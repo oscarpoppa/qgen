@@ -37,7 +37,8 @@ def upload():
     form = UploadForm()
     if form.validate_on_submit():
         ufile = request.files['thefile']
-        ufile.save('/home/dan/flask-app/app/static/{}'.format(secure_filename(ufile.filename)))
+        #need to generalize this
+        ufile.save('/home/dan/proj/quiz/app/static/{}'.format(secure_filename(ufile.filename)))
         flash('{} saved'.format(ufile.filename))
         return redirect(url_for('mypage'))
     return render_template('upload.html', title='Upload a File', form=form)
