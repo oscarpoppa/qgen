@@ -1,0 +1,31 @@
+<html>
+	<head>
+		{% if title %}
+		<title>{{ title }}</title>
+		{% else %}
+		<title>Welcome</title>
+		{% endif %}
+	</head>
+	<body>
+		{% if current_user.is_authenticated %}
+		<div><a href="{{ url_for('logout') }}">log out</a></div>
+		<div><a href="{{ url_for('mypage') }}">my page</a></div>
+		<div><a href="{{ url_for('upload') }}">upload file</a></div>
+		{% else %}
+		<div><a href="{{ url_for('login') }}">log in</a></div>
+		<div><a href="{{ url_for('register') }}">create an account</a></div>
+		{% endif %}
+		{% with messages = get_flashed_messages() %}
+		{% if messages %}
+	       	       <hr>
+		       <ul>
+			       {% for message in messages %}
+			       <li>{{ message }}</li> 
+			       {% endfor %}
+		       </ul>
+		{% endif %}
+		{% endwith %}
+		<hr>
+		{% block content %}{% endblock %}
+	</body>
+</html>
