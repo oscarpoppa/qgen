@@ -18,7 +18,7 @@ class VProblem(db.Model):
             raise
 
     def __repr__(self):
-        return '<VProblem: {}>'.format(self.raw_prob)
+        return '<Virtual Problem: {}>'.format(self.raw_prob)
 
 
 class VQuiz(db.Model):
@@ -36,17 +36,26 @@ class VQuiz(db.Model):
             raise
 
     def __repr__(self):
-        return '<Virtual Problem: {}>'.format(self.raw_prob)
+        return '<Virtual Quiz: {}>'.format(self.vpid_dict)
 
 
+# joiner
 class VQuizProblem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     vq_id = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
     vp_id = db.Column(db.Integer, db.ForeignKey('vproblem.id'))
 
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
 
 
 ##################################################################
+
 class CProblem(db.Model):
     __tablename__ = 'cproblem'
     id = db.Column(db.Integer, primary_key=True)
@@ -65,4 +74,36 @@ class CProblem(db.Model):
 
     def __repr__(self):
         return '<Concrete Problem: {}>'.format(self.conc_prob)
+
+
+class CQuiz(db.Model):
+    __tablename__ = 'cquiz'
+    id = db.Column(db.Integer, primary_key=True)
+    requestor = db.Column(db.Integer, db.ForeignKey('user.id'))
+    vparent = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
+
+    def __repr__(self):
+        return '<Concrete Quiz: {}>'.format(self.id)
+
+
+class CQuizProblem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cq_id = db.Column(db.Integer, db.ForeignKey('cquiz.id'))
+    cp_id = db.Column(db.Integer, db.ForeignKey('cproblem.id'))
+
+    def save(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
 
