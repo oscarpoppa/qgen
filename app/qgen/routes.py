@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from random import randint
 from re import sub, search, split
-from app.qgen.models import Ppatt
+from app.qgen.models import VProblem, CProblem
 
 #should this be here?
 class P2C:
@@ -9,12 +9,15 @@ class P2C:
     mainpatt = r'{{([^}]*)}}'
 
     def __init__(self, pid):
-        self.symbols = {}
-        record = Ppatt.query.filter_by(id=pid).first()
+        self.pid = pid
+        record = VProblem.query.filter_by(id=self.pid).first()
         if not record:
-            print('Not found')
-        self.text = record.raw_prob
-        self.ansr = record.raw_answer
+            raise KeyError('pattern id {} not found'.format(self.pid))
+        self.raw_text = record.raw_prob
+        self.conc_text = ''
+        self.raw_ansr = record.raw_answer
+        self.conc_ansr = ''
+        self.symbols = {}
     
     def extract_symbol(self, chunk):
         patt = r'(?P<symbol>\w+)\s*:\s*(?P<func>\w+)\((?P<args>.+)\)'
@@ -39,11 +42,21 @@ class P2C:
             return chunk.group(0)
         return str(self.symbols[mo.group('symbol')])
     
-    def final_text(self):
-        upd = sub(P2C.mainpatt, self.extract_symbol, self.text)
-        return upd
+    def gen_conc_text(self):
+        self.conc_text = sub(P2C.mainpatt, self.extract_symbol, self.raw_text)
+        return self.conc_text
     
-    def final_ansr(self):
-        ans_upd = sub(P2C.mainpatt, self.upt_ansr, self.ansr)
-        return str(eval(ans_upd)) ## !!!!!!
+    def gen_conc_ansr(self):
+        # !! must be called after gen_conc_text
+        ans_upd = sub(P2C.mainpatt, self.upt_ansr, self.raw_ansr)
+        # not for prime time b4 this is locked down
+        self.conc_ansr = str(eval(ans_upd))
+        return self.conc_ansr
+
+    def gen_conc_to_db(self):
+        ct = self.gen_conc_text() 
+        ca = self.gen_conc_ansr() 
+        nuconc = CProblem(conc_prob=ct, conc_answer=ca, vparent=self.pid, requestor=1)
+        nuconc.save()
+        return nuconc.id
 
