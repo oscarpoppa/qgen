@@ -60,13 +60,13 @@ class V2CProb:
         return nuconc
 
 
-# dct is some posted data - may be jsonified already
-def create_vquiz(dct):
-    nuquiz = VQuiz(vpid_dict=dumps(dct), author_id=1)
+# lst is some posted data - may be jsonified already
+# lst is reap ptyhon list
+def create_vquiz(lst):
+    nuquiz = VQuiz(vpid_lst=dumps(lst), author_id=1)
     nuquiz.save()
-    for pid in dct.values():
-        prob = VProblem.query.filter_by(id=pid).first()
-        nuquiz.vproblems.append(prob)
+    probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
+    nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
 
