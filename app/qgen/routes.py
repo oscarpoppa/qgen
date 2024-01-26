@@ -73,13 +73,13 @@ def create_vquiz(lst):
 def create_cquiz(vquiz):
     nuquiz = CQuiz(vquiz_id=vquiz.id)
     nuquiz.save()
-    for vp in vquiz.vproblems:
-        cp = V2CProb(vp, nuquiz).gen_conc_to_db()
-        nuquiz.cproblems.append(cp)
+    probs = [V2CProb(vp, nuquiz).gen_conc_to_db() for vp in vquiz.vproblems]
+    nuquiz.cproblems.extend(probs)
     nuquiz.save()
     return nuquiz
 
 def dump_cquiz(cquiz):
+    print('\n#######\nQuiz {}\n#######\n\n'.format(cquiz.id))
     for cp in cquiz.cproblems:
         print('{}\n({})\n\n'.format(cp.conc_prob, cp.conc_answer))
 
