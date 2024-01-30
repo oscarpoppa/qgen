@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from app import app
 from random import randint
 from re import sub, search, split
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
@@ -6,10 +7,21 @@ from json import dumps, loads
 from flask import flash, render_template, render_template_string, redirect, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
-from re import sub
-from app import app
 
-#should this be here?
+top = """
+{% extends "base.html" %}
+
+{% block content %}
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+"""
+
+bottom = """
+        {{ form.submit() }}
+    </form>
+{% endblock %}
+"""
+
 class V2CProb:
     funcs = {'randint':randint, 'ri':randint}
     mainpatt = r'{{([^}]*)}}'
@@ -84,23 +96,11 @@ def create_cquiz(vquiz):
     return nuquiz
 
 def create_template(cquiz):
-    top = """
-{% extends "base.html" %}
-
-{% block content %}
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
-"""
-    bottom = """
-        {{ form.submit() }}
-    </form>
-{% endblock %}
-"""
     felems = []
     ttlst = ['''<b>{{ name }}</b><br><br>''']
     for number, problem in enumerate(cquiz.cproblems, 1):
         name = 'Number{}'.format(number)
-        inpstr = '{{ '+'form.{}(size=6)'.format(name)+' }}'
+        inpstr = '{{ '+'form.{}'.format(name)+' }}'
         felem = {'name':name, 'num':number, 'ansr':problem.conc_answer, 'form':problem.vproblem.form_elem}
         felems.append(felem)
         ptxt = '''{}. {}<br>{}<br><br>'''.format(number, problem.conc_prob, inpstr)
@@ -117,16 +117,34 @@ def create_form(felems):
     for elem in felems:
        ftype = ftypes[elem['form']]
        setattr(OTF, elem['name'], ftype(elem['name'])) 
+       setattr(OTF, elem['name']+'_ansr', elem['ansr']) 
     setattr(OTF, 'submit', SubmitField('Submit'))
+    setattr(OTF, 'count', len(felems))
     return OTF
 
 @app.route('/quiz/alpha', methods=['GET','POST'])
 def alpha():
     cq = CQuiz.query.all()[-2]
-    w,f = create_template(cq)
-    fcls = create_form(f)
+    templ,fdata = create_template(cq)
+    fcls = create_form(fdata)
     form = fcls()
     if form.validate_on_submit():
-        pass
-    return render_template_string(w, name='Test Alpha', form=form)
+        for num in range(1, int(form.count)+1):
+            name = 'Number{}'.format(num)
+            st_ansr = getattr(form, name).data or 'None'
+            cor_ansr = getattr(form, name+'_ansr')
+            try:
+                fsta = float(st_ansr)
+                fcora = float(cor_ansr)
+                if st_ansr != 'None' and abs(float(st_ansr) - float(cor_ansr)) < 0.1:
+                   rez = 'Correct'
+                else: 
+                   rez = 'Wrong'
+            except:
+               rez = 'Wrong'
+            msg = 'Your answer: {} : Correct answer: {} : {}'.format(st_ansr, cor_ansr, rez)
+            setattr(form, name, msg)
+        return render_template_string(templ, name='Quiz Alpha', form=form)
+
+    return render_template_string(templ, name='Quiz Alpha', form=form)
 
