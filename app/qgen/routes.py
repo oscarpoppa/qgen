@@ -12,15 +12,53 @@ top = """
 {% extends "base.html" %}
 
 {% block content %}
+"""
+
+ftop = """
     <form action="" method="post">
         {{ form.hidden_tag() }}
 """
 
-bottom = """
+fbottom = """
         {{ form.submit() }}
     </form>
+"""
+
+bottom = """
 {% endblock %}
 """
+
+header = """
+<b>{{ name }}</b><br><br>
+"""
+
+capsule = """
+    {}. {}<br>{}<br><br>
+"""
+
+otfelem = 'Number{}'
+
+class OTF(FlaskForm):
+    @property
+    def result_template(self):
+        psections = [header]
+        for num in range(1, int(self.count)+1):
+            name = otfelem.format(num)
+            submitted_ansr = getattr(self, name).data or 'None'
+            correct_ansr = getattr(self, name+'_ansr')
+            problem = getattr(self, name+'_prob')
+            rez = 'W'
+            try:
+                if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
+                    rez = 'R'
+            except:
+                pass
+            msg = '({}) Your answer: {} : Correct answer: {}'.format(rez, submitted_ansr, correct_ansr)
+            ptxt = capsule.format(num, problem, msg)
+            psections += ptxt
+        ptext = ''.join(psections)
+        return top+ptext+bottom
+
 
 class V2CProb:
     funcs = {'randint':randint, 'ri':randint}
@@ -95,52 +133,34 @@ def create_cquiz(vquiz):
     nuquiz.save()
     return nuquiz
 
-def create_template(cquiz):
-    felems = []
-    ttlst = ['''<b>{{ name }}</b><br><br>''']
-    for number, problem in enumerate(cquiz.cproblems, 1):
-        name = 'Number{}'.format(number)
-        inpstr = '{{ '+'form.{}'.format(name)+' }}'
-        felem = {'name':name, 'num':number, 'ansr':problem.conc_answer, 'form':problem.vproblem.form_elem}
-        felems.append(felem)
-        ptxt = '''{}. {}<br>{}<br><br>'''.format(number, problem.conc_prob, inpstr)
-        ttlst += ptxt
-    ttext = ''.join(ttlst)
-    whole = top+ttext+bottom
-    return whole, felems
-
-def create_form(felems):
+def create_renderables(cquiz):
+    count = 0
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
-    class OTF(FlaskForm):
-        pass
-
-    for elem in felems:
-       ftype = ftypes[elem['form']]
-       setattr(OTF, elem['name'], ftype(elem['name'])) 
-       setattr(OTF, elem['name']+'_ansr', elem['ansr']) 
+    ttlst = [header]
+    for number, problem in enumerate(cquiz.cproblems, 1):
+        count += 1
+        name = otfelem.format(number)
+        inpstr = '{{ '+'form.{}'.format(name)+' }}'
+        ptxt = capsule.format(number, problem.conc_prob, inpstr)
+        ttlst += ptxt
+        ftype = ftypes[problem.vproblem.form_elem]
+        setattr(OTF, name, ftype(name)) 
+        setattr(OTF, name+'_ansr', problem.conc_answer) 
+        setattr(OTF, name+'_prob', problem.conc_prob) 
     setattr(OTF, 'submit', SubmitField('Submit'))
-    setattr(OTF, 'count', len(felems))
-    return OTF
+    setattr(OTF, 'count', count)
+    ttext = ''.join(ttlst)
+    templ = top+ftop+ttext+fbottom+bottom
+    return templ, OTF
+
 
 #POC
 @qgen_bp.route('/quiz/alpha', methods=['GET','POST'])
 def alpha():
     cq = CQuiz.query.all()[-2]
-    templ,fdata = create_template(cq)
-    fcls = create_form(fdata)
-    form = fcls()
+    templ, cform = create_renderables(cq)
+    form = cform()
     if form.validate_on_submit():
-        for num in range(1, int(form.count)+1):
-            name = 'Number{}'.format(num)
-            st_ansr = getattr(form, name).data or 'None'
-            cor_ansr = getattr(form, name+'_ansr')
-            rez = 'Wrong'
-            try:
-                if st_ansr != 'None' and abs(float(st_ansr) - float(cor_ansr)) < 0.1:
-                    rez = 'Correct'
-            except:
-                pass
-            msg = 'Your answer: {} : Correct answer: {} : {}'.format(st_ansr, cor_ansr, rez)
-            setattr(form, name, msg)
+        return render_template_string(form.result_template, name='Quiz Alpha')
     return render_template_string(templ, name='Quiz Alpha', form=form)
 
