@@ -3,6 +3,11 @@ from random import randint
 from re import sub, search, split
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
 from json import dumps, loads
+from flask import flash, render_template, render_template_string, redirect, url_for, request
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
+from re import sub
+from app import app
 
 #should this be here?
 class V2CProb:
@@ -78,8 +83,50 @@ def create_cquiz(vquiz):
     nuquiz.save()
     return nuquiz
 
-def dump_cquiz(cquiz):
-    print('\n#######\nQuiz {}\n#######\n\n'.format(cquiz.id))
-    for cp in cquiz.cproblems:
-        print('{}\n({})\n\n'.format(cp.conc_prob, cp.conc_answer))
+def create_template(cquiz):
+    top = """
+{% extends "base.html" %}
+
+{% block content %}
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+"""
+    bottom = """
+        {{ form.submit() }}
+    </form>
+{% endblock %}
+"""
+    felems = []
+    ttlst = ['''<b>{{ name }}</b><br><br>''']
+    for number, problem in enumerate(cquiz.cproblems, 1):
+        name = 'Number{}'.format(number)
+        inpstr = '{{ '+'form.{}(size=6)'.format(name)+' }}'
+        felem = {'name':name, 'num':number, 'ansr':problem.conc_answer, 'form':problem.vproblem.form_elem}
+        felems.append(felem)
+        ptxt = '''{}. {}<br>{}<br><br>'''.format(number, problem.conc_prob, inpstr)
+        ttlst += ptxt
+    ttext = ''.join(ttlst)
+    whole = top+ttext+bottom
+    return whole, felems
+
+def create_form(felems):
+    ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
+    class OTF(FlaskForm):
+        pass
+
+    for elem in felems:
+       ftype = ftypes[elem['form']]
+       setattr(OTF, elem['name'], ftype(elem['name'])) 
+    setattr(OTF, 'submit', SubmitField('Submit'))
+    return OTF
+
+@app.route('/quiz/alpha', methods=['GET','POST'])
+def alpha():
+    cq = CQuiz.query.all()[-2]
+    w,f = create_template(cq)
+    fcls = create_form(f)
+    form = fcls()
+    if form.validate_on_submit():
+        pass
+    return render_template_string(w, name='Test Alpha', form=form)
 
