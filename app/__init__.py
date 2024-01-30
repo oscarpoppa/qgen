@@ -14,11 +14,12 @@ login.login_view = 'login'
 # this needs to be down here to avoid circular import
 from app.error import error_bp
 from app.apiv1 import api_bp
+from app.qgen import qgen_bp
 
 app.register_blueprint(error_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(qgen_bp)
 
 # this needs to be down here to avoid circular import
 from app import routes, models
 from app.qgen import models
-from app.qgen import routes
