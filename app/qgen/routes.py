@@ -144,7 +144,5 @@ def alpha():
                rez = 'Wrong'
             msg = 'Your answer: {} : Correct answer: {} : {}'.format(st_ansr, cor_ansr, rez)
             setattr(form, name, msg)
-        return render_template_string(templ, name='Quiz Alpha', form=form)
-
     return render_template_string(templ, name='Quiz Alpha', form=form)
 
