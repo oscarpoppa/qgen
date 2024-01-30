@@ -133,15 +133,12 @@ def alpha():
             name = 'Number{}'.format(num)
             st_ansr = getattr(form, name).data or 'None'
             cor_ansr = getattr(form, name+'_ansr')
+            rez = 'Wrong'
             try:
-                fsta = float(st_ansr)
-                fcora = float(cor_ansr)
                 if st_ansr != 'None' and abs(float(st_ansr) - float(cor_ansr)) < 0.1:
-                   rez = 'Correct'
-                else: 
-                   rez = 'Wrong'
+                    rez = 'Correct'
             except:
-               rez = 'Wrong'
+                pass
             msg = 'Your answer: {} : Correct answer: {} : {}'.format(st_ansr, cor_ansr, rez)
             setattr(form, name, msg)
     return render_template_string(templ, name='Quiz Alpha', form=form)
