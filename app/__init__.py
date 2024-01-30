@@ -21,3 +21,4 @@ app.register_blueprint(api_bp)
 # this needs to be down here to avoid circular import
 from app import routes, models
 from app.qgen import models
+from app.qgen import routes
