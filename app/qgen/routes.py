@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from app import app
+from app.qgen import qgen_bp
 from random import randint
 from re import sub, search, split
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
@@ -122,7 +122,8 @@ def create_form(felems):
     setattr(OTF, 'count', len(felems))
     return OTF
 
-@app.route('/quiz/alpha', methods=['GET','POST'])
+#POC
+@qgen_bp.route('/quiz/alpha', methods=['GET','POST'])
 def alpha():
     cq = CQuiz.query.all()[-2]
     templ,fdata = create_template(cq)
