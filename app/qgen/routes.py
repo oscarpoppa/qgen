@@ -29,7 +29,7 @@ bottom = """
 """
 
 header = """
-<b>{{ name }}</b><br><br>
+<b>{{ title }}</b><br><br>
 """
 
 capsule = """
@@ -42,6 +42,7 @@ class OTF(FlaskForm):
     @property
     def result_template(self):
         psections = [header]
+        correct = 0
         for num in range(1, int(self.count)+1):
             name = otfelem.format(num)
             submitted_ansr = getattr(self, name).data or 'None'
@@ -50,12 +51,14 @@ class OTF(FlaskForm):
             rez = 'W'
             try:
                 if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
+                    correct += 1
                     rez = 'R'
             except:
                 pass
             msg = '({}) Your answer: {} : Correct answer: {}'.format(rez, submitted_ansr, correct_ansr)
             ptxt = capsule.format(num, problem, msg)
             psections += ptxt
+        psections += '<br>Score: {}%'.format(100*correct/self.count)
         ptext = ''.join(psections)
         return top+ptext+bottom
 
@@ -150,13 +153,19 @@ def create_renderables(cquiz):
     templ = top+ftop+ttext+fbottom+bottom
     return templ, OTF
 
-#POC
-@qgen_bp.route('/quiz/alpha', methods=['GET','POST'])
-def alpha():
-    cq = CQuiz.query.all()[-2]
+@qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
+def qtake(cidx):
+    cq = CQuiz.query.filter_by(id=cidx).first()
     templ, cform = create_renderables(cq)
     form = cform()
+    title = 'Quiz {}'.format(cidx)
     if form.validate_on_submit():
-        return render_template_string(form.result_template, name='Quiz Alpha')
-    return render_template_string(templ, name='Quiz Alpha', form=form)
+        return render_template_string(form.result_template, title=title)
+    return render_template_string(templ, title=title, form=form)
+
+@qgen_bp.route('/quiz/take/new/<vidx>', methods=['GET','POST'])
+def make_take(vidx):
+    vq = VQuiz.query.filter_by(id=vidx).first()
+    cq = create_cquiz(vq) 
+    return redirect(url_for('qgen.qtake', cidx=cq.id))
 
