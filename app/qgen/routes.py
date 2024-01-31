@@ -136,7 +136,6 @@ def create_cquiz(vquiz):
 def create_renderables(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
     ttlst = [header]
-    count = len(cquiz.cproblems)
     for number, problem in enumerate(cquiz.cproblems, 1):
         name = otfelem.format(number)
         inpstr = '{{ '+'form.{}'.format(name)+' }}'
@@ -146,7 +145,7 @@ def create_renderables(cquiz):
         setattr(OTF, name+'_ansr', problem.conc_answer) 
         setattr(OTF, name+'_prob', problem.conc_prob) 
     setattr(OTF, 'submit', SubmitField('Submit'))
-    setattr(OTF, 'count', count)
+    setattr(OTF, 'count', len(cquiz.cproblems))
     ttext = ''.join(ttlst)
     templ = top+ftop+ttext+fbottom+bottom
     return templ, OTF
