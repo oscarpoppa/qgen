@@ -134,15 +134,13 @@ def create_cquiz(vquiz):
     return nuquiz
 
 def create_renderables(cquiz):
-    count = 0
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
     ttlst = [header]
+    count = len(cquiz.cproblems)
     for number, problem in enumerate(cquiz.cproblems, 1):
-        count += 1
         name = otfelem.format(number)
         inpstr = '{{ '+'form.{}'.format(name)+' }}'
-        ptxt = capsule.format(number, problem.conc_prob, inpstr)
-        ttlst += ptxt
+        ttlst += capsule.format(number, problem.conc_prob, inpstr)
         ftype = ftypes[problem.vproblem.form_elem]
         setattr(OTF, name, ftype(name)) 
         setattr(OTF, name+'_ansr', problem.conc_answer) 
@@ -152,7 +150,6 @@ def create_renderables(cquiz):
     ttext = ''.join(ttlst)
     templ = top+ftop+ttext+fbottom+bottom
     return templ, OTF
-
 
 #POC
 @qgen_bp.route('/quiz/alpha', methods=['GET','POST'])
