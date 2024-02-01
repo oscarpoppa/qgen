@@ -188,3 +188,13 @@ def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).all()
     return render_template('cqlist.html', cqlst=cqlst)
 
+@qgen_bp.route('/quiz/listvp', methods=['GET'])
+def list_vprobs():
+    vplst = VProblem.query.all()
+    return render_template('vplist.html', vplst=vplst)
+
+@qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
+def list_vprob(vpid):
+    vplst = VProblem.query.filter_by(id=vpid).all()
+    return render_template('vplist.html', vplst=vplst)
+
