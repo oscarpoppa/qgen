@@ -8,59 +8,58 @@ from flask import flash, render_template, render_template_string, redirect, url_
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
 
-top = """
+block_top = """
 {% extends "base.html" %}
 
 {% block content %}
 """
 
-ftop = """
+form_top = """
     <form action="" method="post">
         {{ form.hidden_tag() }}
 """
 
-fbottom = """
+form_bottom = """
         {{ form.submit() }}
     </form>
 """
 
-bottom = """
+block_bottom = """
 {% endblock %}
 """
 
-header = """
+block_header = """
 <b>{{ title }}</b><br><br>
 """
 
-capsule = """
+prob_capsule = """
     {}. {}<br>{}<br><br>
 """
 
-otfelem = 'Number{}'
+fieldname_base = 'Number{}'
 
 class OTF(FlaskForm):
     @property
     def result_template(self):
-        psections = [header]
-        correct = 0
-        for num in range(1, int(self.count)+1):
-            name = otfelem.format(num)
-            submitted_ansr = getattr(self, name).data or 'None'
-            correct_ansr = getattr(self, name+'_ansr')
-            problem = getattr(self, name+'_prob')
-            rez = 'W'
+        prob_chunks = [block_header]
+        num_correct = 0
+        for idx in range(1, int(self.count)+1):
+            field_name = fieldname_base.format(idx)
+            submitted_ansr = getattr(self, field_name).data or 'None'
+            correct_ansr = getattr(self, field_name+'_ansr')
+            problem = getattr(self, field_name+'_prob')
+            right_or_wrong = 'W'
             try:
                 if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
-                    correct += 1
-                    rez = 'R'
+                    num_correct += 1
+                    right_or_wrong = 'R'
             except:
                 pass
-            msg = '({}) Your answer: {} : Correct answer: {}'.format(rez, submitted_ansr, correct_ansr)
-            ptxt = capsule.format(num, problem, msg)
-            psections += ptxt
-        psections += '<br>Score: {}%'.format(100*correct/self.count)
-        ptext = ''.join(psections)
-        return top+ptext+bottom
+            summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
+            prob_chunks += prob_capsule.format(idx, problem, summary)
+        prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
+        prob_section = ''.join(prob_chunks)
+        return block_top+prob_section+block_bottom
 
 
 class V2CProb:
@@ -138,19 +137,22 @@ def create_cquiz(vquiz):
 
 def create_renderables(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
-    ttlst = [header]
-    for number, problem in enumerate(cquiz.cproblems, 1):
-        name = otfelem.format(number)
-        inpstr = '{{ '+'form.{}'.format(name)+' }}'
-        ttlst += capsule.format(number, problem.conc_prob, inpstr)
+    ttlst = [block_header]
+    ordered_vids = loads(cquiz.vquiz.vpid_lst)
+    phash = {p.vproblem.id:p for p in cquiz.cproblems}
+    for ordinal, vidx in enumerate(ordered_vids, 1):
+        problem = phash[vidx]
+        field_name = fieldname_base.format(ordinal)
+        inpstr = '{{ '+'form.{}'.format(field_name)+' }}'
+        ttlst += prob_capsule.format(ordinal, problem.conc_prob, inpstr)
         ftype = ftypes[problem.vproblem.form_elem]
-        setattr(OTF, name, ftype(name)) 
-        setattr(OTF, name+'_ansr', problem.conc_answer) 
-        setattr(OTF, name+'_prob', problem.conc_prob) 
+        setattr(OTF, field_name, ftype(field_name)) 
+        setattr(OTF, field_name+'_ansr', problem.conc_answer) 
+        setattr(OTF, field_name+'_prob', problem.conc_prob) 
     setattr(OTF, 'submit', SubmitField('Submit'))
     setattr(OTF, 'count', len(cquiz.cproblems))
     ttext = ''.join(ttlst)
-    templ = top+ftop+ttext+fbottom+bottom
+    templ = block_top+form_top+ttext+form_bottom+block_bottom
     return templ, OTF
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
@@ -168,4 +170,19 @@ def make_take(vidx):
     vq = VQuiz.query.filter_by(id=vidx).first()
     cq = create_cquiz(vq) 
     return redirect(url_for('qgen.qtake', cidx=cq.id))
+
+@qgen_bp.route('/quiz/listvq', methods=['GET'])
+def list_vquizzes():
+    vqlst = VQuiz.query.all()
+    return render_template('vqlist.html', vqlst=vqlst)
+
+@qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
+def list_vquiz(vqid):
+    vqlst = VQuiz.query.filter_by(id=vqid).all()
+    return render_template('vqlist.html', vqlst=vqlst)
+
+@qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
+def list_cquiz(cqid):
+    cqlst = CQuiz.query.filter_by(id=cqid).all()
+    return render_template('cqlist.html', cqlst=cqlst)
 
