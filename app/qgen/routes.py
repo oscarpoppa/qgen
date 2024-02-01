@@ -159,7 +159,7 @@ def create_renderables(cquiz):
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 def qtake(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first()
+    cq = CQuiz.query.filter_by(id=cidx).first_or_404()
     templ, cform = create_renderables(cq)
     form = cform()
     title = 'Quiz {}'.format(cidx)
@@ -169,7 +169,7 @@ def qtake(cidx):
 
 @qgen_bp.route('/quiz/take/new/<vidx>', methods=['GET','POST'])
 def make_take(vidx):
-    vq = VQuiz.query.filter_by(id=vidx).first()
+    vq = VQuiz.query.filter_by(id=vidx).first_or_404()
     cq = create_cquiz(vq) 
     return redirect(url_for('qgen.qtake', cidx=cq.id))
 
@@ -180,13 +180,13 @@ def list_vquizzes():
 
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
 def list_vquiz(vqid):
-    vqlst = VQuiz.query.filter_by(id=vqid).all()
-    return render_template('vqlist.html', vqlst=vqlst)
+    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404()
+    return render_template('vqlist.html', vqlst=[vqlst])
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 def list_cquiz(cqid):
-    cqlst = CQuiz.query.filter_by(id=cqid).all()
-    return render_template('cqlist.html', cqlst=cqlst)
+    cqlst = CQuiz.query.filter_by(id=cqid).first_or_404()
+    return render_template('cqlist.html', cqlst=[cqlst])
 
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
 def list_vprobs():
@@ -195,6 +195,6 @@ def list_vprobs():
 
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
 def list_vprob(vpid):
-    vplst = VProblem.query.filter_by(id=vpid).all()
-    return render_template('vplist.html', vplst=vplst)
+    vplst = VProblem.query.filter_by(id=vpid).first_or_404()
+    return render_template('vplist.html', vplst=[vplst])
 
