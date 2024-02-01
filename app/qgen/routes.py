@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from app.qgen import qgen_bp
+from app.routes import admin_only
 from random import randint
 from re import sub, search, split
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
@@ -7,6 +8,7 @@ from json import dumps, loads
 from flask import flash, render_template, render_template_string, redirect, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
+from flask_login import current_user, login_user, login_required, logout_user
 
 block_top = """
 {% extends "base.html" %}
@@ -158,6 +160,7 @@ def create_renderables(cquiz):
     return templ, OTF
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
+@login_required
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404()
     templ, cform = create_renderables(cq)
@@ -168,32 +171,43 @@ def qtake(cidx):
     return render_template_string(templ, title=title, form=form)
 
 @qgen_bp.route('/quiz/take/new/<vidx>', methods=['GET','POST'])
+@login_required
 def make_take(vidx):
     vq = VQuiz.query.filter_by(id=vidx).first_or_404()
     cq = create_cquiz(vq) 
     return redirect(url_for('qgen.qtake', cidx=cq.id))
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
+@login_required
+@admin_only
 def list_vquizzes():
     vqlst = VQuiz.query.all()
     return render_template('vqlist.html', vqlst=vqlst)
 
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
+@login_required
+@admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404()
     return render_template('vqlist.html', vqlst=[vqlst])
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
+@login_required
+@admin_only
 def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).first_or_404()
     return render_template('cqlist.html', cqlst=[cqlst])
 
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
+@login_required
+@admin_only
 def list_vprobs():
     vplst = VProblem.query.all()
     return render_template('vplist.html', vplst=vplst)
 
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
+@login_required
+@admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404()
     return render_template('vplist.html', vplst=[vplst])

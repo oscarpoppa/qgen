@@ -16,6 +16,14 @@ def logout_required(func):
         return func(*args, **kwargs)
     return inner
 
+def admin_only(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if not current_user.is_admin:
+            flash('Administrators only')
+            return redirect(url_for('mypage'))
+        return func(*args, **kwargs)
+    return inner
 
 @app.route('/mypage')
 @login_required
