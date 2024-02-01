@@ -114,7 +114,7 @@ class V2CProb:
     def gen_conc_to_db(self, ordinal):
         ct = self.gen_conc_text() 
         ca = self.gen_conc_ansr() 
-        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_ansr=ca, vproblem_id=self.vp.id, requestor=1)
+        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_ansr=ca, vproblem_id=self.vp.id)
         nuconc.save()
         return nuconc
 
