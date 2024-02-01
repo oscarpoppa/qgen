@@ -73,7 +73,7 @@ class V2CProb:
         self.cq = cq 
         self.raw_text = vp.raw_prob
         self.conc_text = ''
-        self.raw_ansr = vp.raw_answer
+        self.raw_ansr = vp.raw_ansr
         self.conc_ansr = ''
         self.symbols = {}
     
@@ -114,7 +114,7 @@ class V2CProb:
     def gen_conc_to_db(self, ordinal):
         ct = self.gen_conc_text() 
         ca = self.gen_conc_ansr() 
-        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_answer=ca, vproblem_id=self.vp.id, requestor=1)
+        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_ansr=ca, vproblem_id=self.vp.id, requestor=1)
         nuconc.save()
         return nuconc
 
@@ -151,7 +151,7 @@ def create_renderables(cquiz):
         ttlst += prob_capsule.format(ordinal, problem.conc_prob, inpstr)
         ftype = ftypes[problem.vproblem.form_elem]
         setattr(OTF, field_name, ftype(field_name)) 
-        setattr(OTF, field_name+'_ansr', problem.conc_answer) 
+        setattr(OTF, field_name+'_ansr', problem.conc_ansr) 
         setattr(OTF, field_name+'_prob', problem.conc_prob) 
     setattr(OTF, 'submit', SubmitField('Submit'))
     setattr(OTF, 'count', len(cquiz.cproblems))

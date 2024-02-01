@@ -20,7 +20,7 @@ class VProblem(db.Model, SaveMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
     raw_prob = db.Column(db.String(256))
-    raw_answer = db.Column(db.String(128))
+    raw_ansr = db.Column(db.String(128))
     form_elem = db.Column(db.String(64))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
@@ -49,8 +49,7 @@ class CProblem(db.Model, SaveMixin):
     id = db.Column(db.Integer, primary_key=True)
     cquiz_id = db.Column(db.Integer, db.ForeignKey('cquiz.id'))
     conc_prob = db.Column(db.String(256))
-    conc_answer = db.Column(db.String(128))
-    requestor = db.Column(db.Integer, db.ForeignKey('user.id'))
+    conc_ansr = db.Column(db.String(128))
     vproblem_id = db.Column(db.Integer, db.ForeignKey('vproblem.id'))
     ordinal = db.Column(db.Integer)
 
