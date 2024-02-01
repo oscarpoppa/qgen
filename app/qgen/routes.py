@@ -109,10 +109,10 @@ class V2CProb:
         self.conc_ansr = str(eval(ans_upd))
         return self.conc_ansr
 
-    def gen_conc_to_db(self):
+    def gen_conc_to_db(self, ordinal):
         ct = self.gen_conc_text() 
         ca = self.gen_conc_ansr() 
-        nuconc = CProblem(cquiz_id=self.cq.id, conc_prob=ct, conc_answer=ca, vproblem_id=self.vp.id, requestor=1)
+        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_answer=ca, vproblem_id=self.vp.id, requestor=1)
         nuconc.save()
         return nuconc
 
@@ -130,7 +130,9 @@ def create_vquiz(lst):
 def create_cquiz(vquiz):
     nuquiz = CQuiz(vquiz_id=vquiz.id)
     nuquiz.save()
-    probs = [V2CProb(vp, nuquiz).gen_conc_to_db() for vp in vquiz.vproblems]
+    ordered_vids = loads(vquiz.vpid_lst)
+    vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
+    probs = [V2CProb(vp, nuquiz).gen_conc_to_db(o) for o,vp in vprobs]
     nuquiz.cproblems.extend(probs)
     nuquiz.save()
     return nuquiz
@@ -138,10 +140,10 @@ def create_cquiz(vquiz):
 def create_renderables(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
     ttlst = [block_header]
-    ordered_vids = loads(cquiz.vquiz.vpid_lst)
-    phash = {p.vproblem.id:p for p in cquiz.cproblems}
-    for ordinal, vidx in enumerate(ordered_vids, 1):
-        problem = phash[vidx]
+    phash = {p.ordinal:p for p in cquiz.cproblems}
+    skeys = sorted(phash.keys())
+    for ordinal in skeys:
+        problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
         inpstr = '{{ '+'form.{}'.format(field_name)+' }}'
         ttlst += prob_capsule.format(ordinal, problem.conc_prob, inpstr)
