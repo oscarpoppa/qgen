@@ -5,7 +5,7 @@
     CQuiz: ( id={{item.id}} ) ( based on VQuiz {{item.vquiz_id}})
     <br><br>
     {% for prob in item.cproblems %}
-        ( {{prob.id}} ) {{prob.conc_prob}} ( ans = {{prob.conc_answer}} ) ( based on VProblem {{prob.vproblem_id}} )
+        ( {{prob.id}} ) {{prob.conc_prob}} ( ans = {{prob.conc_ansr}} ) ( based on VProblem {{prob.vproblem_id}} )
         <br>
     {% endfor %}
     <br><br><br>
