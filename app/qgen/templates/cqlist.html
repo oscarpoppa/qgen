@@ -2,7 +2,8 @@
 
 {% block content %}
 {% for item in cqlst %}
-    CQuiz: ( id={{item.id}} ) ( based on VQuiz {{item.vquiz_id}})
+    CQuiz: ( id={{item.id}} ) {{item.vquiz.title}} ( based on VQuiz {{item.vquiz_id}}) 
+    Assigned to: {{item.taker.username}}
     <br><br>
     {% for prob in item.cproblems %}
         ( {{prob.id}} ) {{prob.conc_prob}} ( ans = {{prob.conc_ansr}} ) ( based on VProblem {{prob.vproblem_id}} )
