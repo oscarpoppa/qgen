@@ -21,6 +21,7 @@ class VProblem(db.Model, SaveMixin):
     id = db.Column(db.Integer, primary_key=True)
     raw_prob = db.Column(db.String(256))
     raw_ansr = db.Column(db.String(128))
+    example = db.Column(db.String(128))
     form_elem = db.Column(db.String(64))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
@@ -36,6 +37,7 @@ class VQuiz(db.Model, SaveMixin):
     id = db.Column(db.Integer, primary_key=True)
     vpid_lst = db.Column(db.String(256))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(64))
 
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)
     cquizzes = db.relationship('CQuiz', backref='vquiz', lazy=True)
@@ -60,10 +62,14 @@ class CProblem(db.Model, SaveMixin):
 class CQuiz(db.Model, SaveMixin):
     __tablename__ = 'cquiz'
     id = db.Column(db.Integer, primary_key=True)
-    requestor = db.Column(db.Integer, db.ForeignKey('user.id'))
+    assignee = db.Column(db.Integer, db.ForeignKey('user.id'))
     vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
+    transcript = db.Column(db.String(2048))
+    completed = db.Column(db.Boolean, default=False)
+    score = db.Column(db.Float)
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True)
+    taker = db.relationship('User', backref='cquizzes', lazy=True)
 
     def __repr__(self):
         return '<Concrete Quiz: {}>'.format(self.id)

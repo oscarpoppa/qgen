@@ -60,6 +60,7 @@ class OTF(FlaskForm):
             summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
             prob_chunks += prob_capsule.format(idx, problem, summary)
         prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
+        self.score = 100*num_correct/self.count
         prob_section = ''.join(prob_chunks)
         return block_top+prob_section+block_bottom
 
@@ -121,8 +122,8 @@ class V2CProb:
 
 # lst is some posted data - may be jsonified already
 # lst is reap ptyhon list
-def create_vquiz(lst):
-    nuquiz = VQuiz(vpid_lst=dumps(lst), author_id=1)
+def create_vquiz(lst, title):
+    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
     probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
     nuquiz.vproblems.extend(probs)
@@ -163,10 +164,22 @@ def create_renderables(cquiz):
 @login_required
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404()
+    title = '{} ({}) ({})'.format(cq.vquiz.title, cidx, current_user.username)
+    if not cq.taker:
+        flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
+        return redirect(url_for('mypage'))
+    if current_user != cq.taker and not current_user.is_admin:
+        flash('{} unauthorized'.format(request.__dict__['environ']['RAW_URI']))
+        return redirect(url_for('mypage'))
+    if cq.completed:
+        return render_template_string(cq.transcript, title=title)
     templ, cform = create_renderables(cq)
     form = cform()
-    title = '{}: Quiz {}'.format(current_user.username, cidx)
     if form.validate_on_submit():
+        cq.transcript = form.result_template
+        cq.completed = True
+        cq.score = form.score
+        cq.save()
         return render_template_string(form.result_template, title=title)
     return render_template_string(templ, title=title, form=form)
 
