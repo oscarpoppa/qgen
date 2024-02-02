@@ -1,4 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<ul>
+{% for cq in current_user.cquizzes %}
+    <li><a href={{url_for('qgen.qtake', cidx=cq.id)}}>{{cq.vquiz.title}} {% if cq.completed %}(completed){% endif %}</a></li>
+{% endfor %}
+</ul>
 {% endblock %}
