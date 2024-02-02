@@ -11,7 +11,7 @@ def logout_required(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if current_user.is_authenticated:
-            flash('{} unavailable while logged in'.format(request.__dict__['environ']['RAW_URI']))
+            flash('{} is unavailable while logged in'.format(request.__dict__['environ']['RAW_URI']))
             return redirect(url_for('mypage'))
         return func(*args, **kwargs)
     return inner
@@ -20,7 +20,7 @@ def admin_only(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if not current_user.is_admin:
-            flash('{} available to administrators only'.format(request.__dict__['environ']['RAW_URI']))
+            flash('{} is available to administrators only'.format(request.__dict__['environ']['RAW_URI']))
             return redirect(url_for('mypage'))
         return func(*args, **kwargs)
     return inner
@@ -28,7 +28,7 @@ def admin_only(func):
 @app.route('/mypage')
 @login_required
 def mypage():
-    return render_template('mypage.html', title='{}\'s Page'.format(current_user.username))
+    return render_template('mypage.html', current_user=current_user, title='{}\'s Page'.format(current_user.username))
 
 
 @app.route('/logout')
