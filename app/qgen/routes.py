@@ -60,6 +60,7 @@ class OTF(FlaskForm):
             summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
             prob_chunks += prob_capsule.format(idx, problem, summary)
         prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
+        #add to object
         self.score = 100*num_correct/self.count
         prob_section = ''.join(prob_chunks)
         return block_top+prob_section+block_bottom
@@ -182,13 +183,6 @@ def qtake(cidx):
         cq.save()
         return render_template_string(form.result_template, title=title)
     return render_template_string(templ, title=title, form=form)
-
-@qgen_bp.route('/quiz/take/new/<vidx>', methods=['GET','POST'])
-@login_required
-def make_take(vidx):
-    vq = VQuiz.query.filter_by(id=vidx).first_or_404()
-    cq = create_cquiz(vq) 
-    return redirect(url_for('qgen.qtake', cidx=cq.id))
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
 @login_required
