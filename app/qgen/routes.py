@@ -165,7 +165,7 @@ def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404()
     templ, cform = create_renderables(cq)
     form = cform()
-    title = 'Quiz {}'.format(cidx)
+    title = '{}: Quiz {}'.format(current_user.username, cidx)
     if form.validate_on_submit():
         return render_template_string(form.result_template, title=title)
     return render_template_string(templ, title=title, form=form)
@@ -182,33 +182,33 @@ def make_take(vidx):
 @admin_only
 def list_vquizzes():
     vqlst = VQuiz.query.all()
-    return render_template('vqlist.html', vqlst=vqlst)
+    return render_template('vqlist.html', vqlst=vqlst, title='All VQuizzes')
 
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
 @login_required
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404()
-    return render_template('vqlist.html', vqlst=[vqlst])
+    return render_template('vqlist.html', vqlst=[vqlst], title='VQuiz {} detail'.format(vqid))
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required
 @admin_only
 def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).first_or_404()
-    return render_template('cqlist.html', cqlst=[cqlst])
+    return render_template('cqlist.html', cqlst=[cqlst], title='CQuiz {} detail'.format(cqid))
 
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
 @login_required
 @admin_only
 def list_vprobs():
     vplst = VProblem.query.all()
-    return render_template('vplist.html', vplst=vplst)
+    return render_template('vplist.html', vplst=vplst, title='All VProblems')
 
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
 @login_required
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404()
-    return render_template('vplist.html', vplst=[vplst])
+    return render_template('vplist.html', vplst=[vplst], title='VProblem {} detail'.format(vpid))
 
