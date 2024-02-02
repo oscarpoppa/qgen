@@ -130,8 +130,8 @@ def create_vquiz(lst, title):
     nuquiz.save()
     return nuquiz
 
-def create_cquiz(vquiz):
-    nuquiz = CQuiz(vquiz_id=vquiz.id)
+def create_cquiz(vquiz, assignee):
+    nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
     nuquiz.save()
     ordered_vids = loads(vquiz.vpid_lst)
     vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
