@@ -26,6 +26,7 @@
 		        <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
 		        <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
 		        <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
+		        <hr>
 		    {% endif %}
 		{% else %}
 		<div><a href="{{ url_for('login') }}">log in</a></div>
@@ -41,7 +42,6 @@
 		       </ul>
 		{% endif %}
 		{% endwith %}
-		<hr>
 		{% block content %}{% endblock %}
 	</body>
 </html>
