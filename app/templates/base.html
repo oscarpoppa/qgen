@@ -29,12 +29,13 @@
 		        <hr>
 		    {% endif %}
 		{% else %}
-		<div><a href="{{ url_for('login') }}">log in</a></div>
-		<div><a href="{{ url_for('register') }}">create an account</a></div>
+	            <div><a href="{{ url_for('login') }}">log in</a></div>
+		    <div><a href="{{ url_for('register') }}">create an account</a></div>
+                    <hr>
 		{% endif %}
 		{% with messages = get_flashed_messages() %}
 		{% if messages %}
-		       <ul>
+		      <ul>
 			       {% for message in messages %}
 			       <li>{{ message }}</li> 
 			       {% endfor %}
