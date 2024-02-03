@@ -5,28 +5,28 @@
     <form action="" method="post">
 	    {{ form.hidden_tag() }}
 	    <p>
-	            {{ form.rawprob.label }}<br>
+	            <b>{{ form.rawprob.label }}</b><br>
 		    {{ form.rawprob(size=128) }}<br>
                     {% for error in form.rawprob.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.rawansr.label }}<br>
+	            <b>{{ form.rawansr.label }}</b><br>
 		    {{ form.rawansr(size=64) }}<br>
                     {% for error in form.rawansr.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.example.label }}<br>
+	            <b>{{ form.example.label }}</b><br>
 		    {{ form.example(size=64) }}<br>
                     {% for error in form.example.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.formelem.label }}<br>
+	            <b>{{ form.formelem.label }}</b><br>
 		    {{ form.formelem(size=16) }}<br>
                     {% for error in form.formelem.errors %}
                     <span style="color: red">[{{ error }}]</span>

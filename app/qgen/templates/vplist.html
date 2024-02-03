@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in vplst %}
-    VProblem: ( id={{item.id}} ) {{item.raw_prob}} ( ans = {{item.raw_ansr}} )
+    <b>VProblem: ( id={{item.id}} )</b> {{item.raw_prob}} ( <b>ans</b> = {{item.raw_ansr}} )
     <br><br>
 {% endfor %}
 {% endblock %}

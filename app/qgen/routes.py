@@ -169,7 +169,7 @@ def create_cquiz(vquiz, assignee):
     nuquiz.save()
     return nuquiz
 
-def create_renderables(cquiz):
+def renderable_factory(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
     ttlst = [block_header]
     phash = {p.ordinal:p for p in cquiz.cproblems}
@@ -228,7 +228,7 @@ def qtake(cidx):
         return redirect(url_for('mypage'))
     if cq.completed:
         return render_template_string(cq.transcript, title=title)
-    templ, cform = create_renderables(cq)
+    templ, cform = renderable_factory(cq)
     form = cform()
     if form.validate_on_submit():
         cq.transcript = form.result_template
