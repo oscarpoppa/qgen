@@ -101,8 +101,7 @@ class V2CProb:
 # lst is some posted data - may be jsonified already
 # lst is reap ptyhon list
 def create_vquiz(lst, title):
-    #nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
-    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=1)
+    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
     probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
     nuquiz.vproblems.extend(probs)
