@@ -10,6 +10,8 @@ from flask import flash, render_template, render_template_string, redirect, url_
 from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
+from app.qgen.forms import VProbAdd, VQuizAdd
+from re import findall
 
 block_top = """
 {% extends "base.html" %}
@@ -99,12 +101,39 @@ class V2CProb:
 # lst is some posted data - may be jsonified already
 # lst is reap ptyhon list
 def create_vquiz(lst, title):
-    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
+    #nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
+    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=1)
     nuquiz.save()
     probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
     nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
+
+@qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def mkvquiz():
+    form = VQuizAdd()
+    if form.validate_on_submit():
+        lstr = form.vplist.data
+        numlist = [int(a) for a in findall('(\d+)', lstr)]
+        title = form.title.data
+        nq = create_vquiz(numlist, title)
+        flash('Created vquiz: ({}) {}'.format(nq.id, title))
+        return redirect(url_for('qgen.mkvquiz'))
+    return render_template('vqadd.html', title='Create VQuiz', form=form)
+
+@qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def mkvprob():
+    form = VProbAdd()
+    if form.validate_on_submit():
+        nuprob = VProblem(raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id)
+        nuprob.save()
+        flash('Created vproblem: ({}) {}'.format(nuprob.id, nuprob.raw_prob))
+        return redirect(url_for('qgen.mkvprob'))
+    return render_template('vpadd.html', title='Create VProblem', form=form)
 
 def assign_form_factory():
 
@@ -148,6 +177,7 @@ def create_renderables(cquiz):
     skeys = sorted(phash.keys())
 
     class OTF(FlaskForm):
+        submit = SubmitField('Submit')
         @property
         def result_template(self):
             prob_chunks = [block_header]
@@ -181,7 +211,6 @@ def create_renderables(cquiz):
         setattr(OTF, field_name, ftype(field_name)) 
         setattr(OTF, field_name+'_ansr', problem.conc_ansr) 
         setattr(OTF, field_name+'_prob', problem.conc_prob) 
-    setattr(OTF, 'submit', SubmitField('Submit'))
     setattr(OTF, 'count', len(cquiz.cproblems))
     ttext = ''.join(ttlst)
     templ = block_top+form_top+ttext+form_bottom+block_bottom

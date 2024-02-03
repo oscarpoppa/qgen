@@ -23,10 +23,30 @@
                     </table>
                     <hr>
                     {% if current_user.is_admin %}
-		        <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
-		        <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
-		        <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
-		        <hr>
+                        <table width=100% columns=3>
+                        <tr> 
+                        <td align=left width=33%>
+		            <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
+                        </td>
+                        <td align=center width=33%>
+		            <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
+                        </td>
+                        <td align=right width=34%>
+		            <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
+                        </td>
+                        </tr>
+                        <tr>
+                        <td align=left width=33%>
+		            <div><a href="{{ url_for('qgen.mkvprob') }}">create vproblems</a></div>
+                        </td>
+                        <td align=center width=33%>
+		            <div><a href="{{ url_for('qgen.mkvquiz') }}">create vquizzes</a></div>
+                        </td>
+                        <td>
+                        </td>
+                      </tr>
+                    </table>
+		    <hr>
 		    {% endif %}
 		{% else %}
 	            <div><a href="{{ url_for('login') }}">log in</a></div>
