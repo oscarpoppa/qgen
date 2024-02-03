@@ -40,32 +40,6 @@ prob_capsule = """
 
 fieldname_base = 'Number{}'
 
-class OTF(FlaskForm):
-    @property
-    def result_template(self):
-        prob_chunks = [block_header]
-        num_correct = 0
-        for idx in range(1, int(self.count)+1):
-            field_name = fieldname_base.format(idx)
-            submitted_ansr = getattr(self, field_name).data or 'None'
-            correct_ansr = getattr(self, field_name+'_ansr')
-            problem = getattr(self, field_name+'_prob')
-            right_or_wrong = 'W'
-            try:
-                if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
-                    num_correct += 1
-                    right_or_wrong = 'R'
-            except:
-                pass
-            summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
-            prob_chunks += prob_capsule.format(idx, problem, summary)
-        prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
-        #add to object
-        self.score = 100*num_correct/self.count
-        prob_section = ''.join(prob_chunks)
-        return block_top+prob_section+block_bottom
-
-
 class V2CProb:
     funcs = {'randint':randint, 'ri':randint}
     mainpatt = r'{{([^}]*)}}'
@@ -146,6 +120,32 @@ def create_renderables(cquiz):
     ttlst = [block_header]
     phash = {p.ordinal:p for p in cquiz.cproblems}
     skeys = sorted(phash.keys())
+
+    class OTF(FlaskForm):
+        @property
+        def result_template(self):
+            prob_chunks = [block_header]
+            num_correct = 0
+            for idx in range(1, int(self.count)+1):
+                field_name = fieldname_base.format(idx)
+                submitted_ansr = getattr(self, field_name).data or 'None'
+                correct_ansr = getattr(self, field_name+'_ansr')
+                problem = getattr(self, field_name+'_prob')
+                right_or_wrong = 'W'
+                try:
+                    if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
+                        num_correct += 1
+                        right_or_wrong = 'R'
+                except:
+                    pass
+                summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
+                prob_chunks += prob_capsule.format(idx, problem, summary)
+            prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
+            #add to object
+            self.score = 100*num_correct/self.count
+            prob_section = ''.join(prob_chunks)
+            return block_top+prob_section+block_bottom
+
     for ordinal in skeys:
         problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
