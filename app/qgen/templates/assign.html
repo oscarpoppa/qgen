@@ -6,14 +6,14 @@
 	    {{ form.hidden_tag() }}
 	    <p>
 	            <b>{{ form.user.label }}</b><br>
-		    {{ form.user(size=3) }}<br>
+		    {{ form.user(size=3, style="width : 10%") }}<br>
                     {% for error in form.user.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
 	            <b>{{ form.vquiz.label }}</b><br>
-		    {{ form.vquiz(size=3) }}<br>
+		    {{ form.vquiz(size=3, style="width : 25%") }}<br>
                     {% for error in form.vquiz.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
