@@ -5,14 +5,14 @@
     <form action="" method="post">
 	    {{ form.hidden_tag() }}
 	    <p>
-	            {{ form.vplist.label }}<br>
+	            <b>{{ form.vplist.label }}</b><br>
 		    {{ form.vplist(size=64) }}<br>
                     {% for error in form.vplist.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.title.label }}<br>
+	            <b>{{ form.title.label }}</b><br>
 		    {{ form.title(size=64) }}<br>
                     {% for error in form.title.errors %}
                     <span style="color: red">[{{ error }}]</span>

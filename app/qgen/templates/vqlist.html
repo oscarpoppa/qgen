@@ -2,12 +2,12 @@
 
 {% block content %}
 {% for item in vqlst %}
-    VQuiz: ( id={{item.id}} ) {{item.title}} {{item.vpid_lst}}
-    <br><br>
+    <b>VQuiz: ( id={{item.id}} ) {{item.title}}</b> {{item.vpid_lst}}
+    <br>
     {% for prob in item.vproblems %}
         ( {{prob.id}} ) {{prob.raw_prob}} ( ans = {{prob.raw_ansr}} )
         <br>
     {% endfor %}
-    <br><br><br>
+    <br>
 {% endfor %}
 {% endblock %}
