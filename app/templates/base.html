@@ -25,6 +25,7 @@
                     {% if current_user.is_admin %}
 		        <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
 		        <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
+		        <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
 		    {% endif %}
 		{% else %}
 		<div><a href="{{ url_for('login') }}">log in</a></div>

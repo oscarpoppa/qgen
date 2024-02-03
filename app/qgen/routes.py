@@ -3,11 +3,12 @@ from app.qgen import qgen_bp
 from app.routes import admin_only
 from random import randint
 from re import sub, search, split
+from app.models import User
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
 from json import dumps, loads
 from flask import flash, render_template, render_template_string, redirect, url_for, request
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
+from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
 
 block_top = """
@@ -104,6 +105,31 @@ def create_vquiz(lst, title):
     nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
+
+def assign_form_factory():
+
+    class A(FlaskForm):
+        submit = SubmitField('Submit')
+
+    users = User.query.all()
+    vquizzes = VQuiz.query.all()
+    setattr(A,'user', SelectField('User', choices=[(a.id, a.username) for a in users]))
+    setattr(A,'vquiz', SelectField('VQuiz', choices=[(a.id, a.title) for a in vquizzes]))
+    return A
+
+@qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def assign():
+    fcls = assign_form_factory()
+    form = fcls()
+    if form.validate_on_submit():
+        vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
+        user = User.query.filter_by(id=int(form.user.data)).first()
+        cq = create_cquiz(vquiz, user) 
+        flash('Created quiz: "{} ({})" for {}'.format(vquiz.title, cq.id, user.username))
+        return redirect(url_for('qgen.assign'))
+    return render_template('assign.html', title='Assign Quiz', form=form)
 
 def create_cquiz(vquiz, assignee):
     nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
