@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1><u>Create VProblem</u></h1>
+    <form action="" method="post">
+	    {{ form.hidden_tag() }}
+	    <p>
+	            {{ form.rawprob.label }}<br>
+		    {{ form.rawprob(size=128) }}<br>
+                    {% for error in form.rawprob.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            {{ form.rawansr.label }}<br>
+		    {{ form.rawansr(size=64) }}<br>
+                    {% for error in form.rawansr.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            {{ form.example.label }}<br>
+		    {{ form.example(size=64) }}<br>
+                    {% for error in form.example.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            {{ form.formelem.label }}<br>
+		    {{ form.formelem(size=16) }}<br>
+                    {% for error in form.formelem.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>     {{ form.submit() }} </p>
+    </form>
+{% endblock %}
