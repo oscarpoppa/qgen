@@ -41,6 +41,7 @@ def logout():
 
 @app.route('/upload', methods=['POST','GET'])
 @login_required
+@admin_only
 def upload():
     form = UploadForm()
     if form.validate_on_submit():
