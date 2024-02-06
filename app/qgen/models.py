@@ -19,6 +19,7 @@ vproblem_vquiz = db.Table('vproblem_vquiz',
 class VProblem(db.Model, SaveMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
+    image = db.Column(db.String(128))
     raw_prob = db.Column(db.String(256))
     raw_ansr = db.Column(db.String(128))
     example = db.Column(db.String(128))
@@ -35,6 +36,7 @@ class VProblem(db.Model, SaveMixin):
 class VQuiz(db.Model, SaveMixin):
     __tablename__ = 'vquiz'
     id = db.Column(db.Integer, primary_key=True)
+    image = db.Column(db.String(128))
     vpid_lst = db.Column(db.String(256))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     title = db.Column(db.String(64))
