@@ -175,6 +175,7 @@ def renderable_factory(cquiz):
     ttlst = [block_header]
     phash = {p.ordinal:p for p in cquiz.cproblems}
     skeys = sorted(phash.keys())
+    imgtmpl = '<br><img src="/static/{}" style="width:35%"/><br><br>'
 
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
@@ -197,7 +198,7 @@ def renderable_factory(cquiz):
                 summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
                 pimg = phash[idx].vproblem.image
                 if pimg:
-                    img = '<br><img src="/static/{}" style="width:35%"/><br><br>'.format(pimg)
+                    img = imgtmpl.format(pimg)
                 else:
                     img = ''
                 prob_chunks += prob_capsule.format(idx, img, problem, summary)
@@ -213,7 +214,7 @@ def renderable_factory(cquiz):
         inpstr = '{{ '+'form.{}'.format(field_name)+' }}'
         pimg = problem.vproblem.image
         if pimg:
-            img = '<br><img src="/static/{}" style="width:35%"/><br><br>'.format(pimg)
+            img = imgtmpl.format(pimg)
         else:
             img = ''
         ttlst += prob_capsule.format(ordinal, img, problem.conc_prob, inpstr)
