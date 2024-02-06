@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in vplst %}
-    <b>VProblem: ( id={{item.id}} )</b> {{item.raw_prob}} ( <b>ans</b> = {{item.raw_ansr}} )
+    <b>VProblem: ( id={{item.id}} )</b> {{item.raw_prob}} ( <b>ans</b> = {{item.raw_ansr}} ) {% if item.image %} (<b>img</b> = {{item.image}}) {% endif %}
     <br><br>
 {% endfor %}
 {% endblock %}
