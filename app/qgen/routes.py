@@ -38,7 +38,7 @@ block_header = """
 """
 
 prob_capsule = """
-    {}. {}<br>{}<br><br>
+    {}. {} {}<br>{}<br><br>
 """
 
 fieldname_base = 'Number{}'
@@ -100,8 +100,8 @@ class V2CProb:
 
 # lst is some posted data - may be jsonified already
 # lst is reap ptyhon list
-def create_vquiz(lst, title):
-    nuquiz = VQuiz(title=title, vpid_lst=dumps(lst), author_id=current_user.id)
+def create_vquiz(lst, title, img):
+    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
     probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
     nuquiz.vproblems.extend(probs)
@@ -117,7 +117,8 @@ def mkvquiz():
         lstr = form.vplist.data
         numlist = [int(a) for a in findall('(\d+)', lstr)]
         title = form.title.data
-        nq = create_vquiz(numlist, title)
+        image = form.image.data
+        nq = create_vquiz(numlist, title, image)
         flash('Created vquiz: ({}) {}'.format(nq.id, title))
         return redirect(url_for('qgen.mkvquiz'))
     return render_template('vqadd.html', title='Create VQuiz', form=form)
@@ -128,7 +129,7 @@ def mkvquiz():
 def mkvprob():
     form = VProbAdd()
     if form.validate_on_submit():
-        nuprob = VProblem(raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id)
+        nuprob = VProblem(image=form.image.data, raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id)
         nuprob.save()
         flash('Created vproblem: ({}) {}'.format(nuprob.id, nuprob.raw_prob))
         return redirect(url_for('qgen.mkvprob'))
@@ -194,7 +195,12 @@ def renderable_factory(cquiz):
                 except:
                     pass
                 summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
-                prob_chunks += prob_capsule.format(idx, problem, summary)
+                pimg = phash[idx].vproblem.image
+                if pimg:
+                    img = '<br><img src="/static/{}" style="width:35%"/><br><br>'.format(pimg)
+                else:
+                    img = ''
+                prob_chunks += prob_capsule.format(idx, img, problem, summary)
             prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
             #add to object
             self.score = 100*num_correct/self.count
@@ -205,7 +211,12 @@ def renderable_factory(cquiz):
         problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
         inpstr = '{{ '+'form.{}'.format(field_name)+' }}'
-        ttlst += prob_capsule.format(ordinal, problem.conc_prob, inpstr)
+        pimg = problem.vproblem.image
+        if pimg:
+            img = '<br><img src="/static/{}" style="width:35%"/><br><br>'.format(pimg)
+        else:
+            img = ''
+        ttlst += prob_capsule.format(ordinal, img, problem.conc_prob, inpstr)
         ftype = ftypes[problem.vproblem.form_elem]
         setattr(OTF, field_name, ftype(field_name)) 
         setattr(OTF, field_name+'_ansr', problem.conc_ansr) 
