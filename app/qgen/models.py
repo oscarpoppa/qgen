@@ -17,8 +17,8 @@ class DateMixin:
 
 # for many-to-many between vprobs and vquizzes
 vproblem_vquiz = db.Table('vproblem_vquiz',
-    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id')),
-    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id')))
+    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
+    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')))
     
 
 class VProblem(db.Model, SaveMixin, DateMixin):
@@ -56,7 +56,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
 class CProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cproblem'
     id = db.Column(db.Integer, primary_key=True)
-    cquiz_id = db.Column(db.Integer, db.ForeignKey('cquiz.id'))
+    cquiz_id = db.Column(db.Integer, db.ForeignKey('cquiz.id', ondelete='CASCADE'))
     conc_prob = db.Column(db.String(256))
     conc_ansr = db.Column(db.String(128))
     vproblem_id = db.Column(db.Integer, db.ForeignKey('vproblem.id'))
