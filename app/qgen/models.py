@@ -1,5 +1,6 @@
 from app import db
 from app.models import User
+from datetime import datetime
 
 class SaveMixin:
     def save(self):
@@ -10,13 +11,17 @@ class SaveMixin:
             db.session.rollback()
             raise
 
+class DateMixin:
+    create_date = db.Column(db.DateTime, default=db.func.now())
+
+
 # for many-to-many between vprobs and vquizzes
 vproblem_vquiz = db.Table('vproblem_vquiz',
     db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id')),
     db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id')))
     
 
-class VProblem(db.Model, SaveMixin):
+class VProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
@@ -33,7 +38,7 @@ class VProblem(db.Model, SaveMixin):
         return '<Virtual Problem: {}>'.format(self.raw_prob)
 
 
-class VQuiz(db.Model, SaveMixin):
+class VQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vquiz'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
@@ -48,7 +53,7 @@ class VQuiz(db.Model, SaveMixin):
         return '<Virtual Quiz: {}>'.format(self.vpid_lst)
 
 
-class CProblem(db.Model, SaveMixin):
+class CProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cproblem'
     id = db.Column(db.Integer, primary_key=True)
     cquiz_id = db.Column(db.Integer, db.ForeignKey('cquiz.id'))
@@ -61,7 +66,7 @@ class CProblem(db.Model, SaveMixin):
         return '<Concrete Problem: {}>'.format(self.conc_prob)
 
 
-class CQuiz(db.Model, SaveMixin):
+class CQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cquiz'
     id = db.Column(db.Integer, primary_key=True)
     assignee = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -69,6 +74,8 @@ class CQuiz(db.Model, SaveMixin):
     transcript = db.Column(db.String(2048))
     completed = db.Column(db.Boolean, default=False)
     score = db.Column(db.Float)
+    startdate = db.Column(db.DateTime, nullable=True)
+    compdate = db.Column(db.DateTime, nullable=True)
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True)
     taker = db.relationship('User', backref='cquizzes', lazy=True)
