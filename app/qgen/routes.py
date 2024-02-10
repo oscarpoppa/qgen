@@ -251,8 +251,9 @@ def qtake(cidx):
         cq.score = form.score
         cq.save()
         return render_template_string(form.result_template, title=title)
-    cq.startdate = datetime.now()
-    cq.save()
+    if not cq.startdate:
+        cq.startdate = datetime.now()
+        cq.save()
     return render_template_string(templ, title=title, form=form)
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
