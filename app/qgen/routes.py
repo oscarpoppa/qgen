@@ -179,8 +179,9 @@ def renderable_factory(cquiz):
         submit = SubmitField('Submit')
         @property
         def result_template(self):
-            date_header = 'Started: {}<br>Completed: {}<br><br>'.format(cquiz.startdate, cquiz.compdate)
-            prob_chunks = [block_header, date_header]
+            date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate, cquiz.compdate)
+            head_chunks = [block_header, date_header]
+            prob_chunks = []
             num_correct = 0
             for idx in range(1, int(self.count)+1):
                 field_name = fieldname_base.format(idx)
@@ -201,10 +202,11 @@ def renderable_factory(cquiz):
                 else:
                     img = ''
                 prob_chunks += prob_capsule.format(idx, img, problem, summary)
-            prob_chunks += '<br>Score: {}%'.format(100*num_correct/self.count)
-            #add to object
             self.score = 100*num_correct/self.count
-            prob_section = ''.join(prob_chunks)
+            head_chunks += '<br><b>Score:</b> {}%<br><br>'.format(100*num_correct/self.count)
+            all_chunks = head_chunks + prob_chunks
+            #add to object
+            prob_section = ''.join(all_chunks)
             return block_top+prob_section+block_bottom
 
     for ordinal in skeys:
