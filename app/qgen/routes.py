@@ -12,6 +12,7 @@ from wtforms import SelectField, StringField, PasswordField, BooleanField, Submi
 from flask_login import current_user, login_user, login_required, logout_user
 from app.qgen.forms import VProbAdd, VQuizAdd
 from re import findall
+from datetime import datetime
 
 block_top = """
 {% extends "base.html" %}
@@ -34,7 +35,7 @@ block_bottom = """
 """
 
 block_header = """
-<b>{{ title }}</b><br><br>
+<b>{{ title }}<br><br></b>
 """
 
 prob_capsule = """
@@ -97,9 +98,6 @@ class V2CProb:
         nuconc.save()
         return nuconc
 
-
-# lst is some posted data - may be jsonified already
-# lst is reap ptyhon list
 def create_vquiz(lst, title, img):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
@@ -156,7 +154,7 @@ def assign():
         vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
         user = User.query.filter_by(id=int(form.user.data)).first()
         cq = create_cquiz(vquiz, user) 
-        flash('Created quiz: "{} ({})" for {}'.format(vquiz.title, cq.id, user.username))
+        flash('Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username))
         return redirect(url_for('qgen.assign'))
     return render_template('assign.html', title='Assign Quiz', form=form)
 
@@ -181,7 +179,8 @@ def renderable_factory(cquiz):
         submit = SubmitField('Submit')
         @property
         def result_template(self):
-            prob_chunks = [block_header]
+            date_header = 'Started: {}<br>Completed: {}<br><br>'.format(cquiz.startdate, cquiz.compdate)
+            prob_chunks = [block_header, date_header]
             num_correct = 0
             for idx in range(1, int(self.count)+1):
                 field_name = fieldname_base.format(idx)
@@ -243,11 +242,15 @@ def qtake(cidx):
     templ, cform = renderable_factory(cq)
     form = cform()
     if form.validate_on_submit():
+        cq.compdate = datetime.now()
+        cq.save()
         cq.transcript = form.result_template
         cq.completed = True
         cq.score = form.score
         cq.save()
         return render_template_string(form.result_template, title=title)
+    cq.startdate = datetime.now()
+    cq.save()
     return render_template_string(templ, title=title, form=form)
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
