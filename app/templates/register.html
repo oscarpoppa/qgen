@@ -5,28 +5,28 @@
     <form action="" method="post">
 	    {{ form.hidden_tag() }}
 	    <p>
-	            {{ form.username.label }}<br>
+	            <b>{{ form.username.label }}</b><br>
 		    {{ form.username(size=64) }}<br>
                     {% for error in form.username.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.email.label }}<br>
+	            <b>{{ form.email.label }}</b><br>
 		    {{ form.email(size=120) }}<br>
                     {% for error in form.email.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.password.label }}<br>
+	            <b>{{ form.password.label }}</b><br>
 		    {{ form.password(size=64) }}<br>
                     {% for error in form.password.errors %}
                     <span style="color: red">[{{ error }}]</span>
                     {% endfor %} 
             </p>
 	    <p>
-	            {{ form.retype_password.label }}<br>
+	            <b>{{ form.retype_password.label }}</b><br>
 		    {{ form.retype_password(size=64) }}<br>
                     {% for error in form.retype_password.errors %}
                     <span style="color: red">[{{ error }}]</span>
