@@ -267,6 +267,13 @@ def qtake(cidx):
         cq.save()
     return render_template_string(templ, title=title, form=form)
 
+@qgen_bp.route('/quiz/listuser', methods=['GET'])
+@login_required
+@admin_only
+def list_users():
+    ulst = User.query.all()
+    return render_template('ulist.html', ulst=ulst, title='User Info')
+
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
 @login_required
 @admin_only
