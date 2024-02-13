@@ -30,6 +30,8 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     example = db.Column(db.String(128))
     form_elem = db.Column(db.String(64))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(64))
+    calculator_ok = db.Column(db.Boolean, default=False)
 
     vquizzes = db.relationship('VQuiz', back_populates='vproblems', secondary=vproblem_vquiz, lazy=True)
     cproblems = db.relationship('CProblem', backref='vproblem', lazy=True)
