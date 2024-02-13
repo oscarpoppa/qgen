@@ -5,7 +5,9 @@
     <b>User: {{item.username}}</b> (id={{item.id}})
     <br><br>
     {% for cq in item.cquizzes %}
-        ({{cq.id}}) <b>{{cq.vquiz.title}}</b> {% if cq.startdate %}(started : {{cq.startdate}}){% endif %}
+        ({{cq.id}}) <b>{{cq.vquiz.title}}</b> 
+                                       (assigned : {{cq.create_date}})
+                                       {% if cq.startdate %}(started : {{cq.startdate}}){% endif %}
                                        {% if cq.startdate and not cq.compdate %}(in progress){% endif %} 
                                        {% if cq.completed %}(completed : {{cq.compdate}} with score : {{cq.score}}%){% endif %}
         <br>
