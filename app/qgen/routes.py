@@ -243,7 +243,7 @@ def renderable_factory(cquiz):
 @login_required
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404()
-    title = '{} ({}) ({})'.format(cq.vquiz.title, cidx, current_user.username)
+    title = '{} ({}) ({})'.format(cq.vquiz.title, cidx, cq.taker.username)
     if not cq.taker:
         flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
         return redirect(url_for('mypage'))
@@ -254,7 +254,7 @@ def qtake(cidx):
         return render_template_string(cq.transcript, title=title)
     templ, cform = renderable_factory(cq)
     form = cform()
-    if form.validate_on_submit():
+    if form.validate_on_submit() and not current_user.is_admin:
         cq.compdate = datetime.now()
         cq.save()
         cq.transcript = form.result_template
@@ -262,7 +262,7 @@ def qtake(cidx):
         cq.score = form.score
         cq.save()
         return render_template_string(form.result_template, title=title)
-    if not cq.startdate:
+    if not cq.startdate and not current_user.is_admin:
         cq.startdate = datetime.now()
         cq.save()
     return render_template_string(templ, title=title, form=form)
