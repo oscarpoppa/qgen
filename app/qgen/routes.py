@@ -274,6 +274,13 @@ def list_users():
     ulst = User.query.all()
     return render_template('ulist.html', ulst=ulst, title='User Info')
 
+@qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
+@login_required
+@admin_only
+def list_user(uid):
+    ulst = User.query.filter_by(id=uid).first_or_404()
+    return render_template('ulist.html', ulst=[ulst], title="{}'s Info".format(ulst.username))
+
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
 @login_required
 @admin_only
