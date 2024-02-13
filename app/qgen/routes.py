@@ -177,8 +177,9 @@ def renderable_factory(cquiz):
 
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
+
         @property
-        def result_template(self):
+        def result_template(self): # AKA transcript
             date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate, cquiz.compdate)
             head_chunks = [block_header, date_header]
             prob_chunks = []
@@ -202,12 +203,17 @@ def renderable_factory(cquiz):
                 else:
                     img = ''
                 prob_chunks += prob_capsule.format(idx, img, problem, summary)
+            pimg = cquiz.vquiz.image
+            if pimg:
+                img = imgtmpl.format(pimg)
+            else:
+                img = ''
             self.score = 100*num_correct/self.count
             head_chunks += '<br><b>Score:</b> {}%<br><br>'.format(100*num_correct/self.count)
             all_chunks = head_chunks + prob_chunks
             #add to object
             prob_section = ''.join(all_chunks)
-            return block_top+prob_section+block_bottom
+            return block_top+img+prob_section+block_bottom
 
     for ordinal in skeys:
         problem = phash[ordinal]
@@ -225,7 +231,12 @@ def renderable_factory(cquiz):
         setattr(OTF, field_name+'_prob', problem.conc_prob) 
     setattr(OTF, 'count', len(cquiz.cproblems))
     ttext = ''.join(ttlst)
-    templ = block_top+form_top+ttext+form_bottom+block_bottom
+    pimg = cquiz.vquiz.image
+    if pimg:
+        img = imgtmpl.format(pimg)
+    else:
+        img = ''
+    templ = block_top+img+form_top+ttext+form_bottom+block_bottom
     return templ, OTF
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
