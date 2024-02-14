@@ -254,7 +254,7 @@ def qtake(cidx):
         return render_template_string(cq.transcript, title=title)
     templ, cform = renderable_factory(cq)
     form = cform()
-    if (not current_user.is_admin) or (current_user.is_admin and current_user==cq.taker):
+    if current_user == cq.taker:
         if form.validate_on_submit():
             cq.compdate = datetime.now()
             cq.save()
