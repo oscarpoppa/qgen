@@ -37,7 +37,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     cproblems = db.relationship('CProblem', backref='vproblem', lazy=True)
 
     def __repr__(self):
-        return '<Virtual Problem: {}>'.format(self.raw_prob)
+        return '<Virtual Problem: {} : {}>'.format(self.title or 'Untitled', self.raw_prob)
 
 
 class VQuiz(db.Model, SaveMixin, DateMixin):
@@ -52,7 +52,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     cquizzes = db.relationship('CQuiz', backref='vquiz', lazy=True)
 
     def __repr__(self):
-        return '<Virtual Quiz: {}>'.format(self.vpid_lst)
+        return '<Virtual Quiz: {} : {}>'.format(self.title or 'Untitled', self.vpid_lst)
 
 
 class CProblem(db.Model, SaveMixin, DateMixin):
@@ -65,7 +65,7 @@ class CProblem(db.Model, SaveMixin, DateMixin):
     ordinal = db.Column(db.Integer)
 
     def __repr__(self):
-        return '<Concrete Problem: {}>'.format(self.conc_prob)
+        return '<Concrete Problem: {} : {}>'.format(self.vproblem.title or 'Untitled', self.conc_prob)
 
 
 class CQuiz(db.Model, SaveMixin, DateMixin):
@@ -83,6 +83,6 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     taker = db.relationship('User', backref='cquizzes', lazy=True)
 
     def __repr__(self):
-        return '<Concrete Quiz: {}>'.format(self.id)
+        return '<Concrete Quiz: {} : {}>'.format(self.taker.username, self.vquiz.title or 'Untitled')
 
 
