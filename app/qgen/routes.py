@@ -46,7 +46,7 @@ fieldname_base = 'Number{}'
 
 class V2CProb:
     funcs = {'randint':randint, 'ri':randint}
-    mainpatt = r'{{([^}]*)}}'
+    mainpatt = r'{{([^}{]*)}}'
 
     def __init__(self, vp, cq):
         self.vp = vp
@@ -243,7 +243,7 @@ def renderable_factory(cquiz):
 @login_required
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404()
-    title = '{} ({}) ({})'.format(cq.vquiz.title, cidx, cq.taker.username)
+    title = '{} ({})'.format(cq.vquiz.title, cq.taker.username)
     if not cq.taker:
         flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
         return redirect(url_for('mypage'))
