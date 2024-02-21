@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from app import db
 from app.qgen import qgen_bp
 from app.routes import admin_only
 from random import randint
@@ -11,8 +12,11 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
 from app.qgen.forms import VProbAdd, VQuizAdd
+from app.qgen.models import VProblem
 from re import findall
 from datetime import datetime
+from wtforms_sqlalchemy.orm import model_form
+
 
 block_top = """
 {% extends "base.html" %}
@@ -316,4 +320,26 @@ def list_vprobs():
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404()
     return render_template('vplist.html', vplst=[vplst], title='VProblem {} detail'.format(vpid))
+
+@qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def edvprob(vpid):
+    vpform = model_form(VProblem, base_class=FlaskForm, db_session=db)
+    setattr(vpform,'submit', SubmitField('Submit Changes'))
+    vpobj = VProblem.query.filter_by(id=vpid).first_or_404()
+    form = vpform(obj=vpobj)
+    if request.method == 'POST':
+        vpobj.image = form.image.data
+        vpobj.raw_prob = form.raw_prob.data
+        vpobj.raw_ansr = form.raw_ansr.data
+        vpobj.form_elem = form.form_elem.data
+        vpobj.title = form.title.data
+        vpobj.example = form.example.data
+        vpobj.calculator_ok = form.calculator_ok.data
+        vpobj.save()
+        flash('Updated vproblem: ({} "{}" ({})) {}'.format(vpobj.id, vpobj.title, 'calc OK' if vpobj.calculator_ok else 'no calc', vpobj.raw_prob))
+        return redirect(url_for('qgen.list_vprobs'))
+    return render_template('vped.html', title='Update VProblem', form=form)
+
 
