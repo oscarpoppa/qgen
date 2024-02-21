@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in vplst %}
-    <b>VProblem: ( id={{item.id}} "{{item.title}}" ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}))</b> {{item.raw_prob}} ( <b>ans</b> = {{item.raw_ansr}} ) {% if item.image %} (<b>img</b> = {{item.image}}) {% endif %} <a href={{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a> 
+    <b>VProblem: ( id={{item.id}} "{{item.title}}" ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}))</b><br> {{item.raw_prob}} <br>( <b>ans</b> = {{item.raw_ansr}} ) {% if item.image %} (<b>img</b> = {{item.image}}) {% endif %} <a href={{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a> 
     <br><br>
 {% endfor %}
 {% endblock %}
