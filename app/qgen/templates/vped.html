@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1><u>Update VProblem</u></h1>
+    <form action="" method="post">
+	    {{ form.hidden_tag() }}
+	    <p>
+	            <b>{{ form.raw_prob.label }}</b><br>
+		    {{ form.raw_prob(size=128) }}<br>
+                    {% for error in form.raw_prob.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.raw_ansr.label }}</b><br>
+		    {{ form.raw_ansr(size=64) }}<br>
+                    {% for error in form.raw_ansr.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.example.label }}</b><br>
+		    {{ form.example(size=64) }}<br>
+                    {% for error in form.example.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.form_elem.label }}</b><br>
+		    {{ form.form_elem(size=16) }}<br>
+                    {% for error in form.form_elem.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.image.label }}</b><br>
+		    {{ form.image(size=64) }}<br>
+                    {% for error in form.image.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.title.label }}</b><br>
+		    {{ form.title(size=64) }}<br>
+                    {% for error in form.title.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.calculator_ok.label }}</b><br>
+		    {{ form.calculator_ok(size=64) }}<br>
+                    {% for error in form.calculator_ok.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>     {{ form.submit() }} </p>
+	    <p>     <a href={{ url_for('qgen.list_vprobs') }}>Cancel</a> </p>
+    </form>
+{% endblock %}
