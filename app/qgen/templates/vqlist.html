@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in vqlst %}
-    <b>VQuiz: ( id={{item.id}} ) {{item.title}}</b> {{item.vpid_lst}} {% if item.image %} (img = {{item.image}}) {% endif %}
+    (id={{item.id}}) <b>{{item.title}}</b> {{item.vpid_lst}} {% if item.image %} (img = {{item.image}}) {% endif %}
     <br>
     {% for prob in item.vproblems %}
         ( {{prob.id}} ) {{prob.raw_prob}} [{{prob.title}}] {% if prob.image %} (img = {{prob.image}}) {% endif %}
