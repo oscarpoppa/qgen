@@ -12,7 +12,6 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
 from app.qgen.forms import VProbAdd, VQuizAdd
-from app.qgen.models import VProblem
 from re import findall
 from datetime import datetime
 from wtforms_sqlalchemy.orm import model_form
@@ -326,7 +325,6 @@ def list_vprob(vpid):
 @admin_only
 def edvprob(vpid):
     vpform = model_form(VProblem, base_class=FlaskForm, db_session=db)
-    setattr(vpform,'submit', SubmitField('Submit Changes'))
     vpobj = VProblem.query.filter_by(id=vpid).first_or_404()
     form = vpform(obj=vpobj)
     if request.method == 'POST':
@@ -338,7 +336,7 @@ def edvprob(vpid):
         vpobj.example = form.example.data
         vpobj.calculator_ok = form.calculator_ok.data
         vpobj.save()
-        flash('Updated vproblem: ({} "{}" ({})) {}'.format(vpobj.id, vpobj.title, 'calc OK' if vpobj.calculator_ok else 'no calc', vpobj.raw_prob))
+        flash('Updated vproblem: ({} "{}") {}'.format(vpobj.id, vpobj.title, vpobj.raw_prob))
         return redirect(url_for('qgen.list_vprobs'))
     return render_template('vped.html', title='Update VProblem', form=form)
 
