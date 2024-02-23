@@ -1,6 +1,6 @@
 from app import app
 from app.models import User
-from app.forms import RegistrationForm, LoginForm, UploadForm
+from app.forms import RegistrationForm, LoginForm, UploadForm, ChPassForm
 from flask import flash, render_template, redirect, url_for, request
 from flask_login import current_user, login_user, login_required, logout_user
 from werkzeug.utils import secure_filename
@@ -83,4 +83,18 @@ def register():
         return redirect(url_for('login'))
     else:
         return render_template('register.html', title='Register Now!', form=form)
+
+
+@app.route('/chpass', methods=['POST','GET'])
+@login_required
+def chpass():
+    form = ChPassForm()
+    user = current_user
+    if form.validate_on_submit():
+        if user.check_password(form.old_password.data):
+            user.set_password(form.password.data)
+            user.save()
+            flash('Password changed')
+        return redirect(url_for('mypage'))
+    return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
