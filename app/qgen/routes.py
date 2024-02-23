@@ -361,3 +361,14 @@ def edvquiz(vqid):
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
 
+
+@qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
+@login_required
+@admin_only
+def del_cquiz(cqid):
+    CQuiz.query.filter_by(id=cqid).first_or_404()
+    CQuiz.query.filter_by(id=cqid).delete()
+    db.session.commit()
+    flash('Deleted cquiz: {}'.format(cqid))
+    return redirect(url_for('qgen.list_users'))
+

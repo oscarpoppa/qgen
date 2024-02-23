@@ -10,6 +10,7 @@
                                        {% if cq.startdate %}(started : {{cq.startdate}}){% endif %}
                                        {% if cq.startdate and not cq.compdate %}(in progress){% endif %} 
                                        {% if cq.completed %}(completed : {{cq.compdate}} with score : {{cq.score}}%){% endif %}
+                        <a href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Are you sure?');">Delete</a>
         <br>
     {% endfor %}
     <br><br>
