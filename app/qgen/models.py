@@ -71,7 +71,7 @@ class CProblem(db.Model, SaveMixin, DateMixin):
 class CQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cquiz'
     id = db.Column(db.Integer, primary_key=True)
-    assignee = db.Column(db.Integer, db.ForeignKey('user.id'))
+    assignee = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
     transcript = db.Column(db.String(2048))
     completed = db.Column(db.Boolean, default=False)
