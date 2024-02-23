@@ -4,6 +4,13 @@ from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from app.models import User
 
 
+class ChPassForm(FlaskForm):
+    old_password = PasswordField('Old Password', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[DataRequired()])
+    retype_password = PasswordField('Re-type New Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
+    submit = SubmitField('Submit')
+
+
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email(message='Bad email address')])
