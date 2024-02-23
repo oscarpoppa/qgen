@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1><u>Update VQuiz</u></h1>
+    <form action="" method="post">
+	    {{ form.hidden_tag() }}
+	    <p>
+	            <b>{{ form.vpid_lst.label }}</b><br>
+		    {{ form.vpid_lst(size=64) }}<br>
+                    {% for error in form.vpid_lst.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.title.label }}</b><br>
+		    {{ form.title(size=64) }}<br>
+                    {% for error in form.title.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+	    <p>
+	            <b>{{ form.image.label }}</b><br>
+		    {{ form.image(size=64) }}<br>
+                    {% for error in form.image.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+            <p>     <input id="submit" name="submit" type="submit" value="Submit"></p>
+	    <p>     <a href={{ url_for('qgen.list_vquizzes') }}>Cancel</a> </p>
+    </form>
+{% endblock %}
