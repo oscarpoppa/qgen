@@ -91,10 +91,12 @@ def chpass():
     form = ChPassForm()
     user = current_user
     if form.validate_on_submit():
-        if user.check_password(form.old_password.data):
-            user.set_password(form.password.data)
-            user.save()
-            flash('Password changed')
+        if not user.check_password(form.old_password.data):
+            flash('Old Password Error')
+            return redirect(url_for('chpass'))
+        user.set_password(form.password.data)
+        user.save()
+        flash('Password changed')
         return redirect(url_for('mypage'))
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
