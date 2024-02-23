@@ -341,3 +341,22 @@ def edvprob(vpid):
     return render_template('vped.html', title='Update VProblem', form=form)
 
 
+@qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def edvquiz(vqid):
+    vqform = model_form(VQuiz, base_class=FlaskForm, db_session=db)
+    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404()
+    form = vqform(obj=vqobj)
+    if request.method == 'POST':
+        vqobj.image = form.image.data
+        vqobj.vpid_lst = form.vpid_lst.data
+        vqobj.title = form.title.data
+        numlist = [int(a) for a in findall('(\d+)', vqobj.vpid_lst)]
+        plist = VProblem.query.filter(VProblem.id.in_(numlist)).all()
+        vqobj.vproblems = plist
+        vqobj.save()
+        flash('Updated vquiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
+        return redirect(url_for('qgen.list_vquizzes'))
+    return render_template('vqed.html', title='Update VQuiz', form=form)
+
