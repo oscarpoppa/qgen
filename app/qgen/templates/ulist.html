@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in ulst %}
-    <b>User: {{item.username}}</b> (id={{item.id}})
+    <b>User: {{item.username}}</b> (id={{item.id}}) <a href="{{ url_for('qgen.del_user', uid=item.id) }}" onclick="return confirm('Are you sure?');">Delete</a>
     <br><br>
     {% for cq in item.cquizzes %}
         ({{cq.id}}) <b><a href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{cq.vquiz.title}}</a></b> 

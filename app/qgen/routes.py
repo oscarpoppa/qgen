@@ -366,9 +366,24 @@ def edvquiz(vqid):
 @login_required
 @admin_only
 def del_cquiz(cqid):
-    CQuiz.query.filter_by(id=cqid).first_or_404()
+    cq = CQuiz.query.filter_by(id=cqid).first_or_404()
     CQuiz.query.filter_by(id=cqid).delete()
     db.session.commit()
     flash('Deleted cquiz: {}'.format(cqid))
+    return redirect(url_for('qgen.list_users'))
+
+
+@qgen_bp.route('/quiz/deluser/<uid>', methods=['GET'])
+@login_required
+@admin_only
+def del_user(uid):
+    usr = User.query.filter_by(id=uid).first_or_404()
+    usrname = usr.username
+    if current_user == usr:
+        flash("I can't let you do that, {}".format(current_user.username))
+        return redirect(url_for('qgen.list_users'))
+    User.query.filter_by(id=uid).delete()
+    db.session.commit()
+    flash('Deleted user: {}'.format(usrname))
     return redirect(url_for('qgen.list_users'))
 
