@@ -104,7 +104,7 @@ class V2CProb:
 def create_vquiz(lst, title, img):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
-    probs = [VProblem.query.filter_by(id=a).first_or_404() for a in lst]
+    probs = [VProblem.query.filter_by(id=a).first_or_404() for a in set(lst)]
     nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
@@ -353,7 +353,7 @@ def edvquiz(vqid):
         vqobj.title = form.title.data
         numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
         #this way to check for 404
-        plist = [VProblem.query.filter_by(id=a).first_or_404() for a in numlist]
+        plist = [VProblem.query.filter_by(id=a).first_or_404() for a in set(numlist)]
         vqobj.vpid_lst = dumps(numlist)
         vqobj.vproblems = plist
         vqobj.save()
