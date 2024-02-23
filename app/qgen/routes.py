@@ -104,7 +104,7 @@ class V2CProb:
 def create_vquiz(lst, title, img):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
-    probs = VProblem.query.filter(VProblem.id.in_(lst)).all()
+    probs = [VProblem.query.filter_by(id=a).first_or_404() for a in lst]
     nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
@@ -350,10 +350,11 @@ def edvquiz(vqid):
     form = vqform(obj=vqobj)
     if request.method == 'POST':
         vqobj.image = form.image.data
-        vqobj.vpid_lst = form.vpid_lst.data
         vqobj.title = form.title.data
-        numlist = [int(a) for a in findall('(\d+)', vqobj.vpid_lst)]
-        plist = VProblem.query.filter(VProblem.id.in_(numlist)).all()
+        numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
+        #this way to check for 404
+        plist = [VProblem.query.filter_by(id=a).first_or_404() for a in numlist]
+        vqobj.vpid_lst = dumps(numlist)
         vqobj.vproblems = plist
         vqobj.save()
         flash('Updated vquiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
