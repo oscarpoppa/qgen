@@ -104,7 +104,7 @@ class V2CProb:
 def create_vquiz(lst, title, img):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
     nuquiz.save()
-    probs = [VProblem.query.filter_by(id=a).first_or_404() for a in set(lst)]
+    probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(lst)]
     nuquiz.vproblems.extend(probs)
     nuquiz.save()
     return nuquiz
@@ -245,7 +245,7 @@ def renderable_factory(cquiz):
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 def qtake(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404()
+    cq = CQuiz.query.filter_by(id=cidx).first_or_404('No cquiz with id {}'.format(cidx))
     title = '{} ({})'.format(cq.vquiz.title, cq.taker.username)
     if not cq.taker:
         flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
@@ -282,7 +282,7 @@ def list_users():
 @login_required
 @admin_only
 def list_user(uid):
-    ulst = User.query.filter_by(id=uid).first_or_404()
+    ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     return render_template('ulist.html', ulst=[ulst], title="{}'s Info".format(ulst.username))
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
@@ -296,14 +296,14 @@ def list_vquizzes():
 @login_required
 @admin_only
 def list_vquiz(vqid):
-    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404()
+    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No vquiz with id {}'.format(vqid))
     return render_template('vqlist.html', vqlst=[vqlst], title='VQuiz {} detail'.format(vqid))
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required
 @admin_only
 def list_cquiz(cqid):
-    cqlst = CQuiz.query.filter_by(id=cqid).first_or_404()
+    cqlst = CQuiz.query.filter_by(id=cqid).first_or_404('No cquiz with id {}'.format(cqid))
     return render_template('cqlist.html', cqlst=[cqlst], title='CQuiz {} detail'.format(cqid))
 
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
@@ -317,7 +317,7 @@ def list_vprobs():
 @login_required
 @admin_only
 def list_vprob(vpid):
-    vplst = VProblem.query.filter_by(id=vpid).first_or_404()
+    vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
     return render_template('vplist.html', vplst=[vplst], title='VProblem {} detail'.format(vpid))
 
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
@@ -325,7 +325,7 @@ def list_vprob(vpid):
 @admin_only
 def edvprob(vpid):
     vpform = model_form(VProblem, base_class=FlaskForm, db_session=db)
-    vpobj = VProblem.query.filter_by(id=vpid).first_or_404()
+    vpobj = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
     form = vpform(obj=vpobj)
     if request.method == 'POST':
         vpobj.image = form.image.data
@@ -346,14 +346,14 @@ def edvprob(vpid):
 @admin_only
 def edvquiz(vqid):
     vqform = model_form(VQuiz, base_class=FlaskForm, db_session=db)
-    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404()
+    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404('No vquiz with id {}'.format(vqid))
     form = vqform(obj=vqobj)
     if request.method == 'POST':
         vqobj.image = form.image.data
         vqobj.title = form.title.data
         numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
         #this way to check for 404
-        plist = [VProblem.query.filter_by(id=a).first_or_404() for a in set(numlist)]
+        plist = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(numlist)]
         vqobj.vpid_lst = dumps(numlist)
         vqobj.vproblems = plist
         vqobj.save()
@@ -367,7 +367,7 @@ def edvquiz(vqid):
 @admin_only
 def del_cquiz(cqid):
     cqquery = CQuiz.query.filter_by(id=cqid)
-    cq = cqquery.first_or_404()
+    cq = cqquery.first_or_404('No cquiz with id {}'.format(cqid))
     title = cq.vquiz.title
     owner = cq.taker.username
     cqquery.delete()
@@ -381,7 +381,7 @@ def del_cquiz(cqid):
 @admin_only
 def del_user(uid):
     usrquery = User.query.filter_by(id=uid)
-    usr = usrquery.first_or_404()
+    usr = usrquery.first_or_404('No user with id {}'.format(uid))
     usrname = usr.username
     if current_user == usr:
         flash("I can't let you do that, {}".format(current_user.username))
