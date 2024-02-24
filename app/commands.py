@@ -9,8 +9,10 @@ def dbdump():
     pass
 
 @dbdump.command()
-def archive():
-    fname = 'db-dump-{}.sql'.format(datetime.now().strftime('%B_%d_%Y_%s'))
+@click.option('-d', '--directory', default=None, help='Directory to put archive')
+def archive(directory):
+    directory = directory + '/' if directory else ''
+    fname = '{}db-dump-{}.sql'.format(directory, datetime.now().strftime('%B_%d_%Y_%s'))
     tables = [a for a in db.metadata.tables.keys()]
     comstr = 'mysqldump -u root -p quiz {} alembic_version > {}'.format(' '.join(tables), fname)
     if system(comstr):
