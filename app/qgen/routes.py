@@ -375,19 +375,3 @@ def del_cquiz(cqid):
     flash("Deleted {}'s cquiz:({}) '{}'".format(owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
-
-@qgen_bp.route('/quiz/deluser/<uid>', methods=['GET'])
-@login_required
-@admin_only
-def del_user(uid):
-    usrquery = User.query.filter_by(id=uid)
-    usr = usrquery.first_or_404('No user with id {}'.format(uid))
-    usrname = usr.username
-    if current_user == usr:
-        flash("I can't let you do that, {}".format(current_user.username))
-        return redirect(url_for('qgen.list_users'))
-    usrquery.delete()
-    db.session.commit()
-    flash('Deleted user: {}'.format(usrname))
-    return redirect(url_for('qgen.list_users'))
-
