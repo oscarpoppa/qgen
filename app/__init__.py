@@ -15,6 +15,9 @@ login.login_view = 'login'
 from app.error import error_bp
 from app.apiv1 import api_bp
 from app.qgen import qgen_bp
+from app.commands import dbdump as dbdump_cli_group
+
+app.cli.add_command(dbdump_cli_group, name='dbdump')
 
 app.register_blueprint(error_bp)
 app.register_blueprint(api_bp)
