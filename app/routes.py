@@ -1,4 +1,4 @@
-from app import app
+from app import app, db
 from app.models import User
 from app.forms import RegistrationForm, LoginForm, UploadForm, ChPassForm
 from flask import flash, render_template, redirect, url_for, request
@@ -99,4 +99,20 @@ def chpass():
         flash('Password changed')
         return redirect(url_for('mypage'))
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
+
+
+@app.route('/deluser/<uid>', methods=['GET'])
+@login_required
+@admin_only
+def del_user(uid):
+    usrquery = User.query.filter_by(id=uid)
+    usr = usrquery.first_or_404('No user with id {}'.format(uid))
+    usrname = usr.username
+    if current_user == usr:
+        flash("I can't let you do that, {}".format(current_user.username))
+        return redirect(url_for('mypage'))
+    usrquery.delete()
+    db.session.commit()
+    flash('Deleted user: {}'.format(usrname))
+    return redirect(url_for('mypage'))
 
