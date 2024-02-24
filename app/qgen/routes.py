@@ -72,7 +72,7 @@ class V2CProb:
             iargs = [int(z) for z in args]
             self.symbols[pdict['symbol']] = func(*iargs)
             return str(self.symbols[pdict['symbol']])
-        return chunk(0)
+        return chunk.group(0)
     
     def upt_ansr(self, chunk):
         patt = r'(?P<symbol>\w+)'
