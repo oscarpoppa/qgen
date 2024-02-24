@@ -1,3 +1,4 @@
+from app import db
 import click
 from os import system
 from datetime import datetime
@@ -9,12 +10,11 @@ def dbdump():
 
 @dbdump.command()
 def archive():
-    pass
     fname = 'db-dump-{}.sql'.format(datetime.now().strftime('%B_%d_%Y_%s'))
-    comstr = 'mysqldump -u root -p quiz vproblem vquiz vproblem_vquiz user cproblem cquiz alembic_version > {}'.format(fname)
-    try:
-        system(comstr)
+    tables = [a for a in db.metadata.tables.keys()]
+    comstr = 'mysqldump -u root -p quiz {} alembic_version > {}'.format(' '.join(tables), fname)
+    if system(comstr):
+        print('Failed to dump database')
+    else:
         print('Created file {}'.format(fname))
-    except Exception as e:
-        print('Failed to dump database: {}'.format(e))
         
