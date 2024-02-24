@@ -3,7 +3,7 @@ from app import db
 from app.qgen import qgen_bp
 from app.routes import admin_only
 from random import randint
-from re import sub, search, split
+from re import sub, search, split, findall
 from app.models import User
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
 from json import dumps, loads
@@ -12,7 +12,6 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
 from app.qgen.forms import VProbAdd, VQuizAdd
-from re import findall
 from datetime import datetime
 from wtforms_sqlalchemy.orm import model_form
 
