@@ -20,6 +20,40 @@ vproblem_vquiz = db.Table('vproblem_vquiz',
     db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
     db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')))
     
+# for many-to-many between vprobs and vpgroups
+vproblem_vpgroup = db.Table('vproblem_vpgroup',
+    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
+    db.Column('vpgroup_id', db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE')))
+
+# for many-to-many between vquizzes and vqgroups
+vquiz_vqgroup = db.Table('vquiz_vqgroup',
+    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')),
+    db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE')))
+
+
+class VPGroup(db.Model, SaveMixin, DateMixin):
+    __tablename__ = 'vpgroup'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64))
+    summary = db.Column(db.String(256))
+
+    vproblems = db.relationship('VProblem', back_populates='vpgroups', secondary=vproblem_vpgroup, lazy=True)
+
+    def __repr__(self):
+        return '<VProblem Group: {}>'.format(self.title)
+
+
+class VQGroup(db.Model, SaveMixin, DateMixin):
+    __tablename__ = 'vqgroup'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64))
+    summary = db.Column(db.String(256))
+
+    vquizzes = db.relationship('VQuiz', back_populates='vqgroups', secondary=vquiz_vqgroup, lazy=True)
+
+    def __repr__(self):
+        return '<VQuiz Group: {}>'.format(self.title)
+
 
 class VProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vproblem'
@@ -33,6 +67,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
 
+    vpgroups = db.relationship('VPGroup', back_populates='vproblems', secondary=vproblem_vpgroup, lazy=True)
     vquizzes = db.relationship('VQuiz', back_populates='vproblems', secondary=vproblem_vquiz, lazy=True)
     cproblems = db.relationship('CProblem', backref='vproblem', lazy=True)
 
@@ -48,6 +83,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     title = db.Column(db.String(64))
 
+    vqgroups = db.relationship('VQGroup', back_populates='vquizzes', secondary=vquiz_vqgroup, lazy=True)
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)
     cquizzes = db.relationship('CQuiz', backref='vquiz', lazy=True)
 
