@@ -5,7 +5,7 @@ from app.routes import admin_only
 from random import randint
 from re import sub, search, split, findall
 from app.models import User
-from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem
+from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from json import dumps, loads
 from flask import flash, render_template, render_template_string, redirect, url_for, request
 from flask_wtf import FlaskForm
@@ -105,6 +105,7 @@ def create_vquiz(lst, title, img):
     nuquiz.save()
     probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(lst)]
     nuquiz.vproblems.extend(probs)
+    nuquiz.vqgroups.append(VQGroup.query.filter_by(title='Archive').first())
     nuquiz.save()
     return nuquiz
 
@@ -130,6 +131,7 @@ def mkvprob():
     form = VProbAdd()
     if form.validate_on_submit():
         nuprob = VProblem(image=form.image.data, raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id, title=form.title.data, calculator_ok=form.calculator_ok.data)
+        nuprob.vpgroups.append(VPGroup.query.filter_by(title='Archive').first())
         nuprob.save()
         flash('Created vproblem: ({} "{}" ({})) {}'.format(nuprob.id, nuprob.title, 'calc OK' if nuprob.calculator_ok else 'no calc', nuprob.raw_prob))
         return redirect(url_for('qgen.mkvprob'))
