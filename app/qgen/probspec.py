@@ -74,9 +74,3 @@ def process_spec(prob, ansr):
         ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     return prob, ansr
 
-def gen_cprob(cquiz, vprob, ordinal):
-    cp, ca = process_spec(vprob.raw_prob, vprob.raw_ansr)
-    nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
-    nucprob.save()
-    return nucprob
-
