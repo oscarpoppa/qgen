@@ -16,7 +16,6 @@ from app.qgen.forms import VProbAdd, VQuizAdd
 from datetime import datetime
 from wtforms_sqlalchemy.orm import model_form
 
-
 block_top = """
 {% extends "base.html" %}
 
@@ -47,7 +46,6 @@ prob_capsule = """
 
 fieldname_base = 'Number{}'
 
-
 def gen_cprob(cquiz, vprob, ordinal):
     cp, ca = process_spec(vprob.raw_prob, vprob.raw_ansr)
     nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
@@ -62,59 +60,6 @@ def create_vquiz(lst, title, img):
     nuquiz.vqgroups.append(VQGroup.query.filter_by(title='Archive').first())
     nuquiz.save()
     return nuquiz
-
-@qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
-@login_required
-@admin_only
-def mkvquiz():
-    form = VQuizAdd()
-    if form.validate_on_submit():
-        lstr = form.vplist.data
-        numlist = [int(a) for a in findall('(\d+)', lstr)]
-        title = form.title.data
-        image = form.image.data
-        nq = create_vquiz(numlist, title, image)
-        flash('Created vquiz: ({}) {}'.format(nq.id, title))
-        return redirect(url_for('qgen.mkvquiz'))
-    return render_template('vqadd.html', title='Create VQuiz', form=form)
-
-@qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
-@login_required
-@admin_only
-def mkvprob():
-    form = VProbAdd()
-    if form.validate_on_submit():
-        nuprob = VProblem(image=form.image.data, raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id, title=form.title.data, calculator_ok=form.calculator_ok.data)
-        nuprob.vpgroups.append(VPGroup.query.filter_by(title='Archive').first())
-        nuprob.save()
-        flash('Created vproblem: ({} "{}" ({})) {}'.format(nuprob.id, nuprob.title, 'calc OK' if nuprob.calculator_ok else 'no calc', nuprob.raw_prob))
-        return redirect(url_for('qgen.mkvprob'))
-    return render_template('vpadd.html', title='Create VProblem', form=form)
-
-def assign_form_factory():
-
-    class A(FlaskForm):
-        submit = SubmitField('Submit')
-
-    users = User.query.all()
-    vquizzes = VQuiz.query.all()
-    setattr(A,'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in users]))
-    setattr(A,'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in vquizzes]))
-    return A
-
-@qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
-@login_required
-@admin_only
-def assign():
-    fcls = assign_form_factory()
-    form = fcls()
-    if form.validate_on_submit():
-        vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
-        user = User.query.filter_by(id=int(form.user.data)).first()
-        cq = create_cquiz(vquiz, user) 
-        flash('Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username))
-        return redirect(url_for('qgen.assign'))
-    return render_template('assign.html', title='Assign Quiz', form=form)
 
 def create_cquiz(vquiz, assignee):
     nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
@@ -132,10 +77,8 @@ def renderable_factory(cquiz):
     phash = {p.ordinal:p for p in cquiz.cproblems}
     skeys = sorted(phash.keys())
     imgtmpl = '<br><img src="/static/{}" style="width:35%"/><br><br>'
-
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
-
         @property
         def result_template(self): # AKA transcript
             date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate, cquiz.compdate)
@@ -172,7 +115,6 @@ def renderable_factory(cquiz):
             #add to object
             prob_section = ''.join(all_chunks)
             return block_top+img+prob_section+block_bottom
-
     for ordinal in skeys:
         problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
@@ -196,6 +138,57 @@ def renderable_factory(cquiz):
         img = ''
     templ = block_top+img+form_top+ttext+form_bottom+block_bottom
     return templ, OTF
+
+def assign_form_factory():
+    class A(FlaskForm):
+        submit = SubmitField('Submit')
+    users = User.query.all()
+    vquizzes = VQuiz.query.all()
+    setattr(A,'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in users]))
+    setattr(A,'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in vquizzes]))
+    return A
+
+@qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def mkvquiz():
+    form = VQuizAdd()
+    if form.validate_on_submit():
+        lstr = form.vplist.data
+        numlist = [int(a) for a in findall('(\d+)', lstr)]
+        title = form.title.data
+        image = form.image.data
+        nq = create_vquiz(numlist, title, image)
+        flash('Created vquiz: ({}) {}'.format(nq.id, title))
+        return redirect(url_for('qgen.mkvquiz'))
+    return render_template('vqadd.html', title='Create VQuiz', form=form)
+
+@qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def mkvprob():
+    form = VProbAdd()
+    if form.validate_on_submit():
+        nuprob = VProblem(image=form.image.data, raw_prob=form.rawprob.data, raw_ansr=form.rawansr.data, example=form.example.data, form_elem=form.formelem.data, author_id=current_user.id, title=form.title.data, calculator_ok=form.calculator_ok.data)
+        nuprob.vpgroups.append(VPGroup.query.filter_by(title='Archive').first())
+        nuprob.save()
+        flash('Created vproblem: ({} "{}" ({})) {}'.format(nuprob.id, nuprob.title, 'calc OK' if nuprob.calculator_ok else 'no calc', nuprob.raw_prob))
+        return redirect(url_for('qgen.mkvprob'))
+    return render_template('vpadd.html', title='Create VProblem', form=form)
+
+@qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
+@login_required
+@admin_only
+def assign():
+    fcls = assign_form_factory()
+    form = fcls()
+    if form.validate_on_submit():
+        vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
+        user = User.query.filter_by(id=int(form.user.data)).first()
+        cq = create_cquiz(vquiz, user) 
+        flash('Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username))
+        return redirect(url_for('qgen.assign'))
+    return render_template('assign.html', title='Assign Quiz', form=form)
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
@@ -295,7 +288,6 @@ def edvprob(vpid):
         return redirect(url_for('qgen.list_vprobs'))
     return render_template('vped.html', title='Update VProblem', form=form)
 
-
 @qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
 @login_required
 @admin_only
@@ -315,7 +307,6 @@ def edvquiz(vqid):
         flash('Updated vquiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
-
 
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
 @login_required
