@@ -39,7 +39,3 @@ class UploadForm(FlaskForm):
     thefile = FileField('Select File', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
-
-class GameForm(FlaskForm):
-    name = StringField('Game Name', validators=[DataRequired()])
-
