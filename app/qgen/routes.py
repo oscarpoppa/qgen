@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from app import db
 from app.qgen import qgen_bp
+from app.qgen.probspec import process_spec
 from app.routes import admin_only
 from random import randint
 from re import sub, search, split, findall
@@ -46,59 +47,12 @@ prob_capsule = """
 
 fieldname_base = 'Number{}'
 
-class V2CProb:
-    funcs = {'randint':randint, 'ri':randint}
-    mainpatt = r'{{([^}{]*)}}'
 
-    def __init__(self, vp, cq):
-        self.vp = vp
-        self.cq = cq 
-        self.raw_text = vp.raw_prob
-        self.conc_text = ''
-        self.raw_ansr = vp.raw_ansr
-        self.conc_ansr = ''
-        self.symbols = {}
-    
-    def extract_symbol(self, chunk):
-        patt = r'(?P<symbol>\w+)\s*:\s*(?P<func>\w+)\((?P<args>.+)\)'
-        mo = search(patt, chunk.group(0))
-        if not mo:
-            return chunk.group(0)
-        pdict = mo.groupdict()
-        args = split('\W+', pdict['args'])
-        if pdict['func'] in V2CProb.funcs:
-            func = V2CProb.funcs[pdict['func']]
-            iargs = [int(z) for z in args]
-            self.symbols[pdict['symbol']] = func(*iargs)
-            return str(self.symbols[pdict['symbol']])
-        return chunk.group(0)
-    
-    def upt_ansr(self, chunk):
-        patt = r'(?P<symbol>\w+)'
-        mo = search(patt, chunk.group(0))
-        if not mo:
-            return chunk.group(0)
-        if not mo.group('symbol') in self.symbols:
-            return chunk.group(0)
-        return str(self.symbols[mo.group('symbol')])
-    
-    def gen_conc_text(self):
-        self.conc_text = sub(V2CProb.mainpatt, self.extract_symbol, self.raw_text)
-        return self.conc_text
-    
-    def gen_conc_ansr(self):
-        # !! must be called after gen_conc_text
-        ans_upd = sub(V2CProb.mainpatt, self.upt_ansr, self.raw_ansr)
-        # not for prime time b4 this is locked down
-        self.conc_ansr = str(eval(ans_upd))
-        return self.conc_ansr
-
-    def gen_conc_to_db(self, ordinal):
-        ct = self.gen_conc_text() 
-        ca = self.gen_conc_ansr() 
-        nuconc = CProblem(ordinal=ordinal, cquiz_id=self.cq.id, conc_prob=ct, conc_ansr=ca, vproblem_id=self.vp.id)
-        nuconc.save()
-        return nuconc
+def gen_cprob(cquiz, vprob, ordinal):
+    cp, ca = process_spec(vprob.raw_prob, vprob.raw_ansr)
+    nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
+    nucprob.save()
+    return nucprob
 
 def create_vquiz(lst, title, img):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
@@ -167,7 +121,7 @@ def create_cquiz(vquiz, assignee):
     nuquiz.save()
     ordered_vids = loads(vquiz.vpid_lst)
     vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
-    probs = [V2CProb(vp, nuquiz).gen_conc_to_db(o) for o,vp in vprobs]
+    probs = [gen_cprob(nuquiz, vp, o) for o,vp in vprobs]
     nuquiz.cproblems.extend(probs)
     nuquiz.save()
     return nuquiz
