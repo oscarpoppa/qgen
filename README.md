@@ -2,8 +2,8 @@ A Lightwieight, Flask/MySQL/MathJax Numerical Quizzing App Proof-Of-Concept.
 
 Suitable for math-based classes in a small school setting.
 
-Allows the creation of quizzes with randomized numerical portions to present each taker with a structurally-identical
-quiz with slightly different numerical components, confounding cheating attempts.
+Allows the creation of quizzes with randomized numerical portions, to present each taker with a structurally-identical
+quiz with different numerical components, thus confounding cheating attempts.
 
 
 Example of two randomized quizzes:
