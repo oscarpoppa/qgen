@@ -4,7 +4,7 @@ from re import sub, search, findall, escape
 allowed_funcs = ('ri',)
 
 def ismath(string):
-    notmath_patt = r'[^\(\)\^\+\-\/\*\d\s]'
+    notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
     if len(bad_m):
         return False
