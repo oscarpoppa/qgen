@@ -1,4 +1,4 @@
-A Lightwieight, Flask/MySQL/MathJax Numerical Quizzing App Proof-Of-Concept.
+A Lightweight, Flask/MySQL/MathJax Numerical Quizzing App Proof-Of-Concept.
 
 Suitable for math-based classes in a small school setting.
 
