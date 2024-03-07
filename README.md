@@ -21,7 +21,7 @@ Upon completion of a quiz, a permanent transcript is created and displayed:
 
 A suite of administrative tools includes a full CRUD interface to users, assigned quizzes, and quiz and problem templates. (most not shown)
 
-![Screen Shot 2024-03-07 at 2 32 49 PM](https://github.com/oscarpoppa/qgen/assets/69337264/98b89418-cb1e-4c29-a3e9-ed2e7e5ebad5)
+![Screen Shot 2024-03-07 at 3 15 29 PM](https://github.com/oscarpoppa/qgen/assets/69337264/48c29595-4e79-44bc-a92a-312124982784)
 
 ![Screen Shot 2024-03-07 at 2 35 57 PM](https://github.com/oscarpoppa/qgen/assets/69337264/2a0e53fb-9818-4cb1-8fad-17007703e2a2)
 
