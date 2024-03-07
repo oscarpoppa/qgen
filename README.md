@@ -5,7 +5,7 @@ Suitable for math based classes in a small school setting.
 Uses a simple markup scheme to allow the creation of quiz problems with randomized numerical portions. Quizzes are assembled using these "virtual problems." Each quiz-taker can then be assigned a structurally identical quiz (same problem set) with different numerical components.
 
 
-Example of two randomized quizzes:
+Example of two "identical," yet randomized quizzes:
 
 ![Screen Shot 2024-03-05 at 9 33 45 AM](https://github.com/oscarpoppa/qgen/assets/69337264/b9af64b9-1805-44fe-b464-053c29f7d1c5)
 
