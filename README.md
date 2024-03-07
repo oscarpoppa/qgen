@@ -17,7 +17,7 @@ Quiz problems may be image-based:
 
 Upon completion, a transcript is created and displayed:
 
-![Screen Shot 2024-03-05 at 9 54 01 AM](https://github.com/oscarpoppa/qgen/assets/69337264/b072089a-df1b-4173-be5c-d0a1970b5951)
+![Screen Shot 2024-03-06 at 10 30 51 PM](https://github.com/oscarpoppa/qgen/assets/69337264/4a00329d-8ebd-4c2d-b6d5-fcd6562818b4)
 
 
 Offers a full suite of administrative tools and full CRUD interface to users, assigned quizzes, and quiz-problem templates.
