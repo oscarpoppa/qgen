@@ -1,5 +1,6 @@
 from random import randint as ri
 from re import sub, search, findall, escape
+from flask import flash, current_app
 
 allowed_funcs = ('ri',)
 
@@ -7,7 +8,7 @@ def ismath(string):
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
     if len(bad_m):
-        return False
+        raise ValueError('Potentially dangerous expression. Eval denied: {} : {}'.format(string, bad_m))
     return True
 
 def get_targets(prob, ansr):

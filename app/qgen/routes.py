@@ -9,7 +9,7 @@ from re import sub, search, split, findall
 from app.models import User
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from json import dumps, loads
-from flask import flash, render_template, render_template_string, redirect, url_for, request
+from flask import flash, render_template, render_template_string, redirect, url_for, request, current_app
 from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from flask_login import current_user, login_user, login_required, logout_user
@@ -20,7 +20,6 @@ from wtforms_sqlalchemy.orm import model_form
 def gen_cprob(cquiz, vprob, ordinal):
     cp, ca = process_spec(vprob.raw_prob, vprob.raw_ansr)
     nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
-    nucprob.save()
     return nucprob
 
 def create_vquiz(lst, title, img):
@@ -33,14 +32,19 @@ def create_vquiz(lst, title, img):
     return nuquiz
 
 def create_cquiz(vquiz, assignee):
-    nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
-    nuquiz.save()
-    ordered_vids = loads(vquiz.vpid_lst)
-    vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
-    probs = [gen_cprob(nuquiz, vp, o) for o,vp in vprobs]
-    nuquiz.cproblems.extend(probs)
-    nuquiz.save()
-    return nuquiz
+    try:
+        nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
+        ordered_vids = loads(vquiz.vpid_lst)
+        vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
+        probs = [gen_cprob(nuquiz, vp, o) for o,vp in vprobs]
+        nuquiz.cproblems.extend(probs)
+        nuquiz.save()
+        return nuquiz
+    except Exception as exc:
+        current_app.logger.error(str(exc))
+        flash(str(exc))
+        db.session.rollback()
+        return None
 
 @qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
 @login_required
@@ -80,7 +84,14 @@ def assign():
         vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
         user = User.query.filter_by(id=int(form.user.data)).first()
         cq = create_cquiz(vquiz, user) 
-        flash('Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username))
+        if cq:
+            istr = 'Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username)
+            flash(istr)
+            current_app.logger.info(istr)
+        else:
+            estr = 'Failed to create quiz: "{}" for {}'.format(vquiz.title, user.username)
+            flash(estr)
+            current_app.logger.error(estr)
         return redirect(url_for('qgen.assign'))
     return render_template('assign.html', title='Assign Quiz', form=form)
 
