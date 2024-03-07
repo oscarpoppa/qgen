@@ -105,9 +105,7 @@ def renderable_factory(cquiz):
 def assign_form_factory():
     class A(FlaskForm):
         submit = SubmitField('Submit')
-    users = User.query.all()
-    vquizzes = VQuiz.query.all()
-    setattr(A,'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in users]))
-    setattr(A,'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in vquizzes]))
+    setattr(A,'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in User.query.all()]))
+    setattr(A,'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in VQuiz.query.all()]))
     return A
 
