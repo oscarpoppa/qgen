@@ -115,11 +115,11 @@ def qtake(cidx):
             cq.compdate = datetime.now()
             current_app.logger.info('{} completed "{}"'.format(current_user.username, cq.vquiz.title))
             cq.save()
-            cq.transcript = form.result_template
+            cq.transcript = form.transcript
             cq.completed = True
             cq.score = form.score
             cq.save()
-            return render_template_string(form.result_template, title=title)
+            return render_template_string(form.transcript, title=title)
         if not cq.startdate:
             cq.startdate = datetime.now()
             current_app.logger.info('{} is starting "{}"'.format(current_user.username, cq.vquiz.title))
@@ -225,7 +225,7 @@ def del_cquiz(cqid):
     owner = cq.taker.username
     cqquery.delete()
     db.session.commit()
-    current_app.logger.info("{}'s CQuiz '{}' has been deleted".format(owner, title))
+    current_app.logger.info("{}'s quiz '{}' has been deleted".format(owner, title))
     flash("Deleted {}'s cquiz:({}) '{}'".format(owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 

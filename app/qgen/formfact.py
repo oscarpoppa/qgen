@@ -43,7 +43,7 @@ def renderable_factory(cquiz):
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
         @property
-        def result_template(self): # AKA transcript
+        def transcript(self):
             date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate, cquiz.compdate)
             head_chunks = [block_header, date_header]
             prob_chunks = []
@@ -105,7 +105,7 @@ def renderable_factory(cquiz):
 def assign_form_factory():
     class A(FlaskForm):
         submit = SubmitField('Submit')
-    setattr(A,'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in User.query.all()]))
-    setattr(A,'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in VQuiz.query.all()]))
+    setattr(A, 'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in User.query.all()]))
+    setattr(A, 'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in VQuiz.query.all()]))
     return A
 
