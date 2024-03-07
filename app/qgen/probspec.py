@@ -2,14 +2,16 @@ from random import randint as ri
 from re import sub, search, findall, escape
 from flask import flash, current_app
 
-allowed_funcs = ('ri',)
+def func_ok_or_raise(string):
+    allowed_funcs = ('ri',)
+    if not string in allowed_funcs:
+        raise ValueError('Unauthorized function specified--eval denied: "{}"'.format(string))
 
-def ismath(string):
+def is_math_or_raise(string):
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
     if len(bad_m):
-        raise ValueError('Potentially dangerous expression--eval denied: {} : {}'.format(string, bad_m))
-    return True
+        raise ValueError('Potentially dangerous expression--eval denied: "{}" : {}'.format(string, bad_m))
 
 def get_targets(prob, ansr):
     mainpatt = r'{{([^}{]*)}}'
@@ -23,8 +25,7 @@ def primary_symbol(string, symbols):
         return None
     mdict = mo.groupdict()
     # only allow approved functions in eval
-    if not mdict['func'] in allowed_funcs:
-        raise ValueError('Unauthorized function specified--eval denied: {}'.format(mdict['func']))
+    func_ok_or_raise(mdict['func'])
     val = eval(mdict['callable'])
     symbols[mdict['symbol']] = val
     return val
@@ -40,8 +41,7 @@ def secondary_symbol(string, symbols):
     for k,v in symbols.items():
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
-    if not ismath(mystr):
-        return None
+    is_math_or_raise(mystr)
     val = eval(mystr)
     symbols[mdict['symbol']] = val
     return val
@@ -52,8 +52,7 @@ def bare_expr(string, symbols):
     for k,v in symbols.items():
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
-    if not ismath(mystr):
-        return string
+    is_math_or_raise(mystr)
     return eval(mystr)
 
 def process_spec(prob, ansr):
