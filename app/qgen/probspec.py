@@ -8,7 +8,7 @@ def ismath(string):
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
     if len(bad_m):
-        raise ValueError('Potentially dangerous expression. Eval denied: {} : {}'.format(string, bad_m))
+        raise ValueError('Potentially dangerous expression--eval denied: {} : {}'.format(string, bad_m))
     return True
 
 def get_targets(prob, ansr):
@@ -24,7 +24,7 @@ def primary_symbol(string, symbols):
     mdict = mo.groupdict()
     # only allow approved functions in eval
     if not mdict['func'] in allowed_funcs:
-        return None
+        raise ValueError('Unauthorized function specified--eval denied: {}'.format(mdict['func']))
     val = eval(mdict['callable'])
     symbols[mdict['symbol']] = val
     return val
