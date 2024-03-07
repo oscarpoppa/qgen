@@ -35,6 +35,7 @@ def mypage():
 @login_required
 def logout():
     flash('{} has been logged out'.format(current_user.username))
+    app.logger.info('{} has logged out'.format(current_user.username))
     logout_user()
     return redirect(url_for('login'))
 
@@ -64,6 +65,7 @@ def login():
             flash('Invalid Username/Password')
             return redirect(url_for('login')) 
         login_user(u, remember=True)
+        app.logger.info('{} has logged in'.format(u.username))
         next_page = request.args.get('next')
         if next_page:
             return redirect(next_page)
@@ -79,6 +81,7 @@ def register():
         u = User(username=form.username.data, email=form.email.data)
         u.set_password(form.password.data)
         u.save()
+        app.logger.info('User {} has been created'.format(u.username))
         flash('Account {} registered'.format(form.username.data))
         return redirect(url_for('login'))
     else:
@@ -113,6 +116,7 @@ def del_user(uid):
         return redirect(url_for('mypage'))
     usrquery.delete()
     db.session.commit()
+    app.logger.info('User {} has been deleted'.format(usrname))
     flash('Deleted user: {}'.format(usrname))
     return redirect(url_for('mypage'))
 

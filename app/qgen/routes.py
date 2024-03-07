@@ -225,6 +225,7 @@ def del_cquiz(cqid):
     owner = cq.taker.username
     cqquery.delete()
     db.session.commit()
+    current_app.logger.info("{}'s CQuiz '{}' has been deleted".format(title))
     flash("Deleted {}'s cquiz:({}) '{}'".format(owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
