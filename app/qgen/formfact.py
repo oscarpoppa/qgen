@@ -72,12 +72,9 @@ def renderable_factory(cquiz):
                 correct_ansr = getattr(self, field_name+'_ansr')
                 problem = getattr(self, field_name+'_prob')
                 right_or_wrong = 'W'
-                try:
-                    if ansr_is_correct(submitted_ansr, correct_ansr):
-                        num_correct += 1
-                        right_or_wrong = 'R'
-                except:
-                    pass
+                if ansr_is_correct(submitted_ansr, correct_ansr):
+                    num_correct += 1
+                    right_or_wrong = 'R'
                 summary = '({}) Your answer: {} : Correct answer: {}'.format(right_or_wrong, submitted_ansr, correct_ansr)
                 pimg = phash[idx].vproblem.image
                 if pimg:
@@ -86,25 +83,20 @@ def renderable_factory(cquiz):
                     img = ''
                 prob_chunks += prob_capsule.format(idx, img, problem, summary)
             pimg = cquiz.vquiz.image
-            if pimg:
-                img = imgtmpl.format(pimg)
-            else:
-                img = ''
+            img = imgtmpl.format(pimg) if pimg else ''
             self.score = 100*num_correct/self.count
             head_chunks += '<br><b>Score:</b> {}%<br><br>'.format(100*num_correct/self.count)
             all_chunks = head_chunks + prob_chunks
             #add to object
             prob_section = ''.join(all_chunks)
             return block_top+img+prob_section+block_bottom
+
     for ordinal in skeys:
         problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
         inpstr = '{{ '+'form.{}'.format(field_name)+' }}'
         pimg = problem.vproblem.image
-        if pimg:
-            img = imgtmpl.format(pimg)
-        else:
-            img = ''
+        img = imgtmpl.format(pimg) if pimg else ''
         ttlst += prob_capsule.format(ordinal, img, problem.conc_prob, inpstr)
         ftype = ftypes[problem.vproblem.form_elem]
         setattr(OTF, field_name, ftype(field_name)) 
@@ -113,10 +105,7 @@ def renderable_factory(cquiz):
     setattr(OTF, 'count', len(cquiz.cproblems))
     ttext = ''.join(ttlst)
     pimg = cquiz.vquiz.image
-    if pimg:
-        img = imgtmpl.format(pimg)
-    else:
-        img = ''
+    img = imgtmpl.format(pimg) if pimg else ''
     templ = block_top+img+form_top+ttext+form_bottom+block_bottom
     return templ, OTF
 
