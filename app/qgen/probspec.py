@@ -69,7 +69,11 @@ def process_spec(prob, ansr):
     for k,v in repl.items():
         if v is None:
             repl[k] = bare_expr(k, symbols)
+    #remove definition-only invisible symbols
     for k,v in repl.items():
+        if search('\s*:\s*inv\s*', k):
+            prob = sub(escape(r'{{'+k+r'}}'), '', prob)
+            continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
         ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     return prob, ansr

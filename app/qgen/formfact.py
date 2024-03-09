@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from app.qgen.models import VQuiz
 from app.models import User
+from re import findall
 
 block_top = """
 {% extends "base.html" %}
@@ -40,6 +41,23 @@ def renderable_factory(cquiz):
     phash = {p.ordinal:p for p in cquiz.cproblems}
     skeys = sorted(phash.keys())
     imgtmpl = '<br><img src="/static/{}" style="width:35%"/><br><br>'
+
+    def ansr_is_correct(subm, corr):
+        if subm == 'None':
+            return False
+        numpatt = '[\d\.\-]+'
+        sublst = sorted(findall(numpatt, subm))
+        corlst = sorted(findall(numpatt, corr))
+        if len(sublst) != len(corlst):
+            return False
+        for idx in range(len(corlst)):
+            try:
+                if abs(float(sublst[idx]) - float(corlst[idx])) > 0.1:
+                    return False
+            except:
+                return False
+        return True
+
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
         @property
@@ -55,7 +73,7 @@ def renderable_factory(cquiz):
                 problem = getattr(self, field_name+'_prob')
                 right_or_wrong = 'W'
                 try:
-                    if submitted_ansr != 'None' and abs(float(submitted_ansr) - float(correct_ansr)) < 0.1:
+                    if ansr_is_correct(submitted_ansr, correct_ansr):
                         num_correct += 1
                         right_or_wrong = 'R'
                 except:

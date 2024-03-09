@@ -131,7 +131,7 @@ def qtake(cidx):
 @admin_only
 def list_users():
     ulst = User.query.all()
-    return render_template('ulist.html', ulst=ulst, title='User Info')
+    return render_template('ulist.html', ulst=ulst, title='Quizzes by User')
 
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
 @login_required
