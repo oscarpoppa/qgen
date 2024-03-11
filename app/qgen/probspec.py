@@ -77,8 +77,10 @@ def process_spec(prob, ansr):
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
         ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     #turn '...+/- -...' into '...-/+ ...'  
+    current_app.logger.debug(prob)
     prob = sub('\+\s*\-', '- ', prob)
     prob = sub('\-\s*\-', '+ ', prob)
     prob = sub('[\+\-]\s*0\w+', '', prob)
+    prob = sub('([\+\-]\s*)1([a-zA-Z])', '\\1\\2', prob)
     return prob, ansr
 
