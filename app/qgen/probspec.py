@@ -1,9 +1,9 @@
-from random import randint as ri
+from random import randint as ri, choice as ch
 from re import sub, search, findall, escape
 from flask import flash, current_app
 
 def func_ok_or_raise(string):
-    allowed_funcs = ('ri',)
+    allowed_funcs = ('ri', 'ch')
     if not string in allowed_funcs:
         raise ValueError('Unauthorized function specified--eval denied: "{}"'.format(string))
 
@@ -76,5 +76,8 @@ def process_spec(prob, ansr):
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
         ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
+    #turn '...+ -...' into '...-...'  
+    prob = sub('\+\s*\-', '- ', prob)
+    prob = sub('\-\s*\-', '+ ', prob)
     return prob, ansr
 
