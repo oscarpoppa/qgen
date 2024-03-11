@@ -76,8 +76,9 @@ def process_spec(prob, ansr):
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
         ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
-    #turn '...+ -...' into '...-...'  
+    #turn '...+/- -...' into '...-/+ ...'  
     prob = sub('\+\s*\-', '- ', prob)
     prob = sub('\-\s*\-', '+ ', prob)
+    prob = sub('[\+\-]\s*0\w+', '', prob)
     return prob, ansr
 
