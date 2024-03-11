@@ -82,6 +82,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     vpid_lst = db.Column(db.String(256))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     title = db.Column(db.String(64))
+    calculator_ok = db.Column(db.Boolean, default=False)
 
     vqgroups = db.relationship('VQGroup', back_populates='vquizzes', secondary=vquiz_vqgroup, lazy=True)
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)
