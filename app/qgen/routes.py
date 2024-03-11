@@ -22,8 +22,8 @@ def gen_cprob(cquiz, vprob, ordinal):
     nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
     return nucprob
 
-def create_vquiz(lst, title, img):
-    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id)
+def create_vquiz(lst, title, img, calculator_ok):
+    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok)
     nuquiz.save()
     probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(lst)]
     nuquiz.vproblems.extend(probs)
@@ -56,7 +56,8 @@ def mkvquiz():
         numlist = [int(a) for a in findall('(\d+)', lstr)]
         title = form.title.data
         image = form.image.data
-        nq = create_vquiz(numlist, title, image)
+        calculator_ok = form.calculator_ok.data
+        nq = create_vquiz(numlist, title, image, calculator_ok)
         flash('Created vquiz: ({}) {}'.format(nq.id, title))
         return redirect(url_for('qgen.mkvquiz'))
     return render_template('vqadd.html', title='Create VQuiz', form=form)
@@ -99,7 +100,8 @@ def assign():
 @login_required
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404('No cquiz with id {}'.format(cidx))
-    title = '{} ({})'.format(cq.vquiz.title, cq.taker.username)
+    cok = cq.vquiz.calculator_ok
+    title = '{} ({}) ({})'.format(cq.vquiz.title, cq.taker.username, 'Calculator OK' if cok else 'No Calculator')
     if not cq.taker:
         flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
         return redirect(url_for('mypage'))
@@ -205,6 +207,7 @@ def edvquiz(vqid):
     if request.method == 'POST':
         vqobj.image = form.image.data
         vqobj.title = form.title.data
+        vqobj.calculator_ok = form.calculator_ok.data
         numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
         #this way to check for 404
         plist = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(numlist)]

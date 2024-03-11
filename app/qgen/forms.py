@@ -18,5 +18,6 @@ class VQuizAdd(FlaskForm):
     vplist = StringField('VProblem List', validators=[DataRequired()])
     title = StringField('Quiz Title', validators=[DataRequired()])
     image = StringField('Image')
+    calculator_ok = BooleanField('Calculator OK')
     submit = SubmitField('Submit')
 
