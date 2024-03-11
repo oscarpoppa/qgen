@@ -80,7 +80,7 @@ def process_spec(prob, ansr):
     current_app.logger.debug(prob)
     prob = sub('\+\s*\-', '- ', prob)
     prob = sub('\-\s*\-', '+ ', prob)
-    prob = sub('[\+\-]\s*0\w+', '', prob)
-    prob = sub('([\+\-]\s*)1([a-zA-Z])', '\\1\\2', prob)
+    prob = sub('[\+\-]\s*0[a-zA-Z]+', '', prob)
+    prob = sub('([\+\-]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
     return prob, ansr
 
