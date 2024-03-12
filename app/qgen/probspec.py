@@ -13,6 +13,7 @@ def is_math_or_raise(string):
     if len(bad_m):
         raise ValueError('Potentially dangerous expression--eval denied: "{}" : {}'.format(string, bad_m))
 
+# list of all patterns
 def get_targets(prob, ansr):
     mainpatt = r'{{([^}{]*)}}'
     return findall(mainpatt, prob) + findall(mainpatt, ansr)
