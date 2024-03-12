@@ -69,9 +69,9 @@ def process_spec(prob, ansr):
     for k,v in repl.items():
         if v is None:
             repl[k] = bare_expr(k, symbols)
-    #symbol substitution
+    #pattern substitution
     for k,v in repl.items():
-        #remove definition-only invisible symbols
+        #remove definition-only invisible patterns
         if search('\s*:\s*inv\s*', k):
             prob = sub(escape(r'{{'+k+r'}}'), '', prob)
             continue 
