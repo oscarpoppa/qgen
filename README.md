@@ -1,8 +1,8 @@
-A Lightweight, Flask/MySQL/MathJax Numerical Quizzing App Proof-Of-Concept.
+A Lightweight, Flask/MySQL/MathJax app Proof-Of-Concept, providing for all aspects of randomizable, numerical-based quiz generation and management.
 
 Suitable for math-based classes in a small school setting.
 
-Uses a simple markup scheme to allow for the creation of quiz problems with randomized numerical portions. Quizzes are assembled using these "virtual problems." Each quiz-taker is then assigned a structurally identical quiz (same problem set), with different numerical components.
+Uses a simple markup scheme to allow for the creation of quiz problems and answers with randomized numerical portions. Quizzes are assembled using these "virtual problems." Each quiz-taker is then assigned a structurally identical quiz (same problem set), with different numerical components.
 
 
 Example of two "identical," yet randomized quizzes:
