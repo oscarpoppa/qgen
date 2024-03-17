@@ -239,18 +239,17 @@ def del_vquiz(vqid):
     vqquery = VQuiz.query.filter_by(id=vqid)
     vq = vqquery.first_or_404('No VQuiz with id {}'.format(vqid))
     title = vq.title
-    try:
+    cq = vq.cquizzes
+    if cq:
+        estr = "VQuiz '{}' NOT deleted. Referenced by CQuizzes".format(title)
+        current_app.logger.error(estr)
+        flash(estr)
+        flash('CQuizzes referencing this VProblem: {}'.format(cq))
+    else:
         vqquery.delete()
         db.session.commit()
         current_app.logger.info("VQuiz '{}' has been deleted".format(title))
         flash("Deleted VQuiz:({}) '{}'".format(vqid, title))
-    except Exception as exc:
-        estr = "VQuiz '{}' NOT deleted".format(title)
-        current_app.logger.error(estr)
-        current_app.logger.error(str(exc))
-        flash(estr)
-        flash(str(exc))
-        flash('CQuizzes referencing this VQuiz: {}'.format(vq.cquizzes))
     return redirect(url_for('qgen.list_vquizzes'))
 
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
@@ -262,7 +261,7 @@ def del_vprob(vpid):
     title = vp.title
     vq = vp.vquizzes
     if vq:
-        estr = "VProblem '{}' NOT deleted. Refenced by VQuizzes".format(title)
+        estr = "VProblem '{}' NOT deleted. Referenced by VQuizzes".format(title)
         current_app.logger.error(estr)
         flash(estr)
         flash('VQuizzes referencing this VProblem: {}'.format(vq))
