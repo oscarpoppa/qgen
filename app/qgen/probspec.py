@@ -10,7 +10,7 @@ def func_ok_or_raise(string):
 def is_math_or_raise(string):
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
-    if len(bad_m):
+    if bad_m:
         raise ValueError('Potentially dangerous expression--eval denied: "{}" : {}'.format(string, bad_m))
 
 # list of all patterns
