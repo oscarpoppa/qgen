@@ -253,3 +253,23 @@ def del_vquiz(vqid):
         flash('CQuizzes referencing this VQuiz: {}'.format(vq.cquizzes))
     return redirect(url_for('qgen.list_vquizzes'))
 
+@qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
+@login_required
+@admin_only
+def del_vprob(vpid):
+    vpquery = VProblem.query.filter_by(id=vpid)
+    vp = vpquery.first_or_404('No VProblem with id {}'.format(vpid))
+    title = vp.title
+    vq = vp.vquizzes
+    if vq:
+        estr = "VProblem '{}' NOT deleted. Refenced by VQuizzes".format(title)
+        current_app.logger.error(estr)
+        flash(estr)
+        flash('VQuizzes referencing this VProblem: {}'.format(vq))
+    else:
+        vpquery.delete()
+        db.session.commit()
+        current_app.logger.info("VProblem '{}' has been deleted".format(title))
+        flash("Deleted VProblem:({}) '{}'".format(vpid, title))
+    return redirect(url_for('qgen.list_vprobs'))
+
