@@ -58,7 +58,7 @@ def mkvquiz():
         image = form.image.data
         calculator_ok = form.calculator_ok.data
         nq = create_vquiz(numlist, title, image, calculator_ok)
-        flash('Created vquiz: ({}) {}'.format(nq.id, title))
+        flash('Created VQuiz: ({}) {}'.format(nq.id, title))
         return redirect(url_for('qgen.mkvquiz'))
     return render_template('vqadd.html', title='Create VQuiz', form=form)
 
@@ -99,7 +99,7 @@ def assign():
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 def qtake(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404('No cquiz with id {}'.format(cidx))
+    cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
     cok = cq.vquiz.calculator_ok
     title = '{} ({}) ({})'.format(cq.vquiz.title, cq.taker.username, 'Calculator OK' if cok else 'No Calculator')
     if not cq.taker:
@@ -153,7 +153,7 @@ def list_vquizzes():
 @login_required
 @admin_only
 def list_vquiz(vqid):
-    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No vquiz with id {}'.format(vqid))
+    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     return render_template('vqlist.html', vqlst=[vqlst], title='VQuiz {} detail'.format(vqid))
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
@@ -202,7 +202,7 @@ def edvprob(vpid):
 @admin_only
 def edvquiz(vqid):
     vqform = model_form(VQuiz, base_class=FlaskForm, db_session=db)
-    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404('No vquiz with id {}'.format(vqid))
+    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     form = vqform(obj=vqobj)
     if request.method == 'POST':
         vqobj.image = form.image.data
@@ -210,11 +210,11 @@ def edvquiz(vqid):
         vqobj.calculator_ok = form.calculator_ok.data
         numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
         #this way to check for 404
-        plist = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(numlist)]
+        plist = [VProblem.query.filter_by(id=a).first_or_404('No VProblem with id {}'.format(a)) for a in set(numlist)]
         vqobj.vpid_lst = dumps(numlist)
         vqobj.vproblems = plist
         vqobj.save()
-        flash('Updated vquiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
+        flash('Updated VQuiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
 
@@ -223,12 +223,33 @@ def edvquiz(vqid):
 @admin_only
 def del_cquiz(cqid):
     cqquery = CQuiz.query.filter_by(id=cqid)
-    cq = cqquery.first_or_404('No cquiz with id {}'.format(cqid))
+    cq = cqquery.first_or_404('No CQuiz with id {}'.format(cqid))
     title = cq.vquiz.title
     owner = cq.taker.username
     cqquery.delete()
     db.session.commit()
     current_app.logger.info("{}'s quiz '{}' has been deleted".format(owner, title))
-    flash("Deleted {}'s cquiz:({}) '{}'".format(owner, cqid, title))
+    flash("Deleted {}'s CQuiz:({}) '{}'".format(owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
+
+@qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
+@login_required
+@admin_only
+def del_vquiz(vqid):
+    vqquery = VQuiz.query.filter_by(id=vqid)
+    vq = vqquery.first_or_404('No VQuiz with id {}'.format(vqid))
+    title = vq.title
+    try:
+        vqquery.delete()
+        db.session.commit()
+        current_app.logger.info("VQuiz '{}' has been deleted".format(title))
+        flash("Deleted VQuiz:({}) '{}'".format(vqid, title))
+    except Exception as exc:
+        estr = "VQuiz '{}' NOT deleted".format(title)
+        current_app.logger.error(estr)
+        current_app.logger.error(str(exc))
+        flash(estr)
+        flash(str(exc))
+        flash('CQuizzes referencing this VQuiz: {}'.format(vq.cquizzes))
+    return redirect(url_for('qgen.list_vquizzes'))
 
