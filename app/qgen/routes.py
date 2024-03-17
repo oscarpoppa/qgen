@@ -228,7 +228,7 @@ def del_cquiz(cqid):
     owner = cq.taker.username
     cqquery.delete()
     db.session.commit()
-    current_app.logger.info("{}'s quiz '{}' has been deleted".format(owner, title))
+    current_app.logger.info("{}'s quiz '{}' deleted by {}".format(owner, title, current_user.username))
     flash("Deleted {}'s CQuiz:({}) '{}'".format(owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
@@ -248,7 +248,7 @@ def del_vquiz(vqid):
     else:
         vqquery.delete()
         db.session.commit()
-        current_app.logger.info("VQuiz '{}' has been deleted".format(title))
+        current_app.logger.info("VQuiz '{}' deleted by {}".format(title, current_user.username))
         flash("Deleted VQuiz:({}) '{}'".format(vqid, title))
     return redirect(url_for('qgen.list_vquizzes'))
 
@@ -268,7 +268,7 @@ def del_vprob(vpid):
     else:
         vpquery.delete()
         db.session.commit()
-        current_app.logger.info("VProblem '{}' has been deleted".format(title))
+        current_app.logger.info("VProblem '{}' deleted by {}".format(title, current_user.username))
         flash("Deleted VProblem:({}) '{}'".format(vpid, title))
     return redirect(url_for('qgen.list_vprobs'))
 
