@@ -2,8 +2,8 @@
 
 {% block content %}
 {% for item in vqlst %}
-    <a href={{ url_for('qgen.edvquiz', vqid=item.id) }}>[Edit]</a> 
-    <a href="{{ url_for('qgen.del_vquiz', vqid=item.id) }}" onclick="return confirm('Are you sure you want to delete VQuiz \'{{item.title}}\'?');">[Del]</a>
+    [<a href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>]
+    [<a href="{{ url_for('qgen.del_vquiz', vqid=item.id) }}" onclick="return confirm('Are you sure you want to delete VQuiz \'{{item.title}}\'?');">Del</a>]
     (id={{item.id}}) <b>{{item.title}}</b> {{item.vpid_lst}} ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}) {% if item.image %} (img = {{item.image}}) {% endif %} 
     <br>
     {% for prob in item.vproblems %}
