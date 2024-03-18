@@ -3,7 +3,7 @@ from app import db
 from app.qgen import qgen_bp
 from app.qgen.probspec import process_spec
 from app.qgen.formfact import renderable_factory, assign_form_factory
-from app.routes import admin_only
+from app.routes import admin_only, pw_check
 from random import randint
 from re import sub, search, split, findall
 from app.models import User
@@ -48,6 +48,7 @@ def create_cquiz(vquiz, assignee):
 
 @qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
 @login_required
+@pw_check
 @admin_only
 def mkvquiz():
     form = VQuizAdd()
@@ -64,6 +65,7 @@ def mkvquiz():
 
 @qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
 @login_required
+@pw_check
 @admin_only
 def mkvprob():
     form = VProbAdd()
@@ -77,6 +79,7 @@ def mkvprob():
 
 @qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
 @login_required
+@pw_check
 @admin_only
 def assign():
     fcls = assign_form_factory()
@@ -98,6 +101,7 @@ def assign():
 
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
+@pw_check
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
     cok = cq.vquiz.calculator_ok
@@ -130,6 +134,7 @@ def qtake(cidx):
 
 @qgen_bp.route('/quiz/listuser', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_users():
     ulst = User.query.all()
@@ -137,6 +142,7 @@ def list_users():
 
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_user(uid):
     ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
@@ -144,6 +150,7 @@ def list_user(uid):
 
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_vquizzes():
     vqlst = VQuiz.query.all()
@@ -151,6 +158,7 @@ def list_vquizzes():
 
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
@@ -158,6 +166,7 @@ def list_vquiz(vqid):
 
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).first_or_404('No cquiz with id {}'.format(cqid))
@@ -165,6 +174,7 @@ def list_cquiz(cqid):
 
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_vprobs():
     vplst = VProblem.query.all()
@@ -172,6 +182,7 @@ def list_vprobs():
 
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
@@ -179,6 +190,7 @@ def list_vprob(vpid):
 
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
 @login_required
+@pw_check
 @admin_only
 def edvprob(vpid):
     vpform = model_form(VProblem, base_class=FlaskForm, db_session=db)
@@ -199,6 +211,7 @@ def edvprob(vpid):
 
 @qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
 @login_required
+@pw_check
 @admin_only
 def edvquiz(vqid):
     vqform = model_form(VQuiz, base_class=FlaskForm, db_session=db)
@@ -220,6 +233,7 @@ def edvquiz(vqid):
 
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def del_cquiz(cqid):
     cqquery = CQuiz.query.filter_by(id=cqid)
@@ -234,6 +248,7 @@ def del_cquiz(cqid):
 
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def del_vquiz(vqid):
     vqquery = VQuiz.query.filter_by(id=vqid)
@@ -254,6 +269,7 @@ def del_vquiz(vqid):
 
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def del_vprob(vpid):
     vpquery = VProblem.query.filter_by(id=vpid)

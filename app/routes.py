@@ -25,23 +25,34 @@ def admin_only(func):
         return func(*args, **kwargs)
     return inner
 
+def pw_check(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if current_user.pw_man_reset:
+            flash('Please change your password before continuing')
+            return redirect(url_for('chpass'))
+        else:
+            return func(*args, **kwargs)
+    return inner
+
 @app.route('/mypage')
 @login_required
+@pw_check
 def mypage():
     return render_template('mypage.html', current_user=current_user, title='{}\'s Page'.format(current_user.username))
 
-
 @app.route('/logout')
 @login_required
+@pw_check
 def logout():
     flash('{} has been logged out'.format(current_user.username))
     app.logger.info('{} has logged out'.format(current_user.username))
     logout_user()
     return redirect(url_for('login'))
 
-
 @app.route('/upload', methods=['POST','GET'])
 @login_required
+@pw_check
 @admin_only
 def upload():
     form = UploadForm()
@@ -52,7 +63,6 @@ def upload():
         flash('{} saved'.format(ufile.filename))
         return redirect(url_for('mypage'))
     return render_template('upload.html', title='Upload a File', form=form)
-
 
 @app.route('/', methods=['POST','GET'])
 @app.route('/login', methods=['POST','GET'])
@@ -72,7 +82,6 @@ def login():
         return redirect(url_for('mypage'))
     return render_template('login.html', title='Login Now!', form=form)
 
-
 @app.route('/register', methods=['POST','GET'])
 @logout_required
 def register():
@@ -87,7 +96,6 @@ def register():
     else:
         return render_template('register.html', title='Register Now!', form=form)
 
-
 @app.route('/chpass', methods=['POST','GET'])
 @login_required
 def chpass():
@@ -98,14 +106,28 @@ def chpass():
             flash('Old Password Error')
             return redirect(url_for('chpass'))
         user.set_password(form.password.data)
+        user.pw_man_reset = False
         user.save()
         flash('Password changed')
         return redirect(url_for('mypage'))
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
+@app.route('/resetpass/<uid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def resetpass(uid):
+    usrquery = User.query.filter_by(id=uid)
+    usr = usrquery.first_or_404('No user with id {}'.format(uid))
+    usr.set_password('PASSWORD')
+    usr.pw_man_reset = True
+    usr.save()
+    flash('Password reset for {}'.format(usr.username))
+    return redirect(url_for('mypage'))
 
 @app.route('/deluser/<uid>', methods=['GET'])
 @login_required
+@pw_check
 @admin_only
 def del_user(uid):
     usrquery = User.query.filter_by(id=uid)
