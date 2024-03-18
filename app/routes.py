@@ -129,7 +129,7 @@ def resetpass(uid):
 @login_required
 @pw_check
 @admin_only
-def del_user(uid):
+def deluser(uid):
     usrquery = User.query.filter_by(id=uid)
     usr = usrquery.first_or_404('No user with id {}'.format(uid))
     usrname = usr.username
