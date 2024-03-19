@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1><u>Update User</u></h1>
+    <form action="" method="post">
+            {{ form.hidden_tag() }}
+            <p> 
+                    <b>{{ form.username.label }}</b><br>
+                    {{ form.username(size=64) }}<br>
+                    {% for error in form.username.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+            <p> 
+                    <b>{{ form.email.label }}</b><br>
+                    {{ form.email(size=64) }}<br>
+                    {% for error in form.email.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+            <p> 
+                    <b>{{ form.is_admin.label }}</b><br>
+                    {{ form.is_admin(size=64) }}<br>
+                    {% for error in form.is_admin.errors %}
+                    <span style="color: red">[{{ error }}]</span>
+                    {% endfor %} 
+            </p>
+            <p>     <input id="submit" name="submit" type="submit" value="Submit"></p>
+            <p>     <a href={{ url_for('userdet') }}>Cancel</a> </p>
+    </form>
+{% endblock %}
+

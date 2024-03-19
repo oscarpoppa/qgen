@@ -3,6 +3,8 @@ from app.models import User
 from app.forms import RegistrationForm, LoginForm, UploadForm, ChPassForm
 from flask import flash, render_template, redirect, url_for, request
 from flask_login import current_user, login_user, login_required, logout_user
+from flask_wtf import FlaskForm
+from wtforms_sqlalchemy.orm import model_form
 from werkzeug.utils import secure_filename
 from functools import wraps
 
@@ -16,6 +18,7 @@ def logout_required(func):
         return func(*args, **kwargs)
     return inner
 
+# Decorator to kick user back to mypage if not admin
 def admin_only(func):
     @wraps(func)
     def inner(*args, **kwargs):
@@ -25,6 +28,7 @@ def admin_only(func):
         return func(*args, **kwargs)
     return inner
 
+# Decorator to kick user back to password change after manual reset
 def pw_check(func):
     @wraps(func)
     def inner(*args, **kwargs):
@@ -123,7 +127,7 @@ def resetpass(uid):
     usr.pw_man_reset = True
     usr.save()
     flash('Password reset for {}'.format(usr.username))
-    return redirect(url_for('mypage'))
+    return redirect(url_for('userdet'))
 
 @app.route('/deluser/<uid>', methods=['GET'])
 @login_required
@@ -140,5 +144,35 @@ def deluser(uid):
     db.session.commit()
     app.logger.info('User {} has been deleted'.format(usrname))
     flash('Deleted user: {}'.format(usrname))
-    return redirect(url_for('mypage'))
+    return redirect(url_for('userdet'))
+
+@app.route('/edituser/<uid>', methods=['POST', 'GET'])
+@login_required
+@pw_check
+@admin_only
+def eduser(uid):
+    uform = model_form(User, base_class=FlaskForm, db_session=db)
+    uobj = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
+    form = uform(obj=uobj)
+    if request.method == 'POST':
+        uobj.username = form.username.data
+        uobj.email = form.email.data
+        if uobj == current_user and uobj.is_admin != form.is_admin.data:
+            flash("I can't let you change is_admin, {}".format(current_user.username))
+        else:
+            uobj.is_admin = form.is_admin.data
+        uobj.save()
+        msg = 'Updated user: ({}) {}'.format(uobj.id, uobj.username)
+        flash(msg)
+        app.logger.info(msg)
+        return redirect(url_for('userdet'))
+    return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
+
+@app.route('/quiz/userdet', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def userdet():
+    ulst = User.query.all()
+    return render_template('udet.html', ulst=ulst, title='User Detail')
 
