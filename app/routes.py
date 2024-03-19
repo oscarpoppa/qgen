@@ -139,7 +139,7 @@ def deluser(uid):
     usrname = usr.username
     if current_user == usr:
         flash("I can't let you do that, {}".format(current_user.username))
-        return redirect(url_for('mypage'))
+        return redirect(url_for('userdet'))
     usrquery.delete()
     db.session.commit()
     app.logger.info('User {} has been deleted'.format(usrname))
