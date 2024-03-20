@@ -10,7 +10,7 @@
                                        (assigned : {{cq.create_date}})
                                        {% if cq.startdate %}(started : {{cq.startdate}}){% endif %}
                                        {% if cq.startdate and not cq.compdate %}(in progress){% endif %} 
-                                       {% if cq.completed %}(completed : {{cq.compdate}} with score : {{cq.score}}%){% endif %}
+                                       {% if cq.completed %}(completed : {{cq.compdate}} with score : {{'%0.2f' % cq.score|float}}%){% endif %}
         <br>
     {% endfor %}
     <br><br>
