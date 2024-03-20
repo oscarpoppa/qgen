@@ -77,7 +77,10 @@ def process_spec(prob, ansr):
             prob = sub(escape(r'{{'+k+r'}}'), '', prob)
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
-        ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
+        if type(v) == float:
+            ansr = sub(escape(r'{{'+k+r'}}'), '{:.2f}'.format(v), ansr)
+        else:
+            ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     #aesthetics...
     #turn '...+/- -...' into '...-/+ ...'  
     prob = sub('\+\s*\-', '- ', prob)

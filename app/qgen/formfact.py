@@ -85,7 +85,7 @@ def renderable_factory(cquiz):
             pimg = cquiz.vquiz.image
             img = imgtmpl.format(pimg) if pimg else ''
             self.score = 100*num_correct/self.count
-            head_chunks += '<br><b>Score:</b> {}%<br><br>'.format(100*num_correct/self.count)
+            head_chunks += '<br><b>Score:</b> {:.2f}%<br><br>'.format(100*num_correct/self.count)
             all_chunks = head_chunks + prob_chunks
             #add to object
             prob_section = ''.join(all_chunks)
