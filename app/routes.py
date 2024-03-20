@@ -169,7 +169,7 @@ def eduser(uid):
         return redirect(url_for('userdet'))
     return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
 
-@app.route('/quiz/userdet', methods=['GET'])
+@app.route('/userdet', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
