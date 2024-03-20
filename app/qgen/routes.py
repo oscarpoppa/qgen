@@ -88,9 +88,8 @@ def assign():
         user = User.query.filter_by(id=int(form.user.data)).first()
         cq = create_cquiz(vquiz, user) 
         if cq:
-            istr = 'Created quiz: "{}" ({}) for {}'.format(vquiz.title, cq.id, user.username)
-            flash(istr)
-            current_app.logger.info(istr)
+            flash('Assigned quiz: "{}" ({}) to {}'.format(vquiz.title, cq.id, user.username))
+            current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, user.username))
         else:
             estr = 'Failed to create quiz: "{}" for {}'.format(vquiz.title, user.username)
             flash(estr)
