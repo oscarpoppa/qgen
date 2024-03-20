@@ -34,37 +34,34 @@
                     </table>
                     <hr>
                     {% if current_user.is_admin %}
-                        <table width=100% columns=3>
-                        <tr> 
-                        <td align=left width=33%>
-		            <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
+                    <table width=100% columns=4>
+                      <tr> 
+                        <td align=left width=25%>
+                            <div><a href="{{ url_for('qgen.mkvprob') }}">create vproblems</a></div>
                         </td>
-                        <td align=center width=33%>
+                        <td align=left width=25%>
                             <div><a href="{{ url_for('qgen.mkvquiz') }}">create vquizzes</a></div>
                         </td>
-                        <td align=right width=34%>
+                        <td align=right width=25%>
+                           <div><a href="{{ url_for('userdet') }}">user detail</a></div>
+                        </td>
+                        <td align=right width=25%>
 		            <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
                         </td>
                         </tr>
                         <tr>
-                        <td align=left width=33%>
+                        <td align=left width=25%>
 		            <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
                         </td>
-                        <td align=center width=33%>
-                            <div><a href="{{ url_for('qgen.mkvprob') }}">create vproblems</a></div>
+                        <td align=left width=25%>
+		            <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
                         </td>
-                        <td align=right width=34%>
-                            <div><a href="{{ url_for('upload') }}">upload static files</a></div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td align=left width=33%>
+                        <td align=right width=25%>
                            <div><a href="{{ url_for('qgen.list_users') }}">list_quizzes by user</a></div>
                         </td>
-                        <td align=center width=33%>
-                           <div><a href="{{ url_for('userdet') }}">user detail</a></div>
+                        <td align=right width=25%>
+                            <div><a href="{{ url_for('upload') }}">upload static files</a></div>
                         </td>
-                        <td align=right width=34%></td>
                       </tr>
                     </table>
 		    <hr>
