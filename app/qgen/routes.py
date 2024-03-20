@@ -128,6 +128,8 @@ def qtake(cidx):
             cq.startdate = datetime.now()
             current_app.logger.info('{} is starting "{}"'.format(current_user.username, cq.vquiz.title))
             cq.save()
+    elif request.method == 'POST':
+        flash("you're not {}".format(cq.taker.username))
     return render_template_string(templ, title=title, form=form)
 
 @qgen_bp.route('/quiz/listuser', methods=['GET'])
