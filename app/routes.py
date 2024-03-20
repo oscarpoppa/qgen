@@ -123,10 +123,12 @@ def chpass():
 def resetpass(uid):
     usrquery = User.query.filter_by(id=uid)
     usr = usrquery.first_or_404('No user with id {}'.format(uid))
-    usr.set_password('PASSWORD')
+    pword = 'PASSWORD'
+    usr.set_password(pword)
     usr.pw_man_reset = True
     usr.save()
     flash('Password reset for {}'.format(usr.username))
+    app.logger.info('{} issued a manual PW reset for {}:{}'.format(current_user.username, usr.username, pword))
     return redirect(url_for('userdet'))
 
 @app.route('/deluser/<uid>', methods=['GET'])
@@ -143,7 +145,7 @@ def deluser(uid):
     usrquery.delete()
     db.session.commit()
     app.logger.info('User {} has been deleted'.format(usrname))
-    flash('Deleted user: {}'.format(usrname))
+    flash('{} deleted user: {}'.format(current_user.username, usrname))
     return redirect(url_for('userdet'))
 
 @app.route('/edituser/<uid>', methods=['POST', 'GET'])
@@ -162,9 +164,8 @@ def eduser(uid):
         else:
             uobj.is_admin = form.is_admin.data
         uobj.save()
-        msg = 'Updated user: ({}) {}'.format(uobj.id, uobj.username)
-        flash(msg)
-        app.logger.info(msg)
+        flash('Updated user: ({}) {}'.format(uobj.id, uobj.username))
+        app.logger.info('{} updated user ({}) {}'.format(current_user.username, uobj.id, uobj.username))
         return redirect(url_for('userdet'))
     return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
 
