@@ -110,7 +110,7 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     assignee = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
-    transcript = db.Column(db.String(2048))
+    transcript = db.Column(db.String(8192))
     completed = db.Column(db.Boolean, default=False)
     score = db.Column(db.Float)
     startdate = db.Column(db.DateTime, nullable=True)
