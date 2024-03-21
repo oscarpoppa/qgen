@@ -58,7 +58,8 @@ def mkvquiz():
         image = form.image.data
         calculator_ok = form.calculator_ok.data
         nq = create_vquiz(numlist, title, image, calculator_ok)
-        flash('Created VQuiz: ({}) {}'.format(nq.id, title))
+        flash('Created VQuiz: ({}) "{}"'.format(nq.id, title))
+        current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, title))
         return redirect(url_for('qgen.mkvquiz'))
     return render_template('vqadd.html', title='Create VQuiz', form=form)
 
@@ -73,6 +74,7 @@ def mkvprob():
         nuprob.vpgroups.append(VPGroup.query.filter_by(title='Archive').first())
         nuprob.save()
         flash('Created vproblem: ({} "{}" ({})) {}'.format(nuprob.id, nuprob.title, 'calc OK' if nuprob.calculator_ok else 'no calc', nuprob.raw_prob))
+        current_app.logger.info('{} created VProblem: ({}) "{}"'.format(current_user.username, nuprob.id, nuprob.title))
         return redirect(url_for('qgen.mkvprob'))
     return render_template('vpadd.html', title='Create VProblem', form=form)
 
@@ -205,7 +207,8 @@ def edvprob(vpid):
         vpobj.example = form.example.data
         vpobj.calculator_ok = form.calculator_ok.data
         vpobj.save()
-        flash('Updated vproblem: ({} "{}") {}'.format(vpobj.id, vpobj.title, vpobj.raw_prob))
+        flash('Updated VProblem: ({} "{}") {}'.format(vpobj.id, vpobj.title, vpobj.raw_prob))
+        current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
         return redirect(url_for('qgen.list_vprobs'))
     return render_template('vped.html', title='Update VProblem', form=form)
 
@@ -228,6 +231,7 @@ def edvquiz(vqid):
         vqobj.vproblems = plist
         vqobj.save()
         flash('Updated VQuiz: ({} "{}") {}'.format(vqobj.id, vqobj.title, vqobj.vpid_lst))
+        current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
 
@@ -242,8 +246,8 @@ def del_cquiz(cqid):
     owner = cq.taker.username
     cqquery.delete()
     db.session.commit()
-    current_app.logger.info("{}'s quiz '{}' deleted by {}".format(owner, title, current_user.username))
     flash("Deleted {}'s CQuiz:({}) '{}'".format(owner, cqid, title))
+    current_app.logger.info("{} deleted {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
@@ -263,8 +267,8 @@ def del_vquiz(vqid):
     else:
         vqquery.delete()
         db.session.commit()
-        current_app.logger.info("VQuiz '{}' deleted by {}".format(title, current_user.username))
         flash("Deleted VQuiz:({}) '{}'".format(vqid, title))
+        current_app.logger.info("{} deleted VQuiz: ({}) '{}'".format(current_user.username, vqid, title))
     return redirect(url_for('qgen.list_vquizzes'))
 
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
@@ -284,7 +288,7 @@ def del_vprob(vpid):
     else:
         vpquery.delete()
         db.session.commit()
-        current_app.logger.info("VProblem '{}' deleted by {}".format(title, current_user.username))
         flash("Deleted VProblem:({}) '{}'".format(vpid, title))
+        current_app.logger.info("{} deleted VProblem: ({}) '{}'".format(current_user.username, vpid, title))
     return redirect(url_for('qgen.list_vprobs'))
 
