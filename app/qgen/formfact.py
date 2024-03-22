@@ -62,7 +62,7 @@ def renderable_factory(cquiz):
         submit = SubmitField('Submit')
         @property
         def transcript(self):
-            date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate.strftime('%A %B %d %Y %I:%M %p'), cquiz.compdate.strftime('%A %B %d %Y %I:%M %p'))
+            date_header = '<b>Started:</b> {}<br><b>Completed:</b> {}<br>'.format(cquiz.startdate.strftime('%b %d %Y %I:%M %p'), cquiz.compdate.strftime('%b %d %Y %I:%M %p'))
             head_chunks = [block_header, date_header]
             prob_chunks = []
             num_correct = 0
