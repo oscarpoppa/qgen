@@ -7,6 +7,8 @@ from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
 from werkzeug.utils import secure_filename
 from functools import wraps
+from PIL import Image
+from re import sub
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -54,6 +56,15 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+def thumbnail(path):
+    fnpatt = '([^/]+)$'
+    im = Image.open(path)    
+    im.thumbnail((128, 128))
+    nupath = sub(fnpatt, 'T_\\1', path)
+    im.save(nupath, 'JPEG')
+    flash('Created thumbnail: {} for {}'.format(nupath, path))
+    return nupath
+
 @app.route('/upload', methods=['POST','GET'])
 @login_required
 @pw_check
@@ -63,9 +74,11 @@ def upload():
     if form.validate_on_submit():
         ufile = request.files['thefile']
         #need to generalize this
-        ufile.save('/home/dan/proj/quiz/app/static/{}'.format(secure_filename(ufile.filename)))
+        fname = '/home/dan/proj/quiz/app/static/{}'.format(secure_filename(ufile.filename))
+        ufile.save(fname)
         flash('{} saved'.format(ufile.filename))
-        return redirect(url_for('mypage'))
+        thumbnail(fname)
+        return redirect(url_for('upload'))
     return render_template('upload.html', title='Upload a File', form=form)
 
 @app.route('/', methods=['POST','GET'])
