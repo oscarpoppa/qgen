@@ -205,6 +205,18 @@ def images():
     imgs = [(f,f[2:]) for f in listdir(STATIC) if f.startswith('T_')]
     return render_template('images.html', imgs=imgs, title='Images')
 
+@app.route('/nonimages', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def nonimages():
+    allf = listdir(STATIC)
+    timgs = [f for f in allf if f.startswith('T_')]
+    imgs = [f[2:] for f in timgs]
+    imgs += timgs
+    nonims = [f for f in allf if f not in imgs]
+    return render_template('nonimages.html', files=nonims, title='Non-Image Files')
+
 @app.route('/delimg/<fname>', methods=['GET'])
 @login_required
 @pw_check
@@ -218,4 +230,17 @@ def delimg(fname):
         flash('Image and thumbnail removed: {}'.format(fname))
         app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
     return redirect(url_for('images'))
+
+@app.route('/delnonimg/<fname>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def delnonimg(fname):
+    if fname not in [f for f in listdir(STATIC)]:
+        flash('File not found: {}'.format(fname))
+    else:
+        remove(STATIC + fname)
+        flash('File removed: {}'.format(fname))
+        app.logger.info('{} removed file {}'.format(current_user.username, fname))
+    return redirect(url_for('nonimages'))
 
