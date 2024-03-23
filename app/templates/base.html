@@ -46,7 +46,7 @@
                            <div><a href="{{ url_for('userdet') }}">user detail</a></div>
                         </td>
                         <td align=right width=25%>
-		            <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
+                            <div><a href="{{ url_for('upload') }}">upload files</a></div>
                         </td>
                         </tr>
                         <tr>
@@ -57,10 +57,10 @@
 		            <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
                         </td>
                         <td align=right width=25%>
-                           <div><a href="{{ url_for('qgen.list_users') }}">list_quizzes by user</a></div>
+		            <div><a href="{{ url_for('qgen.assign') }}">assign quizzes</a></div>
                         </td>
                         <td align=right width=25%>
-                            <div><a href="{{ url_for('upload') }}">upload images</a></div>
+                            <div><a href="{{ url_for('nonimages') }}">uploaded files</a></div>
                         </td>
                       </tr>
                         <tr>
@@ -69,9 +69,10 @@
                         <td align=left width=25%>
                         </td>
                         <td align=right width=25%>
+                           <div><a href="{{ url_for('qgen.list_users') }}">list_quizzes by user</a></div>
                         </td>
                         <td align=right width=25%>
-                            <div><a href="{{ url_for('images') }}">images</a></div>
+                            <div><a href="{{ url_for('images') }}">uploaded images</a></div>
                         </td>
                       </tr>
                     </table>
