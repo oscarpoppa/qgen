@@ -50,7 +50,7 @@ def trythumb(path, fname):
         im.thumbnail((128, 128))
         tname = 'T_' + fname
         nupath = path + tname
-        im.save(nupath, 'JPEG')
+        im.save(nupath)
         flash('Created thumbnail {}'.format(tname))
     except Exception as exc:
         pass
