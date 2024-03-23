@@ -67,6 +67,8 @@ def mypage():
 def logout():
     flash('{} has been logged out'.format(current_user.username))
     app.logger.info('{} has logged out'.format(current_user.username))
+    current_user.logged_in = False
+    current_user.save()
     logout_user()
     return redirect(url_for('login'))
 
@@ -99,6 +101,8 @@ def login():
             flash('Invalid Username/Password')
             return redirect(url_for('login')) 
         login_user(u, remember=True)
+        u.logged_in = True
+        u.save()
         app.logger.info('{} has logged in'.format(u.username))
         next_page = request.args.get('next')
         if next_page:

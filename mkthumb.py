@@ -14,7 +14,8 @@ for fname in stdin:
         im.thumbnail((128, 128))
         tname = 'T_' + fname
         im.save(tname)
+        print('{} created'.format(tname))
     except Exception as exc:
         print(str(exc))
-        print('{} failed'.format(fname))
+        print('{} thumbnailization failed'.format(fname))
 
