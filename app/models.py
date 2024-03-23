@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256))
     is_admin = db.Column(db.Boolean, default=False)
     pw_man_reset = db.Column(db.Boolean, default=False)
+    logged_in = db.Column(db.Boolean, default=False)
 
     def set_password(self, pswd):
         self.password_hash = generate_password_hash(pswd)

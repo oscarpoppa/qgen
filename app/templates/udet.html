@@ -6,7 +6,7 @@
     [<a href="{{ url_for('eduser', uid=item.id) }}">Edit</a>]
     [<a href="{{ url_for('deluser', uid=item.id) }}" onclick="return confirm('Are you sure you want to delete {{item.username}}?');">Del</a>]
     [<a href="{{ url_for('resetpass', uid=item.id) }}" onclick="return confirm('Are you sure you want to reset {{item.username}}\'s password?');">PW Reset</a>]
-    <br><b>User: {{item.username}}</b>
+    <br><b>User: {{item.username}} {% if item.logged_in %} (logged in) {% endif %}</b>
     <br>Email: {{item.email}}
     {% if item.is_admin %} 
     <br>ADMINISTRATOR
