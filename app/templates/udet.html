@@ -2,7 +2,7 @@
 
 {% block content %}
 {% for item in ulst %}
-    <b>({{item.id}})</b>
+    <b>(id={{item.id}})</b>
     [<a href="{{ url_for('eduser', uid=item.id) }}">Edit</a>]
     [<a href="{{ url_for('deluser', uid=item.id) }}" onclick="return confirm('Are you sure you want to delete {{item.username}}?');">Del</a>]
     [<a href="{{ url_for('resetpass', uid=item.id) }}" onclick="return confirm('Are you sure you want to reset {{item.username}}\'s password?');">PW Reset</a>]
