@@ -8,7 +8,9 @@ from wtforms_sqlalchemy.orm import model_form
 from werkzeug.utils import secure_filename
 from functools import wraps
 from PIL import Image
-from re import sub
+from os import listdir, remove
+
+STATIC = '/home/dan/proj/quiz/app/static/'
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -41,14 +43,15 @@ def pw_check(func):
             return func(*args, **kwargs)
     return inner
 
-def trythumb(path):
-    fnpatt = '([^/]+)$'
+def trythumb(path, fname):
+    fpath = path + fname
     try:
-        im = Image.open(path)    
+        im = Image.open(fpath)    
         im.thumbnail((128, 128))
-        nupath = sub(fnpatt, 'T_\\1', path)
+        tname = 'T_' + fname
+        nupath = path + tname
         im.save(nupath, 'JPEG')
-        flash('Created thumbnail: {} for {}'.format(nupath, path))
+        flash('Created thumbnail {}'.format(tname))
     except Exception as exc:
         pass
 
@@ -76,10 +79,12 @@ def upload():
     if form.validate_on_submit():
         ufile = request.files['thefile']
         #need to generalize this
-        fname = '/home/dan/proj/quiz/app/static/{}'.format(secure_filename(ufile.filename))
-        ufile.save(fname)
+        path = STATIC
+        fname = secure_filename(ufile.filename)
+        fpath = path + fname
+        ufile.save(fpath)
         flash('{} saved'.format(ufile.filename))
-        trythumb(fname)
+        trythumb(path, fname)
         return redirect(url_for('upload'))
     return render_template('upload.html', title='Upload a File', form=form)
 
@@ -191,4 +196,26 @@ def eduser(uid):
 def userdet():
     ulst = User.query.all()
     return render_template('udet.html', ulst=ulst, title='User Detail')
+
+@app.route('/images', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def images():
+    imgs = [(f,f[2:]) for f in listdir(STATIC) if f.startswith('T_')]
+    return render_template('images.html', imgs=imgs, title='Images')
+
+@app.route('/delimg/<fname>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def delimg(fname):
+    if fname not in [f for f in listdir(STATIC)]:
+        flash('Image not found: {}'.format(fname))
+    else:
+        remove(STATIC + fname)
+        remove(STATIC + 'T_' + fname)
+        flash('Image and thumbnail removed: {}'.format(fname))
+        app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
+    return redirect(url_for('images'))
 
