@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% for file in files %}
+    [<a href="/static/{{ file }}">{{file}}</a>]
+    [<a href="{{ url_for('delnonimg', fname=file) }}" onclick="return confirm('Are you sure you want to delete file \'{{file}}\'?');">Del</a>]
+    <br><br>
+{% endfor %}
+{% endblock %}
