@@ -229,10 +229,13 @@ def delimg(fname):
     if fname not in [f for f in listdir(STATIC)]:
         flash('Image not found: {}'.format(fname))
     else:
-        remove(STATIC + fname)
-        remove(STATIC + 'T_' + fname)
-        flash('Image and thumbnail removed: {}'.format(fname))
-        app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
+        try:
+            remove(STATIC + fname)
+            remove(STATIC + 'T_' + fname)
+            flash('Image and thumbnail removed: {}'.format(fname))
+            app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
+        except Exception as exc:
+            flash('Deletion failed for {}'.format(fname))
     return redirect(url_for('images'))
 
 @app.route('/delnonimg/<fname>', methods=['GET'])
@@ -243,8 +246,11 @@ def delnonimg(fname):
     if fname not in [f for f in listdir(STATIC)]:
         flash('File not found: {}'.format(fname))
     else:
-        remove(STATIC + fname)
-        flash('File removed: {}'.format(fname))
-        app.logger.info('{} removed file {}'.format(current_user.username, fname))
+        try:
+            remove(STATIC + fname)
+            flash('File removed: {}'.format(fname))
+            app.logger.info('{} removed file {}'.format(current_user.username, fname))
+        except Exception as exc:
+            flash('Deletion failed for {}'.format(fname))
     return redirect(url_for('nonimages'))
 
