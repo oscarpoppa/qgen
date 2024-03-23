@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+    [<a href="{{ url_for('upload') }}">Upload a New File</a>]<br><br>
 {% for file in files %}
     {{file}}<br>
     [<a href="/static/{{ file }}">View</a>]

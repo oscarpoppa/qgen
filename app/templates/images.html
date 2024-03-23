@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+[<a href="{{ url_for('upload') }}">Upload a New Image</a>]<br><br>
 {% for pair in imgs %}
     <img src="/static/{{ pair[0] }}"><br>
     {{pair[1]}}<br>
