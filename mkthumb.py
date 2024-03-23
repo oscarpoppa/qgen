@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# Intended for after-the-fact thumbnailization. Not needed if app used to upload.
 from PIL import Image
 from sys import stdin
 
