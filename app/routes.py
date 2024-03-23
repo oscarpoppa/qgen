@@ -41,6 +41,17 @@ def pw_check(func):
             return func(*args, **kwargs)
     return inner
 
+def trythumb(path):
+    fnpatt = '([^/]+)$'
+    try:
+        im = Image.open(path)    
+        im.thumbnail((128, 128))
+        nupath = sub(fnpatt, 'T_\\1', path)
+        im.save(nupath, 'JPEG')
+        flash('Created thumbnail: {} for {}'.format(nupath, path))
+    except Exception as exc:
+        pass
+
 @app.route('/mypage')
 @login_required
 @pw_check
@@ -56,15 +67,6 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-def thumbnail(path):
-    fnpatt = '([^/]+)$'
-    im = Image.open(path)    
-    im.thumbnail((128, 128))
-    nupath = sub(fnpatt, 'T_\\1', path)
-    im.save(nupath, 'JPEG')
-    flash('Created thumbnail: {} for {}'.format(nupath, path))
-    return nupath
-
 @app.route('/upload', methods=['POST','GET'])
 @login_required
 @pw_check
@@ -77,7 +79,7 @@ def upload():
         fname = '/home/dan/proj/quiz/app/static/{}'.format(secure_filename(ufile.filename))
         ufile.save(fname)
         flash('{} saved'.format(ufile.filename))
-        thumbnail(fname)
+        trythumb(fname)
         return redirect(url_for('upload'))
     return render_template('upload.html', title='Upload a File', form=form)
 
