@@ -88,6 +88,6 @@ def process_spec(prob, ansr):
     #turn '+ 0x' into ''
     prob = sub('[\+\-]\s*0[a-zA-Z]+', '', prob)
     #turn '+ 1x' into '+ x'
-    prob = sub('([\+\-\(\=]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
+    prob = sub('([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
     return prob, ansr
 
