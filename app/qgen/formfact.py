@@ -46,6 +46,7 @@ def renderable_factory(cquiz):
         if subm == 'None':
             return False
         numpatt = '[\d\.\-]+'
+        # not good if checking ordered lists i.e. vectors
         sublst = sorted(findall(numpatt, subm))
         corlst = sorted(findall(numpatt, corr))
         if len(sublst) != len(corlst):
