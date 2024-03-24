@@ -29,7 +29,7 @@ block_header = """
 """
 
 prob_capsule = """
-    {}. {} {}<br>{}<br><br>
+    <b>{}.</b> {} {}<br>{}<br><br><br>
 """
 
 fieldname_base = 'Number{}'
