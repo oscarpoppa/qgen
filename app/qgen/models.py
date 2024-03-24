@@ -59,7 +59,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
-    raw_prob = db.Column(db.String(256))
+    raw_prob = db.Column(db.String(1024))
     raw_ansr = db.Column(db.String(128))
     example = db.Column(db.String(128))
     form_elem = db.Column(db.String(64))
