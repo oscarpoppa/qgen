@@ -45,7 +45,6 @@ def secondary_symbol(string, symbols):
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
     is_math_or_raise(mystr)
-    seed(datetime.now().microsecond**2)
     val = eval(mystr)
     symbols[mdict['symbol']] = val
     return val
@@ -57,7 +56,6 @@ def bare_expr(string, symbols):
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
     is_math_or_raise(mystr)
-    seed(datetime.now().microsecond**2)
     return eval(mystr)
 
 def process_spec(prob, ansr):
