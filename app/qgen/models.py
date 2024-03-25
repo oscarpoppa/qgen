@@ -96,7 +96,7 @@ class CProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cproblem'
     id = db.Column(db.Integer, primary_key=True)
     cquiz_id = db.Column(db.Integer, db.ForeignKey('cquiz.id', ondelete='CASCADE'))
-    conc_prob = db.Column(db.String(256))
+    conc_prob = db.Column(db.String(1024))
     conc_ansr = db.Column(db.String(128))
     vproblem_id = db.Column(db.Integer, db.ForeignKey('vproblem.id'))
     ordinal = db.Column(db.Integer)
