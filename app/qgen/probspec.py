@@ -1,4 +1,5 @@
-from random import randint as ri, choice as ch
+from random import seed, randint as ri, choice as ch
+from datetime import datetime
 from re import sub, search, findall, escape
 from flask import flash, current_app
 
@@ -27,6 +28,7 @@ def primary_symbol(string, symbols):
     mdict = mo.groupdict()
     # only allow approved functions in eval
     func_ok_or_raise(mdict['func'])
+    seed(datetime.now().microsecond**2)
     val = eval(mdict['callable'])
     symbols[mdict['symbol']] = val
     return val
@@ -43,6 +45,7 @@ def secondary_symbol(string, symbols):
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
     is_math_or_raise(mystr)
+    seed(datetime.now().microsecond**2)
     val = eval(mystr)
     symbols[mdict['symbol']] = val
     return val
@@ -54,6 +57,7 @@ def bare_expr(string, symbols):
         mystr = sub(k, str(v), mystr) 
     # only allow math symbols in eval
     is_math_or_raise(mystr)
+    seed(datetime.now().microsecond**2)
     return eval(mystr)
 
 def process_spec(prob, ansr):

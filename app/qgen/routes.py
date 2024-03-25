@@ -7,12 +7,10 @@ from app.qgen.formfact import renderable_factory, assign_form_factory
 from app.qgen.forms import VProbAdd, VQuizAdd
 from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from flask import flash, render_template, render_template_string, redirect, url_for, request, current_app
-from flask_login import current_user, login_user, login_required, logout_user
+from flask_login import current_user, login_required
 from flask_wtf import FlaskForm
-from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from wtforms_sqlalchemy.orm import model_form
-from random import randint
-from re import sub, search, split, findall
+from re import findall
 from json import dumps, loads
 from datetime import datetime
 
