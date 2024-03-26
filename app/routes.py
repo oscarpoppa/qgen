@@ -49,6 +49,7 @@ def sess_check(func):
     def inner(*args, **kwargs):
         if not current_user.session == session['_id']:
             flash('Session invalidated -- a newer session exists')
+            app.logger.warning('Session invalidated for: {}'.format(current_user.username))
             logout_user()
             return redirect(url_for('login'))
         else:
