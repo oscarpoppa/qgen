@@ -1,6 +1,6 @@
 from app import db
 from app.models import User
-from app.routes import admin_only, pw_check
+from app.routes import admin_only, pw_check, sess_check
 from app.qgen import qgen_bp
 from app.qgen.probspec import process_spec
 from app.qgen.formfact import renderable_factory, assign_form_factory
@@ -100,6 +100,7 @@ def assign():
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 @pw_check
+@sess_check
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
     cok = cq.vquiz.calculator_ok
