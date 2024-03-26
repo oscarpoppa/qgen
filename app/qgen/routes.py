@@ -100,7 +100,7 @@ def assign():
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 @pw_check
-@sess_check
+@sess_check # One screen at a time while taking a quiz. Kicks older session/s out.
 def qtake(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
     cok = cq.vquiz.calculator_ok
