@@ -43,19 +43,6 @@ def pw_check(func):
             return func(*args, **kwargs)
     return inner
 
-# Decorator to use only current session. Previous sessions will be invalidated.
-def sess_check(func):
-    @wraps(func)
-    def inner(*args, **kwargs):
-        if not current_user.session == session['_id']:
-            flash('Session invalidated -- a newer session exists')
-            app.logger.warning('Session invalidated for: {}'.format(current_user.username))
-            logout_user()
-            return redirect(url_for('login'))
-        else:
-            return func(*args, **kwargs)
-    return inner
-
 def trythumb(path, fname):
     fpath = path + fname
     try:
