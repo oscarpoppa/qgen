@@ -1,7 +1,7 @@
 from app import app, db
 from app.models import User
 from app.forms import RegistrationForm, LoginForm, UploadForm, ChPassForm
-from flask import flash, render_template, redirect, url_for, request, session
+from flask import flash, render_template, redirect, url_for, request
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
@@ -102,7 +102,6 @@ def login():
             return redirect(url_for('login')) 
         login_user(u, remember=True)
         u.logged_in = True
-        u.session = session['_id'] 
         u.save()
         app.logger.info('{} has logged in'.format(u.username))
         next_page = request.args.get('next')
