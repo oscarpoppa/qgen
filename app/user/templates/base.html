@@ -13,13 +13,13 @@
                     <table width=100% columns=3>
                       <tr>
                         <td align=left width=33%>
-    		          <div><a href="{{ url_for('mypage') }}">my page</a></div>
+    		          <div><a href="{{ url_for('user.mypage') }}">my page</a></div>
                         </td>
                         <td align=center width=33%>
                           <b>{{current_user.username}}</b>
                         </td>
                         <td align=right width=34%>
-    		          <div><a href="{{ url_for('logout') }}">log out</a></div>
+    		          <div><a href="{{ url_for('user.logout') }}">log out</a></div>
                         </td>
                       </tr>
                       <tr>
@@ -28,7 +28,7 @@
                         <td align=center width=33%>
                         </td>
                         <td align=right width=34%>
-    		          <div><a href="{{ url_for('chpass') }}">change password</a></div>
+    		          <div><a href="{{ url_for('user.chpass') }}">change password</a></div>
                         </td>
                       </tr>
                     </table>
@@ -43,10 +43,10 @@
                             <div><a href="{{ url_for('qgen.mkvquiz') }}">create a vquiz</a></div>
                         </td>
                         <td align=right width=25%>
-                           <div><a href="{{ url_for('userdet') }}">user detail</a></div>
+                           <div><a href="{{ url_for('user.userdet') }}">user detail</a></div>
                         </td>
                         <td align=right width=25%>
-                            <div><a href="{{ url_for('upload') }}">upload a file</a></div>
+                            <div><a href="{{ url_for('user.upload') }}">upload a file</a></div>
                         </td>
                         </tr>
                         <tr>
@@ -60,7 +60,7 @@
 		            <div><a href="{{ url_for('qgen.assign') }}">assign a quiz</a></div>
                         </td>
                         <td align=right width=25%>
-                            <div><a href="{{ url_for('nonimages') }}">uploaded files</a></div>
+                            <div><a href="{{ url_for('user.nonimages') }}">uploaded files</a></div>
                         </td>
                       </tr>
                         <tr>
@@ -72,15 +72,15 @@
                            <div><a href="{{ url_for('qgen.list_users') }}">list_quizzes by user</a></div>
                         </td>
                         <td align=right width=25%>
-                            <div><a href="{{ url_for('images') }}">uploaded images</a></div>
+                            <div><a href="{{ url_for('user.images') }}">uploaded images</a></div>
                         </td>
                       </tr>
                     </table>
 		    <hr>
 		    {% endif %}
 		{% else %}
-	            <div><a href="{{ url_for('login') }}">log in</a></div>
-		    <div><a href="{{ url_for('register') }}">create an account</a></div>
+	            <div><a href="{{ url_for('user.login') }}">log in</a></div>
+		    <div><a href="{{ url_for('user.register') }}">create an account</a></div>
                     <hr>
 		{% endif %}
 		{% with messages = get_flashed_messages() %}

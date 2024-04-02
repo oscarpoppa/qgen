@@ -1,4 +1,4 @@
-from app.models import User
+from app.user.models import User
 from flask_restful import Resource, fields, marshal_with
 
 user_fields = {'username': fields.String,

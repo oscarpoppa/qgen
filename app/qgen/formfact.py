@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from app.qgen.models import VQuiz
-from app.models import User
+from app.user.models import User
 from re import findall
 
 block_top = """
