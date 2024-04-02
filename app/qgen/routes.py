@@ -1,6 +1,6 @@
 from app import db
-from app.models import User
-from app.routes import admin_only, pw_check
+from app.user.models import User
+from app.user.routes import admin_only, pw_check
 from app.qgen import qgen_bp
 from app.qgen.probspec import process_spec
 from app.qgen.formfact import renderable_factory, assign_form_factory
@@ -106,10 +106,10 @@ def qtake(cidx):
     title = '{} ({}) ({})'.format(cq.vquiz.title, cq.taker.username, 'Calculator OK' if cok else 'No Calculator')
     if not cq.taker:
         flash('{} unassigned'.format(request.__dict__['environ']['RAW_URI']))
-        return redirect(url_for('mypage'))
+        return redirect(url_for('user.mypage'))
     if current_user != cq.taker and not current_user.is_admin:
         flash('{} unauthorized'.format(request.__dict__['environ']['RAW_URI']))
-        return redirect(url_for('mypage'))
+        return redirect(url_for('user.mypage'))
     if cq.completed:
         return render_template_string(cq.transcript, title=title)
     templ, cform = renderable_factory(cq)

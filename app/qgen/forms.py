@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
-from app.models import User
+from app.user.models import User
 
 class VProbAdd(FlaskForm):
     rawprob = StringField('Raw Problem', validators=[DataRequired()])
