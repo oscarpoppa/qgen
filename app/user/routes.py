@@ -1,15 +1,12 @@
 from . import user_bp
-from app import app, db
 from .models import User
-from .forms import RegistrationForm, LoginForm, UploadForm, ChPassForm
+from .forms import RegistrationForm, LoginForm, ChPassForm
+from app import db
 from flask import flash, render_template, redirect, url_for, request, current_app
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
-from werkzeug.utils import secure_filename
 from functools import wraps
-from PIL import Image
-from os import listdir, remove
 
 STATIC = '/home/dan/proj/quiz/app/static/'
 
@@ -44,18 +41,6 @@ def pw_check(func):
             return func(*args, **kwargs)
     return inner
 
-def trythumb(path, fname):
-    fpath = path + fname
-    try:
-        im = Image.open(fpath)    
-        im.thumbnail((128, 128))
-        tname = 'T_' + fname
-        nupath = path + tname
-        im.save(nupath)
-        flash('Created thumbnail {}'.format(tname))
-    except Exception as exc:
-        pass
-
 @user_bp.route('/mypage')
 @login_required
 @pw_check
@@ -72,24 +57,6 @@ def logout():
     current_user.save()
     logout_user()
     return redirect(url_for('user.login'))
-
-@user_bp.route('/upload', methods=['POST','GET'])
-@login_required
-@pw_check
-@admin_only
-def upload():
-    form = UploadForm()
-    if form.validate_on_submit():
-        ufile = request.files['thefile']
-        #need to generalize this
-        path = STATIC
-        fname = secure_filename(ufile.filename)
-        fpath = path + fname
-        ufile.save(fpath)
-        flash('{} saved'.format(ufile.filename))
-        trythumb(path, fname)
-        return redirect(url_for('user.upload'))
-    return render_template('upload.html', title='Upload a File', form=form)
 
 @user_bp.route('/', methods=['POST','GET'])
 @user_bp.route('/login', methods=['POST','GET'])
@@ -201,57 +168,4 @@ def eduser(uid):
 def userdet():
     ulst = User.query.all()
     return render_template('udet.html', ulst=ulst, title='User Detail')
-
-@user_bp.route('/images', methods=['GET'])
-@login_required
-@pw_check
-@admin_only
-def images():
-    imgs = [(f,f[2:]) for f in listdir(STATIC) if f.startswith('T_')]
-    return render_template('images.html', imgs=imgs, title='Images')
-
-@user_bp.route('/nonimages', methods=['GET'])
-@login_required
-@pw_check
-@admin_only
-def nonimages():
-    allf = listdir(STATIC)
-    timgs = [f for f in allf if f.startswith('T_')]
-    imgs = [f[2:] for f in timgs]
-    imgs += timgs
-    nonims = [f for f in allf if f not in imgs]
-    return render_template('nonimages.html', files=nonims, title='Non-Image Files')
-
-@user_bp.route('/delimg/<fname>', methods=['GET'])
-@login_required
-@pw_check
-@admin_only
-def delimg(fname):
-    if fname not in [f for f in listdir(STATIC)]:
-        flash('Image not found: {}'.format(fname))
-    else:
-        try:
-            remove(STATIC + fname)
-            remove(STATIC + 'T_' + fname)
-            flash('Image and thumbnail removed: {}'.format(fname))
-            current_app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
-        except Exception as exc:
-            flash('Deletion failed for {}'.format(fname))
-    return redirect(url_for('user.images'))
-
-@user_bp.route('/delnonimg/<fname>', methods=['GET'])
-@login_required
-@pw_check
-@admin_only
-def delnonimg(fname):
-    if fname not in [f for f in listdir(STATIC)]:
-        flash('File not found: {}'.format(fname))
-    else:
-        try:
-            remove(STATIC + fname)
-            flash('File removed: {}'.format(fname))
-            current_app.logger.info('{} removed file {}'.format(current_user.username, fname))
-        except Exception as exc:
-            flash('Deletion failed for {}'.format(fname))
-    return redirect(url_for('user.nonimages'))
 
