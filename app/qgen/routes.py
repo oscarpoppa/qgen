@@ -1,7 +1,6 @@
-from . import db
+from . import db, qgen_bp
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
-from app.qgen import qgen_bp
 from app.qgen.probspec import process_spec
 from app.qgen.formfact import renderable_factory, assign_form_factory
 from app.qgen.forms import VProbAdd, VQuizAdd
