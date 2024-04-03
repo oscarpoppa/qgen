@@ -1,7 +1,6 @@
-from . import user_bp
+from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm
-from app import db
 from flask import flash, render_template, redirect, url_for, request, current_app
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm

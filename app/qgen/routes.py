@@ -1,4 +1,4 @@
-from app import db
+from . import db
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
 from app.qgen import qgen_bp
