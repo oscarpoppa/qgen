@@ -12,15 +12,11 @@ migrate = Migrate(app, db)
 login = LoginManager(app)
 login.login_view = 'login'
 
-# this needs to be down here to avoid circular import
 from app.error import error_bp
 from app.apiv1 import api_bp
 from app.qgen import qgen_bp
 from app.user import user_bp
 from app.upload import upload_bp
-from app.commands import dbdump as dbdump_cli_group
-
-app.cli.add_command(dbdump_cli_group, name='dbdump')
 
 app.register_blueprint(error_bp)
 app.register_blueprint(api_bp)
@@ -28,7 +24,6 @@ app.register_blueprint(qgen_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(upload_bp)
 
-# this needs to be down here to avoid circular import
-#from app import routes, models, commands
-from app import commands
-#from app.qgen import models
+from app.commands import dbdump as dbdump_cli_group
+app.cli.add_command(dbdump_cli_group, name='dbdump')
+
