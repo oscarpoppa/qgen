@@ -1,6 +1,5 @@
+from . import db, error_bp
 from flask import render_template, flash
-from app.error import error_bp
-from app import db
 
 @error_bp.app_errorhandler(404)
 def notfound(error):
