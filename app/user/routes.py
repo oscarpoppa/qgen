@@ -136,8 +136,8 @@ def deluser(uid):
         return redirect(url_for('user.userdet'))
     usrquery.delete()
     db.session.commit()
-    current_app.logger.info('User {} has been deleted'.format(usrname))
-    flash('{} deleted user: {}'.format(current_user.username, usrname))
+    flash('User {} has been deleted'.format(usrname))
+    current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
     return redirect(url_for('user.userdet'))
 
 @user_bp.route('/edituser/<uid>', methods=['POST', 'GET'])
