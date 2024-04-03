@@ -1,10 +1,10 @@
 from . import db, qgen_bp
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
-from app.qgen.probspec import process_spec
-from app.qgen.formfact import renderable_factory, assign_form_factory
-from app.qgen.forms import VProbAdd, VQuizAdd
-from app.qgen.models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
+from .probspec import process_spec
+from .formfact import renderable_factory, assign_form_factory
+from .forms import VProbAdd, VQuizAdd
+from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from flask import flash, render_template, render_template_string, redirect, url_for, request, current_app
 from flask_login import current_user, login_required
 from flask_wtf import FlaskForm
