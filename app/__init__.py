@@ -10,7 +10,7 @@ app.logger.setLevel(3)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db) 
 login = LoginManager(app)
-login.login_view = 'login'
+login.login_view = 'user.login'
 
 from app.error import error_bp
 from app.apiv1 import api_bp
