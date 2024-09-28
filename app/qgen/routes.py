@@ -13,11 +13,13 @@ from re import findall
 from json import dumps, loads
 from datetime import datetime
 
+#generate a concrete problem
 def gen_cprob(cquiz, vprob, ordinal):
     cp, ca = process_spec(vprob.raw_prob, vprob.raw_ansr)
     nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
     return nucprob
 
+#generate a virtual quiz
 def create_vquiz(lst, title, img, calculator_ok):
     nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok)
     nuquiz.save()
@@ -27,6 +29,7 @@ def create_vquiz(lst, title, img, calculator_ok):
     nuquiz.save()
     return nuquiz
 
+#generate concrete quiz using virtual and assign
 def create_cquiz(vquiz, assignee):
     try:
         nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
@@ -42,6 +45,7 @@ def create_cquiz(vquiz, assignee):
         db.session.rollback()
         return None
 
+#route to create a virtual quiz
 @qgen_bp.route('/quiz/makevquiz', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -60,6 +64,7 @@ def mkvquiz():
         return redirect(url_for('qgen.mkvquiz'))
     return render_template('vqadd.html', title='Create VQuiz', form=form)
 
+#route to create a virtual problem
 @qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -75,6 +80,7 @@ def mkvprob():
         return redirect(url_for('qgen.mkvprob'))
     return render_template('vpadd.html', title='Create VProblem', form=form)
 
+#route to assign a concrete quiz
 @qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -96,6 +102,7 @@ def assign():
         return redirect(url_for('qgen.assign'))
     return render_template('assign.html', title='Assign Quiz', form=form)
 
+#route to take a concrete quiz
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 @pw_check
@@ -131,6 +138,7 @@ def qtake(cidx):
         flash("you're not {}".format(cq.taker.username))
     return render_template_string(templ, title=title, form=form)
 
+#route to list users
 @qgen_bp.route('/quiz/listuser', methods=['GET'])
 @login_required
 @pw_check
@@ -139,6 +147,7 @@ def list_users():
     ulst = User.query.all()
     return render_template('ulist.html', ulst=ulst, title='Quizzes by User')
 
+#route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
 @login_required
 @pw_check
@@ -147,6 +156,7 @@ def list_user(uid):
     ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     return render_template('ulist.html', ulst=[ulst], title="{}'s Info".format(ulst.username))
 
+#route to list all virtual quizzes
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
 @login_required
 @pw_check
@@ -155,6 +165,7 @@ def list_vquizzes():
     vqlst = VQuiz.query.all()
     return render_template('vqlist.html', vqlst=vqlst, title='All VQuizzes')
 
+#route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
 @login_required
 @pw_check
@@ -163,6 +174,7 @@ def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     return render_template('vqlist.html', vqlst=[vqlst], title='VQuiz {} detail'.format(vqid))
 
+#route to list a specific concrete quiz
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required
 @pw_check
@@ -171,6 +183,7 @@ def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).first_or_404('No cquiz with id {}'.format(cqid))
     return render_template('cqlist.html', cqlst=[cqlst], title='CQuiz {} detail'.format(cqid))
 
+#route to list all virtual problems
 @qgen_bp.route('/quiz/listvp', methods=['GET'])
 @login_required
 @pw_check
@@ -179,6 +192,7 @@ def list_vprobs():
     vplst = VProblem.query.all()
     return render_template('vplist.html', vplst=vplst, title='All VProblems')
 
+#route to list a specific virtual problem
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
 @login_required
 @pw_check
@@ -187,6 +201,7 @@ def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
     return render_template('vplist.html', vplst=[vplst], title='VProblem {} detail'.format(vpid))
 
+#route to edit a specific virtual problem
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -209,6 +224,7 @@ def edvprob(vpid):
         return redirect(url_for('qgen.list_vprobs'))
     return render_template('vped.html', title='Update VProblem', form=form)
 
+#route to edit a specific virtual quiz
 @qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -232,6 +248,7 @@ def edvquiz(vqid):
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
 
+#route to delete a specific concrete quiz
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
 @login_required
 @pw_check
@@ -247,6 +264,7 @@ def del_cquiz(cqid):
     current_app.logger.info("{} deleted {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
+#route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
 @login_required
 @pw_check
@@ -268,6 +286,7 @@ def del_vquiz(vqid):
         current_app.logger.info("{} deleted VQuiz: ({}) '{}'".format(current_user.username, vqid, title))
     return redirect(url_for('qgen.list_vquizzes'))
 
+#route to delete a specific virtual problem
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
 @login_required
 @pw_check
