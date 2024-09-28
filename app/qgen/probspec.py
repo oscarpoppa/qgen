@@ -3,11 +3,13 @@ from datetime import datetime
 from re import sub, search, findall, escape
 from flask import flash, current_app
 
+#test if func allowed, otherwise raise exception
 def func_ok_or_raise(string):
     allowed_funcs = ('ri', 'ch')
     if not string in allowed_funcs:
         raise ValueError('Unauthorized function specified--eval denied: "{}"'.format(string))
-
+        
+#test if math expression, otherwise raise exception
 def is_math_or_raise(string):
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
@@ -58,6 +60,7 @@ def bare_expr(string, symbols):
     is_math_or_raise(mystr)
     return eval(mystr)
 
+#build human-readable expression
 def process_spec(prob, ansr):
     symbols = {}
     repl = {}
