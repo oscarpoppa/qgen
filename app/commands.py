@@ -3,11 +3,13 @@ import click
 from os import system
 from datetime import datetime
 
+#CLI command to dump DB
 @click.group()
 def dbdump():
     """Perform a mysqldump command for this app."""
     pass
 
+#CLI command action
 @dbdump.command()
 @click.option('-d', '--directory', default=None, help='Directory to put archive')
 def archive(directory):
