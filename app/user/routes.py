@@ -40,12 +40,14 @@ def pw_check(func):
             return func(*args, **kwargs)
     return inner
 
+# route to user homepage
 @user_bp.route('/mypage')
 @login_required
 @pw_check
 def mypage():
     return render_template('mypage.html', current_user=current_user, title='{}\'s Page'.format(current_user.username))
 
+# route to user logout action
 @user_bp.route('/logout')
 @login_required
 @pw_check
@@ -57,6 +59,7 @@ def logout():
     logout_user()
     return redirect(url_for('user.login'))
 
+# route to user login action
 @user_bp.route('/', methods=['POST','GET'])
 @user_bp.route('/login', methods=['POST','GET'])
 @logout_required
@@ -77,6 +80,7 @@ def login():
         return redirect(url_for('user.mypage'))
     return render_template('login.html', title='Login Now!', form=form)
 
+# route to user registration action
 @user_bp.route('/register', methods=['POST','GET'])
 @logout_required
 def register():
@@ -91,6 +95,7 @@ def register():
     else:
         return render_template('register.html', title='Register Now!', form=form)
 
+# route to user password-change action
 @user_bp.route('/chpass', methods=['POST','GET'])
 @login_required
 def chpass():
@@ -107,6 +112,7 @@ def chpass():
         return redirect(url_for('user.mypage'))
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
+# route to admin-initiated user password-reset action
 @user_bp.route('/resetpass/<uid>', methods=['GET'])
 @login_required
 @pw_check
@@ -122,6 +128,7 @@ def resetpass(uid):
     current_app.logger.info('{} issued a manual PW reset for {}:{}'.format(current_user.username, usr.username, pword))
     return redirect(url_for('user.userdet'))
 
+# route to admin-initiated user deletion action
 @user_bp.route('/deluser/<uid>', methods=['GET'])
 @login_required
 @pw_check
@@ -139,6 +146,7 @@ def deluser(uid):
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
     return redirect(url_for('user.userdet'))
 
+# route to admin-initiated user editing action
 @user_bp.route('/edituser/<uid>', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -160,6 +168,7 @@ def eduser(uid):
         return redirect(url_for('user.userdet'))
     return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
 
+# route to admin-initiated user detail listing
 @user_bp.route('/userdet', methods=['GET'])
 @login_required
 @pw_check
