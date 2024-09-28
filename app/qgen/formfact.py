@@ -2,7 +2,8 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, StringField, PasswordField, BooleanField, SubmitField, FileField
 from app.qgen.models import VQuiz
 from app.user.models import User
-from re import findall
+from re import findall, search
+
 
 block_top = """
 {% extends "base.html" %}
@@ -34,6 +35,9 @@ prob_capsule = """
 
 fieldname_base = 'Number{}'
 
+
+def get_meta(cprob):
+    metapatt = '{{\s*meta\s*:([^\}]*)\s*}}'
 
 def renderable_factory(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
