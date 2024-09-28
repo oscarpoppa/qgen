@@ -2,6 +2,8 @@ A Lightweight, Flask/MySQL/MathJax app Proof-Of-Concept, providing for all aspec
 
 Suitable for math-based classes in a small school setting.
 
+The problem being solved is that of dishonesty, be it copying another student's work, or memorizing test answers for a future retake.
+
 Uses a simple markup scheme to allow for the creation of quiz problems and answers with randomized numerical portions. Quizzes are assembled using these "virtual problems." Each quiz-taker is then assigned a structurally identical quiz (same problem set), with different numerical components.
 
 
