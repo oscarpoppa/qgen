@@ -5,6 +5,7 @@ from app.user.models import User
 from re import findall, search
 
 
+#snippets of renderable elements used by factory
 block_top = """
 {% extends "base.html" %}
 
@@ -35,10 +36,11 @@ prob_capsule = """
 
 fieldname_base = 'Number{}'
 
-
+#experimental
 def get_meta(cprob):
     metapatt = '{{\s*meta\s*:([^\}]*)\s*}}'
 
+#create a renderable quiz from a concrete specification
 def renderable_factory(cquiz):
     ftypes = {'text':StringField, 'txt':StringField, 'string':StringField}
     ttlst = [block_header]
@@ -46,6 +48,8 @@ def renderable_factory(cquiz):
     skeys = sorted(phash.keys())
     imgtmpl = '<br><img src="/static/{}" style="width:35%"/><br><br>'
 
+    #check answer
+    ## branch created for better accuracy
     def ansr_is_correct(subm, corr):
         if subm == 'None':
             return False
@@ -63,6 +67,7 @@ def renderable_factory(cquiz):
                 return False
         return True
 
+    #flask form element as building block
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
         @property
@@ -96,6 +101,7 @@ def renderable_factory(cquiz):
             prob_section = ''.join(all_chunks)
             return block_top+img+prob_section+block_bottom
 
+    #join building blocks into renderable
     for ordinal in skeys:
         problem = phash[ordinal]
         field_name = fieldname_base.format(ordinal)
@@ -114,6 +120,7 @@ def renderable_factory(cquiz):
     templ = block_top+img+form_top+ttext+form_bottom+block_bottom
     return templ, OTF
 
+#factory to generate user/quiz select lists on assign form
 def assign_form_factory():
     class A(FlaskForm):
         submit = SubmitField('Submit')
