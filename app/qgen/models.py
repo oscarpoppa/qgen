@@ -2,6 +2,7 @@ from . import db
 from app.user.models import User
 from datetime import datetime
 
+#add save method
 class SaveMixin:
     def save(self):
         try:
@@ -11,6 +12,7 @@ class SaveMixin:
             db.session.rollback()
             raise
 
+#add create_date method
 class DateMixin:
     create_date = db.Column(db.DateTime, default=db.func.now())
 
@@ -30,7 +32,7 @@ vquiz_vqgroup = db.Table('vquiz_vqgroup',
     db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')),
     db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE')))
 
-
+#for grouping of virtual problems
 class VPGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vpgroup'
     id = db.Column(db.Integer, primary_key=True)
@@ -42,7 +44,7 @@ class VPGroup(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<VProblem Group: {}>'.format(self.title)
 
-
+#for grouping of virtual quizzes
 class VQGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vqgroup'
     id = db.Column(db.Integer, primary_key=True)
@@ -54,7 +56,7 @@ class VQGroup(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<VQuiz Group: {}>'.format(self.title)
 
-
+#for virtual problem DB storage
 class VProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
@@ -74,7 +76,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<Virtual Problem: {} : {}>'.format(self.title or 'Untitled', self.raw_prob)
 
-
+#for virtual quiz DB storage
 class VQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vquiz'
     id = db.Column(db.Integer, primary_key=True)
@@ -91,7 +93,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<Virtual Quiz: {} : {}>'.format(self.title or 'Untitled', self.vpid_lst)
 
-
+#for concrete problem DB storage
 class CProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cproblem'
     id = db.Column(db.Integer, primary_key=True)
@@ -104,7 +106,7 @@ class CProblem(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<Concrete Problem: {} : {}>'.format(self.vproblem.title or 'Untitled', self.conc_prob)
 
-
+#for concrete quiz DB storage
 class CQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'cquiz'
     id = db.Column(db.Integer, primary_key=True)
