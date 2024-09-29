@@ -4,7 +4,6 @@ from app.qgen.models import VQuiz
 from app.user.models import User
 from re import findall, search
 
-
 #snippets of renderable elements used by factory
 block_top = """
 {% extends "base.html" %}
