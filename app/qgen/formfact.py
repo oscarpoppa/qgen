@@ -60,7 +60,7 @@ def renderable_factory(cquiz):
             return False
         for idx in range(len(corlst)):
             try:
-                if abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.1:
+                if abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.01:
                     return False
             except:
                 return False
