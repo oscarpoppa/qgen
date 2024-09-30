@@ -29,7 +29,7 @@ def create_vquiz(lst, title, img, calculator_ok):
     nuquiz.save()
     return nuquiz
 
-#generate concrete quiz using virtual and assign
+#generate a concrete quiz using virtual and assign
 def create_cquiz(vquiz, assignee):
     try:
         nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
