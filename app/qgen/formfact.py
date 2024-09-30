@@ -66,7 +66,8 @@ def renderable_factory(cquiz):
                 return False
         return True
 
-    #flask form element as building block
+    #flask form element as building block, modified as needed
+    #lifetime of class definition bound to function call to prevent corruption of class
     class OTF(FlaskForm):
         submit = SubmitField('Submit')
         @property
