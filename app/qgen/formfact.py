@@ -62,6 +62,10 @@ def renderable_factory(cquiz):
             try:
                 if abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.01:
                     return False
+            #correct answer is 0
+            except ZeroDivisionError:
+                if abs(float(sublst[idx]) < 0.01:
+                    return True
             except:
                 return False
         return True
