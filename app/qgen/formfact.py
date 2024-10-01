@@ -64,7 +64,7 @@ def renderable_factory(cquiz):
                     return False
             #correct answer is 0
             except ZeroDivisionError:
-                if abs(float(sublst[idx]) < 0.01:
+                if abs(float(sublst[idx])) < 0.01:
                     return True
             except:
                 return False
