@@ -20,6 +20,7 @@ from app.qgen import qgen_bp
 from app.user import user_bp
 from app.upload import upload_bp
 
+#register blueprints
 app.register_blueprint(error_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(qgen_bp)
