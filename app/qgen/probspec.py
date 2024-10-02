@@ -83,7 +83,7 @@ def process_spec(prob, ansr):
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
         if type(v) == float:
-            ansr = sub(escape(r'{{'+k+r'}}'), '{:.2f}'.format(v), ansr)
+            ansr = sub(escape(r'{{'+k+r'}}'), '{:.5f}'.format(v), ansr)
         else:
             ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     #aesthetics...
