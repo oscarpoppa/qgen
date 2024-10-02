@@ -61,7 +61,7 @@ def renderable_factory(cquiz):
         for idx in range(len(corlst)):
             try:
                 # for normal sized numbers
-                if abs(float(corlst[idx])) > 1:
+                if abs(float(corlst[idx])) >= 1:
                     if abs(float(sublst[idx]) - float(corlst[idx])) > 0.01:
                         return False
                # LT 1 -- for very small numbers
