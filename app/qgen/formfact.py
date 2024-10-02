@@ -60,8 +60,14 @@ def renderable_factory(cquiz):
             return False
         for idx in range(len(corlst)):
             try:
-                if abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.01:
-                    return False
+                # for normal sized numbers
+                if abs(float(corlst[idx])) > 1:
+                    if abs(float(sublst[idx]) - float(corlst[idx])) > 0.01:
+                        return False
+               # LT 1 -- for very small numbers
+                elif abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.01:
+                        return False
+                return True
             #correct answer is 0
             except ZeroDivisionError:
                 if abs(float(sublst[idx])) < 0.01:
