@@ -29,7 +29,7 @@ def create_vquiz(lst, title, img, calculator_ok):
     nuquiz.save()
     return nuquiz
 
-#generate a concrete quiz using virtual and assign
+#generate a concrete quiz using virtual and assign to a user
 def create_cquiz(vquiz, assignee):
     try:
         nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
@@ -80,7 +80,7 @@ def mkvprob():
         return redirect(url_for('qgen.mkvprob'))
     return render_template('vpadd.html', title='Create VProblem', form=form)
 
-#route to assign a concrete quiz
+#route to assign a concrete quiz to a user
 @qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -102,7 +102,7 @@ def assign():
         return redirect(url_for('qgen.assign'))
     return render_template('assign.html', title='Assign Quiz', form=form)
 
-#route to take a concrete quiz
+#route for a user to take a concrete quiz
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 @pw_check
@@ -174,7 +174,7 @@ def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     return render_template('vqlist.html', vqlst=[vqlst], title='VQuiz {} detail'.format(vqid))
 
-#route to list a specific concrete quiz
+#route to list contents/transcript of a specific concrete quiz
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required
 @pw_check
@@ -248,7 +248,7 @@ def edvquiz(vqid):
         return redirect(url_for('qgen.list_vquizzes'))
     return render_template('vqed.html', title='Update VQuiz', form=form)
 
-#route to delete a specific concrete quiz
+#route to delete a specific concrete quiz from a user's record
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
 @login_required
 @pw_check
