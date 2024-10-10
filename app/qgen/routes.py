@@ -80,7 +80,7 @@ def mkvprob():
         return redirect(url_for('qgen.mkvprob'))
     return render_template('vpadd.html', title='Create VProblem', form=form)
 
-#route to assign a concrete quiz to a user
+#route to assign a concrete quiz to a specific user
 @qgen_bp.route('/quiz/assign', methods=['POST', 'GET'])
 @login_required
 @pw_check
@@ -102,7 +102,7 @@ def assign():
         return redirect(url_for('qgen.assign'))
     return render_template('assign.html', title='Assign Quiz', form=form)
 
-#route for a user to take a concrete quiz
+#route for an assigned user to begin taking a concrete quiz
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
 @pw_check
