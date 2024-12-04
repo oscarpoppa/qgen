@@ -10,7 +10,9 @@
                                        (assigned : {{cq.create_date.strftime('%b %d %Y %I:%M %p')}})
                                        {% if cq.startdate %}(started : {{cq.startdate.strftime('%b %d %Y %I:%M %p')}}){% endif %}
                                        {% if cq.startdate and not cq.compdate %}(in progress){% endif %} 
-                                       {% if cq.completed %}(completed : {{cq.compdate.strftime('%b %d %Y %I:%M %p')}} with score : {{'%0.2f' % cq.score|float}}%){% endif %}
+                                       {% if cq.completed %}(completed : {{cq.compdate.strftime('%b %d %Y %I:%M %p')}} with score : {{'%0.2f' % cq.score|float}}%)
+                                           [<a href="" onclick="return confirm('Are you sure you want to issue a retake of {{cq.taker.username}}\'s \'{{cq.vquiz.title}}\'?');">Ret</a>]
+                                       {% endif %}
         <br>
     {% endfor %}
     <br><br>
