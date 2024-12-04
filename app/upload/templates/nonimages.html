@@ -5,7 +5,7 @@
 {% for file in files %}
     {{file}}<br>
     [<a href="/static/{{ file }}">View</a>]
-    [<a href="{{ url_for('upload.delnonimg', fname=file) }}" onclick="return confirm('Are you sure you want to delete file \'{{file}}\'?');">Del</a>]
+    [<a href="{{ url_for('upload.delnonimg', fname=file) }}" onclick="return confirm('Are you sure you want to delete file \'{{file}}\'?');">Delete</a>]
     <br><br>
 {% endfor %}
 {% endblock %}

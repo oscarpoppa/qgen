@@ -5,12 +5,14 @@
     <b>User: {{item.username}}</b> (id={{item.id}})
     <br><br>
     {% for cq in item.cquizzes %}
-        [<a href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Are you sure you want to delete {{cq.taker.username}}\'s \'{{cq.vquiz.title}}\'?');">Del</a>]
+        [<a href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Are you sure you want to delete {{cq.taker.username}}\'s \'{{cq.vquiz.title}}\'?');">Delete</a>]
         ({{cq.id}}) <b><a href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{cq.vquiz.title}}</a></b> 
                                        (assigned : {{cq.create_date.strftime('%b %d %Y %I:%M %p')}})
                                        {% if cq.startdate %}(started : {{cq.startdate.strftime('%b %d %Y %I:%M %p')}}){% endif %}
                                        {% if cq.startdate and not cq.compdate %}(in progress){% endif %} 
-                                       {% if cq.completed %}(completed : {{cq.compdate.strftime('%b %d %Y %I:%M %p')}} with score : {{'%0.2f' % cq.score|float}}%){% endif %}
+                                       {% if cq.completed %}(completed : {{cq.compdate.strftime('%b %d %Y %I:%M %p')}} with score : {{'%0.2f' % cq.score|float}}%)
+                                           [<a href="{{ url_for('qgen.ret_cquiz', cqid=cq.id) }}" onclick="return confirm('Are you sure you want to issue a retake of \'{{cq.vquiz.title}}\' to {{cq.taker.username}}?');">Retake</a>]
+                                       {% endif %}
         <br>
     {% endfor %}
     <br><br>
