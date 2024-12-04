@@ -264,6 +264,26 @@ def del_cquiz(cqid):
     current_app.logger.info("{} deleted {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(url_for('qgen.list_users'))
 
+#route to reassign a specific concrete quiz to a user
+@qgen_bp.route('/quiz/retcq/<cqid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def ret_cquiz(cqid):
+    cqquery = CQuiz.query.filter_by(id=cqid)
+    cq = cqquery.first_or_404('No CQuiz with id {}'.format(cqid))
+    vquiz = VQuiz.query.filter_by(id=cq.vquiz_id).first()
+    user = User.query.filter_by(id=cq.taker.id).first()
+    cq = create_cquiz(vquiz, user)
+    if cq: 
+        flash('Assigned retake (of {}) quiz: "{}" ({}) to {}'.format(cqid, vquiz.title, cq.id, user.username))
+        current_app.logger.info('{} assigned retake (of {}) quiz: "{}" ({}) to {}'.format(current_user.username, cqid, vquiz.title, cq.id, user.username))
+    else:
+        estr = 'Failed to create retake (of {}) quiz: "{}" for {}'.format(cqid, vquiz.title, user.username)
+        flash(estr)
+        current_app.logger.error(estr)
+    return redirect(url_for('qgen.list_users'))
+
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
 @login_required

@@ -3,7 +3,7 @@
 {% block content %}
 {% for item in vplst %}
     [<a href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>]
-    [<a href="{{ url_for('qgen.del_vprob', vpid=item.id) }}" onclick="return confirm('Are you sure you want to delete VProblem \'{{item.title}}\'?');">Del</a>]
+    [<a href="{{ url_for('qgen.del_vprob', vpid=item.id) }}" onclick="return confirm('Are you sure you want to delete VProblem \'{{item.title}}\'?');">Delete</a>]
     (id={{item.id}}) <b>{{item.title}}</b> ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}) {% if item.image %} (img = {{item.image}}) {% endif %}<br> {{item.raw_prob}} <br>Answer: {{item.raw_ansr}}
     <br> Example : {{ item.example }}
     <br><br>
