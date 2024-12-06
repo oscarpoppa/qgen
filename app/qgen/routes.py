@@ -123,7 +123,7 @@ def qtake(cidx):
     if current_user == cq.taker:
         if form.validate_on_submit():
             cq.compdate = datetime.now()
-            current_app.logger.info('{} completed "{}"'.format(current_user.username, cq.vquiz.title))
+            current_app.logger.info('{} completed "{}" ({})'.format(current_user.username, cq.vquiz.title, cidx))
             cq.save()
             cq.transcript = form.transcript
             cq.completed = True
@@ -132,7 +132,7 @@ def qtake(cidx):
             return render_template_string(form.transcript, title=title)
         if not cq.startdate:
             cq.startdate = datetime.now()
-            current_app.logger.info('{} is starting "{}"'.format(current_user.username, cq.vquiz.title))
+            current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, cq.vquiz.title, cidx))
             cq.save()
     elif request.method == 'POST':
         flash("you're not {}".format(cq.taker.username))
