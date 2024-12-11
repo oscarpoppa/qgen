@@ -271,9 +271,9 @@ def del_cquiz(cqid):
 @admin_only
 def ret_cquiz(cqid):
     cqquery = CQuiz.query.filter_by(id=cqid)
-    cq = cqquery.first_or_404('No CQuiz with id {}'.format(cqid))
-    vquiz = VQuiz.query.filter_by(id=cq.vquiz_id).first()
-    user = User.query.filter_by(id=cq.taker.id).first()
+    cq0 = cqquery.first_or_404('No CQuiz with id {}'.format(cqid))
+    vquiz = VQuiz.query.filter_by(id=cq0.vquiz_id).first()
+    user = User.query.filter_by(id=cq0.taker.id).first()
     cq = create_cquiz(vquiz, user)
     if cq: 
         flash('Assigned retake (of {}) quiz: "{}" ({}) to {}'.format(cqid, vquiz.title, cq.id, user.username))
