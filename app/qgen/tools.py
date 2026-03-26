@@ -23,6 +23,7 @@ def pick_n_from_list(lst, n, excludelst=None):
     mylst = [a for a in lst if a not in excludelst]
     return random.sample(mylst, n) 
 
+#pick
 def pick_list_from_pools(rightpool, wrongpool, rightnum=1, listsize=4):
     wrongnum = listsize - rightnum
     if len(rightpool) < rightnum \
@@ -30,7 +31,9 @@ def pick_list_from_pools(rightpool, wrongpool, rightnum=1, listsize=4):
     or wrongnum < 1 \
     or rightnum > listsize:
         raise ValueError('size constraint violation')
+    #put right answers in list first
     ret = [(a, True) for a in random.sample(rightpool, rightnum)]
+    #pad the rest of the list with wrong answers
     ret += [(a, False) for a in random.sample(wrongpool, wrongnum)]
     mixret = shuffle_list(ret) #order preserved
     retdict = {a[0]:a[1] for a in mixret} #for searchability; order can't be guaranteed
