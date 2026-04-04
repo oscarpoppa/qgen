@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <form action="" method="post">
+      {{ form.hidden_tag() }}
+      <br> {{form.question}}<br><br>
+      <br> {{form.selfield}}<br><br>
+      {{ form.submit() }}
+  </form>
+
+{% endblock %}
