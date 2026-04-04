@@ -87,7 +87,7 @@ def pick_rand_n_from_list_with_answer(wrongpool, rightpool, result_size, right_s
     return {'all':ret_final_lst, 'correct':sorted(ret_correct_idx_lst)}
 
 # returns form containing question, answer, selfield (select-one field)
-def select_one_static_form_factory(question, choice_lst, answer_idx, *args, **kwargs):
+def select_one_static_form_factory(question, choice_lst, answer_idx):
     form = SOS()
     form.question=question 
     form.answer=answer_idx
@@ -95,7 +95,7 @@ def select_one_static_form_factory(question, choice_lst, answer_idx, *args, **kw
     return form
 
 # returns form containing question, answer, selfield (select-many field)
-def select_multiple_static_form_factory(question, choice_lst, answer_idx_lst, *args, **kwargs):
+def select_multiple_static_form_factory(question, choice_lst, answer_idx_lst):
     form = SMS()
     form.question=question
     form.answer=answer_idx_lst
