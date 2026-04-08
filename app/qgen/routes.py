@@ -86,8 +86,7 @@ def mkvprob():
 @pw_check
 @admin_only
 def assign():
-    fcls = assign_form_factory()
-    form = fcls()
+    form = assign_form_factory()
     if form.validate_on_submit():
         vquiz = VQuiz.query.filter_by(id=int(form.vquiz.data)).first()
         user = User.query.filter_by(id=int(form.user.data)).first()

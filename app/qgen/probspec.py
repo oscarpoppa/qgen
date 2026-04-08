@@ -11,6 +11,12 @@ def func_ok_or_raise(string):
         
 #test if math expression, otherwise raise exception
 def is_math_or_raise(string):
+    print(string)
+    try:
+        int(string)
+        return
+    except:
+        pass
     notmath_patt = r'[^\(\)\^\+\-\/\*\d\s\.]'
     bad_m = findall(notmath_patt, string)
     if bad_m:

@@ -3,6 +3,7 @@ from wtforms import SelectField, StringField, PasswordField, BooleanField, Submi
 from app.qgen.models import VQuiz
 from app.user.models import User
 from re import findall, search
+from .forms import VQuizAssign
 
 #snippets of renderable elements used by factory
 block_top = """
@@ -133,9 +134,8 @@ def renderable_factory(cquiz):
 
 #factory to generate user/quiz select lists on assign form
 def assign_form_factory():
-    class A(FlaskForm):
-        submit = SubmitField('Submit')
-    setattr(A, 'user', SelectField('Assign CQuiz to User', choices=[(a.id, a.username) for a in User.query.all()]))
-    setattr(A, 'vquiz', SelectField('Using VQuiz', choices=[(a.id, a.title) for a in VQuiz.query.all()]))
-    return A
+    vqa = VQuizAssign()
+    vqa.user.choices = [(a.id, a.username) for a in User.query.all()]
+    vqa.vquiz.choices = [(a.id, a.title) for a in VQuiz.query.all()]
+    return vqa
 
