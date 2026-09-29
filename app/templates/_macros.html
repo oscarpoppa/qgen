@@ -1,0 +1,50 @@
+{# Shared form pieces. Use: {% from "_macros.html" import field, check, errors %} #}
+
+{% macro field(f, help=None, attrs={}) %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    {{ f.label }}
+    {{ f(**attrs) }}
+    {% if help %}<div class="help">{{ help }}</div>{% endif %}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro check(f, help=None) %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    <div class="check">{{ f() }} {{ f.label }}</div>
+    {% if help %}<div class="help">{{ help }}</div>{% endif %}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro errors(list) %}
+  {% if list %}
+    <div class="alert alert-error" role="alert">
+      <strong>Please fix {{ 'this' if list|length == 1 else 'these' }}:</strong>
+      <ul class="errors">{% for e in list %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{# Drag-and-drop image picker. `f` is a text field holding the image file name. #}
+{% macro image_drop(f, help='Drag a picture here, or click to choose one.') %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    {{ f.label }}
+    <div class="dropzone" data-target="{{ f.id }}" data-upload="{{ url_for('upload.upload_json') }}" data-list="{{ url_for('upload.image_list') }}" tabindex="0" role="button"
+         aria-label="Upload a picture: drop a file here or press Enter to choose one">
+      <img class="dz-preview" alt="" {% if f.data %}src="{{ url_for('static', filename=f.data) }}"{% else %}hidden{% endif %}>
+      <div class="dz-text">
+        <strong class="dz-name">{{ f.data or '' }}</strong>
+        <span class="dz-hint">{{ help }}</span>
+      </div>
+      <input type="file" accept="image/*" hidden>
+    </div>
+    <div class="btn-row dz-actions">
+      <button type="button" class="btn btn-secondary btn-sm dz-pick">Choose one already uploaded</button>
+      <button type="button" class="btn btn-danger btn-sm dz-clear" {% if not f.data %}hidden{% endif %}>Remove picture</button>
+    </div>
+    <div class="dz-gallery thumbs" hidden></div>
+    {{ f(type='hidden') }}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}

@@ -10,7 +10,8 @@ problem, the "Show me 3 examples" preview, and the AI helper:
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
     options   dict: values, choices, shuffle, show_n, case_sensitive,
-              grading_notes, markup
+              grading_notes, markup, images ([{file, label}], one picked
+              at random per student; its label is [picture])
 """
 import json
 import random
@@ -27,6 +28,28 @@ def is_legacy(question, options):
     if options.get('markup'):
         return options['markup'] == 'legacy'
     return '{{' in (question or '')
+
+
+# ---------------------------------------------------------------- pictures
+
+#a problem may list several pictures; each student's copy gets one at random,
+#and its label can be used in the text and answer as [picture]
+PICTURE_NAME = 'picture'
+
+
+def pictures(options):
+    return [p for p in (options.get('images') or []) if p.get('file')]
+
+
+def picture_labels(options):
+    """Labels, but only when some picture has one (otherwise [picture] is unused)."""
+    labels = [(p.get('label') or '').strip() for p in pictures(options)]
+    return labels if any(labels) else []
+
+
+def pick_picture(options, rng):
+    pics = pictures(options)
+    return rng.choice(pics) if pics else None
 
 
 # ---------------------------------------------------------------- fields
@@ -107,12 +130,24 @@ class QType:
         values = options.get('values') or []
         errors = F.validate_values(values)
         known = F.known_names(values)
+        if picture_labels(options):
+            if PICTURE_NAME in known:
+                errors.append('"{}" is used by the picture labels; please rename that value.'.format(PICTURE_NAME))
+            known = known + [PICTURE_NAME]
+            if not all(picture_labels(options)):
+                errors.append('Every picture needs a label, since the problem uses [picture].')
         errors += F.check_text('question', question, known)
         errors += self.validate_parts(answer, options, known)
         if not errors:
             #run it a few times to catch problems that only some values cause
             try:
-                F.try_draws(values, lambda env: self.render(question, answer, options, env, random.Random(0)))
+                labels = picture_labels(options)
+                def run(env):
+                    for label in labels or [None]:
+                        if label is not None:
+                            env = dict(env, **{PICTURE_NAME: label})
+                        self.render(question, answer, options, env, random.Random(0))
+                F.try_draws(values, run)
             except F.FriendlyError as exc:
                 errors.append(str(exc))
         return errors
@@ -126,11 +161,18 @@ class QType:
     def instantiate(self, question, answer, options, rng=None):
         """One student's version: (question text, correct answer, extra data)."""
         rng = rng or random.Random()
+        picture = pick_picture(options, rng)
         if is_legacy(question, options):
             prob, ansr = process_spec(question, answer or '')
-            return prob, ansr, {}
-        env = F.draw_values(options.get('values') or [], rng)
-        return self.render(question, answer, options, env, rng)
+            opts = {}
+        else:
+            env = F.draw_values(options.get('values') or [], rng)
+            if picture and picture.get('label'):
+                env[PICTURE_NAME] = picture['label']
+            prob, ansr, opts = self.render(question, answer, options, env, rng)
+        if picture:
+            opts = dict(opts, image=picture['file'])
+        return prob, ansr, opts
 
     def render(self, question, answer, options, env, rng):
         return F.fill_question(question, env), self.render_answer(answer, env), {}

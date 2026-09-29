@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ cq.vquiz.title }}</h1>
+  <span class="badge">{{ cq.taker.username }}</span>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.review_list') }}">Back to the list</a></div>
+</div>
+<p class="muted">Select words in an answer, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> to highlight them. Click a highlight to remove it.</p>
+
+<form method="post" id="review-form" novalidate>
+  {{ form.hidden_tag() }}
+  {% for row in items %}
+    {% set it = row.item %}
+    <section class="card question">
+      <div class="card-head">
+        <span class="qnum">{{ it.num }}</span>
+        {% if not it.essay %}
+          <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '½'}[it.mark] }}</span>
+          <span class="muted small">graded automatically</span>
+        {% else %}<span class="badge badge-warn">needs your grade</span>{% endif %}
+      </div>
+      {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
+      <div class="qtext">{{ it.text }}</div>
+      {% if it.essay and row.form %}
+        <div class="split">
+          <div>
+            <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
+            <div class="btn-row" style="margin-top:8px">
+              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right">Mark right</button>
+              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong">Mark wrong</button>
+              <button type="button" class="btn btn-sm btn-secondary hl-clear">Clear highlights</button>
+            </div>
+          </div>
+          <div>
+            {{ row.form.cpid() }}{{ row.form.highlights() }}
+            {{ field(row.form.credit, '0 = no credit, 100 = full credit.', attrs={'type': 'number', 'min': 0, 'max': 100, 'step': 5}) }}
+            {{ field(row.form.feedback, attrs={'rows': 4}) }}
+            {% if row.notes %}<div class="feedback"><strong>Your grading notes:</strong> {{ row.notes }}</div>{% endif %}
+            {% if it.correct %}<div class="feedback"><strong>Model answer:</strong> {{ it.correct }}</div>{% endif %}
+          </div>
+        </div>
+      {% else %}
+        <dl class="answer-row">
+          <dt>Answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
+          {% if it.mark != 'ok' %}<dt>Correct answer</dt><dd>{{ it.correct }}</dd>{% endif %}
+        </dl>
+      {% endif %}
+    </section>
+  {% endfor %}
+  <div class="card btn-row">
+    {{ form.finalize(class='btn') }}
+    {{ form.save(class='btn btn-secondary') }}
+    <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/review.js') }}"></script>
+{% endblock %}

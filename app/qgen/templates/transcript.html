@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Results</h1>
+  <div class="actions">
+    <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    <a class="btn btn-secondary" href="{{ url_for('user.mypage') if current_user == cq.taker else url_for('qgen.list_user', uid=cq.assignee) }}">Back</a>
+  </div>
+</div>
+{{ transcript }}
+{% endblock %}

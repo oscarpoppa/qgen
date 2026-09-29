@@ -13,7 +13,7 @@ def logout_required(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if current_user.is_authenticated:
-            flash('{} is unavailable while logged in'.format(request.__dict__['environ']['RAW_URI']))
+            flash('You are already logged in.')
             return redirect(url_for('user.mypage'))
         return func(*args, **kwargs)
     return inner
@@ -23,7 +23,7 @@ def admin_only(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if not current_user.is_admin:
-            flash('{} is available to administrators only'.format(request.__dict__['environ']['RAW_URI']))
+            flash('That page is for administrators only.', 'error')
             return redirect(url_for('user.mypage'))
         return func(*args, **kwargs)
     return inner
@@ -67,7 +67,7 @@ def login():
     if form.validate_on_submit():
         u = User.query.filter_by(username=form.username.data).first()
         if u is None or not u.check_password(form.password.data):
-            flash('Invalid Username/Password')
+            flash('That username and password don\'t match.', 'error')
             return redirect(url_for('user.login')) 
         login_user(u, remember=True)
         u.logged_in = True
@@ -102,12 +102,12 @@ def chpass():
     user = current_user
     if form.validate_on_submit():
         if not user.check_password(form.old_password.data):
-            flash('Old Password Error')
+            flash('Your current password was not right.', 'error')
             return redirect(url_for('user.chpass'))
         user.set_password(form.password.data)
         user.pw_man_reset = False
         user.save()
-        flash('Password changed')
+        flash('Password changed.', 'success')
         return redirect(url_for('user.mypage'))
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 

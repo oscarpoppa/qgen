@@ -1,0 +1,30 @@
+{# "Show me 3 examples" result, inserted into the problem page #}
+{% if errors %}
+  <div class="alert alert-error" role="alert">
+    <strong>Not quite ready yet:</strong>
+    <ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+{% else %}
+  <h2>Three example versions</h2>
+  <p class="muted small">Each student gets a version like these. Press the button again for new ones.</p>
+  <div class="grid">
+  {% for s in samples %}
+    <div class="card">
+      <div class="card-head"><h3>Example {{ loop.index }}</h3></div>
+      {% if s.image %}<img class="qimg" src="{{ url_for('static', filename=s.image) }}" alt="">{% endif %}
+      <p class="qtext">{{ s.text }}</p>
+      {% if s.choices %}
+        <ul class="choice-list">
+          {% for c in s.choices %}
+            <li>{% if loop.index0 in s.right %}<span class="mark mark-ok" aria-label="correct">✓</span>{% else %}<span class="muted" aria-hidden="true">○</span>{% endif %} {{ c }}</li>
+          {% endfor %}
+        </ul>
+      {% elif essay %}
+        <p class="muted small">{% if s.correct %}Model answer: {{ s.correct }}{% else %}An instructor grades this answer.{% endif %}</p>
+      {% else %}
+        <p><span class="badge badge-ok">Correct answer</span> {{ s.correct }}</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+{% endif %}

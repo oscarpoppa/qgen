@@ -134,3 +134,29 @@ def test_legacy_markup_unchanged(seed):
     prob, ansr, co = get_qtype('numeric').instantiate(q, a, {'markup': 'legacy'})
     x, y = numbers(prob)
     assert int(ansr) == x + y and co == {}
+
+
+def test_each_student_can_get_a_different_picture_with_matching_answer():
+    qt = get_qtype('text')
+    o = {'values': [], 'markup': 'friendly',
+         'images': [{'file': 'cat.png', 'label': 'cat'}, {'file': 'dog.png', 'label': 'dog'}, {'file': 'owl.png', 'label': 'owl'}]}
+    assert qt.validate('What animal is this?', '[picture]', o) == []
+    seen = set()
+    for seed in range(40):
+        _, ansr, co = qt.instantiate('What animal is this?', '[picture]', o, random.Random(seed))
+        assert co['image'] == ansr + '.png'
+        seen.add(co['image'])
+    assert len(seen) == 3
+
+
+def test_picture_pool_without_labels_just_varies_the_image():
+    qt = get_qtype('numeric')
+    o = {'values': [{'name': 'a', 'kind': 'whole', 'min': 1, 'max': 3}], 'markup': 'friendly',
+         'images': [{'file': 'x.png'}, {'file': 'y.png'}]}
+    assert qt.validate('Count [a]', 'a', o) == []
+    assert {qt.instantiate('Count [a]', 'a', o, random.Random(s))[2]['image'] for s in range(20)} == {'x.png', 'y.png'}
+
+
+def test_picture_labels_must_all_be_filled_in():
+    o = {'values': [], 'markup': 'friendly', 'images': [{'file': 'a.png', 'label': 'a'}, {'file': 'b.png'}]}
+    assert 'Every picture needs a label' in ' '.join(get_qtype('text').validate('q', '[picture]', o))

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ cq.vquiz.title }}</h1>
+  <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_ok else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_ok else 'No calculator' }}</span>
+</div>
+
+{% if preview %}
+  <div class="alert alert-warning">You're viewing {{ cq.taker.username }}'s quiz. Only they can submit it.</div>
+{% endif %}
+
+{% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
+
+<form method="post" id="take-form" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="progress" aria-live="polite">
+    <div class="small muted"><span id="answered">0</span> of {{ items|length }} answered</div>
+    <div class="progress-bar"><span id="bar"></span></div>
+  </div>
+
+  {% for it in items %}
+    <section class="card question" data-q="{{ it.num }}" aria-labelledby="q{{ it.num }}">
+      <div class="card-head"><span class="qnum">{{ it.num }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ it.num }}</h2></div>
+      {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="Picture for question {{ it.num }}">{% endif %}
+      <div class="qtext">{{ it.text }}</div>
+      {% if it.qtype in ('choice_one', 'truefalse') %}
+        {{ it.field(class='choice-list') }}
+      {% elif it.qtype == 'choice_many' %}
+        <div class="small muted" style="margin-bottom:6px">Tick every correct answer.</div>
+        {{ it.field(class='choice-list') }}
+      {% elif it.qtype == 'essay' %}
+        {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+      {% else %}
+        {{ it.field(autocomplete='off', **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+      {% endif %}
+      {% for e in it.field.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </section>
+  {% endfor %}
+
+  {% if not preview %}
+    <div class="card btn-row">
+      {{ form.submit(class='btn') }}
+      <span class="muted small">You can't change your answers after submitting.</span>
+    </div>
+  {% endif %}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var form = document.getElementById('take-form');
+  var qs = form.querySelectorAll('.question');
+  function answered(q) {
+    return Array.prototype.some.call(q.querySelectorAll('input, textarea'), function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') return el.checked;
+      return el.value.trim() !== '';
+    });
+  }
+  function update() {
+    var n = Array.prototype.filter.call(qs, answered).length;
+    document.getElementById('answered').textContent = n;
+    document.getElementById('bar').style.width = (qs.length ? 100 * n / qs.length : 0) + '%';
+    return qs.length - n;
+  }
+  form.addEventListener('input', update);
+  form.addEventListener('change', update);
+  form.addEventListener('submit', function (e) {
+    var blank = update();
+    if (blank && !confirm('You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?')) e.preventDefault();
+  });
+  update();
+})();
+</script>
+{% endblock %}

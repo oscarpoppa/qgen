@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, check, image_drop %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">Back to quizzes</a></div>
+</div>
+
+<form method="post" id="quiz-form" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="card">
+    {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
+    {{ check(form.calculator_ok) }}
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <div class="card-head"><h2>Problems</h2><span class="muted small">tick the ones to include</span></div>
+      {% if probs %}
+        <input type="search" class="filter" data-filter="#all-problems" placeholder="Filter problems…" aria-label="Filter problems">
+        <div class="table-wrap">
+          <table id="all-problems">
+            <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
+            <tbody>
+            {% for p in probs %}
+              <tr>
+                <td><input type="checkbox" class="pick" value="{{ p.id }}" id="pick-{{ p.id }}" data-title="{{ p.title or 'Untitled' }}"></td>
+                <td><label for="pick-{{ p.id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
+                  <div class="small muted clamp">{{ p.raw_prob }}</div></td>
+                <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create one first</a>.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Order in the quiz</h2></div>
+      <ol id="order" class="choice-list"></ol>
+      <p id="order-empty" class="muted small">Nothing ticked yet.</p>
+      {{ form.vplist() }}
+      {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    {{ image_drop(form.image) }}
+    <div class="btn-row">
+      {{ form.submit(class='btn') }}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/filter.js') }}"></script>
+<script>
+(function () {
+  var hidden = document.getElementById('vplist');
+  var list = document.getElementById('order');
+  var empty = document.getElementById('order-empty');
+  var order = (hidden.value.match(/\d+/g) || []);
+  var boxes = {};
+  document.querySelectorAll('input.pick').forEach(function (b) { boxes[b.value] = b; });
+
+  function render() {
+    order = order.filter(function (id) { return boxes[id]; });
+    hidden.value = order.join(', ');
+    list.innerHTML = '';
+    empty.hidden = order.length > 0;
+    order.forEach(function (id, i) {
+      boxes[id].checked = true;
+      var li = document.createElement('li');
+      var name = document.createElement('span');
+      name.style.flex = '1';
+      name.textContent = (i + 1) + '. ' + boxes[id].dataset.title;
+      li.appendChild(name);
+      [['↑', -1, 'Move up'], ['↓', 1, 'Move down'], ['✕', 0, 'Remove']].forEach(function (b) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'btn btn-secondary btn-sm';
+        btn.textContent = b[0]; btn.setAttribute('aria-label', b[2] + ': ' + boxes[id].dataset.title);
+        btn.addEventListener('click', function () {
+          if (b[1] === 0) { boxes[id].checked = false; order.splice(i, 1); }
+          else {
+            var j = i + b[1];
+            if (j < 0 || j >= order.length) return;
+            order[i] = order[j]; order[j] = id;
+          }
+          render();
+        });
+        li.appendChild(btn);
+      });
+      list.appendChild(li);
+    });
+  }
+
+  Object.keys(boxes).forEach(function (id) {
+    boxes[id].addEventListener('change', function () {
+      if (this.checked) { if (order.indexOf(id) === -1) order.push(id); }
+      else order = order.filter(function (x) { return x !== id; });
+      render();
+    });
+  });
+  render();
+})();
+</script>
+{% endblock %}

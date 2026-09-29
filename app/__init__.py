@@ -27,6 +27,16 @@ app.register_blueprint(qgen_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(upload_bp)
 
+#values every page template can use
+from flask_wtf.csrf import generate_csrf
+from app.qgen.models import CQuiz
+
+@app.context_processor
+def page_helpers():
+    def review_count():
+        return CQuiz.query.filter_by(needs_review=True, completed=False).count()
+    return dict(csrf_token=generate_csrf, review_count=review_count)
+
 #create CLI command for DB dump
 from app.commands import dbdump as dbdump_cli_group
 app.cli.add_command(dbdump_cli_group, name='dbdump')

@@ -2,13 +2,27 @@
 
 {% block content %}
 {% for item in cqlst %}
-    CQuiz: ( id={{item.id}} ) {{item.vquiz.title}} ( based on VQuiz {{item.vquiz_id}}) 
-    Assigned to: {{item.taker.username}}
-    <br><br>
+<div class="page-head">
+  <h1>{{ item.vquiz.title }}</h1>
+  <span class="badge">{{ item.taker.username }}</span>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=item.assignee) }}">Back</a></div>
+</div>
+<p class="muted small">This student's own version of the quiz, with the correct answers.</p>
+<div class="table-wrap stack">
+  <table>
+    <thead><tr><th>#</th><th>Question</th><th>Correct answer</th><th>Their answer</th></tr></thead>
+    <tbody>
     {% for prob in item.cproblems %}
-        ( {{prob.id}} ) {{prob.conc_prob}} ( ans = {{prob.conc_ansr}} ) ( based on VProblem {{prob.vproblem_id}} )
-        <br>
+      <tr>
+        <td data-label="#">{{ prob.ordinal }}</td>
+        <td data-label="Question">{{ prob.conc_prob }}
+          {% if prob.conc_opts.get('choices') %}<ul class="small" style="margin:4px 0 0">{% for c in prob.conc_opts['choices'] %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}</td>
+        <td data-label="Correct answer">{{ prob.conc_ansr }}</td>
+        <td data-label="Their answer">{% if prob.submitted is not none %}{{ shown(prob) }}{% if prob.credit is not none %} <span class="badge {{ 'badge-ok' if prob.credit == 1 else 'badge-bad' if prob.credit == 0 else 'badge-warn' }}">{{ '%.0f' % (prob.credit * 100) }}%</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
     {% endfor %}
-    <br><br><br>
+    </tbody>
+  </table>
+</div>
 {% endfor %}
 {% endblock %}

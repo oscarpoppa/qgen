@@ -1,31 +1,19 @@
 {% extends "base.html" %}
+{% from "_macros.html" import field %}
 
 {% block content %}
-<h1><u>Change Password</u></h1>
-    <form action="" method="post">
-	    {{ form.hidden_tag() }}
-	    <p>
-	            <b>{{ form.old_password.label }}</b><br>
-		    {{ form.old_password(size=64) }}<br>
-                    {% for error in form.old_password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.password.label }}</b><br>
-		    {{ form.password(size=64) }}<br>
-                    {% for error in form.password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.retype_password.label }}</b><br>
-		    {{ form.retype_password(size=64) }}<br>
-                    {% for error in form.retype_password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>     {{ form.submit() }} </p>
-            <p><a href={{ url_for('user.mypage') }}>Cancel</a> </p>
-    </form>
+<div class="card card-narrow">
+  <h1>Change password</h1>
+  {% if current_user.pw_man_reset %}<p class="alert alert-warning">Your password was reset. Please choose a new one to continue.</p>{% endif %}
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.old_password, 'The one you logged in with.' if not current_user.pw_man_reset else 'The temporary password you were given.', attrs={'autocomplete': 'current-password'}) }}
+    {{ field(form.password, attrs={'autocomplete': 'new-password'}) }}
+    {{ field(form.retype_password, attrs={'autocomplete': 'new-password'}) }}
+    <div class="btn-row">
+      {{ form.submit(class='btn', value='Change password') }}
+      {% if not current_user.pw_man_reset %}<a class="btn btn-secondary" href="{{ url_for('user.mypage') }}">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
 {% endblock %}

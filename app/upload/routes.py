@@ -1,7 +1,9 @@
 from . import upload_bp
 from .forms import UploadForm
 from app.user.routes import admin_only, pw_check
-from flask import flash, render_template, redirect, url_for, request, current_app
+from flask import flash, render_template, redirect, url_for, request, current_app, jsonify, abort
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from werkzeug.utils import secure_filename
@@ -17,7 +19,7 @@ def static_files():
     return [f for f in listdir(sdir) if osp.isfile(sdir + f)]
 
 #try to create a thumbnail
-def trythumb(path, fname):
+def trythumb(path, fname, quiet=False):
     fpath = path + fname
     try:
         im = Image.open(fpath)    
@@ -25,7 +27,8 @@ def trythumb(path, fname):
         tname = 'T_' + fname
         nupath = path + tname
         im.save(nupath)
-        flash('Created thumbnail {}'.format(tname))
+        if not quiet:
+            flash('Created thumbnail {}'.format(tname))
     except Exception as exc:
         pass
 
@@ -105,3 +108,61 @@ def delnonimg(fname):
             flash('Deletion failed for {}'.format(fname))
     return redirect(url_for('upload.nonimages'))
 
+
+
+#pick a free file name so a new upload never replaces an existing one
+def unique_name(fname):
+    base, dot, ext = fname.rpartition('.')
+    if not dot:
+        base, ext = fname, ''
+    existing = set(listdir(static_dir()))
+    cand, n = fname, 1
+    while cand in existing or 'T_' + cand in existing:
+        n += 1
+        cand = '{}-{}{}{}'.format(base, n, dot, ext)
+    return cand
+
+#admin-only drag-and-drop upload; returns JSON for static/js/dropzone.js
+@upload_bp.route('/upload/json', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def upload_json():
+    try:
+        validate_csrf(request.headers.get('X-CSRFToken'))
+    except ValidationError:
+        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
+    ufile = request.files.get('file')
+    if not ufile or not ufile.filename:
+        return jsonify(ok=False, error='No file received.'), 400
+    fname = secure_filename(ufile.filename)
+    if not fname:
+        return jsonify(ok=False, error='That file name can\'t be used.'), 400
+    #only real pictures, checked by opening them
+    try:
+        im = Image.open(ufile.stream)
+        im.verify()
+    except Exception:
+        return jsonify(ok=False, error='That doesn\'t look like a picture.'), 400
+    ufile.stream.seek(0)
+    fname = unique_name(fname)
+    ufile.save(static_dir() + fname)
+    trythumb(static_dir(), fname, quiet=True)
+    current_app.logger.info('{} uploaded {}'.format(current_user.username, fname))
+    return jsonify(ok=True, name=fname, url=url_for('static', filename=fname))
+
+#admin-only list of uploaded pictures for the picker
+@upload_bp.route('/upload/imagelist', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def image_list():
+    files = static_files()
+    thumbs = {f[2:] for f in files if f.startswith('T_')}
+    items = [dict(name=f, url=url_for('static', filename=f),
+                  thumb=url_for('static', filename='T_' + f if f in thumbs else f))
+             for f in sorted(files) if not f.startswith('T_') and (f in thumbs or is_image_name(f))]
+    return jsonify(items)
+
+def is_image_name(fname):
+    return fname.rsplit('.', 1)[-1].lower() in ('png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp')

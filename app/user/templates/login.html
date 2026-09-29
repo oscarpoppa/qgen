@@ -1,23 +1,15 @@
 {% extends "base.html" %}
+{% from "_macros.html" import field %}
 
 {% block content %}
-<h1><u>Log in</u></h1>
-    <form action="" method="post">
-	    {{ form.hidden_tag() }}
-	    <p>
-	            <b>{{ form.username.label }}</b><br>
-		    {{ form.username(size=64) }}<br>
-                    {% for error in form.username.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.password.label }}</b><br>
-		    {{ form.password(size=64) }}<br>
-                    {% for error in form.password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>     {{ form.submit() }} </p>
-    </form>
+<div class="card card-narrow">
+  <h1>Log in</h1>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.username, attrs={'autocomplete': 'username', 'autofocus': true}) }}
+    {{ field(form.password, attrs={'autocomplete': 'current-password'}) }}
+    {{ form.submit(class='btn', value='Log in', style='width:100%') }}
+  </form>
+  <p class="muted small" style="margin-top:14px">New here? <a href="{{ url_for('user.register') }}">Create an account</a></p>
+</div>
 {% endblock %}

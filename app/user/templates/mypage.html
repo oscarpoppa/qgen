@@ -1,9 +1,36 @@
 {% extends "base.html" %}
 
 {% block content %}
-<ul>
-{% for cq in current_user.cquizzes %}
-    <li><a href={{url_for('qgen.qtake', cidx=cq.id)}}>{{cq.vquiz.title}} {% if cq.startdate and not cq.compdate %}(in progress){% endif %} {% if cq.completed %}(completed : {{'%0.2f' % cq.score|float}}%){% endif %}</a></li>
-{% endfor %}
-</ul>
+<div class="page-head"><h1>My quizzes</h1></div>
+{% set quizzes = current_user.cquizzes|sort(attribute='id', reverse=true) %}
+{% if quizzes %}
+  <div class="grid">
+  {% for cq in quizzes %}
+    <article class="card">
+      <div class="card-head">
+        <h2>{{ cq.vquiz.title }}</h2>
+      </div>
+      <p class="muted small">Assigned {{ cq.create_date.strftime('%b %d %Y') if cq.create_date else '' }}
+        · {{ cq.cproblems|length }} question{{ '' if cq.cproblems|length == 1 else 's' }}</p>
+      <div class="btn-row">
+        {% if cq.status == 'completed' %}
+          <span class="badge badge-ok">Score {{ '%.0f' % (cq.score or 0) }}%</span>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View results</a>
+        {% elif cq.status == 'review' %}
+          <span class="badge badge-warn">Waiting for grading</span>
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
+        {% elif cq.status == 'started' %}
+          <span class="badge badge-accent">In progress</span>
+          <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
+        {% else %}
+          <span class="badge">Not started</span>
+          <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+        {% endif %}
+      </div>
+    </article>
+  {% endfor %}
+  </div>
+{% else %}
+  <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
+{% endif %}
 {% endblock %}

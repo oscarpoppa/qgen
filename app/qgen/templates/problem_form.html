@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, check, errors as error_box, image_drop %}
+
+{% macro value_row(row, idx) %}
+  <tr class="value-row">
+    <td data-label="Name">{{ row.form.name(placeholder='e.g. speed', **{'aria-label': 'Name'}) }}</td>
+    <td data-label="Kind">{{ row.form.kind(class='kind', **{'aria-label': 'Kind'}) }}</td>
+    <td data-label="Settings">
+      <div class="settings">
+        {{ row.form.min(placeholder='from', class='k-whole k-decimal', **{'aria-label': 'From'}) }}
+        {{ row.form.max(placeholder='to', class='k-whole k-decimal', **{'aria-label': 'To'}) }}
+        {{ row.form.step(placeholder='in steps of (optional)', class='k-whole', **{'aria-label': 'In steps of'}) }}
+        {{ row.form.places(placeholder='decimal places', class='k-decimal', **{'aria-label': 'Decimal places'}) }}
+        {{ row.form.items(placeholder='Maria, Ahmed, Li', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
+        {{ row.form.pick_n(placeholder='how many to pick (optional)', class='k-list', **{'aria-label': 'How many to pick'}) }}
+        {{ row.form.formula(placeholder='e.g. speed * hours', class='k-calc', **{'aria-label': 'Formula'}) }}
+        <label class="inline k-whole">{{ row.form.nonzero() }} not zero</label>
+        {{ row.form.different_from(placeholder='different from… (optional)', **{'aria-label': 'Different from'}) }}
+      </div>
+    </td>
+    <td class="actions"><button type="button" class="btn btn-danger btn-sm remove-row" aria-label="Remove this value">✕</button></td>
+  </tr>
+{% endmacro %}
+
+{% macro image_row(row) %}
+  <div class="image-row card">
+    {{ image_drop(row.form.file, 'Drag a picture here, or click to choose one.') }}
+    <div class="field">
+      {{ row.form.label.label }}
+      {{ row.form.label(placeholder='optional, e.g. cat') }}
+      <div class="help">If you label your pictures, use <code>[picture]</code> in the question or answer to mean “the label of the picture this student got”.</div>
+    </div>
+    <button type="button" class="btn btn-danger btn-sm remove-image">Remove this picture slot</button>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Back to problems</a></div>
+</div>
+
+{{ error_box(errors) }}
+
+<form method="post" id="problem-form" novalidate>
+  {{ form.hidden_tag() }}
+
+  {% if ai_enabled %}
+  <div class="card ai-box">
+    <div class="card-head"><h2>Describe it in plain English</h2><span class="badge badge-accent">AI helper</span></div>
+    <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”.</p>
+    <div class="field">
+      <label for="ai-problem">Describe the whole problem</label>
+      <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn ai-go" data-kind="problem" data-src="ai-problem" data-url="{{ url_for('qgen.ai_problem') }}">Fill in for me</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="ai-values">…or just describe the random values</label>
+      <textarea id="ai-values" placeholder="e.g. all integers from 3 to 5, then a random one of those"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn btn-secondary ai-go" data-kind="values" data-src="ai-values" data-url="{{ url_for('qgen.ai_values') }}">Fill in the values</button>
+      </div>
+    </div>
+    <div class="ai-status small" role="status" aria-live="polite"></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="form-row">
+      {{ field(form.qtype) }}
+      {{ field(form.title, attrs={'placeholder': 'e.g. Train distance'}) }}
+    </div>
+    {{ field(form.question, 'Put a random value in square brackets, like [speed]. You can do math inside too: [speed * 2].', attrs={'rows': 4, 'placeholder': 'A train goes [speed] mph for [hours] hours. How far does it travel?'}) }}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Random values</h2><span class="muted small">each student gets their own</span></div>
+    <div class="table-wrap stack values-table">
+      <table>
+        <thead><tr><th style="width:16%">Name</th><th style="width:18%">Kind</th><th>Settings</th><th></th></tr></thead>
+        <tbody id="values-body">
+          {% for row in form.values %}{{ value_row(row, loop.index0) }}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button type="button" class="btn btn-secondary btn-sm" id="add-value">+ Add value</button>
+    </div>
+  </div>
+
+  <div class="card" id="answer-card">
+    <h2>Answer</h2>
+    <div class="t-choice_one t-choice_many">
+      {{ field(form.choices, 'Put * in front of each correct choice. Choices can use values too, like [speed * hours + 10].', attrs={'rows': 5, 'placeholder': '*[speed * hours]\n[speed + hours]\n[speed * hours + 10]'}) }}
+      <div class="form-row">
+        {{ check(form.shuffle) }}
+        {{ field(form.show_n, 'Optional. Each student sees this many, always including a correct one.', attrs={'min': 2}) }}
+      </div>
+    </div>
+    <div class="t-numeric t-text t-truefalse t-essay">
+      {% for key, qt in qtypes.items() %}
+        <div class="answer-help t-{{ key }}"><span class="label">{{ qt.answer_label }}</span>{% if qt.answer_help %}<div class="help muted small">{{ qt.answer_help }}</div>{% endif %}</div>
+      {% endfor %}
+      <div class="field{% if form.answer.errors %} has-error{% endif %}">
+        {{ form.answer(rows=3, **{'aria-label': 'Answer'}) }}
+      </div>
+    </div>
+    <div class="t-text">{{ check(form.case_sensitive) }}</div>
+    <div class="t-essay">{{ field(form.grading_notes, 'Shown to you next to the student’s answer while grading.', attrs={'rows': 3}) }}</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Pictures</h2><span class="muted small">optional</span></div>
+    <p class="muted small">Add one picture, or several: each student is shown one of them at random.</p>
+    <div id="images-body">
+      {% for row in form.images %}{{ image_row(row) }}{% endfor %}
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="add-image">+ Add a picture</button>
+  </div>
+
+  <div class="card">
+    {{ check(form.calculator_ok) }}
+    <div class="btn-row">
+      {{ form.submit(class='btn') }}
+      <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}">Show me 3 examples</button>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Cancel</a>
+    </div>
+  </div>
+
+  <div id="preview" class="examples" aria-live="polite"></div>
+</form>
+
+<details class="card help-box">
+  <summary>Examples of each question type</summary>
+  <h3>Numeric</h3>
+  <pre>Question: A train goes [speed] mph for [hours] hours. How far does it travel?
+Values:   speed  Whole number  40 to 80, in steps of 5
+          hours  Whole number  2 to 5
+Answer:   speed * hours</pre>
+  <h3>Short text</h3>
+  <pre>Question: What is the capital of France?
+Answer:   Paris
+          Paris, France</pre>
+  <h3>Pick one</h3>
+  <pre>Question: [a] + [b] = ?
+Choices:  *[a + b]
+          [a + b + 1]
+          [a * b]</pre>
+  <h3>Pick several</h3>
+  <pre>Question: Which of these are even?
+Choices:  *2
+          *4
+          3
+          5</pre>
+  <h3>True / False</h3>
+  <pre>Question: True or false: [a] is bigger than [b].
+Answer:   a > b</pre>
+  <h3>Long text</h3>
+  <pre>Question: Explain why [who] needs more money than [other].
+Model answer (optional): Because …</pre>
+  <h3>Pictures with labels</h3>
+  <pre>Question: What animal is in the picture?     (question type: Short text)
+Pictures: cat.png labelled “cat”, dog.png labelled “dog”
+Answer:   [picture]</pre>
+</details>
+
+<template id="value-template">{{ value_row(blank.values[0], 0) }}</template>
+<template id="image-template">{{ image_row(blank.images[0]) }}</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/problem_form.js') }}"></script>
+{% endblock %}
