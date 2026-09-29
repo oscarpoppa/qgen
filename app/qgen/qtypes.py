@@ -298,7 +298,10 @@ class ChoiceOne(QType):
         #repeats may have been dropped, so never ask for more than exist
         show_n = min(show_n, len(choices))
         if self.multi:
-            nright = rng.randint(max(1, show_n - len(wrong)), min(show_n, len(right)))
+            #at least one correct, and at least one wrong when there are any,
+            #so "tick them all" is never the answer by accident
+            most = min(show_n - 1 if wrong else show_n, len(right))
+            nright = rng.randint(max(1, show_n - len(wrong)), max(1, most))
         else:
             nright = 1
         return rng.sample(right, nright) + rng.sample(wrong, min(show_n - nright, len(wrong)))

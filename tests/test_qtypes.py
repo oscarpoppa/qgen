@@ -160,3 +160,12 @@ def test_picture_pool_without_labels_just_varies_the_image():
 def test_picture_labels_must_all_be_filled_in():
     o = {'values': [], 'markup': 'friendly', 'images': [{'file': 'a.png', 'label': 'a'}, {'file': 'b.png'}]}
     assert 'Every picture needs a label' in ' '.join(get_qtype('text').validate('q', '[picture]', o))
+
+
+def test_pick_several_pool_always_mixes_right_and_wrong():
+    qt = get_qtype('choice_many')
+    o = {'values': [], 'markup': 'friendly', 'choices': '*2\n*4\n*6\n*8\n3\n5\n7\n9', 'show_n': 4}
+    for seed in range(200):
+        _, _, co = qt.instantiate('Which are even?', '', o, random.Random(seed))
+        assert len(co['choices']) == 4
+        assert 1 <= len(co['correct']) <= 3
