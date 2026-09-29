@@ -36,7 +36,7 @@
               </div>
             </details>
             <a href="{{ url_for('qgen.review_list') }}">Review
-              {% set waiting = review_count() %}{% if waiting %}<span class="count" aria-label="{{ waiting }} waiting">{{ waiting }}</span>{% endif %}
+              {% set nav_review_count = review_count() %}{% if nav_review_count %}<span class="count" aria-label="{{ nav_review_count }} waiting">{{ nav_review_count }}</span>{% endif %}
             </a>
             <a href="{{ url_for('user.userdet') }}">Users</a>
             <details class="menu">

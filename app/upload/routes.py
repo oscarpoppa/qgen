@@ -2,8 +2,7 @@ from . import upload_bp
 from .forms import UploadForm
 from app.user.routes import admin_only, pw_check
 from flask import flash, render_template, redirect, url_for, request, current_app, jsonify, abort
-from flask_wtf.csrf import validate_csrf
-from wtforms.validators import ValidationError
+from app.jsoncsrf import json_csrf_ok
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from werkzeug.utils import secure_filename
@@ -128,9 +127,7 @@ def unique_name(fname):
 @pw_check
 @admin_only
 def upload_json():
-    try:
-        validate_csrf(request.headers.get('X-CSRFToken'))
-    except ValidationError:
+    if not json_csrf_ok():
         return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
     ufile = request.files.get('file')
     if not ufile or not ufile.filename:

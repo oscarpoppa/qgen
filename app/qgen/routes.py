@@ -6,7 +6,8 @@ from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
-from flask import flash, render_template, redirect, url_for, request, current_app, abort
+from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
+from app.jsoncsrf import json_csrf_ok
 from flask_login import current_user, login_required
 from re import findall
 from json import dumps, loads
@@ -199,7 +200,7 @@ def checked_vplist(form):
     if not numlist:
         form.vplist.errors = ['Tick at least one problem.']
         return None
-    missing = [n for n in set(numlist) if not VProblem.query.get(n)]
+    missing = [n for n in set(numlist) if not db.session.get(VProblem, n)]
     if missing:
         form.vplist.errors = ['These problems no longer exist: {}'.format(', '.join(map(str, missing)))]
         return None
@@ -239,7 +240,7 @@ def edvquiz(vqid):
             vqobj.calculator_ok = form.calculator_ok.data
             vqobj.shuffle_order = form.shuffle_order.data
             vqobj.vpid_lst = dumps(numlist)
-            vqobj.vproblems = [VProblem.query.get(a) for a in set(numlist)]
+            vqobj.vproblems = [db.session.get(VProblem, a) for a in set(numlist)]
             vqobj.save()
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
@@ -300,10 +301,10 @@ def assign():
     if request.method == 'GET' and request.args.get('vq', '').isdigit():
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
-        vquiz = VQuiz.query.get_or_404(form.vquiz.data)
+        vquiz = db.get_or_404(VQuiz, form.vquiz.data)
         done = []
         for uid in form.users.data:
-            user = User.query.get(uid)
+            user = db.session.get(User, uid)
             cq = create_cquiz(vquiz, user)
             if cq:
                 done.append(user.username)
@@ -376,7 +377,7 @@ def review_list():
 @pw_check
 @admin_only
 def review(cqid):
-    cq = CQuiz.query.get_or_404(cqid)
+    cq = db.get_or_404(CQuiz, cqid)
     if cq.completed:
         flash('That quiz has already been graded.', 'info')
         return redirect(url_for('qgen.qtake', cidx=cq.id))
@@ -497,14 +498,10 @@ def ret_cquiz(cqid):
 def ai_fill(kind):
     """Shared by both "Fill in for me" buttons; always answers with JSON."""
     from flask import jsonify
-    from flask_wtf.csrf import validate_csrf
-    from wtforms.validators import ValidationError
     from datetime import timedelta
     from .ai_helper import ask, problems_with, AIError, HOURLY_LIMIT
     from .models import AICall
-    try:
-        validate_csrf(request.headers.get('X-CSRFToken'))
-    except ValidationError:
+    if not json_csrf_ok():
         return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
     key = current_app.config.get('ANTHROPIC_API_KEY')
     if not key:
@@ -544,3 +541,32 @@ def ai_problem():
 @admin_only
 def ai_values():
     return ai_fill('values')
+
+
+# ---------------------------------------------------------------- live helper
+
+#problem page: rule-based hints as the teacher types (same form data as the preview)
+@qgen_bp.route('/quiz/checkvprob', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def check_vprob():
+    from .coach import problem_hints
+    form = ProblemForm()
+    form.validate()
+    return jsonify(hints=problem_hints(form.qtype.data, form.question.data, form.answer.data, form.options()))
+
+#quiz page: hints about the ticked problems
+@qgen_bp.route('/quiz/checkvquiz', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def check_vquiz():
+    from .coach import quiz_hints
+    form = QuizForm()
+    vpids = parse_vplist(form.vplist.data)
+    problems = {p.id: p for p in VProblem.query.filter(VProblem.id.in_(vpids)).all()} if vpids else {}
+    vpids = [p for p in vpids if p in problems]
+    this_id = request.args.get('vq', type=int)
+    others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
+    return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems))
