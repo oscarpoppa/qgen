@@ -28,8 +28,8 @@ def archive(obj, group_cls, rel):
         getattr(obj, rel).append(group)
 
 #generate a virtual quiz
-def create_vquiz(lst, title, img, calculator_ok):
-    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok)
+def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True):
+    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok, shuffle_order=shuffle_order)
     nuquiz.save()
     probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(lst)]
     nuquiz.vproblems.extend(probs)
@@ -42,6 +42,9 @@ def create_cquiz(vquiz, assignee):
     try:
         nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
         ordered_vids = loads(vquiz.vpid_lst)
+        #so "question 1 is B" means nothing to the student next door
+        if vquiz.shuffle_order:
+            random.shuffle(ordered_vids)
         vprobs = [(o, VProblem.query.filter_by(id=vid).first()) for o, vid in enumerate(ordered_vids, 1)]
         probs = [gen_cprob(nuquiz, vp, o) for o,vp in vprobs]
         nuquiz.cproblems.extend(probs)
@@ -212,7 +215,7 @@ def mkvquiz():
     if form.validate_on_submit():
         numlist = checked_vplist(form)
         if numlist:
-            nq = create_vquiz(numlist, form.title.data, form.image.data or None, form.calculator_ok.data)
+            nq = create_vquiz(numlist, form.title.data, form.image.data or None, form.calculator_ok.data, form.shuffle_order.data)
             flash('Created quiz "{}" with {} problem{}.'.format(nq.title, len(numlist), '' if len(numlist) == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
             return redirect(url_for('qgen.list_vquizzes'))
@@ -234,6 +237,7 @@ def edvquiz(vqid):
             vqobj.image = form.image.data or None
             vqobj.title = form.title.data
             vqobj.calculator_ok = form.calculator_ok.data
+            vqobj.shuffle_order = form.shuffle_order.data
             vqobj.vpid_lst = dumps(numlist)
             vqobj.vproblems = [VProblem.query.get(a) for a in set(numlist)]
             vqobj.save()

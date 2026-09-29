@@ -5,6 +5,8 @@ __pycache__/
 
 # secrets
 .env
+.env.*
+!.env.example
 
 # uploaded images/files; site css/js are tracked
 static/*

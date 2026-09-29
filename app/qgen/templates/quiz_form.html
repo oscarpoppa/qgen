@@ -12,6 +12,7 @@
   <div class="card">
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
     {{ check(form.calculator_ok) }}
+    {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
   </div>
 
   <div class="split">
@@ -41,6 +42,7 @@
 
     <div class="card">
       <div class="card-head"><h2>Order in the quiz</h2></div>
+      <p class="muted small shuffle-note">With shuffling on, this is just the order you see here; each student gets their own.</p>
       <ol id="order" class="choice-list"></ol>
       <p id="order-empty" class="muted small">Nothing ticked yet.</p>
       {{ form.vplist() }}

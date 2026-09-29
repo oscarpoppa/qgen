@@ -109,6 +109,7 @@ class QuizForm(FlaskForm):
     vplist = HiddenField('Problems')
     image = StringField('Picture shown at the top (optional)')
     calculator_ok = BooleanField('Calculator allowed')
+    shuffle_order = BooleanField('Give each student the questions in a different order', default=True)
     submit = SubmitField('Save quiz')
 
 

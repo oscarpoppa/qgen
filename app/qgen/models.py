@@ -99,6 +99,8 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
+    #each student gets the questions in their own random order
+    shuffle_order = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
 
     vqgroups = db.relationship('VQGroup', back_populates='vquizzes', secondary=vquiz_vqgroup, lazy=True)
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)

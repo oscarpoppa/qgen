@@ -1,4 +1,4 @@
-"""question types, saved answers, instructor review, AI call log
+"""question types, saved answers, instructor review, shuffled question order, AI call log
 
 Revision ID: c3a7d2e41f90
 Revises: 95f1e890c9dd
@@ -28,6 +28,9 @@ def upgrade():
         batch_op.add_column(sa.Column('feedback', sa.Text(), nullable=True))
         batch_op.add_column(sa.Column('highlights', sa.Text(), nullable=True))
         batch_op.alter_column('conc_ansr', existing_type=sa.String(length=128), type_=sa.Text())
+
+    with op.batch_alter_table('vquiz', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('shuffle_order', sa.Boolean(), nullable=False, server_default=sa.true()))
 
     with op.batch_alter_table('cquiz', schema=None) as batch_op:
         batch_op.add_column(sa.Column('needs_review', sa.Boolean(), nullable=False, server_default=sa.false()))
@@ -63,6 +66,8 @@ def downgrade():
         batch_op.drop_column('graded_date')
         batch_op.drop_column('graded_by')
         batch_op.drop_column('needs_review')
+    with op.batch_alter_table('vquiz', schema=None) as batch_op:
+        batch_op.drop_column('shuffle_order')
     with op.batch_alter_table('cproblem', schema=None) as batch_op:
         batch_op.drop_column('highlights')
         batch_op.drop_column('feedback')
