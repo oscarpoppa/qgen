@@ -242,3 +242,34 @@ def test_precision_choices():
     o = {'markup': 'friendly', 'values': [], 'precision': 'whole'}
     assert qt.grade('7', '6.5', {}, o) == 1.0 and qt.grade('6', '6.5', {}, o) == 0.0
     assert m('2.35', '2.345', 'hundredths') and not m('2.34', '2.345', 'hundredths')
+
+
+@pytest.mark.parametrize('key', ['choice_one', 'choice_many'])
+def test_full_pool_is_still_shuffled(key):
+    qt = get_qtype(key)
+    choices = '*A\nB\nC\nD\nE' if key == 'choice_one' else '*A\n*B\nC\nD\nE'
+    o = {'markup': 'friendly', 'values': [], 'choices': choices, 'show_n': 5, 'shuffle': True}
+    orders = {tuple(qt.instantiate('q', '', o, random.Random(s))[2]['choices']) for s in range(60)}
+    assert len(orders) > 20                      # many different orders
+    firsts = {qt.instantiate('q', '', o, random.Random(s))[2]['choices'][0] for s in range(60)}
+    assert firsts == set('ABCDE')                # the right answer isn't stuck in one place
+
+
+@pytest.mark.parametrize('key', ['choice_one', 'choice_many'])
+def test_unshuffled_pool_keeps_teacher_order(key):
+    qt = get_qtype(key)
+    o = {'markup': 'friendly', 'values': [], 'choices': 'W1\nW2\n*R\nW3\nW4', 'show_n': 3, 'shuffle': False}
+    for s in range(40):
+        shown = qt.instantiate('q', '', o, random.Random(s))[2]['choices']
+        assert shown == sorted(shown, key='W1 W2 R W3 W4'.split().index)
+    positions = {qt.instantiate('q', '', o, random.Random(s))[2]['choices'].index('R') for s in range(40)}
+    assert len(positions) > 1                    # R isn't always first
+
+
+def test_unshuffled_combinations_keep_teacher_order():
+    qt = get_qtype('choice_many')
+    o = {'markup': 'friendly', 'values': [], 'show_n': 4, 'shuffle': False,
+         'choices': '1\n3\n4\n6\n7\n9', 'combos': '1, 9\n3, 7\n4, 6'}
+    for s in range(30):
+        shown = qt.instantiate('q', '', o, random.Random(s))[2]['choices']
+        assert shown == sorted(shown, key=int)

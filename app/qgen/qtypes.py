@@ -406,9 +406,13 @@ class ChoiceOne(QType):
         merged = {}
         for text, ok in filled:
             merged[text] = merged.get(text, False) or ok
-        picked = self.pick(list(merged.items()), options.get('show_n'), rng)
+        pool = list(merged.items())
+        picked = self.pick(pool, options.get('show_n'), rng)
         if options.get('shuffle', True):
             rng.shuffle(picked)
+        else:
+            #keep the teacher's order, so a pool's picks never put the right answer first
+            picked.sort(key=pool.index)
         opts = {'choices': [t for t, _ in picked], 'correct': [i for i, (_, ok) in enumerate(picked) if ok]}
         return F.fill_question(question, env), '; '.join(t for t, ok in picked if ok), opts
 
@@ -513,6 +517,8 @@ class ChoiceMany(ChoiceOne):
             shown = pool
         if options.get('shuffle', True):
             rng.shuffle(shown)
+        else:
+            shown.sort(key=pool.index)
         index = {t: i for i, t in enumerate(shown)}
         valid = [sorted(index[t] for t in s) for s in sets if all(t in index for t in s)]
         valid = [v for i, v in enumerate(valid) if v not in valid[:i]]
