@@ -1,3 +1,5 @@
 #!/bin/bash
-sudo nginx -c /etc/nginx/sites-available/quiz-app
-sudo /home/dan/proj/quiz/venv/bin/gunicorn --bind unix:/tmp/quizapp.sock --workers 4 quizapp:app --daemon --access-logfile /var/log/gunicorn/access.log --error-logfile /var/log/gunicorn/error.log --log-level DEBUG
+# runs from the conda base environment (nginx + gunicorn from ~/anaconda3)
+cd "$(dirname "$0")"
+nginx -c /home/dan/anaconda3/etc/nginx/nginx.conf
+gunicorn --bind unix:/tmp/qgen.sock --workers 4 quizapp:app --daemon --log-level DEBUG

@@ -6,9 +6,15 @@ from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from werkzeug.utils import secure_filename
 from PIL import Image
-from os import listdir, remove
+from os import listdir, remove, path as osp
 
-STATIC = '/home/dan/proj/quiz/app/static/'
+#uploads live in the configured static folder (css/ and js/ subfolders are site assets)
+def static_dir():
+    return osp.join(current_app.config['STATIC_DIR'], '')
+
+def static_files():
+    sdir = static_dir()
+    return [f for f in listdir(sdir) if osp.isfile(sdir + f)]
 
 #try to create a thumbnail
 def trythumb(path, fname):
@@ -33,7 +39,7 @@ def upload():
     if form.validate_on_submit():
         ufile = request.files['thefile']
         #need to generalize this
-        path = STATIC
+        path = static_dir()
         fname = secure_filename(ufile.filename)
         fpath = path + fname
         ufile.save(fpath)
@@ -48,7 +54,7 @@ def upload():
 @pw_check
 @admin_only
 def images():
-    imgs = [(f,f[2:]) for f in listdir(STATIC) if f.startswith('T_')]
+    imgs = [(f,f[2:]) for f in static_files() if f.startswith('T_')]
     return render_template('images.html', imgs=imgs, title='Images')
 
 #admin-only list non-image files on server
@@ -57,7 +63,7 @@ def images():
 @pw_check
 @admin_only
 def nonimages():
-    allf = listdir(STATIC)
+    allf = static_files()
     timgs = [f for f in allf if f.startswith('T_')]
     imgs = [f[2:] for f in timgs]
     imgs += timgs
@@ -70,12 +76,12 @@ def nonimages():
 @pw_check
 @admin_only
 def delimg(fname):
-    if fname not in [f for f in listdir(STATIC)]:
+    if fname not in static_files():
         flash('Image not found: {}'.format(fname))
     else:
         try:
-            remove(STATIC + fname)
-            remove(STATIC + 'T_' + fname)
+            remove(static_dir() + fname)
+            remove(static_dir() + 'T_' + fname)
             flash('Image and thumbnail removed: {}'.format(fname))
             current_app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
         except Exception as exc:
@@ -88,11 +94,11 @@ def delimg(fname):
 @pw_check
 @admin_only
 def delnonimg(fname):
-    if fname not in [f for f in listdir(STATIC)]:
+    if fname not in static_files():
         flash('File not found: {}'.format(fname))
     else:
         try:
-            remove(STATIC + fname)
+            remove(static_dir() + fname)
             flash('File removed: {}'.format(fname))
             current_app.logger.info('{} removed file {}'.format(current_user.username, fname))
         except Exception as exc:

@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 
 #build app
-app = Flask(__name__)
+app = Flask(__name__, static_folder=Config.STATIC_DIR)
 app.config.from_object(Config)
 app.logger.setLevel(3)
 db = SQLAlchemy(app)

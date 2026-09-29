@@ -6,8 +6,7 @@ from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
-
-STATIC = '/home/dan/proj/quiz/app/static/'
+from secrets import token_urlsafe
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -120,12 +119,13 @@ def chpass():
 def resetpass(uid):
     usrquery = User.query.filter_by(id=uid)
     usr = usrquery.first_or_404('No user with id {}'.format(uid))
-    pword = 'PASSWORD'
+    #random one-time password, shown once to the admin and never logged
+    pword = token_urlsafe(9)
     usr.set_password(pword)
     usr.pw_man_reset = True
     usr.save()
-    flash('Password reset for {}'.format(usr.username))
-    current_app.logger.info('{} issued a manual PW reset for {}:{}'.format(current_user.username, usr.username, pword))
+    flash('Password reset for {}. Temporary password: {} (they must change it at next login)'.format(usr.username, pword))
+    current_app.logger.info('{} issued a manual PW reset for {}'.format(current_user.username, usr.username))
     return redirect(url_for('user.userdet'))
 
 # route to admin-initiated user deletion action
