@@ -6,6 +6,7 @@ from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
+from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
 from app.jsoncsrf import json_csrf_ok
 from flask_login import current_user, login_required
@@ -30,9 +31,9 @@ def archive(obj, group_cls, rel):
 
 #generate a virtual quiz
 def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True):
-    nuquiz = VQuiz(image=img, title=title, vpid_lst=dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok, shuffle_order=shuffle_order)
+    nuquiz = VQuiz(image=img, title=title, vpid_lst=layout.dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok, shuffle_order=shuffle_order)
     nuquiz.save()
-    probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(lst)]
+    probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(layout.all_ids(lst))]
     nuquiz.vproblems.extend(probs)
     archive(nuquiz, VQGroup, 'vqgroups')
     nuquiz.save()
@@ -42,7 +43,8 @@ def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True):
 def create_cquiz(vquiz, assignee):
     try:
         nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
-        ordered_vids = loads(vquiz.vpid_lst)
+        #groups ("2 of these 6") are drawn separately for each student
+        ordered_vids = layout.draw(layout.parse(vquiz.vpid_lst), random)
         #so "question 1 is B" means nothing to the student next door
         if vquiz.shuffle_order:
             random.shuffle(ordered_vids)
@@ -58,7 +60,8 @@ def create_cquiz(vquiz, assignee):
         return None
 
 def parse_vplist(text):
-    return [int(a) for a in findall(r'(\d+)', text or '')]
+    """The quiz's problem list from the form: single ids and groups."""
+    return layout.parse(text)
 
 
 # ---------------------------------------------------------------- problems
@@ -196,13 +199,21 @@ def quiz_page(form, title, vq=None):
     return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq)
 
 def checked_vplist(form):
-    numlist = parse_vplist(form.vplist.data)
+    try:
+        numlist = parse_vplist(form.vplist.data)
+    except layout.LayoutError as exc:
+        form.vplist.errors = [str(exc)]
+        return None
     if not numlist:
         form.vplist.errors = ['Tick at least one problem.']
         return None
-    missing = [n for n in set(numlist) if not db.session.get(VProblem, n)]
+    missing = [n for n in set(layout.all_ids(numlist)) if not db.session.get(VProblem, n)]
     if missing:
         form.vplist.errors = ['These problems no longer exist: {}'.format(', '.join(map(str, missing)))]
+        return None
+    errors = layout.check(numlist)
+    if errors:
+        form.vplist.errors = errors
         return None
     return numlist
 
@@ -217,7 +228,8 @@ def mkvquiz():
         numlist = checked_vplist(form)
         if numlist:
             nq = create_vquiz(numlist, form.title.data, form.image.data or None, form.calculator_ok.data, form.shuffle_order.data)
-            flash('Created quiz "{}" with {} problem{}.'.format(nq.title, len(numlist), '' if len(numlist) == 1 else 's'), 'success')
+            count = layout.question_count(numlist)
+            flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
             return redirect(url_for('qgen.list_vquizzes'))
     return quiz_page(form, 'New quiz')
@@ -231,7 +243,7 @@ def edvquiz(vqid):
     vqobj = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     form = QuizForm(obj=vqobj)
     if request.method == 'GET':
-        form.vplist.data = ', '.join(map(str, loads(vqobj.vpid_lst or '[]')))
+        form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
     elif form.validate_on_submit():
         numlist = checked_vplist(form)
         if numlist:
@@ -239,8 +251,8 @@ def edvquiz(vqid):
             vqobj.title = form.title.data
             vqobj.calculator_ok = form.calculator_ok.data
             vqobj.shuffle_order = form.shuffle_order.data
-            vqobj.vpid_lst = dumps(numlist)
-            vqobj.vproblems = [db.session.get(VProblem, a) for a in set(numlist)]
+            vqobj.vpid_lst = layout.dumps(numlist)
+            vqobj.vproblems = [db.session.get(VProblem, a) for a in set(layout.all_ids(numlist))]
             vqobj.save()
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
@@ -254,7 +266,7 @@ def edvquiz(vqid):
 @admin_only
 def list_vquizzes():
     vqlst = VQuiz.query.order_by(VQuiz.id.desc()).all()
-    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', loads=loads)
+    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', layout=layout)
 
 #route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -263,7 +275,7 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), loads=loads)
+    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout)
 
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
@@ -564,9 +576,14 @@ def check_vprob():
 def check_vquiz():
     from .coach import quiz_hints
     form = QuizForm()
-    vpids = parse_vplist(form.vplist.data)
+    try:
+        lay = parse_vplist(form.vplist.data)
+    except layout.LayoutError:
+        lay = []
+    vpids = layout.all_ids(lay)
     problems = {p.id: p for p in VProblem.query.filter(VProblem.id.in_(vpids)).all()} if vpids else {}
     vpids = [p for p in vpids if p in problems]
     this_id = request.args.get('vq', type=int)
     others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
-    return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems))
+    return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
+                                    lay=lay, shuffle_order=form.shuffle_order.data))

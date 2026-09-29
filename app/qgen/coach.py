@@ -189,9 +189,15 @@ def problem_hints(qtype_key, question, answer, options):
     return hints
 
 
-def quiz_hints(title, vpids, calculator_ok, existing_titles, problems):
-    """problems: {id: VProblem} for the ticked ids."""
+def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None, shuffle_order=True):
+    """problems: {id: VProblem} for the ticked ids; lay: the quiz layout with groups."""
+    from . import layout
     hints = []
+    for err in layout.check(lay or []):
+        hints.append(hint('error', err))
+    if vpids and not shuffle_order:
+        hints.append(hint('warn', 'Question order isn\'t shuffled, so every student has the same question 1, 2, 3… '
+                          'and "number 3 is B" is easier to pass along.'))
     if not (title or '').strip():
         hints.append(hint('error', 'Give the quiz a title so students can recognise it.'))
     elif title.strip().lower() in existing_titles:

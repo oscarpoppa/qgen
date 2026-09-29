@@ -45,6 +45,9 @@
       <p class="muted small shuffle-note">With shuffling on, this is just the order you see here; each student gets their own.</p>
       <ol id="order" class="choice-list"></ol>
       <p id="order-empty" class="muted small">Nothing ticked yet.</p>
+      <div id="groups" class="small"></div>
+      <p class="muted small">To give each student only some problems from a set, put them in the same group
+        (A, B, …) and choose how many each student gets.</p>
       {{ form.vplist() }}
       {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </div>
@@ -62,54 +65,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filter.js') }}"></script>
-<script>
-(function () {
-  var hidden = document.getElementById('vplist');
-  var list = document.getElementById('order');
-  var empty = document.getElementById('order-empty');
-  var order = (hidden.value.match(/\d+/g) || []);
-  var boxes = {};
-  document.querySelectorAll('input.pick').forEach(function (b) { boxes[b.value] = b; });
-
-  function render() {
-    order = order.filter(function (id) { return boxes[id]; });
-    hidden.value = order.join(', ');
-    list.innerHTML = '';
-    empty.hidden = order.length > 0;
-    order.forEach(function (id, i) {
-      boxes[id].checked = true;
-      var li = document.createElement('li');
-      var name = document.createElement('span');
-      name.style.flex = '1';
-      name.textContent = (i + 1) + '. ' + boxes[id].dataset.title;
-      li.appendChild(name);
-      [['↑', -1, 'Move up'], ['↓', 1, 'Move down'], ['✕', 0, 'Remove']].forEach(function (b) {
-        var btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'btn btn-secondary btn-sm';
-        btn.textContent = b[0]; btn.setAttribute('aria-label', b[2] + ': ' + boxes[id].dataset.title);
-        btn.addEventListener('click', function () {
-          if (b[1] === 0) { boxes[id].checked = false; order.splice(i, 1); }
-          else {
-            var j = i + b[1];
-            if (j < 0 || j >= order.length) return;
-            order[i] = order[j]; order[j] = id;
-          }
-          render();
-        });
-        li.appendChild(btn);
-      });
-      list.appendChild(li);
-    });
-  }
-
-  Object.keys(boxes).forEach(function (id) {
-    boxes[id].addEventListener('change', function () {
-      if (this.checked) { if (order.indexOf(id) === -1) order.push(id); }
-      else order = order.filter(function (x) { return x !== id; });
-      render();
-    });
-  });
-  render();
-})();
-</script>
+<script src="{{ url_for('static', filename='js/quiz_form.js') }}"></script>
 {% endblock %}

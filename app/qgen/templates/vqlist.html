@@ -13,14 +13,23 @@
       <thead><tr><th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in vqlst %}
-        {% set order = loads(item.vpid_lst or '[]') %}
+        {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
         <tr>
           <td data-label="Quiz"><strong>{{ item.title }}</strong>
-            <div class="small muted">{% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}</div></td>
+            <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
+              · {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
+              {% if item.shuffle_order %}· order shuffled{% endif %}</div></td>
           <td data-label="Problems">
             <ol class="small" style="margin:0;padding-left:1.2em">
-              {% for pid in order %}<li>{{ byid[pid].title if pid in byid else 'missing problem ' ~ pid }}</li>{% endfor %}
+              {% for e in entries %}
+                {% if layout.is_group(e) %}
+                  <li><span class="badge badge-accent">{{ e.pick }} of these {{ e['from']|length }}</span>
+                    <ul style="margin:2px 0 4px;padding-left:1.1em">{% for pid in e['from'] %}<li>{{ byid[pid].title if pid in byid else 'missing problem ' ~ pid }}</li>{% endfor %}</ul></li>
+                {% else %}
+                  <li>{{ byid[e].title if e in byid else 'missing problem ' ~ e }}</li>
+                {% endif %}
+              {% endfor %}
             </ol>
           </td>
           <td data-label="Assigned">{{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</td>

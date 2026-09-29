@@ -234,3 +234,35 @@ def test_pick_several_combinations_through_the_pages(app_db):
     assert '[a], [10 - a]' in page
     bad = dict(form, combos='[a], [10 - b]')
     assert b"isn&#39;t one of the choices" in teacher.post('/quiz/makevprob', data=bad).data
+
+
+def test_question_groups_give_students_different_problems(app_db):
+    app, db = app_db
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    for n in range(5):
+        f = problem_form('numeric', 'P{}'.format(n), '[a] + {} = ?'.format(n), 'a + {}'.format(n),
+                         [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '50'}])
+        assert teacher.post('/quiz/makevprob', data=f).status_code == 302
+    p = [v.id for v in VProblem.query.order_by(VProblem.id)]
+    lay = json.dumps([p[0], {'pick': 2, 'from': p[1:]}])
+    bad = json.dumps([p[0], {'pick': 9, 'from': p[1:]}])
+    assert b'not 9' in teacher.post('/quiz/makevquiz', data={'title': 'G', 'vplist': bad}).data
+    assert teacher.post('/quiz/makevquiz', data={'title': 'Groups', 'vplist': lay, 'shuffle_order': 'y'}).status_code == 302
+    vq = VQuiz.query.one()
+    assert b'2 of these 4' in teacher.get('/quiz/listvq').data
+    assert json.loads(teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+                      .split('id="vplist" name="vplist" type="hidden" value="')[1].split('"')[0].replace('&#34;', '"')) \
+        == [p[0], {'pick': 2, 'from': p[1:]}]
+    for i in range(8):
+        u = User(username='s{}'.format(i)); u.set_password('pw-for-tests'); db.session.add(u)
+    db.session.commit()
+    ids = [u.id for u in User.query.filter(User.username.like('s%')).all()]
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': ids})
+    sets = set()
+    for uid in ids:
+        got = [cp.vproblem_id for cp in CQuiz.query.filter_by(assignee=uid).one().cproblems]
+        assert len(got) == 3 and p[0] in got and len(set(got)) == 3
+        sets.add(frozenset(got))
+    assert len(sets) > 1
