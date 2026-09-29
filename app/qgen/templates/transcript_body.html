@@ -30,7 +30,7 @@
     {% else %}
       <dl class="answer-row">
         <dt>Your answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
-        {% if it.mark != 'ok' %}<dt>Correct answer</dt><dd>{{ it.correct }}</dd>{% endif %}
+        {% if it.mark != 'ok' and show_answers %}<dt>Correct answer</dt><dd>{{ it.correct }}</dd>{% endif %}
       </dl>
     {% endif %}
   </section>

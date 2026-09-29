@@ -201,7 +201,7 @@ def test_whole_school_week(app_db):
     assert 'Mentions inertia' not in page
 
     # --- home page and lists
-    assert b'Score 93%' in sam.get('/mypage').data
+    assert '★ 93%' in sam.get('/mypage').data.decode()
     for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/listuser', '/userdet', '/images', '/nonimages',
                 '/quiz/listcq/{}'.format(sam_q.id), '/quiz/editvquiz/{}'.format(vq.id), '/quiz/assign?vq={}'.format(vq.id)):
         assert teacher.get(url).status_code == 200, url

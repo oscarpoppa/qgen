@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{{ title or 'Quizzes' }}</title>
+  <title>{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   {% block head %}{% endblock %}
@@ -12,7 +12,9 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">Quizzes</a>
+      {% set s = site() %}
+      <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">
+        {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
       <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
               onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu</button>
       <nav class="nav" id="nav" aria-label="Main">
@@ -47,6 +49,7 @@
                 <a href="{{ url_for('upload.nonimages') }}">Other files</a>
               </div>
             </details>
+            <a href="{{ url_for('user.settings') }}">Settings</a>
           {% endif %}
           <div class="nav-right">
             <details class="menu">

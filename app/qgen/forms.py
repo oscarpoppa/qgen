@@ -1,11 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import (Form, StringField, BooleanField, SubmitField, SelectField, TextAreaField,
-                     IntegerField, FieldList, FormField, HiddenField, SelectMultipleField)
-from wtforms.validators import DataRequired, Optional, NumberRange
+                     IntegerField, FieldList, FormField, HiddenField, SelectMultipleField, DateTimeLocalField)
+from wtforms.validators import DataRequired, Optional, NumberRange, ValidationError
 from wtforms.widgets import ListWidget, CheckboxInput
 
 from .friendly import KINDS
 from .qtypes import REGISTRY, PRECISIONS
+from .models import RETAKE_RULES
 
 
 #one row of the values table (not a FlaskForm: the page form carries the CSRF token)
@@ -116,6 +117,8 @@ class QuizForm(FlaskForm):
     image = StringField('Picture shown at the top (optional)')
     calculator_ok = BooleanField('Calculator allowed')
     shuffle_order = BooleanField('Give each student the questions in a different order', default=True)
+    retake_rule = SelectField('If a student takes this quiz more than once, their score is', choices=list(RETAKE_RULES.items()), default='best')
+    hide_answers = BooleanField('Hide the correct answers until I release them')
     submit = SubmitField('Save quiz')
 
 
@@ -123,7 +126,14 @@ class QuizForm(FlaskForm):
 class AssignForm(FlaskForm):
     vquiz = SelectField('Quiz', coerce=int)
     users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Tick at least one student.')])
+    opens_at = DateTimeLocalField('Opens', format='%Y-%m-%dT%H:%M', validators=[Optional()])
+    closes_at = DateTimeLocalField('Closes', format='%Y-%m-%dT%H:%M', validators=[Optional()])
+    time_limit = IntegerField('Time limit (minutes)', validators=[Optional(), NumberRange(min=1, max=600, message='Between 1 and 600 minutes.')])
     submit = SubmitField('Assign')
+
+    def validate_closes_at(self, field):
+        if field.data and self.opens_at.data and field.data <= self.opens_at.data:
+            raise ValidationError('The closing time must be after the opening time.')
 
 
 #instructor grading of one essay answer

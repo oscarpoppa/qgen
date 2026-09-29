@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, image_drop %}
+
+{% block content %}
+<div class="page-head"><h1>Settings</h1></div>
+<form method="post" class="card" style="max-width:640px" novalidate>
+  {{ form.hidden_tag() }}
+  <h2>Your site</h2>
+  {{ field(form.site_name, 'Shown at the top of every page, next to the logo.') }}
+  {{ image_drop(form.logo, 'Drag your school’s logo here, or click to choose it. A wide or square picture works best.') }}
+  <h2>Sign-up</h2>
+  {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
+  {{ form.submit(class='btn') }}
+</form>
+{% endblock %}

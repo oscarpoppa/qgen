@@ -1,7 +1,7 @@
 from . import db, qgen_bp
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
-from .formfact import quiz_form_class, quiz_items, record_answers, finalize, transcript_html, transcript_item
+from .formfact import quiz_form_class, quiz_items, record_answers, finalize, transcript_html, transcript_item, fieldname_base
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from .qtypes import get_qtype, REGISTRY
@@ -12,7 +12,7 @@ from app.jsoncsrf import json_csrf_ok
 from flask_login import current_user, login_required
 from re import findall
 from json import dumps, loads
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import random
 
@@ -30,8 +30,9 @@ def archive(obj, group_cls, rel):
         getattr(obj, rel).append(group)
 
 #generate a virtual quiz
-def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True):
-    nuquiz = VQuiz(image=img, title=title, vpid_lst=layout.dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok, shuffle_order=shuffle_order)
+def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True, **settings):
+    nuquiz = VQuiz(image=img, title=title, vpid_lst=layout.dumps(lst), author_id=current_user.id, calculator_ok=calculator_ok,
+                   shuffle_order=shuffle_order, **settings)
     nuquiz.save()
     probs = [VProblem.query.filter_by(id=a).first_or_404('No vproblem with id {}'.format(a)) for a in set(layout.all_ids(lst))]
     nuquiz.vproblems.extend(probs)
@@ -40,9 +41,9 @@ def create_vquiz(lst, title, img, calculator_ok, shuffle_order=True):
     return nuquiz
 
 #generate a concrete quiz using virtual and assign to a user
-def create_cquiz(vquiz, assignee):
+def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None):
     try:
-        nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id)
+        nuquiz = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id, opens_at=opens_at, closes_at=closes_at, time_limit=time_limit)
         #groups ("2 of these 6") are drawn separately for each student
         ordered_vids = layout.draw(layout.parse(vquiz.vpid_lst), random)
         #so "question 1 is B" means nothing to the student next door
@@ -227,7 +228,8 @@ def mkvquiz():
     if form.validate_on_submit():
         numlist = checked_vplist(form)
         if numlist:
-            nq = create_vquiz(numlist, form.title.data, form.image.data or None, form.calculator_ok.data, form.shuffle_order.data)
+            nq = create_vquiz(numlist, form.title.data, form.image.data or None, form.calculator_ok.data, form.shuffle_order.data,
+                              retake_rule=form.retake_rule.data, hide_answers=form.hide_answers.data)
             count = layout.question_count(numlist)
             flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
@@ -251,6 +253,10 @@ def edvquiz(vqid):
             vqobj.title = form.title.data
             vqobj.calculator_ok = form.calculator_ok.data
             vqobj.shuffle_order = form.shuffle_order.data
+            vqobj.retake_rule = form.retake_rule.data
+            if vqobj.hide_answers != form.hide_answers.data:
+                vqobj.answers_released = False
+            vqobj.hide_answers = form.hide_answers.data
             vqobj.vpid_lst = layout.dumps(numlist)
             vqobj.vproblems = [db.session.get(VProblem, a) for a in set(layout.all_ids(numlist))]
             vqobj.save()
@@ -299,6 +305,39 @@ def del_vquiz(vqid):
     return redirect(url_for('qgen.list_vquizzes'))
 
 
+#route to show (or hide again) correct answers on students' results pages
+@qgen_bp.route('/quiz/releasevq/<vqid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def release_vquiz(vqid):
+    vq = db.get_or_404(VQuiz, vqid)
+    vq.answers_released = not vq.answers_released
+    vq.save()
+    flash('Correct answers for "{}" are now {} to students.'.format(vq.title, 'shown' if vq.answers_released else 'hidden'), 'success')
+    return redirect(request.referrer or url_for('qgen.list_vquizzes'))
+
+
+#route to set how one student's attempts at one quiz combine ('' = use the quiz's rule)
+@qgen_bp.route('/quiz/retakerule/<cqid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def set_retake_rule(cqid):
+    from .models import RETAKE_RULES
+    cq = db.get_or_404(CQuiz, cqid)
+    rule = request.form.get('rule') or None
+    if rule and rule not in RETAKE_RULES:
+        abort(400)
+    #kept on every attempt so it survives deleting one
+    for other in CQuiz.query.filter_by(assignee=cq.assignee, vquiz_id=cq.vquiz_id):
+        other.retake_rule = rule
+    db.session.commit()
+    flash('{}\'s score for "{}" is now: {}.'.format(cq.taker.username, cq.vquiz.title,
+          RETAKE_RULES[rule].lower() if rule else 'the quiz\'s own rule'), 'success')
+    return redirect(request.referrer or url_for('qgen.list_user', uid=cq.assignee))
+
+
 # ---------------------------------------------------------------- assigning
 
 #route to assign a concrete quiz to one or more users
@@ -317,7 +356,7 @@ def assign():
         done = []
         for uid in form.users.data:
             user = db.session.get(User, uid)
-            cq = create_cquiz(vquiz, user)
+            cq = create_cquiz(vquiz, user, form.opens_at.data, form.closes_at.data, form.time_limit.data)
             if cq:
                 done.append(user.username)
                 current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, user.username))
@@ -333,6 +372,30 @@ def assign():
 
 # ---------------------------------------------------------------- taking
 
+#answers are still accepted this long after the deadline (slow connections, the auto-submit)
+GRACE = timedelta(minutes=2)
+
+def submit_quiz(cq, form=None):
+    """Grade and close an attempt, from the submitted form or else from autosaved answers."""
+    if record_answers(cq, form):
+        cq.needs_review = True
+    else:
+        finalize(cq)
+    cq.save()
+
+def prefill(cq, form):
+    """Put autosaved answers back into the quiz form."""
+    for cp in cq.cproblems:
+        if cp.submitted is None:
+            continue
+        field = form[fieldname_base.format(cp.ordinal)]
+        qt = get_qtype(cp.vproblem.qtype)
+        if qt.uses_choices or qt.key == 'truefalse':
+            picked = [str(i) for i in qt.picked(cp.submitted)]
+            field.data = picked if qt.multi else (picked[0] if picked else None)
+        else:
+            field.data = cp.submitted
+
 #route for an assigned user to begin taking a concrete quiz
 @qgen_bp.route('/quiz/take/<cidx>', methods=['GET','POST'])
 @login_required
@@ -346,30 +409,63 @@ def qtake(cidx):
         flash('That quiz belongs to someone else.', 'error')
         return redirect(url_for('user.mypage'))
     title = cq.vquiz.title
+    is_taker = current_user == cq.taker
+    now = datetime.now()
     if cq.completed:
-        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title))
+        show = cq.vquiz.answers_visible or current_user.is_admin
+        return render_template('transcript.html', cq=cq, title=title,
+                               transcript=transcript_html(cq, title, show_answers=show), answers_hidden=not show)
     if cq.needs_review:
         return render_template('awaiting.html', cq=cq, title=title)
+    if cq.not_open_yet(now) and is_taker:
+        return render_template('not_open.html', cq=cq, title=title)
+    #out of time: close it with whatever was autosaved
+    deadline = cq.deadline()
+    if is_taker and deadline and now > deadline + GRACE:
+        submit_quiz(cq)
+        flash('Time ran out, so your saved answers were submitted.', 'info')
+        current_app.logger.info('{} ran out of time on "{}" ({})'.format(current_user.username, title, cidx))
+        return redirect(url_for('qgen.qtake', cidx=cidx))
     form = quiz_form_class(cq)()
-    if current_user == cq.taker:
+    if is_taker:
         if form.validate_on_submit():
-            if record_answers(cq, form):
-                cq.needs_review = True
-                cq.save()
-                current_app.logger.info('{} submitted "{}" ({}) for review'.format(current_user.username, cq.vquiz.title, cidx))
-                return redirect(url_for('qgen.qtake', cidx=cidx))
-            finalize(cq)
-            cq.save()
-            current_app.logger.info('{} completed "{}" ({})'.format(current_user.username, cq.vquiz.title, cidx))
+            submit_quiz(cq, form)
+            current_app.logger.info('{} submitted "{}" ({})'.format(current_user.username, title, cidx))
             return redirect(url_for('qgen.qtake', cidx=cidx))
         if not cq.startdate:
-            cq.startdate = datetime.now()
-            current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, cq.vquiz.title, cidx))
+            cq.startdate = now
+            current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, title, cidx))
             cq.save()
+            deadline = cq.deadline()
     elif request.method == 'POST':
         flash("Only {} can submit this quiz.".format(cq.taker.username), 'error')
+    if request.method == 'GET':
+        prefill(cq, form)
     return render_template('quiz_take.html', cq=cq, form=form, items=quiz_items(cq, form), title=title,
-                           preview=current_user != cq.taker)
+                           preview=not is_taker, deadline=deadline)
+
+#autosave: the quiz page sends the answers so far every few seconds
+@qgen_bp.route('/quiz/take/<cidx>/save', methods=['POST'])
+@login_required
+@pw_check
+def qsave(cidx):
+    cq = CQuiz.query.filter_by(id=cidx).first_or_404()
+    if current_user != cq.taker:
+        return jsonify(ok=False, error='Not your quiz.'), 403
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
+    if cq.completed or cq.needs_review:
+        return jsonify(ok=False, error='This quiz has already been submitted.'), 409
+    deadline = cq.deadline()
+    if deadline and datetime.now() > deadline + GRACE:
+        return jsonify(ok=False, error='Time is up.'), 409
+    form = quiz_form_class(cq)(meta={'csrf': False})
+    for cp in cq.cproblems:
+        name = fieldname_base.format(cp.ordinal)
+        if name in request.form or name + '_present' in request.form:
+            cp.submitted = get_qtype(cp.vproblem.qtype).to_stored(form[name].data)
+    db.session.commit()
+    return jsonify(ok=True, saved=datetime.now().strftime('%I:%M:%S %p').lstrip('0'))
 
 
 # ---------------------------------------------------------------- review
@@ -447,7 +543,8 @@ def review(cqid):
 @admin_only
 def list_users():
     ulst = User.query.order_by(User.username).all()
-    return render_template('ulist.html', ulst=ulst, title='Results by student')
+    from .models import RETAKE_RULES
+    return render_template('ulist.html', ulst=ulst, rules=RETAKE_RULES, title='Results by student')
 
 #route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
@@ -456,7 +553,8 @@ def list_users():
 @admin_only
 def list_user(uid):
     ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
-    return render_template('ulist.html', ulst=[ulst], title="{}'s quizzes".format(ulst.username))
+    from .models import RETAKE_RULES
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, title="{}'s quizzes".format(ulst.username))
 
 #route to list contents/transcript of a specific concrete quiz
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])

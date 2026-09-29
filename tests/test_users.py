@@ -13,8 +13,11 @@ def client():
         db.drop_all()
 
 
-def register(client, name, email):
-    return client.post('/register', data={'username': name, 'email': email,
+def register(client, name, email, code='maple-7'):
+    from app.qgen.models import Setting
+    if Setting.get('class_code') is None:
+        Setting.put('class_code', 'maple-7')
+    return client.post('/register', data={'class_code': code, 'username': name, 'email': email,
                                           'password': 'pw-for-tests', 'retype_password': 'pw-for-tests'})
 
 
@@ -49,3 +52,16 @@ def test_admin_can_clear_an_email(client):
     r = client.post('/edituser/{}'.format(gus.id), data={'username': 'gus', 'email': ''})
     assert r.status_code == 302
     assert db.session.execute(db.text('SELECT email FROM user WHERE id = :i'), {'i': gus.id}).scalar() is None
+
+
+def test_class_code_controls_sign_up(client):
+    from app.user.models import User
+    from app.qgen.models import Setting
+    r = client.get('/register')
+    assert b'Sign-up is closed' in r.data
+    Setting.put('class_code', 'Maple-7')
+    assert b'Class code' in client.get('/register').data
+    r = register(client, 'hal', '', code='wrong')
+    assert r.status_code == 200 and b"class code isn" in r.data
+    assert register(client, 'hal', '', code='  maple-7 ').status_code == 302
+    assert User.query.filter_by(username='hal').count() == 1

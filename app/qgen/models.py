@@ -1,6 +1,6 @@
 from . import db
 from app.user.models import User
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 #add save method
@@ -101,6 +101,15 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     calculator_ok = db.Column(db.Boolean, default=False)
     #each student gets the questions in their own random order
     shuffle_order = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
+    #how several attempts combine into one score: see RETAKE_RULES
+    retake_rule = db.Column(db.String(16), default='best', nullable=False, server_default='best')
+    #keep correct answers off results pages until the teacher releases them
+    hide_answers = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    answers_released = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+
+    @property
+    def answers_visible(self):
+        return not self.hide_answers or self.answers_released
 
     vqgroups = db.relationship('VQGroup', back_populates='vquizzes', secondary=vquiz_vqgroup, lazy=True)
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)
@@ -162,10 +171,26 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     needs_review = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
     graded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     graded_date = db.Column(db.DateTime, nullable=True)
+    #optional window and time limit (minutes) for this assignment
+    opens_at = db.Column(db.DateTime, nullable=True)
+    closes_at = db.Column(db.DateTime, nullable=True)
+    time_limit = db.Column(db.Integer, nullable=True)
+    #the teacher can override the quiz's retake rule for this student
+    retake_rule = db.Column(db.String(16), nullable=True)
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
     grader = db.relationship('User', lazy=True, foreign_keys=[graded_by])
+
+    def deadline(self):
+        """When answers stop being accepted: the time limit or the close time, whichever is first."""
+        ends = [t for t in (self.closes_at,) if t]
+        if self.time_limit and self.startdate:
+            ends.append(self.startdate + timedelta(minutes=self.time_limit))
+        return min(ends) if ends else None
+
+    def not_open_yet(self, now=None):
+        return bool(self.opens_at and (now or datetime.now()) < self.opens_at)
 
     @property
     def status(self):
@@ -194,3 +219,69 @@ class AICall(db.Model):
     ok = db.Column(db.Boolean, default=False)
     input_tokens = db.Column(db.Integer)
     output_tokens = db.Column(db.Integer)
+
+
+#how a student's attempts at the same quiz combine into one score
+RETAKE_RULES = {
+    'best': 'The best attempt',
+    'latest': 'The latest attempt',
+    'average': 'The average of all attempts',
+    'first': 'The first attempt',
+    'best2': 'The average of the best two attempts',
+}
+
+
+def combined_score(rule, scores):
+    """scores: finished attempts' scores, oldest first."""
+    if not scores:
+        return None
+    if rule == 'latest':
+        return scores[-1]
+    if rule == 'first':
+        return scores[0]
+    if rule == 'average':
+        return sum(scores) / len(scores)
+    if rule == 'best2':
+        top = sorted(scores, reverse=True)[:2]
+        return sum(top) / len(top)
+    return max(scores)
+
+
+#simple site-wide settings, e.g. the class code needed to sign up
+class Setting(db.Model):
+    __tablename__ = 'setting'
+    key = db.Column(db.String(64), primary_key=True)
+    value = db.Column(db.Text)
+
+    @staticmethod
+    def get(key, default=None):
+        row = db.session.get(Setting, key)
+        return row.value if row and row.value is not None else default
+
+    @staticmethod
+    def put(key, value):
+        row = db.session.get(Setting, key) or Setting(key=key)
+        row.value = value
+        db.session.add(row)
+        db.session.commit()
+
+
+def attempts_by_quiz(cquizzes):
+    """A student's assigned quizzes grouped by quiz, for showing retakes:
+    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined'}]"""
+    groups = {}
+    for cq in sorted(cquizzes, key=lambda c: c.id):
+        groups.setdefault(cq.vquiz_id, []).append(cq)
+    out = []
+    for attempts in groups.values():
+        done = [c for c in attempts if c.completed and c.score is not None]
+        vq = attempts[0].vquiz
+        best = max(done, key=lambda c: c.score) if done else None
+        override = next((c.retake_rule for c in reversed(attempts) if c.retake_rule), None)
+        rule = override or vq.retake_rule
+        out.append({'vquiz': vq, 'attempts': attempts, 'best': best, 'latest': attempts[-1],
+                    'combined': combined_score(rule, [c.score for c in done]),
+                    'rule': RETAKE_RULES.get(rule, RETAKE_RULES['best']), 'rule_key': rule,
+                    'overridden': bool(override)})
+    #newest activity first
+    return sorted(out, key=lambda g: -g['attempts'][-1].id)

@@ -16,23 +16,40 @@
     {% if item.cquizzes %}
       <div class="table-wrap stack">
         <table>
-          <thead><tr><th>Quiz</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Quiz</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
           <tbody>
-          {% for cq in item.cquizzes|sort(attribute='id', reverse=true) %}
+          {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr>
-              <td data-label="Quiz"><a href="{{ url_for('qgen.qtake', cidx=cq.id) }}"><strong>{{ cq.vquiz.title }}</strong></a></td>
-              <td data-label="Assigned" class="nowrap">{{ cq.create_date.strftime('%b %d %Y') if cq.create_date else '' }}</td>
-              <td data-label="Status">
-                {% if cq.status == 'completed' %}<span class="badge badge-ok">{{ '%.0f' % (cq.score or 0) }}%</span>
-                  <span class="small muted">{{ cq.compdate.strftime('%b %d') if cq.compdate else '' }}</span>
-                {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
-                {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
-                {% else %}<span class="badge">not started</span>{% endif %}
+              <td data-label="Quiz"><strong>{{ g.vquiz.title }}</strong></td>
+              <td data-label="Attempts">
+                {% for cq in g.attempts %}
+                  <div class="btn-row" style="margin:2px 0">
+                    <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}">#{{ loop.index }}</a>
+                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if g.best == cq else '' }}">{{ '★ ' if g.best == cq }}{{ '%.0f' % (cq.score or 0) }}%</span>
+                      <span class="small muted">{{ cq.compdate.strftime('%b %d') if cq.compdate else '' }}</span>
+                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
+                    {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
+                    {% else %}<span class="badge">not started</span>{% endif %}
+                    {% if cq.closes_at and not cq.completed %}<span class="small muted">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</span>{% endif %}
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
+                    <a class="btn btn-danger btn-sm" href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Delete {{ item.username|e }}’s attempt #{{ loop.index }} at “{{ g.vquiz.title|e }}”? This removes their answers too.');">Delete</a>
+                  </div>
+                {% endfor %}
+              </td>
+              <td data-label="Score counted">
+                {% if g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}
+                {% if g.attempts|length > 1 or g.overridden %}
+                <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="small" style="margin-top:4px">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="rule" aria-label="How {{ item.username }}'s attempts count" onchange="this.form.submit()" style="min-height:32px;padding:2px 6px">
+                    <option value="" {{ 'selected' if not g.overridden }}>Quiz setting ({{ rules[g.vquiz.retake_rule]|lower }})</option>
+                    {% for key, label in rules.items() %}<option value="{{ key }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ label }}</option>{% endfor %}
+                  </select>
+                </form>
+                {% endif %}
               </td>
               <td class="actions">
-                {% if cq.completed %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.ret_cquiz', cqid=cq.id) }}" onclick="return confirm('Give {{ item.username|e }} a retake of “{{ cq.vquiz.title|e }}” with new values?');">Retake</a>{% endif %}
-                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                <a class="btn btn-danger btn-sm" href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Delete {{ item.username|e }}’s “{{ cq.vquiz.title|e }}”? This removes their answers too.');">Delete</a>
+                {% if g.latest.completed %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.ret_cquiz', cqid=g.latest.id) }}" onclick="return confirm('Give {{ item.username|e }} another attempt at “{{ g.vquiz.title|e }}” with new values?');">Retake</a>{% endif %}
               </td>
             </tr>
           {% endfor %}

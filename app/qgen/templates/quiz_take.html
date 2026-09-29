@@ -12,15 +12,22 @@
 
 {% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
 
-<form method="post" id="take-form" novalidate>
+<form method="post" id="take-form" novalidate
+      {% if not preview %}data-save-url="{{ url_for('qgen.qsave', cidx=cq.id) }}"{% endif %}
+      {% if deadline and not preview %}data-remaining="{{ [((deadline - now()).total_seconds())|int, 0]|max }}"{% endif %}>
   {{ form.hidden_tag() }}
   <div class="progress" aria-live="polite">
-    <div class="small muted"><span id="answered">0</span> of {{ items|length }} answered</div>
+    <div class="small muted btn-row" style="justify-content:space-between">
+      <span><span id="answered">0</span> of {{ items|length }} answered</span>
+      {% if not preview %}<span id="save-status" class="muted">Your answers are saved as you go.</span>{% endif %}
+      {% if deadline and not preview %}<button type="button" class="btn-link small muted timer" id="timer" title="Click to hide or show the time">…</button>{% endif %}
+    </div>
     <div class="progress-bar"><span id="bar"></span></div>
   </div>
 
   {% for it in items %}
     <section class="card question" data-q="{{ it.num }}" aria-labelledby="q{{ it.num }}">
+      <input type="hidden" name="{{ it.field.name }}_present" value="1">
       <div class="card-head"><span class="qnum">{{ it.num }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ it.num }}</h2></div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="Picture for question {{ it.num }}">{% endif %}
       <div class="qtext">{{ it.text }}</div>
@@ -66,10 +73,48 @@
   }
   form.addEventListener('input', update);
   form.addEventListener('change', update);
+  var submitting = false;
   form.addEventListener('submit', function (e) {
+    if (submitting) return;
     var blank = update();
-    if (blank && !confirm('You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?')) e.preventDefault();
+    if (blank && !confirm('You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?')) { e.preventDefault(); return; }
+    submitting = true;
   });
+
+  /* autosave: send the answers a moment after each change */
+  var saveUrl = form.dataset.saveUrl, status = document.getElementById('save-status'), timer = null;
+  function save() {
+    if (!saveUrl || submitting) return;
+    var data = new FormData(form);
+    data.delete('csrf_token');
+    fetch(saveUrl, { method: 'POST', body: data, credentials: 'same-origin',
+                     headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { status.textContent = res.ok ? 'Saved at ' + res.saved : (res.error || 'Not saved'); },
+            function () { status.textContent = 'Not saved — check your connection. Keep this page open.'; });
+  }
+  function soon() { clearTimeout(timer); if (status) status.textContent = 'Saving…'; timer = setTimeout(save, 1200); }
+  if (saveUrl) { form.addEventListener('input', soon); form.addEventListener('change', soon); }
+
+  /* time limit: a quiet reminder, updated once a minute; hands in what's there at the end */
+  var left = form.dataset.remaining ? +form.dataset.remaining : null, clock = document.getElementById('timer');
+  var hidden = false, end = left === null ? null : Date.now() + left * 1000;
+  if (clock) clock.addEventListener('click', function () { hidden = !hidden; show(); });
+  function show() {
+    if (end === null || !clock) return;
+    var secs = Math.max(0, Math.round((end - Date.now()) / 1000)), last = secs <= 60;
+    if (hidden && !last) { clock.textContent = 'Show time'; return; }
+    clock.textContent = last ? 'Less than a minute left' : Math.ceil(secs / 60) + ' min left';
+    clock.classList.toggle('timer-last', last);
+  }
+  function tick() {
+    if (end === null) return;
+    var secs = (end - Date.now()) / 1000;
+    if (secs <= 0) { submitting = true; HTMLFormElement.prototype.submit.call(form); return; }
+    show();
+    setTimeout(tick, secs > 61 ? Math.min(60000, (secs - 60) * 1000) : 1000);
+  }
+  tick();
   update();
 })();
 </script>

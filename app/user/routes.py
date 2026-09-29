@@ -1,6 +1,6 @@
 from . import db, user_bp
 from .models import User
-from .forms import RegistrationForm, LoginForm, ChPassForm, clean_email
+from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
 from flask import flash, render_template, redirect, url_for, request, current_app
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
@@ -83,6 +83,9 @@ def login():
 @user_bp.route('/register', methods=['POST','GET'])
 @logout_required
 def register():
+    from app.qgen.models import Setting
+    if not Setting.get('class_code'):
+        return render_template('register_closed.html', title='Sign-up')
     form = RegistrationForm()
     if form.validate_on_submit():
         u = User(username=form.username.data, email=clean_email(form.email.data))
@@ -179,6 +182,28 @@ def eduser(uid):
 @pw_check
 @admin_only
 def userdet():
-    ulst = User.query.all()
-    return render_template('udet.html', ulst=ulst, title='User Detail')
+    ulst = User.query.order_by(User.username).all()
+    return render_template('udet.html', ulst=ulst, title='Users')
 
+# route to site-wide settings: name, logo, and the class code students need to sign up
+@user_bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+@pw_check
+@admin_only
+def settings():
+    from app.qgen.models import Setting
+    form = SettingsForm()
+    if request.method == 'GET':
+        form.site_name.data = Setting.get('site_name', 'Quizzes')
+        form.logo.data = Setting.get('logo', '')
+        form.code.data = Setting.get('class_code', '')
+    elif form.validate_on_submit():
+        code = (form.code.data or '').strip()
+        Setting.put('site_name', form.site_name.data.strip())
+        Setting.put('logo', (form.logo.data or '').strip() or None)
+        Setting.put('class_code', code or None)
+        flash('Settings saved. ' + ('Students can sign up with the class code "{}".'.format(code) if code
+              else 'Sign-up is off until you set a class code.'), 'success')
+        current_app.logger.info('{} changed the site settings'.format(current_user.username))
+        return redirect(url_for('user.settings'))
+    return render_template('settings.html', form=form, title='Settings')

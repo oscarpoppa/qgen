@@ -1,32 +1,50 @@
 {% extends "base.html" %}
 
+{% macro action(cq) %}
+  {% if cq.status == 'completed' %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View results</a>
+  {% elif cq.status == 'review' %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
+  {% elif cq.not_open_yet() %}
+    <span class="muted small">Opens {{ cq.opens_at.strftime('%b %d, %I:%M %p') }}</span>
+  {% elif cq.status == 'started' %}
+    <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
+  {% else %}
+    <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+  {% endif %}
+{% endmacro %}
+
+{% macro status(cq, best=false) %}
+  {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if best else '' }}">{{ '★ ' if best }}{{ '%.0f' % (cq.score or 0) }}%</span>
+  {% elif cq.status == 'review' %}<span class="badge badge-warn">Waiting for grading</span>
+  {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
+  {% else %}<span class="badge">Not started</span>{% endif %}
+{% endmacro %}
+
 {% block content %}
 <div class="page-head"><h1>My quizzes</h1></div>
-{% set quizzes = current_user.cquizzes|sort(attribute='id', reverse=true) %}
-{% if quizzes %}
+{% set groups = attempts_by_quiz(current_user.cquizzes) %}
+{% if groups %}
   <div class="grid">
-  {% for cq in quizzes %}
+  {% for g in groups %}
+    {% set latest = g.latest %}
     <article class="card">
-      <div class="card-head">
-        <h2>{{ cq.vquiz.title }}</h2>
-      </div>
-      <p class="muted small">Assigned {{ cq.create_date.strftime('%b %d %Y') if cq.create_date else '' }}
-        · {{ cq.cproblems|length }} question{{ '' if cq.cproblems|length == 1 else 's' }}</p>
-      <div class="btn-row">
-        {% if cq.status == 'completed' %}
-          <span class="badge badge-ok">Score {{ '%.0f' % (cq.score or 0) }}%</span>
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View results</a>
-        {% elif cq.status == 'review' %}
-          <span class="badge badge-warn">Waiting for grading</span>
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
-        {% elif cq.status == 'started' %}
-          <span class="badge badge-accent">In progress</span>
-          <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
-        {% else %}
-          <span class="badge">Not started</span>
-          <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+      <div class="card-head"><h2>{{ g.vquiz.title }}</h2></div>
+      <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
+        {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
+        {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
+      {% if g.attempts|length == 1 %}
+        <div class="btn-row">{{ status(latest, g.best == latest) }} {{ action(latest) }}</div>
+      {% else %}
+        {% if g.combined is not none %}
+          <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ g.rule|lower }})</span></p>
         {% endif %}
-      </div>
+        <ol class="small" style="padding-left:1.2em;margin:0 0 8px">
+          {% for cq in g.attempts %}
+            <li class="btn-row" style="margin:4px 0">Attempt {{ loop.index }} {{ status(cq, g.best == cq) }} {{ action(cq) }}</li>
+          {% endfor %}
+        </ol>
+      {% endif %}
     </article>
   {% endfor %}
   </div>

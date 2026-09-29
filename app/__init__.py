@@ -29,13 +29,22 @@ app.register_blueprint(upload_bp)
 
 #values every page template can use
 from flask_wtf.csrf import generate_csrf
-from app.qgen.models import CQuiz
+from datetime import datetime
+from app.qgen.models import CQuiz, Setting, attempts_by_quiz
 
 @app.context_processor
 def page_helpers():
     def review_count():
         return CQuiz.query.filter_by(needs_review=True, completed=False).count()
-    return dict(csrf_token=generate_csrf, review_count=review_count)
+    def site():
+        try:
+            return {'name': Setting.get('site_name', 'Quizzes'), 'logo': Setting.get('logo')}
+        except Exception:
+            #e.g. before the database is upgraded
+            db.session.rollback()
+            return {'name': 'Quizzes', 'logo': None}
+    return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
+                attempts_by_quiz=attempts_by_quiz, site=site)
 
 #create CLI command for DB dump
 from app.commands import dbdump as dbdump_cli_group

@@ -6,6 +6,7 @@
   <h1>Create an account</h1>
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
+    {{ field(form.class_code, 'Your teacher gives you this.', attrs={'autocomplete': 'off', 'autofocus': true}) }}
     {{ field(form.username, attrs={'autocomplete': 'username'}) }}
     {{ field(form.email, 'Leave blank if the student has no email address.', attrs={'type': 'email', 'autocomplete': 'email'}) }}
     {{ field(form.password, attrs={'autocomplete': 'new-password'}) }}

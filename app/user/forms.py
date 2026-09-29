@@ -24,11 +24,18 @@ class ChPassForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
+    class_code = StringField('Class code', validators=[DataRequired(message='Ask your teacher for the class code.')])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email (optional)', validators=[email_optional, Email(message='That doesn\'t look like an email address.')])
     password = PasswordField('Password', validators=[DataRequired()])
     retype_password = PasswordField('Re-type Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
+
+    def validate_class_code(self, field):
+        from app.qgen.models import Setting
+        code = Setting.get('class_code')
+        if not code or field.data.strip().lower() != code.strip().lower():
+            raise ValidationError('That class code isn\'t right. Ask your teacher for it.')
 
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
@@ -48,3 +55,11 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
+
+
+#admin: site-wide settings
+class SettingsForm(FlaskForm):
+    site_name = StringField('Site name', validators=[DataRequired(message='Please give the site a name.')])
+    logo = StringField('Logo')
+    code = StringField('Class code for sign-up')
+    submit = SubmitField('Save settings')

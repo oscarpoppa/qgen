@@ -13,6 +13,8 @@
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
     {{ check(form.calculator_ok) }}
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
+    {{ check(form.hide_answers, 'Students always see their score. With this on, they see which questions were right or wrong, but not the correct answers, until you press “Release answers” on the quiz list (e.g. once everyone has finished).') }}
+    {{ field(form.retake_rule, 'Every attempt stays visible and the best one is marked. You can change this for one student on “Results by student”.') }}
   </div>
 
   <div class="split">

@@ -340,3 +340,13 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .dz-gallery .thumb { cursor: pointer; }
 .dz-gallery .thumb:hover, .dz-gallery .thumb:focus-visible { border-color: var(--accent); }
 .dropzone.big { flex-direction: column; justify-content: center; text-align: center; min-height: 180px; }
+
+/* quiz time limit: quiet grey text; only the last minute gets a soft color */
+.timer { color: var(--muted); font-weight: 500; text-decoration: none; }
+.timer:hover { text-decoration: underline; }
+.timer.timer-last { color: var(--warn); }
+
+/* site logo in the top-left corner: fits the bar whatever its shape */
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand-logo { height: 36px; width: auto; max-width: 160px; object-fit: contain; display: block; }
+@media (max-width: 720px) { .brand-logo { height: 30px; max-width: 120px; } }

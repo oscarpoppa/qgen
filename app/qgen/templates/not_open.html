@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-narrow empty">
+  <span class="big">🔒</span>
+  <h1>{{ cq.vquiz.title }}</h1>
+  <p>This quiz opens <strong>{{ cq.opens_at.strftime('%A %b %d at %I:%M %p') }}</strong>.</p>
+  {% if cq.time_limit %}<p class="muted">You'll have {{ cq.time_limit }} minutes once you start.</p>{% endif %}
+  <p><a href="{{ url_for('user.mypage') }}">Back to my quizzes</a></p>
+</div>
+{% endblock %}

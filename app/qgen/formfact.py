@@ -58,12 +58,16 @@ def quiz_items(cquiz, form):
             for cp in cquiz.cproblems]
 
 
-#save answers and auto-grade; returns True when an instructor still needs to grade
-def record_answers(cquiz, form):
+#save answers and auto-grade; returns True when an instructor still needs to grade.
+#With no form (time ran out), the autosaved answers are graded as they are.
+def record_answers(cquiz, form=None):
     needs_review = False
     for cprob in cquiz.cproblems:
         qt = qtype_of(cprob)
-        cprob.submitted = qt.to_stored(form[fieldname_base.format(cprob.ordinal)].data)
+        if form is not None:
+            cprob.submitted = qt.to_stored(form[fieldname_base.format(cprob.ordinal)].data)
+        elif cprob.submitted is None:
+            cprob.submitted = qt.to_stored(None)
         if qt.auto_graded:
             cprob.credit = qt.grade(cprob.submitted, cprob.conc_ansr or '', cprob.conc_opts, cprob.vproblem.options)
         else:
@@ -152,8 +156,8 @@ def transcript_items(cquiz):
     return [transcript_item(cp) for cp in cquiz.cproblems]
 
 
-def build_transcript(cquiz):
-    return render_template('transcript_body.html', cq=cquiz, items=transcript_items(cquiz))
+def build_transcript(cquiz, show_answers=True):
+    return render_template('transcript_body.html', cq=cquiz, items=transcript_items(cquiz), show_answers=show_answers)
 
 
 def legacy_transcript(stored, title):
@@ -164,8 +168,11 @@ def legacy_transcript(stored, title):
     return body.replace('{{ title }}', escape(title or ''))
 
 
-def transcript_html(cquiz, title):
+def transcript_html(cquiz, title, show_answers=True):
     stored = cquiz.transcript or ''
     if stored.startswith(TRANSCRIPT_V2):
+        if not show_answers:
+            #the saved record has the answers; build a copy without them from the same data
+            return Markup(build_transcript(cquiz, show_answers=False))
         return Markup(stored[len(TRANSCRIPT_V2):])
     return Markup('<div class="card legacy-transcript">{}</div>'.format(legacy_transcript(stored, title)))
