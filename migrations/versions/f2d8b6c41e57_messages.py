@@ -34,5 +34,5 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index('ix_message_student_created', table_name='message')
+    #dropping the table drops its index too (MySQL won't drop it first: a foreign key uses it)
     op.drop_table('message')
