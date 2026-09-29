@@ -9,6 +9,18 @@ app = Flask(__name__, static_folder=Config.STATIC_DIR)
 app.config.from_object(Config)
 app.logger.setLevel(3)
 db = SQLAlchemy(app)
+
+#SQLite (tests, local dev) ignores foreign keys unless asked; MySQL always enforces them
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import sqlite3
+
+@event.listens_for(Engine, 'connect')
+def _sqlite_foreign_keys(dbapi_conn, record):
+    if isinstance(dbapi_conn, sqlite3.Connection):
+        cur = dbapi_conn.cursor()
+        cur.execute('PRAGMA foreign_keys=ON')
+        cur.close()
 migrate = Migrate(app, db) 
 login = LoginManager(app)
 login.login_view = 'user.login'

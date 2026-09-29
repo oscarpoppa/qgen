@@ -13,6 +13,7 @@ Everything here is plain data in, plain data out: no eval(), and every
 problem is checked with validate() before it is saved.
 """
 import ast
+import itertools
 import math
 import operator
 import random
@@ -124,13 +125,21 @@ def evaluate(expr, env):
         if not isinstance(env[name], (int, float)):
             raise FriendlyError('"{}" is a word, so it can\'t be used in math.'.format(name))
     try:
-        return _eval(tree, env)
+        result = _eval(tree, env)
     except FriendlyError:
         raise
     except ZeroDivisionError:
-        raise FriendlyError('A formula divided by zero.')
+        raise FriendlyError('"{}" divides by zero for some values.'.format(_show(expr)))
     except (ValueError, OverflowError, TypeError):
-        raise FriendlyError('A formula couldn\'t be worked out (for example, the square root of a negative number).')
+        raise FriendlyError('"{}" can\'t be worked out for some values (for example, the square root of a negative number).'.format(_show(expr)))
+    #e.g. (-8) ^ (1/3) gives a complex number; huge results become infinity
+    if isinstance(result, complex) or (isinstance(result, float) and not math.isfinite(result)):
+        raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
+    return result
+
+
+def _show(expr):
+    return ast.unparse(expr).replace('**', '^') if isinstance(expr, ast.AST) else str(expr)
 
 
 _COMPARE = {
@@ -497,9 +506,60 @@ def known_names(values):
     return names
 
 
-def try_draws(values, render, times=20):
-    """Run a problem a few times to catch errors that only show up with
-    some values (dividing by zero, impossible "different from" rules)."""
+def _choices_of(row):
+    """Every value a row can take, or None when there are too many to list (decimals)."""
+    kind = row.get('kind')
+    if kind == 'whole':
+        rng = _whole_range(row)
+        return None if len(rng) > 500 else [v for v in rng if not (row.get('nonzero') and v == 0)]
+    if kind == 'list' and _pick_n(row) == 1:
+        return _items(row)
+    return None
+
+
+def every_env(values, limit=5000):
+    """Every possible set of values, when there are at most `limit` of them; else None."""
+    rows = [r for r in values if r.get('kind') != 'calc']
+    options = [_choices_of(r) for r in rows]
+    if any(o is None for o in options):
+        return None
+    total = 1
+    for o in options:
+        total *= max(1, len(o))
+        if total > limit:
+            return None
+    calcs = {r['name']: r for r in values if r.get('kind') == 'calc'}
+    order = calc_order(values)
+    envs = []
+    for combo in itertools.product(*options):
+        env = {}
+        for row, val in zip(rows, combo):
+            if row.get('kind') == 'list':
+                for col, name in enumerate(row_names(row)):
+                    env[name] = val[col]
+            else:
+                env[row['name']] = val
+        if not all(env.get(row_names(r)[0]) != env.get(o) for r in rows for o in r.get('different_from') or [] if o in env):
+            continue
+        for name in order:
+            env[name] = evaluate(calcs[name]['formula'], env)
+        #calculated values can have "different from" rules too
+        if all(env[row_names(r)[0]] != env[o] for r in values for o in r.get('different_from') or [] if o in env):
+            envs.append(env)
+    return envs
+
+
+def try_draws(values, render, times=300):
+    """Before a problem is saved, run it on every possible set of values (or,
+    when there are too many, on a few hundred random ones) so that dividing
+    by zero or impossible rules are caught now, not when a student opens it."""
+    envs = every_env(values)
+    if envs is not None:
+        if not envs and values:
+            raise FriendlyError('No set of values satisfies all the "different from" rules.')
+        for env in envs or [{}]:
+            render(env)
+        return
     rng = random.Random(0)
     for _ in range(times):
         env = draw_values(values, rng)

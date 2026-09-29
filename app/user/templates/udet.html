@@ -18,7 +18,7 @@
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.resetpass', uid=item.id) }}" onclick="return confirm('Reset {{ item.username|e }}’s password? You’ll be shown a temporary one to give them.');">Reset password</a>
-          {% if item != current_user %}<a class="btn btn-danger btn-sm" href="{{ url_for('user.deluser', uid=item.id) }}" onclick="return confirm('Delete {{ item.username|e }}?');">Delete</a>{% endif %}
+          {% if item != current_user %}<a class="btn btn-danger btn-sm" href="{{ url_for('user.deluser', uid=item.id) }}" onclick="return confirm('Delete {{ item.username|e }}? {{ 'Their quizzes and answers are deleted too.' if not item.is_admin else 'Problems, quizzes and grades they made are kept.' }}');">Delete</a>{% endif %}
         </td>
       </tr>
     {% endfor %}

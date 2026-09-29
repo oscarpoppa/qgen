@@ -19,7 +19,15 @@ import random
 #generate a concrete problem: this student's own random version
 def gen_cprob(cquiz, vprob, ordinal):
     qt = get_qtype(vprob.qtype)
-    cp, ca, opts = qt.instantiate(vprob.raw_prob, vprob.raw_ansr, vprob.options)
+    #problems are checked before saving, but if a rare draw still can't be
+    #worked out (e.g. an edge case in an old problem), draw again
+    for attempt in range(50):
+        try:
+            cp, ca, opts = qt.instantiate(vprob.raw_prob, vprob.raw_ansr, vprob.options)
+            break
+        except FriendlyError:
+            if attempt == 49:
+                raise FriendlyError('Problem "{}" couldn\'t be set up; please open it and check it.'.format(vprob.title))
     nucprob = CProblem(ordinal=ordinal, cquiz_id=cquiz.id, conc_prob=cp, conc_ansr=ca, vproblem_id=vprob.id)
     nucprob.conc_opts = opts
     return nucprob
@@ -185,6 +193,11 @@ def del_vprob(vpid):
         estr = 'Problem "{}" was not deleted because these quizzes use it: {}.'.format(title, ', '.join('"{}"'.format(q.title) for q in vq))
         current_app.logger.error(estr)
         flash(estr, 'error')
+    elif vp.cproblems:
+        #students' answers to it are part of their records
+        flash('Problem "{}" was not deleted because {} student answer{} to it are on record. '
+              'You can take it out of quizzes instead; it just won\'t be used again.'.format(
+                  title, len(vp.cproblems), '' if len(vp.cproblems) == 1 else 's'), 'error')
     else:
         vpquery.delete()
         db.session.commit()

@@ -71,7 +71,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     qtype = db.Column(db.String(32), default='numeric', nullable=False, server_default='numeric')
     #JSON: values table, choices and type settings
     options_json = db.Column('options', db.Text)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
 
@@ -95,8 +95,9 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vquiz'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
-    vpid_lst = db.Column(db.String(256))
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    #JSON list of problem ids and groups, see layout.py
+    vpid_lst = db.Column(db.Text)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
     #each student gets the questions in their own random order
@@ -169,7 +170,7 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     compdate = db.Column(db.DateTime, nullable=True)
     #submitted, but essays still need an instructor's grading
     needs_review = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
-    graded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    graded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     graded_date = db.Column(db.DateTime, nullable=True)
     #optional window and time limit (minutes) for this assignment
     opens_at = db.Column(db.DateTime, nullable=True)
@@ -212,7 +213,7 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
 class AICall(db.Model):
     __tablename__ = 'aicall'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     created = db.Column(db.DateTime, default=db.func.now(), index=True)
     kind = db.Column(db.String(16))
     request = db.Column(db.Text)

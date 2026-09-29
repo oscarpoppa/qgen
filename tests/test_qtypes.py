@@ -125,7 +125,7 @@ def test_validation_messages():
 def test_divide_by_zero_found_before_saving():
     o = {'values': [{'name': 'a', 'kind': 'whole', 'min': 0, 'max': 3}], 'markup': 'friendly'}
     errors = get_qtype('numeric').validate('6 / [a]', '6 / a', o)
-    assert errors == ['A formula divided by zero.']
+    assert errors == ['"6 / a" divides by zero for some values.']
 
 
 @pytest.mark.parametrize('seed', range(5))

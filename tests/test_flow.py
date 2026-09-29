@@ -266,3 +266,50 @@ def test_question_groups_give_students_different_problems(app_db):
         assert len(got) == 3 and p[0] in got and len(set(got)) == 3
         sets.add(frozenset(got))
     assert len(sets) > 1
+
+
+def test_deleting_people_and_problems_keeps_records_consistent(app_db):
+    app, db = app_db
+    from app.qgen.models import VProblem, VQuiz, CQuiz, CProblem, AICall
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    # a second teacher writes a problem and a quiz, grades, and uses the AI log
+    t2 = User(username='t2', is_admin=True); t2.set_password('pw-for-tests'); db.session.add(t2); db.session.commit()
+    other = login(app, 't2')
+    f = problem_form('numeric', 'By t2', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
+    other.post('/quiz/makevprob', data=f)
+    vp = VProblem.query.one()
+    other.post('/quiz/makevquiz', data={'title': 'By t2', 'vplist': str(vp.id)})
+    vq = VQuiz.query.one()
+    sam = User.query.filter_by(username='sam').one()
+    other.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
+    cq = CQuiz.query.one()
+    cq.graded_by = t2.id
+    db.session.add(AICall(user_id=t2.id, kind='values', request='x'))
+    db.session.commit()
+    cq_id, vp_id, vq_id, t2_id, sam_id = cq.id, vp.id, vq.id, t2.id, sam.id
+
+    # deleting that teacher keeps their problem, quiz, grade and log, with the link cleared
+    teacher.get('/deluser/{}'.format(t2_id))
+    db.session.expire_all()
+    assert db.session.get(User, t2_id) is None
+    assert db.session.get(VProblem, vp_id).author_id is None
+    assert db.session.get(VQuiz, vq_id).author_id is None
+    assert db.session.get(CQuiz, cq_id).graded_by is None
+    assert AICall.query.one().user_id is None
+
+    # a problem with student answers can't be deleted, even once it's out of every quiz
+    q = db.session.get(VQuiz, vq_id)
+    q.vproblems = []
+    db.session.commit()
+    r = teacher.get('/quiz/delvp/{}'.format(vp_id), follow_redirects=True)
+    assert b'student answer' in r.data and db.session.get(VProblem, vp_id) is not None
+
+    # deleting a student removes their quizzes and answers
+    teacher.get('/deluser/{}'.format(sam_id))
+    db.session.expire_all()
+    assert CQuiz.query.count() == 0 and CProblem.query.count() == 0
+    # ...after which the problem can go
+    teacher.get('/quiz/delvp/{}'.format(vp_id))
+    db.session.expire_all()
+    assert db.session.get(VProblem, vp_id) is None

@@ -138,3 +138,33 @@ def test_matched_pairs_errors():
     assert any('should have 2 parts' in e for e in errs)
     errs = F.validate_values([{'name': 'country = 2nd', 'kind': 'list', 'items': 'a = b'}])
     assert any("can't be a name" in e for e in errs)
+
+
+def test_every_value_is_checked_for_divide_by_zero():
+    from app.qgen.qtypes import get_qtype
+    # a is 0 only once in 101 values: random sampling could miss it, the full check can't
+    o = {'markup': 'friendly', 'values': [{'name': 'a', 'kind': 'whole', 'min': '0', 'max': '100'}]}
+    errs = get_qtype('numeric').validate('What is 100 / [a]?', '100 / a', o)
+    assert errs and 'divides by zero' in errs[0]
+    o['values'][0]['nonzero'] = True
+    assert get_qtype('numeric').validate('What is 100 / [a]?', '100 / a', o) == []
+
+
+def test_other_special_cases_caught():
+    from app.qgen.qtypes import get_qtype
+    num = get_qtype('numeric')
+    v = lambda lo, hi: {'markup': 'friendly', 'values': [{'name': 'a', 'kind': 'whole', 'min': lo, 'max': hi}]}
+    assert "can't be worked out" in num.validate('[a]', 'sqrt(a)', v('-3', '3'))[0]
+    assert 'ordinary number' in num.validate('[a]', 'a ^ 0.5', v('-3', '3'))[0]
+    assert 'too large' in num.validate('[a]', '10 ^ a', v('1', '200'))[0]
+    assert num.validate('[a]', 'sqrt(a)', v('0', '9')) == []
+    # a hidden zero inside a calculated value is found too
+    o = {'markup': 'friendly', 'values': [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'},
+                                          {'name': 'd', 'kind': 'calc', 'formula': 'a - 5'}]}
+    assert 'divides by zero' in num.validate('12 / [d]', '12 / d', o)[0]
+
+
+def test_large_ranges_still_sampled():
+    from app.qgen.qtypes import get_qtype
+    o = {'markup': 'friendly', 'values': [{'name': 'x', 'kind': 'decimal', 'min': '1', 'max': '9', 'places': '2'}]}
+    assert get_qtype('numeric').validate('[x] / 2', 'x / 2', o) == []
