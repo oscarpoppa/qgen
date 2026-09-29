@@ -50,11 +50,13 @@ class QuizItem:
     image: Optional[str]
     field: Any
     qtype: str
+    complex: bool = False
 
 
 def quiz_items(cquiz, form):
     return [QuizItem(num=cp.ordinal, text=cp.conc_prob, image=problem_image(cp),
-                     field=form[fieldname_base.format(cp.ordinal)], qtype=qtype_of(cp).key)
+                     field=form[fieldname_base.format(cp.ordinal)], qtype=qtype_of(cp).key,
+                     complex=bool(cp.conc_opts.get('complex')))
             for cp in cquiz.cproblems]
 
 

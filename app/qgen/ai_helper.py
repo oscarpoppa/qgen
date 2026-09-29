@@ -31,9 +31,11 @@ VALUE_SCHEMA = {
         'items': _NULLABLE_STR,
         'pick_n': _NULLABLE_STR,
         'formula': _NULLABLE_STR,
+        'im_min': _NULLABLE_STR,
+        'im_max': _NULLABLE_STR,
         'different_from': {'type': 'array', 'items': {'type': 'string'}},
     },
-    'required': ['name', 'kind', 'min', 'max', 'step', 'places', 'nonzero', 'items', 'pick_n', 'formula', 'different_from'],
+    'required': ['name', 'kind', 'min', 'max', 'step', 'places', 'nonzero', 'items', 'pick_n', 'formula', 'im_min', 'im_max', 'different_from'],
     'additionalProperties': False,
 }
 
@@ -75,6 +77,8 @@ Each value has a name (letters and digits, starting with a letter, e.g. speed, a
 - "decimal": min, max, and places (decimal places, "0" to "6"; default "1").
 - "list": items is a comma-separated list, e.g. "Maria, Ahmed, Li" or "2, 3, 5, 7". Optional pick_n ("2") picks that many different items, available as name1, name2, ... (and name is the first).
 - "calc": formula computed from other values, e.g. "speed * hours".
+- "imaginary": b·i with b a whole number from min to max (never 0). Only for problems about complex numbers.
+- "complex": a + b·i with a from min to max and b from im_min to im_max (b never 0). Only for problems about complex numbers.
 Any value may list other value names in different_from, e.g. b different from a.
 Fields that don't apply to the kind must be null (nonzero false, different_from []).
 
@@ -99,6 +103,7 @@ Unused fields are null (choices null unless a choice type; show_n null unless as
 # Rules
 - Follow the teacher's wording exactly; choose sensible names.
 - Never invent kinds or fields. If part of the request can't be expressed with these kinds (for example "prime numbers only" with no list given), do the rest and explain the missing part briefly in cannot_do, in plain words for a teacher, suggesting a workaround (such as a "list" of the allowed numbers). Otherwise cannot_do is null.
+- Complex numbers: formulas may use i (= sqrt(-1)) only in problems about complex numbers; use "imaginary"/"complex" values there. Never use them for ordinary arithmetic.
 - Values can come in matched pairs: a "list" named "country = capital" with items "France = Paris, Japan = Tokyo"; then [country] and [capital] always match.
 - Keep the question text natural and student-facing. Math may use LaTeX between \\( and \\).
 """
@@ -158,7 +163,7 @@ def clean(fill, kind):
     values = []
     for v in fill.get('values') or []:
         row = {'name': str(v.get('name') or ''), 'kind': v.get('kind') if v.get('kind') in KINDS else ''}
-        for key in ('min', 'max', 'step', 'places', 'items', 'pick_n', 'formula'):
+        for key in ('min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'im_min', 'im_max'):
             if v.get(key) not in (None, ''):
                 row[key] = str(v[key])
         if v.get('nonzero'):

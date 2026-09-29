@@ -27,7 +27,14 @@
 
   qtype.addEventListener('change', showType);
   form.addEventListener('change', function (e) {
-    if (e.target.matches('select.kind')) showKind(e.target.closest('.value-row'));
+    if (e.target.matches('select.kind')) {
+      showKind(e.target.closest('.value-row'));
+      //an imaginary or complex value means the problem uses complex numbers
+      if (['imaginary', 'complex'].indexOf(e.target.value) !== -1) {
+        var box = form.querySelector('[name=complex]');
+        if (box) box.checked = true;
+      }
+    }
   });
 
   /* ---------- rows ---------- */

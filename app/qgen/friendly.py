@@ -13,6 +13,7 @@ Everything here is plain data in, plain data out: no eval(), and every
 problem is checked with validate() before it is saved.
 """
 import ast
+import cmath
 import itertools
 import math
 import operator
@@ -27,7 +28,11 @@ KINDS = {
     'decimal': 'Decimal',
     'list': 'Pick from list',
     'calc': 'Calculated',
+    'imaginary': 'Imaginary number (bi)',
+    'complex': 'Complex number (a + bi)',
 }
+#choosing one of these kinds turns complex numbers on for the problem
+COMPLEX_KINDS = ('imaginary', 'complex')
 
 FUNCS = {
     'sqrt': math.sqrt,
@@ -35,7 +40,15 @@ FUNCS = {
     'round': round,
     'min': min,
     'max': max,
+    #for complex numbers: real part, imaginary part, conjugate
+    're': lambda z: z.real,
+    'im': lambda z: z.imag if isinstance(z, complex) else 0,
+    'conj': lambda z: z.conjugate(),
 }
+
+#an env holding this key allows complex numbers, with i = sqrt(-1); only
+#problems with "Use complex numbers" ticked ever get it
+COMPLEX = '__complex__'
 
 MAX_TRIES = 100
 NAME_PATT = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
@@ -60,9 +73,13 @@ _UNARY = {ast.USub: operator.neg, ast.UAdd: operator.pos}
 
 
 def normalize_expr(expr):
-    """Accept the symbols people actually type: ^ for powers, x-like signs."""
-    return (expr.replace('^', '**').replace('×', '*').replace('÷', '/')
-                .replace('−', '-').replace('·', '*').strip())
+    """Accept the symbols people actually type: ^ for powers, x-like signs,
+    and 2i for 2 times i."""
+    expr = (expr.replace('^', '**').replace('×', '*').replace('÷', '/')
+                .replace('−', '-').replace('·', '*').replace('√', 'sqrt').strip())
+    #2i, (a+b)i, and "b i" (a name, a space, then i) all mean times i
+    expr = re.sub(r'(\d|\))\s*i\b', r'\1*i', expr)
+    return re.sub(r'\b([A-Za-z_]\w*)\s+i\b', r'\1*i', expr)
 
 
 def parse_expr(expr):
@@ -82,7 +99,7 @@ def parse_expr(expr):
                 and node.func.id in FUNCS and not node.keywords:
             continue
         raise FriendlyError('"{}" can only use numbers, value names, + - * / ^ and '
-                            'sqrt, abs, round, min, max.'.format(expr))
+                            'sqrt, abs, round, min, max (and re, im, conj for complex numbers).'.format(expr))
     return tree
 
 
@@ -108,6 +125,8 @@ def _eval(node, env):
         return _BINOPS[type(node.op)](left, right)
     if isinstance(node, ast.Call):
         args = [_eval(a, env) for a in node.args]
+        if node.func.id == 'sqrt' and env.get(COMPLEX):
+            return cmath.sqrt(*args)
         return FUNCS[node.func.id](*args)
     raise FriendlyError('Unsupported formula.')
 
@@ -122,7 +141,7 @@ def evaluate(expr, env):
     if isinstance(tree.body, ast.Name):
         return env[tree.body.id]
     for name in names_in(tree):
-        if not isinstance(env[name], (int, float)):
+        if isinstance(env[name], bool) or not isinstance(env[name], (int, float, complex)):
             raise FriendlyError('"{}" is a word, so it can\'t be used in math.'.format(name))
     try:
         result = _eval(tree, env)
@@ -132,8 +151,16 @@ def evaluate(expr, env):
         raise FriendlyError('"{}" divides by zero for some values.'.format(_show(expr)))
     except (ValueError, OverflowError, TypeError):
         raise FriendlyError('"{}" can\'t be worked out for some values (for example, the square root of a negative number).'.format(_show(expr)))
-    #e.g. (-8) ^ (1/3) gives a complex number; huge results become infinity
-    if isinstance(result, complex) or (isinstance(result, float) and not math.isfinite(result)):
+    if isinstance(result, complex):
+        if abs(result.imag) < 1e-12:
+            result = result.real
+        elif not env.get(COMPLEX):
+            #never let an imaginary number into an ordinary problem
+            raise FriendlyError('"{}" gives an imaginary number for some values. If that\'s intended, '
+                                'tick "Use complex numbers"; otherwise change the formula or ranges.'.format(_show(expr)))
+        elif not (math.isfinite(result.real) and math.isfinite(result.imag)):
+            raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
+    if isinstance(result, float) and not math.isfinite(result):
         raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
     return result
 
@@ -197,11 +224,29 @@ def evaluate_condition(expr, env):
     kind, payload = parse_condition(expr)
     if kind == 'const':
         return payload
-    return all(_COMPARE[op](evaluate(left, env), evaluate(right, env)) for left, op, right in payload)
+    try:
+        return all(_COMPARE[op](evaluate(left, env), evaluate(right, env)) for left, op, right in payload)
+    except TypeError:
+        raise FriendlyError('Complex numbers can only be compared with = or ≠ (use abs(z) to compare sizes).')
+
+
+def _tidy(x):
+    """Round away floating-point dust (so 2.9999999999 is 3) before showing a part."""
+    r = round(x, 9)
+    return 0.0 if r == 0 else (int(r) if r == int(r) else r)
 
 
 def format_num(val):
-    """Show numbers the way a person would write them."""
+    """Show numbers the way a person would write them; complex as 3 + 2i."""
+    if isinstance(val, complex):
+        re_part, im_part = _tidy(val.real), _tidy(val.imag)
+        if im_part == 0:
+            return format_num(re_part)
+        coef = {1: '', -1: '-'}.get(im_part, format_num(im_part))
+        imag = coef + 'i'
+        if re_part == 0:
+            return imag
+        return '{} {} {}'.format(format_num(re_part), '-' if im_part < 0 else '+', imag.lstrip('-'))
     if isinstance(val, bool) or not isinstance(val, (int, float)):
         return str(val)
     if isinstance(val, float):
@@ -279,6 +324,15 @@ def _whole_range(row):
     return rng
 
 
+def _imag_row(row):
+    """The imaginary-part range of a complex value, as a row _whole_range understands."""
+    return {'name': '{} (imaginary part)'.format(row.get('name')), 'min': row.get('im_min'), 'max': row.get('im_max')}
+
+
+def uses_complex(values):
+    return any(r.get('kind') in COMPLEX_KINDS for r in values)
+
+
 def _places(row):
     places = row.get('places')
     if places in (None, ''):
@@ -322,6 +376,13 @@ def _draw(row, env, rng):
         places = _places(row)
         val = round(rng.uniform(lo, hi), places)
         env[row['name']] = int(val) if places == 0 else val
+    elif kind == 'imaginary':
+        choices = [v for v in _whole_range(row) if v != 0]
+        env[row['name']] = complex(0, rng.choice(choices))
+    elif kind == 'complex':
+        real = rng.choice(_whole_range(row))
+        imag = rng.choice([v for v in _whole_range(_imag_row(row)) if v != 0])
+        env[row['name']] = complex(real, imag)
     elif kind == 'list':
         items = _items(row)
         n = _pick_n(row)
@@ -349,15 +410,22 @@ def calc_order(values):
     return order
 
 
-def draw_values(values, rng=None):
+def start_env(complex_ok=False):
+    """A fresh set of values; with complex numbers on, i means sqrt(-1)."""
+    return {COMPLEX: True, 'i': 1j} if complex_ok else {}
+
+
+def draw_values(values, rng=None, complex_ok=False):
     """Pick one random set of values, honoring every "different from" rule."""
     rng = rng or random.Random()
     rows = {r['name']: r for r in values if r.get('kind') == 'calc'}
     order = calc_order(values)
     for _ in range(MAX_TRIES):
-        env = {}
+        env = start_env(complex_ok)
         for row in values:
             _draw(row, env, rng)
+        if env.get(COMPLEX) and any('i' in row_names(r) for r in values):
+            pass  # the teacher's own value called i wins
         for name in order:
             env[name] = evaluate(rows[name]['formula'], env)
         if all(env[row_names(row)[0]] != env[other]
@@ -467,6 +535,13 @@ def validate_values(values):
                     raise FriendlyError('The list for {} is empty.'.format(name))
                 if n < 1 or n > len(items):
                     raise FriendlyError('{} picks {} from a list of only {}.'.format(name, n, len(items)))
+            elif kind == 'imaginary':
+                if not [v for v in _whole_range(row) if v != 0]:
+                    raise FriendlyError('For {}, the range must include a number other than 0.'.format(name))
+            elif kind == 'complex':
+                _whole_range(row)
+                if not [v for v in _whole_range(_imag_row(row)) if v != 0]:
+                    raise FriendlyError('For {}, the imaginary part must be able to be something other than 0.'.format(name))
             elif kind == 'calc':
                 if not (row.get('formula') or '').strip():
                     raise FriendlyError('Please give a formula for {}.'.format(name))
@@ -514,10 +589,17 @@ def _choices_of(row):
         return None if len(rng) > 500 else [v for v in rng if not (row.get('nonzero') and v == 0)]
     if kind == 'list' and _pick_n(row) == 1:
         return _items(row)
+    if kind == 'imaginary':
+        return [complex(0, v) for v in _whole_range(row) if v != 0]
+    if kind == 'complex':
+        reals, imags = _whole_range(row), [v for v in _whole_range(_imag_row(row)) if v != 0]
+        if len(reals) * len(imags) > 2000:
+            return None
+        return [complex(a, b) for a in reals for b in imags]
     return None
 
 
-def every_env(values, limit=5000):
+def every_env(values, limit=5000, complex_ok=False):
     """Every possible set of values, when there are at most `limit` of them; else None."""
     rows = [r for r in values if r.get('kind') != 'calc']
     options = [_choices_of(r) for r in rows]
@@ -532,7 +614,7 @@ def every_env(values, limit=5000):
     order = calc_order(values)
     envs = []
     for combo in itertools.product(*options):
-        env = {}
+        env = start_env(complex_ok)
         for row, val in zip(rows, combo):
             if row.get('kind') == 'list':
                 for col, name in enumerate(row_names(row)):
@@ -549,18 +631,18 @@ def every_env(values, limit=5000):
     return envs
 
 
-def try_draws(values, render, times=300):
+def try_draws(values, render, times=300, complex_ok=False):
     """Before a problem is saved, run it on every possible set of values (or,
     when there are too many, on a few hundred random ones) so that dividing
     by zero or impossible rules are caught now, not when a student opens it."""
-    envs = every_env(values)
+    envs = every_env(values, complex_ok=complex_ok)
     if envs is not None:
         if not envs and values:
             raise FriendlyError('No set of values satisfies all the "different from" rules.')
-        for env in envs or [{}]:
+        for env in envs or [start_env(complex_ok)]:
             render(env)
         return
     rng = random.Random(0)
     for _ in range(times):
-        env = draw_values(values, rng)
+        env = draw_values(values, rng, complex_ok)
         render(env)

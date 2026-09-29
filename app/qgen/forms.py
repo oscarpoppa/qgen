@@ -21,6 +21,8 @@ class ValueRow(Form):
     items = StringField('List (comma separated)')
     pick_n = StringField('How many to pick')
     formula = StringField('Formula')
+    im_min = StringField('Imaginary part from')
+    im_max = StringField('Imaginary part to')
     different_from = StringField('Different from')
 
 
@@ -43,6 +45,7 @@ class ProblemForm(FlaskForm):
     show_n = IntegerField('Show only this many choices', validators=[Optional(), NumberRange(min=2, max=50)])
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
     precision = SelectField('How close must the answer be?', choices=list(PRECISIONS.items()), default='close')
+    complex = BooleanField('Use complex numbers (i = √−1)')
     grading_notes = TextAreaField('Grading notes (only you see these)')
     images = FieldList(FormField(ImageRow), min_entries=0)
     calculator_ok = BooleanField('Calculator allowed')
@@ -55,7 +58,7 @@ class ProblemForm(FlaskForm):
             if not any(str(v).strip() for k, v in row.items() if k != 'nonzero' and v is not None) and not row.get('nonzero'):
                 continue  # untouched blank row
             val = {'name': (row['name'] or '').strip(), 'kind': row['kind']}
-            for key in ('min', 'max', 'step', 'places', 'items', 'pick_n', 'formula'):
+            for key in ('min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'im_min', 'im_max'):
                 if (row.get(key) or '').strip():
                     val[key] = row[key].strip()
             if row.get('nonzero'):
@@ -75,6 +78,7 @@ class ProblemForm(FlaskForm):
             'show_n': self.show_n.data,
             'case_sensitive': bool(self.case_sensitive.data),
             'precision': self.precision.data or 'close',
+            'complex': bool(self.complex.data),
             'grading_notes': self.grading_notes.data or '',
             'images': images,
         }
@@ -92,6 +96,7 @@ class ProblemForm(FlaskForm):
         self.show_n.data = opts.get('show_n')
         self.case_sensitive.data = opts.get('case_sensitive', False)
         self.precision.data = opts.get('precision', 'close')
+        self.complex.data = opts.get('complex', False)
         self.grading_notes.data = opts.get('grading_notes', '')
         self.calculator_ok.data = vp.calculator_ok
         for val in opts.get('values', []):

@@ -155,7 +155,7 @@ def test_other_special_cases_caught():
     num = get_qtype('numeric')
     v = lambda lo, hi: {'markup': 'friendly', 'values': [{'name': 'a', 'kind': 'whole', 'min': lo, 'max': hi}]}
     assert "can't be worked out" in num.validate('[a]', 'sqrt(a)', v('-3', '3'))[0]
-    assert 'ordinary number' in num.validate('[a]', 'a ^ 0.5', v('-3', '3'))[0]
+    assert 'imaginary number' in num.validate('[a]', 'a ^ 0.5', v('-3', '3'))[0]
     assert 'too large' in num.validate('[a]', '10 ^ a', v('1', '200'))[0]
     assert num.validate('[a]', 'sqrt(a)', v('0', '9')) == []
     # a hidden zero inside a calculated value is found too

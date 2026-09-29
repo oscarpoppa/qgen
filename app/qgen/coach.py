@@ -14,7 +14,7 @@ import re
 from difflib import get_close_matches
 
 from . import friendly as F
-from .qtypes import get_qtype, is_legacy, parse_choices, picture_labels, PICTURE_NAME
+from .qtypes import get_qtype, is_legacy, parse_choices, picture_labels, PICTURE_NAME, uses_complex
 
 
 def hint(level, text, action=None):
@@ -75,6 +75,8 @@ def problem_hints(qtype_key, question, answer, options):
     known = F.known_names(values)
     if picture_labels(options):
         known.append(PICTURE_NAME)
+    if uses_complex(options) and 'i' not in known:
+        known.append('i')
 
     #errors, with a one-click fix for names that aren't defined yet
     missing = set()
@@ -216,6 +218,10 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
         errors = get_qtype(p.qtype).validate(p.raw_prob, p.raw_ansr, p.options)
         if errors:
             hints.append(hint('warn', '"{}" has something to fix: {}'.format(p.title, errors[0])))
+    cplx = [p for p in problems.values() if uses_complex(p.options)]
+    if cplx and len(cplx) < len(problems):
+        hints.append(hint('tip', 'Only some problems use complex numbers ({}). Fine if intended; the others will never show one.'
+                          .format(', '.join('"{}"'.format(p.title) for p in cplx))))
     essays = [p for p in problems.values() if not get_qtype(p.qtype).auto_graded]
     if essays:
         hints.append(hint('tip', 'This quiz has {} written answer{}. Students see their score after you grade {} under Review.'.format(

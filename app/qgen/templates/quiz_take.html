@@ -40,6 +40,7 @@
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
       {% else %}
         {{ it.field(autocomplete='off', **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+        {% if it.complex %}<div class="small muted" style="margin-top:4px">Write complex numbers like 3 + 2i (use i for √−1). Separate several answers with commas.</div>{% endif %}
       {% endif %}
       {% for e in it.field.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </section>

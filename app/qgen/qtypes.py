@@ -9,7 +9,7 @@ problem, the "Show me 3 examples" preview, and the AI helper:
 
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
-    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision,
+    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, complex,
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
@@ -133,6 +133,47 @@ def numbers_match(subm, corr, precision='close'):
     return all(_close_enough(got, want, precision) for got, want in zip(sublst, corlst))
 
 
+def uses_complex(options):
+    """Complex numbers are allowed only when the teacher ticked the box or chose
+    an imaginary/complex value, so they never turn up in ordinary arithmetic."""
+    return bool(options.get('complex')) or F.uses_complex(options.get('values') or [])
+
+
+def read_complex(text):
+    """Complex numbers a student typed, like "3+2i, 3-2i" or "-i" (j works too).
+    Returns None if any part can't be read."""
+    out = []
+    for piece in re.split(r'[,;]|\band\b|\bor\b', (text or '').lower()):
+        piece = piece.strip().replace('j', 'i').replace(' ', '')
+        if not piece:
+            continue
+        if not re.fullmatch(r'[0-9i+\-*/.()]+', piece):
+            return None
+        try:
+            val = F.evaluate(piece, F.start_env(True))
+        except (F.FriendlyError, KeyError):
+            return None
+        out.append(complex(val))
+    return out
+
+
+def complex_match(subm, corr, precision='close'):
+    """Every complex number must match (real and imaginary parts each checked
+    with the problem's precision); order doesn't matter."""
+    got, want = read_complex(subm), read_complex(corr)
+    if not got or not want or len(got) != len(want):
+        return False
+    unused = list(got)
+    for w in want:
+        for g in unused:
+            if _close_enough(g.real, w.real, precision) and _close_enough(g.imag, w.imag, precision):
+                unused.remove(g)
+                break
+        else:
+            return False
+    return True
+
+
 def normalize_text(text, case_sensitive=False):
     text = re.sub(r'\s+', ' ', (text or '').strip()).rstrip('.')
     return text if case_sensitive else text.casefold()
@@ -171,6 +212,9 @@ class QType:
         values = options.get('values') or []
         errors = F.validate_values(values)
         known = F.known_names(values)
+        complex_ok = uses_complex(options)
+        if complex_ok and 'i' not in known:
+            known = known + ['i']
         if picture_labels(options):
             if PICTURE_NAME in known:
                 errors.append('"{}" is used by the picture labels; please rename that value.'.format(PICTURE_NAME))
@@ -188,7 +232,7 @@ class QType:
                         if label is not None:
                             env = dict(env, **{PICTURE_NAME: label})
                         self.render(question, answer, options, env, random.Random(0))
-                F.try_draws(values, run)
+                F.try_draws(values, run, complex_ok=complex_ok)
             except F.FriendlyError as exc:
                 errors.append(str(exc))
         return errors
@@ -207,7 +251,7 @@ class QType:
             prob, ansr = process_spec(question, answer or '')
             opts = {}
         else:
-            env = F.draw_values(options.get('values') or [], rng)
+            env = F.draw_values(options.get('values') or [], rng, uses_complex(options))
             if picture and picture.get('label'):
                 env[PICTURE_NAME] = picture['label']
             prob, ansr, opts = self.render(question, answer, options, env, rng)
@@ -273,8 +317,17 @@ class Numeric(QType):
     def render_answer(self, answer, env):
         return F.fill_answer(answer, env)
 
+    def render(self, question, answer, options, env, rng):
+        prob, ansr, opts = super().render(question, answer, options, env, rng)
+        if uses_complex(options):
+            opts['complex'] = True  # the quiz page tells the student how to type i
+        return prob, ansr, opts
+
     def grade(self, stored, conc_ansr, conc_opts, options):
-        return 1.0 if numbers_match(stored, conc_ansr, options.get('precision') or 'close') else 0.0
+        precision = options.get('precision') or 'close'
+        if uses_complex(options):
+            return 1.0 if complex_match(stored, conc_ansr, precision) else 0.0
+        return 1.0 if numbers_match(stored, conc_ansr, precision) else 0.0
 
 
 class Text(QType):

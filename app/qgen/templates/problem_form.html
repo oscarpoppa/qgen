@@ -7,8 +7,10 @@
     <td data-label="Kind">{{ row.form.kind(class='kind', **{'aria-label': 'Kind'}) }}</td>
     <td data-label="Settings">
       <div class="settings">
-        {{ row.form.min(placeholder='from', class='k-whole k-decimal', **{'aria-label': 'From'}) }}
-        {{ row.form.max(placeholder='to', class='k-whole k-decimal', **{'aria-label': 'To'}) }}
+        {{ row.form.min(placeholder='from', class='k-whole k-decimal k-imaginary k-complex', **{'aria-label': 'From (real part for complex)'}) }}
+        {{ row.form.max(placeholder='to', class='k-whole k-decimal k-imaginary k-complex', **{'aria-label': 'To (real part for complex)'}) }}
+        {{ row.form.im_min(placeholder='imaginary from', class='k-complex', **{'aria-label': 'Imaginary part from'}) }}
+        {{ row.form.im_max(placeholder='imaginary to', class='k-complex', **{'aria-label': 'Imaginary part to'}) }}
         {{ row.form.step(placeholder='in steps of (optional)', class='k-whole', **{'aria-label': 'In steps of'}) }}
         {{ row.form.places(placeholder='decimal places', class='k-decimal', **{'aria-label': 'Decimal places'}) }}
         {{ row.form.items(placeholder='Maria, Ahmed, Li', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
@@ -111,6 +113,7 @@
       </div>
     </div>
     <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.') }}</div>
+    <div class="t-numeric t-choice_one t-choice_many t-truefalse">{{ check(form.complex, 'Off for ordinary arithmetic: then no imaginary number can ever appear. Turns on by itself if a value is an Imaginary or Complex number. Students type answers like 3 + 2i.') }}</div>
     <div class="t-text">{{ check(form.case_sensitive) }}</div>
     <div class="t-essay">{{ field(form.grading_notes, 'Shown to you next to the student’s answer while grading.', attrs={'rows': 3}) }}</div>
   </div>
@@ -174,6 +177,12 @@ Answer:   a > b</pre>
   <h3>Long text</h3>
   <pre>Question: Explain why [who] needs more money than [other].
 Model answer (optional): Because …</pre>
+  <h3>Complex numbers</h3>
+  <pre>Values:   z  Complex number    real 1 to 5, imaginary 1 to 5
+          w  Imaginary number  2 to 6
+Question: What is ([z])([w])?
+Answer:   z * w                 (students type e.g. -8 + 12i)
+Formulas can also use i directly: [a] + [b]i, sqrt(-a), conj(z), abs(z), re(z), im(z)</pre>
   <h3>Pictures with labels</h3>
   <pre>Question: What animal is in the picture?     (question type: Short text)
 Pictures: cat.png labelled “cat”, dog.png labelled “dog”
