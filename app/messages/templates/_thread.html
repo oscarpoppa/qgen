@@ -1,0 +1,17 @@
+{# messages in one conversation; `me_teacher` says which side is "you" #}
+<ol class="thread" aria-label="Messages">
+  {% for m in items %}
+    <li class="msg {{ 'msg-teacher' if m.from_teacher else 'msg-student' }} {{ 'msg-mine' if m.from_teacher == me_teacher else '' }} msg-{{ m.kind }} {{ 'msg-new' if unread_ids is defined and m.id in unread_ids else '' }}">
+      <div class="msg-meta small">
+        {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
+        {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
+        <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
+        <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
+        {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
+      </div>
+      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
+    </li>
+  {% else %}
+    <li class="muted small">No messages yet.</li>
+  {% endfor %}
+</ol>

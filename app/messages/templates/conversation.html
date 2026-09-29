@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ student.username }}</h1>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}">Quizzes</a>
+    <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}">All messages</a>
+  </div>
+</div>
+<div class="card">
+  {% set me_teacher = true %}{% include "_thread.html" %}
+  <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="to" value="{{ student.id }}">
+    <label for="body" class="sr-only">Message to {{ student.username }}</label>
+    <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write to {{ student.username }}…"></textarea>
+    <button class="btn">Send</button>
+  </form>
+</div>
+{% endblock %}

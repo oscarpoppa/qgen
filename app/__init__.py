@@ -31,6 +31,7 @@ from app.apiv1 import api_bp
 from app.qgen import qgen_bp
 from app.user import user_bp
 from app.upload import upload_bp
+from app.messages import messages_bp
 
 #register blueprints
 app.register_blueprint(error_bp)
@@ -38,6 +39,7 @@ app.register_blueprint(api_bp)
 app.register_blueprint(qgen_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(upload_bp)
+app.register_blueprint(messages_bp)
 
 #values every page template can use
 from flask_wtf.csrf import generate_csrf
@@ -55,8 +57,14 @@ def page_helpers():
             #e.g. before the database is upgraded
             db.session.rollback()
             return {'name': 'Quizzes', 'logo': None}
+    def unread_messages():
+        from app.messages.models import unread_for_student, unread_for_teachers
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return 0
+        return unread_for_teachers() if current_user.is_admin else unread_for_student(current_user.id)
     return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
-                attempts_by_quiz=attempts_by_quiz, site=site)
+                attempts_by_quiz=attempts_by_quiz, site=site, unread_messages=unread_messages)
 
 #create CLI command for DB dump
 from app.commands import dbdump as dbdump_cli_group

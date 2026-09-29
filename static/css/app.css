@@ -350,3 +350,15 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .brand { display: inline-flex; align-items: center; gap: 10px; }
 .brand-logo { height: 36px; width: auto; max-width: 160px; object-fit: contain; display: block; }
 @media (max-width: 720px) { .brand-logo { height: 30px; max-width: 120px; } }
+
+/* ---------- messages ---------- */
+.thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.thread-scroll { max-height: 360px; overflow-y: auto; margin-bottom: 12px; }
+.msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+.msg-mine { align-self: flex-end; background: var(--accent-soft); }
+.msg-notice, .msg-announcement { max-width: 100%; align-self: stretch; background: var(--info-soft); }
+.msg-new { box-shadow: 0 0 0 2px var(--warn) inset; }
+.msg-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 2px; }
+.msg-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reply-box { display: flex; gap: 8px; align-items: flex-end; }
+.reply-box textarea { min-height: 44px; }

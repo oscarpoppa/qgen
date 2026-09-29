@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head"><h1>Messages</h1></div>
+
+<form method="post" action="{{ url_for('messages.send') }}" class="card" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>New message</h2>
+  <div class="field">
+    <label for="to">To</label>
+    <select id="to" name="to">
+      <option value="all">Everyone (announcement)</option>
+      {% for r in rows %}<option value="{{ r.student.id }}">{{ r.student.username }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="body">Message</label>
+    <textarea id="body" name="body" rows="3" maxlength="2000" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
+  </div>
+  <button class="btn">Send</button>
+</form>
+
+{% if rows %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Student</th><th>Latest</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td data-label="Student"><strong>{{ r.student.username }}</strong>
+            {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
+          <td data-label="Latest">
+            {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.username ~ ': ' }}{{ r.last.body }}</div>
+              <div class="small muted">{{ r.last.created.strftime('%b %d, %I:%M %p') }}</div>
+            {% else %}<span class="muted small">No messages yet</span>{% endif %}
+          </td>
+          <td class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=r.student.id) }}">Open</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">No students yet.</div>
+{% endif %}
+{% endblock %}

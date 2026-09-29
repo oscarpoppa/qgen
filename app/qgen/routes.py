@@ -7,6 +7,7 @@ from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
+from app.messages.models import notify
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
 from app.jsoncsrf import json_csrf_ok
 from flask_login import current_user, login_required
@@ -326,6 +327,10 @@ def del_vquiz(vqid):
 def release_vquiz(vqid):
     vq = db.get_or_404(VQuiz, vqid)
     vq.answers_released = not vq.answers_released
+    if vq.answers_released:
+        for cq in {c.assignee: c for c in vq.cquizzes if c.completed}.values():
+            notify(cq.assignee, 'The correct answers for "{}" are now on your results page.'.format(vq.title),
+                   url_for('qgen.qtake', cidx=cq.id))
     vq.save()
     flash('Correct answers for "{}" are now {} to students.'.format(vq.title, 'shown' if vq.answers_released else 'hidden'), 'success')
     return redirect(request.referrer or url_for('qgen.list_vquizzes'))
@@ -372,11 +377,14 @@ def assign():
             cq = create_cquiz(vquiz, user, form.opens_at.data, form.closes_at.data, form.time_limit.data)
             if cq:
                 done.append(user.username)
+                when = ' It opens {}.'.format(cq.opens_at.strftime('%b %d at %I:%M %p')) if cq.opens_at else ''
+                notify(user.id, 'New quiz: "{}".{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
                 current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, user.username))
             else:
                 estr = 'Failed to create quiz: "{}" for {}'.format(vquiz.title, user.username)
                 flash(estr, 'error')
                 current_app.logger.error(estr)
+        db.session.commit()  # the last "new quiz" notice
         if done:
             flash('Assigned "{}" to {}.'.format(vquiz.title, ', '.join(done)), 'success')
         return redirect(url_for('qgen.assign'))
@@ -533,6 +541,8 @@ def review(cqid):
             cq.graded_by = current_user.id
             cq.graded_date = datetime.now()
             finalize(cq)
+            notify(cq.assignee, 'Your written answers in "{}" have been graded: {:.0f}%.'.format(cq.vquiz.title, cq.score),
+                   url_for('qgen.qtake', cidx=cq.id))
             cq.save()
             flash('Finished grading {}\'s "{}": {:.0f}%.'.format(cq.taker.username, cq.vquiz.title, cq.score), 'success')
             current_app.logger.info('{} graded CQuiz ({}) for {}'.format(current_user.username, cq.id, cq.taker.username))
@@ -607,6 +617,8 @@ def ret_cquiz(cqid):
     user = User.query.filter_by(id=cq0.taker.id).first()
     cq = create_cquiz(vquiz, user)
     if cq:
+        notify(user.id, 'You can try "{}" again.'.format(vquiz.title), url_for('qgen.qtake', cidx=cq.id))
+        db.session.commit()
         flash('Assigned a retake of "{}" to {}.'.format(vquiz.title, user.username), 'success')
         current_app.logger.info('{} assigned retake (of {}) quiz: "{}" ({}) to {}'.format(current_user.username, cqid, vquiz.title, cq.id, user.username))
     else:

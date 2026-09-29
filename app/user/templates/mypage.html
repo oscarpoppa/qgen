@@ -23,6 +23,7 @@
 
 {% block content %}
 <div class="page-head"><h1>My quizzes</h1></div>
+{% if panel %}{% with items=panel['items'], unread_ids=panel['unread_ids'], max_len=panel['max_len'] %}{% include "_student_messages.html" %}{% endwith %}{% endif %}
 {% set groups = attempts_by_quiz(current_user.cquizzes) %}
 {% if groups %}
   <div class="grid">
