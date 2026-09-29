@@ -44,9 +44,7 @@ def test_admin_can_clear_an_email(client):
     admin.set_password('pw-for-tests')
     db.session.add(admin)
     db.session.commit()
-    with client.session_transaction() as s:
-        s['_user_id'] = str(admin.id)
-        s['_fresh'] = True
+    client.post('/login', data={'username': 'boss', 'password': 'pw-for-tests'})
     gus = User.query.filter_by(username='gus').first()
     r = client.post('/edituser/{}'.format(gus.id), data={'username': 'gus', 'email': ''})
     assert r.status_code == 302
