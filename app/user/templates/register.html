@@ -7,7 +7,7 @@
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.username, attrs={'autocomplete': 'username'}) }}
-    {{ field(form.email, attrs={'type': 'email', 'autocomplete': 'email'}) }}
+    {{ field(form.email, 'Leave blank if the student has no email address.', attrs={'type': 'email', 'autocomplete': 'email'}) }}
     {{ field(form.password, attrs={'autocomplete': 'new-password'}) }}
     {{ field(form.retype_password, attrs={'autocomplete': 'new-password'}) }}
     {{ form.submit(class='btn', value='Create account', style='width:100%') }}

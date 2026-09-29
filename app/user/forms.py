@@ -1,7 +1,19 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, StopValidation
 from .models import User
+
+
+#email is optional: blank or "none" means no email
+def clean_email(value):
+    value = (value or '').strip()
+    return None if value.lower() in ('', 'none') else value
+
+
+def email_optional(form, field):
+    if clean_email(field.data) is None:
+        field.errors[:] = []
+        raise StopValidation()
 
 
 class ChPassForm(FlaskForm):
@@ -13,7 +25,7 @@ class ChPassForm(FlaskForm):
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired(), Email(message='Bad email address')])
+    email = StringField('Email (optional)', validators=[email_optional, Email(message='That doesn\'t look like an email address.')])
     password = PasswordField('Password', validators=[DataRequired()])
     retype_password = PasswordField('Re-type Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
@@ -24,7 +36,9 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Username {} already taken'.format(username.data))
 
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        if clean_email(email.data) is None:
+            return
+        user = User.query.filter_by(email=clean_email(email.data)).first()
         if user is not None:
             raise ValidationError('Email address {} already taken'.format(email.data))
 

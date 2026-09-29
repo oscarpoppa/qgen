@@ -1,6 +1,6 @@
 from . import db, user_bp
 from .models import User
-from .forms import RegistrationForm, LoginForm, ChPassForm
+from .forms import RegistrationForm, LoginForm, ChPassForm, clean_email
 from flask import flash, render_template, redirect, url_for, request, current_app
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
@@ -85,7 +85,7 @@ def login():
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        u = User(username=form.username.data, email=form.email.data)
+        u = User(username=form.username.data, email=clean_email(form.email.data))
         u.set_password(form.password.data)
         u.save()
         current_app.logger.info('User {} has been created'.format(u.username))
@@ -156,8 +156,13 @@ def eduser(uid):
     uobj = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     form = uform(obj=uobj)
     if request.method == 'POST':
+        email = clean_email(form.email.data)
+        taken = email and User.query.filter(User.email == email, User.id != uobj.id).first()
+        if taken:
+            flash('{} already uses that email address.'.format(taken.username), 'error')
+            return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
         uobj.username = form.username.data
-        uobj.email = form.email.data
+        uobj.email = email
         if uobj == current_user and uobj.is_admin != form.is_admin.data:
             flash("I can't let you change is_admin, {}".format(current_user.username))
         else:

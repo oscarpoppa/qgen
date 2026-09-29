@@ -10,7 +10,7 @@
     {% for item in ulst %}
       <tr>
         <td data-label="Name"><strong>{{ item.username }}</strong>{% if item.logged_in %} <span class="badge badge-ok">logged in</span>{% endif %}</td>
-        <td data-label="Email">{{ item.email }}</td>
+        <td data-label="Email">{% if item.email %}{{ item.email }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
         <td class="actions">
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
