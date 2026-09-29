@@ -140,7 +140,7 @@
         if (!res.ok) { status.textContent = res.error || 'Something went wrong.'; return; }
         var f = res.fill || {};
         if (kind === 'problem') {
-          ['qtype', 'title', 'question', 'answer', 'choices', 'show_n', 'grading_notes', 'case_sensitive'].forEach(function (n) { setField(n, f[n]); });
+          ['qtype', 'title', 'question', 'answer', 'choices', 'combos', 'show_n', 'grading_notes', 'case_sensitive'].forEach(function (n) { setField(n, f[n]); });
           showType();
         }
         fillValues(f.values);

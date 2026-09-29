@@ -56,12 +56,13 @@ PROBLEM_SCHEMA = {
         'values': {'type': 'array', 'items': VALUE_SCHEMA},
         'answer': _NULLABLE_STR,
         'choices': _NULLABLE_STR,
+        'combos': _NULLABLE_STR,
         'show_n': {'type': ['integer', 'null']},
         'case_sensitive': {'type': 'boolean'},
         'grading_notes': _NULLABLE_STR,
         'cannot_do': _NULLABLE_STR,
     },
-    'required': ['qtype', 'title', 'question', 'values', 'answer', 'choices', 'show_n',
+    'required': ['qtype', 'title', 'question', 'values', 'answer', 'choices', 'combos', 'show_n',
                  'case_sensitive', 'grading_notes', 'cannot_do'],
     'additionalProperties': False,
 }
@@ -84,7 +85,7 @@ In the question, answers, and choices, [name] is replaced by a value and [formul
 - "numeric": answer is a formula such as "speed * hours" (no brackets), or placeholders like "[x], [y]" when there are several numbers.
 - "text": answer lists accepted answers, one per line. case_sensitive is usually false.
 - "choice_one": choices, one per line, correct one starts with *. Example: "*[a + b]\\n[a + b + 1]\\n[a * b]". Optionally show_n to show only that many (needs enough wrong choices).
-- "choice_many": like choice_one but several choices start with *.
+- "choice_many": like choice_one but several choices start with *. If different sets of ticks can each be right (e.g. "tick two numbers that add to 10"), leave the * off and list each acceptable set in combos, one per line, choices separated by commas and written exactly as in choices, e.g. "[a], [10 - a]\n[b], [10 - b]". combos is null otherwise.
 - "truefalse": answer is True, False, or a comparison that decides it, like "a > b" or "a = b and b < 10".
 - "essay": students write freely and a teacher grades it. answer may be a short model answer; grading_notes may hold marking guidance.
 Unused fields are null (choices null unless a choice type; show_n null unless asked).
@@ -98,6 +99,7 @@ Unused fields are null (choices null unless a choice type; show_n null unless as
 # Rules
 - Follow the teacher's wording exactly; choose sensible names.
 - Never invent kinds or fields. If part of the request can't be expressed with these kinds (for example "prime numbers only" with no list given), do the rest and explain the missing part briefly in cannot_do, in plain words for a teacher, suggesting a workaround (such as a "list" of the allowed numbers). Otherwise cannot_do is null.
+- Values can come in matched pairs: a "list" named "country = capital" with items "France = Paris, Japan = Tokyo"; then [country] and [capital] always match.
 - Keep the question text natural and student-facing. Math may use LaTeX between \\( and \\).
 """
 
@@ -173,6 +175,7 @@ def clean(fill, kind):
             question=str(fill.get('question') or ''),
             answer=str(fill.get('answer') or ''),
             choices=str(fill.get('choices') or ''),
+            combos=str(fill.get('combos') or ''),
             show_n=fill.get('show_n') if isinstance(fill.get('show_n'), int) else None,
             case_sensitive=bool(fill.get('case_sensitive')),
             grading_notes=str(fill.get('grading_notes') or ''),
@@ -185,6 +188,6 @@ def problems_with(fill, kind):
     from .friendly import validate_values
     if kind != 'problem':
         return validate_values(fill['values'])
-    options = {'markup': 'friendly', 'values': fill['values'], 'choices': fill['choices'],
+    options = {'markup': 'friendly', 'values': fill['values'], 'choices': fill['choices'], 'combos': fill['combos'],
                'show_n': fill['show_n'], 'case_sensitive': fill['case_sensitive'], 'shuffle': True}
     return get_qtype(fill['qtype']).validate(fill['question'], fill['answer'], options)

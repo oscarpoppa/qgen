@@ -217,3 +217,20 @@ def test_whole_school_week(app_db):
     # a problem in use can't be deleted
     teacher.get('/quiz/delvp/{}'.format(probs[0].id))
     assert db.session.get(VProblem, probs[0].id) is not None
+
+
+def test_pick_several_combinations_through_the_pages(app_db):
+    app, db = app_db
+    from app.qgen.models import VProblem
+    teacher = login(app, 'teach')
+    form = problem_form('choice_many', 'Make ten', 'Tick two numbers that add up to 10.', '',
+                        [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '4'}],
+                        choices='[a]\n[10 - a]\n5\n9', combos='[a], [10 - a]')
+    assert teacher.post('/quiz/previewvprob', data=form).data.count(b'Example ') == 3
+    assert teacher.post('/quiz/makevprob', data=form).status_code == 302
+    vp = VProblem.query.one()
+    assert vp.options['combos'] == '[a], [10 - a]'
+    page = teacher.get('/quiz/editvprob/{}'.format(vp.id)).data.decode()
+    assert '[a], [10 - a]' in page
+    bad = dict(form, combos='[a], [10 - b]')
+    assert b"isn&#39;t one of the choices" in teacher.post('/quiz/makevprob', data=bad).data

@@ -37,6 +37,7 @@ class ProblemForm(FlaskForm):
     values = FieldList(FormField(ValueRow), min_entries=0)
     answer = TextAreaField('Answer')
     choices = TextAreaField('Choices (one per line, put * in front of correct ones)')
+    combos = TextAreaField('Other correct combinations (optional)')
     shuffle = BooleanField('Shuffle the choices for each student', default=True)
     show_n = IntegerField('Show only this many choices', validators=[Optional(), NumberRange(min=2, max=50)])
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
@@ -67,6 +68,7 @@ class ProblemForm(FlaskForm):
             'markup': 'legacy' if '{{' in (self.question.data or '') else 'friendly',
             'values': values,
             'choices': self.choices.data or '',
+            'combos': self.combos.data or '',
             'shuffle': bool(self.shuffle.data),
             'show_n': self.show_n.data,
             'case_sensitive': bool(self.case_sensitive.data),
@@ -82,6 +84,7 @@ class ProblemForm(FlaskForm):
         self.question.data = vp.raw_prob
         self.answer.data = vp.raw_ansr
         self.choices.data = opts.get('choices', '')
+        self.combos.data = opts.get('combos', '')
         self.shuffle.data = opts.get('shuffle', True)
         self.show_n.data = opts.get('show_n')
         self.case_sensitive.data = opts.get('case_sensitive', False)

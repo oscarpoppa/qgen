@@ -179,3 +179,46 @@ def test_country_capital_question():
     for seed in range(20):
         prob, ansr, _ = qt.instantiate('What is the capital of [country]?', '[capital]', o, random.Random(seed))
         assert {'France': 'Paris', 'Japan': 'Tokyo', 'Peru': 'Lima'}[prob.split('of ')[1].rstrip('?')] == ansr
+
+
+def test_pick_several_other_correct_combinations():
+    qt = get_qtype('choice_many')
+    o = {'markup': 'friendly',
+         'values': [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '4'},
+                    {'name': 'b', 'kind': 'whole', 'min': '6', 'max': '8'}],
+         'choices': '[a]\n[10 - a]\n[b]\n[10 - b]\n[a + 20]\n[b + 30]',
+         'combos': '[a], [10 - a]\n[b], [10 - b]'}
+    assert qt.validate('Tick two numbers that add up to 10.', '', o) == []
+    for seed in range(30):
+        _, ansr, co = qt.instantiate('Tick two numbers that add up to 10.', '', o, random.Random(seed))
+        #two combinations, unless both came out as the same pair this time
+        assert 1 <= len(co['combos']) <= 2 and (' or ' in ansr) == (len(co['combos']) == 2)
+        for combo in co['combos']:
+            assert sum(int(co['choices'][i]) for i in combo) == 10
+            assert qt.grade(qt.to_stored([str(i) for i in combo]), ansr, co, o) == 1.0
+        both = sorted(set(sum(co['combos'], [])) | {co['choices'].index(max(co['choices'], key=int))})
+        assert qt.grade(qt.to_stored([str(i) for i in both]), ansr, co, o) == 0.0
+        assert qt.grade(qt.to_stored([str(co['combos'][0][0])]), ansr, co, o) == 0.0
+
+
+def test_combinations_with_a_pool_show_one_whole_combination():
+    qt = get_qtype('choice_many')
+    o = {'markup': 'friendly', 'values': [], 'show_n': 4,
+         'choices': '3\n7\n4\n6\n1\n2\n5\n8', 'combos': '3, 7\n4, 6\n2, 8'}
+    for seed in range(50):
+        _, _, co = qt.instantiate('Tick two numbers that add to 10', '', o, random.Random(seed))
+        assert len(co['choices']) == 4 and co['combos']
+        assert all(sum(int(co['choices'][i]) for i in c) == 10 for c in co['combos'])
+
+
+def test_combination_typos_reported():
+    o = {'markup': 'friendly', 'values': [], 'choices': '3\n7\n4\n6', 'combos': '3, 8'}
+    errs = get_qtype('choice_many').validate('q', '', o)
+    assert any('"8", which isn\'t one of the choices' in e for e in errs)
+
+
+def test_combination_that_can_collapse_is_refused():
+    o = {'markup': 'friendly', 'values': [{'name': 'b', 'kind': 'whole', 'min': '4', 'max': '6'}],
+         'choices': '[b]\n[10 - b]\n1\n2', 'combos': '[b], [10 - b]'}
+    errs = get_qtype('choice_many').validate('Tick two that add to 10', '', o)
+    assert any('same answer twice' in e for e in errs)

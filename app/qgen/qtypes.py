@@ -9,7 +9,7 @@ problem, the "Show me 3 examples" preview, and the AI helper:
 
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
-    options   dict: values, choices, shuffle, show_n, case_sensitive,
+    options   dict: values, choices, combos, shuffle, show_n, case_sensitive,
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
@@ -343,10 +343,92 @@ class ChoiceOne(QType):
         return '; '.join(choices[i] for i in self.picked(stored) if i < len(choices))
 
 
+def parse_combos(text):
+    """'[a], [b]\n[c], [d]' -> [['[a]', '[b]'], ['[c]', '[d]']]. Commas inside
+    brackets (like min(a, b)) don't split."""
+    combos = []
+    for line in (text or '').splitlines():
+        parts = [p.strip().lstrip('*').strip() for p in re.split(r',(?![^\[]*\])', line)]
+        parts = [p for p in parts if p]
+        if parts:
+            combos.append(parts)
+    return combos
+
+
 class ChoiceMany(ChoiceOne):
+    """Several boxes to tick. The right answer is the set of * choices, and/or
+    any of the teacher's "other correct combinations"."""
     key = 'choice_many'
     label = 'Pick several'
     multi = True
+
+    def validate_parts(self, answer, options, known):
+        combos = parse_combos(options.get('combos'))
+        if not combos:
+            return super().validate_parts(answer, options, known)
+        choices = self.choice_lines(options)
+        texts = [t for t, _ in choices]
+        errors = []
+        if len(choices) < 2:
+            errors.append('Please give at least two choices, one per line.')
+        for combo in combos:
+            for item in combo:
+                if item not in texts:
+                    errors.append('The combination "{}" uses "{}", which isn\'t one of the choices. '
+                                  'Write it exactly as in the choices list.'.format(', '.join(combo), item))
+        show_n = options.get('show_n')
+        if show_n:
+            if show_n < 2 or show_n > len(choices):
+                errors.append('"Show only" must be between 2 and the number of choices ({}).'.format(len(choices)))
+            elif all(len(c) > show_n for c in self.answer_sets(choices, combos)):
+                errors.append('Every correct combination has more than {} choices, so it can\'t be shown whole.'.format(show_n))
+        for text in texts:
+            errors += F.check_text('choice "{}"'.format(text), text, known)
+        return errors
+
+    def answer_sets(self, choices, combos):
+        """Every correct set of raw choice lines: the * set (if any) plus combinations."""
+        sets = [list(c) for c in combos]
+        starred = [t for t, ok in choices if ok]
+        if starred and starred not in sets:
+            sets.insert(0, starred)
+        return sets
+
+    def render(self, question, answer, options, env, rng):
+        combos = parse_combos(options.get('combos'))
+        if not combos:
+            return super().render(question, answer, options, env, rng)
+        lines = self.choice_lines(options)
+        filled = {t: F.fill(t, env) for t, _ in lines}
+        #numeric choices can come out equal; keep each shown text once
+        pool = list(dict.fromkeys(filled[t] for t, _ in lines))
+        raw_sets = self.answer_sets(lines, combos)
+        sets = [sorted(set(filled[t] for t in s)) for s in raw_sets]
+        for raw, got in zip(raw_sets, sets):
+            if len(got) < len(set(raw)):
+                raise F.FriendlyError('With some values, the combination "{}" turns into the same answer twice ({}). '
+                                      'Change the ranges or use "different from" so that can\'t happen.'
+                                      .format(', '.join(raw), ', '.join(filled[t] for t in raw)))
+        show_n = options.get('show_n')
+        if show_n:
+            show_n = min(show_n, len(pool))
+            target = rng.choice([s for s in sets if len(s) <= show_n] or sets)
+            rest = [t for t in pool if t not in target]
+            shown = target + rng.sample(rest, max(0, min(show_n - len(target), len(rest))))
+        else:
+            shown = pool
+        if options.get('shuffle', True):
+            rng.shuffle(shown)
+        index = {t: i for i, t in enumerate(shown)}
+        valid = [sorted(index[t] for t in s) for s in sets if all(t in index for t in s)]
+        valid = [v for i, v in enumerate(valid) if v not in valid[:i]]
+        opts = {'choices': shown, 'correct': valid[0], 'combos': valid}
+        answer_text = ' or '.join(', '.join(shown[i] for i in v) for v in valid)
+        return F.fill_question(question, env), answer_text, opts
+
+    def grade(self, stored, conc_ansr, conc_opts, options):
+        combos = conc_opts.get('combos') or [conc_opts.get('correct', [])]
+        return 1.0 if self.picked(stored) in [sorted(c) for c in combos] else 0.0
 
     def make_field(self, name, conc_opts):
         return CheckboxField(name, choices=list(enumerate_choices(conc_opts)))
