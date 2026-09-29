@@ -114,8 +114,15 @@ def problem_hints(qtype_key, question, answer, options):
         used |= set(row.get('different_from') or [])
     for row in values:
         name = row.get('name')
-        if name and name not in used and not (set(F.pick_names(row)[1:]) & used if row.get('kind') == 'list' else False):
-            hints.append(hint('warn', 'You made a value called "{}" but never use it. Put [{}] in the question, or remove it.'.format(name, name)))
+        try:
+            numbered = set(F.pick_names(row))
+        except F.FriendlyError:
+            numbered = set()
+        for part in F.row_names(row):
+            #a column counts as used if it or any of its numbered copies (who1, who2...) appears
+            copies = {n for n in numbered if n == part or re.fullmatch(re.escape(part) + r'\d+', n)}
+            if part and not copies & used:
+                hints.append(hint('warn', 'You made a value called "{}" but never use it. Put [{}] in the question, or remove it.'.format(part, part)))
         if row.get('kind') == 'whole' and str(row.get('min', '')).strip() and str(row.get('min')) == str(row.get('max')):
             hints.append(hint('warn', '"{}" goes from {} to {}, so it\'s always the same number.'.format(name, row['min'], row['max'])))
         if row.get('kind') == 'list' and len([i for i in str(row.get('items') or '').split(',') if i.strip()]) == 1:

@@ -219,20 +219,40 @@ def _num(row, key, label, integer=False):
     return val
 
 
+def row_names(row):
+    """Names a row defines. A pick-from-list row may define matched columns:
+    name "country = capital" with items "France = Paris, Japan = Tokyo"."""
+    name = (row.get('name') or '').strip()
+    if row.get('kind') == 'list' and '=' in name:
+        return [n.strip() for n in name.split('=')]
+    return [name]
+
+
+def _value(text):
+    text = str(text).strip()
+    try:
+        num = float(text)
+        return int(num) if num == int(num) and '.' not in text else num
+    except ValueError:
+        return text
+
+
 def _items(row):
+    """List items as tuples, one entry per name in row_names(row)."""
     items = row.get('items') or []
     if isinstance(items, str):
         items = items.split(',')
+    width = len(row_names(row))
     out = []
     for item in items:
         item = str(item).strip()
         if not item:
             continue
-        try:
-            num = float(item)
-            out.append(int(num) if num == int(num) and '.' not in item else num)
-        except ValueError:
-            out.append(item)
+        parts = [p.strip() for p in item.split('=')] if width > 1 else [item]
+        if len(parts) != width:
+            raise FriendlyError('In the list for {}, "{}" should have {} parts separated by "=" (like "France = Paris").'
+                                .format(row.get('name'), item, width))
+        out.append(tuple(_value(p) for p in parts))
     return out
 
 
@@ -271,10 +291,13 @@ def _pick_n(row):
 
 
 def pick_names(row):
-    """Names a row makes available: 'who' plus who1..whoN for pick-N lists."""
-    name = row['name']
+    """Names a row makes available: 'who' plus who1..whoN for pick-N lists
+    (for matched columns, each column's name gets the same treatment)."""
     n = _pick_n(row) if row.get('kind') == 'list' else 1
-    return [name] + (['{}{}'.format(name, i) for i in range(1, n + 1)] if n > 1 else [])
+    names = []
+    for name in row_names(row):
+        names += [name] + (['{}{}'.format(name, i) for i in range(1, n + 1)] if n > 1 else [])
+    return names
 
 
 def _draw(row, env, rng):
@@ -294,10 +317,11 @@ def _draw(row, env, rng):
         items = _items(row)
         n = _pick_n(row)
         picked = rng.sample(items, n)
-        env[row['name']] = picked[0]
-        if n > 1:
-            for i, item in enumerate(picked, 1):
-                env['{}{}'.format(row['name'], i)] = item
+        for col, name in enumerate(row_names(row)):
+            env[name] = picked[0][col]
+            if n > 1:
+                for i, item in enumerate(picked, 1):
+                    env['{}{}'.format(name, i)] = item[col]
 
 
 def calc_order(values):
@@ -319,7 +343,7 @@ def calc_order(values):
 def draw_values(values, rng=None):
     """Pick one random set of values, honoring every "different from" rule."""
     rng = rng or random.Random()
-    rows = {r['name']: r for r in values}
+    rows = {r['name']: r for r in values if r.get('kind') == 'calc'}
     order = calc_order(values)
     for _ in range(MAX_TRIES):
         env = {}
@@ -327,8 +351,8 @@ def draw_values(values, rng=None):
             _draw(row, env, rng)
         for name in order:
             env[name] = evaluate(rows[name]['formula'], env)
-        if all(env[name] != env[other]
-               for name, row in rows.items()
+        if all(env[row_names(row)[0]] != env[other]
+               for row in values
                for other in (row.get('different_from') or []) if other in env):
             return env
     raise FriendlyError('I couldn\'t find values that are all different after {} tries. '
@@ -403,18 +427,20 @@ def validate_values(values):
         if not name:
             errors.append('Every value needs a name.')
             continue
-        if not NAME_PATT.match(name):
+        bad = [n for n in row_names(row) if not NAME_PATT.match(n)]
+        if bad:
             errors.append('"{}" can\'t be a name: use letters and numbers only, starting with a letter.'
-                          .format(name))
+                          .format(bad[0] or name))
             continue
-        if name in FUNCS:
-            errors.append('"{}" is already used for math; please pick another name.'.format(name))
-        if name in seen:
-            errors.append('The name "{}" is used twice.'.format(name))
+        for part in row_names(row):
+            if part in FUNCS:
+                errors.append('"{}" is already used for math; please pick another name.'.format(part))
+            if part in seen:
+                errors.append('The name "{}" is used twice.'.format(part))
         try:
             seen.extend(pick_names(row))
         except FriendlyError:
-            seen.append(name)
+            seen.extend(row_names(row))
         kind = row.get('kind')
         try:
             if kind == 'whole':
@@ -467,7 +493,7 @@ def known_names(values):
             try:
                 names.extend(pick_names(row))
             except FriendlyError:
-                names.append(row['name'])
+                names.extend(row_names(row))
     return names
 
 

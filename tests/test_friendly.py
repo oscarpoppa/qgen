@@ -110,3 +110,31 @@ def test_true_false_conditions():
     assert F.evaluate_condition('a = b', env) is False
     assert F.evaluate_condition('a ≥ 5 and b < 4', env) is True
     assert F.evaluate_condition('False', env) is False
+
+
+def test_matched_pairs_stay_together():
+    capitals = {'France': 'Paris', 'Japan': 'Tokyo', 'Kenya': 'Nairobi', 'Peru': 'Lima'}
+    row = {'name': 'country = capital', 'kind': 'list',
+           'items': ', '.join('{} = {}'.format(k, v) for k, v in capitals.items())}
+    assert F.validate_values([row]) == []
+    assert F.known_names([row]) == ['country', 'capital']
+    seen = set()
+    for env in draws([row]):
+        assert capitals[env['country']] == env['capital']
+        seen.add(env['country'])
+    assert seen == set(capitals)
+
+
+def test_matched_pairs_pick_several():
+    row = {'name': 'word = number', 'kind': 'list', 'items': 'one = 1, two = 2, three = 3, four = 4', 'pick_n': 2}
+    for env in draws([row], 50):
+        assert env['word1'] != env['word2']
+        assert {'one': 1, 'two': 2, 'three': 3, 'four': 4}[env['word2']] == env['number2']
+        assert F.evaluate('number1 + number2', env) == env['number1'] + env['number2']
+
+
+def test_matched_pairs_errors():
+    errs = F.validate_values([{'name': 'country = capital', 'kind': 'list', 'items': 'France = Paris, Japan'}])
+    assert any('should have 2 parts' in e for e in errs)
+    errs = F.validate_values([{'name': 'country = 2nd', 'kind': 'list', 'items': 'a = b'}])
+    assert any("can't be a name" in e for e in errs)

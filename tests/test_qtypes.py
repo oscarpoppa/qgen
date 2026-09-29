@@ -169,3 +169,13 @@ def test_pick_several_pool_always_mixes_right_and_wrong():
         _, _, co = qt.instantiate('Which are even?', '', o, random.Random(seed))
         assert len(co['choices']) == 4
         assert 1 <= len(co['correct']) <= 3
+
+
+def test_country_capital_question():
+    qt = get_qtype('text')
+    o = {'markup': 'friendly', 'values': [{'name': 'country = capital', 'kind': 'list',
+                                            'items': 'France = Paris, Japan = Tokyo, Peru = Lima'}]}
+    assert qt.validate('What is the capital of [country]?', '[capital]', o) == []
+    for seed in range(20):
+        prob, ansr, _ = qt.instantiate('What is the capital of [country]?', '[capital]', o, random.Random(seed))
+        assert {'France': 'Paris', 'Japan': 'Tokyo', 'Peru': 'Lima'}[prob.split('of ')[1].rstrip('?')] == ansr
