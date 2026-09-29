@@ -44,6 +44,7 @@
 
 {{ error_box(errors) }}
 
+<div class="editor">
 <form method="post" id="problem-form" novalidate>
   {{ form.hidden_tag() }}
 
@@ -138,6 +139,8 @@
 
   <div id="preview" class="examples" aria-live="polite"></div>
 </form>
+{% with form_id='problem-form', check_url=url_for('qgen.check_vprob'), review_url=url_for('qgen.ai_review_problem') if ai_enabled else none %}{% include "_helper.html" %}{% endwith %}
+</div>
 
 <details class="card help-box">
   <summary>Examples of each question type</summary>
@@ -195,4 +198,5 @@ Answer:   [picture]</pre>
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/problem_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/helper.js') }}"></script>
 {% endblock %}

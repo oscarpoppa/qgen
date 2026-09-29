@@ -39,7 +39,7 @@
       out.push(seen[item.group]);
     });
     hidden.value = JSON.stringify(out);
-    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    hidden.form.dispatchEvent(new Event('helper-refresh'));
   }
 
   function renderGroups() {

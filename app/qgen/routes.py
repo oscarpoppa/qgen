@@ -211,7 +211,8 @@ def del_vprob(vpid):
 
 def quiz_page(form, title, vq=None):
     probs = VProblem.query.order_by(VProblem.id.desc()).all()
-    return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq)
+    return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq,
+                           ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')))
 
 def checked_vplist(form):
     try:
@@ -630,38 +631,114 @@ def ret_cquiz(cqid):
 
 # ---------------------------------------------------------------- AI helper
 
-def ai_fill(kind):
-    """Shared by both "Fill in for me" buttons; always answers with JSON."""
-    from flask import jsonify
+def ai_call(kind, text, work):
+    """Every AI button goes through here: session check, API key, size and hourly
+    limits, and the call log. `work(key, text)` returns (result, usage)."""
     from datetime import timedelta
-    from .ai_helper import ask, problems_with, AIError, HOURLY_LIMIT
+    from .ai_helper import AIError, HOURLY_LIMIT
     from .models import AICall
     if not json_csrf_ok():
-        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
+        return None, (jsonify(ok=False, error='Your session expired. Please reload the page.'), 400)
     key = current_app.config.get('ANTHROPIC_API_KEY')
     if not key:
-        return jsonify(ok=False, error='The AI helper isn\'t set up (no API key).'), 400
-    text = ((request.get_json(silent=True) or {}).get('text') or '').strip()
+        return None, (jsonify(ok=False, error='The AI helper isn\'t set up (no API key).'), 400)
+    text = (text or '').strip()
     if not text:
-        return jsonify(ok=False, error='Please describe what you want first.'), 400
-    if len(text) > 4000:
-        return jsonify(ok=False, error='Please keep the description under 4000 characters.'), 400
+        return None, (jsonify(ok=False, error='Please describe what you want first.'), 400)
+    if len(text) > 8000:
+        return None, (jsonify(ok=False, error='That\'s too long for the AI helper; please shorten it.'), 400)
     since = datetime.now() - timedelta(hours=1)
     if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= HOURLY_LIMIT:
-        return jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(HOURLY_LIMIT)), 429
+        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(HOURLY_LIMIT)), 429)
     call = AICall(user_id=current_user.id, created=datetime.now(), kind=kind, request=text, ok=False)
     try:
-        fill, usage = ask(key, kind, text)
+        result, usage = work(key, text)
         call.ok = True
         call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
+        return result, None
     except AIError as exc:
-        return jsonify(ok=False, error=str(exc)), 502
+        return None, (jsonify(ok=False, error=str(exc)), 502)
     finally:
         db.session.add(call)
         db.session.commit()
         current_app.logger.info('{} used the AI helper ({}, ok={}, tokens in/out {}/{})'.format(
             current_user.username, kind, call.ok, call.input_tokens, call.output_tokens))
+
+def ai_fill(kind):
+    """Shared by both "Fill in for me" buttons; always answers with JSON."""
+    from .ai_helper import ask, problems_with
+    text = (request.get_json(silent=True) or {}).get('text')
+    fill, failed = ai_call(kind, text, lambda key, t: ask(key, kind, t))
+    if failed:
+        return failed
     return jsonify(ok=True, fill=fill, note=fill.get('cannot_do'), problems=problems_with(fill, kind))
+
+def describe_problem(form):
+    """A problem as plain text for the AI reviewer, with two sample versions."""
+    opts = form.options()
+    qt = get_qtype(form.qtype.data)
+    lines = ['Question type: ' + qt.label, 'Question: ' + (form.question.data or '')]
+    for v in opts['values']:
+        lines.append('Value {}: {}'.format(v.get('name'), ', '.join('{}={}'.format(k, v[k]) for k in v if k != 'name')))
+    if qt.uses_choices:
+        lines.append('Choices (* = correct):\n' + opts['choices'])
+        if opts.get('combos'):
+            lines.append('Other correct combinations:\n' + opts['combos'])
+        lines.append('Shuffled per student: {}; show only: {}'.format(opts['shuffle'], opts['show_n'] or 'all'))
+    else:
+        lines.append('{}: {}'.format(qt.answer_label, form.answer.data or ''))
+    if qt.key == 'numeric':
+        lines.append('Answer must be: ' + opts['precision'])
+    if opts['images']:
+        lines.append('Pictures: ' + ', '.join('{} ({})'.format(i['file'], i['label'] or 'no label') for i in opts['images']))
+    if not qt.validate(form.question.data, form.answer.data, opts):
+        rng = random.Random(1)
+        for n in (1, 2):
+            prob, ansr, co = qt.instantiate(form.question.data, form.answer.data, opts, rng)
+            lines.append('Sample student version {}: {} | correct: {}{}'.format(
+                n, prob, qt.show_correct(ansr, co), ' | choices: ' + ' / '.join(co['choices']) if co.get('choices') else ''))
+    return '\n'.join(lines)
+
+def describe_quiz(form):
+    try:
+        lay = parse_vplist(form.vplist.data)
+    except layout.LayoutError:
+        lay = []
+    lines = ['Quiz title: ' + (form.title.data or ''), 'Calculator allowed: {}'.format(form.calculator_ok.data),
+             'Question order shuffled per student: {}'.format(form.shuffle_order.data)]
+    def one(pid, prefix=''):
+        p = db.session.get(VProblem, pid)
+        if p:
+            lines.append('{}- [{}] {}: {}'.format(prefix, get_qtype(p.qtype).label, p.title, p.raw_prob))
+    for e in lay:
+        if layout.is_group(e):
+            lines.append('Group: each student gets {} of these {}:'.format(e['pick'], len(e['from'])))
+            for pid in e['from']:
+                one(pid, '  ')
+        else:
+            one(e)
+    return '\n'.join(lines)
+
+@qgen_bp.route('/quiz/ai/reviewproblem', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def ai_review_problem():
+    from .ai_helper import review
+    form = ProblemForm()
+    form.validate()
+    tips, failed = ai_call('review', describe_problem(form), review)
+    return failed or jsonify(ok=True, hints=tips)
+
+@qgen_bp.route('/quiz/ai/reviewquiz', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def ai_review_quiz():
+    from .ai_helper import review
+    form = QuizForm()
+    tips, failed = ai_call('review', describe_quiz(form), review)
+    return failed or jsonify(ok=True, hints=tips)
 
 @qgen_bp.route('/quiz/ai/problem', methods=['POST'])
 @login_required

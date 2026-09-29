@@ -160,6 +160,19 @@
     });
   });
 
+  /* ---------- one-click fixes from the helper panel ---------- */
+  form.addEventListener('helper-action', function (e) {
+    var a = e.detail;
+    if (a.type === 'add_value') {
+      var row = addValue();
+      row.querySelector('[name$="-name"]').value = a.name;
+      row.querySelector('select.kind').focus();
+    } else if (a.type === 'set_qtype') {
+      qtype.value = a.value;
+      showType();
+    }
+  });
+
   /* ---------- start ---------- */
   showType();
   form.querySelectorAll('.value-row').forEach(showKind);
