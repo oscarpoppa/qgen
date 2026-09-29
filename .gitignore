@@ -7,6 +7,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.demo-accounts.txt
 
 # uploaded images/files; site css/js are tracked
 static/*
