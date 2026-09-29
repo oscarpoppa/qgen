@@ -54,7 +54,7 @@ def mkvquiz():
     form = VQuizAdd()
     if form.validate_on_submit():
         lstr = form.vplist.data
-        numlist = [int(a) for a in findall('(\d+)', lstr)]
+        numlist = [int(a) for a in findall(r'(\d+)', lstr)]
         title = form.title.data
         image = form.image.data
         calculator_ok = form.calculator_ok.data
@@ -237,7 +237,7 @@ def edvquiz(vqid):
         vqobj.image = form.image.data
         vqobj.title = form.title.data
         vqobj.calculator_ok = form.calculator_ok.data
-        numlist = [int(a) for a in findall('(\d+)', form.vpid_lst.data)]
+        numlist = [int(a) for a in findall(r'(\d+)', form.vpid_lst.data)]
         #this way to check for 404
         plist = [VProblem.query.filter_by(id=a).first_or_404('No VProblem with id {}'.format(a)) for a in set(numlist)]
         vqobj.vpid_lst = dumps(numlist)

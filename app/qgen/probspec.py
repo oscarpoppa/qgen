@@ -78,7 +78,7 @@ def process_spec(prob, ansr):
     #pattern substitution
     for k,v in repl.items():
         #remove definition-only invisible patterns
-        if search('\s*:\s*inv\s*', k):
+        if search(r'\s*:\s*inv\s*', k):
             prob = sub(escape(r'{{'+k+r'}}'), '', prob)
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
@@ -88,11 +88,11 @@ def process_spec(prob, ansr):
             ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
     #aesthetics...
     #turn '...+/- -...' into '...-/+ ...'  
-    prob = sub('\+\s*\-', '- ', prob)
-    prob = sub('\-\s*\-', '+ ', prob)
+    prob = sub(r'\+\s*\-', '- ', prob)
+    prob = sub(r'\-\s*\-', '+ ', prob)
     #turn '+ 0x' into ''
-    prob = sub('[\+\-]\s*0[a-zA-Z]+', '', prob)
+    prob = sub(r'[\+\-]\s*0[a-zA-Z]+', '', prob)
     #turn '+ 1x' into '+ x'
-    prob = sub('([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
+    prob = sub(r'([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
     return prob, ansr
 

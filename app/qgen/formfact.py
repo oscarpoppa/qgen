@@ -37,7 +37,7 @@ fieldname_base = 'Number{}'
 
 #experimental
 def get_meta(cprob):
-    metapatt = '{{\s*meta\s*:([^\}]*)\s*}}'
+    metapatt = r'{{\s*meta\s*:([^\}]*)\s*}}'
 
 #create a renderable quiz from a concrete specification
 def renderable_factory(cquiz):
@@ -52,7 +52,7 @@ def renderable_factory(cquiz):
     def ansr_is_correct(subm, corr):
         if subm == 'None':
             return False
-        numpatt = '[\d\.\-]+'
+        numpatt = r'[\d\.\-]+'
         # not good if checking ordered lists i.e. vectors
         sublst = sorted(findall(numpatt, subm))
         corlst = sorted(findall(numpatt, corr))
@@ -67,14 +67,13 @@ def renderable_factory(cquiz):
                # LT 1 -- for very small numbers
                 elif abs(float(sublst[idx]) - float(corlst[idx])) / abs(float(corlst[idx])) > 0.01:
                         return False
-                return True
             #correct answer is 0
             except ZeroDivisionError:
-                if abs(float(sublst[idx])) < 0.01:
-                    return True
-                return False
+                if abs(float(sublst[idx])) >= 0.01:
+                    return False
             except:
                 return False
+        #every number matched
         return True
 
     #flask form element as building block, modified as needed
