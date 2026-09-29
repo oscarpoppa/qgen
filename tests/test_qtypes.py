@@ -222,3 +222,23 @@ def test_combination_that_can_collapse_is_refused():
          'choices': '[b]\n[10 - b]\n1\n2', 'combos': '[b], [10 - b]'}
     errs = get_qtype('choice_many').validate('Tick two that add to 10', '', o)
     assert any('same answer twice' in e for e in errs)
+
+
+def test_fractions_are_understood():
+    assert numbers_match('3/4', '0.75')
+    assert numbers_match('1 1/2', '1.5')
+    assert numbers_match('-2/3', '-0.6667')
+    assert numbers_match('1/3, 1/2', '0.5, 0.3333')
+    assert not numbers_match('3/4', '3, 4')
+
+
+def test_precision_choices():
+    from app.qgen.qtypes import numbers_match as m
+    assert m('3.33', '3.3333', 'hundredths') and not m('3.3', '3.3333', 'hundredths')
+    assert m('3', '3.4', 'whole') and not m('3.4', '3.4', 'whole') and not m('4', '3.4', 'whole')
+    assert m('1/3', '0.3333', 'exact') and not m('0.33', '0.3333', 'exact')
+    assert m('12.004', '12') and not m('12.02', '12')  # original rule unchanged
+    qt = get_qtype('numeric')
+    o = {'markup': 'friendly', 'values': [], 'precision': 'whole'}
+    assert qt.grade('7', '6.5', {}, o) == 1.0 and qt.grade('6', '6.5', {}, o) == 0.0
+    assert m('2.35', '2.345', 'hundredths') and not m('2.34', '2.345', 'hundredths')

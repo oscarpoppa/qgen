@@ -110,6 +110,7 @@
         {{ form.answer(rows=3, **{'aria-label': 'Answer'}) }}
       </div>
     </div>
+    <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.') }}</div>
     <div class="t-text">{{ check(form.case_sensitive) }}</div>
     <div class="t-essay">{{ field(form.grading_notes, 'Shown to you next to the student’s answer while grading.', attrs={'rows': 3}) }}</div>
   </div>

@@ -5,7 +5,7 @@ from wtforms.validators import DataRequired, Optional, NumberRange
 from wtforms.widgets import ListWidget, CheckboxInput
 
 from .friendly import KINDS
-from .qtypes import REGISTRY
+from .qtypes import REGISTRY, PRECISIONS
 
 
 #one row of the values table (not a FlaskForm: the page form carries the CSRF token)
@@ -41,6 +41,7 @@ class ProblemForm(FlaskForm):
     shuffle = BooleanField('Shuffle the choices for each student', default=True)
     show_n = IntegerField('Show only this many choices', validators=[Optional(), NumberRange(min=2, max=50)])
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
+    precision = SelectField('How close must the answer be?', choices=list(PRECISIONS.items()), default='close')
     grading_notes = TextAreaField('Grading notes (only you see these)')
     images = FieldList(FormField(ImageRow), min_entries=0)
     calculator_ok = BooleanField('Calculator allowed')
@@ -72,6 +73,7 @@ class ProblemForm(FlaskForm):
             'shuffle': bool(self.shuffle.data),
             'show_n': self.show_n.data,
             'case_sensitive': bool(self.case_sensitive.data),
+            'precision': self.precision.data or 'close',
             'grading_notes': self.grading_notes.data or '',
             'images': images,
         }
@@ -88,6 +90,7 @@ class ProblemForm(FlaskForm):
         self.shuffle.data = opts.get('shuffle', True)
         self.show_n.data = opts.get('show_n')
         self.case_sensitive.data = opts.get('case_sensitive', False)
+        self.precision.data = opts.get('precision', 'close')
         self.grading_notes.data = opts.get('grading_notes', '')
         self.calculator_ok.data = vp.calculator_ok
         for val in opts.get('values', []):

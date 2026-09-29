@@ -9,13 +9,14 @@ problem, the "Show me 3 examples" preview, and the AI helper:
 
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
-    options   dict: values, choices, combos, shuffle, show_n, case_sensitive,
+    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision,
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
 import json
 import random
 import re
+from decimal import Decimal, ROUND_HALF_UP
 
 from wtforms import StringField, TextAreaField, RadioField, SelectMultipleField
 from wtforms.widgets import ListWidget, CheckboxInput
@@ -70,26 +71,66 @@ class CheckboxField(SelectMultipleField):
 
 # ---------------------------------------------------------------- grading helpers
 
-def numbers_match(subm, corr):
-    """Every number in the answer must match within 1% (or 0.01 near zero).
-    Order doesn't matter, so '3, 5' matches '5, 3'."""
+PRECISIONS = {
+    'close': 'Within 0.01 (recommended)',
+    'exact': 'Exactly',
+    'hundredths': 'Rounded to 2 decimal places',
+    'whole': 'Rounded to a whole number',
+}
+
+#a mixed number ("1 1/2"), a fraction ("3/4"), or a decimal ("-0.75", ".5")
+_NUMBER = re.compile(r'(-?)\s*(?:(\d+)\s+(\d+)\s*/\s*(\d+)|(\d+)\s*/\s*(\d+)|(\d*\.?\d+))')
+
+
+def read_numbers(text):
+    """All the numbers a student typed, understanding fractions and mixed numbers."""
+    out = []
+    for sign, whole, num, den, fnum, fden, dec in _NUMBER.findall(text or ''):
+        try:
+            if whole:
+                val = int(whole) + int(num) / int(den)
+            elif fnum:
+                val = int(fnum) / int(fden)
+            else:
+                val = float(dec)
+        except ZeroDivisionError:
+            continue
+        out.append(-val if sign else val)
+    return out
+
+
+def school_round(x, places=0):
+    """Round halves up (away from zero), the way it's taught: 6.5 -> 7."""
+    q = Decimal(1).scaleb(-places)
+    return float(Decimal(repr(x)).quantize(q, rounding=ROUND_HALF_UP))
+
+
+def _close_enough(got, want, precision):
+    if precision == 'whole':
+        return abs(got - round(got)) < 1e-9 and round(got) == school_round(want)
+    if precision == 'hundredths':
+        return abs(got - school_round(want, 2)) < 0.0005
+    if precision == 'exact':
+        #answers are stored to 4 decimal places, so 1/3 matches 0.3333
+        return abs(got - want) <= 0.00005 + 1e-9 * abs(want)
+    #the original rule: within 0.01, or within 1% for numbers smaller than 1
+    if abs(want) >= 1:
+        return abs(got - want) <= 0.01
+    if want == 0:
+        return abs(got) < 0.01
+    return abs(got - want) / abs(want) <= 0.01
+
+
+def numbers_match(subm, corr, precision='close'):
+    """Every number in the answer must match; order doesn't matter, so
+    '3, 5' matches '5, 3'. Fractions like 3/4 and 1 1/2 are understood."""
     if subm in (None, '', 'None'):
         return False
-    numpatt = r'-?\d*\.?\d+'
-    sublst = sorted(float(n) for n in re.findall(numpatt, subm))
-    corlst = sorted(float(n) for n in re.findall(numpatt, corr))
+    sublst = sorted(read_numbers(subm))
+    corlst = sorted(read_numbers(corr))
     if not corlst or len(sublst) != len(corlst):
         return False
-    for got, want in zip(sublst, corlst):
-        if abs(want) >= 1:
-            if abs(got - want) > 0.01:
-                return False
-        elif want == 0:
-            if abs(got) >= 0.01:
-                return False
-        elif abs(got - want) / abs(want) > 0.01:
-            return False
-    return True
+    return all(_close_enough(got, want, precision) for got, want in zip(sublst, corlst))
 
 
 def normalize_text(text, case_sensitive=False):
@@ -233,7 +274,7 @@ class Numeric(QType):
         return F.fill_answer(answer, env)
 
     def grade(self, stored, conc_ansr, conc_opts, options):
-        return 1.0 if numbers_match(stored, conc_ansr) else 0.0
+        return 1.0 if numbers_match(stored, conc_ansr, options.get('precision') or 'close') else 0.0
 
 
 class Text(QType):

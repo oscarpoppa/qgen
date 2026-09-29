@@ -177,7 +177,7 @@ def problem_hints(qtype_key, question, answer, options):
             for _ in range(15):
                 _, ansr, _ = qt.instantiate(question, answer, options, rng)
                 if re.search(r'\d\.\d{3,}', ansr):
-                    hints.append(hint('tip', 'Some answers come out like {}. Students are marked right within 1%, but you might say how to round, or use round(…, 2) in the answer.'.format(ansr)))
+                    hints.append(hint('tip', 'Some answers come out like {}. Consider telling students how to round, and setting “How close must the answer be?” to match (e.g. 2 decimal places).'.format(ansr)))
                     break
         except F.FriendlyError:
             pass
