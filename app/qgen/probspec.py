@@ -86,7 +86,10 @@ def process_spec(prob, ansr):
             ansr = sub(escape(r'{{'+k+r'}}'), '{:.5f}'.format(v), ansr)
         else:
             ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
-    #aesthetics...
+    return tidy(prob), ansr
+
+#aesthetics, shared with the friendly markup
+def tidy(prob):
     #turn '...+/- -...' into '...-/+ ...'  
     prob = sub(r'\+\s*\-', '- ', prob)
     prob = sub(r'\-\s*\-', '+ ', prob)
@@ -94,5 +97,4 @@ def process_spec(prob, ansr):
     prob = sub(r'[\+\-]\s*0[a-zA-Z]+', '', prob)
     #turn '+ 1x' into '+ x'
     prob = sub(r'([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
-    return prob, ansr
-
+    return prob
