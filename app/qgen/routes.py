@@ -511,6 +511,9 @@ def ai_fill(kind):
     fill, failed = ai_call(kind, text, lambda key, t: ask(key, kind, t))
     if failed:
         return failed
+    if fill.get('off_topic'):
+        #the helper is for school quiz problems only; nothing else is filled in
+        return jsonify(ok=False, error='The AI helper only writes school quiz problems. Please describe a quiz question for your students.'), 422
     return jsonify(ok=True, fill=fill, note=fill.get('cannot_do'), problems=problems_with(fill, kind))
 
 def describe_problem(form):

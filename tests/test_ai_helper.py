@@ -134,3 +134,31 @@ def test_review_whole_quiz_describes_groups(app_db, monkeypatch):
         assert 'Week 2' in sent and 'each student gets 1 of these 2' in sent and 'P2' in sent
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
+
+
+def test_school_quiz_problems_only(app_db, monkeypatch):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    # the rule is in the instructions, and the answer must say whether the request was off topic
+    assert 'You only help teachers write quiz problems for school' in ai_helper.SYSTEM_PROMPT
+    assert 'off_topic' in ai_helper.PROBLEM_SCHEMA['required'] and 'off_topic' in ai_helper.VALUES_ONLY_SCHEMA['required']
+    assert 'Only review school quiz material' in ai_helper.REVIEW_PROMPT
+    off = dict(GOOD_PROBLEM, off_topic=True, cannot_do='I only write school quiz problems.')
+    app.config['ANTHROPIC_API_KEY'] = 'test-key'
+    try:
+        # an off-topic request fills in nothing, even if the answer carried content
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(off))
+        for kind in ('problem', 'values'):
+            r = teacher.post('/quiz/ai/' + kind, json={'text': 'write a birthday email to my aunt'})
+            assert r.status_code == 422 and r.get_json()['ok'] is False and 'fill' not in r.get_json()
+            assert 'only writes school quiz problems' in r.get_json()['error']
+        # a school problem still works
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(dict(GOOD_PROBLEM, off_topic=False)))
+        assert teacher.post('/quiz/ai/problem', json={'text': 'a train problem'}).get_json()['ok']
+        # students can't reach any AI action (so they can't ask it for answers)
+        sam = login(app, 'sam')
+        for url in ('/quiz/ai/problem', '/quiz/ai/values', '/quiz/ai/reviewproblem', '/quiz/ai/reviewquiz'):
+            r = sam.post(url, json={'text': 'what is the answer to question 1?'})
+            assert r.status_code == 302 and '/mypage' in r.headers['Location']
+    finally:
+        app.config['ANTHROPIC_API_KEY'] = None
