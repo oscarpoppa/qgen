@@ -71,22 +71,30 @@ def test_teacher_removes_a_picture_and_initials_show(app_db):
     assert not os.path.exists(path)
 
 
-def test_tokens_on_the_profile_page(app_db):
+def test_tokens_on_the_profile_page_are_for_teachers(app_db):
     app, db = app_db
     from app.api.models import ApiToken
+    from app.user.models import User
+    # students see no app/API section and can't make tokens from the page
     sam = login(app, 'sam')
-    page = sam.post('/profile/tokens', data={'name': 'My phone'}).data.decode()
+    page = sam.get('/profile').data.decode()
+    assert 'Apps' not in page and 'Create token' not in page and '/api/' not in page
+    sam.post('/profile/tokens', data={'name': 'x'})
+    assert ApiToken.query.count() == 0
+    # teachers do
+    teach = login(app, 'teach')
+    page = teach.post('/profile/tokens', data={'name': 'My phone'}).data.decode()
     token = page.split('id="new-token">')[1].split('<')[0]
     assert token.startswith('qg_')
-    assert token not in sam.get('/profile').data.decode()  # shown once only
+    assert token not in teach.get('/profile').data.decode()  # shown once only
     api = Api(app)
     api.token = token
-    assert api.get('/me').get_json()['username'] == 'sam'
+    assert api.get('/me').get_json()['username'] == 'teach'
     row = ApiToken.query.one()
-    kim = login(app, 'kim')
-    kim.post('/profile/tokens/{}/revoke'.format(row.id))
-    assert api.get('/me').status_code == 200  # not kim's to revoke
-    sam.post('/profile/tokens/{}/revoke'.format(row.id))
+    t2 = User(username='t2', is_admin=True); t2.set_password('pw-for-tests'); db.session.add(t2); db.session.commit()
+    login(app, 't2').post('/profile/tokens/{}/revoke'.format(row.id))
+    assert api.get('/me').status_code == 200  # not t2's to revoke
+    teach.post('/profile/tokens/{}/revoke'.format(row.id))
     assert api.get('/me').status_code == 401
 
 

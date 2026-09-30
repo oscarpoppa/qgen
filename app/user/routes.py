@@ -230,7 +230,7 @@ def settings():
 @pw_check
 def profile():
     from app.api.models import ApiToken
-    tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all()
+    tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all() if current_user.is_admin else []
     return render_template('profile.html', tokens=tokens, title='My profile')
 
 # route to upload one's own picture (drag and drop on the profile page)
@@ -270,10 +270,11 @@ def remove_avatar(uid):
     current_app.logger.info('{} removed the picture of {}'.format(current_user.username, usr.username))
     return redirect(request.referrer or url_for('user.profile'))
 
-# route to create an app token from the profile page (shown once)
+# route to create an app token from the profile page (shown once); teachers only
 @user_bp.route('/profile/tokens', methods=['POST'])
 @login_required
 @pw_check
+@admin_only
 def create_token():
     from app.api.models import ApiToken
     if not form_csrf_ok():
@@ -286,10 +287,11 @@ def create_token():
     #the token is only ever shown on this one page
     return render_template('profile.html', tokens=tokens, new_token=token, title='My profile')
 
-# route to revoke one of your app tokens
+# route to revoke one of your app tokens; teachers only
 @user_bp.route('/profile/tokens/<int:token_id>/revoke', methods=['POST'])
 @login_required
 @pw_check
+@admin_only
 def revoke_token(token_id):
     from app.api.models import ApiToken
     if not form_csrf_ok():

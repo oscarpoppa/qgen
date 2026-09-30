@@ -25,6 +25,7 @@
   <p class="muted small" style="margin-top:10px">Your picture shows next to your name, including in messages. Teachers can remove pictures.</p>
 </div>
 
+{% if current_user.is_admin %}
 <div class="card" style="max-width:640px">
   <div class="card-head"><h2>Apps</h2></div>
   <p class="muted small">Apps sign in with a personal access token. Each lasts 90 days; revoke one to sign that app out.
@@ -64,6 +65,7 @@
   </div>
   {% else %}<p class="muted small">No tokens yet.</p>{% endif %}
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
