@@ -124,7 +124,7 @@ def test_retake_scoring_rules(app_db):
     second = CQuiz.query.filter(CQuiz.id != first.id).one()
     sam.post('/quiz/take/{}'.format(second.id), data={})  # 0%
     page = sam.get('/mypage').data.decode()
-    assert 'Your score: 25%' in page and '★ 50%' in page and 'Attempt 2' in page
+    assert 'Your score: 25%' in page and '★ 50%' in page and 'Attempt 2' not in page
     # the teacher counts only sam's best attempt
     r = teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': 'best'})
     assert r.status_code == 302
@@ -151,3 +151,15 @@ def test_date_fields_get_the_calendar_control(app_db):
     # the calendar script is on every page and enhances every date field
     assert 'js/calendar.js' in page
     assert page.count('type="datetime-local"') == 2
+
+
+def test_attempts_are_named_by_date():
+    from app.qgen.models import CQuiz
+    cq = CQuiz(create_date=datetime(2026, 9, 3, 8, 0))
+    assert cq.when_label == 'assigned Sep 3'
+    cq.startdate = datetime(2026, 9, 4, 13, 5)
+    assert cq.when_label == 'started Sep 4'
+    cq.compdate, cq.needs_review = datetime(2026, 9, 4, 13, 45), True
+    assert cq.when_label == 'Sep 4, 1:45 PM'
+    cq.needs_review, cq.completed, cq.compdate = False, True, datetime(2026, 9, 4, 0, 7)
+    assert cq.when_label == 'Sep 4, 12:07 AM'

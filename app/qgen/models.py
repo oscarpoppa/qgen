@@ -196,6 +196,18 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
         return bool(self.opens_at and (now or datetime.now()) < self.opens_at)
 
     @property
+    def when_label(self):
+        """How an attempt is named in lists: its hand-in time, or when it was started or assigned."""
+        def day(d):
+            return '{:%b} {}'.format(d, d.day)
+        if self.compdate and (self.completed or self.needs_review):
+            d = self.compdate
+            return '{}, {}:{:%M} {:%p}'.format(day(d), d.hour % 12 or 12, d, d)
+        if self.startdate:
+            return 'started {}'.format(day(self.startdate))
+        return 'assigned {}'.format(day(self.create_date)) if self.create_date else 'not started'
+
+    @property
     def status(self):
         if self.completed:
             return 'completed'
