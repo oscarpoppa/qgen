@@ -634,3 +634,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card[open] .quiz-sum { display: none; }
 .quiz-card:not([open]) { padding-top: 14px; padding-bottom: 14px; }
 @media (prefers-reduced-motion: reduce) { .quiz-card .fold { transition: none; } }
+/* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
+.quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
+.quiz-card .quiz-flag { flex: 0 0 auto; }
+.quiz-card[open] .quiz-flag { display: none; }

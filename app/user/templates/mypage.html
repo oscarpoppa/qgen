@@ -39,9 +39,12 @@
   {% for g in groups %}
     {% set latest = g.latest %}
     {# each quiz folds down to its title and score; the page remembers which are folded #}
-    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" open>
+    {# what's in the box: attempts and their state; a folded box flags a change #}
+    {% set sig = g.attempts|map(attribute='id')|join(',') ~ '|' ~ g.attempts|map(attribute='status')|join(',') ~ '|' ~ g.attempts|map(attribute='score')|join(',') %}
+    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-sig="{{ sig }}" open>
       <summary class="card-head">
         <span class="fold" aria-hidden="true"></span><h2>{{ g.vquiz.title }}</h2>
+        <span class="badge badge-warn quiz-flag" hidden></span>
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% else %}{{ status(latest, g.best == latest) }}{% endif %}</span>
       </summary>
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
@@ -78,18 +81,51 @@
 
 {% block scripts %}
 <script>
-/* folded quizzes: remembered in this browser (a convenience; nothing is lost without it) */
+/* folded quizzes, remembered in this browser (a convenience; nothing is lost without
+ * it). A folded box remembers what it held; if that changes while folded (a new
+ * attempt, a grade...), the box is flagged until it's opened. */
 (function () {
   var KEY = 'qgen-folded-quizzes', cards = document.querySelectorAll('details.quiz-card');
   if (!cards.length) return;
-  var folded = [];
-  try { folded = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) {}
-  cards.forEach(function (d) { if (folded.indexOf(d.dataset.quiz) !== -1) d.open = false; });
-  function remember() {
-    var ids = [];
-    cards.forEach(function (d) { if (!d.open) ids.push(d.dataset.quiz); });
-    try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {}
+  var folded = {};
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    //older format: a list of folded quiz ids, with nothing remembered about their contents
+    if (Array.isArray(saved)) saved.forEach(function (id) { folded[id] = null; }); else folded = saved || {};
+  } catch (e) {}
+
+  function flag(d, text) {
+    var f = d.querySelector('.quiz-flag');
+    f.textContent = text || '';
+    f.hidden = !text;
+    d.classList.toggle('quiz-alert', !!text);
   }
+
+  cards.forEach(function (d) {
+    var id = d.dataset.quiz;
+    if (!(id in folded)) return;
+    d.open = false;
+    var before = folded[id];
+    if (before === null) { folded[id] = { sig: d.dataset.sig, attempts: d.dataset.attempts }; return; }
+    if (before.sig !== d.dataset.sig) {
+      var had = (before.attempts || '').split(','), now = d.dataset.attempts.split(',');
+      var added = now.some(function (a) { return had.indexOf(a) === -1; });
+      flag(d, added ? 'New' : 'Updated');
+    }
+  });
+
+  function remember() {
+    var keep = {};
+    cards.forEach(function (d) {
+      if (d.open) { flag(d, ''); return; }
+      var id = d.dataset.quiz;
+      //a flagged box keeps what it held when folded, so the flag stays until opened
+      keep[id] = d.classList.contains('quiz-alert') && folded[id] ? folded[id] : { sig: d.dataset.sig, attempts: d.dataset.attempts };
+    });
+    folded = keep;
+    try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
+  }
+  remember();
   cards.forEach(function (d) { d.addEventListener('toggle', remember); });
   function all(open) { cards.forEach(function (d) { d.open = open; }); remember(); }
   var c = document.getElementById('collapse-all'), x = document.getElementById('expand-all');

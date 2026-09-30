@@ -268,3 +268,25 @@ def test_question_type_is_fixed_once_students_have_it(app_db):
     assert VProblem.query.one().qtype == 'numeric'
     assert teacher.post('/quiz/editvprob/{}'.format(vp.id), data=problem_form('numeric', 'N2', 'What is 2 + 2?', '4', [])).status_code == 302
     assert '<dt>Correct answer</dt><dd>4</dd>' in login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+
+
+def test_folded_quiz_box_knows_what_it_holds(app_db):
+    # each box carries its attempts and their state, so a folded box can flag a change
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Fold', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    before = sam.get('/mypage').data.decode()
+    assert 'data-attempts="{}"'.format(cq.id) in before and 'data-sig="{}|new|None"'.format(cq.id) in before
+    assert 'class="badge badge-warn quiz-flag" hidden' in before
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        new = S.retake(cq)
+    after = sam.get('/mypage').data.decode()
+    assert 'data-attempts="{},{}"'.format(cq.id, new.id) in after or 'data-attempts="{},{}"'.format(new.id, cq.id) in after
