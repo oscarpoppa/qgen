@@ -181,6 +181,24 @@ def release_answers(vq, released):
     vq.save()
 
 
+def release_answers_to(vq, student_id, released):
+    """Show (or hide again) the correct answers to one student, on all of that student's
+    attempts at this quiz, while the quiz still hides them from everyone else. Tells the
+    student when shown. Returns the attempts changed."""
+    attempts = CQuiz.query.filter_by(vquiz_id=vq.id, assignee=student_id).all()
+    if not attempts:
+        raise ServiceError('That student doesn\'t have "{}".'.format(vq.title))
+    for cq in attempts:
+        cq.answers_released = bool(released)
+    finished = [cq for cq in attempts if cq.completed]
+    if released and finished:
+        latest = max(finished, key=lambda c: c.id)
+        notify(student_id, 'The correct answers for "{}" are now on your results page.'.format(vq.title),
+               url_for('qgen.qtake', cidx=latest.id))
+    db.session.commit()
+    return attempts
+
+
 # ---------------------------------------------------------------- assigning
 
 def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None):
@@ -258,6 +276,8 @@ def retake(cq):
         raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.username, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
+    #answers released to this student stay released on the new attempt
+    new.answers_released = cq.answers_released
     notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
     db.session.commit()
     return new

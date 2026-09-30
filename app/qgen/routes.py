@@ -219,6 +219,21 @@ def release_vquiz(vqid):
     return redirect(request.referrer or url_for('qgen.list_vquizzes'))
 
 
+#route to show (or hide again) the correct answers to one student: all of that
+#student's attempts at the quiz of the attempt given
+@qgen_bp.route('/quiz/releasecq/<cqid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def release_to_student(cqid):
+    cq = db.get_or_404(CQuiz, cqid)
+    released = not cq.answers_released
+    S.release_answers_to(cq.vquiz, cq.assignee, released)
+    flash('Correct answers for "{}" are now {} to {}.'.format(cq.vquiz.title, 'shown' if released else 'hidden', cq.taker.username), 'success')
+    return redirect(request.referrer or url_for('qgen.list_user', uid=cq.assignee))
+
+
 #route to set how one student's attempts at one quiz combine ('' = use the quiz's rule)
 @qgen_bp.route('/quiz/retakerule/<cqid>', methods=['POST'])
 @login_required
@@ -297,7 +312,7 @@ def qtake(cidx):
     is_taker = current_user == cq.taker
     state = S.attempt_state(cq)
     if state == 'completed':
-        show = cq.vquiz.answers_visible or current_user.is_admin
+        show = cq.answers_visible or current_user.is_admin
         return render_template('transcript.html', cq=cq, title=title,
                                transcript=transcript_html(cq, title, show_answers=show), answers_hidden=not show)
     if state == 'review':

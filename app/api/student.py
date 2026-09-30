@@ -59,7 +59,7 @@ def clean_answers(cq, answers):
 
 
 def show_answers_for(cq):
-    return cq.vquiz.answers_visible
+    return cq.answers_visible
 
 
 @api_bp.route('/my/quizzes', methods=['GET'])
