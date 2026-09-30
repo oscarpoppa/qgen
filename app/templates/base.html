@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
   <script>
     /* the "safe" extension stops typed math from making links or styles, so a
        student can't slip a harmful link into an answer a teacher reads */
@@ -143,12 +143,12 @@
     });
   </script>
   {% if current_user.is_authenticated and current_user.is_admin %}
-  <script src="{{ url_for('static', filename='js/dropzone.js') }}" defer></script>
+  <script src="{{ asset('js/dropzone.js') }}" defer></script>
   {% endif %}
-  <script src="{{ url_for('static', filename='js/calendar.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/tips.js') }}" defer></script>
+  <script src="{{ asset('js/calendar.js') }}" defer></script>
+  <script src="{{ asset('js/tips.js') }}" defer></script>
   {% if current_user.is_authenticated %}
-  <script src="{{ url_for('static', filename='js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" defer></script>
+  <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" defer></script>
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

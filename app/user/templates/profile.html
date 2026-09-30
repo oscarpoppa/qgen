@@ -69,7 +69,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if not current_user.is_admin %}<script src="{{ url_for('static', filename='js/dropzone.js') }}"></script>{% endif %}
+{% if not current_user.is_admin %}<script src="{{ asset('js/dropzone.js') }}"></script>{% endif %}
 <script>
 /* show the new picture as soon as it's uploaded */
 document.addEventListener('dropzone-uploaded', function (e) {

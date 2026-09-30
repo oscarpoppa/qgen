@@ -27,3 +27,19 @@ def test_group_mistakes():
     assert 'at least two' in layout.check([{'pick': 1, 'from': [5]}])[0]
     assert 'not 3' in layout.check([{'pick': 3, 'from': [5, 6]}])[0]
     assert layout.check([{'pick': 2, 'from': [5, 6]}]) == []
+
+
+def test_scripts_and_styles_are_versioned():
+    # after an update, browsers must fetch the new files instead of a saved old copy
+    import os, re
+    from app import app
+    app.config.update(TESTING=True)
+    os.makedirs(os.path.join(app.static_folder, 'css'), exist_ok=True)
+    path = os.path.join(app.static_folder, 'css', 'app.css')
+    with open(path, 'w') as f:
+        f.write('body {}')
+    os.utime(path, (1790000000, 1790000000))
+    page = app.test_client().get('/login').data.decode()
+    links = re.findall(r'(?:href|src)="(/[^"]*\.(?:css|js)[^"]*)"', page)
+    assert links and all(re.search(r'\?v=\d+$', l) for l in links), links
+    assert any(l.endswith('css/app.css?v=1790000000') for l in links)

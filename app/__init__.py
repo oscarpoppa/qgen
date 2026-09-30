@@ -62,6 +62,16 @@ def page_helpers():
             #e.g. before the database is upgraded
             db.session.rollback()
             return {'name': 'Quizzes', 'logo': None}
+    def asset(filename):
+        """A stylesheet's or script's address stamped with when the file last changed,
+        so browsers fetch the new copy after an update instead of a saved old one."""
+        import os
+        from flask import url_for
+        try:
+            version = int(os.path.getmtime(os.path.join(app.static_folder, filename)))
+        except OSError:
+            version = 0
+        return url_for('static', filename=filename, v=version)
     def unread_messages():
         from app.messages.models import unread_for_student, unread_for_teachers
         from flask_login import current_user
@@ -76,7 +86,7 @@ def page_helpers():
         return unread_notices_for_teachers() if current_user.is_admin else unread_notices_for_student(current_user.id)
     from app.user.avatars import initials, color
     return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
-                attempts_by_quiz=attempts_by_quiz, site=site, unread_messages=unread_messages, unread_notices=unread_notices,
+                attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)
 
 #quizzes whose time is up are handed in and scored even if the student never
