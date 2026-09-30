@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# answers still hidden: reload when the "answers released" notice arrives #}
+{% block body_attrs %}{% if answers_hidden %} data-refresh-on-notice{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-head">

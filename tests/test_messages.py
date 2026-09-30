@@ -425,3 +425,28 @@ def test_student_pages_refresh_when_graded(app_db):
     assert sam.get('/messages/poll').get_json()['latest_notice'] != before
     home = sam.get('/mypage').data.decode()
     assert 'Waiting for grading' not in home and '80%' in home
+
+
+def test_results_page_refreshes_when_answers_are_released(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    f = problem_form('numeric', 'N', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
+    teacher.post('/quiz/makevprob', data=f)
+    teacher.post('/quiz/makevquiz', data={'title': 'Hidden', 'vplist': str(VProblem.query.one().id), 'hide_answers': 'y'})
+    vq = VQuiz.query.one()
+    assert vq.hide_answers
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '999'})  # wrong
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'data-refresh-on-notice' in page and '<dt>Correct answer</dt>' not in page
+    teacher.post('/quiz/releasevq/{}'.format(vq.id))
+    db.session.expire_all()
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert '<dt>Correct answer</dt>' in page and 'data-refresh-on-notice' not in page
+    assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
