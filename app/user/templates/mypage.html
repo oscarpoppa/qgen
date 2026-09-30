@@ -53,12 +53,21 @@
   {% endfor %}
   </div>
 {% else %}
+  {% if current_user.is_admin %}
+  <div class="card empty"><span class="big">📚</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
+    <div class="btn-row" style="justify-content:center;margin-top:12px">
+      <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}">Problems</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}">Messages</a></div></div>
+  {% else %}
   <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
+  {% endif %}
 {% endif %}
 </div>
 {% if panel %}
 <aside class="home-side" aria-label="Messages">
-{% if panel %}{% with items=panel['items'], pinned=panel['pinned'], unread_ids=panel['unread_ids'], max_len=panel['max_len'] %}{% include "_student_messages.html" %}{% endwith %}{% endif %}
+{% if teacher_panel %}{% with rows=panel['rows'], student=panel['student'], items=panel['items'], unread_ids=panel['unread_ids'], others_unread=panel['others_unread'], max_len=panel['max_len'] %}{% include "_teacher_messages.html" %}{% endwith %}
+{% else %}{% with items=panel['items'], pinned=panel['pinned'], unread_ids=panel['unread_ids'], max_len=panel['max_len'] %}{% include "_student_messages.html" %}{% endwith %}{% endif %}
 </aside>
 {% endif %}
 </div>

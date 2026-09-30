@@ -45,9 +45,12 @@ def pw_check(func):
 @login_required
 @pw_check
 def mypage():
-    from app.messages.routes import student_panel
-    panel = student_panel(current_user) if not current_user.is_admin else None
-    return render_template('mypage.html', current_user=current_user, panel=panel, title='My quizzes')
+    from app.messages.routes import student_panel, teacher_panel
+    if current_user.is_admin:
+        panel, teacher = teacher_panel(request.args.get('student', type=int)), True
+    else:
+        panel, teacher = student_panel(current_user), False
+    return render_template('mypage.html', current_user=current_user, panel=panel, teacher_panel=teacher, title='My quizzes')
 
 # route to user logout action
 @user_bp.route('/logout')

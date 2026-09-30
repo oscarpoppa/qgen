@@ -89,3 +89,49 @@ def test_chosen_students_and_pinning_on_the_web(app_db):
     teacher.post('/messages/send', data={'to': 'chosen', 'students': [str(sam_id), '1'], 'body': 'y'})
     assert Message.query.filter_by(body='y').count() == 0
     assert kim_id != sam_id
+
+
+def test_teacher_home_has_a_messages_box(app_db):
+    app, db = app_db
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    teacher = login(app, 'teach')
+
+    # no messages yet: the box still opens a conversation, so the teacher can start one
+    home = teacher.get('/mypage').data.decode()
+    assert 'id="messages"' in home and 'id="msg-student"' in home and 'name="home" value="1"' in home
+
+    # a student writes: the teacher's home opens that conversation, shows it as new, and marks it read
+    login(app, 'kim').post('/messages/reply', data={'body': 'Is the quiz timed?'})
+    assert teacher.get('/messages/poll').get_json()['unread'] == 1
+    home = teacher.get('/mypage').data.decode()
+    assert 'Is the quiz timed?' in home and 'msg-new' in home
+    assert '<option value="{}" selected>'.format(kim_id) in home
+    assert teacher.get('/messages/poll').get_json()['unread'] == 0
+
+    # replying from home stays on home, with the same conversation open
+    r = teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'No, take your time.', 'home': '1'})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/mypage?student={}#messages'.format(kim_id))
+    assert 'No, take your time.' in login(app, 'kim').get('/mypage').data.decode()
+    # without the flag, the full conversation page as before
+    r = teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'Good luck!'})
+    assert r.headers['Location'].endswith('/messages/{}'.format(kim_id))
+
+    # choosing another student, on the page or through the box's reload
+    assert '<option value="{}" selected>'.format(sam_id) in teacher.get('/mypage?student={}'.format(sam_id)).data.decode()
+    box = teacher.get('/messages/panel?student={}'.format(kim_id)).data.decode()
+    assert 'Is the quiz timed?' in box and 'id="msg-student"' in box
+    # a teacher's id (or nonsense) isn't a conversation: falls back to a student
+    teach_id = User.query.filter_by(username='teach').one().id
+    assert teacher.get('/mypage?student={}'.format(teach_id)).status_code == 200
+    assert teacher.get('/mypage?student=abc').status_code == 200
+
+    # the poll tells the teacher's page when any student writes, so the box can reload
+    before = teacher.get('/messages/poll').get_json()['latest']
+    login(app, 'sam').post('/messages/reply', data={'body': 'Me too?'})
+    assert teacher.get('/messages/poll').get_json()['latest'] > before
+
+    # students still get their own box, never the teacher's
+    sam_home = login(app, 'sam').get('/mypage').data.decode()
+    assert 'id="messages"' in sam_home and 'id="msg-student"' not in sam_home and 'Write to your teacher' in sam_home

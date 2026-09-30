@@ -51,6 +51,9 @@ def send():
     pinned = ' and pinned to the top of their home page{}'.format('' if len(students) == 1 else 's') if request.form.get('pin') else ''
     if len(students) == 1 and to != 'all':
         flash('Message sent to {}{}.'.format(students[0].username, pinned), 'success')
+        if request.form.get('home'):
+            #sent from the messages box on the teacher's home page: stay there
+            return redirect(url_for('user.mypage', student=students[0].id) + '#messages')
         return redirect(url_for('messages.conversation', student_id=students[0].id))
     flash('Announcement sent to {} student{}{}.'.format(len(students), '' if len(students) == 1 else 's', pinned), 'success')
     current_app.logger.info('{} sent an announcement to {} students'.format(current_user.username, len(students)))
@@ -85,13 +88,13 @@ def reply():
         flash(str(exc), 'error')
     return redirect(url_for('user.mypage') + '#messages')
 
-#the messages box on the student home page, reloaded by the page when something new arrives
+#the messages box on the home page, reloaded by the page when something new arrives
 @messages_bp.route('/messages/panel', methods=['GET'])
 @login_required
 @pw_check
 def panel():
     if current_user.is_admin:
-        abort(404)
+        return render_template('_teacher_messages.html', **teacher_panel(request.args.get('student', type=int)))
     return render_template('_student_messages.html', **student_panel(current_user))
 
 
@@ -106,6 +109,25 @@ def student_panel(user, mark_seen=True):
     return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.MAX_LEN}
 
 
+def teacher_panel(student_id=None, mark_seen=True):
+    """The messages box on a teacher's home page: one conversation at a time, with a
+    menu of every student (unread first). Without a choice it opens the conversation
+    that most needs attention. Showing a conversation marks it seen."""
+    rows = M.inbox()
+    chosen = next((r for r in rows if r['student'].id == student_id), None) if student_id else None
+    if chosen is None:
+        chosen = next((r for r in rows if r['unread']), None) or next((r for r in rows if r['last']), None) \
+            or (rows[0] if rows else None)
+    student = chosen['student'] if chosen else None
+    items = M.thread(student.id, limit=30) if student else []
+    unread_ids = {m.id for m in items if not m.from_teacher and not m.seen_by_teacher}
+    if student and mark_seen:
+        M.mark_seen_by_teachers(student.id)
+        chosen['unread'] = 0
+    return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids,
+            'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN}
+
+
 # ---------------------------------------------------------------- both
 
 #pages ask every 30 seconds whether anything new has arrived
@@ -113,6 +135,8 @@ def student_panel(user, mark_seen=True):
 @login_required
 def poll():
     if current_user.is_admin:
-        return jsonify(unread=unread_for_teachers())
+        #the newest message from any student: the teacher's home page reloads its box when it changes
+        latest = Message.query.filter_by(from_teacher=False).order_by(Message.id.desc()).first()
+        return jsonify(unread=unread_for_teachers(), latest=latest.id if latest else 0)
     latest = Message.query.filter_by(student_id=current_user.id).order_by(Message.id.desc()).first()
     return jsonify(unread=unread_for_student(current_user.id), latest=latest.id if latest else 0)

@@ -485,3 +485,6 @@ th .tip-wrap { margin-left: 4px; }
 .values-guide { display: none; margin: 0 0 8px; }
 .values-guide > span { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px; }
 @media (max-width: 640px) { .values-guide { display: block; } }
+
+/* teacher's home page: which student's conversation the messages box shows */
+.convo-pick { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
