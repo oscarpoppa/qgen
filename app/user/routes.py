@@ -7,6 +7,7 @@ from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
 from secrets import token_urlsafe
+from app.jsoncsrf import json_csrf_ok, form_csrf_ok
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -145,6 +146,8 @@ def deluser(uid):
     if current_user == usr:
         flash("I can't let you do that, {}".format(current_user.username))
         return redirect(url_for('user.userdet'))
+    from . import avatars
+    avatars.remove(usr, commit=False)
     usrquery.delete()
     db.session.commit()
     flash('User {} has been deleted'.format(usrname))
@@ -209,3 +212,86 @@ def settings():
         current_app.logger.info('{} changed the site settings'.format(current_user.username))
         return redirect(url_for('user.settings'))
     return render_template('settings.html', form=form, title='Settings')
+
+
+# ---------------------------------------------------------------- profile
+
+# route to a user's own profile: picture and app tokens
+@user_bp.route('/profile', methods=['GET'])
+@login_required
+@pw_check
+def profile():
+    from app.api.models import ApiToken
+    tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all()
+    return render_template('profile.html', tokens=tokens, title='My profile')
+
+# route to upload one's own picture (drag and drop on the profile page)
+@user_bp.route('/profile/avatar', methods=['POST'])
+@login_required
+@pw_check
+def upload_avatar():
+    from flask import jsonify
+    from . import avatars
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify(ok=False, error='No picture received.'), 400
+    try:
+        name = avatars.save(current_user, f.stream)
+    except avatars.AvatarError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    current_app.logger.info('{} changed their picture'.format(current_user.username))
+    return jsonify(ok=True, name=name, url=url_for('static', filename=name))
+
+# route to remove a picture: your own, or (teachers) anyone's
+@user_bp.route('/avatar/remove/<int:uid>', methods=['POST'])
+@login_required
+@pw_check
+def remove_avatar(uid):
+    from . import avatars
+    if not form_csrf_ok():
+        flash('Your session expired. Please try again.', 'error')
+        return redirect(request.referrer or url_for('user.mypage'))
+    if uid != current_user.id and not current_user.is_admin:
+        flash('You can only remove your own picture.', 'error')
+        return redirect(url_for('user.mypage'))
+    usr = User.query.filter_by(id=uid).first_or_404()
+    avatars.remove(usr)
+    flash('Picture removed{}.'.format('' if usr == current_user else ' for {}'.format(usr.username)), 'success')
+    current_app.logger.info('{} removed the picture of {}'.format(current_user.username, usr.username))
+    return redirect(request.referrer or url_for('user.profile'))
+
+# route to create an app token from the profile page (shown once)
+@user_bp.route('/profile/tokens', methods=['POST'])
+@login_required
+@pw_check
+def create_token():
+    from app.api.models import ApiToken
+    if not form_csrf_ok():
+        flash('Your session expired. Please try again.', 'error')
+        return redirect(url_for('user.profile'))
+    name = (request.form.get('name') or '').strip() or 'App'
+    row, token = ApiToken.issue(current_user, name)
+    current_app.logger.info('{} created API token {} ({})'.format(current_user.username, row.prefix, name))
+    tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all()
+    #the token is only ever shown on this one page
+    return render_template('profile.html', tokens=tokens, new_token=token, title='My profile')
+
+# route to revoke one of your app tokens
+@user_bp.route('/profile/tokens/<int:token_id>/revoke', methods=['POST'])
+@login_required
+@pw_check
+def revoke_token(token_id):
+    from app.api.models import ApiToken
+    if not form_csrf_ok():
+        flash('Your session expired. Please try again.', 'error')
+        return redirect(url_for('user.profile'))
+    row = db.session.get(ApiToken, token_id)
+    if not row or row.user_id != current_user.id:
+        flash('That token isn\'t yours.', 'error')
+    else:
+        row.revoked = True
+        db.session.commit()
+        flash('Token "{}" revoked: apps using it are signed out.'.format(row.name), 'success')
+    return redirect(url_for('user.profile'))

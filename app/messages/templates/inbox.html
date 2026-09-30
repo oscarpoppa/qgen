@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
 
 {% block content %}
 <div class="page-head"><h1>Messages</h1></div>
@@ -59,7 +60,7 @@
       <tbody>
       {% for r in rows %}
         <tr>
-          <td data-label="Student"><strong>{{ r.student.username }}</strong>
+          <td data-label="Student"><span class="person">{{ avatar(r.student, 28) }}<strong>{{ r.student.username }}</strong></span>
             {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
           <td data-label="Latest">
             {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.username ~ ': ' }}{{ r.last.body }}</div>

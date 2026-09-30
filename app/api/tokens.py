@@ -63,3 +63,27 @@ def sign_out():
 @token_required()
 def me():
     return jsonify(user_json(g.api_user, full=True))
+
+
+@api_bp.route('/me/avatar', methods=['POST'])
+@token_required()
+def set_avatar():
+    """Upload your picture: multipart/form-data with a "file" field."""
+    from flask import request
+    from app.user import avatars
+    f = request.files.get('file')
+    if not f or not f.filename:
+        raise ApiError(400, 'bad_request', 'Send the picture as multipart/form-data in a field named "file".')
+    try:
+        avatars.save(g.api_user, f.stream)
+    except avatars.AvatarError as exc:
+        raise ApiError(422, 'invalid', str(exc))
+    return jsonify(user_json(g.api_user, full=True))
+
+
+@api_bp.route('/me/avatar', methods=['DELETE'])
+@token_required()
+def delete_avatar():
+    from app.user import avatars
+    avatars.remove(g.api_user)
+    return '', 204

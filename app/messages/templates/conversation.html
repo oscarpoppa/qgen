@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
 
 {% block content %}
 <div class="page-head">
-  <h1>{{ student.username }}</h1>
+  <h1 class="person">{{ avatar(student, 40) }}{{ student.username }}</h1>
   <div class="actions">
     <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}">Quizzes</a>
     <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}">All messages</a>

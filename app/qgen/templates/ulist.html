@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
 
 {% block content %}
 <div class="page-head">
@@ -10,7 +11,7 @@
 {% for item in ulst %}
   <section class="card student" data-name="{{ item.username|lower }}">
     <div class="card-head">
-      <h2>{{ item.username }}</h2>
+      <h2 class="person">{{ avatar(item, 36) }}{{ item.username }}</h2>
       <span class="muted small">{{ item.cquizzes|length }} quiz{{ '' if item.cquizzes|length == 1 else 'zes' }}</span>
     </div>
     {% if item.cquizzes %}

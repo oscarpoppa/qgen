@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
 {% from "_macros.html" import field %}
 
 {% block content %}
 <div class="page-head">
   <h1>{{ cq.vquiz.title }}</h1>
-  <span class="badge">{{ cq.taker.username }}</span>
+  <span class="person">{{ avatar(cq.taker, 32) }}{{ cq.taker.username }}</span>
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.review_list') }}">Back to the list</a></div>
 </div>
 <p class="muted">Select words in an answer, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> to highlight them. Click a highlight to remove it.</p>

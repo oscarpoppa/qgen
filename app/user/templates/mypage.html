@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
 
 {% macro action(cq) %}
   {% if cq.status == 'completed' %}
@@ -22,7 +23,8 @@
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>My quizzes</h1></div>
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
+  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 {% if panel %}{% with items=panel['items'], pinned=panel['pinned'], unread_ids=panel['unread_ids'], max_len=panel['max_len'] %}{% include "_student_messages.html" %}{% endwith %}{% endif %}
 {% set groups = attempts_by_quiz(current_user.cquizzes) %}
 {% if groups %}

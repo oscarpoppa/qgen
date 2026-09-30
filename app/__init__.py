@@ -7,6 +7,8 @@ from flask_login import LoginManager
 #build app
 app = Flask(__name__, static_folder=Config.STATIC_DIR)
 app.config.from_object(Config)
+#uploads (pictures, files) are refused above this size
+app.config.setdefault('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)
 app.logger.setLevel(3)
 db = SQLAlchemy(app)
 
@@ -65,8 +67,10 @@ def page_helpers():
         if not current_user.is_authenticated:
             return 0
         return unread_for_teachers() if current_user.is_admin else unread_for_student(current_user.id)
+    from app.user.avatars import initials, color
     return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
-                attempts_by_quiz=attempts_by_quiz, site=site, unread_messages=unread_messages)
+                attempts_by_quiz=attempts_by_quiz, site=site, unread_messages=unread_messages,
+                avatar_initials=initials, avatar_color=color)
 
 #quizzes whose time is up are handed in and scored even if the student never
 #returns: checked at most once a minute per server process

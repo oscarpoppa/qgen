@@ -61,7 +61,11 @@
       files.reduce(function (p, f) {
         return p.then(function () {
           return upload(zone, f).then(function (res) {
-            if (res.ok) { done++; if (!multiple) show(res.name, res.url); }
+            if (res.ok) {
+              done++;
+              if (!multiple) show(res.name, res.url);
+              zone.dispatchEvent(new CustomEvent('dropzone-uploaded', { bubbles: true, detail: res }));
+            }
             else failed.push(f.name + ': ' + (res.error || 'upload failed'));
           }, function () { failed.push(f.name + ': network error'); });
         });

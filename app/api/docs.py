@@ -13,6 +13,8 @@ ENDPOINTS = [
     ('DELETE', '/tokens/{token_id}', 'signed in', 'Revoke one of your tokens.', None),
     ('DELETE', '/tokens/current', 'signed in', 'Sign out: revoke the token used for this request.', None),
     ('GET', '/me', 'signed in', 'Who you are.', None),
+    ('POST', '/me/avatar', 'signed in', 'Upload your picture (multipart/form-data, field "file"); cropped to a square.', None),
+    ('DELETE', '/me/avatar', 'signed in', 'Remove your picture.', None),
 
     ('GET', '/my/quizzes', 'signed in', 'Your quizzes, grouped with retakes, and the score that counts.', None),
     ('GET', '/my/attempts/{attempt_id}', 'signed in', 'Open a quiz to take it (starts any time limit), or see its results.', None),

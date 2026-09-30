@@ -1,4 +1,4 @@
-<!doctype html>
+{% from "_macros.html" import avatar with context %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -55,8 +55,9 @@
           {% endif %}
           <div class="nav-right">
             <details class="menu">
-              <summary>{{ current_user.username }}</summary>
+              <summary class="person">{{ avatar(current_user, 24) }}{{ current_user.username }}</summary>
               <div class="menu-list">
+                <a href="{{ url_for('user.profile') }}">My profile</a>
                 <a href="{{ url_for('user.chpass') }}">Change password</a>
                 <a href="{{ url_for('user.logout') }}">Log out</a>
               </div>

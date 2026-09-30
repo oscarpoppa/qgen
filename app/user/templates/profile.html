@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
+
+{% block content %}
+<div class="page-head"><h1>My profile</h1></div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-head"><h2>Picture</h2></div>
+  <div class="btn-row" style="align-items:center;gap:16px">
+    <span id="my-avatar">{{ avatar(current_user, 96) }}</span>
+    <div style="flex:1;min-width:220px">
+      <div class="dropzone" data-upload="{{ url_for('user.upload_avatar') }}" tabindex="0" role="button"
+           aria-label="Upload your picture: drop a file here or press Enter to choose one">
+        <div class="dz-text"><strong>Drop a picture here</strong><span class="dz-hint">or click to choose one. It's cropped to a square.</span></div>
+        <input type="file" accept="image/*" hidden>
+      </div>
+      {% if current_user.avatar %}
+      <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-danger btn-sm">Remove my picture</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <p class="muted small" style="margin-top:10px">Your picture shows next to your name, including in messages. Teachers can remove pictures.</p>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-head"><h2>Apps</h2></div>
+  <p class="muted small">Apps sign in with a personal access token. Each lasts 90 days; revoke one to sign that app out.
+    Apps can also get a token themselves by signing in with your username and password.
+    <a href="{{ url_for('apiv2.docs_page') }}">How apps use it</a></p>
+  {% if new_token %}
+    <div class="alert alert-success">
+      <strong>Your new token</strong> (copy it now; it won't be shown again):
+      <pre style="white-space:pre-wrap;word-break:break-all;margin:8px 0 0"><code id="new-token">{{ new_token }}</code></pre>
+    </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('user.create_token') }}" class="btn-row" style="margin-bottom:12px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="name" maxlength="64" placeholder="Name, e.g. My phone" aria-label="Token name" style="flex:1;min-width:180px">
+    <button class="btn btn-secondary">Create token</button>
+  </form>
+  {% if tokens %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Name</th><th>Starts with</th><th>Last used</th><th>Expires</th><th></th></tr></thead>
+      <tbody>
+      {% for t in tokens %}
+        <tr>
+          <td data-label="Name">{{ t.name }}</td>
+          <td data-label="Starts with"><code>{{ t.prefix }}…</code></td>
+          <td data-label="Last used" class="small">{{ t.last_used.strftime('%b %d, %I:%M %p') if t.last_used else 'never' }}</td>
+          <td data-label="Expires" class="small">{% if t.revoked %}<span class="badge">revoked</span>{% elif not t.active %}<span class="badge">expired</span>{% else %}{{ t.expires_at.strftime('%b %d %Y') }}{% endif %}</td>
+          <td class="actions">{% if t.active %}
+            <form method="post" action="{{ url_for('user.revoke_token', token_id=t.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-danger btn-sm">Revoke</button>
+            </form>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="muted small">No tokens yet.</p>{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if not current_user.is_admin %}<script src="{{ url_for('static', filename='js/dropzone.js') }}"></script>{% endif %}
+<script>
+/* show the new picture as soon as it's uploaded */
+document.addEventListener('dropzone-uploaded', function (e) {
+  var box = document.getElementById('my-avatar');
+  box.innerHTML = '';
+  var img = document.createElement('img');
+  img.className = 'avatar'; img.alt = ''; img.src = e.detail.url;
+  img.style.width = img.style.height = '96px';
+  box.appendChild(img);
+});
+</script>
+{% endblock %}

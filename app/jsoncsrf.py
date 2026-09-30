@@ -13,3 +13,14 @@ def json_csrf_ok():
         return True
     except ValidationError:
         return False
+
+
+def form_csrf_ok():
+    """The same check for plain HTML forms that post csrf_token without a FlaskForm."""
+    if not current_app.config.get('WTF_CSRF_ENABLED', True):
+        return True
+    try:
+        validate_csrf(request.form.get('csrf_token'))
+        return True
+    except ValidationError:
+        return False
