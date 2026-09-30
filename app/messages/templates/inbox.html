@@ -4,7 +4,8 @@
 {% block content %}
 <div class="page-head"><h1>Messages</h1></div>
 
-<form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate>
+<form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate data-students="{{ rows|length }}"
+      data-confirm="Are you sure you want to send this to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}?" data-confirm-ok="Send to everyone">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <h2>New message</h2>
   <div class="field">
@@ -32,7 +33,7 @@
     <label for="body">Message</label>
     <textarea id="body" name="body" rows="3" maxlength="2000" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
   </div>
-  <div class="check field"><input type="checkbox" name="pin" value="1" id="pin"><label for="pin">Pin it to the top of the home page (until you unpin it)</label></div>
+  <div class="check field"><input type="checkbox" name="pin" value="1" id="pin"><label for="pin">Pin it to the top of their messages (until you unpin it)</label></div>
   <button class="btn">Send</button>
 </form>
 
@@ -82,7 +83,12 @@
 <script>
 (function () {
   var to = document.getElementById('to'), chosen = document.getElementById('chosen');
-  function show() { chosen.hidden = to.value !== 'chosen'; }
+  var form = document.getElementById('compose'), everyoneQuestion = form.dataset.confirm;
+  function show() {
+    chosen.hidden = to.value !== 'chosen';
+    //"are you sure?" only when it goes to everyone (asked by confirm.js)
+    if (to.value === 'all') { form.dataset.confirm = everyoneQuestion; } else { delete form.dataset.confirm; }
+  }
   to.addEventListener('change', show); show();
   var items = chosen.querySelectorAll('li');
   chosen.querySelector('.filter-list').addEventListener('input', function () {

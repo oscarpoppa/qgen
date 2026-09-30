@@ -61,7 +61,7 @@
 {# A button for an action that changes something (delete, retake, ...): a small POST form
    carrying the session token, optionally asking "are you sure?" first. #}
 {% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none) %}
-  <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} onsubmit="return confirm({{ confirm|tojson|forceescape }});"{% endif %}>
+  <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}">{{ label }}</button>
   </form>
 {% endmacro %}

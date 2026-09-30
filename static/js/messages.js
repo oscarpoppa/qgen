@@ -14,6 +14,8 @@
   var root = document.documentElement;
   var PANES = ['notices', 'messages'];
   var latest = { messages: null, notices: null };
+  //what each panel shows (pins, deletions...): an open panel reloads when it changes
+  var shown = { messages: null, notices: null };
   var loaded = { messages: false, notices: false };
   var narrow = window.matchMedia('(max-width: 1000px)');
 
@@ -131,20 +133,22 @@
       if (el) el.focus();
     });
   }
+  function ask(q, ok) { return window.qgenAsk ? window.qgenAsk(q, ok) : Promise.resolve(window.confirm(q)); }
   document.addEventListener('change', function (e) {
     if (e.target.id !== 'msg-student') return;
-    if (busyTyping() && !confirm('Discard the message you were writing?')) {
-      e.target.value = e.target.dataset.current;
-      return;
-    }
-    showStudent(e.target.value);
+    var sel = e.target;
+    if (!busyTyping()) { showStudent(sel.value); return; }
+    ask('Discard the message you were writing?', 'Discard').then(function (yes) {
+      if (yes) showStudent(sel.value); else sel.value = sel.dataset.current;
+    });
   });
   //"Reply to …" on a message in the all-messages view, and "← All messages"
   document.addEventListener('click', function (e) {
     var b = e.target.closest('#dock-messages .show-student');
     if (!b) return;
-    if (busyTyping() && !confirm('Discard the message you were writing?')) return;
-    showStudent(b.dataset.student, b.dataset.student === 'all' ? null : 'reply');
+    var go = function () { showStudent(b.dataset.student, b.dataset.student === 'all' ? null : 'reply'); };
+    if (!busyTyping()) { go(); return; }
+    ask('Discard the message you were writing?', 'Discard').then(function (yes) { if (yes) go(); });
   });
 
   //send from the panel without leaving the page
@@ -173,11 +177,10 @@
       .then(function () { button.disabled = false; });
   });
 
-  //deleting, clearing notices and pinning: ask first where the form says so; inside a
-  //panel, do it without leaving the page and reload that panel
+  //deleting, clearing notices and pinning inside a panel: done without leaving the page,
+  //then that panel reloads (confirm.js has already asked "are you sure?" where needed)
   document.addEventListener('submit', function (e) {
     var form = e.target;
-    if (form.dataset.confirm && !confirm(form.dataset.confirm)) { e.preventDefault(); return; }
     var inPane = form.matches('.dock-form') && form.closest('.dock-pane');
     if (!inPane) return;
     e.preventDefault();
@@ -253,16 +256,19 @@
       var waiting = (isOpen('messages') ? 0 : res.unread) + (isOpen('notices') ? 0 : res.notices);
       document.title = (waiting ? '(' + waiting + ') ' : '') + baseTitle;
 
-      [['messages', res.latest, res.message_preview, res.unread], ['notices', res.latest_notice, res.notice_preview, res.notices]].forEach(function (x) {
-        var p = x[0], id = x[1], info = x[2], count = x[3];
+      [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
+       ['notices', res.latest_notice, res.notice_preview, res.notices, res.notices_state]].forEach(function (x) {
+        var p = x[0], id = x[1], info = x[2], count = x[3], state = x[4];
         var first = latest[p] === null;
-        var changed = !first && id !== latest[p];
+        var changed = !first && id !== latest[p];  // something new arrived
+        var restyled = shown[p] !== null && state !== undefined && state !== shown[p];  // pinned, deleted...
         latest[p] = id;
+        if (state !== undefined) shown[p] = state;
         //pages whose content a notice changes (a student's quiz list, "waiting for grading")
         //reload to show it, but not while a message is being written
         if (p === 'notices' && changed && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
         if (isOpen(p)) {
-          if (changed && !(p === 'messages' && busyTyping())) load(p);
+          if ((changed || restyled) && !(p === 'messages' && busyTyping())) load(p);
         } else if (changed && count) {
           toast(p, info);
           pulse(p);

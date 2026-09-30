@@ -43,3 +43,10 @@ def test_scripts_and_styles_are_versioned():
     links = re.findall(r'(?:href|src)="(/[^"]*\.(?:css|js)[^"]*)"', page)
     assert links and all(re.search(r'\?v=\d+$', l) for l in links), links
     assert any(l.endswith('css/app.css?v=1790000000') for l in links)
+
+
+def test_my_quizzes_fold():
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    page = open(os.path.join(root, 'app', 'user', 'templates', 'mypage.html')).read()
+    assert '<details class="card quiz-card"' in page and 'id="collapse-all"' in page and 'qgen-folded-quizzes' in page

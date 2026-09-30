@@ -524,7 +524,7 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 #dock-messages .reply-box { flex-direction: column; align-items: stretch; }
 #dock-messages .reply-box textarea { min-height: 64px; }
 #dock-messages .msg { max-width: 100%; }
-#dock-messages .pinned-list { max-height: 30%; overflow-y: auto; }
+#dock-messages .pinned-list { flex: 0 0 auto; max-height: 40%; min-height: 3.6em; overflow-y: auto; margin-bottom: 8px; }
 .send-error { color: var(--bad); }
 
 .notice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -611,3 +611,26 @@ details.msg-x-wrap .msg-del-choices {
   padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
   box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
 }
+
+/* "are you sure?" asked inside the page (confirm.js) */
+dialog.ask {
+  border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; max-width: min(420px, calc(100vw - 32px));
+  background: var(--surface); color: var(--text); box-shadow: 0 16px 48px rgba(16, 24, 40, .3);
+}
+dialog.ask::backdrop { background: rgba(10, 14, 22, .45); }
+dialog.ask p { margin: 0 0 16px; font-size: 1rem; }
+dialog.ask .btn-row { justify-content: flex-end; }
+dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+/* My quizzes: each quiz folds down to its title and score */
+.quiz-grid { align-items: start; }
+.quiz-card > summary { list-style: none; cursor: pointer; margin-bottom: 0; align-items: center; }
+.quiz-card > summary::-webkit-details-marker { display: none; }
+.quiz-card[open] > summary { margin-bottom: 10px; }
+.quiz-card .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
+  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+.quiz-card[open] .fold { transform: rotate(90deg); }
+.quiz-card .quiz-sum { margin-left: auto; }
+.quiz-card[open] .quiz-sum { display: none; }
+.quiz-card:not([open]) { padding-top: 14px; padding-bottom: 14px; }
+@media (prefers-reduced-motion: reduce) { .quiz-card .fold { transition: none; } }

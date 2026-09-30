@@ -111,7 +111,9 @@ def test_side_panels_on_every_page(app_db):
 
     # the panel starts on everyone's messages together; a student's id shows one conversation
     box = teacher.get('/messages/panel').data.decode()
-    assert 'id="msg-student"' in box and '<option value="all" selected>' in box and 'reply-box' not in box
+    assert 'id="msg-student"' in box and '<option value="all" selected>' in box
+    # ...where the send box writes to every student
+    assert 'name="to" value="all"' in box and 'Send to all 2 students' in box
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'reply-box' in box and 'Write to sam' in box and 'data-student="all"' in box
 
@@ -135,7 +137,7 @@ def test_side_panels_on_every_page(app_db):
 
     # sending from the panel answers with JSON (the panel reloads itself; no page change, no flash)
     r = teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'No, take your time.'}, headers={'X-Requested-With': 'fetch'})
-    assert r.get_json() == {'ok': True}
+    assert r.get_json() == {'ok': True, 'sent': 1}
     r = teacher.post('/messages/send', data={'to': str(kim_id), 'body': '  '}, headers={'X-Requested-With': 'fetch'})
     assert r.status_code == 400 and r.get_json()['ok'] is False
     kim = login(app, 'kim')
@@ -460,3 +462,113 @@ def test_results_page_refreshes_when_answers_are_released(app_db):
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert '<dt>Correct answer</dt>' in page and 'data-refresh-on-notice' not in page
     assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
+
+
+def test_questions_are_asked_in_the_page_and_delete_is_always_an_x(app_db):
+    # browsers can switch their own confirm() pop-ups off, after which buttons that
+    # use them silently do nothing; every "are you sure?" is asked inside the page
+    import glob, os, re
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for path in glob.glob(os.path.join(root, 'app', '**', '*.html'), recursive=True) + glob.glob(os.path.join(root, 'static', 'js', '*.js')):
+        text = open(path).read()
+        if path.endswith('confirm.js'):
+            continue
+        assert not re.search(r'(?<![\w.])confirm\(', text), path  # only window.confirm as a fallback
+        assert 'onsubmit="return confirm' not in text, path
+    app, db = app_db
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Hello'})
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Everyone hello'})
+    sam.post('/messages/reply', data={'body': 'Hi'})
+    for client, url in ((sam, '/messages/panel'), (teacher, '/messages/panel?student={}'.format(sam_id)),
+                        (teacher, '/messages/panel?student=all'), (teacher, '/messages/{}'.format(sam_id))):
+        page = client.get(url).data.decode()
+        assert 'class="msg-x"' in page and '>Delete<' not in page and 'Delete</button>' not in page, url
+        # each question names its button
+        assert all('data-confirm-ok=' in f for f in re.findall(r'<form[^>]*data-confirm=[^>]*>', page)), url
+    assert 'js/confirm.js' in sam.get('/mypage').data.decode()
+
+
+
+def test_send_to_all_students_from_the_panel(app_db):
+    app, db = app_db
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    J = {'X-Requested-With': 'fetch'}
+    r = teacher.post('/messages/send', data={'to': 'all', 'body': 'Quiz Friday'}, headers=J)
+    assert r.get_json() == {'ok': True, 'sent': 2}
+    r = teacher.post('/messages/send', data={'to': 'all', 'body': 'Bring pencils', 'pin': '1'}, headers=J)
+    assert r.get_json()['sent'] == 2
+    assert Message.query.filter_by(body='Quiz Friday', pinned=False).count() == 2
+    assert Message.query.filter_by(body='Bring pencils', pinned=True).count() == 2
+    for name in ('sam', 'kim'):
+        page = login(app, name).get('/messages/panel').data.decode()
+        assert 'Quiz Friday' in page and 'pinned-list' in page and 'Bring pencils' in page
+
+
+def test_sending_to_everyone_asks_first(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    panel = teacher.get('/messages/panel?student=all').data.decode()
+    assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in panel
+    assert 'data-confirm-ok="Send to everyone"' in panel
+    page = teacher.get('/messages').data.decode()
+    assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in page
+    # one student's conversation doesn't ask
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    assert 'send this to all' not in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+
+
+def test_pins_and_deletions_reach_open_panels(app_db):
+    # the poll's "state" changes whenever a panel's contents change, not only when
+    # something new arrives, so open panels reload on every screen
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam, kim = login(app, 'teach'), login(app, 'sam'), login(app, 'kim')
+    J = {'X-Requested-With': 'fetch'}
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Pin me'})
+    state = lambda c: c.get('/messages/poll').get_json()['messages_state']
+    s0, t0, k0 = state(sam), state(teacher), state(kim)
+    mid = Message.query.filter_by(body='Pin me').one().id
+    teacher.post('/messages/pin/{}'.format(mid), data={'pinned': '1'}, headers=J)
+    s1 = state(sam)
+    assert s1 != s0 and state(teacher) != t0 and state(kim) == k0  # kim's panel isn't affected
+    assert sam.get('/messages/poll').get_json()['latest'] == mid  # nothing new arrived...
+    teacher.post('/messages/pin/{}'.format(mid), data={'pinned': '0'}, headers=J)
+    assert state(sam) != s1  # ...but unpinning shows too
+    s2 = state(sam)
+    sam.post('/messages/delete/{}'.format(mid), headers=J)  # sam removes it from their view
+    assert state(sam) != s2
+    t2 = state(teacher)
+    teacher.post('/messages/delete/{}'.format(mid), headers=J)  # deleted for good
+    assert state(teacher) != t2
+    # notices: clearing one changes the Notices panel's state
+    from app.messages.models import notify
+    notify(sam_id, 'New quiz: "Z".'); db.session.commit()
+    n0 = sam.get('/messages/poll').get_json()['notices_state']
+    sam.post('/messages/notices/clear', headers=J)
+    assert sam.get('/messages/poll').get_json()['notices_state'] != n0
+
+
+def test_all_messages_view_shows_an_announcement_once(app_db):
+    app, db = app_db
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    J = {'X-Requested-With': 'fetch'}
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'No class Monday'}, headers=J)
+    box = teacher.get('/messages/panel?student=all').data.decode()
+    assert box.count('No class Monday') == 1 and 'to all 2 students' in box
+    assert 'Delete this announcement for all 2 students who got it?' in box
+    first = Message.query.filter_by(body='No class Monday').order_by(Message.id).first().id
+    assert teacher.post('/messages/delete/{}'.format(first), data={'everyone': '1'}, headers=J).get_json()['deleted'] == 2
+    # in one student's conversation it's still that student's copy, with both choices
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Quiz moved'}, headers=J)
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'Only from sam' in box and 'From every student who got it' in box and 'to all 2 students' not in box

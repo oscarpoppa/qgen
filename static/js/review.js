@@ -80,7 +80,10 @@
       });
     });
     box.querySelector('.hl-clear').addEventListener('click', function () {
-      if (spansOf(area).length && confirm('Remove all highlights from this answer?')) save(area, []);
+      if (!spansOf(area).length) return;
+      var q = 'Remove all highlights from this answer?';
+      (window.qgenAsk ? window.qgenAsk(q, 'Remove all', true) : Promise.resolve(window.confirm(q)))
+        .then(function (yes) { if (yes) save(area, []); });
     });
   });
 })();

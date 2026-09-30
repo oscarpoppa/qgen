@@ -45,10 +45,10 @@ def send():
     if wants_json():
         #from the side panel: stays on the page it's on
         try:
-            M.send(current_user, to, request.form.get('body'))
+            students = M.send(current_user, to, request.form.get('body'), pinned=bool(request.form.get('pin')))
         except M.MessageError as exc:
             return jsonify(ok=False, error=str(exc)), 400
-        return jsonify(ok=True)
+        return jsonify(ok=True, sent=len(students))
     if to == 'chosen':
         to = request.form.getlist('students')
         if not to:
@@ -248,7 +248,29 @@ def poll():
     new_msg, new_notice = newest(mine.filter(NOT_NOTICE, unseen)), newest(mine.filter(IS_NOTICE, unseen))
     return jsonify(unread=unread, notices=notices,
                    latest=latest.id if latest else 0, latest_notice=latest_notice.id if latest_notice else 0,
-                   message_preview=preview(new_msg), notice_preview=preview(new_notice))
+                   message_preview=preview(new_msg), notice_preview=preview(new_notice),
+                   messages_state=messages_state(), notices_state=notices_state())
+
+
+def messages_state():
+    """Changes whenever what this person's Messages panel shows changes: a message
+    written or deleted, pinned or unpinned, or removed from a student's view. Open
+    panels reload when it changes, so a pin shows on every screen without a reload."""
+    q = Message.query.filter(NOT_NOTICE)
+    if not current_user.is_admin:
+        q = q.filter(Message.student_id == current_user.id, Message.hidden_for_student.is_(False))
+    rows = q.with_entities(Message.id, Message.pinned, Message.hidden_for_student).all()
+    return '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
+                                sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))
+
+
+def notices_state():
+    """The same for the Notices panel: a notice added or cleared."""
+    q = Message.query.filter(IS_NOTICE)
+    q = q.filter(Message.from_teacher.is_(False)) if current_user.is_admin else \
+        q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
+    ids = [r[0] for r in q.with_entities(Message.id).all()]
+    return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))
 
 
 def preview(m):

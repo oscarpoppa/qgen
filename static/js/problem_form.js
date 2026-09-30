@@ -216,13 +216,24 @@
     renderChips();
   }
 
+  //"are you sure?" inside the page (confirm.js); the browser's own pop-ups can be switched off
+  function ask(q, ok) { return window.qgenAsk ? window.qgenAsk(q, ok) : Promise.resolve(window.confirm(q)); }
+
   form.querySelectorAll('.ai-go').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var kind = btn.dataset.kind;
       var text = document.getElementById(btn.dataset.src).value.trim();
       var status = form.querySelector('.ai-status');
       if (!text) { status.textContent = 'Please describe what you want first.'; return; }
-      if (formHasContent(kind) && !confirm('Replace what\'s already in the form?')) return;
+      if (formHasContent(kind)) {
+        ask('Replace what\'s already in the form?', 'Replace').then(function (yes) { if (yes) fill(btn, kind, text, status); });
+        return;
+      }
+      fill(btn, kind, text, status);
+    });
+  });
+
+  function fill(btn, kind, text, status) {
       form.querySelectorAll('.ai-go').forEach(function (b) { b.disabled = true; });
       status.innerHTML = '<span class="spinner"></span> Thinking… this can take up to a minute.';
       fetch(btn.dataset.url, {
@@ -243,8 +254,7 @@
         status.textContent = msg;
       }, function () { status.textContent = 'Couldn\'t reach the server. Please try again.'; })
         .then(function () { form.querySelectorAll('.ai-go').forEach(function (b) { b.disabled = false; }); });
-    });
-  });
+  }
 
   /* ---------- one-click fixes from the helper panel ---------- */
   form.addEventListener('helper-action', function (e) {

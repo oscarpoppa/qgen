@@ -79,7 +79,20 @@
   form.addEventListener('submit', function (e) {
     if (submitting) return;
     var blank = update();
-    if (blank && !confirm('You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?')) { e.preventDefault(); return; }
+    if (blank && form.dataset.blankOk !== '1') {
+      //asked inside the page (the browser's own pop-ups can be switched off)
+      e.preventDefault();
+      var question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?';
+      var ask = window.qgenAsk ? window.qgenAsk(question, 'Submit anyway') : Promise.resolve(window.confirm(question));
+      var submitter = e.submitter;
+      ask.then(function (yes) {
+        if (!yes) return;
+        form.dataset.blankOk = '1';
+        if (form.requestSubmit) form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+        else form.submit();
+      });
+      return;
+    }
     submitting = true;
   });
 

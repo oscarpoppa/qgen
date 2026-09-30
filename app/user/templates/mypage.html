@@ -26,15 +26,24 @@
 
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
-  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
+  <div class="actions">
+    {% if current_user.cquizzes %}
+      <button type="button" class="btn btn-secondary btn-sm" id="collapse-all">Collapse all</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="expand-all">Expand all</button>
+    {% endif %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 
 {% set groups = attempts_by_quiz(current_user.cquizzes) %}
 {% if groups %}
-  <div class="grid">
+  <div class="grid quiz-grid">
   {% for g in groups %}
     {% set latest = g.latest %}
-    <article class="card">
-      <div class="card-head"><h2>{{ g.vquiz.title }}</h2></div>
+    {# each quiz folds down to its title and score; the page remembers which are folded #}
+    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" open>
+      <summary class="card-head">
+        <span class="fold" aria-hidden="true"></span><h2>{{ g.vquiz.title }}</h2>
+        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% else %}{{ status(latest, g.best == latest) }}{% endif %}</span>
+      </summary>
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
         {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
@@ -50,7 +59,7 @@
           {% endfor %}
         </ol>
       {% endif %}
-    </article>
+    </details>
   {% endfor %}
   </div>
 {% else %}
@@ -65,4 +74,27 @@
   {% endif %}
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* folded quizzes: remembered in this browser (a convenience; nothing is lost without it) */
+(function () {
+  var KEY = 'qgen-folded-quizzes', cards = document.querySelectorAll('details.quiz-card');
+  if (!cards.length) return;
+  var folded = [];
+  try { folded = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) {}
+  cards.forEach(function (d) { if (folded.indexOf(d.dataset.quiz) !== -1) d.open = false; });
+  function remember() {
+    var ids = [];
+    cards.forEach(function (d) { if (!d.open) ids.push(d.dataset.quiz); });
+    try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {}
+  }
+  cards.forEach(function (d) { d.addEventListener('toggle', remember); });
+  function all(open) { cards.forEach(function (d) { d.open = open; }); remember(); }
+  var c = document.getElementById('collapse-all'), x = document.getElementById('expand-all');
+  if (c) c.addEventListener('click', function () { all(false); });
+  if (x) x.addEventListener('click', function () { all(true); });
+})();
+</script>
 {% endblock %}

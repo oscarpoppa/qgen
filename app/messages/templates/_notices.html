@@ -3,7 +3,7 @@
 <div id="notices" data-panel-url="{{ url_for('messages.notices') }}">
   {% if items %}
     <form method="post" action="{{ url_for('messages.clear_notices') }}" class="dock-form notice-clear-all"
-          data-confirm="Clear all your notices? This can't be undone.">
+          data-confirm="Clear all your notices? This can't be undone." data-confirm-ok="Clear all">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn-link small">Clear all</button>
     </form>

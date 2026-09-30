@@ -95,8 +95,21 @@ def conversation(student_id, limit=None, for_student=False):
 
 
 def everyone(limit=60):
-    """The newest messages from all conversations together (no notices), oldest first."""
-    return _oldest_first(Message.query.filter(NOT_NOTICE), limit)
+    """The newest messages from all conversations together (no notices), oldest first.
+    An announcement sent to several students appears once (its first copy), with
+    `.copies` saying how many students got it."""
+    items = _oldest_first(Message.query.filter(NOT_NOTICE), limit * 4)
+    out, seen = [], set()
+    for m in items:
+        if m.batch and m.kind == 'announcement':
+            if m.batch in seen:
+                continue
+            seen.add(m.batch)
+            m.copies = Message.query.filter_by(batch=m.batch).count()
+        else:
+            m.copies = 1
+        out.append(m)
+    return out[-limit:]
 
 
 def mark_messages_seen_by_teachers(messages):
