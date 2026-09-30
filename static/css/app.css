@@ -384,3 +384,6 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .person { display: inline-flex; align-items: center; gap: 8px; }
 .msg-with-avatar { display: flex; gap: 8px; align-items: flex-start; }
 .msg-mine.msg-with-avatar { flex-direction: row-reverse; }
+
+.inline-form { display: inline; margin: 0; }
+td.actions .inline-form .btn { margin-left: 4px; }

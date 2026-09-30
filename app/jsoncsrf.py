@@ -24,3 +24,19 @@ def form_csrf_ok():
         return True
     except ValidationError:
         return False
+
+
+def post_form_only(view):
+    """For actions that change things (delete, retake, release, reset password):
+    only a POSTed form with this site's session token may trigger them, so another
+    website can't make a signed-in teacher's browser do it (cross-site request forgery)."""
+    from functools import wraps
+    from flask import flash, redirect, url_for
+
+    @wraps(view)
+    def inner(*args, **kwargs):
+        if request.method != 'POST' or not form_csrf_ok():
+            flash('That didn\'t go through (the page was out of date). Please try again.', 'error')
+            return redirect(request.referrer or url_for('user.mypage'))
+        return view(*args, **kwargs)
+    return inner

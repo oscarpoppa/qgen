@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
 <div class="page-head">
@@ -36,10 +37,9 @@
           <td data-label="Assigned">{{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</td>
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
-            {% if item.hide_answers %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.release_vquiz', vqid=item.id) }}"
-               onclick="return confirm('{{ 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title|e ~ '”?' }}');">{{ 'Hide answers' if item.answers_released else 'Release answers' }}</a>{% endif %}
+            {% if item.hide_answers %}{{ post_button(url_for('qgen.release_vquiz', vqid=item.id), 'Hide answers' if item.answers_released else 'Release answers', 'btn btn-secondary btn-sm', 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title ~ '”?') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
-            <a class="btn btn-danger btn-sm" href="{{ url_for('qgen.del_vquiz', vqid=item.id) }}" onclick="return confirm('Delete the quiz “{{ item.title|e }}”?');">Delete</a>
+            {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?') }}
           </td>
         </tr>
       {% endfor %}

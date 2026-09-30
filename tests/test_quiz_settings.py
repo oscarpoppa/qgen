@@ -99,7 +99,7 @@ def test_hidden_answers_and_release(app_db):
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert 'Correct answer' not in page and 'show the correct answers later' in page and '0%' in page
     assert 'Correct answer' in teacher.get('/quiz/take/{}'.format(cq.id)).data.decode()  # teacher always sees them
-    teacher.get('/quiz/releasevq/{}'.format(vq.id))
+    teacher.post('/quiz/releasevq/{}'.format(vq.id))
     assert 'Correct answer' in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
 
 
@@ -120,7 +120,7 @@ def test_retake_scoring_rules(app_db):
     first = CQuiz.query.one()
     num = [cp for cp in first.cproblems if cp.vproblem.qtype == 'numeric'][0]
     sam.post('/quiz/take/{}'.format(first.id), data={'Number{}'.format(num.ordinal): num.conc_ansr})  # 50%
-    teacher.get('/quiz/retcq/{}'.format(first.id))
+    teacher.post('/quiz/retcq/{}'.format(first.id))
     second = CQuiz.query.filter(CQuiz.id != first.id).one()
     sam.post('/quiz/take/{}'.format(second.id), data={})  # 0%
     page = sam.get('/mypage').data.decode()

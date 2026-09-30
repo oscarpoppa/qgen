@@ -9,7 +9,7 @@ from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
-from app.jsoncsrf import json_csrf_ok
+from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
 from datetime import datetime, timedelta
 import json
@@ -103,10 +103,11 @@ def list_vprob(vpid):
     return render_template('vplist.html', vplst=[vplst], qtypes=REGISTRY, title='Problem {}'.format(vpid))
 
 #route to delete a specific virtual problem
-@qgen_bp.route('/quiz/delvp/<vpid>', methods=['GET'])
+@qgen_bp.route('/quiz/delvp/<vpid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def del_vprob(vpid):
     vp = VProblem.query.filter_by(id=vpid).first_or_404('No VProblem with id {}'.format(vpid))
     title = vp.title
@@ -187,10 +188,11 @@ def list_vquiz(vqid):
     return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout)
 
 #route to delete a specific virtual quiz
-@qgen_bp.route('/quiz/delvq/<vqid>', methods=['GET'])
+@qgen_bp.route('/quiz/delvq/<vqid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def del_vquiz(vqid):
     vq = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     title = vq.title
@@ -205,10 +207,11 @@ def del_vquiz(vqid):
 
 
 #route to show (or hide again) correct answers on students' results pages
-@qgen_bp.route('/quiz/releasevq/<vqid>', methods=['GET'])
+@qgen_bp.route('/quiz/releasevq/<vqid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def release_vquiz(vqid):
     vq = db.get_or_404(VQuiz, vqid)
     S.release_answers(vq, not vq.answers_released)
@@ -434,10 +437,11 @@ def list_cquiz(cqid):
     return render_template('cqlist.html', cqlst=[cqlst], shown=shown, title='Assigned quiz {}'.format(cqid))
 
 #route to delete a specific concrete quiz from a user's record
-@qgen_bp.route('/quiz/delcq/<cqid>', methods=['GET'])
+@qgen_bp.route('/quiz/delcq/<cqid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.username
@@ -447,10 +451,11 @@ def del_cquiz(cqid):
     return redirect(request.referrer or url_for('qgen.list_users'))
 
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
-@qgen_bp.route('/quiz/retcq/<cqid>', methods=['GET'])
+@qgen_bp.route('/quiz/retcq/<cqid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def ret_cquiz(cqid):
     cq0 = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     try:

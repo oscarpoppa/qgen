@@ -1,4 +1,5 @@
 from . import upload_bp
+from app.jsoncsrf import post_form_only
 from .forms import UploadForm
 from app.user.routes import admin_only, pw_check
 from flask import flash, render_template, redirect, url_for, request, current_app, jsonify, abort
@@ -73,10 +74,11 @@ def nonimages():
     return render_template('nonimages.html', files=nonims, title='Non-Image Files')
 
 #admin-only delete an image from server
-@upload_bp.route('/delimg/<fname>', methods=['GET'])
+@upload_bp.route('/delimg/<fname>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def delimg(fname):
     if fname not in static_files():
         flash('Image not found: {}'.format(fname))
@@ -91,10 +93,11 @@ def delimg(fname):
     return redirect(url_for('upload.images'))
 
 #admin-only delete a non-image from server
-@upload_bp.route('/delnonimg/<fname>', methods=['GET'])
+@upload_bp.route('/delnonimg/<fname>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def delnonimg(fname):
     if fname not in static_files():
         flash('File not found: {}'.format(fname))

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
 
 {% block content %}
@@ -33,7 +34,7 @@
                     {% else %}<span class="badge">not started</span>{% endif %}
                     {% if cq.closes_at and not cq.completed %}<span class="small muted">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</span>{% endif %}
                     <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    <a class="btn btn-danger btn-sm" href="{{ url_for('qgen.del_cquiz', cqid=cq.id) }}" onclick="return confirm('Delete {{ item.username|e }}’s attempt #{{ loop.index }} at “{{ g.vquiz.title|e }}”? This removes their answers too.');">Delete</a>
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '’s attempt #' ~ (loop.index)|string ~ ' at “' ~ (g.vquiz.title)|string ~ '”? This removes their answers too.') }}
                   </div>
                 {% endfor %}
               </td>
@@ -50,7 +51,7 @@
                 {% endif %}
               </td>
               <td class="actions">
-                {% if g.latest.completed %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.ret_cquiz', cqid=g.latest.id) }}" onclick="return confirm('Give {{ item.username|e }} another attempt at “{{ g.vquiz.title|e }}” with new values?');">Retake</a>{% endif %}
+                {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (item.username)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% endif %}
               </td>
             </tr>
           {% endfor %}

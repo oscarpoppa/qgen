@@ -7,7 +7,7 @@ from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
 from secrets import token_urlsafe
-from app.jsoncsrf import json_csrf_ok, form_csrf_ok
+from app.jsoncsrf import json_csrf_ok, form_csrf_ok, post_form_only
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -118,10 +118,11 @@ def chpass():
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
 # route to admin-initiated user password-reset action
-@user_bp.route('/resetpass/<uid>', methods=['GET'])
+@user_bp.route('/resetpass/<uid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def resetpass(uid):
     usrquery = User.query.filter_by(id=uid)
     usr = usrquery.first_or_404('No user with id {}'.format(uid))
@@ -135,10 +136,11 @@ def resetpass(uid):
     return redirect(url_for('user.userdet'))
 
 # route to admin-initiated user deletion action
-@user_bp.route('/deluser/<uid>', methods=['GET'])
+@user_bp.route('/deluser/<uid>', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
+@post_form_only
 def deluser(uid):
     usrquery = User.query.filter_by(id=uid)
     usr = usrquery.first_or_404('No user with id {}'.format(uid))

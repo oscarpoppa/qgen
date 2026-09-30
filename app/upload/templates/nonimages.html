@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
 <div class="page-head">
@@ -15,7 +16,7 @@
           <td data-label="File">{{ file }}</td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('static', filename=file) }}" target="_blank" rel="noopener">View</a>
-            <a class="btn btn-danger btn-sm" href="{{ url_for('upload.delnonimg', fname=file) }}" onclick="return confirm('Delete “{{ file|e }}”?');">Delete</a>
+            {{ post_button(url_for('upload.delnonimg', fname=file), 'Delete', 'btn btn-danger btn-sm', 'Delete “' ~ (file)|string ~ '”?') }}
           </td>
         </tr>
       {% endfor %}

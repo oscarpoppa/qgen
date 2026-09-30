@@ -207,15 +207,15 @@ def test_whole_school_week(app_db):
         assert teacher.get(url).status_code == 200, url
 
     # --- retake gives new values; delete removes the assignment and its answers
-    r = teacher.get('/quiz/retcq/{}'.format(sam_q.id))
+    r = teacher.post('/quiz/retcq/{}'.format(sam_q.id))
     assert CQuiz.query.filter_by(assignee=sam_q.assignee).count() == 2
     kim_problems, kim_id = [cp.id for cp in kim_q.cproblems], kim_q.id
-    teacher.get('/quiz/delcq/{}'.format(kim_id))
+    teacher.post('/quiz/delcq/{}'.format(kim_id))
     db.session.expire_all()
     assert db.session.get(CQuiz, kim_id) is None
     assert CProblem.query.filter(CProblem.id.in_(kim_problems)).count() == 0
     # a problem in use can't be deleted
-    teacher.get('/quiz/delvp/{}'.format(probs[0].id))
+    teacher.post('/quiz/delvp/{}'.format(probs[0].id))
     assert db.session.get(VProblem, probs[0].id) is not None
 
 
@@ -290,7 +290,7 @@ def test_deleting_people_and_problems_keeps_records_consistent(app_db):
     cq_id, vp_id, vq_id, t2_id, sam_id = cq.id, vp.id, vq.id, t2.id, sam.id
 
     # deleting that teacher keeps their problem, quiz, grade and log, with the link cleared
-    teacher.get('/deluser/{}'.format(t2_id))
+    teacher.post('/deluser/{}'.format(t2_id))
     db.session.expire_all()
     assert db.session.get(User, t2_id) is None
     assert db.session.get(VProblem, vp_id).author_id is None
@@ -302,14 +302,45 @@ def test_deleting_people_and_problems_keeps_records_consistent(app_db):
     q = db.session.get(VQuiz, vq_id)
     q.vproblems = []
     db.session.commit()
-    r = teacher.get('/quiz/delvp/{}'.format(vp_id), follow_redirects=True)
+    r = teacher.post('/quiz/delvp/{}'.format(vp_id), follow_redirects=True)
     assert b'student answer' in r.data and db.session.get(VProblem, vp_id) is not None
 
     # deleting a student removes their quizzes and answers
-    teacher.get('/deluser/{}'.format(sam_id))
+    teacher.post('/deluser/{}'.format(sam_id))
     db.session.expire_all()
     assert CQuiz.query.count() == 0 and CProblem.query.count() == 0
     # ...after which the problem can go
-    teacher.get('/quiz/delvp/{}'.format(vp_id))
+    teacher.post('/quiz/delvp/{}'.format(vp_id))
     db.session.expire_all()
     assert db.session.get(VProblem, vp_id) is None
+
+
+def test_changes_need_a_real_form_from_this_site(app_db):
+    """Delete/retake/release/reset can't be triggered by a link or by another website."""
+    app, db = app_db
+    from app.qgen.models import VProblem
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    f = problem_form('numeric', 'Keep me', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
+    teacher.post('/quiz/makevprob', data=f)
+    vp_id = VProblem.query.one().id
+    sam_id = User.query.filter_by(username='sam').one().id
+    # a plain link (GET) does nothing
+    assert teacher.get('/quiz/delvp/{}'.format(vp_id)).status_code == 405
+    assert teacher.get('/deluser/{}'.format(sam_id)).status_code == 405
+    # a form without this site's session token is refused
+    app.config['WTF_CSRF_ENABLED'] = True
+    try:
+        r = teacher.post('/quiz/delvp/{}'.format(vp_id), follow_redirects=True)
+        assert b'out of date' in r.data
+        teacher.post('/deluser/{}'.format(sam_id), data={'csrf_token': 'forged'})
+        db.session.expire_all()
+        assert db.session.get(VProblem, vp_id) is not None and db.session.get(User, sam_id) is not None
+        # the real page's button works
+        page = teacher.get('/quiz/listvp').data.decode()
+        token = page.split('name="csrf_token" value="')[1].split('"')[0]
+        teacher.post('/quiz/delvp/{}'.format(vp_id), data={'csrf_token': token})
+        db.session.expire_all()
+        assert db.session.get(VProblem, vp_id) is None
+    finally:
+        app.config['WTF_CSRF_ENABLED'] = False

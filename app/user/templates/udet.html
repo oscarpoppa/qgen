@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
 
 {% block content %}
@@ -20,8 +21,8 @@
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
           {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" onsubmit="return confirm('Remove {{ item.username|e }}’s picture?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary btn-sm">Remove picture</button></form>{% endif %}
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('user.resetpass', uid=item.id) }}" onclick="return confirm('Reset {{ item.username|e }}’s password? You’ll be shown a temporary one to give them.');">Reset password</a>
-          {% if item != current_user %}<a class="btn btn-danger btn-sm" href="{{ url_for('user.deluser', uid=item.id) }}" onclick="return confirm('Delete {{ item.username|e }}? {{ 'Their quizzes and answers are deleted too.' if not item.is_admin else 'Problems, quizzes and grades they made are kept.' }}');">Delete</a>{% endif %}
+          {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.username)|string ~ '’s password? You’ll be shown a temporary one to give them.') }}
+          {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Their quizzes and answers are deleted too.' if not item.is_admin else 'Problems, quizzes and grades they made are kept.')|string) }}{% endif %}
         </td>
       </tr>
     {% endfor %}

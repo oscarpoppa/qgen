@@ -1,4 +1,5 @@
 from flask import Flask
+import click
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -94,6 +95,38 @@ def close_expired_command():
     """Hand in and score every quiz whose time is up (for cron)."""
     from app.qgen.services import close_expired
     print('closed {} quiz attempt(s)'.format(close_expired()))
+
+@app.cli.command('init-db')
+def init_db_command():
+    """Set up an empty database: create every table and mark it as up to date.
+    (Existing databases are upgraded with `flask db upgrade` instead.)"""
+    from flask_migrate import stamp
+    from sqlalchemy import inspect
+    import app.api.models, app.messages.models, app.qgen.models, app.user.models  # noqa: F401 (every table)
+    if inspect(db.engine).get_table_names():
+        print('This database already has tables; use "flask db upgrade" to bring it up to date.')
+        return
+    db.create_all()
+    from app.qgen.models import VPGroup, VQGroup
+    db.session.add_all([VPGroup(title='Archive'), VQGroup(title='Archive')])
+    db.session.commit()
+    stamp()
+    print('Database ready. Next: flask create-admin')
+
+@app.cli.command('create-admin')
+@click.argument('username')
+def create_admin_command(username):
+    """Create an administrator (asks for the password), e.g. for the very first login."""
+    from app.user.models import User
+    if User.query.filter_by(username=username).first():
+        print('"{}" already exists.'.format(username))
+        return
+    password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
+    u = User(username=username, is_admin=True)
+    u.set_password(password)
+    db.session.add(u)
+    db.session.commit()
+    print('Administrator "{}" created. Log in, then set a class code under Settings.'.format(username))
 
 #create CLI command for DB dump
 from app.commands import dbdump as dbdump_cli_group

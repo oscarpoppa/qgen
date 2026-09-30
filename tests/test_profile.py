@@ -67,7 +67,7 @@ def test_teacher_removes_a_picture_and_initials_show(app_db):
     kim_u = User.query.filter_by(username='kim').one()
     db.session.refresh(kim_u)
     path = os.path.join(app.config['STATIC_DIR'], kim_u.avatar)
-    teacher.get('/deluser/{}'.format(kim_u.id))
+    teacher.post('/deluser/{}'.format(kim_u.id))
     assert not os.path.exists(path)
 
 

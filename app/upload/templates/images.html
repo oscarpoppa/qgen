@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
 <div class="page-head">
@@ -11,7 +12,7 @@
     <div class="thumb">
       <a href="{{ url_for('static', filename=pair[1]) }}" target="_blank" rel="noopener"><img src="{{ url_for('static', filename=pair[0]) }}" alt="{{ pair[1] }}"></a>
       <div class="name">{{ pair[1] }}</div>
-      <a class="btn btn-danger btn-sm" href="{{ url_for('upload.delimg', fname=pair[1]) }}" onclick="return confirm('Delete the picture “{{ pair[1]|e }}”? Problems using it will show no picture.');">Delete</a>
+      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.') }}
     </div>
   {% endfor %}
   </div>

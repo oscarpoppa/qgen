@@ -135,6 +135,8 @@ class CProblem(db.Model, SaveMixin, DateMixin):
     #instructor comment and [start, end, "right"|"wrong"] spans (JSON) on essays
     feedback = db.Column(db.Text)
     highlights_json = db.Column('highlights', db.Text)
+    #added by the older sandbox branch (new-qgen-everything); unused here, kept so its data is safe
+    ans_field = db.Column(db.String(1024))
     vproblem_id = db.Column(db.Integer, db.ForeignKey('vproblem.id'))
     ordinal = db.Column(db.Integer)
 

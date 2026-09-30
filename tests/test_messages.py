@@ -57,7 +57,7 @@ def test_two_way_messages_announcements_and_notices(app_db):
     assert 'New quiz: &#34;Quiz 9&#34;' in sam.get('/mypage').data.decode()
 
     # deleting a student removes their conversation
-    teacher.get('/deluser/{}'.format(kim_id))
+    teacher.post('/deluser/{}'.format(kim_id))
     db.session.expire_all()
     assert Message.query.filter_by(student_id=kim_id).count() == 0
 
