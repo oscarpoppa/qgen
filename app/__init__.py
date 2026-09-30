@@ -132,6 +132,25 @@ def create_admin_command(username):
     db.session.commit()
     print('Administrator "{}" created. Log in, then set a class code under Settings.'.format(username))
 
+@app.cli.command('set-password')
+@click.argument('username')
+def set_password_command(username):
+    """Set a new password for an account (asks for it privately), e.g. a forgotten one."""
+    from app.user.models import User
+    from app.user.forms import MIN_PASSWORD
+    u = User.query.filter_by(username=username).first()
+    if not u:
+        print('No account called "{}".'.format(username))
+        return
+    password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
+    if len(password) < MIN_PASSWORD:
+        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+        return
+    u.set_password(password)
+    u.pw_man_reset = False
+    db.session.commit()
+    print('Password changed for "{}".'.format(username))
+
 #create CLI command for DB dump
 from app.commands import dbdump as dbdump_cli_group
 app.cli.add_command(dbdump_cli_group, name='dbdump')
