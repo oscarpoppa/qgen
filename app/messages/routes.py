@@ -1,31 +1,12 @@
-from datetime import datetime
-
 from flask import render_template, redirect, url_for, request, flash, jsonify, abort, current_app
 from flask_login import current_user, login_required
 
 from app import db
-from app.jsoncsrf import json_csrf_ok
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
 from . import messages_bp
+from . import services as M
 from .models import Message, unread_for_student, unread_for_teachers
-
-MAX_LEN = 2000
-
-
-def clean_body(text):
-    text = (text or '').strip()
-    if not text:
-        return None, 'Please write a message first.'
-    if len(text) > MAX_LEN:
-        return None, 'Please keep messages under {} characters.'.format(MAX_LEN)
-    return text, None
-
-
-def thread(student_id, limit=None):
-    q = Message.query.filter_by(student_id=student_id).order_by(Message.created.desc(), Message.id.desc())
-    items = q.limit(limit).all() if limit else q.all()
-    return list(reversed(items))
 
 
 # ---------------------------------------------------------------- teachers
@@ -36,14 +17,7 @@ def thread(student_id, limit=None):
 @pw_check
 @admin_only
 def inbox():
-    students = User.query.filter_by(is_admin=False).order_by(User.username).all()
-    rows = []
-    for s in students:
-        last = Message.query.filter_by(student_id=s.id).order_by(Message.created.desc(), Message.id.desc()).first()
-        unread = Message.query.filter_by(student_id=s.id, from_teacher=False, seen_by_teacher=False).count()
-        rows.append({'student': s, 'last': last, 'unread': unread})
-    rows.sort(key=lambda r: (-r['unread'], -(r['last'].created.timestamp() if r['last'] else 0), r['student'].username))
-    return render_template('inbox.html', rows=rows, title='Messages')
+    return render_template('inbox.html', rows=M.inbox(), pinned=M.pinned_announcements(), title='Messages')
 
 #route to one student's conversation, as a teacher
 @messages_bp.route('/messages/<int:student_id>', methods=['GET'])
@@ -52,41 +26,47 @@ def inbox():
 @admin_only
 def conversation(student_id):
     student = db.get_or_404(User, student_id)
-    items = thread(student.id)
-    Message.query.filter_by(student_id=student.id, from_teacher=False, seen_by_teacher=False).update({'seen_by_teacher': True})
-    db.session.commit()
+    items = M.thread(student.id)
+    M.mark_seen_by_teachers(student.id)
     return render_template('conversation.html', student=student, items=items, title='Messages: {}'.format(student.username))
 
-#route for a teacher to send to one student, or an announcement to every student
+#route for a teacher to send to one student, chosen students, or everyone
 @messages_bp.route('/messages/send', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
 def send():
-    body, err = clean_body(request.form.get('body'))
-    to = request.form.get('to', '')
     back = request.referrer or url_for('messages.inbox')
-    if err:
-        flash(err, 'error')
+    to = request.form.get('to', '')
+    if to == 'chosen':
+        to = request.form.getlist('students')
+        if not to:
+            flash('Tick at least one student.', 'error')
+            return redirect(back)
+    try:
+        students = M.send(current_user, to, request.form.get('body'), pinned=bool(request.form.get('pin')))
+    except M.MessageError as exc:
+        flash(str(exc), 'error')
         return redirect(back)
-    if to == 'all':
-        students = User.query.filter_by(is_admin=False).all()
-        for s in students:
-            db.session.add(Message(student_id=s.id, sender_id=current_user.id, from_teacher=True,
-                                   kind='announcement', body=body, seen_by_teacher=True))
-        db.session.commit()
-        flash('Announcement sent to {} student{}.'.format(len(students), '' if len(students) == 1 else 's'), 'success')
-        current_app.logger.info('{} sent an announcement to all students'.format(current_user.username))
-        return redirect(back)
-    student = db.session.get(User, int(to)) if to.isdigit() else None
-    if not student or student.is_admin:
-        flash('Please choose a student.', 'error')
-        return redirect(back)
-    db.session.add(Message(student_id=student.id, sender_id=current_user.id, from_teacher=True,
-                           body=body, seen_by_teacher=True))
-    db.session.commit()
-    flash('Message sent to {}.'.format(student.username), 'success')
-    return redirect(url_for('messages.conversation', student_id=student.id))
+    pinned = ' and pinned to the top of their home page{}'.format('' if len(students) == 1 else 's') if request.form.get('pin') else ''
+    if len(students) == 1 and to != 'all':
+        flash('Message sent to {}{}.'.format(students[0].username, pinned), 'success')
+        return redirect(url_for('messages.conversation', student_id=students[0].id))
+    flash('Announcement sent to {} student{}{}.'.format(len(students), '' if len(students) == 1 else 's', pinned), 'success')
+    current_app.logger.info('{} sent an announcement to {} students'.format(current_user.username, len(students)))
+    return redirect(back)
+
+#route to pin or unpin a message (and every copy sent with it)
+@messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def pin(message_id):
+    msg = db.get_or_404(Message, message_id)
+    pinned = request.form.get('pinned') == '1'
+    count = M.set_pinned(msg, pinned)
+    flash('{} for {} student{}.'.format('Pinned' if pinned else 'Unpinned', count, '' if count == 1 else 's'), 'success')
+    return redirect(request.referrer or url_for('messages.inbox'))
 
 
 # ---------------------------------------------------------------- students
@@ -98,14 +78,11 @@ def send():
 def reply():
     if current_user.is_admin:
         abort(404)
-    body, err = clean_body(request.form.get('body'))
-    if err:
-        flash(err, 'error')
-    else:
-        db.session.add(Message(student_id=current_user.id, sender_id=current_user.id, from_teacher=False,
-                               body=body, seen_by_student=True))
-        db.session.commit()
+    try:
+        M.reply(current_user, request.form.get('body'))
         flash('Message sent to your teacher.', 'success')
+    except M.MessageError as exc:
+        flash(str(exc), 'error')
     return redirect(url_for('user.mypage') + '#messages')
 
 #the messages box on the student home page, reloaded by the page when something new arrives
@@ -119,13 +96,14 @@ def panel():
 
 
 def student_panel(user, mark_seen=True):
-    """Recent messages for a student's home page; opening it marks them seen."""
-    items = thread(user.id, limit=30)
-    unread_ids = {m.id for m in items if m.from_teacher and not m.seen_by_student}
-    if mark_seen and unread_ids:
-        Message.query.filter(Message.id.in_(unread_ids)).update({'seen_by_student': True}, synchronize_session=False)
-        db.session.commit()
-    return {'items': items, 'unread_ids': unread_ids, 'max_len': MAX_LEN}
+    """Pinned announcements and recent messages for a student's home page;
+    opening it marks them seen."""
+    items = M.thread(user.id, limit=30)
+    pinned = M.pinned_for(user.id)
+    unread_ids = {m.id for m in items + pinned if m.from_teacher and not m.seen_by_student}
+    if mark_seen:
+        M.mark_seen_by_student(user.id, items + pinned)
+    return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.MAX_LEN}
 
 
 # ---------------------------------------------------------------- both

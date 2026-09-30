@@ -7,9 +7,16 @@
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
         <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
+        {% if m.pinned %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
+      {% if me_teacher and m.from_teacher %}
+        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="small">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
+          <button class="btn-link">{{ 'Unpin' if m.pinned else 'Pin to top' }}</button>
+        </form>
+      {% endif %}
     </li>
   {% else %}
     <li class="muted small">No messages yet.</li>

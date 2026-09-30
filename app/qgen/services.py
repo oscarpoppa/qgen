@@ -270,6 +270,22 @@ def attempt_state(cq, now=None):
     return 'open'
 
 
+def close_expired(now=None):
+    """Hand in and score every attempt whose time is up, even if the student never
+    comes back. Returns how many were closed. Called by the app about once a
+    minute (see app/__init__.py) and by `flask close-expired`."""
+    now = now or datetime.now()
+    candidates = CQuiz.query.filter(CQuiz.completed.is_(False), CQuiz.needs_review.is_(False),
+                                    db.or_(CQuiz.closes_at.isnot(None),
+                                           db.and_(CQuiz.time_limit.isnot(None), CQuiz.startdate.isnot(None)))).all()
+    closed = 0
+    for cq in candidates:
+        if attempt_state(cq, now) == 'time_up':
+            submit(cq)
+            closed += 1
+    return closed
+
+
 def start(cq):
     """The student opened the quiz: the time limit starts now."""
     if not cq.startdate:

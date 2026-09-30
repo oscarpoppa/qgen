@@ -60,3 +60,32 @@ def test_two_way_messages_announcements_and_notices(app_db):
     teacher.get('/deluser/{}'.format(kim_id))
     db.session.expire_all()
     assert Message.query.filter_by(student_id=kim_id).count() == 0
+
+
+def test_chosen_students_and_pinning_on_the_web(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    # to chosen students, pinned
+    r = teacher.post('/messages/send', data={'to': 'chosen', 'students': [str(sam_id)], 'body': 'Bring a ruler.', 'pin': '1'})
+    assert r.status_code == 302
+    m = Message.query.one()
+    assert m.pinned and m.student_id == sam_id
+    assert teacher.post('/messages/send', data={'to': 'chosen', 'body': 'x'}).status_code == 302
+    assert Message.query.count() == 1  # nobody ticked: nothing sent
+    # everyone, pinned: one pinned entry for the teacher, one per student
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday!', 'pin': '1'})
+    home = login(app, 'kim').get('/mypage').data.decode()
+    assert 'pinned-list' in home and 'Test Friday!' in home
+    assert teacher.get('/messages').data.decode().count('Unpin') == 2
+    batch_msg = Message.query.filter_by(body='Test Friday!').first()
+    teacher.post('/messages/pin/{}'.format(batch_msg.id), data={'pinned': '0'})
+    assert Message.query.filter_by(body='Test Friday!', pinned=True).count() == 0
+    assert 'pinned-list' not in login(app, 'kim').get('/mypage').data.decode()
+    # a teacher account can't be chosen as a recipient
+    teacher.post('/messages/send', data={'to': 'chosen', 'students': [str(sam_id), '1'], 'body': 'y'})
+    assert Message.query.filter_by(body='y').count() == 0
+    assert kim_id != sam_id

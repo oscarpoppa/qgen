@@ -375,3 +375,5 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .hint-warn { background: var(--warn-soft); } .hint-warn .hint-icon { color: var(--warn); }
 .hint-ok { background: var(--ok-soft); } .hint-ok .hint-icon { color: var(--ok); }
 .helper-ai { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
+.pinned-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.msg-pinned { border-left: 4px solid var(--accent); }

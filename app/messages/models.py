@@ -18,6 +18,10 @@ class Message(db.Model):
     created = db.Column(db.DateTime, default=datetime.now, nullable=False)
     seen_by_student = db.Column(db.Boolean, default=False, nullable=False)
     seen_by_teacher = db.Column(db.Boolean, default=False, nullable=False)
+    #an announcement kept at the top of students' home pages
+    pinned = db.Column(db.Boolean, default=False, nullable=False)
+    #rows sent together (one broadcast) share this, so they're pinned or unpinned together
+    batch = db.Column(db.String(32), index=True)
 
     __table_args__ = (db.Index('ix_message_student_created', 'student_id', 'created'),)
 

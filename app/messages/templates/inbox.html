@@ -3,22 +3,54 @@
 {% block content %}
 <div class="page-head"><h1>Messages</h1></div>
 
-<form method="post" action="{{ url_for('messages.send') }}" class="card" novalidate>
+<form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <h2>New message</h2>
   <div class="field">
     <label for="to">To</label>
     <select id="to" name="to">
       <option value="all">Everyone (announcement)</option>
+      <option value="chosen">Chosen students…</option>
       {% for r in rows %}<option value="{{ r.student.id }}">{{ r.student.username }}</option>{% endfor %}
     </select>
   </div>
+  <fieldset class="field" id="chosen" hidden>
+    <legend>Students</legend>
+    <div class="btn-row small" style="margin-bottom:8px">
+      <input type="search" class="filter-list" placeholder="Filter…" aria-label="Filter students" style="max-width:200px">
+      <button type="button" class="btn btn-secondary btn-sm" data-set="1">Select all</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-set="0">Clear</button>
+    </div>
+    <ul class="choice-list" style="max-height:240px;overflow:auto">
+      {% for r in rows %}
+        <li><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.username }}</label></li>
+      {% endfor %}
+    </ul>
+  </fieldset>
   <div class="field">
     <label for="body">Message</label>
     <textarea id="body" name="body" rows="3" maxlength="2000" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
   </div>
+  <div class="check field"><input type="checkbox" name="pin" value="1" id="pin"><label for="pin">Pin to the top of their home page (until you unpin it)</label></div>
   <button class="btn">Send</button>
 </form>
+
+{% if pinned %}
+  <div class="card">
+    <h2>Pinned</h2>
+    <ul class="hints">
+      {% for m in pinned %}
+        <li class="hint"><span class="hint-icon" aria-hidden="true">📌</span>
+          <span>{{ m.body }} <span class="small muted">· {{ m.created.strftime('%b %d') }}{% if m.kind != 'announcement' %} · to {{ m.student.username }}{% endif %}</span></span>
+          <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
+            <button class="btn btn-secondary btn-sm">Unpin</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
 
 {% if rows %}
   <div class="table-wrap stack">
@@ -43,4 +75,24 @@
 {% else %}
   <div class="card empty">No students yet.</div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var to = document.getElementById('to'), chosen = document.getElementById('chosen');
+  function show() { chosen.hidden = to.value !== 'chosen'; }
+  to.addEventListener('change', show); show();
+  var items = chosen.querySelectorAll('li');
+  chosen.querySelector('.filter-list').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    items.forEach(function (li) { li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
+  });
+  chosen.querySelectorAll('[data-set]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = b.dataset.set === '1'; });
+    });
+  });
+})();
+</script>
 {% endblock %}
