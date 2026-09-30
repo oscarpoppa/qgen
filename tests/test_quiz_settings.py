@@ -143,3 +143,11 @@ def test_site_settings_logo_and_name(app_db):
     page = login(app, 'sam').get('/mypage').data.decode()
     assert 'Lincoln Middle School' in page and 'crest.png' in page and 'class="brand-logo"' in page
     assert login(app, 'sam').get('/settings').status_code == 302  # students can't change settings
+
+
+def test_date_fields_get_the_calendar_control(app_db):
+    app, db = app_db
+    page = login(app, 'teach').get('/quiz/assign').data.decode()
+    # the calendar script is on every page and enhances every date field
+    assert 'js/calendar.js' in page
+    assert page.count('type="datetime-local"') == 2

@@ -20,9 +20,11 @@
   </div>
   <fieldset>
     <legend>When (optional)</legend>
-    <div class="form-row">
+    <div class="form-row dates">
       {{ field(form.opens_at) }}
       {{ field(form.closes_at) }}
+    </div>
+    <div style="max-width:240px">
       {{ field(form.time_limit, 'Starts when the student opens the quiz.', attrs={'min': 1, 'placeholder': 'no limit'}) }}
     </div>
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>

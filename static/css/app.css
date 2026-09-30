@@ -387,3 +387,35 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 
 .inline-form { display: inline; margin: 0; }
 td.actions .inline-form .btn { margin-left: 4px; }
+
+/* ---------- calendar control (static/js/calendar.js) ---------- */
+input[type=datetime-local], input[type=date], input[type=time] {
+  font: inherit; color: var(--text); width: 100%; max-width: 100%;
+  padding: 9px 12px; min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+}
+.cal-row { position: relative; display: flex; gap: 6px; align-items: stretch; }
+.cal-row input { flex: 1; min-width: 0; }
+.cal-btn { padding: 6px 10px; min-height: 40px; font-size: 1.05rem; }
+.cal-reading { margin-top: 4px; min-height: 1.2em; }
+.cal-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 296px; max-width: calc(100vw - 32px);
+  padding: 12px; margin: 0; box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-title { font-weight: 700; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal-dow { padding: 4px 0; }
+.cal-day {
+  font: inherit; font-weight: 500; min-height: 34px; padding: 0; border-radius: 8px;
+  border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer;
+}
+.cal-day:hover { background: var(--surface-2); filter: none; }
+.cal-day.cal-other { color: var(--muted); opacity: .6; }
+.cal-day.cal-today { border-color: var(--accent); }
+.cal-day.cal-chosen { background: var(--accent); color: var(--accent-text); }
+.cal-time { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.cal-time select { width: auto; min-height: 34px; padding: 4px 8px; flex: 1; }
+.cal-foot { margin-top: 10px; justify-content: flex-end; }
+/* enhanced fields use our calendar button, not the browser's own icon */
+input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
+.form-row.dates { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
