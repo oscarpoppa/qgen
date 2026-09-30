@@ -342,3 +342,14 @@ def test_every_route_is_documented(app_db):
     spec = Api(app).get('/openapi.json').get_json()
     assert spec['openapi'].startswith('3.1') and '/my/quizzes' in spec['paths']
     assert b'API for apps' in app.test_client().get('/api/v2/docs').data
+
+
+def test_retake_only_after_finishing(app_db):
+    app, db = app_db
+    t = Api(app, 'teach')
+    r = t.post('/problems', json={'type': 'numeric', 'title': 'Add', 'question': '[a] + 1 = ?', 'answer': 'a + 1',
+                                  'options': {'values': [A]}})
+    qid = t.post('/quizzes', json={'title': 'R', 'problems': [r.get_json()['id']]}).get_json()['id']
+    aid = t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['sam']]}).get_json()['assigned'][0]['id']
+    r = t.post('/attempts/{}/retake'.format(aid))
+    assert r.status_code == 409 and "hasn't finished" in r.get_json()['error']['message']

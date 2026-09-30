@@ -121,7 +121,11 @@ def create_admin_command(username):
     if User.query.filter_by(username=username).first():
         print('"{}" already exists.'.format(username))
         return
+    from app.user.forms import MIN_PASSWORD
     password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
+    if len(password) < MIN_PASSWORD:
+        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+        return
     u = User(username=username, is_admin=True)
     u.set_password(password)
     db.session.add(u)

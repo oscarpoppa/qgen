@@ -66,12 +66,18 @@ def logout():
 @user_bp.route('/login', methods=['POST','GET'])
 @logout_required
 def login():
+    from app.api.models import LoginFailure
     form = LoginForm()
     if form.validate_on_submit():
+        #the same guard as the API: slow down password guessing
+        if LoginFailure.too_many(form.username.data):
+            flash('Too many wrong passwords. Please wait 15 minutes and try again.', 'error')
+            return redirect(url_for('user.login'))
         u = User.query.filter_by(username=form.username.data).first()
         if u is None or not u.check_password(form.password.data):
+            LoginFailure.record(form.username.data)
             flash('That username and password don\'t match.', 'error')
-            return redirect(url_for('user.login')) 
+            return redirect(url_for('user.login'))
         login_user(u, remember=True)
         u.logged_in = True
         u.save()

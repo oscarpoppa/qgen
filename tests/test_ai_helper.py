@@ -113,3 +113,24 @@ def test_ai_boxes_hidden_without_key(app_db):
     app.config['ANTHROPIC_API_KEY'] = None
     page = login(app, 'teach').get('/quiz/makevprob').data.decode()
     assert 'Fill in for me' not in page and 'Review with AI' not in page and 'id="helper"' in page
+
+
+def test_review_whole_quiz_describes_groups(app_db, monkeypatch):
+    app, db = app_db
+    from app.qgen.models import VProblem
+    teacher = login(app, 'teach')
+    for n in range(3):
+        teacher.post('/quiz/makevprob', data=problem_form('numeric', 'P{}'.format(n), '[a] + {}'.format(n), 'a + {}'.format(n),
+                                                          [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}]))
+    ids = [p.id for p in VProblem.query.order_by(VProblem.id)]
+    fake = FakeClient({'suggestions': [{'level': 'tip', 'text': 'Nice mix.'}]})
+    monkeypatch.setattr(ai_helper, '_client', lambda key: fake)
+    app.config['ANTHROPIC_API_KEY'] = 'test-key'
+    try:
+        r = teacher.post('/quiz/ai/reviewquiz', data={'title': 'Week 2', 'shuffle_order': 'y',
+                                                      'vplist': json.dumps([ids[0], {'pick': 1, 'from': ids[1:]}])})
+        assert r.get_json()['hints'][0]['text'] == 'Nice mix.'
+        sent = fake.calls[0]['messages'][0]['content']
+        assert 'Week 2' in sent and 'each student gets 1 of these 2' in sent and 'P2' in sent
+    finally:
+        app.config['ANTHROPIC_API_KEY'] = None

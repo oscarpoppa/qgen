@@ -1,6 +1,9 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, StopValidation
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, StopValidation, Length
+
+MIN_PASSWORD = 8
+long_enough = Length(min=MIN_PASSWORD, message='Please use at least {} characters.'.format(MIN_PASSWORD))
 from .models import User
 
 
@@ -18,7 +21,7 @@ def email_optional(form, field):
 
 class ChPassForm(FlaskForm):
     old_password = PasswordField('Old Password', validators=[DataRequired()])
-    password = PasswordField('New Password', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[DataRequired(), long_enough])
     retype_password = PasswordField('Re-type New Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
 
@@ -27,7 +30,7 @@ class RegistrationForm(FlaskForm):
     class_code = StringField('Class code', validators=[DataRequired(message='Ask your teacher for the class code.')])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email (optional)', validators=[email_optional, Email(message='That doesn\'t look like an email address.')])
-    password = PasswordField('Password', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), long_enough])
     retype_password = PasswordField('Re-type Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
 

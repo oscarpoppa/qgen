@@ -6,6 +6,11 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script>
+    /* the "safe" extension stops typed math from making links or styles, so a
+       student can't slip a harmful link into an answer a teacher reads */
+    window.MathJax = { loader: { load: ['ui/safe'] } };
+  </script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   {% block head %}{% endblock %}
 </head>

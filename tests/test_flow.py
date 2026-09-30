@@ -344,3 +344,9 @@ def test_changes_need_a_real_form_from_this_site(app_db):
         assert db.session.get(VProblem, vp_id) is None
     finally:
         app.config['WTF_CSRF_ENABLED'] = False
+
+
+def test_math_display_runs_in_safe_mode(app_db):
+    app, db = app_db
+    page = login(app, 'sam').get('/mypage').data.decode()
+    assert "load: ['ui/safe']" in page and page.index('ui/safe') < page.index('MathJax-script')

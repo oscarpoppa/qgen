@@ -230,6 +230,8 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None):
 
 def retake(cq):
     """A fresh copy, with new values, of a quiz the student has taken."""
+    if not (cq.completed or cq.needs_review):
+        raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.username, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
     notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))

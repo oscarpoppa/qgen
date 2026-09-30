@@ -65,3 +65,20 @@ def test_class_code_controls_sign_up(client):
     assert r.status_code == 200 and b"class code isn" in r.data
     assert register(client, 'hal', '', code='  maple-7 ').status_code == 302
     assert User.query.filter_by(username='hal').count() == 1
+
+
+def test_web_login_is_throttled_like_the_api(client):
+    register(client, 'ivy', '')
+    for _ in range(10):
+        client.post('/login', data={'username': 'ivy', 'password': 'wrong-guess'})
+    r = client.post('/login', data={'username': 'ivy', 'password': 'pw-for-tests'}, follow_redirects=True)
+    assert b'Too many wrong passwords' in r.data and b'My quizzes' not in r.data
+
+
+def test_passwords_need_eight_characters(client):
+    from app.user.models import User
+    from app.qgen.models import Setting
+    Setting.put('class_code', 'maple-7')
+    r = client.post('/register', data={'class_code': 'maple-7', 'username': 'jo', 'email': '',
+                                       'password': 'short', 'retype_password': 'short'})
+    assert b'at least 8 characters' in r.data and User.query.filter_by(username='jo').count() == 0
