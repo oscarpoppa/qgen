@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.user.models import User
-from .models import Message, NOT_NOTICE, IS_NOTICE
+from .models import Message, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT
 
 MAX_LEN = 2000
 
@@ -81,13 +81,17 @@ def thread(student_id, limit=None):
     """Everything in a student's record the student may see: the conversation,
     announcements and the student's own notices (not teachers' notices about the student)."""
     q = Message.query.filter(Message.student_id == student_id,
-                             db.or_(NOT_NOTICE, Message.from_teacher.is_(True)))
+                             db.or_(NOT_NOTICE, Message.from_teacher.is_(True)), VISIBLE_TO_STUDENT)
     return _oldest_first(q, limit)
 
 
-def conversation(student_id, limit=None):
-    """Just what people wrote (messages and announcements), oldest first."""
-    return _oldest_first(Message.query.filter(Message.student_id == student_id, NOT_NOTICE), limit)
+def conversation(student_id, limit=None, for_student=False):
+    """Just what people wrote (messages and announcements), oldest first. for_student
+    leaves out teachers' messages the student removed from their view."""
+    q = Message.query.filter(Message.student_id == student_id, NOT_NOTICE)
+    if for_student:
+        q = q.filter(VISIBLE_TO_STUDENT)
+    return _oldest_first(q, limit)
 
 
 def everyone(limit=60):
@@ -122,7 +126,8 @@ def mark_notices_seen_by_teachers():
 
 
 def pinned_for(student_id):
-    return Message.query.filter_by(student_id=student_id, pinned=True).order_by(Message.created.desc()).all()
+    return Message.query.filter(Message.student_id == student_id, Message.pinned.is_(True), VISIBLE_TO_STUDENT) \
+        .order_by(Message.created.desc()).all()
 
 
 def mark_seen_by_student(student_id, messages):
@@ -173,19 +178,25 @@ def pinned_announcements():
 # ---------------------------------------------------------------- deleting
 
 def can_delete(user, m):
-    """Conversation messages (not notices): teachers may delete any; students only their own."""
+    """Conversation messages (not notices): teachers may delete any; a student may
+    delete anything in their own conversation (a teacher's message only from their view)."""
     if m.kind == 'notice':
         return False
     if user.is_admin:
         return True
-    return m.student_id == user.id and not m.from_teacher
+    return m.student_id == user.id
 
 
 def delete_message(user, m, everyone=False):
-    """Delete a message for good. For an announcement sent to several students,
-    everyone=True removes every copy, else just this conversation's. Returns how many."""
+    """Delete a message for good; a student deleting a teacher's message only removes
+    it from the student's view. For an announcement sent to several students, a
+    teacher's everyone=True removes every copy. Returns how many."""
     if not can_delete(user, m):
-        raise MessageError('You can only delete messages you wrote.')
+        raise MessageError('You can only delete messages in your own conversation.')
+    if not user.is_admin and m.from_teacher:
+        m.hidden_for_student = True
+        db.session.commit()
+        return 1
     rows = Message.query.filter_by(batch=m.batch).all() if (everyone and m.batch and user.is_admin) else [m]
     for row in rows:
         db.session.delete(row)

@@ -196,6 +196,19 @@
       });
   });
 
+  //an announcement's ✕ opens a small menu: keep it in view, one at a time, and close it
+  //when clicking elsewhere
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d.matches || !d.matches('details.msg-x-wrap') || !d.open) return;
+    document.querySelectorAll('details.msg-x-wrap[open]').forEach(function (o) { if (o !== d) o.open = false; });
+    var menu = d.querySelector('.msg-del-choices');
+    if (menu) menu.scrollIntoView({ block: 'nearest' });
+  }, true);
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.msg-x-wrap[open]').forEach(function (d) { if (!d.contains(e.target)) d.open = false; });
+  });
+
   /* ---------- something new while a panel is hidden ---------- */
 
   function toast(p, info) {

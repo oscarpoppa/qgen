@@ -574,10 +574,15 @@ button.badge-btn { border: 0; min-height: 0; cursor: pointer; font: 600 .78rem/1
 button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 
 /* deleting messages and clearing notices */
-.msg-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-top: 4px; }
-.msg-actions .btn-link { font-size: .8rem; }
-.msg-del-btn { color: var(--bad) !important; }
-.msg-del > summary { list-style: none; cursor: pointer; color: var(--bad); font-size: .8rem; font-weight: 500; }
+.msg-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin-top: 4px; }
+/* small, quiet links under a message: Pin, Delete */
+.msg-act {
+  display: inline-flex; align-items: center; gap: 3px; min-height: 0; padding: 0;
+  border: 0; background: none; color: var(--muted);
+  font: 500 .75rem/1.2 inherit; cursor: pointer; white-space: nowrap;
+}
+.msg-act:hover { background: none; color: var(--text); text-decoration: underline; filter: none; }
+
 .msg-del > summary::-webkit-details-marker { display: none; }
 .msg-del-choices { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .msg-del-choices .btn { white-space: normal; text-align: left; }
@@ -587,3 +592,22 @@ button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 .notice-x { background: none; border: 0; color: var(--muted); min-height: 0; padding: 2px 6px; font-size: .85rem; }
 .notice-x:hover { color: var(--bad); background: var(--bad-soft); filter: none; }
 .notice-clear-all { text-align: right; margin: -4px 0 6px; }
+
+/* the ✕ that deletes a message, in its top-right corner (like notices) */
+.msg { position: relative; }
+.msg:has(.msg-x-wrap) .msg-meta { padding-right: 22px; }
+.msg-x-wrap { position: absolute; top: 4px; right: 4px; margin: 0; }
+.msg-x {
+  display: inline-flex; align-items: center; justify-content: center; list-style: none;
+  width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 5px;
+  background: none; color: var(--muted); font: 400 .8rem/1 inherit; cursor: pointer;
+}
+.msg-x::-webkit-details-marker { display: none; }
+.msg-x:hover, details[open] > .msg-x { color: var(--bad); background: var(--bad-soft); filter: none; }
+/* an announcement's choice opens under its ✕ */
+details.msg-x-wrap[open] { z-index: 5; }
+details.msg-x-wrap .msg-del-choices {
+  position: absolute; right: 0; top: 26px; width: max-content; max-width: 240px;
+  padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}

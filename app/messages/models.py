@@ -25,6 +25,8 @@ class Message(db.Model):
     pinned = db.Column(db.Boolean, default=False, nullable=False)
     #rows sent together (one broadcast) share this, so they're pinned or unpinned together
     batch = db.Column(db.String(32), index=True)
+    #the student removed this teacher's message from their own view (teachers still see it)
+    hidden_for_student = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     __table_args__ = (db.Index('ix_message_student_created', 'student_id', 'created'),)
 
@@ -50,12 +52,14 @@ def notify_teachers(student_id, body, link=None):
 
 NOT_NOTICE = Message.kind != 'notice'
 IS_NOTICE = Message.kind == 'notice'
+#what a student sees of their own record
+VISIBLE_TO_STUDENT = Message.hidden_for_student.is_(False)
 
 
 def unread_for_student(user_id):
     """Unread conversation messages (and announcements) for a student."""
     return Message.query.filter(Message.student_id == user_id, Message.from_teacher.is_(True),
-                                Message.seen_by_student.is_(False), NOT_NOTICE).count()
+                                Message.seen_by_student.is_(False), NOT_NOTICE, VISIBLE_TO_STUDENT).count()
 
 
 def unread_notices_for_student(user_id):

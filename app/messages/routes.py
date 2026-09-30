@@ -185,7 +185,7 @@ def notices():
 def student_panel(user, mark_seen=True):
     """Pinned announcements and recent messages for a student's home page;
     opening it marks them seen."""
-    items = M.conversation(user.id, limit=30)
+    items = M.conversation(user.id, limit=30, for_student=True)
     pinned = M.pinned_for(user.id)
     unread_ids = {m.id for m in items + pinned if m.from_teacher and not m.seen_by_student}
     if mark_seen:
@@ -239,7 +239,8 @@ def poll():
         unseen = Message.seen_by_teacher.is_(False)
         unread, notices = unread_for_teachers(), unread_notices_for_teachers()
     else:
-        mine = Message.query.filter(Message.student_id == current_user.id, Message.from_teacher.is_(True))
+        mine = Message.query.filter(Message.student_id == current_user.id, Message.from_teacher.is_(True),
+                                    Message.hidden_for_student.is_(False))
         unseen = Message.seen_by_student.is_(False)
         unread, notices = unread_for_student(current_user.id), unread_notices_for_student(current_user.id)
     newest = lambda q: q.order_by(Message.id.desc()).first()

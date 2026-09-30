@@ -316,17 +316,25 @@ def test_deleting_messages(app_db):
     kim.post('/messages/reply', data={'body': 'Kim wrote this'})
     mid = lambda body: Message.query.filter_by(body=body).one().id
 
-    # students: Delete only on their own messages, and the server enforces it
+    # students: Delete on everything in their own conversation, nothing in anyone else's
     box = sam.get('/messages/panel').data.decode()
-    assert box.count('aria-label="Delete this message"') == 2  # sam's two, not the teacher's
-    assert sam.post('/messages/delete/{}'.format(mid('From the teacher')), headers=J).status_code == 403
+    assert box.count('aria-label="Delete this message"') == 3
+    assert 'Your teacher will still have it' in box  # the teacher's message: removed from sam's view only
     assert sam.post('/messages/delete/{}'.format(mid('Kim wrote this')), headers=J).status_code == 403
+    teacher_msg = mid('From the teacher')
+    assert sam.post('/messages/delete/{}'.format(teacher_msg), headers=J).get_json() == {'ok': True, 'deleted': 1}
+    assert 'From the teacher' not in sam.get('/messages/panel').data.decode()
+    assert db.session.get(Message, teacher_msg) is not None  # still there for the teacher...
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'From the teacher' in box and 'sam removed this from their messages' in box  # ...marked
+    from app.messages import services as MS
+    assert all(m.body != 'From the teacher' for m in MS.thread(sam_id))  # and not through the API
     assert sam.post('/messages/delete/{}'.format(mid('Mine to delete')), headers=J).get_json() == {'ok': True, 'deleted': 1}
     assert Message.query.filter_by(body='Mine to delete').count() == 0
     # teachers: any message, from the panel (JSON) or the conversation page (redirect)
     assert 'Delete this message' in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert teacher.post('/messages/delete/{}'.format(mid('Teacher deletes this')), headers=J).get_json()['ok']
-    r = teacher.post('/messages/delete/{}'.format(mid('From the teacher')))
+    r = teacher.post('/messages/delete/{}'.format(teacher_msg))  # the teacher deletes it for good
     assert r.status_code == 302
     assert Message.query.filter(Message.body.in_(['Teacher deletes this', 'From the teacher'])).count() == 0
     assert teacher.post('/messages/delete/999999', headers=J).status_code == 404
@@ -343,11 +351,13 @@ def test_deleting_messages(app_db):
     one = Message.query.filter_by(body='Quiz moved', student_id=kim_id).one().id
     assert teacher.post('/messages/delete/{}'.format(one), data={'everyone': '1'}, headers=J).get_json()['deleted'] == 2
     assert Message.query.filter(Message.body.in_(['Test Friday', 'Quiz moved'])).count() == 0
-    # a student can't use "everyone" to delete other students' copies
+    # a student can't use "everyone" to touch other students' copies: it only leaves sam's view
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Hands off'})
     assert sam.post('/messages/delete/{}'.format(Message.query.filter_by(body='Hands off', student_id=sam_id).one().id),
-                    data={'everyone': '1'}, headers=J).status_code == 403
+                    data={'everyone': '1'}, headers=J).get_json()['deleted'] == 1
     assert Message.query.filter_by(body='Hands off').count() == 2
+    assert Message.query.filter_by(body='Hands off', hidden_for_student=True).one().student_id == sam_id
+    assert 'Hands off' in login(app, 'kim').get('/messages/panel').data.decode()
     # notices aren't deleted this way
     from app.messages.models import notify
     n = notify(sam_id, 'New quiz: "X".'); db.session.commit()
