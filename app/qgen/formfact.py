@@ -61,13 +61,14 @@ def quiz_items(cquiz, form):
 
 
 #save answers and auto-grade; returns True when an instructor still needs to grade.
-#With no form (time ran out), the autosaved answers are graded as they are.
-def record_answers(cquiz, form=None):
+#answers: {question number: answer as the form or API sends it}. Questions not
+#in it keep their autosaved answer, so answers=None (time ran out) grades what was saved.
+def record_answers(cquiz, answers=None):
     needs_review = False
     for cprob in cquiz.cproblems:
         qt = qtype_of(cprob)
-        if form is not None:
-            cprob.submitted = qt.to_stored(form[fieldname_base.format(cprob.ordinal)].data)
+        if answers is not None and cprob.ordinal in answers:
+            cprob.submitted = qt.to_stored(answers[cprob.ordinal])
         elif cprob.submitted is None:
             cprob.submitted = qt.to_stored(None)
         if qt.auto_graded:
@@ -78,6 +79,11 @@ def record_answers(cquiz, form=None):
             needs_review = needs_review or cprob.credit is None
     cquiz.compdate = datetime.now()
     return needs_review
+
+
+def form_answers(cquiz, form):
+    """{question number: answer} from the quiz page's form."""
+    return {cp.ordinal: form[fieldname_base.format(cp.ordinal)].data for cp in cquiz.cproblems}
 
 
 def quiz_score(cquiz):
