@@ -109,17 +109,29 @@ def test_side_panels_on_every_page(app_db):
     # ...and not before signing in
     assert 'id="dock"' not in app.test_client().get('/login').data.decode()
 
-    # no messages yet: the teacher's panel still opens a conversation to start one
+    # the panel starts on everyone's messages together; a student's id shows one conversation
     box = teacher.get('/messages/panel').data.decode()
-    assert 'id="msg-student"' in box and 'reply-box' in box
+    assert 'id="msg-student"' in box and '<option value="all" selected>' in box and 'reply-box' not in box
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'reply-box' in box and 'Write to sam' in box and 'data-student="all"' in box
 
-    # a student writes: the panel opens that conversation, shows it as new, and marks it read
+    # students write: the all-messages view shows both, labeled, with Reply buttons, and marks them read
     login(app, 'kim').post('/messages/reply', data={'body': 'Is the quiz timed?'})
+    login(app, 'sam').post('/messages/reply', data={'body': 'Can I retake it?'})
     poll = teacher.get('/messages/poll').get_json()
-    assert poll['unread'] == 1 and poll['message_preview'] == {'id': poll['latest'], 'from': 'kim', 'text': 'Is the quiz timed?'}
-    box = teacher.get('/messages/panel').data.decode()
-    assert 'Is the quiz timed?' in box and 'msg-new' in box and '<option value="{}" selected>'.format(kim_id) in box
+    assert poll['unread'] == 2 and poll['message_preview']['from'] == 'sam'
+    box = teacher.get('/messages/panel?student=all').data.decode()
+    assert 'Is the quiz timed?' in box and 'Can I retake it?' in box and box.count('msg-new') == 2
+    assert 'Reply to kim' in box and 'Reply to sam' in box
+    assert box.index('Is the quiz timed?') < box.index('Can I retake it?')  # newest at the bottom
     assert teacher.get('/messages/poll').get_json()['unread'] == 0
+    # a teacher's own message in that view says who it went to
+    teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'Yes, 20 minutes.'}, headers={'X-Requested-With': 'fetch'})
+    assert 'to kim' in teacher.get('/messages/panel').data.decode()
+    # one student's conversation shows only that student's messages
+    box = teacher.get('/messages/panel?student={}'.format(kim_id)).data.decode()
+    assert 'Is the quiz timed?' in box and 'Can I retake it?' not in box
+    assert '<option value="{}" selected>'.format(kim_id) in box
 
     # sending from the panel answers with JSON (the panel reloads itself; no page change, no flash)
     r = teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'No, take your time.'}, headers={'X-Requested-With': 'fetch'})

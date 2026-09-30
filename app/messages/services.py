@@ -90,6 +90,19 @@ def conversation(student_id, limit=None):
     return _oldest_first(Message.query.filter(Message.student_id == student_id, NOT_NOTICE), limit)
 
 
+def everyone(limit=60):
+    """The newest messages from all conversations together (no notices), oldest first."""
+    return _oldest_first(Message.query.filter(NOT_NOTICE), limit)
+
+
+def mark_messages_seen_by_teachers(messages):
+    """Mark these students' messages read (those a teacher has just been shown)."""
+    ids = [m.id for m in messages if not m.from_teacher and not m.seen_by_teacher and m.kind != 'notice']
+    if ids:
+        Message.query.filter(Message.id.in_(ids)).update({'seen_by_teacher': True}, synchronize_session=False)
+        db.session.commit()
+
+
 def notices_for_student(student_id, limit=30):
     """A student's automatic notices, newest first."""
     return Message.query.filter(Message.student_id == student_id, IS_NOTICE, Message.from_teacher.is_(True)) \
@@ -128,14 +141,18 @@ def mark_seen_by_teachers(student_id):
     db.session.commit()
 
 
+def unread_from(student_id):
+    return Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
+                                Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
+
+
 def inbox():
     """Every student's conversation for teachers: unread first, then most recent."""
     rows = []
     for s in User.query.filter_by(is_admin=False).order_by(User.username).all():
         last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE) \
             .order_by(Message.created.desc(), Message.id.desc()).first()
-        unread = Message.query.filter(Message.student_id == s.id, Message.from_teacher.is_(False),
-                                      Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
+        unread = unread_from(s.id)
         rows.append({'student': s, 'last': last, 'unread': unread})
     rows.sort(key=lambda r: (-r['unread'], -(r['last'].created.timestamp() if r['last'] else 0), r['student'].username))
     return rows

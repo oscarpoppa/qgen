@@ -1,25 +1,32 @@
-{# the messages side panel for a teacher: one conversation at a time, pick the student above it #}
-<section id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id) if student else url_for('messages.panel') }}" aria-labelledby="messages-title">
-  <div class="card-head"><h2 id="messages-title" class="sr-only">Messages</h2>
-    {% if others_unread %}<span class="badge badge-warn" title="Unread messages from other students">{{ others_unread }} more new</span>{% endif %}
-    <a class="right small" href="{{ url_for('messages.inbox') }}">All messages</a></div>
-  {% if student %}
-    <form method="get" action="{{ url_for('user.mypage') }}" class="convo-pick">
-      <label for="msg-student" class="small muted">Talking with</label>
-      <select id="msg-student" name="student" data-current="{{ student.id }}">
-        {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+{# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
+<section id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id if student else 'all') }}" aria-labelledby="messages-title">
+  <h2 id="messages-title" class="sr-only">Messages</h2>
+  {% if rows %}
+    <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-pick">
+      <label for="msg-student" class="small muted">Showing</label>
+      <select id="msg-student" name="student" data-current="{{ student.id if student else 'all' }}">
+        <option value="all"{{ ' selected' if everyone }}>All messages (every student)</option>
+        {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
       </select>
-      <noscript><button class="btn btn-secondary btn-sm">Open</button></noscript>
     </form>
-    <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
-    <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="to" value="{{ student.id }}">
-            <label for="reply" class="sr-only">Message to {{ student.username }}</label>
-      <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.username }}…"></textarea>
-      <button class="btn">Send</button>
-    </form>
-    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}#compose">Announcement to several students or everyone…</a></p>
+    {% if everyone %}
+      <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
+      <p class="muted small" style="margin:0">To write back, press <strong>Reply</strong> on a message, or pick a student above.</p>
+    {% else %}
+      <div class="btn-row convo-bar">
+        <button type="button" class="btn-link small show-student" data-student="all">← All messages</button>
+        {% if others_unread %}<span class="badge badge-warn">{{ others_unread }} new from others</span>{% endif %}
+      </div>
+      <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
+      <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="to" value="{{ student.id }}">
+        <label for="reply" class="sr-only">Message to {{ student.username }}</label>
+        <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.username }}…"></textarea>
+        <button class="btn">Send</button>
+      </form>
+    {% endif %}
+    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}">Messages page: announcements and pinned messages</a></p>
   {% else %}
     <p class="muted small">No students yet. Once students sign up, you can talk with them here.</p>
   {% endif %}

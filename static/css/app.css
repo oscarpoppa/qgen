@@ -569,3 +569,4 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
   .nav { order: 4; }
 }
 .convo-switch select { min-width: 160px; }
+.convo-bar { margin-bottom: 8px; justify-content: space-between; }

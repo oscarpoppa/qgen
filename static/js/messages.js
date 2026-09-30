@@ -63,7 +63,7 @@
 
   function paneUrl(p) {
     var url = pane(p).dataset.url;
-    var student = p === 'messages' && stored('qgen-dock-student');
+    var student = p === 'messages' && stored('qgen-dock-view');
     return student ? url + '?student=' + encodeURIComponent(student) : url;
   }
 
@@ -123,18 +123,28 @@
     }
   });
 
-  //teacher: choose whose conversation the panel shows
+  //teacher: show everyone's messages ('all') or one student's conversation
+  function showStudent(choice, focus) {
+    store('qgen-dock-view', choice);
+    return load('messages').then(function () {
+      var el = focus === 'reply' ? pane('messages').querySelector('textarea') : document.getElementById('msg-student');
+      if (el) el.focus();
+    });
+  }
   document.addEventListener('change', function (e) {
     if (e.target.id !== 'msg-student') return;
     if (busyTyping() && !confirm('Discard the message you were writing?')) {
-      e.target.value = stored('qgen-dock-student') || e.target.dataset.current;
+      e.target.value = e.target.dataset.current;
       return;
     }
-    store('qgen-dock-student', e.target.value);
-    load('messages').then(function () {
-      var sel = document.getElementById('msg-student');
-      if (sel) sel.focus();
-    });
+    showStudent(e.target.value);
+  });
+  //"Reply to …" on a message in the all-messages view, and "← All messages"
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('#dock-messages .show-student');
+    if (!b) return;
+    if (busyTyping() && !confirm('Discard the message you were writing?')) return;
+    showStudent(b.dataset.student, b.dataset.student === 'all' ? null : 'reply');
   });
 
   //send from the panel without leaving the page

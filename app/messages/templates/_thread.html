@@ -1,4 +1,4 @@
-{# messages in one conversation; `me_teacher` says which side is "you" #}
+{# messages in one conversation (or, with `everyone`, from all students); `me_teacher` says which side is "you" #}
 {% from "_macros.html" import avatar with context %}
 <ol class="thread" aria-label="Messages">
   {% for m in items %}
@@ -9,11 +9,15 @@
         {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
         <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
+        {% if everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.username }}</span>{% endif %}
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
         {% if m.pinned %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
+      {% if everyone is defined and everyone %}
+        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">Reply to {{ m.student.username }}</button>
+      {% endif %}
       {% if me_teacher and m.from_teacher %}
         <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="small">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">

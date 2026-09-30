@@ -120,7 +120,7 @@ def wants_json():
 @pw_check
 def panel():
     if current_user.is_admin:
-        return render_template('_teacher_messages.html', **teacher_panel(request.args.get('student', type=int)))
+        return render_template('_teacher_messages.html', **teacher_panel(request.args.get('student', 'all')))
     return render_template('_student_messages.html', **student_panel(current_user))
 
 #the notices side panel: automatic notices, apart from the conversation; showing them marks them seen
@@ -150,23 +150,34 @@ def student_panel(user, mark_seen=True):
     return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.MAX_LEN}
 
 
-def teacher_panel(student_id=None, mark_seen=True):
-    """The messages box on a teacher's home page: one conversation at a time, with a
-    menu of every student (unread first). Without a choice it opens the conversation
-    that most needs attention. Showing a conversation marks it seen."""
+def teacher_panel(choice='all', mark_seen=True):
+    """The messages side panel for a teacher. choice 'all' (the default) shows every
+    student's messages together, newest at the bottom, each with a Reply button;
+    a student's id shows just that conversation, with a reply box. What is shown
+    is marked seen. The menu lists every student, unread first."""
     rows = M.inbox()
+    try:
+        student_id = int(choice)
+    except (TypeError, ValueError):
+        student_id = None
     chosen = next((r for r in rows if r['student'].id == student_id), None) if student_id else None
     if chosen is None:
-        chosen = next((r for r in rows if r['unread']), None) or next((r for r in rows if r['last']), None) \
-            or (rows[0] if rows else None)
-    student = chosen['student'] if chosen else None
-    items = M.conversation(student.id, limit=30) if student else []
+        items = M.everyone()
+        unread_ids = {m.id for m in items if not m.from_teacher and not m.seen_by_teacher}
+        if mark_seen:
+            M.mark_messages_seen_by_teachers(items)
+            for r in rows:
+                r['unread'] = M.unread_from(r['student'].id)
+        return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
+                'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN, 'everyone': True}
+    student = chosen['student']
+    items = M.conversation(student.id, limit=30)
     unread_ids = {m.id for m in items if not m.from_teacher and not m.seen_by_teacher}
-    if student and mark_seen:
+    if mark_seen:
         M.mark_seen_by_teachers(student.id)
         chosen['unread'] = 0
     return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids,
-            'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN}
+            'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN, 'everyone': False}
 
 
 # ---------------------------------------------------------------- both
