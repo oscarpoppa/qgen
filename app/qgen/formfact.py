@@ -179,8 +179,7 @@ def legacy_transcript(stored, title):
 def transcript_html(cquiz, title, show_answers=True):
     stored = cquiz.transcript or ''
     if stored.startswith(TRANSCRIPT_V2):
-        if not show_answers:
-            #the saved record has the answers; build a copy without them from the same data
-            return Markup(build_transcript(cquiz, show_answers=False))
-        return Markup(stored[len(TRANSCRIPT_V2):])
+        #shown from the same saved data the stored record was made from, so pages
+        #made before a change in how results look (or what's shown) get it too
+        return Markup(build_transcript(cquiz, show_answers=show_answers))
     return Markup('<div class="card legacy-transcript">{}</div>'.format(legacy_transcript(stored, title)))

@@ -222,3 +222,20 @@ def test_release_answers_to_one_student(app_db):
     assert sam.post('/quiz/releasecq/{}'.format(kim_cq.id)).status_code == 302
     db.session.expire_all()
     assert not CQuiz.query.get(kim_cq.id).answers_released
+
+
+def test_correct_answer_shown_under_right_answers_too(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Easy', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert cq.score == 100 and '<dt>Correct answer</dt><dd>4</dd>' in page
