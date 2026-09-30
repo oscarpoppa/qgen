@@ -231,3 +231,28 @@ def test_conversation_page_switches_students(app_db):
     assert '<option value="/messages/{}" selected>sam</option>'.format(sam_id) in page
     assert '<option value="/messages/{}">kim (1 new)</option>'.format(kim_id) in page
     assert 'Hello from kim' in teacher.get('/messages/{}'.format(kim_id)).data.decode()
+
+
+def test_new_from_others_button_goes_to_them(app_db):
+    app, db = app_db
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    teacher = login(app, 'teach')
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'new from' not in box  # nothing waiting
+    # one other student wrote: the button names them and opens their conversation
+    login(app, 'kim').post('/messages/reply', data={'body': 'Hi'})
+    login(app, 'kim').post('/messages/reply', data={'body': 'Still there?'})
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'class="badge badge-warn badge-btn show-student" data-student="{}"'.format(kim_id) in box
+    assert '2 new from kim →' in box
+    # several students: it opens all messages instead
+    from app.messages import services as M
+    M.reply(User.query.filter_by(username='sam').one(), 'Me too')
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()  # reading sam's clears sam's
+    assert '2 new from kim →' in box
+    extra = User(username='lee'); extra.set_password('pw-for-tests'); db.session.add(extra); db.session.commit()
+    M.reply(extra, 'Hello from lee')
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'data-student="all"' in box and '3 new from 2 students →' in box

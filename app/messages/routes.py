@@ -176,8 +176,11 @@ def teacher_panel(choice='all', mark_seen=True):
     if mark_seen:
         M.mark_seen_by_teachers(student.id)
         chosen['unread'] = 0
+    #other students waiting for an answer, most recent first: the "new from ..." button
+    waiting = sorted((r for r in rows if r['unread']), key=lambda r: r['last'].created, reverse=True)
     return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids,
-            'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN, 'everyone': False}
+            'others_unread': sum(r['unread'] for r in rows), 'waiting': waiting,
+            'max_len': M.MAX_LEN, 'everyone': False}
 
 
 # ---------------------------------------------------------------- both

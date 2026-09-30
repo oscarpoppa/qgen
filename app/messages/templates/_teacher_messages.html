@@ -15,7 +15,16 @@
     {% else %}
       <div class="btn-row convo-bar">
         <button type="button" class="btn-link small show-student" data-student="all">← All messages</button>
-        {% if others_unread %}<span class="badge badge-warn">{{ others_unread }} new from others</span>{% endif %}
+        {% if waiting %}
+          {# one student: go to that conversation; several: to all messages, where the new ones are marked #}
+          {% if waiting|length == 1 %}
+            <button type="button" class="badge badge-warn badge-btn show-student" data-student="{{ waiting[0].student.id }}"
+                    title="Open {{ waiting[0].student.username }}'s conversation">{{ others_unread }} new from {{ waiting[0].student.username }} →</button>
+          {% else %}
+            <button type="button" class="badge badge-warn badge-btn show-student" data-student="all"
+                    title="See all messages; the new ones are marked">{{ others_unread }} new from {{ waiting|length }} students →</button>
+          {% endif %}
+        {% endif %}
       </div>
       <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
       <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
