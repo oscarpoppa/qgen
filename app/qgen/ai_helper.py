@@ -210,7 +210,7 @@ REVIEW_SCHEMA = {
     'additionalProperties': False,
 }
 
-REVIEW_PROMPT = """You review quiz material written by a teacher who may not be technical. Each student gets their own randomized version, so students can't copy each other's answers; that goal matters.
+REVIEW_PROMPT = """You review quiz material written by a teacher who may not be technical. Each student gets a different randomized version, so students can't copy each other's answers; that goal matters.
 
 Give at most 6 short, concrete suggestions in plain words, most important first:
 - "warn" for real problems: an answer that doesn't match the question, ambiguous wording, missing units or rounding instructions, a question students could misread, several correct choices where only one is expected, or something that makes answers easy to pass between students.

@@ -140,7 +140,7 @@ def resetpass(uid):
     usr.set_password(pword)
     usr.pw_man_reset = True
     usr.save()
-    flash('Password reset for {}. Temporary password: {} (they must change it at next login)'.format(usr.username, pword))
+    flash('Password reset for {}. Temporary password: {} (it must be changed at the next login)'.format(usr.username, pword))
     current_app.logger.info('{} issued a manual PW reset for {}'.format(current_user.username, usr.username))
     return redirect(url_for('user.userdet'))
 
@@ -252,7 +252,7 @@ def upload_avatar():
         name = avatars.save(current_user, f.stream)
     except avatars.AvatarError as exc:
         return jsonify(ok=False, error=str(exc)), 400
-    current_app.logger.info('{} changed their picture'.format(current_user.username))
+    current_app.logger.info('{} uploaded a new profile picture'.format(current_user.username))
     return jsonify(ok=True, name=name, url=url_for('static', filename=name))
 
 # route to remove a picture: your own, or (teachers) anyone's

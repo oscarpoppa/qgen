@@ -7,7 +7,7 @@
 </div>
 
 {% if preview %}
-  <div class="alert alert-warning">You're viewing {{ cq.taker.username }}'s quiz. Only they can submit it.</div>
+  <div class="alert alert-warning">You're viewing {{ cq.taker.username }}'s quiz. Only {{ cq.taker.username }} can submit it.</div>
 {% endif %}
 
 {% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}

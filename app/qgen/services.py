@@ -25,7 +25,7 @@ GRACE = timedelta(minutes=2)
 
 
 class ServiceError(ValueError):
-    """Something the person asked for can't be done, worded for them."""
+    """Something that was asked for can't be done, worded for people to read."""
 
 
 def archive(obj, group_cls, rel):
@@ -209,7 +209,7 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
 
 
 def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None):
-    """Give each student their own copy; returns (created quizzes, [(student, error), ...])."""
+    """Give each student a separate copy; returns (created quizzes, [(student, error), ...])."""
     if opens_at and closes_at and closes_at <= opens_at:
         raise ServiceError('The closing time must be after the opening time.')
     if time_limit is not None and not 1 <= time_limit <= 600:

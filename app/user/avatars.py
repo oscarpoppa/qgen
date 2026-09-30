@@ -10,7 +10,7 @@ from app import db
 
 SIZE = 256
 FOLDER = 'avatars'
-#a soft palette for initials, picked by name so each person keeps their color
+#a soft palette for initials, picked by name so each person always gets the same color
 COLORS = ['#2f5bd3', '#1d7a46', '#b3261e', '#8a5a00', '#6b3fa0', '#0f7c8c', '#a1356e', '#46607a']
 
 

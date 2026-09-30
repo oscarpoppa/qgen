@@ -1,6 +1,6 @@
 """How records look in API responses. Dates are ISO 8601 (local server time).
 
-A student's view never includes correct answers before their attempt is
+A student's view never includes correct answers before the attempt is
 finished (and, when the teacher hides them, before they're released).
 """
 from flask import url_for
@@ -126,7 +126,7 @@ def vquiz_json(vq, full=False):
 
 
 def teacher_attempt_json(cq):
-    """Everything about one attempt, for a teacher: their answers, the correct ones, grading."""
+    """Everything about one attempt, for a teacher: the student's answers, the correct ones, grading."""
     out = attempt_summary(cq)
     out['student'] = user_json(cq.taker)
     out['scoring_rule_override'] = cq.retake_rule

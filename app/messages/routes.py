@@ -48,7 +48,12 @@ def send():
     except M.MessageError as exc:
         flash(str(exc), 'error')
         return redirect(back)
-    pinned = ' and pinned to the top of their home page{}'.format('' if len(students) == 1 else 's') if request.form.get('pin') else ''
+    if not request.form.get('pin'):
+        pinned = ''
+    elif len(students) == 1:
+        pinned = ' and pinned to the top of {}\'s home page'.format(students[0].username)
+    else:
+        pinned = ' and pinned to the top of their home pages'
     if len(students) == 1 and to != 'all':
         flash('Message sent to {}{}.'.format(students[0].username, pinned), 'success')
         if request.form.get('home'):
@@ -74,7 +79,7 @@ def pin(message_id):
 
 # ---------------------------------------------------------------- students
 
-#route for a student to reply to their teachers (shown on their home page)
+#route for a student to reply to the teachers (shown on the student's home page)
 @messages_bp.route('/messages/reply', methods=['POST'])
 @login_required
 @pw_check

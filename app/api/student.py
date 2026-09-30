@@ -133,7 +133,7 @@ def my_results(attempt_id):
 @api_bp.route('/my/messages', methods=['GET'])
 @token_required()
 def my_messages():
-    """A student's conversation with their teachers (reading marks them seen)."""
+    """A student's conversation with the teachers (reading marks the messages seen)."""
     if g.api_user.is_admin:
         raise ApiError(403, 'forbidden', 'Teachers use /messages.')
     panel = student_panel(g.api_user)

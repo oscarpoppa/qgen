@@ -4,7 +4,7 @@
 <div class="card card-narrow empty">
   <span class="big">⏳</span>
   <h1>Submitted</h1>
-  <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. An instructor is grading the written answers; your score will appear here when they're done.</p>
+  <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. An instructor is grading the written answers; your score will appear here when grading is done.</p>
   {% if current_user.is_admin %}<p><a class="btn" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade it now</a></p>{% endif %}
   <p><a href="{{ url_for('user.mypage') }}">Back to my quizzes</a></p>
 </div>

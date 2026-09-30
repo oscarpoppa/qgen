@@ -100,7 +100,7 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
-    #each student gets the questions in their own random order
+    #each student gets the questions in a different random order
     shuffle_order = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
     #how several attempts combine into one score: see RETAKE_RULES
     retake_rule = db.Column(db.String(16), default='best', nullable=False, server_default='best')

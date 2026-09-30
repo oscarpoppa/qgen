@@ -45,7 +45,7 @@ ENDPOINTS = [
     ('PUT', '/quizzes/{quiz_id}', 'teacher', 'Replace a quiz (same body as creating).', None),
     ('DELETE', '/quizzes/{quiz_id}', 'teacher', 'Delete a quiz (409 once it has been assigned).', None),
     ('POST', '/quizzes/{quiz_id}/release', 'teacher', 'Show (true) or hide (false) correct answers to students.', {'released': True}),
-    ('POST', '/quizzes/{quiz_id}/assign', 'teacher', 'Give each student their own random copy.',
+    ('POST', '/quizzes/{quiz_id}/assign', 'teacher', 'Give each student a separate random copy.',
      {'students': [7, 8], 'opens_at': '2026-10-05T09:00', 'closes_at': '2026-10-05T10:00', 'time_limit_minutes': 30}),
 
     ('GET', '/students', 'teacher', 'All students.', None),

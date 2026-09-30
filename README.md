@@ -1,10 +1,10 @@
-# qgen: quizzes where every student gets their own version
+# qgen: quizzes where every student gets a different version
 
 qgen is a small, self-hosted quiz app for teachers (Flask, MySQL and MathJax).
 
 **The problem it solves is cheating.** When everyone gets the same quiz, answers travel.
 A student says "number 3 is B" to a friend, peeks at a neighbour's screen, or remembers a
-quiz for a retake. In qgen, **every student gets their own version** of the same quiz.
+quiz for a retake. In qgen, **every student gets a different version** of the same quiz.
 The questions are the same kind, but they use different numbers, names and pictures, with
 choices and questions in a different order. Passing answers along doesn't help.
 
@@ -50,7 +50,7 @@ Teachers don't need to be technical. Problems are written in plain words with
 - **Settings:** your school's name and logo, and a class code that students need to sign up.
 
 ### For students
-- A clean home page with their quizzes, scores (best attempt marked), messages and
+- A clean home page with quizzes, scores (best attempt marked), messages and
   announcements.
 - **Answers save automatically.** A closed tab or a flat battery loses nothing.
 - A quiet time reminder when there's a time limit. When time is up, saved answers are
@@ -126,8 +126,8 @@ flask --app quizapp.py close-expired
 | **Values** | `speed`: Whole number, 40 to 80, in steps of 5 · `hours`: Whole number, 2 to 5 · `who`: Pick from list `Maria, Ahmed, Li` |
 | **Answer** | `speed * hours` |
 
-Every student sees their own numbers and name, and each is graded against their own
-answer.
+Every student sees different numbers and a different name, and each answer is graded
+against that student's version.
 
 - **Pick one / Pick several:** write one choice per line and put `*` before correct ones.
   Choices can use values too, like `*[a + b]`. "Show only 4" gives each student a different

@@ -33,7 +33,7 @@
                     {% else %}<span class="badge">not started</span>{% endif %}
                     {% if cq.closes_at and not cq.completed %}<span class="small muted">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</span>{% endif %}
                     <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '”? This removes their answers too.') }}
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '”? This removes the answers too.') }}
                   </div>
                 {% endfor %}
               </td>

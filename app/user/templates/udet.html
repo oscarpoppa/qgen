@@ -21,8 +21,8 @@
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
           {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" onsubmit="return confirm('Remove {{ item.username|e }}’s picture?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary btn-sm">Remove picture</button></form>{% endif %}
-          {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.username)|string ~ '’s password? You’ll be shown a temporary one to give them.') }}
-          {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Their quizzes and answers are deleted too.' if not item.is_admin else 'Problems, quizzes and grades they made are kept.')|string) }}{% endif %}
+          {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.username)|string ~ '’s password? You’ll be shown a temporary one to pass on.') }}
+          {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Quizzes and answers belonging to this account are deleted too.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept.')|string) }}{% endif %}
         </td>
       </tr>
     {% endfor %}

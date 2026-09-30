@@ -54,7 +54,7 @@ def send(sender, to, body, pinned=False):
 
 
 def reply(student, body):
-    """From a student to their teachers."""
+    """From a student to the teachers."""
     if student.is_admin:
         raise MessageError('Teachers write from Messages.')
     db.session.add(Message(student_id=student.id, sender_id=student.id, from_teacher=False,

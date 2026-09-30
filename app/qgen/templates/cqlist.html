@@ -10,7 +10,7 @@
 <p class="muted small">This student's own version of the quiz, with the correct answers.</p>
 <div class="table-wrap stack">
   <table>
-    <thead><tr><th>#</th><th>Question</th><th>Correct answer</th><th>Their answer</th></tr></thead>
+    <thead><tr><th>#</th><th>Question</th><th>Correct answer</th><th>Student's answer</th></tr></thead>
     <tbody>
     {% for prob in item.cproblems %}
       <tr>
@@ -18,7 +18,7 @@
         <td data-label="Question">{{ prob.conc_prob }}
           {% if prob.conc_opts.get('choices') %}<ul class="small" style="margin:4px 0 0">{% for c in prob.conc_opts['choices'] %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}</td>
         <td data-label="Correct answer">{{ prob.conc_ansr }}</td>
-        <td data-label="Their answer">{% if prob.submitted is not none %}{{ shown(prob) }}{% if prob.credit is not none %} <span class="badge {{ 'badge-ok' if prob.credit == 1 else 'badge-bad' if prob.credit == 0 else 'badge-warn' }}">{{ '%.0f' % (prob.credit * 100) }}%</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td data-label="Student's answer">{% if prob.submitted is not none %}{{ shown(prob) }}{% if prob.credit is not none %} <span class="badge {{ 'badge-ok' if prob.credit == 1 else 'badge-bad' if prob.credit == 0 else 'badge-warn' }}">{{ '%.0f' % (prob.credit * 100) }}%</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>
