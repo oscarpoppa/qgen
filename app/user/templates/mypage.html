@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
+{# a student's quiz list changes when quizzes are assigned or graded: reload when a notice arrives #}
+{% block body_attrs %}{% if not current_user.is_admin %} data-refresh-on-notice{% endif %}{% endblock %}
 
 {% macro action(cq) %}
   {% if cq.status == 'completed' %}

@@ -29,7 +29,7 @@
   {% endif %}
   {% block head %}{% endblock %}
 </head>
-<body>
+<body{% block body_attrs %}{% endblock %}>
   <header class="topbar">
     <div class="topbar-inner">
       {% set s = site() %}

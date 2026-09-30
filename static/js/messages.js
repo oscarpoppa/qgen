@@ -229,6 +229,7 @@
   }
 
   var baseTitle = document.title;
+  var refreshWanted = false;
   function check() {
     if (document.hidden) return;
     fetch(pollUrl, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
@@ -244,6 +245,9 @@
         var first = latest[p] === null;
         var changed = !first && id !== latest[p];
         latest[p] = id;
+        //pages whose content a notice changes (a student's quiz list, "waiting for grading")
+        //reload to show it, but not while a message is being written
+        if (p === 'notices' && changed && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
         if (isOpen(p)) {
           if (changed && !(p === 'messages' && busyTyping())) load(p);
         } else if (changed && count) {
@@ -253,6 +257,7 @@
           pulse(p);  // unread from before this page opened: a nudge, no pop-up
         }
       });
+      if (refreshWanted && !busyTyping()) window.location.reload();
     }, function () {});
   }
 

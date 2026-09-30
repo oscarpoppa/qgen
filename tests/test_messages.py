@@ -394,3 +394,34 @@ def test_delete_and_clear_need_the_page_token(app_db):
         assert Message.query.filter_by(body='keep me').count() == 1 and db.session.get(Message, n.id) is not None
     finally:
         app.config['WTF_CSRF_ENABLED'] = False
+
+
+def test_student_pages_refresh_when_graded(app_db):
+    # an open "My quizzes" or "waiting for grading" page reloads when a notice arrives
+    # (e.g. "graded"), so its labels don't go stale; a quiz being taken never does
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('essay', 'Why', 'Explain why.', '', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Essay 1', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    flag = 'data-refresh-on-notice'
+    assert flag not in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()  # taking it: never reload
+    with app.test_request_context():
+        S.submit(cq, {1: 'Because.'})
+    waiting = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert flag in waiting
+    home = sam.get('/mypage').data.decode()
+    assert flag in home and 'Waiting for grading' in home
+    assert flag not in teacher.get('/mypage').data.decode()
+    # graded: the notice the page is waiting for arrives, and the reloaded page shows the result
+    before = sam.get('/messages/poll').get_json()['latest_notice']
+    with app.test_request_context():
+        S.grade_essays(cq, {cq.cproblems[0].id: {'credit': 80}}, finish=True)
+    assert sam.get('/messages/poll').get_json()['latest_notice'] != before
+    home = sam.get('/mypage').data.decode()
+    assert 'Waiting for grading' not in home and '80%' in home

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# grading finishes elsewhere: reload when the "graded" notice arrives #}
+{% block body_attrs %} data-refresh-on-notice{% endblock %}
 
 {% block content %}
 <div class="card card-narrow empty">
