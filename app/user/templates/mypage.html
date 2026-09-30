@@ -25,8 +25,7 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
   <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
-<div class="home{{ ' home-with-side' if panel else '' }}">
-<div class="home-main">
+
 {% set groups = attempts_by_quiz(current_user.cquizzes) %}
 {% if groups %}
   <div class="grid">
@@ -63,12 +62,5 @@
   <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}
 {% endif %}
-</div>
-{% if panel %}
-<aside class="home-side" aria-label="Messages">
-{% if teacher_panel %}{% with rows=panel['rows'], student=panel['student'], items=panel['items'], unread_ids=panel['unread_ids'], others_unread=panel['others_unread'], max_len=panel['max_len'] %}{% include "_teacher_messages.html" %}{% endwith %}
-{% else %}{% with items=panel['items'], pinned=panel['pinned'], unread_ids=panel['unread_ids'], max_len=panel['max_len'] %}{% include "_student_messages.html" %}{% endwith %}{% endif %}
-</aside>
-{% endif %}
-</div>
+
 {% endblock %}

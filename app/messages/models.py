@@ -4,7 +4,10 @@ from app import db
 
 
 #one conversation per student, shared by all teachers; also carries
-#announcements (to everyone) and automatic notices (quiz assigned, graded, ...)
+#announcements (to everyone) and automatic notices. Notices are kept out of the
+#conversation and shown in their own panel: from_teacher=True notices are for the
+#student (quiz assigned, graded, ...), from_teacher=False ones are for teachers
+#about that student (handed in, waiting for grading, signed up).
 class Message(db.Model):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
@@ -37,9 +40,33 @@ def notify(student_id, body, link=None, kind='notice', sender_id=None):
     return msg
 
 
+def notify_teachers(student_id, body, link=None):
+    """An automatic notice for teachers about a student (committed by the caller)."""
+    msg = Message(student_id=student_id, body=body, link=link, kind='notice',
+                  from_teacher=False, seen_by_student=True)
+    db.session.add(msg)
+    return msg
+
+
+NOT_NOTICE = Message.kind != 'notice'
+IS_NOTICE = Message.kind == 'notice'
+
+
 def unread_for_student(user_id):
-    return Message.query.filter_by(student_id=user_id, from_teacher=True, seen_by_student=False).count()
+    """Unread conversation messages (and announcements) for a student."""
+    return Message.query.filter(Message.student_id == user_id, Message.from_teacher.is_(True),
+                                Message.seen_by_student.is_(False), NOT_NOTICE).count()
+
+
+def unread_notices_for_student(user_id):
+    return Message.query.filter(Message.student_id == user_id, Message.from_teacher.is_(True),
+                                Message.seen_by_student.is_(False), IS_NOTICE).count()
 
 
 def unread_for_teachers():
-    return Message.query.filter_by(from_teacher=False, seen_by_teacher=False).count()
+    """Unread messages from students."""
+    return Message.query.filter(Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
+
+
+def unread_notices_for_teachers():
+    return Message.query.filter(Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False), IS_NOTICE).count()

@@ -1,0 +1,21 @@
+{# the notices side panel: automatic notices (quiz assigned, handed in, graded...), newest first #}
+{% from "_macros.html" import avatar with context %}
+<div id="notices" data-panel-url="{{ url_for('messages.notices') }}">
+  {% if items %}
+    <ol class="notice-list" aria-label="Notices">
+      {% for m in items %}
+        <li class="notice{{ ' notice-new' if m.id in unread_ids }}">
+          {% if teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">🔔</span>{% endif %}
+          <div class="notice-text">
+            <div>{{ m.body }}</div>
+            <div class="small muted">{{ m.created.strftime('%b %d, %I:%M %p') }}
+              {% if m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
+              {% if m.link %} · <a href="{{ m.link }}">Open</a>{% endif %}</div>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="muted small">Nothing yet. {{ 'When students sign up or hand in quizzes, it shows up here.' if teacher else 'When a quiz is assigned or graded, it shows up here.' }}</p>
+  {% endif %}
+</div>

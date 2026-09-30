@@ -421,13 +421,6 @@ input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
 .form-row.dates { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
 /* student home: quizzes on the left, messages in a column on the right */
-.home-with-side { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
-.home-side #messages { margin-bottom: 0; }
-.home-side .thread-scroll { max-height: min(60vh, 520px); }
-.home-side .msg { max-width: 100%; }
-.home-side .reply-box { flex-direction: column; align-items: stretch; }
-@media (min-width: 901px) { .home-side { position: sticky; top: 72px; } }
-@media (max-width: 900px) { .home-with-side { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---------- help tips ("?" next to a label) and editor guides ---------- */
 
@@ -488,3 +481,91 @@ th .tip-wrap { margin-left: 4px; }
 
 /* teacher's home page: which student's conversation the messages box shows */
 .convo-pick { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+
+/* ---------- side panels: notices and messages, on every page ---------- */
+
+:root { --dock-w: 360px; --topbar-h: 57px; }
+.dock-buttons { display: flex; gap: 6px; margin-left: auto; order: 2; }
+.dock-btn {
+  position: relative; background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  padding: 5px 10px; min-height: 34px; font-size: .9rem; gap: 6px;
+}
+.dock-btn:hover { background: var(--surface-2); filter: none; }
+.dock-btn[aria-expanded=true] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+.dock-btn .count { margin-left: 2px; }
+/* something new while the panel is hidden */
+.dock-btn.pulse { animation: dock-pulse 1.2s ease-in-out 4; border-color: var(--warn); }
+@keyframes dock-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 55%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--warn) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .dock-btn.pulse { animation: none; background: var(--warn-soft); } }
+
+.dock {
+  position: fixed; right: 0; top: var(--topbar-h); bottom: 0; width: var(--dock-w); z-index: 9;
+  display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--border);
+}
+.dock-pane { display: none; flex-direction: column; min-height: 0; flex: 1 1 0; }
+html.dock-notices #dock-notices, html.dock-messages #dock-messages { display: flex; }
+/* both open: notices take the top third, the conversation the rest */
+html.dock-notices.dock-messages #dock-notices { flex: 0 1 34%; border-bottom: 1px solid var(--border); }
+html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
+.dock-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.dock-head h2 { font-size: 1rem; margin: 0; flex: 1; }
+.dock-head h2:focus { outline: none; }
+.dock-close { background: none; border: 0; color: var(--muted); min-height: 0; padding: 4px 8px; font-size: 1rem; }
+.dock-close:hover { color: var(--text); background: var(--surface); filter: none; }
+.dock-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+
+/* the conversation fills its panel: messages scroll, the reply box stays at the bottom */
+#dock-messages .dock-body { display: flex; flex-direction: column; overflow: hidden; }
+#dock-messages #messages { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#dock-messages .thread-scroll { flex: 1 1 auto; min-height: 60px; max-height: none; }
+#dock-messages .reply-box { flex-direction: column; align-items: stretch; }
+#dock-messages .reply-box textarea { min-height: 64px; }
+#dock-messages .msg { max-width: 100%; }
+#dock-messages .pinned-list { max-height: 30%; overflow-y: auto; }
+.send-error { color: var(--bad); }
+
+.notice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: .92rem; }
+.notice-new { border-color: var(--warn); background: var(--warn-soft); }
+.notice-icon { font-size: 1.1rem; line-height: 1.4; }
+.notice-text { min-width: 0; overflow-wrap: anywhere; }
+
+/* wide screens: the page makes room beside the open panels */
+@media (min-width: 1001px) {
+  html.dock-notices body, html.dock-messages body { padding-right: var(--dock-w); }
+  /* ...but the top bar still runs the full width, above the panels */
+  html.dock-notices .topbar, html.dock-messages .topbar { margin-right: calc(-1 * var(--dock-w)); }
+  html.dock-notices .topbar-inner, html.dock-messages .topbar-inner { max-width: none; }
+}
+/* phones and small windows: the panels slide over the page */
+@media (max-width: 1000px) {
+  .dock { width: min(var(--dock-w), 100vw); z-index: 30; box-shadow: -8px 0 24px rgba(16, 24, 40, .25); }
+  .topbar-inner { position: relative; }
+  .dock-buttons { margin-left: auto; }
+  .btn.nav-toggle { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  .dock-btn-label { display: none; }
+  .dock { width: 100vw; border-left: 0; }
+}
+
+/* pop-ups about new things while their panel is hidden */
+.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 40; display: flex; flex-direction: column; gap: 10px; width: min(340px, calc(100vw - 32px)); }
+.toast { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .22); padding: 12px 14px; animation: toast-in .25s ease-out; }
+.toast-notices { border-left-color: var(--warn); }
+.toast-text { margin: 4px 0 10px; font-size: .92rem; overflow-wrap: anywhere; }
+@keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+@media (min-width: 1001px) {
+  html.dock-notices .toasts, html.dock-messages .toasts { right: calc(var(--dock-w) + 16px); }
+}
+@media (max-width: 1000px) {
+  /* top bar on small screens: name, the two panel buttons, then Menu */
+  .btn.nav-toggle { order: 3; }
+  .nav { order: 4; }
+}
+.convo-switch select { min-width: 160px; }

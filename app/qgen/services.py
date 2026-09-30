@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from flask import url_for
 
 from app import db
-from app.messages.models import notify
+from app.messages.models import notify, notify_teachers
 from . import layout
 from .formfact import record_answers, finalize
 from .friendly import FriendlyError
@@ -335,13 +335,26 @@ def submit(cq, answers=None):
         raise ServiceError('This quiz isn\'t open yet.')
     if answers is not None:
         answers = _answers_by_ordinal(cq, answers)
+    who = cq.taker.username if cq.taker else 'A student'
     if record_answers(cq, answers):
         cq.needs_review = True
+        notify_teachers(cq.assignee, '{} handed in "{}": written answers are waiting for grading.'.format(who, cq.vquiz.title),
+                        _link('qgen.review', cqid=cq.id))
         cq.save()
         return 'review'
     finalize(cq)
+    notify_teachers(cq.assignee, '{} handed in "{}": {:.0f}%.'.format(who, cq.vquiz.title, cq.score or 0),
+                    _link('qgen.list_user', uid=cq.assignee))
     cq.save()
     return 'completed'
+
+
+def _link(endpoint, **values):
+    """A page address for a notice, or None outside a web request (e.g. `flask close-expired`)."""
+    try:
+        return url_for(endpoint, **values)
+    except RuntimeError:
+        return None
 
 
 # ---------------------------------------------------------------- grading

@@ -45,12 +45,8 @@ def pw_check(func):
 @login_required
 @pw_check
 def mypage():
-    from app.messages.routes import student_panel, teacher_panel
-    if current_user.is_admin:
-        panel, teacher = teacher_panel(request.args.get('student', type=int)), True
-    else:
-        panel, teacher = student_panel(current_user), False
-    return render_template('mypage.html', current_user=current_user, panel=panel, teacher_panel=teacher, title='My quizzes')
+    #messages and notices are in the side panels every page has (see base.html)
+    return render_template('mypage.html', current_user=current_user, title='My quizzes')
 
 # route to user logout action
 @user_bp.route('/logout')
@@ -103,6 +99,9 @@ def register():
         u = User(username=form.username.data, email=clean_email(form.email.data))
         u.set_password(form.password.data)
         u.save()
+        from app.messages.models import notify_teachers
+        notify_teachers(u.id, 'New student signed up: {}.'.format(u.username), url_for('qgen.list_user', uid=u.id))
+        db.session.commit()
         current_app.logger.info('User {} has been created'.format(u.username))
         flash('Account {} registered'.format(form.username.data))
         return redirect(url_for('user.login'))

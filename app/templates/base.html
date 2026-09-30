@@ -12,6 +12,21 @@
     window.MathJax = { loader: { load: ['ui/safe'] } };
   </script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  {% if current_user.is_authenticated %}
+  <script>
+    /* open the side panels before the page draws, so it doesn't jump: each is
+       remembered per browser; the first time, both open on wide screens */
+    (function () {
+      var wide = window.matchMedia('(min-width: 1001px)').matches, c = document.documentElement.classList;
+      ['notices', 'messages'].forEach(function (p) {
+        var v = null;
+        try { v = localStorage.getItem('qgen-dock-' + p); } catch (e) {}
+        if (v === 'open' || (v === null && wide)) c.add('dock-' + p);
+      });
+      if (!wide) c.remove('dock-notices', 'dock-messages');  // on phones they open when tapped
+    })();
+  </script>
+  {% endif %}
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -20,12 +35,22 @@
       {% set s = site() %}
       <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
+      {% if current_user.is_authenticated %}
+        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
+        <div class="dock-buttons">
+          <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide notices">
+            <span aria-hidden="true">🔔</span><span class="dock-btn-label">Notices</span>
+            <span class="count nav-notices" {% if not nav_notices %}hidden{% endif %}>{{ nav_notices }}</span></button>
+          <button type="button" class="dock-btn" data-pane="messages" aria-controls="dock-messages" aria-expanded="false" title="Show or hide messages">
+            <span aria-hidden="true">💬</span><span class="dock-btn-label">Messages</span>
+            <span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span></button>
+        </div>
+      {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
               onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu</button>
       <nav class="nav" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
-          {% set nav_unread = unread_messages() %}
-          <a href="{{ url_for('user.mypage') }}">My quizzes{% if not current_user.is_admin %}<span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span>{% endif %}</a>
+          <a href="{{ url_for('user.mypage') }}">My quizzes</a>
           {% if current_user.is_admin %}
             <details class="menu">
               <summary>Problems</summary>
@@ -46,7 +71,7 @@
             <a href="{{ url_for('qgen.review_list') }}">Review
               {% set nav_review_count = review_count() %}{% if nav_review_count %}<span class="count" aria-label="{{ nav_review_count }} waiting">{{ nav_review_count }}</span>{% endif %}
             </a>
-            <a href="{{ url_for('messages.inbox') }}">Messages<span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span></a>
+            <a href="{{ url_for('messages.inbox') }}">Messages</a>
             <a href="{{ url_for('user.userdet') }}">Users</a>
             <details class="menu">
               <summary>Files</summary>
@@ -90,6 +115,24 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+  {% if current_user.is_authenticated %}
+  {# the side panels: notices (automatic) above messages (the conversation); each can be hidden #}
+  <aside class="dock" id="dock" aria-label="Notices and messages">
+    <section class="dock-pane" id="dock-notices" data-url="{{ url_for('messages.notices') }}" aria-labelledby="dock-notices-title">
+      <div class="dock-head"><h2 id="dock-notices-title" tabindex="-1"><span aria-hidden="true">🔔</span> Notices</h2>
+        <button type="button" class="dock-close" data-pane="notices" aria-label="Hide notices" title="Hide notices">✕</button></div>
+      <div class="dock-body"><p class="muted small">Loading…</p></div>
+    </section>
+    <section class="dock-pane" id="dock-messages" data-url="{{ url_for('messages.panel') }}" aria-labelledby="dock-messages-title">
+      <div class="dock-head"><h2 id="dock-messages-title" tabindex="-1"><span aria-hidden="true">💬</span> Messages</h2>
+        <button type="button" class="dock-close" data-pane="messages" aria-label="Hide messages" title="Hide messages">✕</button></div>
+      <div class="dock-body"><p class="muted small">Loading…</p></div>
+    </section>
+  </aside>
+  {# pop-ups about something new while its panel is hidden #}
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  {% endif %}
 
   <script>
     /* close open menus when clicking elsewhere */

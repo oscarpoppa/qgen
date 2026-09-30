@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.user.models import User
-from .models import Message
+from .models import Message, NOT_NOTICE, IS_NOTICE
 
 MAX_LEN = 2000
 
@@ -71,10 +71,41 @@ def set_pinned(message, pinned):
     return len(rows)
 
 
-def thread(student_id, limit=None):
-    q = Message.query.filter_by(student_id=student_id).order_by(Message.created.desc(), Message.id.desc())
+def _oldest_first(q, limit):
+    q = q.order_by(Message.created.desc(), Message.id.desc())
     items = q.limit(limit).all() if limit else q.all()
     return list(reversed(items))
+
+
+def thread(student_id, limit=None):
+    """Everything in a student's record the student may see: the conversation,
+    announcements and the student's own notices (not teachers' notices about the student)."""
+    q = Message.query.filter(Message.student_id == student_id,
+                             db.or_(NOT_NOTICE, Message.from_teacher.is_(True)))
+    return _oldest_first(q, limit)
+
+
+def conversation(student_id, limit=None):
+    """Just what people wrote (messages and announcements), oldest first."""
+    return _oldest_first(Message.query.filter(Message.student_id == student_id, NOT_NOTICE), limit)
+
+
+def notices_for_student(student_id, limit=30):
+    """A student's automatic notices, newest first."""
+    return Message.query.filter(Message.student_id == student_id, IS_NOTICE, Message.from_teacher.is_(True)) \
+        .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
+
+
+def notices_for_teachers(limit=50):
+    """Automatic notices for teachers (about all students), newest first."""
+    return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False)) \
+        .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
+
+
+def mark_notices_seen_by_teachers():
+    Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False)) \
+        .update({'seen_by_teacher': True}, synchronize_session=False)
+    db.session.commit()
 
 
 def pinned_for(student_id):
@@ -90,7 +121,10 @@ def mark_seen_by_student(student_id, messages):
 
 
 def mark_seen_by_teachers(student_id):
-    Message.query.filter_by(student_id=student_id, from_teacher=False, seen_by_teacher=False).update({'seen_by_teacher': True})
+    """The teachers have read this student's messages (notices are marked in their own panel)."""
+    Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
+                         Message.seen_by_teacher.is_(False), NOT_NOTICE) \
+        .update({'seen_by_teacher': True}, synchronize_session=False)
     db.session.commit()
 
 
@@ -98,8 +132,10 @@ def inbox():
     """Every student's conversation for teachers: unread first, then most recent."""
     rows = []
     for s in User.query.filter_by(is_admin=False).order_by(User.username).all():
-        last = Message.query.filter_by(student_id=s.id).order_by(Message.created.desc(), Message.id.desc()).first()
-        unread = Message.query.filter_by(student_id=s.id, from_teacher=False, seen_by_teacher=False).count()
+        last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE) \
+            .order_by(Message.created.desc(), Message.id.desc()).first()
+        unread = Message.query.filter(Message.student_id == s.id, Message.from_teacher.is_(False),
+                                      Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
         rows.append({'student': s, 'last': last, 'unread': unread})
     rows.sort(key=lambda r: (-r['unread'], -(r['last'].created.timestamp() if r['last'] else 0), r['student'].username))
     return rows

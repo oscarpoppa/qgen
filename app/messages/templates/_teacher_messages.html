@@ -1,12 +1,12 @@
-{# the messages box on a teacher's home page: one conversation at a time, pick the student above it #}
-<section class="card" id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id) if student else url_for('messages.panel') }}" aria-labelledby="messages-title">
-  <div class="card-head"><h2 id="messages-title">Messages</h2>
+{# the messages side panel for a teacher: one conversation at a time, pick the student above it #}
+<section id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id) if student else url_for('messages.panel') }}" aria-labelledby="messages-title">
+  <div class="card-head"><h2 id="messages-title" class="sr-only">Messages</h2>
     {% if others_unread %}<span class="badge badge-warn" title="Unread messages from other students">{{ others_unread }} more new</span>{% endif %}
     <a class="right small" href="{{ url_for('messages.inbox') }}">All messages</a></div>
   {% if student %}
     <form method="get" action="{{ url_for('user.mypage') }}" class="convo-pick">
       <label for="msg-student" class="small muted">Talking with</label>
-      <select id="msg-student" name="student" data-panel="{{ url_for('messages.panel') }}">
+      <select id="msg-student" name="student" data-current="{{ student.id }}">
         {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
       </select>
       <noscript><button class="btn btn-secondary btn-sm">Open</button></noscript>
@@ -15,8 +15,7 @@
     <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="to" value="{{ student.id }}">
-      <input type="hidden" name="home" value="1">
-      <label for="reply" class="sr-only">Message to {{ student.username }}</label>
+            <label for="reply" class="sr-only">Message to {{ student.username }}</label>
       <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.username }}…"></textarea>
       <button class="btn">Send</button>
     </form>

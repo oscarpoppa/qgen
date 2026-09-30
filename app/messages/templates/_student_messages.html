@@ -1,6 +1,6 @@
-{# the messages box on a student's home page #}
-<section class="card" id="messages" data-panel-url="{{ url_for('messages.panel') }}" aria-labelledby="messages-title">
-  <div class="card-head"><h2 id="messages-title">Messages</h2>
+{# the messages side panel for a student: pinned announcements, the conversation, a reply box #}
+<section id="messages" data-panel-url="{{ url_for('messages.panel') }}" aria-labelledby="messages-title">
+  <div class="card-head"><h2 id="messages-title" class="sr-only">Messages</h2>
     {% if unread_ids %}<span class="badge badge-warn">{{ unread_ids|length }} new</span>{% endif %}</div>
   {% if pinned %}
     <ul class="pinned-list" aria-label="Pinned announcements">
