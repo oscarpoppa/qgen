@@ -82,8 +82,51 @@ def pin(message_id):
     msg = db.get_or_404(Message, message_id)
     pinned = request.form.get('pinned') == '1'
     count = M.set_pinned(msg, pinned)
+    if wants_json():
+        return jsonify(ok=True)
     flash('{} for {} student{}.'.format('Pinned' if pinned else 'Unpinned', count, '' if count == 1 else 's'), 'success')
     return redirect(request.referrer or url_for('messages.inbox'))
+
+
+#route to delete a message for good (teachers: any message; students: their own).
+#An announcement sent to several students: everyone=1 removes every copy.
+@messages_bp.route('/messages/delete/<int:message_id>', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def delete(message_id):
+    msg = db.get_or_404(Message, message_id)
+    everyone = request.form.get('everyone') == '1'
+    try:
+        count = M.delete_message(current_user, msg, everyone=everyone)
+    except M.MessageError as exc:
+        if wants_json():
+            return jsonify(ok=False, error=str(exc)), 403
+        flash(str(exc), 'error')
+        return redirect(request.referrer or url_for('user.mypage'))
+    current_app.logger.info('{} deleted {} message{}'.format(current_user.username, count, '' if count == 1 else 's'))
+    if wants_json():
+        return jsonify(ok=True, deleted=count)
+    flash('Message deleted{}.'.format(' for all {} students who got it'.format(count) if count > 1 else ''), 'success')
+    return redirect(request.referrer or url_for('user.mypage'))
+
+#route to clear one notice (or, without an id, all of them) from your Notices panel
+@messages_bp.route('/messages/notices/clear', methods=['POST'])
+@messages_bp.route('/messages/notices/clear/<int:notice_id>', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def clear_notices(notice_id=None):
+    try:
+        count = M.clear_notices(current_user, notice_id)
+    except M.MessageError as exc:
+        if wants_json():
+            return jsonify(ok=False, error=str(exc)), 404
+        flash(str(exc), 'error')
+        return redirect(request.referrer or url_for('user.mypage'))
+    if wants_json():
+        return jsonify(ok=True, cleared=count)
+    return redirect(request.referrer or url_for('user.mypage'))
 
 
 # ---------------------------------------------------------------- students

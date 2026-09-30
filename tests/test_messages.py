@@ -300,3 +300,97 @@ def test_teachers_get_a_notice_when_a_quiz_is_assigned(app_db):
     Api(app, 'teach').post('/quizzes/{}/assign'.format(VQuiz.query.one().id), json={'students': [sam_id]})
     assert Message.query.filter(Message.kind == 'notice', Message.from_teacher.is_(False),
                                 Message.body.like('teach assigned "Quiz 7" to 1 student: sam.%')).count() == 1
+
+
+def test_deleting_messages(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    teacher, sam, kim = login(app, 'teach'), login(app, 'sam'), login(app, 'kim')
+    J = {'X-Requested-With': 'fetch'}
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'From the teacher'})
+    sam.post('/messages/reply', data={'body': 'Mine to delete'})
+    sam.post('/messages/reply', data={'body': 'Teacher deletes this'})
+    kim.post('/messages/reply', data={'body': 'Kim wrote this'})
+    mid = lambda body: Message.query.filter_by(body=body).one().id
+
+    # students: Delete only on their own messages, and the server enforces it
+    box = sam.get('/messages/panel').data.decode()
+    assert box.count('aria-label="Delete this message"') == 2  # sam's two, not the teacher's
+    assert sam.post('/messages/delete/{}'.format(mid('From the teacher')), headers=J).status_code == 403
+    assert sam.post('/messages/delete/{}'.format(mid('Kim wrote this')), headers=J).status_code == 403
+    assert sam.post('/messages/delete/{}'.format(mid('Mine to delete')), headers=J).get_json() == {'ok': True, 'deleted': 1}
+    assert Message.query.filter_by(body='Mine to delete').count() == 0
+    # teachers: any message, from the panel (JSON) or the conversation page (redirect)
+    assert 'Delete this message' in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert teacher.post('/messages/delete/{}'.format(mid('Teacher deletes this')), headers=J).get_json()['ok']
+    r = teacher.post('/messages/delete/{}'.format(mid('From the teacher')))
+    assert r.status_code == 302
+    assert Message.query.filter(Message.body.in_(['Teacher deletes this', 'From the teacher'])).count() == 0
+    assert teacher.post('/messages/delete/999999', headers=J).status_code == 404
+
+    # an announcement to several: "only from this student" or "from every student who got it"
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday', 'pin': '1'})
+    box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'Only from sam' in box and 'From every student who got it' in box
+    first = Message.query.filter_by(body='Test Friday', student_id=sam_id).one().id
+    teacher.post('/messages/delete/{}'.format(first), headers=J)
+    assert Message.query.filter_by(body='Test Friday').count() == 1  # kim keeps hers
+    teacher.post('/messages/delete/{}'.format(Message.query.filter_by(body='Test Friday').one().id), data={'everyone': '1'}, headers=J)
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Quiz moved'})
+    one = Message.query.filter_by(body='Quiz moved', student_id=kim_id).one().id
+    assert teacher.post('/messages/delete/{}'.format(one), data={'everyone': '1'}, headers=J).get_json()['deleted'] == 2
+    assert Message.query.filter(Message.body.in_(['Test Friday', 'Quiz moved'])).count() == 0
+    # a student can't use "everyone" to delete other students' copies
+    teacher.post('/messages/send', data={'to': 'all', 'body': 'Hands off'})
+    assert sam.post('/messages/delete/{}'.format(Message.query.filter_by(body='Hands off', student_id=sam_id).one().id),
+                    data={'everyone': '1'}, headers=J).status_code == 403
+    assert Message.query.filter_by(body='Hands off').count() == 2
+    # notices aren't deleted this way
+    from app.messages.models import notify
+    n = notify(sam_id, 'New quiz: "X".'); db.session.commit()
+    assert teacher.post('/messages/delete/{}'.format(n.id), headers=J).status_code == 403
+
+
+def test_clearing_notices(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, notify, notify_teachers
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    J = {'X-Requested-With': 'fetch'}
+    a = notify(sam_id, 'New quiz: "A".'); b = notify(sam_id, 'New quiz: "B".'); k = notify(kim_id, 'New quiz: "K".')
+    t = notify_teachers(sam_id, 'sam handed in "A": 90%.')
+    db.session.commit()
+    page = sam.get('/messages/notices').data.decode()
+    assert page.count('aria-label="Clear this notice"') == 2 and 'Clear all' in page
+    # each person clears only their own notices
+    assert sam.post('/messages/notices/clear/{}'.format(k.id), headers=J).status_code == 404
+    assert sam.post('/messages/notices/clear/{}'.format(t.id), headers=J).status_code == 404
+    assert sam.post('/messages/notices/clear/{}'.format(a.id), headers=J).get_json() == {'ok': True, 'cleared': 1}
+    assert sam.post('/messages/notices/clear', headers=J).get_json() == {'ok': True, 'cleared': 1}  # "Clear all"
+    assert Message.query.filter(Message.id.in_([a.id, b.id])).count() == 0
+    assert db.session.get(Message, k.id) is not None and db.session.get(Message, t.id) is not None
+    # teachers clear teachers' notices, never students'
+    assert teacher.post('/messages/notices/clear', headers=J).get_json()['cleared'] == 1
+    assert db.session.get(Message, k.id) is not None
+
+
+def test_delete_and_clear_need_the_page_token(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, notify
+    sam_id = User.query.filter_by(username='sam').one().id
+    sam = login(app, 'sam')
+    sam.post('/messages/reply', data={'body': 'keep me'})
+    n = notify(sam_id, 'New quiz: "Z".'); db.session.commit()
+    app.config['WTF_CSRF_ENABLED'] = True
+    try:
+        sam.post('/messages/delete/{}'.format(Message.query.filter_by(body='keep me').one().id))
+        sam.post('/messages/notices/clear')
+        assert Message.query.filter_by(body='keep me').count() == 1 and db.session.get(Message, n.id) is not None
+    finally:
+        app.config['WTF_CSRF_ENABLED'] = False

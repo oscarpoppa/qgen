@@ -2,6 +2,11 @@
 {% from "_macros.html" import avatar with context %}
 <div id="notices" data-panel-url="{{ url_for('messages.notices') }}">
   {% if items %}
+    <form method="post" action="{{ url_for('messages.clear_notices') }}" class="dock-form notice-clear-all"
+          data-confirm="Clear all your notices? This can't be undone.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn-link small">Clear all</button>
+    </form>
     <ol class="notice-list" aria-label="Notices">
       {% for m in items %}
         <li class="notice{{ ' notice-new' if m.id in unread_ids }}">
@@ -12,6 +17,10 @@
               {% if m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
               {% if m.link %} · <a href="{{ m.link }}">Open</a>{% endif %}</div>
           </div>
+          <form method="post" action="{{ url_for('messages.clear_notices', notice_id=m.id) }}" class="dock-form notice-clear">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="notice-x" aria-label="Clear this notice" title="Clear this notice">✕</button>
+          </form>
         </li>
       {% endfor %}
     </ol>

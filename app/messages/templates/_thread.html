@@ -18,11 +18,42 @@
       {% if everyone is defined and everyone %}
         <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">Reply to {{ m.student.username }}</button>
       {% endif %}
-      {% if me_teacher and m.from_teacher %}
-        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="small">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
-          <button class="btn-link">{{ 'Unpin' if m.pinned else 'Pin to top' }}</button>
-        </form>
+      {% set can_pin = me_teacher and m.from_teacher %}
+      {# teachers may delete any message; students only their own #}
+      {% set can_delete = m.kind != 'notice' and (me_teacher or not m.from_teacher) %}
+      {% if can_pin or can_delete %}
+      <div class="msg-actions small">
+        {% if can_pin %}
+          <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="inline-form dock-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
+            <button class="btn-link">{{ 'Unpin' if m.pinned else 'Pin to top' }}</button>
+          </form>
+        {% endif %}
+        {% if can_delete and me_teacher and m.batch and m.kind == 'announcement' %}
+          {# an announcement sent to several students: ask which to remove #}
+          <details class="msg-del">
+            <summary class="btn-link">Delete</summary>
+            <div class="msg-del-choices">
+              <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
+                    data-confirm="Delete this announcement from {{ m.student.username }}'s messages? This can't be undone.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-secondary btn-sm">Only from {{ m.student.username }}</button>
+              </form>
+              <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
+                    data-confirm="Delete this announcement for every student who got it? This can't be undone.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
+                <button class="btn btn-danger btn-sm">From every student who got it</button>
+              </form>
+            </div>
+          </details>
+        {% elif can_delete %}
+          <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="inline-form dock-form"
+                data-confirm="Delete this message? This can't be undone.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-link msg-del-btn" aria-label="Delete this message">Delete</button>
+          </form>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
     </li>

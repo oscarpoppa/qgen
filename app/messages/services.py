@@ -168,3 +168,53 @@ def pinned_announcements():
         seen.add(key)
         out.append(m)
     return out
+
+
+# ---------------------------------------------------------------- deleting
+
+def can_delete(user, m):
+    """Conversation messages (not notices): teachers may delete any; students only their own."""
+    if m.kind == 'notice':
+        return False
+    if user.is_admin:
+        return True
+    return m.student_id == user.id and not m.from_teacher
+
+
+def delete_message(user, m, everyone=False):
+    """Delete a message for good. For an announcement sent to several students,
+    everyone=True removes every copy, else just this conversation's. Returns how many."""
+    if not can_delete(user, m):
+        raise MessageError('You can only delete messages you wrote.')
+    rows = Message.query.filter_by(batch=m.batch).all() if (everyone and m.batch and user.is_admin) else [m]
+    for row in rows:
+        db.session.delete(row)
+    db.session.commit()
+    return len(rows)
+
+
+def batch_size(m):
+    """How many students got this message (1 unless it was sent to several together)."""
+    return Message.query.filter_by(batch=m.batch).count() if m.batch else 1
+
+
+def _my_notices(user):
+    """The notices shown in this person's Notices panel."""
+    if user.is_admin:
+        return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False))
+    return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(True), Message.student_id == user.id)
+
+
+def clear_notices(user, notice_id=None):
+    """Remove one notice (or all of them) from this person's Notices panel. Teachers'
+    notices are shared by the teachers. Returns how many were removed."""
+    q = _my_notices(user)
+    if notice_id is not None:
+        q = q.filter(Message.id == notice_id)
+    rows = q.all()
+    if notice_id is not None and not rows:
+        raise MessageError('That notice isn\'t in your notices.')
+    for row in rows:
+        db.session.delete(row)
+    db.session.commit()
+    return len(rows)

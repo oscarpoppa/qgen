@@ -572,3 +572,18 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 .convo-bar { margin-bottom: 8px; justify-content: space-between; }
 button.badge-btn { border: 0; min-height: 0; cursor: pointer; font: 600 .78rem/1 inherit; padding: 6px 9px; }
 button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
+
+/* deleting messages and clearing notices */
+.msg-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-top: 4px; }
+.msg-actions .btn-link { font-size: .8rem; }
+.msg-del-btn { color: var(--bad) !important; }
+.msg-del > summary { list-style: none; cursor: pointer; color: var(--bad); font-size: .8rem; font-weight: 500; }
+.msg-del > summary::-webkit-details-marker { display: none; }
+.msg-del-choices { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.msg-del-choices .btn { white-space: normal; text-align: left; }
+.notice { position: relative; }
+.notice-text { flex: 1; }
+.notice-clear { margin-left: auto; }
+.notice-x { background: none; border: 0; color: var(--muted); min-height: 0; padding: 2px 6px; font-size: .85rem; }
+.notice-x:hover { color: var(--bad); background: var(--bad-soft); filter: none; }
+.notice-clear-all { text-align: right; margin: -4px 0 6px; }

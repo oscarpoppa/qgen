@@ -173,6 +173,29 @@
       .then(function () { button.disabled = false; });
   });
 
+  //deleting, clearing notices and pinning: ask first where the form says so; inside a
+  //panel, do it without leaving the page and reload that panel
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (form.dataset.confirm && !confirm(form.dataset.confirm)) { e.preventDefault(); return; }
+    var inPane = form.matches('.dock-form') && form.closest('.dock-pane');
+    if (!inPane) return;
+    e.preventDefault();
+    var p = inPane.id.replace('dock-', '');
+    var button = form.querySelector('button');
+    if (button) button.disabled = true;
+    fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin',
+                         headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'The page is out of date. Please reload it and try again.' }; }); })
+      .then(function (res) {
+        if (!res.ok) alert(res.error || 'That didn\'t work. Please try again.');
+        load(p);
+      }, function () {
+        alert('Couldn\'t reach the server. Please try again.');
+        if (button) button.disabled = false;
+      });
+  });
+
   /* ---------- something new while a panel is hidden ---------- */
 
   function toast(p, info) {
