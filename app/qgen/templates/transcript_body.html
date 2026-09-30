@@ -18,7 +18,7 @@
   <section class="card question">
     <div class="card-head">
       <span class="qnum">{{ it.num }}</span>
-      <span class="mark mark-{{ it.mark }}" aria-label="{{ {'ok': 'correct', 'bad': 'incorrect', 'partial': 'partly correct'}[it.mark] }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '½'}[it.mark] }}</span>
+      <span class="mark mark-{{ it.mark }}" aria-label="{{ {'ok': 'correct', 'bad': 'incorrect', 'partial': 'partly correct'}[it.mark] }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
       <span class="right badge {{ 'badge-ok' if it.mark == 'ok' else 'badge-bad' if it.mark == 'bad' else 'badge-warn' }}">{{ '%.0f' % ((it.credit or 0) * 100) }}%</span>
     </div>
     {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}

@@ -18,7 +18,7 @@
       <div class="card-head">
         <span class="qnum">{{ it.num }}</span>
         {% if not it.essay %}
-          <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '½'}[it.mark] }}</span>
+          <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
           <span class="muted small">graded automatically</span>
         {% else %}<span class="badge badge-warn">needs your grade</span>{% endif %}
       </div>

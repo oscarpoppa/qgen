@@ -61,7 +61,8 @@
   var form = document.getElementById('take-form');
   var qs = form.querySelectorAll('.question');
   function answered(q) {
-    return Array.prototype.some.call(q.querySelectorAll('input, textarea'), function (el) {
+    //hidden markers (used by autosave) aren't answers
+    return Array.prototype.some.call(q.querySelectorAll('input:not([type=hidden]), textarea'), function (el) {
       if (el.type === 'radio' || el.type === 'checkbox') return el.checked;
       return el.value.trim() !== '';
     });

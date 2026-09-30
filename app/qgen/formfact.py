@@ -141,7 +141,7 @@ class TranscriptItem:
 
     @property
     def mark(self):
-        """'ok', 'bad' or 'partial', for the ✓ / ✗ / ½ symbol."""
+        """'ok', 'bad' or 'partial', for the ✓ / ✗ / ◐ symbol."""
         if self.credit == 1:
             return 'ok'
         return 'bad' if not self.credit else 'partial'
