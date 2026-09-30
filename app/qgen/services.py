@@ -46,6 +46,10 @@ def save_problem(vp, qtype, title, question, answer, options, calculator_ok=Fals
     errors = problem_errors(qtype, question, answer, options)
     if not (title or '').strip():
         errors = ['Please give the problem a short title.'] + errors
+    if vp.id is not None and vp.qtype and qtype != vp.qtype and vp.cproblems:
+        #students' answers were given (and are shown and graded) as the old type
+        errors = ['Students have already been given this problem as "{}", so its question type can\'t change. '
+                  'Make a new problem instead (the old one keeps their answers).'.format(get_qtype(vp.qtype).label)] + errors
     if errors:
         return errors
     new = vp.id is None

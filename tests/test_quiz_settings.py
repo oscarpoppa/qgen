@@ -239,3 +239,32 @@ def test_correct_answer_shown_under_right_answers_too(app_db):
         S.submit(cq, {1: '4'})
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert cq.score == 100 and '<dt>Correct answer</dt><dd>4</dd>' in page
+
+
+def test_question_type_is_fixed_once_students_have_it(app_db):
+    # results pages, grading and details all read answers as the problem's type
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    vp = VProblem.query.one()
+    # not given to anyone yet: the type can still change
+    assert teacher.post('/quiz/editvprob/{}'.format(vp.id), data=problem_form('text', 'N', 'Say four', 'four', [])).status_code == 302
+    db.session.expire_all()
+    assert VProblem.query.one().qtype == 'text'
+    teacher.post('/quiz/editvprob/{}'.format(vp.id), data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(vp.id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    # given to a student: changing the type is refused, other edits still work
+    r = teacher.post('/quiz/editvprob/{}'.format(vp.id), data=problem_form('text', 'N', 'Say four', 'four', []))
+    assert r.status_code == 200 and 'its question type can' in r.data.decode()
+    db.session.expire_all()
+    assert VProblem.query.one().qtype == 'numeric'
+    assert teacher.post('/quiz/editvprob/{}'.format(vp.id), data=problem_form('numeric', 'N2', 'What is 2 + 2?', '4', [])).status_code == 302
+    assert '<dt>Correct answer</dt><dd>4</dd>' in login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()

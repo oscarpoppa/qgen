@@ -204,11 +204,6 @@ def delete_message(user, m, everyone=False):
     return len(rows)
 
 
-def batch_size(m):
-    """How many students got this message (1 unless it was sent to several together)."""
-    return Message.query.filter_by(batch=m.batch).count() if m.batch else 1
-
-
 def _my_notices(user):
     """The notices shown in this person's Notices panel."""
     if user.is_admin:
