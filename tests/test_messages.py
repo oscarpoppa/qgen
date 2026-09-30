@@ -53,7 +53,7 @@ def test_two_way_messages_announcements_and_notices(app_db):
     from app.qgen.models import VProblem, VQuiz
     teacher.post('/quiz/makevquiz', data={'title': 'Quiz 9', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id, kim_id]})
-    assert Message.query.filter_by(kind='notice').count() == 2
+    assert Message.query.filter_by(kind='notice', from_teacher=True).count() == 2  # the students' own
     # ...in the notices panel, not the conversation, with its own count
     assert sam.get('/messages/poll').get_json()['notices'] == 1
     assert 'New quiz' not in sam.get('/messages/panel').data.decode()
@@ -172,6 +172,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Quiz 5', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    assert 'teach assigned &#34;Quiz 5&#34;' in teacher.get('/messages/notices').data.decode()  # read it
 
     # sam hands in: the teachers get a notice, not a message
     from app.qgen import services as S
@@ -256,3 +257,38 @@ def test_new_from_others_button_goes_to_them(app_db):
     M.reply(extra, 'Hello from lee')
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'data-student="all"' in box and '3 new from 2 students →' in box
+
+
+def test_teachers_get_a_notice_when_a_quiz_is_assigned(app_db):
+    app, db = app_db
+    from datetime import datetime, timedelta
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    kim_id = User.query.filter_by(username='kim').one().id
+    teacher = login(app, 'teach')
+    f = problem_form('numeric', 'N', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
+    teacher.post('/quiz/makevprob', data=f)
+    teacher.post('/quiz/makevquiz', data={'title': 'Quiz 7', 'vplist': str(VProblem.query.one().id)})
+    due = (datetime.now() + timedelta(days=3)).replace(hour=17, minute=0, second=0, microsecond=0)
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id, kim_id],
+                                       'closes_at': due.strftime('%Y-%m-%dT%H:%M'), 'time_limit': '20'})
+    # one notice for the whole assignment, on the assigning teacher's record, for the teachers only
+    notices = Message.query.filter_by(kind='notice', from_teacher=False).all()
+    assert len(notices) == 1
+    body = notices[0].body
+    assert body.startswith('teach assigned "Quiz 7" to 2 students: ') and 'sam' in body and 'kim' in body
+    assert 'Due {}'.format(due.strftime('%b %d at %I:%M %p')) in body and '20 minute time limit.' in body
+    assert notices[0].student_id == User.query.filter_by(username='teach').one().id
+    assert teacher.get('/messages/poll').get_json()['notices'] == 1
+    assert 'teach assigned &#34;Quiz 7&#34;' in teacher.get('/messages/notices').data.decode()
+    # students still get their own "New quiz" notice, and never see the teachers' one
+    sam = login(app, 'sam')
+    page = sam.get('/messages/notices').data.decode()
+    assert 'New quiz: &#34;Quiz 7&#34;' in page and 'assigned' not in page
+    # the API's assign does the same
+    from test_api import Api
+    Api(app, 'teach').post('/quizzes/{}/assign'.format(VQuiz.query.one().id), json={'students': [sam_id]})
+    assert Message.query.filter(Message.kind == 'notice', Message.from_teacher.is_(False),
+                                Message.body.like('teach assigned "Quiz 7" to 1 student: sam.%')).count() == 1

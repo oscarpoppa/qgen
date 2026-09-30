@@ -238,7 +238,8 @@ def assign_vquiz(qid):
     if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool)):
         raise bad_request('"time_limit_minutes" must be a whole number.')
     try:
-        created, failed = S.assign(vq, students, parse_when(data, 'opens_at'), parse_when(data, 'closes_at'), limit)
+        created, failed = S.assign(vq, students, parse_when(data, 'opens_at'), parse_when(data, 'closes_at'), limit,
+                                   by=g.api_user)
     except S.ServiceError as exc:
         raise invalid([str(exc)])
     return jsonify(assigned=[attempt_summary(cq) | {'student_id': cq.assignee} for cq in created],

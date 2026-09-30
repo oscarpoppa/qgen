@@ -253,7 +253,8 @@ def assign():
     if form.validate_on_submit():
         vquiz = db.get_or_404(VQuiz, form.vquiz.data)
         students = [db.session.get(User, uid) for uid in form.users.data]
-        created, failed = S.assign(vquiz, [u for u in students if u], form.opens_at.data, form.closes_at.data, form.time_limit.data)
+        created, failed = S.assign(vquiz, [u for u in students if u], form.opens_at.data, form.closes_at.data, form.time_limit.data,
+                                   by=current_user)
         for student, err in failed:
             flash(err, 'error')
             current_app.logger.error(err)

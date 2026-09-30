@@ -208,8 +208,9 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         raise ServiceError('Couldn\'t create "{}" for {}: {}'.format(vquiz.title, assignee.username, exc))
 
 
-def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None):
-    """Give each student a separate copy; returns (created quizzes, [(student, error), ...])."""
+def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None):
+    """Give each student a separate copy; returns (created quizzes, [(student, error), ...]).
+    `by` is the teacher assigning it: the teachers' notices say who assigned what."""
     if opens_at and closes_at and closes_at <= opens_at:
         raise ServiceError('The closing time must be after the opening time.')
     if time_limit is not None and not 1 <= time_limit <= 600:
@@ -224,8 +225,30 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None):
         when = ' It opens {}.'.format(cq.opens_at.strftime('%b %d at %I:%M %p')) if cq.opens_at else ''
         notify(student.id, 'New quiz: "{}".{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
         created.append(cq)
+    if created:
+        _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit)
     db.session.commit()
     return created, failed
+
+
+def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
+    """One notice for the teachers per assignment (not one per student), e.g.
+    'dan assigned "Quiz 3" to 3 students: sam, kim, lee. Due Oct 03 at 05:00 PM.'"""
+    names = [cq.taker.username for cq in created if cq.taker]
+    shown = ', '.join(names[:6]) + (' and {} more'.format(len(names) - 6) if len(names) > 6 else '')
+    details = []
+    if opens_at:
+        details.append('Opens {}.'.format(opens_at.strftime('%b %d at %I:%M %p')))
+    if closes_at:
+        details.append('Due {}.'.format(closes_at.strftime('%b %d at %I:%M %p')))
+    if time_limit:
+        details.append('{} minute time limit.'.format(time_limit))
+    body = '{} assigned "{}" to {} student{}: {}.{}'.format(
+        by.username if by else 'A teacher', vquiz.title, len(names), '' if len(names) == 1 else 's', shown,
+        (' ' + ' '.join(details)) if details else '')
+    #a notice belongs to one person's record: the assigning teacher's (so the panel shows that
+    #teacher's picture), or the first student's when assigned without a signed-in teacher
+    notify_teachers(by.id if by else created[0].assignee, body, _link('qgen.list_users'))
 
 
 def retake(cq):
