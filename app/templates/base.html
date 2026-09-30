@@ -103,6 +103,7 @@
   <script src="{{ url_for('static', filename='js/dropzone.js') }}" defer></script>
   {% endif %}
   <script src="{{ url_for('static', filename='js/calendar.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/tips.js') }}" defer></script>
   {% if current_user.is_authenticated %}
   <script src="{{ url_for('static', filename='js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" defer></script>
   {% endif %}

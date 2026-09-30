@@ -17,18 +17,103 @@
     });
   }
 
+  //a plain-words line under each value row saying what its kind does
+  var KIND_HINTS = {
+    '': 'Choose a kind to see its settings.',
+    whole: 'A whole number between “from” and “to” (both included). “In steps of” 5 with 40 to 80 gives 40, 45, 50 … 80.',
+    decimal: 'A number between “from” and “to” with this many decimal places (1 if empty). 1 to 10 with 2 places gives numbers like 4.37.',
+    list: 'Each student gets one item from your comma-separated list. To pick 2 different items, put 2 in “how many”, then use [name1] and [name2].',
+    calc: 'Worked out from other values, e.g. speed * hours. No brackets needed here. You can use + - * / ^ ( ) sqrt abs round min max.',
+    imaginary: 'A number like 3i: the part in front of i is a whole number from “from” to “to”, never 0. Turns on complex numbers.',
+    complex: 'A number like 2 + 3i: real part from the first range, imaginary part from the second (never 0). Turns on complex numbers.'
+  };
+
   function showKind(row) {
     var kind = row.querySelector('select.kind').value;
     row.querySelectorAll('[class*="k-"]').forEach(function (el) {
       var kinds = Array.prototype.filter.call(el.classList, function (c) { return c.indexOf('k-') === 0; });
       if (kinds.length) el.hidden = kinds.indexOf('k-' + kind) === -1;
     });
+    var hint = row.querySelector('.kind-hint');
+    if (hint) hint.textContent = KIND_HINTS[kind] || '';
   }
+
+  /* ---------- your value names as click-to-insert chips ---------- */
+
+  var NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+  //every name the values table defines, the way friendly.py counts them
+  function valueNames() {
+    var names = [];
+    form.querySelectorAll('.value-row').forEach(function (row) {
+      var raw = (row.querySelector('[name$="-name"]').value || '').trim();
+      var kind = row.querySelector('select.kind').value;
+      if (!raw) return;
+      var parts = kind === 'list' && raw.indexOf('=') !== -1 ? raw.split('=').map(function (x) { return x.trim(); }) : [raw];
+      var n = kind === 'list' ? parseInt(row.querySelector('[name$="-pick_n"]').value, 10) || 1 : 1;
+      parts.forEach(function (p) {
+        if (!NAME.test(p)) return;
+        names.push(p);
+        for (var i = 1; n > 1 && i <= n; i++) names.push(p + i);
+      });
+    });
+    return names.filter(function (x, i) { return names.indexOf(x) === i; });
+  }
+
+  //the box a chip types into: the one last typed in, else the bar's own box
+  var lastBox = null;
+  form.addEventListener('focusin', function (e) {
+    if (e.target.matches('[name=question], [name=answer], [name=choices], [name=combos]')) lastBox = e.target;
+  });
+
+  function renderChips() {
+    var names = valueNames();
+    form.querySelectorAll('.name-chips').forEach(function (bar) {
+      bar.querySelectorAll('.chip').forEach(function (c) { c.remove(); });
+      names.forEach(function (n) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.dataset.name = n;
+        b.textContent = '[' + n + ']';
+        b.title = 'Insert ' + n + ' where you were typing';
+        bar.appendChild(b);
+      });
+      bar.hidden = !names.length;
+    });
+  }
+
+  function insertName(box, name) {
+    //a Numeric or True/False answer is a formula: bare names, unless it already uses [placeholders]
+    var bare = box.name === 'answer' && ['numeric', 'truefalse'].indexOf(qtype.value) !== -1 && box.value.indexOf('[') === -1;
+    var text = bare ? name : '[' + name + ']';
+    var start = box.selectionStart, end = box.selectionEnd;
+    if (typeof start !== 'number') { start = end = box.value.length; }
+    box.value = box.value.slice(0, start) + text + box.value.slice(end);
+    box.focus();
+    box.setSelectionRange(start + text.length, start + text.length);
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  form.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) return;
+    var bar = chip.closest('.name-chips');
+    var own = form.querySelector('[name=' + bar.dataset.default + ']');
+    var box = lastBox && !lastBox.closest('[hidden]') ? lastBox : own;
+    insertName(box, chip.dataset.name);
+  });
+  //keep the focus (and the cursor position) in the box while clicking a chip
+  form.addEventListener('mousedown', function (e) { if (e.target.closest('.chip')) e.preventDefault(); });
+  form.addEventListener('input', function (e) {
+    if (e.target.closest('.value-row')) renderChips();
+  });
 
   qtype.addEventListener('change', showType);
   form.addEventListener('change', function (e) {
     if (e.target.matches('select.kind')) {
       showKind(e.target.closest('.value-row'));
+      renderChips();
       //an imaginary or complex value means the problem uses complex numbers
       if (['imaginary', 'complex'].indexOf(e.target.value) !== -1) {
         var box = form.querySelector('[name=complex]');
@@ -77,7 +162,7 @@
     if (window.qgenDropzone) window.qgenDropzone(row.querySelector('.dropzone'));
   });
   form.addEventListener('click', function (e) {
-    if (e.target.closest('.remove-row')) e.target.closest('.value-row').remove();
+    if (e.target.closest('.remove-row')) { e.target.closest('.value-row').remove(); renderChips(); }
     if (e.target.closest('.remove-image')) e.target.closest('.image-row').remove();
   });
 
@@ -128,6 +213,7 @@
       showKind(row);
     });
     if (!(values || []).length) addValue();
+    renderChips();
   }
 
   form.querySelectorAll('.ai-go').forEach(function (btn) {
@@ -166,6 +252,7 @@
     if (a.type === 'add_value') {
       var row = addValue();
       row.querySelector('[name$="-name"]').value = a.name;
+      renderChips();
       row.querySelector('select.kind').focus();
     } else if (a.type === 'set_qtype') {
       qtype.value = a.value;
@@ -176,4 +263,5 @@
   /* ---------- start ---------- */
   showType();
   form.querySelectorAll('.value-row').forEach(showKind);
+  renderChips();
 })();

@@ -428,3 +428,60 @@ input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
 .home-side .reply-box { flex-direction: column; align-items: stretch; }
 @media (min-width: 901px) { .home-side { position: sticky; top: 72px; } }
 @media (max-width: 900px) { .home-with-side { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- help tips ("?" next to a label) and editor guides ---------- */
+
+.label-line { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.label-line > label { margin: 0; font-weight: 600; }
+.tip-wrap { display: inline-flex; vertical-align: middle; }
+button.tip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; min-height: 0; padding: 0; margin-left: 2px;
+  border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft); color: var(--accent);
+  font: 700 .72rem/1 inherit; cursor: help; flex: 0 0 auto;
+}
+button.tip:hover, button.tip[aria-expanded=true] { background: var(--accent); color: var(--accent-text); }
+/* a bigger invisible target for fingers */
+@media (pointer: coarse) { button.tip { position: relative; } button.tip::after { content: ""; position: absolute; inset: -10px; } }
+.tip-body {
+  position: fixed; z-index: 1000; width: max-content; max-width: min(340px, calc(100vw - 24px));
+  padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+  font-size: .875rem; font-weight: 400; line-height: 1.45; text-transform: none; letter-spacing: normal;
+  text-align: left; white-space: normal;
+}
+.tip-body p { margin: 0 0 6px; }
+.tip-body p:last-child, .tip-body ul:last-child { margin-bottom: 0; }
+.tip-body ul { margin: 4px 0 6px; padding-left: 18px; }
+.tip-body code { background: var(--surface-2); padding: 1px 4px; border-radius: 4px; font-size: .82rem; }
+th .tip-wrap { margin-left: 4px; }
+
+/* numbered steps on the problem editor's cards */
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--accent); color: var(--accent-text); font-weight: 700; font-size: .85rem;
+  align-self: center;
+}
+
+/* live explanation of the chosen kind under a value row's settings */
+.kind-hint { flex-basis: 100% !important; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+.kind-hint:empty { display: none; }
+
+/* your value names as click-to-insert chips */
+.name-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -8px 0 16px; font-size: .85rem; }
+.name-chips .muted { margin-right: 2px; }
+.chip {
+  font: 600 .82rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 5px 8px; min-height: 0; border-radius: 999px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft); color: var(--accent);
+}
+.chip:hover { background: var(--accent); color: var(--accent-text); }
+
+/* the value table's column tips live in its headings; stacked on phones the headings
+   are hidden, so the same tips show in a line above the table instead */
+.values-guide { display: none; margin: 0 0 8px; }
+.values-guide > span { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px; }
+@media (max-width: 640px) { .values-guide { display: block; } }

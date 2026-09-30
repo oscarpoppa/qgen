@@ -1,17 +1,20 @@
-{# Shared form pieces. Use: {% from "_macros.html" import field, check, errors %} #}
+{# Shared form pieces. Use: {% from "_macros.html" import field, check, errors, tip %} #}
 
-{% macro field(f, help=None, attrs={}) %}
+{# A small "?" next to a label: hover, focus or tap shows `body` (trusted template markup). #}
+{% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
+
+{% macro field(f, help=None, attrs={}, tip_body=None) %}
   <div class="field{% if f.errors %} has-error{% endif %}">
-    {{ f.label }}
+    {% if tip_body %}<div class="label-line">{{ f.label }}{{ tip(f.label.text, tip_body) }}</div>{% else %}{{ f.label }}{% endif %}
     {{ f(**attrs) }}
     {% if help %}<div class="help">{{ help }}</div>{% endif %}
     {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
 {% endmacro %}
 
-{% macro check(f, help=None) %}
+{% macro check(f, help=None, tip_body=None) %}
   <div class="field{% if f.errors %} has-error{% endif %}">
-    <div class="check">{{ f() }} {{ f.label }}</div>
+    <div class="check">{{ f() }} {{ f.label }}{% if tip_body %}{{ tip(f.label.text, tip_body) }}{% endif %}</div>
     {% if help %}<div class="help">{{ help }}</div>{% endif %}
     {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
