@@ -183,6 +183,11 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     assert poll['notice_preview']['from'] is None and 'sam handed in "Quiz 5"' in poll['notice_preview']['text']
     panel = teacher.get('/messages/notices').data.decode()
     assert 'sam handed in &#34;Quiz 5&#34;' in panel and 'notice-new' in panel
+    # its Open goes to that attempt's results, which a teacher can see
+    from app.messages.models import Message
+    link = Message.query.filter(Message.body.like('sam handed in%')).one().link
+    assert link == '/quiz/take/{}'.format(cq.id)
+    assert 'Quiz 5' in teacher.get(link).data.decode()
     assert teacher.get('/messages/poll').get_json()['notices'] == 0
     # not in the conversation or inbox, and never shown to the student
     assert 'handed in' not in teacher.get('/messages/{}'.format(sam_id)).data.decode()

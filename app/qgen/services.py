@@ -367,8 +367,9 @@ def submit(cq, answers=None):
         cq.save()
         return 'review'
     finalize(cq)
+    #"Open" goes to this attempt's results (answers and score)
     notify_teachers(cq.assignee, '{} handed in "{}": {:.0f}%.'.format(who, cq.vquiz.title, cq.score or 0),
-                    _link('qgen.list_user', uid=cq.assignee))
+                    _link('qgen.qtake', cidx=cq.id))
     cq.save()
     return 'completed'
 
