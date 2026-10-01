@@ -54,7 +54,7 @@ def test_the_dashboard_is_for_administrators_only(app_db):
         assert r.status_code == 302 and r.headers['Location'].endswith('/mypage')
         body = sam.get(url, follow_redirects=True).data.decode()
         assert 'That page is for administrators only.' in body
-        assert 'id="dash-now"' not in body and 'dash-counters' not in body and 'Site at a glance' not in body
+        assert 'id="dash-live"' not in body and 'dash-counters' not in body and 'Site at a glance' not in body
     # signed out: log in first
     r = app.test_client().get('/dashboard')
     assert r.status_code == 302 and '/login' in r.headers['Location']
@@ -146,65 +146,6 @@ def test_grading_queue_and_recent_handins(app_db):
     assert 'badge-ok">100%' in page and 'being graded' in page
 
 
-def test_students_to_check_on(app_db):
-    app, db = app_db
-    from app.qgen import dashboard as D
-    from app.qgen import services as S
-    teacher = login(app, 'teach')
-    now = datetime.now()
-    soon = make_quiz(app, teacher, 'Soon')
-    later = make_quiz(app, teacher, 'Later')
-    gone = make_quiz(app, teacher, 'Gone')
-    low = make_quiz(app, teacher, 'Low')
-    give(soon, 'sam', closes_at=now + timedelta(days=1))
-    give(later, 'sam', closes_at=now + timedelta(days=5))
-    missed = give(gone, 'kim', closes_at=now - timedelta(days=1))
-    with app.test_request_context():
-        S.close_expired(now)
-    assert db.session.get(type(missed), missed.id).completed  # handed in, empty, by the clock
-    bad = give(low, 'kim')
-    with app.test_request_context():
-        S.submit(bad, {1: '5'})  # 0%
-    # the teacher has a quiz too: teachers are never listed
-    give(soon, 'teach', closes_at=now + timedelta(hours=2))
-    rows = {r['student'].username: r['reasons'] for r in D.students_to_check(now)}
-    assert set(rows) == {'sam', 'kim'}
-    assert len(rows['sam']) == 1 and rows['sam'][0].startswith('Hasn\'t started “Soon” (closes ')
-    assert any(r.startswith('Missed “Gone”') for r in rows['kim'])
-    assert any(r.startswith('Average score 0% over') for r in rows['kim'])
-    # the counted score follows the retake rule: a good retake under "latest" clears it
-    with app.test_request_context():
-        kim_low = S.retake(bad)
-        S.submit(kim_low, {1: '4'})
-    S.set_retake_rule(bad, 'latest')
-    rows = {r['student'].username: r['reasons'] for r in D.students_to_check(now)}
-    assert not any(r.startswith('Average') for r in rows['kim'])
-
-
-def test_quiz_progress(app_db):
-    app, db = app_db
-    from app.qgen import dashboard as D
-    from app.qgen import services as S
-    teacher = login(app, 'teach')
-    now = datetime.now()
-    vq = make_quiz(app, teacher, 'Week 2')
-    old = make_quiz(app, teacher, 'Long ago')
-    a = give(vq, 'sam', closes_at=now + timedelta(days=3))
-    give(vq, 'kim', closes_at=now + timedelta(days=1))
-    with app.test_request_context():
-        S.submit(a, {1: '4'})
-    ancient = give(old, 'sam')
-    with app.test_request_context():
-        S.submit(ancient, {1: '4'})
-    ancient.compdate = now - timedelta(days=30)
-    db.session.commit()
-    rows = D.quiz_progress(now)
-    assert [r['vquiz'].title for r in rows] == ['Week 2']
-    r = rows[0]
-    assert (r['assigned'], r['finished'], r['waiting'], r['average']) == (2, 1, 0, 100.0)
-    assert now + timedelta(hours=23) < r['closes'] <= now + timedelta(days=1)
-
-
 def test_recent_messages_are_shown_but_not_marked_read(app_db):
     app, db = app_db
     from app.messages.models import Message, MessageRead
@@ -280,7 +221,55 @@ def test_dashboard_boxes_open_and_close(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
-    for key in ('now', 'queue', 'handins', 'check', 'messages', 'progress', 'glance'):
+    for key in ('now', 'queue', 'handins', 'out', 'messages', 'glance'):
         assert 'data-box="{}" open>'.format(key) in page
     assert 'data-dash-boxes="open"' in page and 'data-dash-boxes="close"' in page and 'js/dashboard.js' in page
     assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()
+
+
+def test_the_whole_dashboard_refreshes(app_db):
+    # a hand-in after the Dashboard was opened shows on its next refresh, in every box
+    app, db = app_db
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, teacher, 'variables1')
+    cq = give(vq, 'sam')
+    page = teacher.get('/dashboard').data.decode()
+    assert 'data-url="/dashboard/now"' in page and 'Nothing handed in yet.' in page
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    part = teacher.get('/dashboard/now').data.decode()
+    assert 'Nothing handed in yet.' not in part and '/quiz/take/{}'.format(cq.id) in part  # Recent hand-ins
+    for key in ('now', 'queue', 'handins', 'out', 'messages', 'glance'):
+        assert 'data-box="{}" open>'.format(key) in part
+
+
+def test_no_quiz_progress_or_students_to_check(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    page = teacher.get('/dashboard').data.decode()
+    assert 'Quiz progress' not in page and 'Students to check on' not in page
+    assert 'data-box="check"' not in page and 'data-box="progress"' not in page
+
+
+def test_assigned_but_not_handed_in(app_db):
+    app, db = app_db
+    from app.qgen import dashboard as D
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    now = datetime.now()
+    vq = make_quiz(app, teacher, 'Fractions')
+    fresh = give(vq, 'sam', closes_at=now + timedelta(days=3))
+    going = give(vq, 'kim')
+    S.start(going)
+    later = give(vq, 'kim', opens_at=now + timedelta(days=1))
+    done = give(vq, 'sam')
+    with app.test_request_context():
+        S.submit(done, {1: '4'})
+    rows, total = D.out_now(now)
+    assert total == 3 and done.id not in [r['cq'].id for r in rows]
+    states = {r['cq'].id: r['state'] for r in rows}
+    assert states == {fresh.id: 'new', going.id: 'started', later.id: 'not_open'}
+    assert len(D.out_now(now, limit=2)[0]) == 2
+    page = teacher.get('/dashboard').data.decode()
+    assert 'Assigned, not handed in yet' in page and 'Not started' in page and 'In progress' in page and 'Opens tomorrow' in page

@@ -993,11 +993,15 @@ def purge_archived(aid):
 
 # ---------------------------------------------------------------- the Dashboard
 
-def dashboard_now_data():
+def dashboard_data():
+    """Everything the Dashboard shows, fresh."""
     from . import dashboard as D
     now = datetime.now()
+    queue, waiting = D.grading_queue()
+    out, out_total = D.out_now(now)
     return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
-            'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now)}
+            'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
+            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'messages': D.recent_messages(current_user), 'glance': D.site_glance(now)}
 
 #route to the administrators' landing page: what needs doing and what's going on
 @qgen_bp.route('/dashboard', methods=['GET'])
@@ -1005,13 +1009,7 @@ def dashboard_now_data():
 @pw_check
 @admin_only
 def dashboard():
-    from . import dashboard as D
-    now = datetime.now()
-    queue, waiting = D.grading_queue()
-    return render_template('dashboard.html', title='Dashboard', queue=queue, waiting=waiting,
-                           handins=D.recent_handins(), to_check=D.students_to_check(now),
-                           progress=D.quiz_progress(now), messages=D.recent_messages(current_user),
-                           glance=D.site_glance(now), **dashboard_now_data())
+    return render_template('dashboard.html', title='Dashboard', **dashboard_data())
 
 #route to the top bar's "online" list (opened from any teacher page)
 @qgen_bp.route('/dashboard/online', methods=['GET'])
@@ -1023,10 +1021,10 @@ def dashboard_online():
     now = datetime.now()
     return render_template('_online_list.html', online=D.online(now), recent=D.recently_active(now), now=now)
 
-#route to the Dashboard's live part (counters and "Right now"), refreshed every minute
+#route to the Dashboard's contents again, for its refresh every 30 seconds
 @qgen_bp.route('/dashboard/now', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def dashboard_now():
-    return render_template('_dashboard_now.html', **dashboard_now_data())
+    return render_template('_dashboard_live.html', **dashboard_data())

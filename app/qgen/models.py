@@ -14,9 +14,10 @@ class SaveMixin:
             db.session.rollback()
             raise
 
-#add create_date method
+#when a row was made, in the app's local time (like every other time it stores; the
+#database's NOW() is UTC on SQLite)
 class DateMixin:
-    create_date = db.Column(db.DateTime, default=db.func.now())
+    create_date = db.Column(db.DateTime, default=datetime.now)
 
 
 # for many-to-many between vprobs and vquizzes

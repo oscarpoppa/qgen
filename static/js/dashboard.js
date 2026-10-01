@@ -1,11 +1,12 @@
 /* The Dashboard:
  * - each box (details[data-box]) opens and closes; the closed ones are remembered in
- *   this browser, also across the every-minute refresh; "Open all" / "Close all"
- * - the counters and "Right now" refresh every minute while the tab is visible
+ *   this browser, also across the refresh; "Open all" / "Close all"
+ * - everything below the title refreshes every 30 seconds while the tab is visible,
+ *   and at once when the tab is shown again
  * - buttons with data-open-pane open the Notices or Messages panel */
 (function () {
   var KEY = 'qgen-dash-closed';
-  var box = document.getElementById('dash-now');
+  var box = document.getElementById('dash-live');
 
   function closed() {
     try { return JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) { return []; }
@@ -50,6 +51,6 @@
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) { if (html) { box.innerHTML = html; apply(); } }, function () {});
   }
-  setInterval(refresh, 60000);
+  setInterval(refresh, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();
