@@ -3,17 +3,19 @@
 {# a student's quiz list changes when quizzes are assigned or graded: reload when a notice arrives #}
 {% block body_attrs %}{% if not current_user.is_admin %} data-refresh-on-notice{% endif %}{% endblock %}
 
-{% macro action(cq) %}
+{# compact: the small version for a row in a list of attempts, so the row stays on one line #}
+{% macro action(cq, compact=false) %}
+  {% set size = 'btn-xs' if compact else 'btn-sm' %}
   {% if cq.status == 'completed' %}
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View results</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if compact else 'View results' }}</a>
   {% elif cq.status == 'review' %}
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
   {% elif cq.not_open_yet() %}
     <span class="muted small">Opens {{ cq.opens_at.strftime('%b %d, %I:%M %p') }}</span>
   {% elif cq.status == 'started' %}
-    <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
   {% else %}
-    <a class="btn btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
   {% endif %}
 {% endmacro %}
 
@@ -59,7 +61,7 @@
         {% endif %}
         <ol class="small" style="padding-left:1.2em;margin:0 0 8px">
           {% for cq in g.attempts %}
-            <li class="btn-row" style="margin:4px 0"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, g.best == cq) }} {{ action(cq) }}</li>
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, g.best == cq) }} {{ action(cq, compact=true) }}</li>
           {% endfor %}
         </ol>
       {% endif %}

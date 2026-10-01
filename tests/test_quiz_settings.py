@@ -393,3 +393,27 @@ def test_view_problems_and_quizzes_without_editing(app_db):
     assert sam.get('/quiz/viewvquiz/{}'.format(vq.id)).status_code == 302
     assert sam.get('/quiz/viewvprob/{}'.format(probs[0].id)).status_code == 302
     assert teacher.get('/quiz/viewvquiz/999999').status_code == 404
+
+
+def test_attempt_rows_use_the_small_results_button(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Twice', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    # one attempt: the box has room for the full button
+    assert 'btn btn-secondary btn-sm" href="/quiz/take/{}">View results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
+    with app.test_request_context():
+        again = S.retake(cq)
+        S.submit(again, {1: '4'})
+    home = sam.get('/mypage').data.decode()
+    # several attempts: one line each, ending in a small "Results" button
+    assert home.count('class="attempt-row"') == 2 and home.count('btn-xs" href="/quiz/take/') == 2
+    assert '>Results</a>' in home and '>View results</a>' not in home

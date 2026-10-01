@@ -658,3 +658,9 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .math-preview { margin: -6px 0 14px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; background: var(--surface-2); }
 .math-preview .label { font-size: .75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
 .math-preview-body { white-space: pre-wrap; overflow-x: auto; }
+
+/* a small button, for rows in a list (e.g. each attempt on My quizzes) */
+.btn-xs { padding: 3px 8px; min-height: 24px; font-size: .78rem; border-radius: 6px; }
+/* My quizzes: one attempt per line — date, score, a small button at the end */
+.attempt-row { display: flex; align-items: center; gap: 6px; margin: 4px 0; white-space: nowrap; }
+.attempt-row .btn { margin-left: auto; }
