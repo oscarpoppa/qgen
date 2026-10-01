@@ -1,98 +1,156 @@
-<html>
-	<head>
-		{% if title %}
-		<title>{{ title }}</title>
-		{% else %}
-		<title>Welcome</title>
-		{% endif %}
-                <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-                <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-	</head>
-	<body>
-		{% if current_user.is_authenticated %}
-                    <table width=100% columns=3>
-                      <tr>
-                        <td align=left width=33%>
-    		          <div><a href="{{ url_for('user.mypage') }}">my page</a></div>
-                        </td>
-                        <td align=center width=33%>
-                          <b>{{current_user.username}}</b>
-                        </td>
-                        <td align=right width=34%>
-    		          <div><a href="{{ url_for('user.logout') }}">log out</a></div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td align=left width=33%>
-                        </td>
-                        <td align=center width=33%>
-                        </td>
-                        <td align=right width=34%>
-    		          <div><a href="{{ url_for('user.chpass') }}">change password</a></div>
-                        </td>
-                      </tr>
-                    </table>
-                    <hr>
-                    {% if current_user.is_admin %}
-                    <table width=100% columns=4>
-                      <tr> 
-                        <td align=left width=25%>
-                            <div><a href="{{ url_for('qgen.mkvprob') }}">create a vproblem</a></div>
-                        </td>
-                        <td align=left width=25%>
-                            <div><a href="{{ url_for('qgen.mkvquiz') }}">create a vquiz</a></div>
-                        </td>
-                        <td align=right width=25%>
-                           <div><a href="{{ url_for('user.userdet') }}">list user detail</a></div>
-                        </td>
-                        <td align=right width=25%>
-                            <div><a href="{{ url_for('upload.upload') }}">upload a file/image</a></div>
-                        </td>
-                        </tr>
-                        <tr>
-                        <td align=left width=25%>
-		            <div><a href="{{ url_for('qgen.list_vprobs') }}">list vproblems</a></div>
-                        </td>
-                        <td align=left width=25%>
-		            <div><a href="{{ url_for('qgen.list_vquizzes') }}">list vquizzes</a></div>
-                        </td>
-                        <td align=right width=25%>
-		            <div><a href="{{ url_for('qgen.assign') }}">assign a quiz</a></div>
-                        </td>
-                        <td align=right width=25%>
-                            <div><a href="{{ url_for('upload.nonimages') }}">list uploaded files</a></div>
-                        </td>
-                      </tr>
-                        <tr>
-                        <td align=left width=25%>
-                        </td>
-                        <td align=left width=25%>
-                        </td>
-                        <td align=right width=25%>
-                           <div><a href="{{ url_for('qgen.list_users') }}">list_quizzes by user</a></div>
-                        </td>
-                        <td align=right width=25%>
-                            <div><a href="{{ url_for('upload.images') }}">list uploaded images</a></div>
-                        </td>
-                      </tr>
-                    </table>
-		    <hr>
-		    {% endif %}
-		{% else %}
-	            <div><a href="{{ url_for('user.login') }}">log in</a></div>
-		    <div><a href="{{ url_for('user.register') }}">create an account</a></div>
-                    <hr>
-		{% endif %}
-		{% with messages = get_flashed_messages() %}
-		{% if messages %}
-		      <ul>
-			       {% for message in messages %}
-			       <li>{{ message }}</li> 
-			       {% endfor %}
-		       </ul>
-	       	       <hr>
-		{% endif %}
-		{% endwith %}
-		{% block content %}{% endblock %}
-	</body>
+{% from "_macros.html" import avatar with context %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  <script>
+    /* the "safe" extension stops typed math from making links or styles, so a
+       student can't slip a harmful link into an answer a teacher reads */
+    window.MathJax = { loader: { load: ['ui/safe'] } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  {% if current_user.is_authenticated %}
+  <script>
+    /* open the side panels before the page draws, so it doesn't jump: each is
+       remembered per browser; the first time, both open on wide screens */
+    (function () {
+      var wide = window.matchMedia('(min-width: 1001px)').matches, c = document.documentElement.classList;
+      ['notices', 'messages'].forEach(function (p) {
+        var v = null;
+        try { v = localStorage.getItem('qgen-dock-' + p); } catch (e) {}
+        if (v === 'open' || (v === null && wide)) c.add('dock-' + p);
+      });
+      if (!wide) c.remove('dock-notices', 'dock-messages');  // on phones they open when tapped
+    })();
+  </script>
+  {% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body{% block body_attrs %}{% endblock %}>
+  <header class="topbar">
+    <div class="topbar-inner">
+      {% set s = site() %}
+      <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">
+        {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
+      {% if current_user.is_authenticated %}
+        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
+        <div class="dock-buttons">
+          <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide notices">
+            <span aria-hidden="true">🔔</span><span class="dock-btn-label">Notices</span>
+            <span class="count nav-notices" {% if not nav_notices %}hidden{% endif %}>{{ nav_notices }}</span></button>
+          <button type="button" class="dock-btn" data-pane="messages" aria-controls="dock-messages" aria-expanded="false" title="Show or hide messages">
+            <span aria-hidden="true">💬</span><span class="dock-btn-label">Messages</span>
+            <span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span></button>
+        </div>
+      {% endif %}
+      <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu</button>
+      <nav class="nav" id="nav" aria-label="Main">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('user.mypage') }}">My quizzes</a>
+          {% if current_user.is_admin %}
+            <details class="menu">
+              <summary>Problems</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('qgen.list_vprobs') }}">All problems</a>
+                <a href="{{ url_for('qgen.mkvprob') }}">New problem</a>
+              </div>
+            </details>
+            <details class="menu">
+              <summary>Quizzes</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('qgen.list_vquizzes') }}">All quizzes</a>
+                <a href="{{ url_for('qgen.mkvquiz') }}">New quiz</a>
+                <a href="{{ url_for('qgen.assign') }}">Assign a quiz</a>
+                <a href="{{ url_for('qgen.list_users') }}">Results by student</a>
+              </div>
+            </details>
+            <a href="{{ url_for('qgen.review_list') }}">Review
+              {% set nav_review_count = review_count() %}{% if nav_review_count %}<span class="count" aria-label="{{ nav_review_count }} waiting">{{ nav_review_count }}</span>{% endif %}
+            </a>
+            <a href="{{ url_for('messages.inbox') }}">Messages</a>
+            <a href="{{ url_for('user.userdet') }}">Users</a>
+            <details class="menu">
+              <summary>Files</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('upload.upload') }}">Upload</a>
+                <a href="{{ url_for('upload.images') }}">Images</a>
+                <a href="{{ url_for('upload.nonimages') }}">Other files</a>
+              </div>
+            </details>
+            <a href="{{ url_for('user.settings') }}">Settings</a>
+          {% endif %}
+          <div class="nav-right">
+            <details class="menu">
+              <summary class="person">{{ avatar(current_user, 24) }}{{ current_user.username }}</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('user.profile') }}">My profile</a>
+                <a href="{{ url_for('user.chpass') }}">Change password</a>
+                <a href="{{ url_for('user.logout') }}">Log out</a>
+              </div>
+            </details>
+          </div>
+        {% else %}
+          <div class="nav-right">
+            <a href="{{ url_for('user.login') }}">Log in</a>
+            <a href="{{ url_for('user.register') }}">Create an account</a>
+          </div>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="alerts" role="status">
+          {% for category, message in messages %}
+            <li class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'warning' if category == 'warning' else 'info' }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if current_user.is_authenticated %}
+  {# the side panels: notices (automatic) above messages (the conversation); each can be hidden #}
+  <aside class="dock" id="dock" aria-label="Notices and messages">
+    <section class="dock-pane" id="dock-notices" data-url="{{ url_for('messages.notices') }}" aria-labelledby="dock-notices-title">
+      <div class="dock-head"><h2 id="dock-notices-title" tabindex="-1"><span aria-hidden="true">🔔</span> Notices</h2>
+        <button type="button" class="dock-close" data-pane="notices" aria-label="Hide notices" title="Hide notices">✕</button></div>
+      <div class="dock-body"><p class="muted small">Loading…</p></div>
+    </section>
+    <section class="dock-pane" id="dock-messages" data-url="{{ url_for('messages.panel') }}" aria-labelledby="dock-messages-title">
+      <div class="dock-head"><h2 id="dock-messages-title" tabindex="-1"><span aria-hidden="true">💬</span> Messages</h2>
+        <button type="button" class="dock-close" data-pane="messages" aria-label="Hide messages" title="Hide messages">✕</button></div>
+      <div class="dock-body"><p class="muted small">Loading…</p></div>
+    </section>
+  </aside>
+  {# pop-ups about something new while its panel is hidden #}
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  {% endif %}
+
+  <script>
+    /* close open menus when clicking elsewhere */
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('details.menu[open]').forEach(function (d) {
+        if (!d.contains(e.target)) d.removeAttribute('open');
+      });
+    });
+  </script>
+  {% if current_user.is_authenticated and current_user.is_admin %}
+  <script src="{{ asset('js/dropzone.js') }}" defer></script>
+  {% endif %}
+  <script src="{{ asset('js/calendar.js') }}" defer></script>
+  <script src="{{ asset('js/tips.js') }}" defer></script>
+  <script src="{{ asset('js/confirm.js') }}" defer></script>
+  {% if current_user.is_authenticated %}
+  <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" defer></script>
+  {% endif %}
+  {% block scripts %}{% endblock %}
+</body>
 </html>

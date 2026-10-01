@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{# answers still hidden: reload when the "answers released" notice arrives #}
+{% block body_attrs %}{% if answers_hidden %} data-refresh-on-notice{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Results</h1>
+  <div class="actions">
+    <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    <a class="btn btn-secondary" href="{{ url_for('user.mypage') if current_user == cq.taker else url_for('qgen.list_user', uid=cq.assignee) }}">Back</a>
+  </div>
+</div>
+{% if answers_hidden %}<div class="alert alert-info">Your teacher will show the correct answers later. Your score and which questions you got right are below.</div>{% endif %}
+{{ transcript }}
+{% endblock %}

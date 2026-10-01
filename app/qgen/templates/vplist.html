@@ -1,11 +1,44 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
-{% for item in vplst %}
-    [<a href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>]
-    [<a href="{{ url_for('qgen.del_vprob', vpid=item.id) }}" onclick="return confirm('Are you sure you want to delete VProblem \'{{item.title}}\'?');">Delete</a>]
-    (id={{item.id}}) <b>{{item.title}}</b> ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}) {% if item.image %} (img = {{item.image}}) {% endif %}<br> {{item.raw_prob}} <br>Answer: {{item.raw_ansr}}
-    <br> Example : {{ item.example }}
-    <br><br>
-{% endfor %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
+</div>
+
+{% if vplst %}
+  {% if vplst|length > 5 %}<input type="search" class="filter" data-filter="#problems" placeholder="Filter problems…" aria-label="Filter problems">{% endif %}
+  <div class="table-wrap stack">
+    <table id="problems">
+      <thead><tr><th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <tbody>
+      {% for item in vplst %}
+        <tr>
+          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong>
+            <div class="small muted">
+              {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
+              {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
+              {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
+            </div>
+          </td>
+          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
+            {% if item.options.get('markup') == 'legacy' %}<div class="small muted">old markup</div>{% endif %}</td>
+          <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
+          <td data-label="Answer"><div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div></td>
+          <td class="actions">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
+            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?') }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+{% endif %}
 {% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script>{% endblock %}

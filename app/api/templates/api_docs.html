@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head"><h1>API for apps</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('apiv2.openapi_json') }}">openapi.json</a></div></div>
+<div class="card">
+  <p>Every address below starts with <code>/api/v2</code>. First sign in with <code>POST /api/v2/tokens</code>
+    to get a personal access token, then send it with each request:</p>
+  <pre><code>Authorization: Bearer qg_…</code></pre>
+  <p class="muted small">Tokens last 90 days and can be revoked on your profile page. Errors are JSON:
+    <code>{"error": {"code": …, "message": …}}</code>. Dates are ISO 8601.</p>
+</div>
+<div class="table-wrap stack">
+  <table>
+    <thead><tr><th>Method</th><th>Address</th><th>Who</th><th>What it does</th></tr></thead>
+    <tbody>
+    {% for method, path, who, summary, example in endpoints %}
+      <tr>
+        <td data-label="Method"><span class="badge badge-accent">{{ method }}</span></td>
+        <td data-label="Address"><code>{{ path }}</code></td>
+        <td data-label="Who" class="small">{{ who }}</td>
+        <td data-label="What">{{ summary }}
+          {% if example %}<details class="small"><summary>Example body</summary><pre>{{ example|tojson(indent=2) }}</pre></details>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

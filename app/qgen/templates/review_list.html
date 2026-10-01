@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+{% if waiting %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Student</th><th>Quiz</th><th>Submitted</th><th>To grade</th><th></th></tr></thead>
+      <tbody>
+      {% for cq in waiting %}
+        {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
+        <tr>
+          <td data-label="Student"><strong>{{ cq.taker.username }}</strong></td>
+          <td data-label="Quiz">{{ cq.vquiz.title }}</td>
+          <td data-label="Submitted">{{ cq.compdate.strftime('%b %d, %I:%M %p') if cq.compdate else '' }}</td>
+          <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">ready to finish</span>{% endif %}</td>
+          <td class="actions"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty"><span class="big">✅</span>Nothing waiting. Written answers show up here when students submit them.</div>
+{% endif %}
+{% endblock %}

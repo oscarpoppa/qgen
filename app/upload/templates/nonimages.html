@@ -1,11 +1,29 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
-    [<a href="{{ url_for('upload.upload') }}">Upload a New File</a>]<br><br>
-{% for file in files %}
-    {{file}}<br>
-    [<a href="/static/{{ file }}">View</a>]
-    [<a href="{{ url_for('upload.delnonimg', fname=file) }}" onclick="return confirm('Are you sure you want to delete file \'{{file}}\'?');">Delete</a>]
-    <br><br>
-{% endfor %}
+<div class="page-head">
+  <h1>Other files</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('upload.upload') }}">Upload a file</a></div>
+</div>
+{% if files %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>File</th><th></th></tr></thead>
+      <tbody>
+      {% for file in files %}
+        <tr>
+          <td data-label="File">{{ file }}</td>
+          <td class="actions">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('static', filename=file) }}" target="_blank" rel="noopener">View</a>
+            {{ post_button(url_for('upload.delnonimg', fname=file), 'Delete', 'btn btn-danger btn-sm', 'Delete “' ~ (file)|string ~ '”?') }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty">No other files uploaded.</div>
+{% endif %}
 {% endblock %}

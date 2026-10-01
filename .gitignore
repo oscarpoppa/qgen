@@ -1,0 +1,15 @@
+**/*.pyc
+**/*.swp
+__pycache__/
+.idea/
+
+# secrets
+.env
+.env.*
+!.env.example
+.demo-accounts.txt
+
+# uploaded images/files; site css/js are tracked
+static/*
+!static/css/
+!static/js/

@@ -1,0 +1,67 @@
+{# Shared form pieces. Use: {% from "_macros.html" import field, check, errors, tip %} #}
+
+{# A small "?" next to a label: hover, focus or tap shows `body` (trusted template markup). #}
+{% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
+
+{% macro field(f, help=None, attrs={}, tip_body=None) %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    {% if tip_body %}<div class="label-line">{{ f.label }}{{ tip(f.label.text, tip_body) }}</div>{% else %}{{ f.label }}{% endif %}
+    {{ f(**attrs) }}
+    {% if help %}<div class="help">{{ help }}</div>{% endif %}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro check(f, help=None, tip_body=None) %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    <div class="check">{{ f() }} {{ f.label }}{% if tip_body %}{{ tip(f.label.text, tip_body) }}{% endif %}</div>
+    {% if help %}<div class="help">{{ help }}</div>{% endif %}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro errors(list) %}
+  {% if list %}
+    <div class="alert alert-error" role="alert">
+      <strong>Please fix {{ 'this' if list|length == 1 else 'these' }}:</strong>
+      <ul class="errors">{% for e in list %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{# Drag-and-drop image picker. `f` is a text field holding the image file name. #}
+{% macro image_drop(f, help='Drag a picture here, or click to choose one.') %}
+  <div class="field{% if f.errors %} has-error{% endif %}">
+    {{ f.label }}
+    <div class="dropzone" data-target="{{ f.id }}" data-upload="{{ url_for('upload.upload_json') }}" data-list="{{ url_for('upload.image_list') }}" tabindex="0" role="button"
+         aria-label="Upload a picture: drop a file here or press Enter to choose one">
+      <img class="dz-preview" alt="" {% if f.data %}src="{{ url_for('static', filename=f.data) }}"{% else %}hidden{% endif %}>
+      <div class="dz-text">
+        <strong class="dz-name">{{ f.data or '' }}</strong>
+        <span class="dz-hint">{{ help }}</span>
+      </div>
+      <input type="file" accept="image/*" hidden>
+    </div>
+    <div class="btn-row dz-actions">
+      <button type="button" class="btn btn-secondary btn-sm dz-pick">Choose one already uploaded</button>
+      <button type="button" class="btn btn-danger btn-sm dz-clear" {% if not f.data %}hidden{% endif %}>Remove picture</button>
+    </div>
+    <div class="dz-gallery thumbs" hidden></div>
+    {{ f(type='hidden') }}
+    {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{# A person's picture, or the name's initials in a colored circle. #}
+{% macro avatar(user, size=32) %}
+  {% if user and user.avatar %}<img class="avatar" src="{{ url_for('static', filename=user.avatar) }}" alt="" width="{{ size }}" height="{{ size }}" style="width:{{ size }}px;height:{{ size }}px">
+  {% else %}<span class="avatar avatar-initials" aria-hidden="true" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ (size * 0.42)|round|int }}px;background:{{ avatar_color(user.username if user else '?') }}">{{ avatar_initials(user.username if user else '?') }}</span>{% endif %}
+{% endmacro %}
+
+{# A button for an action that changes something (delete, retake, ...): a small POST form
+   carrying the session token, optionally asking "are you sure?" first. #}
+{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none) %}
+  <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}">{{ label }}</button>
+  </form>
+{% endmacro %}

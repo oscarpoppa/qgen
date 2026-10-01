@@ -4,7 +4,7 @@ from flask_login import UserMixin
 
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return db.session.get(User, int(id))
 
 
 class User(UserMixin, db.Model):
@@ -15,6 +15,8 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     pw_man_reset = db.Column(db.Boolean, default=False)
     logged_in = db.Column(db.Boolean, default=False)
+    #file name of the profile picture's square thumbnail (in the static folder)
+    avatar = db.Column(db.String(128))
 
     def set_password(self, pswd):
         self.password_hash = generate_password_hash(pswd)

@@ -1,24 +1,49 @@
 {% extends "base.html" %}
+{% from "_macros.html" import field %}
 
 {% block content %}
-<h1><u>Assign a Quiz</u></h1>
-    <form action="" method="post">
-	    {{ form.hidden_tag() }}
-	    <p>
-	            <b>{{ form.user.label }}</b><br>
-		    {{ form.user(size=5, style="width : 10%") }}<br>
-                    {% for error in form.user.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.vquiz.label }}</b><br>
-		    {{ form.vquiz(size=8, style="width : 25%") }}<br>
-                    {% for error in form.vquiz.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>     {{ form.submit() }} </p>
-            <p>     <a href={{ url_for('user.mypage') }}>Cancel</a> </p>
-    </form>
+<div class="page-head"><h1>{{ title }}</h1></div>
+
+<form method="post" class="card" style="max-width:640px" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.vquiz) }}
+  <div class="field{% if form.users.errors %} has-error{% endif %}">
+    <span class="label">Students</span>
+    <input type="search" class="filter-list" placeholder="Filter students…" aria-label="Filter students" style="margin-bottom:8px">
+    <div class="btn-row small" style="margin-bottom:8px">
+      <button type="button" class="btn btn-secondary btn-sm" id="all">Select all</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="none">Clear</button>
+    </div>
+    <div style="max-height:320px;overflow:auto">{{ form.users(class='choice-list') }}</div>
+    {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    <div class="help">Each student gets a different random version of the quiz.</div>
+  </div>
+  <fieldset>
+    <legend>When (optional)</legend>
+    <div class="form-row dates">
+      {{ field(form.opens_at) }}
+      {{ field(form.closes_at) }}
+    </div>
+    <div style="max-width:240px">
+      {{ field(form.time_limit, 'Starts when the student opens the quiz.', attrs={'min': 1, 'placeholder': 'no limit'}) }}
+    </div>
+    <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
+  </fieldset>
+  {{ form.submit(class='btn') }}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var items = document.querySelectorAll('.choice-list li');
+  document.querySelector('.filter-list').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    items.forEach(function (li) { li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
+  });
+  function set(v) { items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = v; }); }
+  document.getElementById('all').onclick = function () { set(true); };
+  document.getElementById('none').onclick = function () { set(false); };
+})();
+</script>
 {% endblock %}

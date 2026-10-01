@@ -78,7 +78,7 @@ def process_spec(prob, ansr):
     #pattern substitution
     for k,v in repl.items():
         #remove definition-only invisible patterns
-        if search('\s*:\s*inv\s*', k):
+        if search(r'\s*:\s*inv\s*', k):
             prob = sub(escape(r'{{'+k+r'}}'), '', prob)
             continue 
         prob = sub(escape(r'{{'+k+r'}}'), str(v), prob)
@@ -86,13 +86,18 @@ def process_spec(prob, ansr):
             ansr = sub(escape(r'{{'+k+r'}}'), '{:.5f}'.format(v), ansr)
         else:
             ansr = sub(escape(r'{{'+k+r'}}'), str(v), ansr)
-    #aesthetics...
-    #turn '...+/- -...' into '...-/+ ...'  
-    prob = sub('\+\s*\-', '- ', prob)
-    prob = sub('\-\s*\-', '+ ', prob)
-    #turn '+ 0x' into ''
-    prob = sub('[\+\-]\s*0[a-zA-Z]+', '', prob)
-    #turn '+ 1x' into '+ x'
-    prob = sub('([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
-    return prob, ansr
+    return tidy(prob), ansr
 
+#aesthetics, shared with the friendly markup
+def tidy(prob):
+    #turn '...+/- -...' into '...-/+ ...'  
+    prob = sub(r'\+\s*\-', '- ', prob)
+    prob = sub(r'\-\s*\-', '+ ', prob)
+    #turn '+ 0x' into ''
+    prob = sub(r'[\+\-]\s*0[a-zA-Z]+', '', prob)
+    #turn '+ 1x' into '+ x'
+    prob = sub(r'([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
+    #...and right after a math opener \[ or inside braces, {1x} -> {x}: one-letter
+    #variables only, so units like \text{1kg} stay as typed
+    prob = sub(r'(\\\[\s*|\{\s*)1([a-zA-Z])(?![a-zA-Z])', '\\1\\2', prob)
+    return prob

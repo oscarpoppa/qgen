@@ -1,0 +1,30 @@
+{# math buttons above the question box (problem_form.js inserts them). In each pattern
+   "@" is the selected text (or where it goes) and "¶" is where the cursor ends up. #}
+{% from "_macros.html" import tip %}
+{% set tip_math %}<p>The buttons write math the page shows as real formulas. Select something first to put it inside, e.g. select <code>x+1</code> and press √.</p><ul><li><code>\( x^2 \)</code> → x²</li><li><code>\( \sqrt{[a]} \)</code> → square root of each student's number</li><li><code>\( \frac{[a]}{[b]} \)</code> → a fraction</li><li><code>\( [a]x^2 + [b]x + [c] \)</code> → a quadratic, signs tidied (+ −3 shows as − 3)</li></ul><p>Math sits between <code>\(</code> and <code>\)</code>; the buttons add those when needed. Values in [brackets] work inside math too.</p>{% endset %}
+{# math_target: the name of the box the buttons write into (default: the question) #}
+<div class="math-toolbar" role="toolbar" aria-label="Math buttons" data-target="{{ math_target|default('question') }}">
+  {% for label, tex, title in [
+      ('x²', '@^{2}¶', 'Squared'),
+      ('xⁿ', '@^{¶}', 'Power'),
+      ('x₁', '@_{¶}', 'Subscript'),
+      ('√', '\\sqrt{@¶}', 'Square root'),
+      ('ⁿ√', '\\sqrt[¶]{@}', 'nth root'),
+      ('a⁄b', '\\frac{@¶}{}', 'Fraction'),
+      ('±', '\\pm ¶', 'Plus or minus'),
+      ('×', '\\times ¶', 'Times'),
+      ('÷', '\\div ¶', 'Divided by'),
+      ('·', '\\cdot ¶', 'Dot (times)'),
+      ('≤', '\\le ¶', 'Less than or equal'),
+      ('≥', '\\ge ¶', 'Greater than or equal'),
+      ('≠', '\\ne ¶', 'Not equal'),
+      ('π', '\\pi ¶', 'Pi'),
+      ('θ', '\\theta ¶', 'Theta'),
+      ('°', '^\\circ ¶', 'Degrees'),
+      ('|x|', '\\left|@¶\\right|', 'Absolute value'),
+      ('∞', '\\infty ¶', 'Infinity'),
+  ] %}
+    <button type="button" class="math-btn" data-tex="{{ tex }}" title="{{ title }}" aria-label="{{ title }}">{{ label }}</button>
+  {% endfor %}
+  {{ tip('math buttons', tip_math) }}
+</div>

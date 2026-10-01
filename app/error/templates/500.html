@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Oops... Need to check the error logs</h1>
+<div class="card card-narrow empty">
+  <span class="big">⚠️</span>
+  <h1>Something went wrong</h1>
+  <p>Sorry, that didn't work. Please try again; if it keeps happening, tell your teacher or administrator.</p>
+  <a class="btn" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a>
+</div>
 {% endblock %}

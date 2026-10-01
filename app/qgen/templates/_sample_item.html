@@ -1,0 +1,24 @@
+{# one question as a student sees it; the answer parts carry class "ans" (hidden by .answers-off) #}
+<section class="card sample-item">
+  <div class="card-head">
+    {% if s.num %}<span class="qnum">{{ s.num }}</span>{% endif %}
+    <span class="badge">{{ s.qtype }}</span>
+    {% if show_titles %}<a class="small muted" href="{{ url_for('qgen.view_vprob', vpid=s.vpid) }}" title="View this problem on its own">{{ s.title }}</a>{% endif %}
+  </div>
+  {% if s.image %}<img class="qimg" src="{{ url_for('static', filename=s.image) }}" alt="">{% endif %}
+  <div class="qtext">{{ s.text }}</div>
+  {% if s.choices %}
+    <ul class="choice-list">
+      {% for c in s.choices %}
+        <li><span class="ans-mark" aria-hidden="true">{% if loop.index0 in s.right %}<span class="ans mark mark-ok">✓</span><span class="q-only">○</span>{% else %}○{% endif %}</span>
+          {{ c }}{% if loop.index0 in s.right %}<span class="sr-only ans"> (correct)</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% elif s.essay %}
+    <div class="essay-box muted small">The student writes an answer here; you grade it.</div>
+    {% if s.correct %}<p class="ans small"><span class="badge">Model answer (only you see it)</span> {{ s.correct }}</p>{% endif %}
+  {% else %}
+    <div class="answer-line muted small">The student types the answer here.</div>
+    <p class="ans"><span class="badge badge-ok">Correct answer</span> {{ s.correct }}</p>
+  {% endif %}
+</section>

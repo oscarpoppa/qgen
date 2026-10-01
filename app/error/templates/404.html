@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Not found</h1>
+<div class="card card-narrow empty">
+  <span class="big">🔎</span>
+  <h1>Page not found</h1>
+  <p>That page doesn't exist, or it was deleted.</p>
+  <a class="btn" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a>
+</div>
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ vp.title }}</h1>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="Draw three new versions">New examples</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}">Edit</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Back to problems</a>
+  </div>
+</div>
+<p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.</p>
+{% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+<div class="grid">
+  {% for s in samples %}{% with show_titles = false %}{% include "_sample_item.html" %}{% endwith %}{% endfor %}
+</div>
+{% endblock %}

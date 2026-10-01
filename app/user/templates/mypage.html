@@ -1,9 +1,139 @@
 {% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
+{# a student's quiz list changes when quizzes are assigned or graded: reload when a notice arrives #}
+{% block body_attrs %}{% if not current_user.is_admin %} data-refresh-on-notice{% endif %}{% endblock %}
+
+{# compact: the small version for a row in a list of attempts, so the row stays on one line #}
+{% macro action(cq, compact=false) %}
+  {% set size = 'btn-xs' if compact else 'btn-sm' %}
+  {% if cq.status == 'completed' %}
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if compact else 'View results' }}</a>
+  {% elif cq.status == 'review' %}
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
+  {% elif cq.not_open_yet() %}
+    <span class="muted small">Opens {{ cq.opens_at.strftime('%b %d, %I:%M %p') }}</span>
+  {% elif cq.status == 'started' %}
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
+  {% else %}
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+  {% endif %}
+{% endmacro %}
+
+{% macro status(cq, best=false) %}
+  {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if best else '' }}">{{ '★ ' if best }}{{ '%.0f' % (cq.score or 0) }}%</span>
+  {% elif cq.status == 'review' %}<span class="badge badge-warn">Waiting for grading</span>
+  {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
+  {# assigned and not opened yet: new to the student #}
+  {% else %}<span class="badge badge-warn">New</span>{% endif %}
+{% endmacro %}
 
 {% block content %}
-<ul>
-{% for cq in current_user.cquizzes %}
-    <li><a href={{url_for('qgen.qtake', cidx=cq.id)}}>{{cq.vquiz.title}} {% if cq.startdate and not cq.compdate %}(in progress){% endif %} {% if cq.completed %}(completed : {{'%0.2f' % cq.score|float}}%){% endif %}</a></li>
-{% endfor %}
-</ul>
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
+  <div class="actions">
+    {% if current_user.cquizzes %}
+      <button type="button" class="btn btn-secondary btn-sm" id="collapse-all">Collapse all</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="expand-all">Expand all</button>
+    {% endif %}
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
+
+{% set groups = attempts_by_quiz(current_user.cquizzes) %}
+{% if groups %}
+  <div class="grid quiz-grid">
+  {% for g in groups %}
+    {% set latest = g.latest %}
+    {# each quiz folds down to its title and score; the page remembers which are folded #}
+    {# what's in the box: attempts and their state; a folded box flags a change #}
+    {% set sig = g.attempts|map(attribute='id')|join(',') ~ '|' ~ g.attempts|map(attribute='status')|join(',') ~ '|' ~ g.attempts|map(attribute='score')|join(',') %}
+    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-sig="{{ sig }}" open>
+      <summary class="card-head">
+        <span class="fold" aria-hidden="true"></span><h2>{{ g.vquiz.title }}</h2>
+        <span class="badge badge-warn quiz-flag" hidden></span>
+        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% else %}{{ status(latest, g.best == latest) }}{% endif %}</span>
+      </summary>
+      <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
+        {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
+        {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
+      {% if g.attempts|length == 1 %}
+        <div class="btn-row">{{ status(latest, g.best == latest) }} {{ action(latest) }}</div>
+      {% else %}
+        {% if g.combined is not none %}
+          <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ g.rule|lower }})</span></p>
+        {% endif %}
+        <ol class="small" style="padding-left:1.2em;margin:0 0 8px">
+          {% for cq in g.attempts %}
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, g.best == cq) }} {{ action(cq, compact=true) }}</li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    </details>
+  {% endfor %}
+  </div>
+{% else %}
+  {% if current_user.is_admin %}
+  <div class="card empty"><span class="big">📚</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
+    <div class="btn-row" style="justify-content:center;margin-top:12px">
+      <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}">Problems</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}">Messages</a></div></div>
+  {% else %}
+  <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* folded quizzes, remembered in this browser (a convenience; nothing is lost without
+ * it). A folded box remembers what it held; if that changes while folded (a new
+ * attempt, a grade...), the box is flagged until it's opened. */
+(function () {
+  var KEY = 'qgen-folded-quizzes', cards = document.querySelectorAll('details.quiz-card');
+  if (!cards.length) return;
+  var folded = {};
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    //older format: a list of folded quiz ids, with nothing remembered about their contents
+    if (Array.isArray(saved)) saved.forEach(function (id) { folded[id] = null; }); else folded = saved || {};
+  } catch (e) {}
+
+  function flag(d, text) {
+    var f = d.querySelector('.quiz-flag');
+    f.textContent = text || '';
+    f.hidden = !text;
+    d.classList.toggle('quiz-alert', !!text);
+  }
+
+  cards.forEach(function (d) {
+    var id = d.dataset.quiz;
+    if (!(id in folded)) return;
+    d.open = false;
+    var before = folded[id];
+    if (before === null) { folded[id] = { sig: d.dataset.sig, attempts: d.dataset.attempts }; return; }
+    if (before.sig !== d.dataset.sig) {
+      var had = (before.attempts || '').split(','), now = d.dataset.attempts.split(',');
+      var added = now.some(function (a) { return had.indexOf(a) === -1; });
+      flag(d, added ? 'New' : 'Updated');
+    }
+  });
+
+  function remember() {
+    var keep = {};
+    cards.forEach(function (d) {
+      if (d.open) { flag(d, ''); return; }
+      var id = d.dataset.quiz;
+      //a flagged box keeps what it held when folded, so the flag stays until opened
+      keep[id] = d.classList.contains('quiz-alert') && folded[id] ? folded[id] : { sig: d.dataset.sig, attempts: d.dataset.attempts };
+    });
+    folded = keep;
+    try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
+  }
+  remember();
+  cards.forEach(function (d) { d.addEventListener('toggle', remember); });
+  function all(open) { cards.forEach(function (d) { d.open = open; }); remember(); }
+  var c = document.getElementById('collapse-all'), x = document.getElementById('expand-all');
+  if (c) c.addEventListener('click', function () { all(false); });
+  if (x) x.addEventListener('click', function () { all(true); });
+})();
+</script>
 {% endblock %}

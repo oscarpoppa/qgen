@@ -1,0 +1,54 @@
+{# The permanent record of a finished quiz. Rendered once and saved in CQuiz.transcript. #}
+<div class="card">
+  <div class="result-head">
+    <div class="score" aria-label="Score {{ '%.0f' % cq.score }} percent">{{ '%.0f' % cq.score }}%<small>score</small></div>
+    <div>
+      <h2 style="margin:0">{{ cq.vquiz.title }}</h2>
+      <div class="muted small">{{ cq.taker.username }}</div>
+      <div class="muted small">
+        {% if cq.startdate %}Started {{ cq.startdate.strftime('%b %d %Y, %I:%M %p') }} · {% endif %}
+        Submitted {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}
+        {% if cq.graded_date %} · Graded {{ cq.graded_date.strftime('%b %d %Y') }}{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
+{% for it in items %}
+  <section class="card question">
+    <div class="card-head">
+      <span class="qnum">{{ it.num }}</span>
+      <span class="mark mark-{{ it.mark }}" aria-label="{{ {'ok': 'correct', 'bad': 'incorrect', 'partial': 'partly correct'}[it.mark] }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
+      <span class="right badge {{ 'badge-ok' if it.mark == 'ok' else 'badge-bad' if it.mark == 'bad' else 'badge-warn' }}">{{ '%.0f' % ((it.credit or 0) * 100) }}%</span>
+    </div>
+    {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
+    <div class="qtext">{{ it.text }}</div>
+    {% if it.essay %}
+      <div class="label">Your answer</div>
+      <div class="essay-text">{{ it.submitted_html if it.submitted else '(no answer)' }}</div>
+      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
+    {% elif it.choices %}
+      {# every choice the student saw: their pick, and (once answers are shown) the right ones #}
+      <ul class="choice-list review-choices" aria-label="Choices">
+        {% for c in it.choices %}
+          <li class="{{ 'is-picked' if c.picked }} {{ 'is-right' if show_answers and c.right }}">
+            <span class="pick" aria-hidden="true">{{ '●' if c.picked else '○' }}</span>
+            <span class="choice-text">{{ c.text }}</span>
+            {% if c.picked %}<span class="badge">your answer</span>{% endif %}
+            {% if show_answers and c.right %}<span class="badge badge-ok">✓ correct</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if not it.submitted %}<p class="muted small">(no answer)</p>{% endif %}
+      {% if show_answers and not it.choices|selectattr('right')|list %}
+        <dl class="answer-row"><dt>Correct answer</dt><dd>{{ it.correct }}</dd></dl>
+      {% endif %}
+    {% else %}
+      <dl class="answer-row">
+        <dt>Your answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
+        {# once answers are shown: under every question, right or wrong #}
+        {% if show_answers %}<dt>Correct answer</dt><dd>{{ it.correct }}</dd>{% endif %}
+      </dl>
+    {% endif %}
+  </section>
+{% endfor %}

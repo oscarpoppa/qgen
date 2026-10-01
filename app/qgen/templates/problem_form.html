@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, check, errors as error_box, image_drop, tip %}
+
+{# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
+{% set tip_ai %}<p>Describe it the way you'd tell a colleague. Claude fills in the form below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
+{% set tip_ai_problem %}<p>Say what kind of question, what changes from student to student, and what's being asked. For example:</p><ul><li>A pick-one question adding two different whole numbers from 1 to 20</li><li>True or false: a random number from 1 to 50 is bigger than another one</li><li>Short text: the capital of a random country from France, Japan and Brazil</li></ul><p>It fills in the type, question, values and answer.</p>{% endset %}
+{% set tip_ai_values %}<p>Use this when you'll write the question yourself and only want help with the random values. It fills in the <b>Random values</b> table and leaves everything else alone.</p><ul><li>two different numbers under 20</li><li>a price between $2 and $20 in quarters</li><li>a random first name</li><li>a decimal from 1 to 10 with 2 places</li></ul><p>No square brackets needed here: plain English is fine.</p>{% endset %}
+{% set tip_qtype %}<p>How students answer, and how it's marked:</p><ul><li><b>Numeric</b>: they type a number. Marked instantly.</li><li><b>Short text</b>: a word or phrase; any answer on your list counts.</li><li><b>Pick one</b>: round buttons, one right choice.</li><li><b>Pick several</b>: tick boxes; they must tick exactly the right ones.</li><li><b>True / False</b>: the right answer can depend on the values, like <code>a &gt; b</code>.</li><li><b>Long text</b>: an essay you grade yourself, with partial credit, highlights and comments.</li></ul><p>Everything except Long text is scored automatically.</p>{% endset %}
+{% set tip_title %}<p>A short name so you can find this problem in your lists and in the quiz builder.</p><p>Students never see it; they see the quiz's title.</p>{% endset %}
+{% set tip_question %}<p>What the student reads. Put a value's name in square brackets and every student sees a randomly picked number or word:</p><p><code>A train goes [speed] mph for [hours] hours.</code></p><p>Math works inside the brackets too: <code>[speed * 2]</code>, <code>[round(a / b, 2)]</code>, <code>[sqrt(n)]</code>.</p><p>Brackets without a value name, like <code>[0, 5]</code>, are shown just as typed.</p><p>The chips under this box insert your value names for you.</p><p><b>Math that looks like math:</b> put it between <code>\(</code> and <code>\)</code>. <code>\( [a]x^2 + [b]x + [c] \)</code> shows as a real formula, with each student's numbers. For Numeric problems, the math buttons above the box write this for you, and the preview under the box shows how it will look.</p>{% endset %}
+{% set tip_values %}<p>Each value is drawn fresh for every student, so students can't copy each other's answers.</p><p>Give each value a <b>name</b>, choose its <b>kind</b>, and fill in the settings. Then use <code>[name]</code> in the question, answer and choices.</p><p><b>Show me 3 examples</b> at the bottom shows you what three different students would get.</p>{% endset %}
+{% set tip_name %}<p>A short word: letters and digits, starting with a letter, no spaces, like <code>speed</code>, <code>a</code>, <code>who</code>, <code>x2</code>.</p><p>Capitals matter: <code>Speed</code> and <code>speed</code> are different names.</p><p>For matched pairs from a list, name both columns: <code>country = capital</code> with items <code>France = Paris, Japan = Tokyo</code>.</p>{% endset %}
+{% set tip_kind %}<ul><li><b>Whole number</b>: from–to, optionally in steps, optionally never zero.</li><li><b>Decimal</b>: from–to, with a number of decimal places (1 if left empty).</li><li><b>Pick from list</b>: one item from your list, or several different ones.</li><li><b>Calculated</b>: worked out from other values, like <code>speed * hours</code>.</li><li><b>Imaginary / Complex</b>: only for complex-number problems.</li></ul>{% endset %}
+{% set tip_settings %}<p>The boxes change with the kind; the grey line under them explains what they do.</p><p><b>not zero</b> skips 0, handy when you divide by the value.</p><p><b>different from</b>: other value names this one must never equal, separated by commas, without brackets, e.g. <code>a, b</code>. Only one of each pair needs it.</p>{% endset %}
+{% set tip_choices %}<p>One choice per line. Put <code>*</code> in front of each correct one:</p><p><code>*[a + b]</code><br><code>[a + b + 1]</code><br><code>[a * b]</code></p><p>Wrong choices built from the values (like <code>[a + b + 1]</code>) stay believable for every student. Use <b>Show me 3 examples</b> to check that no two choices ever come out the same.</p>{% endset %}
+{% set tip_combos %}<p>Only for questions where more than one set of ticks is right, like “tick two numbers that add up to 10”.</p><p>Leave the <code>*</code> off, and write each right set on its own line, choices separated by commas, exactly as in the list above:</p><p><code>[a], [10 - a]</code><br><code>[b], [10 - b]</code></p>{% endset %}
+{% set tip_shuffle %}<p>Each student gets the choices in a different order, so “it's the second one” doesn't help anyone.</p>{% endset %}
+{% set tip_show_n %}<p>Show each student only some of the choices, e.g. 4 out of 8, so students see different options.</p><p>At least one correct choice is always included. Leave it empty to show them all.</p>{% endset %}
+{% set tip_precision %}<ul><li><b>Within 0.01</b>: 3.14 counts for 3.14159 (for numbers under 1, within 1%). Best for most problems.</li><li><b>Exactly</b>: must match to 4 decimal places.</li><li><b>Rounded to 2 decimal places</b>: they must round, e.g. 3.14.</li><li><b>Rounded to a whole number</b>: they must round, e.g. 3; 6.5 rounds to 7.</li></ul>{% endset %}
+{% set tip_display %}<p>The answer box above is worked out as a number, so results show e.g. 3.4641. Write the exact form here to show it too: results then say <code>\( 2\sqrt{3} \)  (≈ 3.4641)</code>.</p><p>Use the same [values] as the question, e.g. <code>\( \frac{[a]}{[b]} \)</code> or <code>\( [a]\sqrt{[n]} \)</code>. Students are graded on the number either way, and may type math themselves, like 2√3.</p>{% endset %}
+{% set tip_ordered %}<p>For an answer with several numbers, like <code>r1, r2</code>:</p><ul><li><b>Off</b>: <code>3, 5</code> and <code>5, 3</code> both count. Right for roots or "the two numbers".</li><li><b>On</b>: they must be in your order. Right for a point <code>(x, y)</code>.</li></ul><p>Answers with a single number aren't affected.</p>{% endset %}
+{% set tip_complex %}<p>Leave this off for ordinary arithmetic: then a square root of a negative number is an error you'll hear about, instead of an imaginary number sneaking into a student's problem.</p>{% endset %}
+{% set tip_case %}<p>Tick when capital letters matter, e.g. chemical symbols (<code>Co</code> is cobalt, <code>CO</code> is carbon monoxide).</p>{% endset %}
+{% set tip_notes %}<p>Your marking guide: what a full-credit answer includes, common mistakes, how much each part is worth.</p><p>Only you see it, next to each student's essay while you grade.</p>{% endset %}
+{% set tip_pictures %}<p><b>One picture</b>: every student sees it.</p><p><b>Several</b>: each student gets one at random. Give them labels (cat, dog…) and use <code>[picture]</code> in the question or answer to mean “the label of the picture this student got”.</p>{% endset %}
+{% set tip_calc %}<p>A note about this problem. It shows in your problem list, and the quiz builder warns you if you put it in a quiz marked “no calculator”.</p><p>Students see the quiz's own calculator setting.</p>{% endset %}
+{% set answer_tips = {
+  'numeric': '<p>A formula using your value names, <b>without</b> brackets: <code>speed * hours</code>. The app works it out for each student.</p><p><b>Several numbers</b> (two roots, a point): separate the formulas with commas, like <code>r1, r2</code> or <code>(x, y)</code>. Every number is checked. Tick <b>Order matters</b> when they must come in that order, as in a point.</p><p>Students may type fractions like <code>3/4</code> or <code>1 1/2</code>.</p>',
+
+  'text': '<p>One accepted answer per line; any of them is marked right. <code>[who]</code> works when the answer is one of your values.</p><p>Capital letters and extra spaces are ignored unless you tick Case sensitive.</p>',
+  'truefalse': '<p>Type <code>True</code> or <code>False</code>, or a comparison that decides it for each student, without brackets:</p><p><code>a &gt; b</code> &nbsp; <code>a = b</code> &nbsp; <code>a != b</code> &nbsp; <code>a + b &lt; 10 and a &gt; 2</code></p>',
+  'essay': '<p>Optional. A short model answer to compare against while you grade.</p>',
+} %}
+
+{% macro value_row(row, idx) %}
+  <tr class="value-row">
+    <td data-label="Name">{{ row.form.name(placeholder='e.g. speed', title='Letters and digits, starting with a letter. Use it in the question as [name].', **{'aria-label': 'Name'}) }}</td>
+    <td data-label="Kind">{{ row.form.kind(class='kind', title='What sort of value this is', **{'aria-label': 'Kind'}) }}</td>
+    <td data-label="Settings">
+      <div class="settings">
+        {{ row.form.min(placeholder='from', title='Smallest possible value (included)', class='k-whole k-decimal k-imaginary k-complex', **{'aria-label': 'From (real part for complex)'}) }}
+        {{ row.form.max(placeholder='to', title='Largest possible value (included)', class='k-whole k-decimal k-imaginary k-complex', **{'aria-label': 'To (real part for complex)'}) }}
+        {{ row.form.im_min(placeholder='imaginary from', title='Smallest imaginary part (never 0)', class='k-complex', **{'aria-label': 'Imaginary part from'}) }}
+        {{ row.form.im_max(placeholder='imaginary to', title='Largest imaginary part', class='k-complex', **{'aria-label': 'Imaginary part to'}) }}
+        {{ row.form.step(placeholder='in steps of (optional)', title='Count up from “from” in steps of this size. 5 with 40 to 80 gives 40, 45, 50 … 80', class='k-whole', **{'aria-label': 'In steps of'}) }}
+        {{ row.form.places(placeholder='decimal places', title='How many digits after the point (1 if left empty)', class='k-decimal', **{'aria-label': 'Decimal places'}) }}
+        {{ row.form.items(placeholder='Maria, Ahmed, Li', title='The choices, separated by commas. Each student gets one at random', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
+        {{ row.form.pick_n(placeholder='how many to pick (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
+        {{ row.form.formula(placeholder='e.g. speed * hours', title='Worked out from other values, without brackets. + - * / ^ ( ) sqrt abs round min max', class='k-calc', **{'aria-label': 'Formula'}) }}
+        <label class="inline k-whole" title="Never 0: handy when you divide by this value">{{ row.form.nonzero() }} not zero</label>
+        {{ row.form.different_from(placeholder='different from… (optional)', title='Names of values this one must never equal, separated by commas, e.g. a, b', **{'aria-label': 'Different from'}) }}
+        <div class="kind-hint" aria-live="polite"></div>
+      </div>
+    </td>
+    <td class="actions"><button type="button" class="btn btn-danger btn-sm remove-row" aria-label="Remove this value" title="Remove this value">✕</button></td>
+  </tr>
+{% endmacro %}
+
+{% macro image_row(row) %}
+  <div class="image-row card">
+    {{ image_drop(row.form.file, 'Drag a picture here, or click to choose one.') }}
+    <div class="field">
+      {{ row.form.label.label }}
+      {{ row.form.label(placeholder='optional, e.g. cat') }}
+      <div class="help">If you label your pictures, use <code>[picture]</code> in the question or answer to mean “the label of the picture this student got”.</div>
+    </div>
+    <button type="button" class="btn btn-danger btn-sm remove-image" title="Take this picture out of the problem (the file stays uploaded)">Remove this picture slot</button>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Back to problems</a></div>
+</div>
+
+{{ error_box(errors) }}
+
+<div class="editor">
+<form method="post" id="problem-form" novalidate>
+  {{ form.hidden_tag() }}
+
+  {% if ai_enabled %}
+  <div class="card ai-box">
+    <div class="card-head"><h2>Describe it in plain English</h2><span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span>{{ tip('the AI helper', tip_ai) }}</div>
+    <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”.</p>
+    <div class="field">
+      <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
+      <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn ai-go" data-kind="problem" data-src="ai-problem" data-url="{{ url_for('qgen.ai_problem') }}" title="Claude drafts the type, question, values and answer. You check before saving.">Fill in for me</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label-line"><label for="ai-values">…or just describe the random values</label>{{ tip('describing the random values', tip_ai_values) }}</div>
+      <textarea id="ai-values" placeholder="e.g. all integers from 3 to 5, then a random one of those"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn btn-secondary ai-go" data-kind="values" data-src="ai-values" data-url="{{ url_for('qgen.ai_values') }}" title="Fills in only the Random values table">Fill in the values</button>
+      </div>
+    </div>
+    <div class="ai-status small" role="status" aria-live="polite"></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">1</span><h2>The question</h2></div>
+    <div class="form-row">
+      {{ field(form.qtype, tip_body=tip_qtype) }}
+      {{ field(form.title, attrs={'placeholder': 'e.g. Train distance'}, tip_body=tip_title) }}
+    </div>
+    {# the math helpers are for Numeric problems only; hidden for other types #}
+    <div class="t-numeric">{% include "_math_toolbar.html" %}</div>
+    {{ field(form.question, 'Put a random value in square brackets, like [speed]. You can do math inside too: [speed * 2].', attrs={'rows': 4, 'placeholder': 'A train goes [speed] mph for [hours] hours. How far does it travel?'}, tip_body=tip_question) }}
+    <div class="t-numeric">
+      <div class="math-preview" id="math-preview" data-source="question" hidden aria-live="polite"><span class="label">How the math will look</span><div class="math-preview-body"></div></div>
+    </div>
+    <div class="name-chips" data-default="question" hidden><span class="muted">Insert a value:</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">2</span><h2>Random values</h2><span class="muted small">picked separately for each student</span>{{ tip('random values', tip_values) }}</div>
+    <div class="values-guide small muted">Help with: <span>Name{{ tip('value names', tip_name) }}</span> <span>Kind{{ tip('kinds of value', tip_kind) }}</span> <span>Settings{{ tip('value settings', tip_settings) }}</span></div>
+    <div class="table-wrap stack values-table">
+      <table>
+        <thead><tr><th style="width:16%">Name{{ tip('value names', tip_name) }}</th><th style="width:18%">Kind{{ tip('kinds of value', tip_kind) }}</th><th>Settings{{ tip('value settings', tip_settings) }}</th><th></th></tr></thead>
+        <tbody id="values-body">
+          {% for row in form.values %}{{ value_row(row, loop.index0) }}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button type="button" class="btn btn-secondary btn-sm" id="add-value" title="Add another row: one row per thing that changes from student to student">+ Add value</button>
+    </div>
+  </div>
+
+  <div class="card" id="answer-card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Answer</h2></div>
+    <div class="t-choice_one t-choice_many">
+      {% with math_target = 'choices' %}{% include "_math_toolbar.html" %}{% endwith %}
+      {{ field(form.choices, 'Put * in front of each correct choice. Choices can use values too, like [speed * hours + 10].', attrs={'rows': 5, 'placeholder': '*[speed * hours]\n[speed + hours]\n[speed * hours + 10]'}, tip_body=tip_choices) }}
+      <div class="math-preview" data-source="choices" hidden aria-live="polite"><span class="label">How the choices will look</span><div class="math-preview-body"></div></div>
+      <div class="t-choice_many">
+        {{ field(form.combos, 'When different sets of ticks can each be right. One combination per line, choices separated by commas, written exactly as in the list above. A student is right if their ticks match any one of them (or the * set).', attrs={'rows': 3, 'placeholder': '[a], [10 - a]\n[b], [10 - b]'}, tip_body=tip_combos) }}
+      </div>
+      <div class="form-row">
+        {{ check(form.shuffle, tip_body=tip_shuffle) }}
+        {{ field(form.show_n, 'Optional. Each student sees this many, always including a correct one.', attrs={'min': 2}, tip_body=tip_show_n) }}
+      </div>
+    </div>
+    <div class="t-numeric t-text t-truefalse t-essay">
+      {% for key, qt in qtypes.items() %}
+        <div class="answer-help t-{{ key }}"><div class="label-line"><span class="label" style="margin:0">{{ qt.answer_label }}</span>{% if key in answer_tips %}{{ tip('the answer', answer_tips[key]|safe) }}{% endif %}</div>{% if qt.answer_help %}<div class="help muted small">{{ qt.answer_help }}</div>{% endif %}</div>
+      {% endfor %}
+      <div class="field{% if form.answer.errors %} has-error{% endif %}">
+        {{ form.answer(rows=3, **{'aria-label': 'Answer'}) }}
+      </div>
+      <div class="t-numeric t-text t-truefalse"><div class="name-chips" data-default="answer" hidden><span class="muted">Insert a value:</span></div></div>
+    </div>
+    <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
+    <div class="t-numeric">
+      {% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}
+      {{ field(form.answer_display, 'Optional. The exact form results show next to the number, e.g. 2√3 instead of 3.4641 (use the buttons above). Students are still graded on the number.', attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display) }}
+      <div class="math-preview" data-source="answer_display" hidden aria-live="polite"><span class="label">How the correct answer will look</span><div class="math-preview-body"></div></div>
+    </div>
+    <div class="t-numeric">{{ check(form.ordered, 'Only for answers with several numbers. Off: any order counts (like the two roots of an equation). On: same order as your answer, like a point (x, y).', tip_body=tip_ordered) }}</div>
+    <div class="t-numeric t-choice_one t-choice_many t-truefalse">{{ check(form.complex, 'Off for ordinary arithmetic: then no imaginary number can ever appear. Turns on by itself if a value is an Imaginary or Complex number. Students type answers like 3 + 2i.', tip_body=tip_complex) }}</div>
+    <div class="t-text">{{ check(form.case_sensitive, tip_body=tip_case) }}</div>
+    <div class="t-essay">{{ field(form.grading_notes, 'Shown to you next to the student’s answer while grading.', attrs={'rows': 3}, tip_body=tip_notes) }}</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2>Pictures</h2><span class="muted small">optional</span>{{ tip('pictures', tip_pictures) }}</div>
+    <p class="muted small">Add one picture, or several: each student is shown one of them at random.</p>
+    <div id="images-body">
+      {% for row in form.images %}{{ image_row(row) }}{% endfor %}
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="add-image" title="Add a picture slot. With several, each student gets one at random">+ Add a picture</button>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">5</span><h2>Check and save</h2></div>
+    {{ check(form.calculator_ok, tip_body=tip_calc) }}
+    <p class="muted small">Tip: press <b>Show me 3 examples</b> first to see three students' versions. Saving checks every possible combination of values for problems like dividing by zero.</p>
+    <div class="btn-row">
+      {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}
+      <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}" title="Leave without saving">Cancel</a>
+    </div>
+  </div>
+
+  <div id="preview" class="examples" aria-live="polite"></div>
+</form>
+{% with form_id='problem-form', check_url=url_for('qgen.check_vprob'), review_url=url_for('qgen.ai_review_problem') if ai_enabled else none %}{% include "_helper.html" %}{% endwith %}
+</div>
+
+<details class="card help-box">
+  <summary>Examples of each question type</summary>
+  <h3>Numeric</h3>
+  <pre>Question: A train goes [speed] mph for [hours] hours. How far does it travel?
+Values:   speed  Whole number  40 to 80, in steps of 5
+          hours  Whole number  2 to 5
+Answer:   speed * hours</pre>
+  <h3>Short text</h3>
+  <pre>Question: What is the capital of France?
+Answer:   Paris
+          Paris, France</pre>
+  <h3>Pick one</h3>
+  <pre>Question: [a] + [b] = ?
+Choices:  *[a + b]
+          [a + b + 1]
+          [a * b]</pre>
+  <h3>Pick several</h3>
+  <pre>Question: Which of these are even?
+Choices:  *2
+          *4
+          3
+          5</pre>
+  <h3>Pick several, with several right combinations</h3>
+  <pre>Question: Tick two numbers that add up to 10.
+Choices:  [a]
+          [10 - a]
+          [b]
+          [10 - b]
+          [a + 20]
+Other correct combinations:
+          [a], [10 - a]
+          [b], [10 - b]</pre>
+  <h3>True / False</h3>
+  <pre>Question: True or false: [a] is bigger than [b].
+Answer:   a > b</pre>
+  <h3>Long text</h3>
+  <pre>Question: Explain why [who] needs more money than [other].
+Model answer (optional): Because …</pre>
+  <h3>Complex numbers</h3>
+  <pre>Values:   z  Complex number    real 1 to 5, imaginary 1 to 5
+          w  Imaginary number  2 to 6
+Question: What is ([z])([w])?
+Answer:   z * w                 (students type e.g. -8 + 12i)
+Formulas can also use i directly: [a] + [b]i, sqrt(-a), conj(z), abs(z), re(z), im(z)</pre>
+  <h3>Pictures with labels</h3>
+  <pre>Question: What animal is in the picture?     (question type: Short text)
+Pictures: cat.png labelled “cat”, dog.png labelled “dog”
+Answer:   [picture]</pre>
+</details>
+
+<template id="value-template">{{ value_row(blank.values[0], 0) }}</template>
+<template id="image-template">{{ image_row(blank.images[0]) }}</template>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/problem_form.js') }}"></script>
+<script src="{{ asset('js/helper.js') }}"></script>
+{% endblock %}

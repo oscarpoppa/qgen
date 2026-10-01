@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
+
+{% block content %}
+<div class="page-head">
+  <h1 class="person">{{ avatar(student, 40) }}{{ student.username }}</h1>
+  <div class="actions">
+    {# switch to another student's conversation #}
+    <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-switch" onsubmit="return false">
+      <label for="switch-student" class="sr-only">Switch to another student</label>
+      <select id="switch-student" onchange="if (this.value) window.location = this.value">
+        {% for r in rows %}<option value="{{ url_for('messages.conversation', student_id=r.student.id) }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+      </select>
+    </form>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}">Quizzes</a>
+    <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}">All messages</a>
+  </div>
+</div>
+<div class="card">
+  {% set me_teacher = true %}{% include "_thread.html" %}
+  <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="to" value="{{ student.id }}">
+    <label for="body" class="sr-only">Message to {{ student.username }}</label>
+    <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write to {{ student.username }}…"></textarea>
+    <button class="btn">Send</button>
+  </form>
+</div>
+{% endblock %}

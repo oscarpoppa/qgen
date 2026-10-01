@@ -1,15 +1,55 @@
 {% extends "base.html" %}
+{% from "_macros.html" import post_button with context %}
 
 {% block content %}
-{% for item in vqlst %}
-    [<a href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>]
-    [<a href="{{ url_for('qgen.del_vquiz', vqid=item.id) }}" onclick="return confirm('Are you sure you want to delete VQuiz \'{{item.title}}\'?');">Delete</a>]
-    (id={{item.id}}) <b>{{item.title}}</b> {{item.vpid_lst}} ({% if item.calculator_ok %}Calc OK{% else %}No Calc{% endif %}) {% if item.image %} (img = {{item.image}}) {% endif %} 
-    <br>
-    {% for prob in item.vproblems %}
-        ( {{prob.id}} ) {{prob.raw_prob}} [{{prob.title}}] {% if prob.image %} (img = {{prob.image}}) {% endif %}
-        <br>
-    {% endfor %}
-    <br>
-{% endfor %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
+</div>
+
+{% if vqlst %}
+  {% if vqlst|length > 5 %}<input type="search" class="filter" data-filter="#quizzes" placeholder="Filter quizzes…" aria-label="Filter quizzes">{% endif %}
+  <div class="table-wrap stack">
+    <table id="quizzes">
+      <thead><tr><th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+      <tbody>
+      {% for item in vqlst %}
+        {% set entries = layout.parse(item.vpid_lst) %}
+        {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
+        <tr>
+          <td data-label="Quiz"><strong>{{ item.title }}</strong>
+            <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
+              · {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
+              {% if item.shuffle_order %}· order shuffled{% endif %}
+              {% if item.hide_answers %}· answers {{ 'released' if item.answers_released else 'hidden' }}{% endif %}</div></td>
+          <td data-label="Problems">
+            <ol class="small" style="margin:0;padding-left:1.2em">
+              {% for e in entries %}
+                {% if layout.is_group(e) %}
+                  <li><span class="badge badge-accent">{{ e.pick }} of these {{ e['from']|length }}</span>
+                    <ul style="margin:2px 0 4px;padding-left:1.1em">{% for pid in e['from'] %}<li>{{ byid[pid].title if pid in byid else 'missing problem ' ~ pid }}</li>{% endfor %}</ul></li>
+                {% else %}
+                  <li>{{ byid[e].title if e in byid else 'missing problem ' ~ e }}</li>
+                {% endif %}
+              {% endfor %}
+            </ol>
+          </td>
+          <td data-label="Assigned">{{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</td>
+          <td class="actions">
+            <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
+            {% if item.hide_answers %}{{ post_button(url_for('qgen.release_vquiz', vqid=item.id), 'Hide answers' if item.answers_released else 'Release answers', 'btn btn-secondary btn-sm', 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title ~ '”?') }}{% endif %}
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
+            {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?') }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
+{% endif %}
 {% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script>{% endblock %}

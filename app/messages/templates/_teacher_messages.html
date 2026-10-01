@@ -1,0 +1,52 @@
+{# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
+<section id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id if student else 'all') }}" aria-labelledby="messages-title">
+  <h2 id="messages-title" class="sr-only">Messages</h2>
+  {% if rows %}
+    <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-pick">
+      <label for="msg-student" class="small muted">Showing</label>
+      <select id="msg-student" name="student" data-current="{{ student.id if student else 'all' }}">
+        <option value="all"{{ ' selected' if everyone }}>All messages (every student)</option>
+        {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+      </select>
+    </form>
+    {% if everyone %}
+      <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
+      {# an announcement to every student, straight from the panel (asked first) #}
+      <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate
+            data-confirm="Are you sure you want to send this to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}?" data-confirm-ok="Send to everyone">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="to" value="all">
+        <label for="reply" class="sr-only">Message to all students</label>
+        <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to all students…"></textarea>
+        <label class="check small"><input type="checkbox" name="pin" value="1"> Pin it to the top of their messages</label>
+        <button class="btn">Send to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}</button>
+      </form>
+      <p class="muted small" style="margin:6px 0 0">To answer one student, press <strong>Reply</strong> on a message or pick them above.</p>
+    {% else %}
+      <div class="btn-row convo-bar">
+        <button type="button" class="btn-link small show-student" data-student="all">← All messages</button>
+        {% if waiting %}
+          {# one student: go to that conversation; several: to all messages, where the new ones are marked #}
+          {% if waiting|length == 1 %}
+            <button type="button" class="badge badge-warn badge-btn show-student" data-student="{{ waiting[0].student.id }}"
+                    title="Open {{ waiting[0].student.username }}'s conversation">{{ others_unread }} new from {{ waiting[0].student.username }} →</button>
+          {% else %}
+            <button type="button" class="badge badge-warn badge-btn show-student" data-student="all"
+                    title="See all messages; the new ones are marked">{{ others_unread }} new from {{ waiting|length }} students →</button>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
+      <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="to" value="{{ student.id }}">
+        <label for="reply" class="sr-only">Message to {{ student.username }}</label>
+        <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.username }}…"></textarea>
+        <button class="btn">Send</button>
+      </form>
+    {% endif %}
+    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}">Messages page: write to chosen students, see pinned messages</a></p>
+  {% else %}
+    <p class="muted small">No students yet. Once students sign up, you can talk with them here.</p>
+  {% endif %}
+</section>

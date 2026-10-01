@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ cq.vquiz.title }}</h1>
+  <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_ok else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_ok else 'No calculator' }}</span>
+</div>
+
+{% if preview %}
+  <div class="alert alert-warning">You're viewing {{ cq.taker.username }}'s quiz. Only {{ cq.taker.username }} can submit it.</div>
+{% endif %}
+
+{% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
+
+<form method="post" id="take-form" novalidate
+      {% if not preview %}data-save-url="{{ url_for('qgen.qsave', cidx=cq.id) }}"{% endif %}
+      {% if deadline and not preview %}data-remaining="{{ [((deadline - now()).total_seconds())|int, 0]|max }}"{% endif %}>
+  {{ form.hidden_tag() }}
+  <div class="progress" aria-live="polite">
+    <div class="small muted btn-row" style="justify-content:space-between">
+      <span><span id="answered">0</span> of {{ items|length }} answered</span>
+      {% if not preview %}<span id="save-status" class="muted">Your answers are saved as you go.</span>{% endif %}
+      {% if deadline and not preview %}<button type="button" class="btn-link small muted timer" id="timer" title="Click to hide or show the time">…</button>{% endif %}
+    </div>
+    <div class="progress-bar"><span id="bar"></span></div>
+  </div>
+
+  {% for it in items %}
+    <section class="card question" data-q="{{ it.num }}" aria-labelledby="q{{ it.num }}">
+      <input type="hidden" name="{{ it.field.name }}_present" value="1">
+      <div class="card-head"><span class="qnum">{{ it.num }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ it.num }}</h2></div>
+      {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="Picture for question {{ it.num }}">{% endif %}
+      <div class="qtext">{{ it.text }}</div>
+      {% if it.qtype in ('choice_one', 'truefalse') %}
+        {{ it.field(class='choice-list') }}
+      {% elif it.qtype == 'choice_many' %}
+        <div class="small muted" style="margin-bottom:6px">Tick every correct answer.</div>
+        {{ it.field(class='choice-list') }}
+      {% elif it.qtype == 'essay' %}
+        {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+      {% else %}
+        {{ it.field(autocomplete='off', **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+        {% if it.complex %}<div class="small muted" style="margin-top:4px">Write complex numbers like 3 + 2i (use i for √−1). Separate several answers with commas.</div>
+        {% elif it.qtype == 'numeric' and not preview %}
+          {# math keys for a number answer: worked out when graded (2√3, π/2, 3^2) #}
+          <div class="keypad" role="group" aria-label="Math keys for question {{ it.num }}">
+            {% for key, title in [('√', 'Square root'), ('π', 'Pi'), ('^', 'Power'), ('(', 'Open bracket'), (')', 'Close bracket'), ('/', 'Divided by (fraction)'), (',', 'Comma (several answers)')] %}
+              <button type="button" class="key" data-ins="{{ key }}" title="{{ title }}" aria-label="{{ title }}">{{ key }}</button>
+            {% endfor %}
+            <span class="small muted">You can type math like 2√3, π/2 or 3^2.</span>
+          </div>
+        {% endif %}
+      {% endif %}
+      {% for e in it.field.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </section>
+  {% endfor %}
+
+  {% if not preview %}
+    <div class="card btn-row">
+      {{ form.submit(class='btn') }}
+      <span class="muted small">You can't change your answers after submitting.</span>
+    </div>
+  {% endif %}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* math keys under a number answer: put the symbol where the cursor is */
+(function () {
+  document.addEventListener('mousedown', function (e) { if (e.target.closest('.keypad .key')) e.preventDefault(); });
+  document.addEventListener('click', function (e) {
+    var key = e.target.closest('.keypad .key');
+    if (!key) return;
+    var box = key.closest('.question').querySelector('input[type=text], input:not([type])');
+    if (!box) return;
+    var start = typeof box.selectionStart === 'number' ? box.selectionStart : box.value.length;
+    var end = typeof box.selectionEnd === 'number' ? box.selectionEnd : start;
+    var text = key.dataset.ins;
+    box.value = box.value.slice(0, start) + text + box.value.slice(end);
+    box.focus();
+    box.setSelectionRange(start + text.length, start + text.length);
+    box.dispatchEvent(new Event('input', { bubbles: true }));  // counted and autosaved like typing
+  });
+})();
+</script>
+<script>
+(function () {
+  var form = document.getElementById('take-form');
+  var qs = form.querySelectorAll('.question');
+  function answered(q) {
+    //hidden markers (used by autosave) aren't answers
+    return Array.prototype.some.call(q.querySelectorAll('input:not([type=hidden]), textarea'), function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') return el.checked;
+      return el.value.trim() !== '';
+    });
+  }
+  function update() {
+    var n = Array.prototype.filter.call(qs, answered).length;
+    document.getElementById('answered').textContent = n;
+    document.getElementById('bar').style.width = (qs.length ? 100 * n / qs.length : 0) + '%';
+    return qs.length - n;
+  }
+  form.addEventListener('input', update);
+  form.addEventListener('change', update);
+  var submitting = false;
+  form.addEventListener('submit', function (e) {
+    if (submitting) return;
+    var blank = update();
+    if (blank && form.dataset.blankOk !== '1') {
+      //asked inside the page (the browser's own pop-ups can be switched off)
+      e.preventDefault();
+      var question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?';
+      var ask = window.qgenAsk ? window.qgenAsk(question, 'Submit anyway') : Promise.resolve(window.confirm(question));
+      var submitter = e.submitter;
+      ask.then(function (yes) {
+        if (!yes) return;
+        form.dataset.blankOk = '1';
+        if (form.requestSubmit) form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+        else form.submit();
+      });
+      return;
+    }
+    submitting = true;
+  });
+
+  /* autosave: send the answers a moment after each change */
+  var saveUrl = form.dataset.saveUrl, status = document.getElementById('save-status'), timer = null;
+  function save() {
+    if (!saveUrl || submitting) return;
+    var data = new FormData(form);
+    data.delete('csrf_token');
+    fetch(saveUrl, { method: 'POST', body: data, credentials: 'same-origin',
+                     headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { status.textContent = res.ok ? 'Saved at ' + res.saved : (res.error || 'Not saved'); },
+            function () { status.textContent = 'Not saved — check your connection. Keep this page open.'; });
+  }
+  function soon() { clearTimeout(timer); if (status) status.textContent = 'Saving…'; timer = setTimeout(save, 1200); }
+  if (saveUrl) { form.addEventListener('input', soon); form.addEventListener('change', soon); }
+
+  /* time limit: a quiet reminder, updated once a minute; hands in what's there at the end */
+  var left = form.dataset.remaining ? +form.dataset.remaining : null, clock = document.getElementById('timer');
+  var hidden = false, end = left === null ? null : Date.now() + left * 1000;
+  if (clock) clock.addEventListener('click', function () { hidden = !hidden; show(); });
+  function show() {
+    if (end === null || !clock) return;
+    var secs = Math.max(0, Math.round((end - Date.now()) / 1000)), last = secs <= 60;
+    if (hidden && !last) { clock.textContent = 'Show time'; return; }
+    clock.textContent = last ? 'Less than a minute left' : Math.ceil(secs / 60) + ' min left';
+    clock.classList.toggle('timer-last', last);
+  }
+  function tick() {
+    if (end === null) return;
+    var secs = (end - Date.now()) / 1000;
+    if (secs <= 0) { submitting = true; HTMLFormElement.prototype.submit.call(form); return; }
+    show();
+    setTimeout(tick, secs > 61 ? Math.min(60000, (secs - 60) * 1000) : 1000);
+  }
+  tick();
+  update();
+})();
+</script>
+{% endblock %}

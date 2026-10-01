@@ -1,17 +1,33 @@
 {% extends "base.html" %}
+{% from "_macros.html" import field %}
 
 {% block content %}
-<h1><u>Upload a File</u></h1>
-    <form action="" method="post" enctype="multipart/form-data">
-	    {{ form.hidden_tag() }}
-	    <p>
-	            <b>{{ form.thefile.label }}</b><br>
-		    {{ form.thefile(size=64) }}<br>
-                    {% for error in form.thefile.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>     {{ form.submit() }} </p>
-            <p>     <a href={{ url_for('user.mypage') }}>Cancel</a> </p>
-    </form>
+<div class="page-head">
+  <h1>Upload files</h1>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('upload.images') }}">Images</a>
+    <a class="btn btn-secondary" href="{{ url_for('upload.nonimages') }}">Other files</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Pictures</h2>
+  <div class="dropzone big" data-multiple data-upload="{{ url_for('upload.upload_json') }}" tabindex="0" role="button"
+       aria-label="Upload pictures: drop files here or press Enter to choose them">
+    <div class="dz-text">
+      <strong style="font-size:1.1rem">Drop pictures here</strong>
+      <span class="dz-hint">or click to choose. You can add several at once.</span>
+    </div>
+    <input type="file" accept="image/*" hidden>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Other files</h2>
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.thefile) }}
+    {{ form.submit(class='btn', value='Upload') }}
+  </form>
+</div>
 {% endblock %}

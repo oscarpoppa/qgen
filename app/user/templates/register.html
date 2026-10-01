@@ -1,37 +1,18 @@
 {% extends "base.html" %}
+{% from "_macros.html" import field %}
 
 {% block content %}
-<h1><u>Register User</u></h1>
-    <form action="" method="post">
-	    {{ form.hidden_tag() }}
-	    <p>
-	            <b>{{ form.username.label }}</b><br>
-		    {{ form.username(size=64) }}<br>
-                    {% for error in form.username.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.email.label }}</b><br>
-		    {{ form.email(size=64) }}<br>
-                    {% for error in form.email.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.password.label }}</b><br>
-		    {{ form.password(size=64) }}<br>
-                    {% for error in form.password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>
-	            <b>{{ form.retype_password.label }}</b><br>
-		    {{ form.retype_password(size=64) }}<br>
-                    {% for error in form.retype_password.errors %}
-                    <span style="color: red">[{{ error }}]</span>
-                    {% endfor %} 
-            </p>
-	    <p>     {{ form.submit() }} </p>
-    </form>
+<div class="card card-narrow">
+  <h1>Create an account</h1>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.class_code, 'Your teacher gives you this.', attrs={'autocomplete': 'off', 'autofocus': true}) }}
+    {{ field(form.username, attrs={'autocomplete': 'username'}) }}
+    {{ field(form.email, 'Leave blank if the student has no email address.', attrs={'type': 'email', 'autocomplete': 'email'}) }}
+    {{ field(form.password, attrs={'autocomplete': 'new-password'}) }}
+    {{ field(form.retype_password, attrs={'autocomplete': 'new-password'}) }}
+    {{ form.submit(class='btn', value='Create account', style='width:100%') }}
+  </form>
+  <p class="muted small" style="margin-top:14px">Already have an account? <a href="{{ url_for('user.login') }}">Log in</a></p>
+</div>
 {% endblock %}

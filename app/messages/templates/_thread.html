@@ -1,0 +1,73 @@
+{# messages in one conversation (or, with `everyone`, from all students); `me_teacher` says which side is "you" #}
+{% from "_macros.html" import avatar with context %}
+<ol class="thread" aria-label="Messages">
+  {% for m in items %}
+    {# in the all-messages view an announcement to several students is shown once #}
+    {% set grouped = everyone is defined and everyone and m.copies is defined and m.copies > 1 %}
+    <li class="msg-with-avatar {{ 'msg-mine' if m.from_teacher == me_teacher else '' }}">
+    {% if m.kind != 'notice' %}{{ avatar(m.sender if m.from_teacher else m.student, 28) }}{% endif %}
+    <div class="msg {{ 'msg-teacher' if m.from_teacher else 'msg-student' }} {{ 'msg-mine' if m.from_teacher == me_teacher else '' }} msg-{{ m.kind }} {{ 'msg-new' if unread_ids is defined and m.id in unread_ids else '' }}">
+      {% if m.kind != 'notice' %}
+        {% if grouped %}
+          {# shown once for everyone who got it: the ✕ removes every copy #}
+          <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
+                data-confirm="Delete this announcement for all {{ m.copies }} students who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
+            <button class="msg-x" aria-label="Delete this message" title="Delete this message">✕</button>
+          </form>
+        {% elif me_teacher and m.batch and m.kind == 'announcement' %}
+          {# an announcement sent to several students: ask which to remove #}
+          <details class="msg-x-wrap msg-del">
+            <summary class="msg-x" aria-label="Delete this message" title="Delete this message">✕</summary>
+            <div class="msg-del-choices">
+              <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
+                    data-confirm="Delete this announcement from {{ m.student.username }}'s messages? This can’t be undone." data-confirm-ok="Delete">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-secondary btn-sm">Only from {{ m.student.username }}</button>
+              </form>
+              <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
+                    data-confirm="Delete this announcement for every student who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
+                <button class="btn btn-danger btn-sm">From every student who got it</button>
+              </form>
+            </div>
+          </details>
+        {% else %}
+          <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
+                data-confirm="{{ 'Remove this message from your messages? Your teacher will still have it.' if (not me_teacher and m.from_teacher) else 'Delete this message? This can’t be undone.' }}"
+                data-confirm-ok="{{ 'Remove' if (not me_teacher and m.from_teacher) else 'Delete' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="msg-x" aria-label="Delete this message" title="Delete this message">✕</button>
+          </form>
+        {% endif %}
+      {% endif %}
+      <div class="msg-meta small">
+        {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
+        {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
+        <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
+        {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
+        {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.username }}</span>{% endif %}
+        <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
+        {% if m.pinned %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
+        {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
+      </div>
+      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
+      {% if everyone is defined and everyone and not grouped %}
+        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">Reply to {{ m.student.username }}</button>
+      {% endif %}
+      {% set can_pin = me_teacher and m.from_teacher %}
+      {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.username }} removed this from their messages</div>{% endif %}
+      {% if can_pin %}
+      <div class="msg-actions">
+        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="inline-form dock-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
+          <button class="msg-act">📌 {{ 'Unpin' if m.pinned else 'Pin to top' }}</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    </li>
+  {% else %}
+    <li class="muted small">No messages yet.</li>
+  {% endfor %}
+</ol>

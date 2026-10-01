@@ -1,0 +1,13 @@
+{# Live helper panel; include next to a form. Needs: form_id, check_url, review_url (or none). #}
+<aside class="card helper" id="helper" data-form="{{ form_id }}" data-check-url="{{ check_url }}"
+       {% if review_url %}data-review-url="{{ review_url }}"{% endif %} aria-labelledby="helper-title">
+  <div class="card-head"><h2 id="helper-title">Helper</h2><span class="right small muted helper-status" aria-live="polite"></span></div>
+  <ul class="hints" aria-live="polite"></ul>
+  {% if review_url %}
+    <div class="helper-ai">
+      <button type="button" class="btn btn-secondary btn-sm helper-review">Review with AI</button>
+      <p class="small muted">Claude reads it like a careful colleague: clarity, mistakes, and how easy answers would be to pass along.</p>
+      <ul class="hints ai-hints" aria-live="polite"></ul>
+    </div>
+  {% endif %}
+</aside>
