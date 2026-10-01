@@ -20,7 +20,15 @@
           <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
             {% if item.options.get('markup') == 'legacy' %}<div class="small muted">old markup</div>{% endif %}</td>
           <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
-          <td data-label="Answer"><div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div></td>
+          <td data-label="Answer">
+            {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}
+              {# written answers: no answer key; a model answer, if given, is only a guide #}
+              <span class="badge">Teacher-graded</span>
+              {% if item.raw_ansr %}<div class="clamp small muted" onclick="this.classList.toggle('open')">Model answer: {{ item.raw_ansr }}</div>{% endif %}
+            {% else %}
+              <div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div>
+            {% endif %}
+          </td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>

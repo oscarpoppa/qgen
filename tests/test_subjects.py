@@ -239,3 +239,19 @@ def test_subject_changes_are_for_teachers_with_the_page_token(app_db):
     finally:
         app.config['WTF_CSRF_ENABLED'] = False
     assert VPGroup.query.count() == 0
+
+
+def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('essay', 'Summer', 'Write about your summer.'))
+    teacher.post('/quiz/makevprob', data=problem_form('essay', 'Sky', 'Why is the sky blue?', 'Light scatters.'))
+    make_problems(teacher, 'Add')
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('<span class="badge">Teacher-graded</span>') == 2
+    assert 'Model answer: Light scatters.' in page
+    # the Users page links to Results by student, whose students are boxes that open and close
+    assert 'href="/quiz/listuser">Results by student</a>' in teacher.get('/userdet').data.decode()
+    results = teacher.get('/quiz/listuser').data.decode()
+    assert 'data-store="qgen-open-results-students"' in results and '<details class="card subject-box student"' in results
+    assert 'data-boxes="open"' in results and 'js/subjects.js' in results

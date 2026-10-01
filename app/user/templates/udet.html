@@ -4,7 +4,8 @@
 
 {% block content %}
 <div class="page-head"><h1>Users</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
+    <a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
 
 {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#users" placeholder="Filter users…" aria-label="Filter users">{% endif %}
 <div class="table-wrap stack">
