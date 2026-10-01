@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload
 
 from app import db
 from app.messages.models import Message, NOT_NOTICE, seen_by, unread_for_teachers, unread_notices_for_teachers
-from app.user.models import User, ONLINE_WINDOW
+from app.user.models import User
 from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, AICall, Setting
 from .services import attempt_state
 
@@ -46,7 +46,7 @@ def counts(teacher, now):
 
 def online(now):
     """Everyone active in the last couple of minutes, by name."""
-    return User.query.filter(User.last_seen >= now - ONLINE_WINDOW).order_by(User.username).all()
+    return User.query.filter(User.online_condition(now)).order_by(User.username).all()
 
 
 #"active recently": seen within this long (but not online now)
@@ -55,7 +55,7 @@ RECENTLY = timedelta(hours=1)
 
 def recently_active(now):
     """People seen in the last hour who aren't online now, most recent first."""
-    return (User.query.filter(User.last_seen >= now - RECENTLY, User.last_seen < now - ONLINE_WINDOW)
+    return (User.query.filter(User.last_seen >= now - RECENTLY, ~User.online_condition(now))
             .order_by(User.last_seen.desc()).all())
 
 

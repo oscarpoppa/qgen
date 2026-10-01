@@ -85,8 +85,8 @@ def page_helpers():
             return 0
         return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
     def online_count():
-        from app.user.models import User, ONLINE_WINDOW
-        return User.query.filter(User.last_seen >= datetime.now() - ONLINE_WINDOW).count()
+        from app.user.models import User
+        return User.query.filter(User.online_condition(datetime.now())).count()
     from app.user.avatars import initials, color
     from app.home import home_url
     return dict(csrf_token=generate_csrf, home_url=home_url, online_count=online_count, review_count=review_count, now=datetime.now,

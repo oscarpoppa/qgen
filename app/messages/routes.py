@@ -259,8 +259,7 @@ def online_now():
     if not current_user.is_admin:
         return None
     from datetime import datetime
-    from app.user.models import ONLINE_WINDOW
-    return User.query.filter(User.last_seen >= datetime.now() - ONLINE_WINDOW).count()
+    return User.query.filter(User.online_condition(datetime.now())).count()
 
 
 def review_waiting():

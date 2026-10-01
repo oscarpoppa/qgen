@@ -98,7 +98,8 @@ def test_taking_a_quiz_right_now(app_db):
     started = give(vq, 'sam', closes_at=now + timedelta(minutes=30))
     S.start(started)
     for name in ('sam', 'kim'):
-        db.session.get(User, ids(name)).last_seen = now
+        u = db.session.get(User, ids(name))
+        u.last_seen, u.logged_in = now, True
     db.session.commit()
     give(vq, 'kim')  # not started
     rows = D.taking_now(now)
@@ -111,7 +112,8 @@ def test_taking_a_quiz_right_now(app_db):
         S.submit(started, {1: '4'})
     assert D.taking_now(now) == []
     # it shows on the page, and the live part refreshes on its own
-    db.session.get(User, ids('sam')).last_seen = datetime.now()
+    sam_u = db.session.get(User, ids('sam'))
+    sam_u.last_seen, sam_u.logged_in = datetime.now(), True
     later = give(vq, 'sam')
     S.start(later)
     db.session.commit()
@@ -273,3 +275,30 @@ def test_assigned_but_not_handed_in(app_db):
     assert len(D.out_now(now, limit=2)[0]) == 2
     page = teacher.get('/dashboard').data.decode()
     assert 'Assigned, not handed in yet' in page and 'Not started' in page and 'In progress' in page and 'Opens tomorrow' in page
+
+
+def test_logging_out_takes_you_off_online(app_db):
+    # logging out ends "online" at once (the logout click itself doesn't count as being
+    # here); still signed in on another device, the next request brings you back
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen import dashboard as D
+    teacher = login(app, 'teach')
+    phone, laptop = login(app, 'sam'), login(app, 'sam')
+    phone.get('/mypage')
+    laptop.get('/mypage')
+    now = datetime.now()
+    assert 'sam' in [u.username for u in D.online(now)]
+    phone.get('/logout')
+    db.session.expire_all()
+    sam = db.session.get(User, ids('sam'))
+    assert not sam.online and sam.seen_label() == 'just now'
+    assert 'sam' not in [u.username for u in D.online(datetime.now())]
+    assert 'sam' in [u.username for u in D.recently_active(datetime.now())]
+    part = teacher.get('/dashboard/online').data.decode()
+    assert part.index('Active in the last hour') < part.index('sam')
+    assert teacher.get('/messages/poll').get_json()['online'] == 1  # just the teacher
+    # the laptop is still signed in: its next request counts
+    laptop.get('/messages/poll')
+    db.session.expire_all()
+    assert db.session.get(User, ids('sam')).online
