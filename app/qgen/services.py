@@ -184,8 +184,10 @@ def _attempt_links(cq):
 
 def _forget_notices(links):
     """Notices whose Open would lead to something that no longer exists."""
-    from app.messages.models import Message
+    from app.messages.models import Message, MessageRead
     if links:
+        ids = Message.query.filter(Message.kind == 'notice', Message.link.in_(links)).with_entities(Message.id)
+        MessageRead.query.filter(MessageRead.message_id.in_(ids)).delete(synchronize_session=False)
         Message.query.filter(Message.kind == 'notice', Message.link.in_(links)).delete(synchronize_session=False)
 
 

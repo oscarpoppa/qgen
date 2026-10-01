@@ -341,7 +341,7 @@ def grade(aid):
 @teacher
 def inbox():
     return jsonify(conversations=[{'student': user_json(r['student']), 'unread': r['unread'],
-                                   'last': message_json(r['last']) if r['last'] else None} for r in M.inbox()],
+                                   'last': message_json(r['last']) if r['last'] else None} for r in M.inbox(g.api_user)],
                    pinned=[message_json(m) for m in M.pinned_announcements()])
 
 
@@ -350,7 +350,7 @@ def inbox():
 def conversation(student_id):
     student = get_or_404(User, student_id, 'That student')
     items = M.thread(student.id)
-    M.mark_seen_by_teachers(student.id)
+    M.mark_seen_by_teachers(g.api_user, student.id)
     return jsonify(student=user_json(student), messages=[message_json(m) for m in items])
 
 

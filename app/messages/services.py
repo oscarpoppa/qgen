@@ -4,7 +4,9 @@ from datetime import datetime
 
 from app import db
 from app.user.models import User
-from .models import Message, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT
+from sqlalchemy.exc import IntegrityError
+
+from .models import Message, MessageRead, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by
 
 MAX_LEN = 2000
 
@@ -112,12 +114,45 @@ def everyone(limit=60):
     return out[-limit:]
 
 
-def mark_messages_seen_by_teachers(messages):
-    """Mark these students' messages read (those a teacher has just been shown)."""
-    ids = [m.id for m in messages if not m.from_teacher and not m.seen_by_teacher and m.kind != 'notice']
-    if ids:
-        Message.query.filter(Message.id.in_(ids)).update({'seen_by_teacher': True}, synchronize_session=False)
-        db.session.commit()
+def _mark_for_teacher(teacher, ids, cleared=False):
+    """Record that this teacher has seen (or cleared) these messages. Also sets
+    seen_by_teacher, which says whether any teacher has seen them."""
+    ids = set(ids)
+    if not ids:
+        return
+    for attempt in (1, 2):
+        have = {r.message_id: r for r in MessageRead.query.filter(MessageRead.user_id == teacher.id,
+                                                                  MessageRead.message_id.in_(ids))}
+        for i in ids:
+            if i not in have:
+                db.session.add(MessageRead(message_id=i, user_id=teacher.id, cleared=cleared))
+            elif cleared:
+                have[i].cleared = True
+        Message.query.filter(Message.id.in_(ids), Message.seen_by_teacher.is_(False)) \
+            .update({'seen_by_teacher': True}, synchronize_session=False)
+        try:
+            db.session.commit()
+            return
+        except IntegrityError:
+            #the same teacher's other tab got there first; look again
+            db.session.rollback()
+            if attempt == 2:
+                raise
+
+
+def unseen_ids(teacher, messages):
+    """Which of these students' messages and notices this teacher hasn't seen yet."""
+    ids = [m.id for m in messages if not m.from_teacher]
+    if not ids:
+        return set()
+    seen = {r.message_id for r in MessageRead.query.filter(MessageRead.user_id == teacher.id,
+                                                           MessageRead.message_id.in_(ids))}
+    return set(ids) - seen
+
+
+def mark_messages_seen_by_teachers(teacher, messages):
+    """Mark these students' messages read for this teacher (those just shown to them)."""
+    _mark_for_teacher(teacher, [m.id for m in messages if not m.from_teacher and m.kind != 'notice'])
 
 
 def notices_for_student(student_id, limit=30):
@@ -126,16 +161,18 @@ def notices_for_student(student_id, limit=30):
         .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
 
 
-def notices_for_teachers(limit=50):
-    """Automatic notices for teachers (about all students), newest first."""
-    return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False)) \
+def notices_for_teachers(teacher, limit=50):
+    """Automatic notices for teachers (about all students), newest first, less the
+    ones this teacher has cleared."""
+    return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~cleared_by(teacher.id)) \
         .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
 
 
-def mark_notices_seen_by_teachers():
-    Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False)) \
-        .update({'seen_by_teacher': True}, synchronize_session=False)
-    db.session.commit()
+def mark_notices_seen_by_teachers(teacher):
+    """This teacher has seen all their notices (the other teachers' alerts stay)."""
+    ids = [r[0] for r in Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~seen_by(teacher.id))
+           .with_entities(Message.id)]
+    _mark_for_teacher(teacher, ids)
 
 
 def pinned_for(student_id):
@@ -151,26 +188,26 @@ def mark_seen_by_student(student_id, messages):
     return set(ids)
 
 
-def mark_seen_by_teachers(student_id):
-    """The teachers have read this student's messages (notices are marked in their own panel)."""
-    Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
-                         Message.seen_by_teacher.is_(False), NOT_NOTICE) \
-        .update({'seen_by_teacher': True}, synchronize_session=False)
-    db.session.commit()
+def mark_seen_by_teachers(teacher, student_id):
+    """This teacher has read this student's messages (notices are marked in their own panel)."""
+    ids = [r[0] for r in Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
+                                              NOT_NOTICE, ~seen_by(teacher.id)).with_entities(Message.id)]
+    _mark_for_teacher(teacher, ids)
 
 
-def unread_from(student_id):
+def unread_from(teacher, student_id):
+    """Messages from this student the teacher hasn't seen."""
     return Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
-                                Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
+                                NOT_NOTICE, ~seen_by(teacher.id)).count()
 
 
-def inbox():
+def inbox(teacher):
     """Every student's conversation for teachers: unread first, then most recent."""
     rows = []
     for s in User.query.filter_by(is_admin=False).order_by(User.username).all():
         last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE) \
             .order_by(Message.created.desc(), Message.id.desc()).first()
-        unread = unread_from(s.id)
+        unread = unread_from(teacher, s.id)
         rows.append({'student': s, 'last': last, 'unread': unread})
     rows.sort(key=lambda r: (-r['unread'], -(r['last'].created.timestamp() if r['last'] else 0), r['student'].username))
     return rows
@@ -225,15 +262,36 @@ def _my_notices(user):
 
 
 def clear_notices(user, notice_id=None):
-    """Remove one notice (or all of them) from this person's Notices panel. Teachers'
-    notices are shared by the teachers. Returns how many were removed."""
+    """Remove one notice (or all of them) from this person's Notices panel. Each teacher
+    clears their own copy; a notice is deleted once every teacher has cleared it.
+    Returns how many were removed."""
     q = _my_notices(user)
+    if user.is_admin:
+        q = q.filter(~cleared_by(user.id))
     if notice_id is not None:
         q = q.filter(Message.id == notice_id)
     rows = q.all()
     if notice_id is not None and not rows:
         raise MessageError('That notice isn\'t in your notices.')
-    for row in rows:
-        db.session.delete(row)
-    db.session.commit()
+    if not user.is_admin:
+        for row in rows:
+            db.session.delete(row)
+        db.session.commit()
+        return len(rows)
+    _mark_for_teacher(user, [r.id for r in rows], cleared=True)
+    _delete_if_all_cleared([r.id for r in rows])
     return len(rows)
+
+
+def _delete_if_all_cleared(ids):
+    """Delete the notices every teacher has now cleared."""
+    teachers = [t[0] for t in User.query.filter_by(is_admin=True).with_entities(User.id)]
+    if not ids or not teachers:
+        return
+    done = [r[0] for r in db.session.query(MessageRead.message_id)
+            .filter(MessageRead.message_id.in_(ids), MessageRead.cleared.is_(True), MessageRead.user_id.in_(teachers))
+            .group_by(MessageRead.message_id).having(db.func.count() >= len(teachers))]
+    if done:
+        for m in Message.query.filter(Message.id.in_(done)):
+            db.session.delete(m)
+        db.session.commit()

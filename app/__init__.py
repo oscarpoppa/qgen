@@ -77,13 +77,13 @@ def page_helpers():
         from flask_login import current_user
         if not current_user.is_authenticated:
             return 0
-        return unread_for_teachers() if current_user.is_admin else unread_for_student(current_user.id)
+        return unread_for_teachers(current_user.id) if current_user.is_admin else unread_for_student(current_user.id)
     def unread_notices():
         from app.messages.models import unread_notices_for_student, unread_notices_for_teachers
         from flask_login import current_user
         if not current_user.is_authenticated:
             return 0
-        return unread_notices_for_teachers() if current_user.is_admin else unread_notices_for_student(current_user.id)
+        return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
     from app.user.avatars import initials, color
     return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,

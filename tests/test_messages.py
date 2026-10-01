@@ -630,3 +630,86 @@ def test_review_count_next_to_review_stays_current(app_db):
     sam = login(app, 'sam')
     assert sam.get('/messages/poll').get_json()['review'] is None
     assert 'nav-review' not in sam.get('/mypage').data.decode()
+
+
+def _second_teacher(app, db, name='coach'):
+    from app.user.models import User
+    u = User(username=name, is_admin=True)
+    u.set_password('pw-for-tests')
+    db.session.add(u)
+    db.session.commit()
+    return login(app, name)
+
+
+def test_every_teacher_gets_every_alert(app_db):
+    """Two teachers signed in at once: one reading or clearing doesn't take the
+    other's alerts away."""
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, MessageRead, notify_teachers
+    teach, coach = login(app, 'teach'), _second_teacher(app, db)
+    sam = login(app, 'sam')
+    sam_id = User.query.filter_by(username='sam').one().id
+    J = {'X-Requested-With': 'fetch'}
+
+    sam.post('/messages/reply', data={'body': 'Is quiz 3 open book?'})
+    t = notify_teachers(sam_id, 'sam handed in "A": 90%.'); db.session.commit()
+    for c in (teach, coach):
+        p = c.get('/messages/poll').get_json()
+        assert (p['unread'], p['notices']) == (1, 1)
+        assert p['message_preview']['text'] == 'Is quiz 3 open book?'
+        assert p['notice_preview']['text'] == 'sam handed in "A": 90%.'
+
+    # teach reads the message (All view) and the notices; coach still has both alerts
+    assert 'msg-new' in teach.get('/messages/panel').data.decode()
+    assert 'notice-new' in teach.get('/messages/notices').data.decode()
+    p = teach.get('/messages/poll').get_json()
+    assert (p['unread'], p['notices'], p['message_preview'], p['notice_preview']) == (0, 0, None, None)
+    p = coach.get('/messages/poll').get_json()
+    assert (p['unread'], p['notices']) == (1, 1) and p['message_preview'] and p['notice_preview']
+    assert 'aria-label="1 unread"' in coach.get('/messages').data.decode()
+    # ...and it's still shown to coach as new
+    assert 'msg-new' in coach.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'notice-new' in coach.get('/messages/notices').data.decode()
+    assert coach.get('/messages/poll').get_json()['unread'] == 0
+    assert db.session.get(Message, t.id).seen_by_teacher  # "seen by a teacher" still kept
+
+    # clearing is per teacher; the notice goes for good once both have cleared it
+    assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).get_json() == {'ok': True, 'cleared': 1}
+    assert 'handed in' not in teach.get('/messages/notices').data.decode()
+    assert 'handed in' in coach.get('/messages/notices').data.decode()
+    assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).status_code == 404  # already gone for teach
+    assert db.session.get(Message, t.id) is not None
+    assert coach.post('/messages/notices/clear', headers=J).get_json()['cleared'] == 1
+    db.session.expire_all()
+    assert db.session.get(Message, t.id) is None
+    assert MessageRead.query.filter_by(message_id=t.id).count() == 0
+
+
+def test_one_teacher_clearing_changes_only_their_notices_panel_state(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import notify_teachers
+    teach, coach = login(app, 'teach'), _second_teacher(app, db)
+    sam_id = User.query.filter_by(username='sam').one().id
+    notify_teachers(sam_id, 'sam signed up.'); db.session.commit()
+    before = coach.get('/messages/poll').get_json()['notices_state']
+    teach.post('/messages/notices/clear', headers={'X-Requested-With': 'fetch'})
+    assert teach.get('/messages/poll').get_json()['notices_state'] != before
+    assert coach.get('/messages/poll').get_json()['notices_state'] == before  # coach's open panel doesn't reload
+
+
+def test_deleting_an_attempt_also_forgets_teachers_read_marks(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, MessageRead, notify_teachers
+    from app.qgen.services import _forget_notices
+    teach = login(app, 'teach')
+    sam_id = User.query.filter_by(username='sam').one().id
+    t = notify_teachers(sam_id, 'sam handed in "A".', link='/quiz/review/7')
+    db.session.commit()
+    tid = t.id
+    teach.get('/messages/notices')
+    assert MessageRead.query.filter_by(message_id=tid).count() == 1
+    _forget_notices(['/quiz/review/7']); db.session.commit()
+    assert Message.query.filter_by(id=tid).count() == 0 and MessageRead.query.count() == 0

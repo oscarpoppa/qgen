@@ -8,7 +8,7 @@ from app.user.routes import admin_only, pw_check
 from . import messages_bp
 from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, unread_for_student, unread_for_teachers,
-                     unread_notices_for_student, unread_notices_for_teachers)
+                     unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by)
 
 
 # ---------------------------------------------------------------- teachers
@@ -19,7 +19,7 @@ from .models import (Message, NOT_NOTICE, IS_NOTICE, unread_for_student, unread_
 @pw_check
 @admin_only
 def inbox():
-    return render_template('inbox.html', rows=M.inbox(), pinned=M.pinned_announcements(), title='Messages')
+    return render_template('inbox.html', rows=M.inbox(current_user), pinned=M.pinned_announcements(), title='Messages')
 
 #route to one student's conversation, as a teacher
 @messages_bp.route('/messages/<int:student_id>', methods=['GET'])
@@ -29,8 +29,8 @@ def inbox():
 def conversation(student_id):
     student = db.get_or_404(User, student_id)
     items = M.conversation(student.id)
-    M.mark_seen_by_teachers(student.id)
-    return render_template('conversation.html', student=student, items=items, rows=M.inbox(),
+    M.mark_seen_by_teachers(current_user, student.id)
+    return render_template('conversation.html', student=student, items=items, rows=M.inbox(current_user),
                            title='Messages: {}'.format(student.username))
 
 #route for a teacher to send to one student, chosen students, or everyone
@@ -172,9 +172,9 @@ def panel():
 @pw_check
 def notices():
     if current_user.is_admin:
-        items = M.notices_for_teachers()
-        unread_ids = {m.id for m in items if not m.seen_by_teacher}
-        M.mark_notices_seen_by_teachers()
+        items = M.notices_for_teachers(current_user)
+        unread_ids = M.unseen_ids(current_user, items)
+        M.mark_notices_seen_by_teachers(current_user)
     else:
         items = M.notices_for_student(current_user.id)
         unread_ids = {m.id for m in items if not m.seen_by_student}
@@ -198,7 +198,7 @@ def teacher_panel(choice='all', mark_seen=True):
     student's messages together, newest at the bottom, each with a Reply button;
     a student's id shows just that conversation, with a reply box. What is shown
     is marked seen. The menu lists every student, unread first."""
-    rows = M.inbox()
+    rows = M.inbox(current_user)
     try:
         student_id = int(choice)
     except (TypeError, ValueError):
@@ -206,18 +206,18 @@ def teacher_panel(choice='all', mark_seen=True):
     chosen = next((r for r in rows if r['student'].id == student_id), None) if student_id else None
     if chosen is None:
         items = M.everyone()
-        unread_ids = {m.id for m in items if not m.from_teacher and not m.seen_by_teacher}
+        unread_ids = M.unseen_ids(current_user, items)
         if mark_seen:
-            M.mark_messages_seen_by_teachers(items)
+            M.mark_messages_seen_by_teachers(current_user, items)
             for r in rows:
-                r['unread'] = M.unread_from(r['student'].id)
+                r['unread'] = M.unread_from(current_user, r['student'].id)
         return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
                 'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN, 'everyone': True}
     student = chosen['student']
     items = M.conversation(student.id, limit=30)
-    unread_ids = {m.id for m in items if not m.from_teacher and not m.seen_by_teacher}
+    unread_ids = M.unseen_ids(current_user, items)
     if mark_seen:
-        M.mark_seen_by_teachers(student.id)
+        M.mark_seen_by_teachers(current_user, student.id)
         chosen['unread'] = 0
     #other students waiting for an answer, most recent first: the "new from ..." button
     waiting = sorted((r for r in rows if r['unread']), key=lambda r: r['last'].created, reverse=True)
@@ -236,8 +236,8 @@ def teacher_panel(choice='all', mark_seen=True):
 def poll():
     if current_user.is_admin:
         mine = Message.query.filter(Message.from_teacher.is_(False))
-        unseen = Message.seen_by_teacher.is_(False)
-        unread, notices = unread_for_teachers(), unread_notices_for_teachers()
+        unseen = ~seen_by(current_user.id)
+        unread, notices = unread_for_teachers(current_user.id), unread_notices_for_teachers(current_user.id)
     else:
         mine = Message.query.filter(Message.student_id == current_user.id, Message.from_teacher.is_(True),
                                     Message.hidden_for_student.is_(False))
@@ -287,7 +287,7 @@ def quizzes_state():
 def notices_state():
     """The same for the Notices panel: a notice added or cleared."""
     q = Message.query.filter(IS_NOTICE)
-    q = q.filter(Message.from_teacher.is_(False)) if current_user.is_admin else \
+    q = q.filter(Message.from_teacher.is_(False), ~cleared_by(current_user.id)) if current_user.is_admin else \
         q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
     ids = [r[0] for r in q.with_entities(Message.id).all()]
     return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))

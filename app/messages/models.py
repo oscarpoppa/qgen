@@ -32,6 +32,18 @@ class Message(db.Model):
 
     student = db.relationship('User', foreign_keys=[student_id])
     sender = db.relationship('User', foreign_keys=[sender_id])
+    reads = db.relationship('MessageRead', cascade='all, delete-orphan', passive_deletes=True)
+
+
+#each teacher's own record of a student's message or teacher notice: a row means that
+#teacher has seen it, and cleared=True that they removed the notice from their own
+#Notices panel. So every teacher gets every alert, whatever the others have read.
+#(seen_by_teacher above still says whether any teacher has seen it.)
+class MessageRead(db.Model):
+    __tablename__ = 'message_read'
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id', ondelete='CASCADE'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)
+    cleared = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
 
 def notify(student_id, body, link=None, kind='notice', sender_id=None):
@@ -67,10 +79,21 @@ def unread_notices_for_student(user_id):
                                 Message.seen_by_student.is_(False), IS_NOTICE).count()
 
 
-def unread_for_teachers():
-    """Unread messages from students."""
-    return Message.query.filter(Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False), NOT_NOTICE).count()
+def seen_by(teacher_id):
+    """Condition: this teacher has seen the message (or notice)."""
+    return db.exists().where(MessageRead.message_id == Message.id, MessageRead.user_id == teacher_id)
 
 
-def unread_notices_for_teachers():
-    return Message.query.filter(Message.from_teacher.is_(False), Message.seen_by_teacher.is_(False), IS_NOTICE).count()
+def cleared_by(teacher_id):
+    """Condition: this teacher has cleared the notice from their Notices panel."""
+    return db.exists().where(MessageRead.message_id == Message.id, MessageRead.user_id == teacher_id,
+                             MessageRead.cleared.is_(True))
+
+
+def unread_for_teachers(teacher_id):
+    """Messages from students this teacher hasn't seen."""
+    return Message.query.filter(Message.from_teacher.is_(False), NOT_NOTICE, ~seen_by(teacher_id)).count()
+
+
+def unread_notices_for_teachers(teacher_id):
+    return Message.query.filter(Message.from_teacher.is_(False), IS_NOTICE, ~seen_by(teacher_id)).count()
