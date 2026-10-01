@@ -3,7 +3,7 @@
   <div class="card-head"><h2 id="messages-title" class="sr-only">Messages</h2>
     {% if unread_ids %}<span class="badge badge-warn">{{ unread_ids|length }} new</span>{% endif %}</div>
   {% if pinned %}
-    {# kept at the top until the teacher unpins it (the same message is also in the conversation below) #}
+    {# kept at the top until the teacher unpins it; it's shown only here, not also in the conversation below #}
     <div class="pinned-box">
       <div class="pinned-label"><span aria-hidden="true">📌</span> Pinned by your teacher</div>
       <ul class="pinned-list" aria-label="Pinned by your teacher">

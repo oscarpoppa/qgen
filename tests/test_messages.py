@@ -713,3 +713,40 @@ def test_deleting_an_attempt_also_forgets_teachers_read_marks(app_db):
     assert MessageRead.query.filter_by(message_id=tid).count() == 1
     _forget_notices(['/quiz/review/7']); db.session.commit()
     assert Message.query.filter_by(id=tid).count() == 0 and MessageRead.query.count() == 0
+
+
+def test_a_pinned_message_shows_once_and_stays_until_unpinned(app_db):
+    """A pinned message is in the student's pinned box only (not also in the conversation),
+    and the student can't remove it; once unpinned it's an ordinary message again."""
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    sam_id = User.query.filter_by(username='sam').one().id
+    J = {'X-Requested-With': 'fetch'}
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Bring a calculator', 'pin': '1'})
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Nice work today'})
+    pin = Message.query.filter_by(body='Bring a calculator').one()
+    panel = sam.get('/messages/panel').data.decode()
+    assert panel.count('Bring a calculator') == 1 and 'Pinned by your teacher' in panel
+    thread = panel.split('class="thread-scroll"')[1]
+    assert 'Bring a calculator' not in thread and 'Nice work today' in thread
+    # the student can't remove it
+    r = sam.post('/messages/delete/{}'.format(pin.id), headers=J)
+    assert r.status_code >= 400 and 'stays until your teacher unpins it' in r.get_json()['error']
+    db.session.expire_all()
+    assert not db.session.get(Message, pin.id).hidden_for_student
+    assert 'Bring a calculator' in sam.get('/messages/panel').data.decode()
+    # a pin a student removed under the old rule still shows while it's pinned
+    db.session.get(Message, pin.id).hidden_for_student = True
+    db.session.commit()
+    assert sam.get('/messages/panel').data.decode().count('Bring a calculator') == 1
+    db.session.get(Message, pin.id).hidden_for_student = False
+    db.session.commit()
+    # unpinned: an ordinary message in the conversation, which the student may remove
+    teacher.post('/messages/pin/{}'.format(pin.id), headers=J)
+    db.session.expire_all()
+    assert not db.session.get(Message, pin.id).pinned
+    panel = sam.get('/messages/panel').data.decode()
+    assert 'Pinned by your teacher' not in panel and 'Bring a calculator' in panel.split('class="thread-scroll"')[1]
+    assert sam.post('/messages/delete/{}'.format(pin.id), headers=J).get_json()['ok']

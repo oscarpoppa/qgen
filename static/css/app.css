@@ -90,6 +90,8 @@ code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
 .topbar-inner {
   display: flex; align-items: center; gap: 12px;
   min-height: 56px; flex-wrap: wrap;
+  /* the top bar uses the whole window width, so the menu stays on one line */
+  max-width: none;
 }
 .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; margin-right: 8px; }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; flex: 1; }
@@ -728,7 +730,8 @@ th.tick-col, td.tick-col { width: 36px; }
 .subject-bar > details.subject-new { flex-basis: auto; }
 .subject-bar .filter { margin: 0 0 0 auto; }
 .subject-boxes { display: flex; flex-direction: column; gap: 12px; }
-.subject-box { padding: 0; overflow: hidden; }
+/* never squeezed by the column they sit in (that cut containers off in the quiz builder) */
+.subject-box { padding: 0; overflow: hidden; flex-shrink: 0; }
 .subject-box > summary { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer;
   font-weight: 600; list-style: none; user-select: none; }
 .subject-box > summary::-webkit-details-marker { display: none; }
@@ -744,9 +747,19 @@ th.tick-col, td.tick-col { width: 36px; }
 .box-tools details > summary::-webkit-details-marker { display: none; }
 .box-empty { margin: 4px 4px 0; }
 .builder-boxes .subject-box > summary { padding: 8px 12px; }
-.builder-boxes { max-height: 70vh; overflow: auto; }
+/* quiz builder: each open container scrolls on its own, so every problem can be reached */
+.builder-boxes .table-wrap { max-height: 22rem; overflow: auto; overscroll-behavior: contain; }
+.builder-boxes .table-wrap thead th { position: sticky; top: 0; z-index: 1; }
 tr.just-saved td { animation: just-saved 2.5s ease-out; }
 @keyframes just-saved { from { background: var(--accent-soft); } to { background: transparent; } }
 .subject-checks.has-error { border-left: 3px solid var(--bad); padding-left: 10px; }
 .subject-new-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .subject-new-inline input { width: 16rem; max-width: 100%; }
+/* small laptops: tighter menu so the top bar stays on one line (below 1001px it becomes the Menu button) */
+@media (min-width: 1001px) and (max-width: 1240px) {
+  .topbar-inner { gap: 8px; }
+  .nav { gap: 0; }
+  .nav a, .menu > summary { padding-left: 7px; padding-right: 7px; font-size: .92rem; }
+  .brand { margin-right: 0; }
+  .dock-btn-label { display: none; }
+}

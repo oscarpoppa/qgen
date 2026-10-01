@@ -482,3 +482,32 @@ def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
     with app.test_request_context():
         S.retake(cq)
     assert len(rows()) == 2  # several: each dated
+
+
+def test_a_students_own_retake_rule_is_shown_where_the_quiz_is(app_db):
+    # the quiz's rule applies to everyone except students given their own rule on
+    # "Results by student": the quiz list, the quiz page and that page all say so
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Rules', 'vplist': str(VProblem.query.one().id), 'retake_rule': 'best'})
+    vq = VQuiz.query.one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    cq = CQuiz.query.one()
+    listing = teacher.get('/quiz/listvq').data.decode()
+    assert 'retakes score best attempt' in listing and 'differs' not in listing
+    assert 'have a different rule' not in teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    S.set_retake_rule(cq, 'average')
+    listing = teacher.get('/quiz/listvq').data.decode()
+    assert '1 student differs' in listing
+    page = teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert '1 student has a different rule' in page and 'sam</a>: the average of all attempts' in page
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    assert 'Just for sam' in results and "The quiz's own rule is the best attempt." in results

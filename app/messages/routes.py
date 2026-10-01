@@ -267,7 +267,8 @@ def messages_state():
     panels reload when it changes, so a pin shows on every screen without a reload."""
     q = Message.query.filter(NOT_NOTICE)
     if not current_user.is_admin:
-        q = q.filter(Message.student_id == current_user.id, Message.hidden_for_student.is_(False))
+        q = q.filter(Message.student_id == current_user.id,
+                     db.or_(Message.hidden_for_student.is_(False), Message.pinned.is_(True)))
     rows = q.with_entities(Message.id, Message.pinned, Message.hidden_for_student).all()
     return '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
                                 sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))

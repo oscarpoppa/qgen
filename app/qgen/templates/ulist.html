@@ -47,6 +47,8 @@
                     {% for key, label in rules.items() %}<option value="{{ key }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ label }}</option>{% endfor %}
                   </select>
                 </form>
+                {% if g.overridden %}<div class="small"><span class="badge badge-warn">Just for {{ item.username }}</span>
+                  <span class="muted">The quiz's own rule is {{ rules[g.vquiz.retake_rule]|lower }}.</span></div>{% endif %}
                 {% endif %}
               </td>
               <td class="actions">

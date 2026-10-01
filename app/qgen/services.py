@@ -662,6 +662,16 @@ def archive_warning(count, what):
         count, '' if count == 1 else 's', 's' if count == 1 else '', what, 'it' if count == 1 else 'they')
 
 
+def retake_overrides(vq):
+    """Students whose attempts at this quiz combine by their own rule instead of the
+    quiz's: [(student, rule key)], by name."""
+    seen = {}
+    for cq in vq.cquizzes:
+        if cq.retake_rule and cq.taker and cq.assignee not in seen:
+            seen[cq.assignee] = (cq.taker, cq.retake_rule)
+    return sorted(seen.values(), key=lambda pair: pair[0].username.lower())
+
+
 def set_retake_rule(cq, rule):
     """How this student's attempts at this quiz combine; None = the quiz's own rule."""
     if rule and rule not in RETAKE_RULES:

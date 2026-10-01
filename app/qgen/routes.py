@@ -4,7 +4,7 @@ from app.user.routes import admin_only, pw_check
 from .formfact import quiz_form_class, quiz_items, form_answers, transcript_html, transcript_item, fieldname_base
 from . import services as S
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
-from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt
+from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
@@ -195,7 +195,8 @@ def quiz_page(form, title, vq=None, subject_error=None):
     return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'),
                            has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
-                           **subject_page_data('quizzes', vq, 'vqgroups', subject_error))
+                           retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],
+                           rules=RETAKE_RULES, **subject_page_data('quizzes', vq, 'vqgroups', subject_error))
 
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
@@ -264,7 +265,7 @@ def edvquiz(vqid):
 @admin_only
 def list_vquizzes():
     return render_template('vqlist.html', boxes=S.subject_boxes('quizzes'), total=VQuiz.query.count(),
-                           title='Quizzes', layout=layout, kind='quizzes', all_subjects=S.subjects('quizzes'),
+                           title='Quizzes', layout=layout, kind='quizzes', all_subjects=S.subjects('quizzes'), rules=RETAKE_RULES,
                            show=request.args.get('show', ''), archived=S.archived_counts()[0],
                            archive_warning=S.archive_warning)
 
@@ -275,7 +276,7 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title='Quiz {}'.format(vqid), layout=layout,
+    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title='Quiz {}'.format(vqid), layout=layout, rules=RETAKE_RULES,
                            kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual quiz

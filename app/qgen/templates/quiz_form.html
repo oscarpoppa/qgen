@@ -17,6 +17,18 @@
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
     {{ check(form.hide_answers, 'Students always see their score. With this on, they see which questions were right or wrong, but not the correct answers, until you press “Release answers” on the quiz list (e.g. once everyone has finished).') }}
     {{ field(form.retake_rule, 'Every attempt stays visible and the best one is marked. You can change this for one student on “Results by student”.') }}
+    {% if retake_overrides %}
+      {# students given their own rule on "Results by student": this setting doesn't apply to them #}
+      <div class="alert alert-info small retake-overrides" role="note">
+        <strong>{{ retake_overrides|length }} student{{ '' if retake_overrides|length == 1 else 's' }} {{ 'has' if retake_overrides|length == 1 else 'have' }} a different rule</strong>
+        (set on “Results by student”, so the setting above doesn't apply to {{ 'them' }}):
+        <ul>
+        {% for student, rule in retake_overrides %}
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ student.username }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+        {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
     {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
   </div>
 

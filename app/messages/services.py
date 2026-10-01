@@ -89,10 +89,11 @@ def thread(student_id, limit=None):
 
 def conversation(student_id, limit=None, for_student=False):
     """Just what people wrote (messages and announcements), oldest first. for_student
-    leaves out teachers' messages the student removed from their view."""
+    leaves out teachers' messages the student removed from their view, and pinned
+    ones: the student sees those once, in the pinned box at the top."""
     q = Message.query.filter(Message.student_id == student_id, NOT_NOTICE)
     if for_student:
-        q = q.filter(VISIBLE_TO_STUDENT)
+        q = q.filter(VISIBLE_TO_STUDENT, Message.pinned.is_(False))
     return _oldest_first(q, limit)
 
 
@@ -176,7 +177,9 @@ def mark_notices_seen_by_teachers(teacher):
 
 
 def pinned_for(student_id):
-    return Message.query.filter(Message.student_id == student_id, Message.pinned.is_(True), VISIBLE_TO_STUDENT) \
+    """A student's pinned messages: shown until the teacher unpins them (a student can't
+    remove a pinned message, so these show even if removed before this rule)."""
+    return Message.query.filter(Message.student_id == student_id, Message.pinned.is_(True), NOT_NOTICE) \
         .order_by(Message.created.desc()).all()
 
 
@@ -234,7 +237,8 @@ def can_delete(user, m):
         return False
     if user.is_admin:
         return True
-    return m.student_id == user.id
+    #a pinned message stays on the student's page until the teacher unpins it
+    return m.student_id == user.id and not (m.from_teacher and m.pinned)
 
 
 def delete_message(user, m, everyone=False):
@@ -242,6 +246,8 @@ def delete_message(user, m, everyone=False):
     it from the student's view. For an announcement sent to several students, a
     teacher's everyone=True removes every copy. Returns how many."""
     if not can_delete(user, m):
+        if not user.is_admin and m.student_id == user.id and m.pinned:
+            raise MessageError('A pinned message stays until your teacher unpins it.')
         raise MessageError('You can only delete messages in your own conversation.')
     if not user.is_admin and m.from_teacher:
         m.hidden_for_student = True
