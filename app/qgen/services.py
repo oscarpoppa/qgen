@@ -168,11 +168,25 @@ def vquiz_delete_blocker(vq):
 
 
 def delete_vquiz(vq):
+    """Delete a quiz that hasn't been assigned (students' attempts are deleted one by one)."""
     blocker = vquiz_delete_blocker(vq)
     if blocker:
         raise ServiceError(blocker)
+    _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
     db.session.delete(vq)
     db.session.commit()
+
+
+def _attempt_links(cq):
+    """The pages notices may point to for one attempt."""
+    return ['/quiz/take/{}'.format(cq.id), '/quiz/review/{}'.format(cq.id)]
+
+
+def _forget_notices(links):
+    """Notices whose Open would lead to something that no longer exists."""
+    from app.messages.models import Message
+    if links:
+        Message.query.filter(Message.kind == 'notice', Message.link.in_(links)).delete(synchronize_session=False)
 
 
 def release_answers(vq, released):
@@ -288,6 +302,9 @@ def retake(cq):
 
 
 def delete_attempt(cq):
+    """Delete one attempt (and notices pointing to it). The student's last attempt at a
+    quiz takes the quiz's box off their My quizzes."""
+    _forget_notices(_attempt_links(cq))
     CProblem.query.filter_by(cquiz_id=cq.id).delete()
     db.session.delete(cq)
     db.session.commit()

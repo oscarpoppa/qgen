@@ -290,3 +290,50 @@ def test_folded_quiz_box_knows_what_it_holds(app_db):
         new = S.retake(cq)
     after = sam.get('/mypage').data.decode()
     assert 'data-attempts="{},{}"'.format(cq.id, new.id) in after or 'data-attempts="{},{}"'.format(new.id, cq.id) in after
+
+
+def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
+    # an attempt is one instance; the box on My quizzes holds all of a student's
+    # attempts at one quiz and disappears with the last of them
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Boxed', 'vplist': str(VProblem.query.one().id)})
+    vq = VQuiz.query.one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    first = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(first, {1: '4'})
+        second = S.retake(first)
+    state = lambda: sam.get('/messages/poll').get_json()['quizzes_state']
+    home = sam.get('/mypage').data.decode()
+    assert home.count('class="card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
+    s0 = state()
+
+    # the teacher deletes one attempt: the box stays with the other, and the page is told
+    assert teacher.post('/quiz/delcq/{}'.format(second.id)).status_code == 302
+    s1 = state()
+    assert s1 != s0
+    home = sam.get('/mypage').data.decode()
+    assert 'data-attempts="{}"'.format(first.id) in home
+    assert not Message.query.filter(Message.link == '/quiz/take/{}'.format(second.id)).count()  # its notices go too
+
+    # the last attempt: the whole box goes
+    teacher.post('/quiz/delcq/{}'.format(first.id))
+    assert state() != s1
+    home = sam.get('/mypage').data.decode()
+    assert 'class="card quiz-card"' not in home and 'Boxed' not in home
+    assert not Message.query.filter(Message.link == '/quiz/take/{}'.format(first.id)).count()
+    # the quiz itself still exists for the teacher, and deleting an assigned quiz is still refused
+    assert VQuiz.query.get(vq.id) is not None
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    teacher.post('/quiz/delvq/{}'.format(vq.id))
+    db.session.expire_all()
+    assert VQuiz.query.get(vq.id) is not None
+    # teachers' polls don't carry it
+    assert teacher.get('/messages/poll').get_json()['quizzes_state'] is None

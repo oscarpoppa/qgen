@@ -14,6 +14,7 @@
   var root = document.documentElement;
   var PANES = ['notices', 'messages'];
   var latest = { messages: null, notices: null };
+  var quizzes = null;  // a student's quizzes and attempts, as last seen
   //what each panel shows (pins, deletions...): an open panel reloads when it changes
   var shown = { messages: null, notices: null };
   var loaded = { messages: false, notices: false };
@@ -276,6 +277,12 @@
           pulse(p);  // unread from before this page opened: a nudge, no pop-up
         }
       });
+      //a student's quiz list (My quizzes, "waiting for grading"...) changed: assigned,
+      //deleted, handed in or graded
+      if (res.quizzes_state !== undefined && res.quizzes_state !== null) {
+        if (quizzes !== null && res.quizzes_state !== quizzes && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
+        quizzes = res.quizzes_state;
+      }
       if (refreshWanted && !busyTyping()) window.location.reload();
     }, function () {});
   }
