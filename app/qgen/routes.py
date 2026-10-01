@@ -251,9 +251,13 @@ def edvquiz(vqid):
     subject_error = None
     if request.method == 'POST' and form.validate_on_submit():
         subject_error = subject_form_error('quizzes', new=False)
+        old_rule, had_own = vqobj.retake_rule, len(S.retake_overrides(vqobj))
         if not subject_error and not save_quiz_from_form(form, vqobj):
             save_subjects('quizzes', vqobj)
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
+            if vqobj.retake_rule != old_rule and had_own:
+                flash('The new retake scoring now applies to every student, including the {} who had their own.'.format(
+                    'one' if had_own == 1 else had_own), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
             return redirect(url_for('qgen.list_vquizzes', show=vqobj.id))
     return quiz_page(form, 'Edit quiz', vqobj, subject_error)

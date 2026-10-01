@@ -42,7 +42,7 @@ ENDPOINTS = [
      {'title': 'Week 3', 'problems': [4, {'pick': 2, 'from': [5, 6, 7]}], 'shuffle_order': True,
       'retake_rule': 'best', 'hide_answers': False, 'calculator_ok': False}),
     ('GET', '/quizzes/{quiz_id}', 'teacher', 'One quiz.', None),
-    ('PUT', '/quizzes/{quiz_id}', 'teacher', 'Replace a quiz (same body as creating).', None),
+    ('PUT', '/quizzes/{quiz_id}', 'teacher', 'Replace a quiz (same body as creating). A new retake_rule applies to every student, replacing any rule set for one student.', None),
     ('DELETE', '/quizzes/{quiz_id}', 'teacher', 'Delete a quiz (409 once it has been assigned).', None),
     ('POST', '/quizzes/{quiz_id}/release', 'teacher', 'Show (true) or hide (false) correct answers to students.', {'released': True}),
     ('POST', '/quizzes/{quiz_id}/assign', 'teacher', 'Give each student a separate random copy.',

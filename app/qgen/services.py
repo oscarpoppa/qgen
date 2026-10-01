@@ -348,6 +348,11 @@ def save_vquiz(vq, title, problems, author_id=None, **settings):
         #in the session before links are made, so lookups below don't trip over it
         db.session.add(vq)
     vq.title = title.strip()
+    if not new and settings.get('retake_rule') and settings['retake_rule'] != vq.retake_rule:
+        #a new scoring rule for the quiz applies to everyone, including students who
+        #had been given their own on "Results by student"
+        for cq in vq.cquizzes:
+            cq.retake_rule = None
     for key in QUIZ_SETTINGS:
         if key in settings:
             if key == 'hide_answers' and vq.hide_answers != settings[key]:

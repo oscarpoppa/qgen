@@ -511,3 +511,52 @@ def test_a_students_own_retake_rule_is_shown_where_the_quiz_is(app_db):
         S.retake(cq)
     results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
     assert 'Just for sam' in results and "The quiz's own rule is the best attempt." in results
+
+
+def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
+    # students given their own rule go back to the quiz's when the quiz's rule changes;
+    # saving the quiz without changing it leaves them alone
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    pid = str(VProblem.query.one().id)
+    teacher.post('/quiz/makevquiz', data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'best'})
+    vq = VQuiz.query.one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    cq = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    S.set_retake_rule(cq, 'average')
+    assert [c.retake_rule for c in CQuiz.query.all()] == ['average', 'average']
+    page = teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert 'Changing the setting above puts everyone on the new rule, this student too' in page
+
+    # same rule: kept
+    r = teacher.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'best'},
+                     follow_redirects=True)
+    assert 'applies to every student' not in r.data.decode()
+    assert [c.retake_rule for c in CQuiz.query.all()] == ['average', 'average']
+
+    # a new rule: everyone, sam included
+    r = teacher.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'latest'},
+                     follow_redirects=True)
+    assert 'The new retake scoring now applies to every student, including the one who had their own.' in r.data.decode()
+    db.session.expire_all()
+    assert db.session.get(VQuiz, vq.id).retake_rule == 'latest'
+    assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
+    assert 'differs' not in teacher.get('/quiz/listvq').data.decode()
+
+    # the same through the API
+    from app.api.models import ApiToken
+    S.set_retake_rule(CQuiz.query.first(), 'first')
+    token = ApiToken.issue(db.session.get(User, User.query.filter_by(username='teach').one().id), 'test')[1]
+    r = app.test_client().put('/api/v2/quizzes/{}'.format(vq.id), headers={'Authorization': 'Bearer ' + token},
+                              json={'title': 'Rules', 'problems': [int(pid)], 'retake_rule': 'average'})
+    assert r.status_code == 200
+    db.session.expire_all()
+    assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
