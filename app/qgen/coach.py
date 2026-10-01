@@ -201,7 +201,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     elif title.strip().lower() in existing_titles:
         hints.append(hint('warn', 'Another quiz is already called "{}". A different title avoids mix-ups.'.format(title.strip())))
     if not vpids:
-        return hints + [hint('tip', 'Tick the problems to include. They\'ll appear in the order you tick them; use ↑ ↓ to reorder.')]
+        return hints + [hint('tip', 'Tick the problems to include. They\'ll appear under “Questions in this quiz”.')]
     for pid in sorted({p for p in vpids if vpids.count(p) > 1}):
         p = problems.get(pid)
         hints.append(hint('tip', '"{}" is included {} times. Each copy gets different random values — fine if that\'s what you want.'

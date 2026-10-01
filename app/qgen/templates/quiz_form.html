@@ -72,14 +72,22 @@
       {% endif %}
     </div>
 
-    <div class="card">
-      <div class="card-head"><h2>Order in the quiz</h2></div>
-      <p class="muted small shuffle-note">With shuffling on, this is just the order you see here; each student gets a separately shuffled order.</p>
-      <ol id="order" class="choice-list"></ol>
-      <p id="order-empty" class="muted small">Nothing ticked yet.</p>
-      <div id="groups" class="small"></div>
-      <p class="muted small">To give each student only some problems from a set, put them in the same group
-        (A, B, …) and choose how many each student gets.</p>
+    <div class="card" id="quiz-contents">
+      <div class="card-head"><h2>Questions in this quiz</h2></div>
+      <p class="order-total" id="order-total" aria-live="polite"></p>
+      <p class="muted small" id="order-shuffled">Each student gets them in a different order (you chose that above).
+        So the order of this list doesn't matter.</p>
+      <p class="muted small" id="order-fixed" hidden>Every student gets them in this order. Use ↑ and ↓ to change it.</p>
+      <ol id="order" class="order-list"></ol>
+      <p id="order-empty" class="muted small">Nothing yet. Tick problems on the left and they appear here.</p>
+      <div id="groups" class="order-groups"></div>
+      <details class="order-help">
+        <summary>Want each student to get only some of these?</summary>
+        <p>Put those problems in the same <b>group</b> with the menu under each one, then choose how many each student gets.
+          Every student gets their own random pick.</p>
+        <p>Example: put 5 fraction problems in group A and choose 2. Each student answers 2 of those 5, and the student
+          next door probably gets a different 2.</p>
+      </details>
       {{ form.vplist() }}
       {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </div>

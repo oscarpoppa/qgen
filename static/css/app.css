@@ -771,7 +771,8 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 /* ---------- the Dashboard (administrators) ---------- */
 .dash-actions .btn { white-space: nowrap; }
 .dash-counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.dash-count { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; text-align: left; font: inherit;
+.dash-count { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px;
+  padding: 12px 14px; text-align: left; font: inherit;
   color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   text-decoration: none; cursor: pointer; }
 .dash-count:hover { border-color: var(--accent); }
@@ -802,4 +803,39 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 @media (max-width: 760px) {
   .dash-grid { grid-template-columns: minmax(0, 1fr); }
   .dash-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the same by the room the page really has (the side panels can take half of it) */
+@container page (max-width: 760px) {
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container page (max-width: 520px) {
+  .dash-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- quiz builder: the questions in this quiz ---------- */
+.order-total { font-weight: 600; margin: 0 0 6px; }
+.order-list { list-style: none; padding: 0; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.order-item { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.order-item.in-group { border-left: 4px solid var(--accent); }
+.order-top, .order-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.order-title { flex: 1 1 8rem; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.order-bottom select { width: auto; max-width: 100%; min-height: 30px; padding: 2px 6px; font-size: .9rem; }
+.order-groups { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.order-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .9rem; }
+.order-group input.order-pick { width: 4.5rem; flex: 0 0 auto; min-height: 30px; padding: 2px 6px; }
+.order-help { font-size: .9rem; }
+.order-help > summary { cursor: pointer; color: var(--accent); }
+.order-help p { margin: 6px 0; color: var(--muted); }
+
+/* the editors (problem and quiz forms) stack by the room they really have, which the
+   Notices / Messages panels can halve, not just by the window's width */
+main.container { container: page / inline-size; }
+.editor > form { container: editform / inline-size; min-width: 0; }
+@container page (max-width: 900px) {
+  .editor { grid-template-columns: minmax(0, 1fr); }
+  .editor > .helper { position: static; max-height: none; order: -1; }
+}
+@container editform (max-width: 640px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
 }
