@@ -869,7 +869,78 @@ def attempt_gone(cidx):
 def archive():
     folders = S.archive_folders()
     blockers = {a.id: S.restore_blocker(a) for f in folders for a in f['items']}
-    return render_template('archive.html', folders=folders, blockers=blockers, total=len(blockers), title='Archive')
+    return render_template('archive.html', folders=folders, blockers=blockers, total=len(blockers), title='Archive',
+                           move_to=[f['folder'] for f in folders if f['folder'] is not None])
+
+def archive_folder_or_404(fid):
+    from .models import ArchiveFolder
+    folder = db.session.get(ArchiveFolder, fid)
+    if folder is None or folder.removed:
+        abort(404)
+    return folder
+
+#route to make an Archive folder of the teacher's own
+@qgen_bp.route('/quiz/archive/folders/new', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def new_archive_folder():
+    try:
+        folder = S.create_archive_folder(request.form.get('name'))
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('qgen.archive'))
+    flash('Made the folder "{}". Tick archived attempts and choose "Move to folder" to put them in it.'.format(folder.name), 'success')
+    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(folder.id)))
+
+#route to rename an Archive folder
+@qgen_bp.route('/quiz/archive/folders/<int:fid>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def rename_archive_folder(fid):
+    folder = archive_folder_or_404(fid)
+    try:
+        S.rename_archive_folder(folder, request.form.get('name'))
+        flash('Renamed the folder to "{}".'.format(folder.name), 'success')
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(fid)))
+
+#route to delete an Archive folder (what's in it moves to Unsorted)
+@qgen_bp.route('/quiz/archive/folders/<int:fid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_archive_folder(fid):
+    folder = archive_folder_or_404(fid)
+    name = folder.name
+    moved = S.delete_archive_folder(folder)
+    flash('Deleted the folder "{}".{}'.format(name, ' Its {} attempt{} moved to Unsorted.'.format(moved, '' if moved == 1 else 's') if moved else ''), 'success')
+    current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
+    return redirect(url_for('qgen.archive'))
+
+#route to move the ticked archived attempts to a folder (or to Unsorted)
+@qgen_bp.route('/quiz/archive/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def move_archived():
+    target = request.form.get('folder', '')
+    folder = None if target == 'unsorted' else (archive_folder_or_404(int(target)) if target.isdigit() else None)
+    if target != 'unsorted' and folder is None:
+        flash('Choose a folder first.', 'error')
+        return redirect(url_for('qgen.archive'))
+    moved = S.move_archived(request.form.getlist('items'), folder)
+    if not moved:
+        flash('Tick at least one first.', 'error')
+    else:
+        flash('Moved {} attempt{} to "{}".'.format(moved, '' if moved == 1 else 's', folder.name if folder else S.UNSORTED), 'success')
+    return redirect(url_for('qgen.archive'))
 
 #route to look at one archived attempt
 @qgen_bp.route('/quiz/archive/<int:aid>', methods=['GET'])

@@ -320,6 +320,23 @@ def attempts_by_quiz(cquizzes):
 LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
 
 
+#a folder on the Archive page. Each student gets one automatically (student_id), named
+#after them; the teacher can also make their own. Renaming a student's folder makes it
+#an ordinary folder (the student gets a new one in their name). Deleting a folder moves
+#what's in it to Unsorted (attempts with no folder); a deleted student folder's row is
+#kept (removed=True) so it isn't made again on its own, and the student's next archived
+#attempt brings it back under their name. If the account is deleted, the folder stays.
+class ArchiveFolder(db.Model):
+    __tablename__ = 'archive_folder'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), unique=True)
+    removed = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+
+    def __repr__(self):
+        return '<Archive folder {}>'.format(self.name)
+
+
 #a student's attempt the teacher deleted (or whose account was deleted), kept so it can
 #be looked at, restored or deleted for good later. The attempt is moved here whole, so
 #the rest of the site never has to tell archived attempts from live ones.
@@ -343,6 +360,8 @@ class ArchivedAttempt(db.Model):
     archived_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     #",3,7," - the problems it used, so deleting a problem can say it is used here
     problem_ids = db.Column(db.Text, nullable=False, default=',')
+    #the Archive folder it's in; none means Unsorted
+    folder_id = db.Column(db.Integer, db.ForeignKey('archive_folder.id', ondelete='SET NULL'), index=True)
     #'deleted' (the attempt) or 'student deleted' (the account)
     reason = db.Column(db.String(16), default='deleted', nullable=False)
     #a compact JSON record of the attempt and its questions (no page markup): the
@@ -351,6 +370,7 @@ class ArchivedAttempt(db.Model):
 
     vquiz = db.relationship('VQuiz', lazy=True)
     archiver = db.relationship('User', foreign_keys=[archived_by], lazy=True)
+    folder = db.relationship('ArchiveFolder', lazy=True)
 
     def __repr__(self):
         return '<Archived attempt {}: {} : {}>'.format(self.original_id, self.student_name, self.quiz_title)

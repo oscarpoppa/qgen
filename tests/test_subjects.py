@@ -116,7 +116,8 @@ def test_deleting_a_subject_keeps_its_items_in_unsorted(app_db):
     t = VPGroup.query.one()
     teacher.post('/quiz/subjects/problems/file', data={'subject': t.id, 'items': [probs['Add'].id]})
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Its 1 problem is kept (in Unsorted, or their other subjects).' in page
+    assert 'Its 1 problem moves to Unsorted (unless also in another subject).' in page
+    assert 'aria-label="Rename the subject “Temp”"' in page and 'aria-label="Delete the subject “Temp”"' in page
     teacher.post('/quiz/subjects/problems/{}/delete'.format(t.id))
     assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Unsorted': ['Add']}
 

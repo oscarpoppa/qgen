@@ -19,7 +19,7 @@ from app.messages.models import notify, notify_teachers
 from . import layout
 from .formfact import record_answers, finalize, TRANSCRIPT_V2
 from .friendly import FriendlyError
-from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, RETAKE_RULES
+from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, ArchiveFolder, RETAKE_RULES
 from .qtypes import get_qtype
 
 #answers are still accepted this long after the deadline (slow connections, the auto-submit)
@@ -566,6 +566,7 @@ def archive_attempt(cq, by=None, reason='deleted'):
         score=cq.score, completed=bool(cq.completed), needs_review=bool(cq.needs_review),
         startdate=cq.startdate, compdate=cq.compdate, assigned=cq.create_date,
         archived_at=datetime.now(), archived_by=by.id if by else None, reason=reason,
+        folder_id=student_folder(cq.taker).id if cq.taker else None,
         problem_ids=',' + ''.join('{},'.format(p['vproblem_id']) for p in record['problems']),
         data=json.dumps(record, separators=(',', ':'), ensure_ascii=False))
     db.session.add(archived)
@@ -622,28 +623,110 @@ def archived_attempts(subject='all'):
     return q.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()).all()
 
 
-def archive_folders():
-    """The Archive page: one folder per student, named after them, holding their archived
-    attempts (newest first). Every student account has a folder, even with nothing in it,
-    so a new student gets one automatically; a deleted account's attempts stay together
-    in a folder under the name it had. Sorted by name.
-    Returns [{'key', 'name', 'user' (None if the account is gone), 'items'}]."""
+FOLDER_NAME_MAX = 64
+UNSORTED = 'Unsorted'
+
+
+def student_folder(user):
+    """A student's Archive folder, made (or brought back, if the teacher deleted it) as
+    needed; not committed."""
+    folder = ArchiveFolder.query.filter_by(student_id=user.id).first()
+    if folder is None:
+        folder = ArchiveFolder(name=user.username, student_id=user.id)
+        db.session.add(folder)
+        db.session.flush()
+    elif folder.removed:
+        folder.removed, folder.name = False, user.username
+    return folder
+
+
+def ensure_archive_folders():
+    """Every student has a folder (a new student gets one the first time the Archive is
+    shown); one the teacher deleted isn't made again here."""
     from app.user.models import User
+    have = {f.student_id for f in ArchiveFolder.query.filter(ArchiveFolder.student_id.isnot(None))}
+    made = False
+    for u in User.query.filter_by(is_admin=False):
+        if u.id not in have:
+            db.session.add(ArchiveFolder(name=u.username, student_id=u.id))
+            made = True
+    if made:
+        try:
+            db.session.commit()
+        except IntegrityError:
+            #another teacher's page made them a moment ago
+            db.session.rollback()
+
+
+def archive_folders():
+    """The Archive page: its folders by name, each with its archived attempts (newest
+    first), then Unsorted (attempts in no folder) when there are any.
+    Returns [{'folder' (None for Unsorted), 'key', 'name', 'student', 'items'}]."""
+    from app.user.models import User
+    ensure_archive_folders()
     users = {u.id: u for u in User.query.all()}
-    folders = {}
-    for u in users.values():
-        if not u.is_admin:
-            folders[('user', u.id)] = {'key': 'student-{}'.format(u.id), 'name': u.username, 'user': u, 'items': []}
+    out = {}
+    for f in ArchiveFolder.query.filter_by(removed=False):
+        out[f.id] = {'folder': f, 'key': 'folder-{}'.format(f.id), 'name': f.name,
+                     'student': users.get(f.student_id) if f.student_id else None, 'items': []}
+    unsorted = {'folder': None, 'key': 'unsorted', 'name': UNSORTED, 'student': None, 'items': []}
     for a in ArchivedAttempt.query.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()):
-        u = users.get(a.student_id) if a.student_id else None
-        if u is not None:
-            key = ('user', u.id)
-            folders.setdefault(key, {'key': 'student-{}'.format(u.id), 'name': u.username, 'user': u, 'items': []})
-        else:
-            key = ('gone', a.student_name.lower())
-            folders.setdefault(key, {'key': 'gone-{}'.format(a.id), 'name': a.student_name, 'user': None, 'items': []})
-        folders[key]['items'].append(a)
-    return sorted(folders.values(), key=lambda f: (f['name'].lower(), f['user'] is None))
+        (out[a.folder_id] if a.folder_id in out else unsorted)['items'].append(a)
+    folders = sorted(out.values(), key=lambda f: f['name'].lower())
+    return folders + ([unsorted] if unsorted['items'] else [])
+
+
+def _folder_name(name, folder=None):
+    name = ' '.join((name or '').split())
+    if not name:
+        raise ServiceError('Please give the folder a name.')
+    if len(name) > FOLDER_NAME_MAX:
+        raise ServiceError('Folder names can be at most {} characters.'.format(FOLDER_NAME_MAX))
+    if name.lower() == UNSORTED.lower():
+        raise ServiceError('"{}" is kept for attempts that aren\'t in a folder.'.format(UNSORTED))
+    for other in ArchiveFolder.query.filter_by(removed=False):
+        if other is not folder and other.name.lower() == name.lower():
+            raise ServiceError('There\'s already a folder called "{}".'.format(other.name))
+    return name
+
+
+def create_archive_folder(name):
+    """A folder of the teacher's own (not tied to a student)."""
+    folder = ArchiveFolder(name=_folder_name(name))
+    db.session.add(folder)
+    db.session.commit()
+    return folder
+
+
+def rename_archive_folder(folder, name):
+    """Rename a folder. A student's folder becomes an ordinary folder with the new name;
+    the student gets a new folder in their name for their next archived attempts."""
+    folder.name = _folder_name(name, folder)
+    folder.student_id = None
+    db.session.commit()
+
+
+def move_archived(ids, folder):
+    """Move archived attempts to a folder (None: Unsorted). Returns how many moved."""
+    wanted = _ids(ids)
+    if not wanted:
+        return 0
+    moved = ArchivedAttempt.query.filter(ArchivedAttempt.id.in_(wanted)) \
+        .update({'folder_id': folder.id if folder else None}, synchronize_session=False)
+    db.session.commit()
+    return moved
+
+
+def delete_archive_folder(folder):
+    """Delete a folder: what's in it moves to Unsorted. Returns how many moved."""
+    moved = ArchivedAttempt.query.filter_by(folder_id=folder.id).update({'folder_id': None}, synchronize_session=False)
+    if folder.student_id:
+        #kept, so it isn't made again on its own (see ArchiveFolder)
+        folder.removed = True
+    else:
+        db.session.delete(folder)
+    db.session.commit()
+    return moved
 
 
 def archived_student(a):

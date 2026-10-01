@@ -43,6 +43,29 @@
 {% endmacro %}
 
 {# one collapsible container; the caller draws its rows #}
+{# Rename and Delete in a container's heading (shown even when it's closed); Rename opens
+   a name box under the heading. what: "subject" or "folder". #}
+{% macro box_actions(key, name, rename_url, delete_url, delete_question, what='subject') %}
+  <span class="box-actions">
+    <button type="button" class="btn btn-secondary btn-xs" data-rename="rename-form-{{ key }}" aria-label="Rename the {{ what }} “{{ name }}”">✎ Rename</button>
+    <form method="post" action="{{ delete_url }}" class="inline-form" data-confirm="{{ delete_question }}" data-confirm-ok="Delete {{ what }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-danger btn-xs" aria-label="Delete the {{ what }} “{{ name }}”">🗑 Delete</button>
+    </form>
+  </span>
+{% endmacro %}
+
+{% macro rename_form(key, name, rename_url, what='subject') %}
+  <form method="post" action="{{ rename_url }}" class="subject-name-form box-rename" id="rename-form-{{ key }}" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="sr-only" for="rename-{{ key }}">New name for “{{ name }}”</label>
+    <input id="rename-{{ key }}" name="name" maxlength="64" required value="{{ name }}">
+    <button class="btn btn-sm">Save name</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-rename-cancel>Cancel</button>
+  </form>
+{% endmacro %}
+
+{# one collapsible container; the caller draws its rows #}
 {% macro subject_box(kind, subject, items, tools=true) %}
 {% set key = subject.id if subject else 'unsorted' %}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
@@ -51,29 +74,16 @@
     <span class="box-name">{{ '📁 ' ~ subject.title if subject else '📥 Unsorted' }}</span>
     <span class="badge" aria-label="{{ items|length }} {{ noun }}">{{ items|length }}</span>
     <span class="badge badge-accent box-ticked" hidden></span>
-  </summary>
-  <div class="box-body">
     {% if subject and tools %}
-    <div class="box-tools">
-      <details class="subject-rename">
-        <summary class="btn btn-secondary btn-sm">Rename</summary>
-        <form method="post" action="{{ url_for('qgen.rename_subject', kind=kind, sid=subject.id) }}" class="subject-name-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <label class="sr-only" for="rename-{{ key }}">New name for “{{ subject.title }}”</label>
-          <input id="rename-{{ key }}" name="name" maxlength="64" required value="{{ subject.title }}">
-          <button class="btn btn-sm">Rename</button>
-        </form>
-      </details>
       {% set n = items|length %}
       {% set what = noun if n != 1 else ('problem' if kind == 'problems' else 'quiz') %}
-      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' are' if n != 1 else ' is') ~ ' kept (in Unsorted, or their other subjects).') if n else 'It is empty.' %}
-      <form method="post" action="{{ url_for('qgen.delete_subject', kind=kind, sid=subject.id) }}" class="inline-form"
-            data-confirm="Delete the subject “{{ subject.title }}”? {{ kept }}" data-confirm-ok="Delete subject">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-danger btn-sm">Delete subject</button>
-      </form>
-    </div>
+      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' move' if n != 1 else ' moves') ~ ' to Unsorted (unless also in another subject).') if n else 'It is empty.' %}
+      {{ box_actions(key, subject.title, url_for('qgen.rename_subject', kind=kind, sid=subject.id),
+                     url_for('qgen.delete_subject', kind=kind, sid=subject.id), 'Delete the subject “' ~ subject.title ~ '”? ' ~ kept) }}
     {% endif %}
+  </summary>
+  <div class="box-body">
+    {% if subject and tools %}{{ rename_form(key, subject.title, url_for('qgen.rename_subject', kind=kind, sid=subject.id)) }}{% endif %}
     {% if items %}
       {{ caller() }}
     {% else %}

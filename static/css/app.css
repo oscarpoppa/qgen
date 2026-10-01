@@ -763,3 +763,7 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
   .brand { margin-right: 0; }
   .dock-btn-label { display: none; }
 }
+/* Rename / Delete in a container's heading */
+.subject-box > summary .box-actions { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+.subject-box > summary .box-actions form { margin: 0; }
+.box-rename { margin: 0 4px 10px; }

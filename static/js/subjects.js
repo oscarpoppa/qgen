@@ -14,6 +14,34 @@
 
   var wrap = document.querySelector('.subject-boxes');
   if (!wrap) return;
+
+  //Rename / Delete sit in a container's heading: clicking them mustn't also open or
+  //close it. Rename opens the container and shows its name box.
+  wrap.addEventListener('click', function (e) {
+    var actions = e.target.closest('.box-actions');
+    if (!actions) return;
+    var rename = e.target.closest('[data-rename]');
+    if (rename) {
+      e.preventDefault();
+      var box = rename.closest('details'), form = document.getElementById(rename.dataset.rename);
+      box.open = true;
+      form.hidden = false;
+      var input = form.querySelector('input[name="name"]');
+      input.focus();
+      input.select();
+      return;
+    }
+    //a Delete button: let its form submit (after the in-page question), but don't toggle
+    if (e.target.closest('button')) {
+      e.preventDefault();
+      var f = e.target.closest('form');
+      if (f.requestSubmit) f.requestSubmit(); else f.submit();
+    }
+  });
+  wrap.addEventListener('click', function (e) {
+    var cancel = e.target.closest('[data-rename-cancel]');
+    if (cancel) cancel.closest('form').hidden = true;
+  });
   var boxes = Array.prototype.slice.call(wrap.querySelectorAll('details.subject-box'));
   var key = wrap.dataset.store;
   var searching = false;
