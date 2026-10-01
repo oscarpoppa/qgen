@@ -14,6 +14,7 @@ problem, the "Show me 3 examples" preview, and the AI helper:
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
+import ast
 import json
 import math
 import random
@@ -159,6 +160,64 @@ def student_numbers(text):
         #written out in full (never 1e-05), which the number reader understands
         out.append(format(float(value), '.10f').rstrip('0').rstrip('.') or '0')
     return ', '.join(out)
+
+
+_PREC = {ast.Add: 1, ast.Sub: 1, ast.Mult: 2, ast.Div: 2, ast.Mod: 2, ast.Pow: 4}
+
+
+def _latex(node):
+    """A student's worked-out formula as math notation, built from the parsed formula
+    (numbers, π, operations), never from what they typed, so nothing else can get in."""
+    if isinstance(node, ast.Expression):
+        return _latex(node.body)
+    if isinstance(node, ast.Constant):
+        return F.format_num(node.value)
+    if isinstance(node, ast.Name):
+        return '\\pi' if node.id == 'pi' else ''
+    if isinstance(node, ast.UnaryOp):
+        inner = _latex(node.operand)
+        if isinstance(node.operand, ast.BinOp) and _PREC[type(node.operand.op)] < 4:
+            inner = '\\left(' + inner + '\\right)'
+        return ('-' if isinstance(node.op, ast.USub) else '') + inner
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        args = [_latex(a) for a in node.args]
+        if node.func.id == 'sqrt' and len(args) == 1:
+            return '\\sqrt{' + args[0] + '}'
+        if node.func.id == 'abs' and len(args) == 1:
+            return '\\left|' + args[0] + '\\right|'
+        return '\\operatorname{' + node.func.id + '}\\left(' + ', '.join(args) + '\\right)'
+    if isinstance(node, ast.BinOp):
+        op = type(node.op)
+        if op is ast.Div:
+            return '\\frac{' + _latex(node.left) + '}{' + _latex(node.right) + '}'
+
+        def side(child, right=False):
+            text = _latex(child)
+            if isinstance(child, ast.BinOp) and type(child.op) is not ast.Div and (
+                    _PREC[type(child.op)] < _PREC[op] or (right and _PREC[type(child.op)] == _PREC[op] and op in (ast.Sub, ast.Pow))):
+                text = '\\left(' + text + '\\right)'
+            return text
+        if op is ast.Pow:
+            return side(node.left) + '^{' + _latex(node.right) + '}'
+        left, right = side(node.left), side(node.right, right=True)
+        if op is ast.Mult:
+            #2√3 and 2π read best without a dot; numbers side by side need one
+            implicit = isinstance(node.left, ast.Constant) and (
+                isinstance(node.right, (ast.Call, ast.Name)) or right.startswith('\\left('))
+            return left + (' ' if implicit else ' \\cdot ') + right
+        return left + {ast.Add: ' + ', ast.Sub: ' - ', ast.Mod: ' \\bmod '}[op] + right
+    return ''
+
+
+def student_math(text):
+    """A student's math answer drawn as math, e.g. "2√3" -> "\\( 2\\sqrt{3} \\)";
+    None when the answer is plain numbers or can't be worked out."""
+    if student_numbers(text) in (None, ''):
+        return None
+    parts, wrapped = F.split_list(text)
+    shown = [_latex(F.parse_expr(_student_expr(p))) for p in parts]
+    body = ', '.join(shown)
+    return '\\( ' + ('\\left(' + body + '\\right)' if wrapped else body) + ' \\)'
 
 
 def numbers_match(subm, corr, precision='close', ordered=False):
@@ -398,7 +457,8 @@ class Numeric(QType):
         if worked == '':
             return "{} (couldn't be worked out)".format(stored)
         shown = ', '.join(F.format_num(float(v)) for v in worked.split(', '))
-        return '{} (= {})'.format(stored, shown)
+        #drawn as real math (a full root sign), from the worked-out formula
+        return '{}  (= {})'.format(student_math(stored) or stored, shown)
 
     def show_correct(self, conc_ansr, conc_opts):
         """With an exact form, e.g. \\( 2\\sqrt{3} \\), shown alongside the number."""

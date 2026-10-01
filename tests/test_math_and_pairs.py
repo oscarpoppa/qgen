@@ -179,7 +179,13 @@ def test_students_may_type_math_answers():
     qt = get_qtype('numeric')
     assert qt.grade('2√3', '3.4641', {}, {}) == 1.0 and qt.grade('√-4', '-4', {}, {}) == 0.0
     assert qt.grade('3.46', '3.4641', {}, {}) == 1.0 and qt.grade('3/4', '0.75', {}, {}) == 1.0
-    assert qt.show_submitted('2√3', {}) == '2√3 (= 3.4641)' and qt.show_submitted('3/4', {}) == '3/4'
+    # drawn as real math (a full root sign), built from the formula, not the typed text
+    assert qt.show_submitted('2√3', {}) == r'\( 2 \sqrt{3} \)  (= 3.4641)' and qt.show_submitted('3/4', {}) == '3/4'
+    from app.qgen.qtypes import student_math
+    assert student_math('(1+√5)/2') == r'\( \frac{1 + \sqrt{5}}{2} \)' and student_math('π/2') == r'\( \frac{\pi}{2} \)'
+    assert student_math('(√2, √3)') == r'\( \left(\sqrt{2}, \sqrt{3}\right) \)'
+    # nothing but numbers and math gets through
+    assert student_math(r'√4 \href{x}{y}') is None and student_math('2√3 <b>') is None
     assert qt.show_submitted('√-4', {}) == "√-4 (couldn't be worked out)"
 
 
@@ -214,7 +220,7 @@ def test_exact_form_of_a_numeric_answer(app_db):
         S.submit(cq, {1: '√{}'.format(n)})
     assert cq.score == 100
     results = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert r'\( \sqrt{%d} \)  (≈ ' % n in results and '√{} (= '.format(n) in results
+    assert r'\( \sqrt{%d} \)  (≈ ' % n in results and r'\( \sqrt{%d} \)  (= ' % n in results
 
 
 def test_results_list_the_choices(app_db):
