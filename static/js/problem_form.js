@@ -166,6 +166,68 @@
     if (e.target.closest('.remove-image')) e.target.closest('.image-row').remove();
   });
 
+  /* ---------- math buttons and the math preview ---------- */
+
+  //the buttons write into the question, or the choices if that's where you were typing
+  //(never into a Numeric answer: that's a formula, not something shown)
+  var MATH_BOXES = '[name=question], [name=choices], [name=combos]';
+  function mathTarget() {
+    return lastBox && lastBox.matches(MATH_BOXES) && !lastBox.closest('[hidden]') ? lastBox : form.querySelector('[name=question]');
+  }
+
+  //is the cursor already inside \( ... \) or \[ ... \] ?
+  function insideMath(before) {
+    var count = function (re) { return (before.match(re) || []).length; };
+    return count(/\\\(/g) > count(/\\\)/g) || count(/\\\[/g) > count(/\\\]/g);
+  }
+
+  //"@" becomes the selected text, "¶" marks where the cursor goes (else where "@" was)
+  function expand(tex, sel) {
+    var out = '', cursor = -1, at = -1;
+    for (var i = 0; i < tex.length; i++) {
+      var ch = tex.charAt(i);
+      if (ch === '@') { at = out.length; out += sel; }
+      else if (ch === '\u00b6') { cursor = out.length; }
+      else out += ch;
+    }
+    if (!sel && at !== -1) cursor = at;
+    return { text: out, cursor: cursor === -1 ? out.length : cursor };
+  }
+
+  form.addEventListener('mousedown', function (e) { if (e.target.closest('.math-btn')) e.preventDefault(); });
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest('.math-btn');
+    if (!b) return;
+    var box = mathTarget();
+    var start = box.selectionStart, end = box.selectionEnd;
+    if (typeof start !== 'number' || document.activeElement !== box && lastBox !== box) { start = end = box.value.length; }
+    var before = box.value.slice(0, start);
+    var piece = expand(b.dataset.tex, box.value.slice(start, end));
+    var open = insideMath(before) ? '' : '\\( ', close = open ? ' \\)' : '';
+    box.value = before + open + piece.text + close + box.value.slice(end);
+    var pos = start + open.length + piece.cursor;
+    box.focus();
+    box.setSelectionRange(pos, pos);
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  //how the question's math will look (values in [brackets] show as typed)
+  var question = form.querySelector('[name=question]'), mathPreview = document.getElementById('math-preview'), mathTimer = null;
+  function showMath() {
+    if (!mathPreview || !question) return;
+    var text = question.value, hasMath = /\\[\(\[]/.test(text);
+    mathPreview.hidden = !hasMath;
+    if (!hasMath || !window.MathJax || !MathJax.typesetPromise) return;
+    var body = mathPreview.querySelector('.math-preview-body');
+    if (MathJax.typesetClear) MathJax.typesetClear([body]);
+    body.textContent = text;
+    MathJax.typesetPromise([body]).catch(function () {});
+  }
+  if (question) question.addEventListener('input', function () { clearTimeout(mathTimer); mathTimer = setTimeout(showMath, 400); });
+  window.addEventListener('load', function () {
+    if (window.MathJax && MathJax.startup && MathJax.startup.promise) MathJax.startup.promise.then(showMath); else showMath();
+  });
+
   /* ---------- show me 3 examples ---------- */
 
   var preview = document.getElementById('preview');

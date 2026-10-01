@@ -19,7 +19,7 @@ teacher = token_required(teacher=True)
 
 #problem settings an app may send, with their defaults
 OPTION_DEFAULTS = {'values': [], 'choices': '', 'combos': '', 'shuffle': True, 'show_n': None,
-                   'case_sensitive': False, 'precision': 'close', 'complex': False, 'grading_notes': '',
+                   'case_sensitive': False, 'precision': 'close', 'ordered': False, 'complex': False, 'grading_notes': '',
                    'images': []}
 VALUE_KEYS = ('name', 'kind', 'min', 'max', 'step', 'places', 'nonzero', 'items', 'pick_n', 'formula',
               'im_min', 'im_max', 'different_from')
@@ -75,7 +75,7 @@ def problem_input(data):
     options['images'] = [{'file': str(i['file']), 'label': str(i.get('label') or '')} for i in options['images']]
     for key in ('choices', 'combos', 'grading_notes'):
         options[key] = str(options[key] or '')
-    for key in ('shuffle', 'case_sensitive', 'complex'):
+    for key in ('shuffle', 'case_sensitive', 'ordered', 'complex'):
         options[key] = bool(options[key])
     question = data.get('question') or ''
     options['markup'] = 'legacy' if '{{' in question else 'friendly'

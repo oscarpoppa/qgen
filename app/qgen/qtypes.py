@@ -9,7 +9,7 @@ problem, the "Show me 3 examples" preview, and the AI helper:
 
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
-    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, complex,
+    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, ordered, complex,
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
@@ -121,13 +121,16 @@ def _close_enough(got, want, precision):
     return abs(got - want) / abs(want) <= 0.01
 
 
-def numbers_match(subm, corr, precision='close'):
-    """Every number in the answer must match; order doesn't matter, so
-    '3, 5' matches '5, 3'. Fractions like 3/4 and 1 1/2 are understood."""
+def numbers_match(subm, corr, precision='close', ordered=False):
+    """Every number in the answer must match. Unless ordered, '3, 5' matches
+    '5, 3'; ordered is for points like (3, 5). Fractions like 3/4 and 1 1/2
+    are understood."""
     if subm in (None, '', 'None'):
         return False
-    sublst = sorted(read_numbers(subm))
-    corlst = sorted(read_numbers(corr))
+    sublst = read_numbers(subm)
+    corlst = read_numbers(corr)
+    if not ordered:
+        sublst, corlst = sorted(sublst), sorted(corlst)
     if not corlst or len(sublst) != len(corlst):
         return False
     return all(_close_enough(got, want, precision) for got, want in zip(sublst, corlst))
@@ -157,16 +160,20 @@ def read_complex(text):
     return out
 
 
-def complex_match(subm, corr, precision='close'):
+def complex_match(subm, corr, precision='close', ordered=False):
     """Every complex number must match (real and imaginary parts each checked
-    with the problem's precision); order doesn't matter."""
+    with the problem's precision); order matters only when ordered."""
     got, want = read_complex(subm), read_complex(corr)
     if not got or not want or len(got) != len(want):
         return False
+    def same(g, w):
+        return _close_enough(g.real, w.real, precision) and _close_enough(g.imag, w.imag, precision)
+    if ordered:
+        return all(same(g, w) for g, w in zip(got, want))
     unused = list(got)
     for w in want:
         for g in unused:
-            if _close_enough(g.real, w.real, precision) and _close_enough(g.imag, w.imag, precision):
+            if same(g, w):
                 unused.remove(g)
                 break
         else:
@@ -292,7 +299,7 @@ class Numeric(QType):
     key = 'numeric'
     label = 'Numeric'
     answer_label = 'Answer (a formula)'
-    answer_help = 'Example: speed * hours. For several numbers use placeholders: [x], [y]'
+    answer_help = 'Example: speed * hours. For a pair or list, separate with commas: x, y'
 
     def validate_legacy(self, question, answer, options):
         try:
@@ -307,12 +314,19 @@ class Numeric(QType):
             return ['Please give the answer formula.']
         if '[' in answer:
             return F.check_text('answer', answer, known)
-        try:
-            tree = F.parse_expr(answer)
-        except F.FriendlyError as exc:
-            return [str(exc)]
-        return ['The answer uses "{}", which isn\'t in your values table.{}'
-                .format(n, F._suggest(n, known)) for n in sorted(F.names_in(tree) - set(known))]
+        parts, _ = F.split_list(answer)
+        if len(parts) > 1 and not all(parts):
+            return ['The answer has an empty spot between commas. For a pair, write it like: x, y']
+        errors = []
+        for part in parts:
+            try:
+                tree = F.parse_expr(part)
+            except F.FriendlyError as exc:
+                errors.append(str(exc))
+                continue
+            errors += ['The answer uses "{}", which isn\'t in your values table.{}'
+                       .format(n, F._suggest(n, known)) for n in sorted(F.names_in(tree) - set(known))]
+        return list(dict.fromkeys(errors))
 
     def render_answer(self, answer, env):
         return F.fill_answer(answer, env)
@@ -325,9 +339,10 @@ class Numeric(QType):
 
     def grade(self, stored, conc_ansr, conc_opts, options):
         precision = options.get('precision') or 'close'
+        ordered = bool(options.get('ordered'))
         if uses_complex(options):
-            return 1.0 if complex_match(stored, conc_ansr, precision) else 0.0
-        return 1.0 if numbers_match(stored, conc_ansr, precision) else 0.0
+            return 1.0 if complex_match(stored, conc_ansr, precision, ordered) else 0.0
+        return 1.0 if numbers_match(stored, conc_ansr, precision, ordered) else 0.0
 
 
 class Text(QType):

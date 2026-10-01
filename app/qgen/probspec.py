@@ -95,6 +95,6 @@ def tidy(prob):
     prob = sub(r'\-\s*\-', '+ ', prob)
     #turn '+ 0x' into ''
     prob = sub(r'[\+\-]\s*0[a-zA-Z]+', '', prob)
-    #turn '+ 1x' into '+ x'
-    prob = sub(r'([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
+    #turn '+ 1x' into '+ x' (also right after a math opener \[ or inside braces {1x})
+    prob = sub(r'(\\\[\s*|[\+\-\(\=\,\{]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
     return prob

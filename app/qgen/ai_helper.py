@@ -91,7 +91,7 @@ Fields that don't apply to the kind must be null (nonzero false, different_from 
 In the question, answers, and choices, [name] is replaced by a value and [formula] by its result, e.g. [a + b]. Formulas may use + - * / ^ ( ) and sqrt, abs, round(x, 2), min, max. Brackets that don't contain a defined name are shown as typed.
 
 # Question types (qtype)
-- "numeric": answer is a formula such as "speed * hours" (no brackets), or placeholders like "[x], [y]" when there are several numbers.
+- "numeric": answer is a formula such as "speed * hours" (no brackets), or formulas separated by commas like "x, y" (a pair) or "(x, y)" (a point) when there are several numbers.
 - "text": answer lists accepted answers, one per line. case_sensitive is usually false.
 - "choice_one": choices, one per line, correct one starts with *. Example: "*[a + b]\\n[a + b + 1]\\n[a * b]". Optionally show_n to show only that many (needs enough wrong choices).
 - "choice_many": like choice_one but several choices start with *. If different sets of ticks can each be right (e.g. "tick two numbers that add to 10"), leave the * off and list each acceptable set in combos, one per line, choices separated by commas and written exactly as in choices, e.g. "[a], [10 - a]\n[b], [10 - b]". combos is null otherwise.

@@ -575,6 +575,7 @@ def describe_problem(form):
         lines.append('{}: {}'.format(qt.answer_label, form.answer.data or ''))
     if qt.key == 'numeric':
         lines.append('Answer must be: ' + opts['precision'])
+        lines.append('Order of several numbers matters: {}'.format(opts['ordered']))
     if opts['images']:
         lines.append('Pictures: ' + ', '.join('{} ({})'.format(i['file'], i['label'] or 'no label') for i in opts['images']))
     if not qt.validate(form.question.data, form.answer.data, opts):

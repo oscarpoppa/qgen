@@ -45,6 +45,7 @@ class ProblemForm(FlaskForm):
     show_n = IntegerField('Show only this many choices', validators=[Optional(), NumberRange(min=2, max=50)])
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
     precision = SelectField('How close must the answer be?', choices=list(PRECISIONS.items()), default='close')
+    ordered = BooleanField('Order matters (like a point (x, y))')
     complex = BooleanField('Use complex numbers (i = √−1)')
     grading_notes = TextAreaField('Grading notes (only you see these)')
     images = FieldList(FormField(ImageRow), min_entries=0)
@@ -78,6 +79,7 @@ class ProblemForm(FlaskForm):
             'show_n': self.show_n.data,
             'case_sensitive': bool(self.case_sensitive.data),
             'precision': self.precision.data or 'close',
+            'ordered': bool(self.ordered.data),
             'complex': bool(self.complex.data),
             'grading_notes': self.grading_notes.data or '',
             'images': images,
@@ -96,6 +98,7 @@ class ProblemForm(FlaskForm):
         self.show_n.data = opts.get('show_n')
         self.case_sensitive.data = opts.get('case_sensitive', False)
         self.precision.data = opts.get('precision', 'close')
+        self.ordered.data = opts.get('ordered', False)
         self.complex.data = opts.get('complex', False)
         self.grading_notes.data = opts.get('grading_notes', '')
         self.calculator_ok.data = vp.calculator_ok

@@ -462,11 +462,55 @@ def fill_question(text, env):
     return tidy(fill(text, env))
 
 
+def _split_top(text):
+    """Split on commas that aren't inside ( ), so min(a, b) stays whole."""
+    parts, depth, start = [], 0, 0
+    for pos, ch in enumerate(text):
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+        elif ch == ',' and depth == 0:
+            parts.append(text[start:pos])
+            start = pos + 1
+    parts.append(text[start:])
+    return parts
+
+
+def _wraps_all(text):
+    """True when text is (...) with the first ( closed by the last )."""
+    if not (text.startswith('(') and text.endswith(')')):
+        return False
+    depth = 0
+    for pos, ch in enumerate(text):
+        depth += {'(': 1, ')': -1}.get(ch, 0)
+        if depth == 0:
+            return pos == len(text) - 1
+    return False
+
+
+def split_list(expr):
+    """A list answer like 'x, y' or '(x, y)' -> (['x', 'y'], wrapped).
+    A single formula comes back as a one-item list."""
+    text = (expr or '').strip()
+    parts = _split_top(text)
+    if len(parts) == 1 and _wraps_all(text):
+        inner = _split_top(text[1:-1])
+        if len(inner) > 1:
+            return [p.strip() for p in inner], True
+    return [p.strip() for p in parts], False
+
+
 def fill_answer(expr, env):
-    """A numeric answer is either a plain formula or text with placeholders."""
+    """A numeric answer is a formula, a list of formulas like 'x, y' or
+    '(x, y)', or text with placeholders."""
     if '[' in (expr or ''):
         return fill(expr, env)
-    return format_num(evaluate(expr, env))
+    parts, wrapped = split_list(expr)
+    if len(parts) == 1:
+        return format_num(evaluate(expr, env))
+    text = ', '.join(format_num(evaluate(p, env)) for p in parts)
+    return '({})'.format(text) if wrapped else text
 
 
 # ---------------------------------------------------------------- checking
