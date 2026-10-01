@@ -283,13 +283,14 @@ def test_folded_quiz_box_knows_what_it_holds(app_db):
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     before = sam.get('/mypage').data.decode()
-    assert 'data-attempts="{}"'.format(cq.id) in before and 'data-sig="{}|new|None"'.format(cq.id) in before
+    assert 'data-attempts="{}"'.format(cq.id) in before and 'data-states="{}:new:"'.format(cq.id) in before
     assert 'class="badge badge-warn quiz-flag" hidden' in before
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         new = S.retake(cq)
     after = sam.get('/mypage').data.decode()
     assert 'data-attempts="{},{}"'.format(cq.id, new.id) in after or 'data-attempts="{},{}"'.format(new.id, cq.id) in after
+    assert 'data-states="{}:completed:100.0;{}:new:"'.format(cq.id, new.id) in after
 
 
 def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
