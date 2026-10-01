@@ -524,7 +524,8 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 #dock-messages .reply-box { flex-direction: column; align-items: stretch; }
 #dock-messages .reply-box textarea { min-height: 64px; }
 #dock-messages .msg { max-width: 100%; }
-#dock-messages .pinned-list { flex: 0 0 auto; max-height: 40%; min-height: 3.6em; overflow-y: auto; margin-bottom: 8px; }
+#dock-messages .pinned-box { flex: 0 0 auto; max-height: 40%; min-height: 4.6em; display: flex; flex-direction: column; margin-bottom: 10px; }
+#dock-messages .pinned-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; }
 .send-error { color: var(--bad); }
 
 .notice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -683,3 +684,9 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .review-choices li.is-picked.is-right { background: var(--ok-soft); }
 .review-choices .pick { color: var(--muted); width: 1em; }
 .review-choices li.is-picked .pick { color: var(--accent); }
+
+/* a student's pinned messages: clearly apart from the conversation */
+.pinned-box { border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); background: var(--warn-soft);
+  border-radius: 10px; padding: 8px 10px 10px; }
+.pinned-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn); margin-bottom: 6px; }
+.pinned-box .msg-pinned { background: var(--surface); border-left: 3px solid var(--warn); max-width: 100%; }
