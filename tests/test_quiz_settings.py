@@ -124,11 +124,13 @@ def test_retake_scoring_rules(app_db):
     second = CQuiz.query.filter(CQuiz.id != first.id).one()
     sam.post('/quiz/take/{}'.format(second.id), data={})  # 0%
     page = sam.get('/mypage').data.decode()
-    assert 'Your score: 25%' in page and '★ 50%' in page and 'Attempt 2' not in page
-    # the teacher counts only sam's best attempt
+    # an average: no single attempt is marked as the one that counts
+    assert 'Your score: 25%' in page and '★' not in page and 'Attempt 2' not in page
+    # the teacher counts only sam's best attempt: that one is marked
     r = teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': 'best'})
     assert r.status_code == 302
-    assert 'Your score: 50%' in sam.get('/mypage').data.decode()
+    page = sam.get('/mypage').data.decode()
+    assert 'Your score: 50%' in page and '★ 50%' in page and '★ 0%' not in page
     ulist = teacher.get('/quiz/listuser').data.decode()
     assert 'selected>The best attempt' in ulist.replace('"selected" ', 'selected').replace('selected ', 'selected') or 'The best attempt' in ulist
     teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': ''})
@@ -565,3 +567,49 @@ def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
     assert r.status_code == 200
     db.session.expire_all()
     assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
+
+
+def test_the_attempts_that_count_are_the_ones_marked(app_db):
+    # the green ★ follows the retake rule, not just the highest score
+    import re
+    from types import SimpleNamespace as NS
+    from app.qgen.models import counted_attempts, combined_score
+    a, b, c = NS(id=1, score=100.0), NS(id=2, score=40.0), NS(id=3, score=70.0)
+    done = [a, b, c]
+    assert counted_attempts('best', done) == [a]
+    assert counted_attempts('latest', done) == [c]
+    assert counted_attempts('first', done) == [a]
+    # an average of several scores: none of them is marked
+    assert counted_attempts('average', done) == [] and counted_attempts('best2', done) == []
+    assert counted_attempts('latest', []) == []
+    # one finished attempt: its score is the score, whatever the rule
+    for rule in ('best', 'latest', 'first', 'average', 'best2'):
+        assert counted_attempts(rule, [b]) == [b]
+    # the marked one's score is the score that counts
+    for rule in ('best', 'latest', 'first'):
+        assert counted_attempts(rule, done)[0].score == combined_score(rule, [x.score for x in done])
+
+    # on the pages: 100% then 0%, scored by the latest attempt
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Pick', 'vplist': str(VProblem.query.one().id), 'retake_rule': 'latest'})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    first = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(first, {1: '4'})
+        second = S.retake(first)
+        S.submit(second, {1: '5'})
+    stars = lambda html: re.findall(r'<span class="badge badge-ok"[^>]*>★ (\d+)%', html)
+    sam = login(app, 'sam')
+    assert stars(sam.get('/mypage').data.decode()) == ['0']
+    assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['0']
+    S.set_retake_rule(first, 'average')
+    assert stars(sam.get('/mypage').data.decode()) == []
+    assert '★' not in teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    S.set_retake_rule(first, 'best')
+    assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['100']

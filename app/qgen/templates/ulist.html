@@ -35,7 +35,7 @@
                 {% for cq in g.attempts %}
                   <div class="btn-row" style="margin:2px 0">
                     <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap">{{ cq.when_label }}</a>
-                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if g.best == cq else '' }}">{{ '★ ' if g.best == cq }}{{ '%.0f' % (cq.score or 0) }}%</span>
+                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
                     {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
                     {% else %}<span class="badge">not started</span>{% endif %}

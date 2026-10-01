@@ -51,6 +51,7 @@ def my_quizzes_json(user):
         out.append({'quiz': {'id': grp['vquiz'].id, 'title': grp['vquiz'].title},
                     'score_counted': grp['combined'], 'scoring_rule': grp['rule_key'],
                     'best_attempt': grp['best'].id if grp['best'] else None,
+                    'counted_attempts': [c.id for c in grp['counted']],
                     'attempts': [attempt_summary(cq) for cq in grp['attempts']]})
     return out
 
@@ -170,6 +171,7 @@ def student_results_json(user):
                     'score_counted': grp['combined'], 'scoring_rule': grp['rule_key'],
                     'rule_overridden': grp['overridden'],
                     'best_attempt': grp['best'].id if grp['best'] else None,
+                    'counted_attempts': [c.id for c in grp['counted']],
                     'attempts': [attempt_summary(cq) for cq in grp['attempts']]})
     return out
 

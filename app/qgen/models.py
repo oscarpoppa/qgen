@@ -276,6 +276,20 @@ def combined_score(rule, scores):
     return max(scores)
 
 
+def counted_attempts(rule, done):
+    """The finished attempt (oldest first) whose score is the one that counts, to mark it:
+    [that attempt], or [] when none is or the score combines several (an average)."""
+    if len(done) == 1:
+        return list(done)
+    if not done or rule in ('average', 'best2'):
+        return []
+    if rule == 'latest':
+        return [done[-1]]
+    if rule == 'first':
+        return [done[0]]
+    return [max(done, key=lambda c: c.score)]
+
+
 #simple site-wide settings, e.g. the class code needed to sign up
 class Setting(db.Model):
     __tablename__ = 'setting'
@@ -297,7 +311,8 @@ class Setting(db.Model):
 
 def attempts_by_quiz(cquizzes):
     """A student's assigned quizzes grouped by quiz, for showing retakes:
-    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined'}]"""
+    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined',
+      'counted' (the attempt to mark as the one that counts, if one does)}]"""
     groups = {}
     for cq in sorted(cquizzes, key=lambda c: c.id):
         groups.setdefault(cq.vquiz_id, []).append(cq)
@@ -310,6 +325,7 @@ def attempts_by_quiz(cquizzes):
         rule = override or vq.retake_rule
         out.append({'vquiz': vq, 'attempts': attempts, 'best': best, 'latest': attempts[-1],
                     'combined': combined_score(rule, [c.score for c in done]),
+                    'counted': counted_attempts(rule, done),
                     'rule': RETAKE_RULES.get(rule, RETAKE_RULES['best']), 'rule_key': rule,
                     'overridden': bool(override)})
     #newest activity first
