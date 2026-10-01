@@ -71,7 +71,8 @@ def login():
     if form.validate_on_submit():
         #the same guard as the API: slow down password guessing
         if LoginFailure.too_many(form.username.data):
-            flash('Too many wrong passwords. Please wait 15 minutes and try again.', 'error')
+            from app import tuning
+            flash('Too many wrong passwords. Please wait {} minutes and try again.'.format(tuning.get('lockout_minutes')), 'error')
             return redirect(url_for('user.login'))
         u = User.query.filter_by(username=form.username.data).first()
         if u is None or not u.check_password(form.password.data):
@@ -227,6 +228,47 @@ def settings():
         return redirect(url_for('user.settings'))
     return render_template('settings.html', form=form, title='Settings')
 
+
+# route to the technical settings: time spans, limits and the AI model (app/tuning.py)
+@user_bp.route('/settings/technical', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def technical_settings():
+    from app import tuning
+    return render_technical(tuning.values(), {})
+
+def render_technical(shown, errors):
+    from app import tuning
+    groups = [(key, label, [t for t in tuning.TUNABLES if t['group'] == key]) for key, label in tuning.GROUPS]
+    return render_template('settings_technical.html', title='Technical settings', groups=groups, shown=shown,
+                           errors=errors, current=tuning.values(),
+                           current_changed=[k for k, v in tuning.values().items() if v != tuning.BY_KEY[k]['default']])
+
+# route to save the technical settings (all or nothing)
+@user_bp.route('/settings/technical', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def save_technical_settings():
+    from app import tuning
+    if request.form.get('reset'):
+        key = request.form['reset']
+        if key == 'all':
+            tuning.reset(current_user)
+            flash('All technical settings are back to their defaults.', 'success')
+        elif key in tuning.BY_KEY:
+            tuning.reset(current_user, key)
+            flash('"{}" is back to its default.'.format(tuning.BY_KEY[key]['label']), 'success')
+        return redirect(url_for('user.technical_settings'))
+    chosen, errors = tuning.validate(request.form)
+    if errors:
+        flash('Nothing was saved: please fix the {} marked below.'.format('one' if len(errors) == 1 else 'ones'), 'error')
+        return render_technical({t['key']: request.form.get(t['key'], '') for t in tuning.TUNABLES}, errors), 400
+    changed = tuning.save(chosen, current_user)
+    flash('Saved {} change{}.'.format(len(changed), '' if len(changed) == 1 else 's') if changed else 'Nothing changed.', 'success')
+    return redirect(url_for('user.technical_settings'))
 
 # ---------------------------------------------------------------- profile
 

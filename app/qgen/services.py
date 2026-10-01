@@ -8,13 +8,13 @@ or by returning lists of plain-language errors.
 """
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import url_for, render_template
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
-from app import db
+from app import db, tuning
 from app.messages.models import notify, notify_teachers
 from . import layout
 from .formfact import record_answers, finalize, TRANSCRIPT_V2
@@ -22,8 +22,8 @@ from .friendly import FriendlyError
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, ArchiveFolder, RETAKE_RULES
 from .qtypes import get_qtype
 
-#answers are still accepted this long after the deadline (slow connections, the auto-submit)
-GRACE = timedelta(minutes=2)
+#answers are still accepted a little after the deadline (slow connections, the
+#auto-submit): "Grace after a quiz's time is up" in Technical settings (app/tuning.py)
 
 
 class ServiceError(ValueError):
@@ -904,7 +904,7 @@ def attempt_state(cq, now=None):
     if cq.not_open_yet(now):
         return 'not_open'
     deadline = cq.deadline()
-    if deadline and now > deadline + GRACE:
+    if deadline and now > deadline + tuning.grace():
         return 'time_up'
     return 'open'
 

@@ -3,7 +3,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 from datetime import timedelta
 
-#"online": seen within this long
+#"online": seen within this long (the default; see Technical settings, app/tuning.py)
 ONLINE_WINDOW = timedelta(minutes=2)
 
 @login.user_loader
@@ -29,12 +29,14 @@ class User(UserMixin, db.Model):
         """Logged in, with a page open: seen in the last couple of minutes (an open page
         checks in every 30 seconds) and not logged out since."""
         from datetime import datetime
-        return bool(self.logged_in and self.last_seen and datetime.now() - self.last_seen < ONLINE_WINDOW)
+        from app import tuning
+        return bool(self.logged_in and self.last_seen and datetime.now() - self.last_seen < tuning.online_window())
 
     @staticmethod
     def online_condition(now):
         """The same as .online, for queries."""
-        return db.and_(User.last_seen >= now - ONLINE_WINDOW, User.logged_in.is_(True))
+        from app import tuning
+        return db.and_(User.last_seen >= now - tuning.online_window(), User.logged_in.is_(True))
 
     def set_password(self, pswd):
         self.password_hash = generate_password_hash(pswd)
@@ -54,11 +56,12 @@ class User(UserMixin, db.Model):
         """When this user was last on the site, in words: 'online now', '12 min ago',
         '3 h ago', 'yesterday', 'Sep 28', or 'never'."""
         from datetime import datetime
+        from app import tuning
         if not self.last_seen:
             return 'never'
         now = now or datetime.now()
         ago = now - self.last_seen
-        if ago < ONLINE_WINDOW and self.logged_in:
+        if self.logged_in and ago < tuning.online_window():
             return 'online now'
         if ago < timedelta(minutes=1):
             return 'just now'
@@ -74,7 +77,8 @@ class User(UserMixin, db.Model):
         return '<User {}>'.format(self.username)
 
 
-#last_seen is written at most this often per user
+#last_seen is written at most this often per user (shortened when the online window is
+#short; see tuning.seen_every)
 SEEN_EVERY = timedelta(minutes=1)
 
 
@@ -83,7 +87,8 @@ def note_seen(user, now=None):
     from datetime import datetime
     now = now or datetime.now()
     #still signed in here after logging out somewhere else: they're logged in after all
-    if user.last_seen and timedelta(0) <= now - user.last_seen < SEEN_EVERY and user.logged_in:
+    from app import tuning
+    if user.last_seen and timedelta(0) <= now - user.last_seen < tuning.seen_every() and user.logged_in:
         return
     try:
         user.last_seen, user.logged_in = now, True

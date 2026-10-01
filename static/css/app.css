@@ -867,3 +867,13 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 @media (max-width: 760px) {
   .online-pop { position: fixed; top: calc(var(--topbar-h) + 4px); left: 12px; right: 12px; width: auto; }
 }
+
+/* Technical settings */
+.tech-group { margin-bottom: 16px; }
+.tech-row { padding: 10px 0; border-top: 1px solid var(--border); }
+.tech-row:first-child { border-top: 0; }
+.tech-input { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tech-input input[type=number] { width: 9rem; flex: 0 0 auto; }
+.tech-input select { width: auto; max-width: 100%; }
+.tech-unit { color: var(--muted); }
+.tech-reset-all { margin-top: 16px; }

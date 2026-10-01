@@ -1,5 +1,6 @@
 {# Who's on the site: online now (a page open in the last 2 minutes), then anyone active
-   in the last hour. Used on the Dashboard and in the top bar's "online" menu. #}
+   recently (both spans are Technical settings). Used on the Dashboard and in the top bar's "online" menu. #}
+{% set recent_min = tuning.get('recently') %}
 {% from "_macros.html" import avatar with context %}
 <div class="online-list">
   <h3 class="dash-sub">Online now <span class="badge badge-ok">{{ online|length }}</span></h3>
@@ -14,7 +15,7 @@
     <p class="muted small">Nobody is online.</p>
   {% endif %}
   {% if recent %}
-    <h3 class="dash-sub">Active in the last hour</h3>
+    <h3 class="dash-sub">Active in the last {{ 'hour' if recent_min == 60 else ('{} hours'.format(recent_min // 60) if recent_min % 60 == 0 else '{} minutes'.format(recent_min)) }}</h3>
     <ul class="online-people">
     {% for u in recent %}
       <li><span class="person">{{ avatar(u, 24) }}{{ u.username }}</span>
@@ -23,6 +24,6 @@
     {% endfor %}
     </ul>
   {% endif %}
-  <p class="muted small dash-note">“Online” means a page is open (checked every 30 seconds). Closing the browser doesn't log
+  <p class="muted small dash-note">“Online” means a page is open (checked every {{ tuning.get('poll_seconds') }} seconds). Closing the browser doesn't log
     anyone out, so this shows who's actually here.</p>
 </div>

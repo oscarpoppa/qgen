@@ -9,10 +9,10 @@ from app.qgen.models import CQuiz, ArchivedAttempt
 from app.qgen.qtypes import get_qtype
 from . import api_bp
 from .auth import token_required, body
+from app import tuning
 from .errors import ApiError, bad_request, not_found, conflict
 from .serialize import (my_quizzes_json, attempt_json, attempt_summary, results_json, message_json)
 
-MAX_ANSWER = 20000
 
 
 def my_attempt(attempt_id):
@@ -54,7 +54,7 @@ def clean_answers(cq, answers):
             if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                 raise bad_request('Question {} takes text.'.format(number))
             text = str(value)
-            if len(text) > MAX_ANSWER:
+            if len(text) > tuning.get('max_api_answer'):
                 raise bad_request('The answer to question {} is too long.'.format(number))
             out[number] = text
     return out

@@ -97,7 +97,8 @@ def test_routes_guard_key_limit_and_log(app_db, monkeypatch):
         r = teacher.post('/quiz/ai/reviewproblem', data=form)
         assert r.get_json()['hints'][0]['text'] == 'Clear.'
         # hourly limit
-        for _ in range(ai_helper.HOURLY_LIMIT):
+        from app import tuning
+        for _ in range(tuning.get('ai_hourly')):
             db.session.add(AICall(user_id=1, kind='values', request='x', ok=True))
         db.session.commit()
         r = teacher.post('/quiz/ai/problem', json=body)

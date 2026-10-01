@@ -10,11 +10,12 @@ import json
 
 import anthropic
 
+from app import tuning
+
 from .friendly import KINDS
 from .qtypes import REGISTRY, get_qtype
 
-MODEL = 'claude-opus-5'
-HOURLY_LIMIT = 30
+#the model and the hourly limit are Technical settings (app/tuning.py: ai_model, ai_hourly)
 
 _NULLABLE_STR = {'type': ['string', 'null']}
 
@@ -133,7 +134,7 @@ def ask(api_key, kind, text, client=None):
     client = client or _client(api_key)
     try:
         resp = client.beta.messages.create(
-            model=MODEL,
+            model=tuning.get('ai_model'),
             max_tokens=16000,
             thinking={'type': 'adaptive'},
             betas=['server-side-fallback-2026-07-01'],
@@ -234,7 +235,7 @@ def review(api_key, material, client=None):
     client = client or _client(api_key)
     try:
         resp = client.beta.messages.create(
-            model=MODEL,
+            model=tuning.get('ai_model'),
             max_tokens=16000,
             thinking={'type': 'adaptive'},
             betas=['server-side-fallback-2026-07-01'],

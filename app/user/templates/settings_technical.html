@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% macro amount(t, value) -%}
+  {%- if t.unit == 'choice' -%}{{ (t.choices|selectattr(0, 'equalto', value)|map(attribute=1)|first) or value }}
+  {%- else -%}{{ '{:,}'.format(value) }} {{ t.unit if value != 1 else t.unit[:-1] }}{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}">← Settings</a></div></div>
+<p class="muted">Time spans and limits the site works with. Changes apply right away; how often pages check in and
+  how often the Dashboard refreshes apply when a page is next opened. Each one shows its default, and
+  <b>Reset</b> puts it back.</p>
+
+<form method="post" action="{{ url_for('user.save_technical_settings') }}" id="tech-form" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for gkey, glabel, items in groups %}
+  <details class="card dash-card tech-group" open>
+    {% set changed = items|selectattr('key', 'in', current_changed)|list|length %}
+    <summary class="dash-head"><h2>{{ glabel }}</h2>{% if changed %}<span class="badge badge-accent">{{ changed }} changed</span>{% endif %}</summary>
+    <div class="dash-body">
+    {% for t in items %}
+      {% set is_changed = current[t.key] != t.default %}
+      <div class="field tech-row{{ ' has-error' if errors.get(t.key) }}">
+        <label class="label" for="t-{{ t.key }}">{{ t.label }}
+          {% if is_changed %}<span class="badge badge-accent">Changed</span>{% endif %}</label>
+        <div class="tech-input">
+          {% if t.unit == 'choice' %}
+            <select id="t-{{ t.key }}" name="{{ t.key }}">
+              {% for value, label in t.choices %}<option value="{{ value }}"{% if shown[t.key] == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          {% else %}
+            <input id="t-{{ t.key }}" name="{{ t.key }}" type="number" inputmode="numeric" min="{{ t.min }}" max="{{ t.max }}" step="1"
+                   value="{{ shown[t.key] }}" aria-describedby="h-{{ t.key }}">
+            <span class="tech-unit">{{ t.unit }}</span>
+          {% endif %}
+          {% if is_changed %}<button class="btn btn-secondary btn-sm" name="reset" value="{{ t.key }}" formnovalidate
+                  title="Back to {{ amount(t, t.default) }}" aria-label="Reset {{ t.label }} to {{ amount(t, t.default) }}">Reset</button>{% endif %}
+        </div>
+        <p class="help" id="h-{{ t.key }}">{{ t.help }}
+          <span class="muted">Default: {{ amount(t, t.default) }}{% if t.unit != 'choice' %}; allowed {{ '{:,}'.format(t.min) }}–{{ '{:,}'.format(t.max) }}{% endif %}.</span></p>
+        {% if errors.get(t.key) %}<div class="error">{{ errors[t.key] }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+  <div class="btn-row">
+    <button class="btn">Save</button>
+    <a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}">Cancel</a>
+  </div>
+</form>
+
+<form method="post" action="{{ url_for('user.save_technical_settings') }}" class="tech-reset-all"
+      data-confirm="Put every technical setting back to its default?" data-confirm-ok="Reset everything">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-secondary btn-sm" name="reset" value="all">Reset everything to defaults</button>
+</form>
+{% endblock %}

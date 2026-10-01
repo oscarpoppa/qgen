@@ -1,9 +1,16 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, FileField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, StopValidation, Length
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, StopValidation
 
-MIN_PASSWORD = 8
-long_enough = Length(min=MIN_PASSWORD, message='Please use at least {} characters.'.format(MIN_PASSWORD))
+#the shortest password allowed is a Technical setting (app/tuning.py); read when checking
+def min_password():
+    from app import tuning
+    return tuning.get('min_password')
+
+
+def long_enough(form, field):
+    if len(field.data or '') < min_password():
+        raise ValidationError('Please use at least {} characters.'.format(min_password()))
 from .models import User
 
 

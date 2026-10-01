@@ -8,7 +8,10 @@ from sqlalchemy.exc import IntegrityError
 
 from .models import Message, MessageRead, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by
 
-MAX_LEN = 2000
+def max_len():
+    """The longest a message can be (Technical settings)."""
+    from app import tuning
+    return tuning.get('max_message')
 
 
 class MessageError(ValueError):
@@ -19,8 +22,8 @@ def clean_body(text):
     text = (text or '').strip()
     if not text:
         raise MessageError('Please write a message first.')
-    if len(text) > MAX_LEN:
-        raise MessageError('Please keep messages under {} characters.'.format(MAX_LEN))
+    if len(text) > max_len():
+        raise MessageError('Please keep messages under {:,} characters.'.format(max_len()))
     return text
 
 

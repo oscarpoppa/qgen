@@ -191,7 +191,7 @@ def student_panel(user, mark_seen=True):
     unread_ids = {m.id for m in items + pinned if m.from_teacher and not m.seen_by_student}
     if mark_seen:
         M.mark_seen_by_student(user.id, items + pinned)
-    return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.MAX_LEN}
+    return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.max_len()}
 
 
 def teacher_panel(choice='all', mark_seen=True):
@@ -213,7 +213,7 @@ def teacher_panel(choice='all', mark_seen=True):
             for r in rows:
                 r['unread'] = M.unread_from(current_user, r['student'].id)
         return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
-                'others_unread': sum(r['unread'] for r in rows), 'max_len': M.MAX_LEN, 'everyone': True}
+                'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True}
     student = chosen['student']
     items = M.conversation(student.id, limit=30)
     unread_ids = M.unseen_ids(current_user, items)
@@ -224,7 +224,7 @@ def teacher_panel(choice='all', mark_seen=True):
     waiting = sorted((r for r in rows if r['unread']), key=lambda r: r['last'].created, reverse=True)
     return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids,
             'others_unread': sum(r['unread'] for r in rows), 'waiting': waiting,
-            'max_len': M.MAX_LEN, 'everyone': False}
+            'max_len': M.max_len(), 'everyone': False}
 
 
 # ---------------------------------------------------------------- both

@@ -89,7 +89,9 @@ def page_helpers():
         return User.query.filter(User.online_condition(datetime.now())).count()
     from app.user.avatars import initials, color
     from app.home import home_url
-    return dict(csrf_token=generate_csrf, home_url=home_url, online_count=online_count, review_count=review_count, now=datetime.now,
+    from app import tuning
+    return dict(csrf_token=generate_csrf, home_url=home_url, online_count=online_count, tuning=tuning,
+                tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)
 
@@ -166,10 +168,10 @@ def create_admin_command(username):
     if User.query.filter_by(username=username).first():
         print('"{}" already exists.'.format(username))
         return
-    from app.user.forms import MIN_PASSWORD
+    from app.user.forms import min_password
     password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
-    if len(password) < MIN_PASSWORD:
-        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+    if len(password) < min_password():
+        print('Please use at least {} characters.'.format(min_password()))
         return
     u = User(username=username, is_admin=True)
     u.set_password(password)
@@ -182,14 +184,14 @@ def create_admin_command(username):
 def set_password_command(username):
     """Set a new password for an account (asks for it privately), e.g. a forgotten one."""
     from app.user.models import User
-    from app.user.forms import MIN_PASSWORD
+    from app.user.forms import min_password
     u = User.query.filter_by(username=username).first()
     if not u:
         print('No account called "{}".'.format(username))
         return
     password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
-    if len(password) < MIN_PASSWORD:
-        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+    if len(password) < min_password():
+        print('Please use at least {} characters.'.format(min_password()))
         return
     u.set_password(password)
     u.pw_man_reset = False

@@ -13,7 +13,7 @@
   </div>
 </div>
 
-<div id="dash-live" data-url="{{ url_for('qgen.dashboard_now') }}">
+<div id="dash-live" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
 {% include "_dashboard_live.html" %}
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
-   30 seconds from /dashboard/now by static/js/dashboard.js. #}
+   so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
 {% from "_macros.html" import avatar with context %}
 {% macro score(value) -%}
   <span class="badge {{ 'badge-ok' if value >= 70 else 'badge-warn' if value >= 50 else 'badge-bad' }}">{{ '%.0f' % value }}%</span>

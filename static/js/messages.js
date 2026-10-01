@@ -2,12 +2,14 @@
  * graded...) and Messages (the conversation). Each can be shown or hidden with
  * its button in the top bar; the choice is remembered in this browser.
  *
- * Every 30 seconds the page asks whether anything new has arrived: the buttons'
+ * Every 30 seconds (Technical settings) the page asks whether anything new has arrived: the buttons'
  * counts update, an open panel reloads, and a hidden one gets a pop-up and a
  * pulsing button. Opening a panel marks what it shows as seen. */
 (function () {
   var me = document.currentScript || document.querySelector('script[data-poll]');
   var pollUrl = me && me.dataset.poll;
+  //how often to check in (Technical settings), 30 seconds if not given
+  var every = Math.max(10000, +(me && me.dataset.every) || 30000);
   var dock = document.getElementById('dock');
   if (!pollUrl || !dock) return;
 
@@ -303,6 +305,6 @@
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
   if (!PANES.some(isOpen)) check();
-  setInterval(check, 30000);
+  setInterval(check, every);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
 })();

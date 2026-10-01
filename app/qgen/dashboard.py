@@ -1,4 +1,5 @@
-"""The administrators' Dashboard: what needs doing and what's going on.
+"""The administrators' Dashboard: what needs doing and what's going on. Its time
+spans and list lengths are Technical settings (app/tuning.py).
 
 Everything here only reads. In particular, looking at students' messages here doesn't
 mark them read (that happens in Messages, as before).
@@ -8,14 +9,12 @@ from datetime import timedelta
 from flask import current_app
 from sqlalchemy.orm import joinedload
 
-from app import db
+from app import db, tuning
 from app.messages.models import Message, NOT_NOTICE, seen_by, unread_for_teachers, unread_notices_for_teachers
 from app.user.models import User
 from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, AICall, Setting
 from .services import attempt_state
 
-#"closing soon": an unfinished attempt that closes within this long
-SOON = timedelta(days=2)
 
 
 def _students():
@@ -31,8 +30,8 @@ def _unfinished():
 
 
 def closing_soon(now):
-    """Unfinished attempts that close within SOON, soonest first."""
-    return (_unfinished().filter(CQuiz.closes_at >= now, CQuiz.closes_at <= now + SOON)
+    """Unfinished attempts that close within the "due soon" days, soonest first."""
+    return (_unfinished().filter(CQuiz.closes_at >= now, CQuiz.closes_at <= now + tuning.due_soon())
             .options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz)).order_by(CQuiz.closes_at).all())
 
 
@@ -49,13 +48,11 @@ def online(now):
     return User.query.filter(User.online_condition(now)).order_by(User.username).all()
 
 
-#"active recently": seen within this long (but not online now)
-RECENTLY = timedelta(hours=1)
 
 
 def recently_active(now):
     """People seen in the last hour who aren't online now, most recent first."""
-    return (User.query.filter(User.last_seen >= now - RECENTLY, ~User.online_condition(now))
+    return (User.query.filter(User.last_seen >= now - tuning.recently(), ~User.online_condition(now))
             .order_by(User.last_seen.desc()).all())
 
 
@@ -76,10 +73,11 @@ def taking_now(now):
     return out
 
 
-def out_now(now, limit=10):
+def out_now(now, limit=None):
     """Assigned attempts not handed in yet (not started, or started), newest assignment
     first: ([{'cq', 'state': 'new' | 'started' | 'not_open'}], how many in all)."""
     q = _unfinished()
+    limit = limit or tuning.get('list_assigned')
     rows = (q.options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz))
             .order_by(CQuiz.create_date.desc(), CQuiz.id.desc()).limit(limit).all())
     out = []
@@ -89,15 +87,17 @@ def out_now(now, limit=10):
     return out, q.count()
 
 
-def grading_queue(limit=5):
+def grading_queue(limit=None):
     """The attempts waiting longest for grading (the same order as Review), and how many wait."""
     q = _waiting()
+    limit = limit or tuning.get('list_grading')
     return (q.options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz)).order_by(CQuiz.compdate, CQuiz.id).limit(limit).all(),
             q.count())
 
 
-def recent_handins(limit=10):
+def recent_handins(limit=None):
     """The latest attempts handed in (graded, or waiting for grading), newest first."""
+    limit = limit or tuning.get('list_handins')
     return (CQuiz.query.filter(db.or_(CQuiz.completed.is_(True), CQuiz.needs_review.is_(True)), CQuiz.compdate.isnot(None))
             .options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz))
             .order_by(CQuiz.compdate.desc(), CQuiz.id.desc()).limit(limit).all())
@@ -118,8 +118,9 @@ def when(d, now):
     return '{:%b} {}'.format(d, d.day)
 
 
-def recent_messages(teacher, limit=5):
+def recent_messages(teacher, limit=None):
     """The newest messages from students: [(message, unread for this teacher)]. Marks nothing."""
+    limit = limit or tuning.get('list_messages')
     rows = (Message.query.filter(Message.from_teacher.is_(False), NOT_NOTICE)
             .options(joinedload(Message.student)).order_by(Message.created.desc(), Message.id.desc()).limit(limit).all())
     unread = {r[0] for r in db.session.query(Message.id).filter(Message.id.in_([m.id for m in rows] or [0]),

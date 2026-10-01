@@ -603,7 +603,9 @@ def ai_call(kind, text, work):
     """Every AI button goes through here: session check, API key, size and hourly
     limits, and the call log. `work(key, text)` returns (result, usage)."""
     from datetime import timedelta
-    from .ai_helper import AIError, HOURLY_LIMIT
+    from .ai_helper import AIError
+    from app import tuning
+    hourly = tuning.get('ai_hourly')
     from .models import AICall
     if not json_csrf_ok():
         return None, (jsonify(ok=False, error='Your session expired. Please reload the page.'), 400)
@@ -616,8 +618,8 @@ def ai_call(kind, text, work):
     if len(text) > 8000:
         return None, (jsonify(ok=False, error='That\'s too long for the AI helper; please shorten it.'), 400)
     since = datetime.now() - timedelta(hours=1)
-    if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= HOURLY_LIMIT:
-        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(HOURLY_LIMIT)), 429)
+    if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= hourly:
+        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(hourly)), 429)
     call = AICall(user_id=current_user.id, created=datetime.now(), kind=kind, request=text, ok=False)
     try:
         result, usage = work(key, text)
@@ -1009,7 +1011,8 @@ def dashboard_data():
 @pw_check
 @admin_only
 def dashboard():
-    return render_template('dashboard.html', title='Dashboard', **dashboard_data())
+    from app import tuning
+    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), **dashboard_data())
 
 #route to the top bar's "online" list (opened from any teacher page)
 @qgen_bp.route('/dashboard/online', methods=['GET'])

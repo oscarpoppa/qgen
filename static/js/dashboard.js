@@ -1,7 +1,8 @@
 /* The Dashboard:
  * - each box (details[data-box]) opens and closes; the closed ones are remembered in
  *   this browser, also across the refresh; "Open all" / "Close all"
- * - everything below the title refreshes every 30 seconds while the tab is visible,
+ * - everything below the title refreshes (every 30 seconds unless Technical settings
+ *   say otherwise) while the tab is visible,
  *   and at once when the tab is shown again
  * - buttons with data-open-pane open the Notices or Messages panel */
 (function () {
@@ -51,6 +52,6 @@
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) { if (html) { box.innerHTML = html; apply(); } }, function () {});
   }
-  setInterval(refresh, 30000);
+  setInterval(refresh, Math.max(10000, +box.dataset.every || 30000));
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();
