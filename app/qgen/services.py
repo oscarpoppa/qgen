@@ -666,9 +666,16 @@ def archive_folders():
     ensure_archive_folders()
     users = {u.id: u for u in User.query.all()}
     out = {}
+    renamed = False
     for f in ArchiveFolder.query.filter_by(removed=False):
+        #a student's own folder (never renamed by the teacher) follows their username
+        student = users.get(f.student_id) if f.student_id else None
+        if student is not None and f.name != student.username:
+            f.name, renamed = student.username, True
         out[f.id] = {'folder': f, 'key': 'folder-{}'.format(f.id), 'name': f.name,
                      'student': users.get(f.student_id) if f.student_id else None, 'items': []}
+    if renamed:
+        db.session.commit()
     unsorted = {'folder': None, 'key': 'unsorted', 'name': UNSORTED, 'student': None, 'items': []}
     for a in ArchivedAttempt.query.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()):
         (out[a.folder_id] if a.folder_id in out else unsorted)['items'].append(a)
@@ -701,7 +708,10 @@ def create_archive_folder(name):
 def rename_archive_folder(folder, name):
     """Rename a folder. A student's folder becomes an ordinary folder with the new name;
     the student gets a new folder in their name for their next archived attempts."""
-    folder.name = _folder_name(name, folder)
+    new = _folder_name(name, folder)
+    if new == folder.name:
+        return
+    folder.name = new
     folder.student_id = None
     db.session.commit()
 

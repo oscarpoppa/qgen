@@ -401,3 +401,29 @@ def test_an_archived_attempt_is_kept_as_a_small_readable_record(app_db):
     # the page drawn from it shows everything, the student's answer still escaped
     view = teacher.get('/quiz/archive/{}'.format(a.id)).data.decode()
     assert 'Plants &lt;b&gt;use&lt;/b&gt; light.' in view and 'Correct answer' in view
+
+
+def test_student_folders_follow_the_student(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import CQuiz, ArchiveFolder
+    from app.api.serialize import archived_json
+    from app.qgen.models import ArchivedAttempt
+    teacher = login(app, 'teach')
+    vq, probs = setup_quiz(app, teacher, 'numeric')
+    teacher.get('/quiz/archive')
+    sam_f = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
+    # saving the same name keeps it the student's folder
+    teacher.post('/quiz/archive/folders/{}/rename'.format(sam_f.id), data={'name': 'sam'})
+    db.session.expire_all()
+    assert db.session.get(ArchiveFolder, sam_f.id).student_id == ids('sam')
+    # the student's username changes: their folder follows
+    u = db.session.get(User, ids('sam'))
+    u.username = 'samuel'
+    db.session.commit()
+    page = teacher.get('/quiz/archive').data.decode()
+    assert '📁 samuel</span>' in page and '📁 sam</span>' not in page
+    # the API says which folder an attempt is in
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('samuel')]})
+    teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
+    assert archived_json(ArchivedAttempt.query.one())['folder'] == 'samuel'

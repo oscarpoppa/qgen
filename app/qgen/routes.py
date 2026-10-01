@@ -811,7 +811,7 @@ def delete_subject(kind, sid):
     subject = subject_or_404(kind, sid)
     name = subject.title
     S.delete_subject(subject)
-    flash('Deleted the subject "{}". Its {} are kept.'.format(name, kind), 'success')
+    flash('Deleted the subject "{}". Its {} are kept: in Unsorted, or in their other subjects.'.format(name, kind), 'success')
     current_app.logger.info('{} deleted {} subject ({}) "{}"'.format(current_user.username, kind, sid, name))
     return subject_list(kind)
 
