@@ -175,7 +175,9 @@ def test_deleting_a_student_keeps_their_results(app_db):
     rows = ArchivedAttempt.query.order_by(ArchivedAttempt.original_id).all()
     assert [(r.student_name, r.reason) for r in rows] == [('sam', 'student deleted')] * 2
     page = teacher.get('/quiz/archive').data.decode()
-    assert page.count('account deleted') == 2 and '100%' in page and 'Not started' in page
+    # both attempts in one folder named after sam, marked as a deleted account
+    assert page.count('account deleted') == 1 and '100%' in page and 'Not started' in page
+    assert page.count('📁 sam</span>') == 1 and 'aria-label="2 archived"' in page
     view = teacher.get('/quiz/archive/{}'.format(rows[0].id)).data.decode()
     assert '100%' in view and "account was deleted" in view
     # can't be restored, even to a new account with the same name
@@ -282,3 +284,31 @@ def test_archive_through_the_api(app_db):
     aid = ArchivedAttempt.query.one().id
     assert c.delete('/api/v2/archive/{}'.format(aid), headers=T).status_code == 204
     assert ArchivedAttempt.query.count() == 0
+
+
+def test_the_archive_has_a_folder_for_each_student(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import CQuiz
+    teacher = login(app, 'teach')
+    vq, probs = setup_quiz(app, teacher, 'numeric')
+    # every student has a folder, even with nothing in it yet; teachers don't
+    page = teacher.get('/quiz/archive').data.decode()
+    assert '📁 kim</span>' in page and '📁 sam</span>' in page and '📁 teach</span>' not in page
+    assert page.index('📁 kim') < page.index('📁 sam') and 'Nothing archived for sam.' in page
+    assert 'id="folder-student-{}" data-box="student-{}" data-empty'.format(ids('sam'), ids('sam')) in page
+    # a new student gets one automatically
+    u = User(username='ava', is_admin=False)
+    u.set_password('pw-for-tests')
+    db.session.add(u)
+    db.session.commit()
+    assert '📁 ava</span>' in teacher.get('/quiz/archive').data.decode()
+    # a deleted attempt goes in its student's folder
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam'), ids('kim')]})
+    teacher.post('/quiz/delcq/{}'.format(CQuiz.query.filter_by(assignee=ids('sam')).one().id))
+    page = teacher.get('/quiz/archive').data.decode()
+    sam = page.split('📁 sam</span>')[1].split('</details>')[0]
+    kim = page.split('📁 kim</span>')[1].split('</details>')[0]
+    assert 'Week 1' in sam and 'aria-label="1 archived"' in sam
+    assert 'Week 1' not in kim and 'Nothing archived for kim.' in kim
+    assert 'id="folder-student-{}" data-box="student-{}">'.format(ids('sam'), ids('sam')) in page  # not empty now

@@ -581,6 +581,30 @@ def archived_attempts(subject='all'):
     return q.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()).all()
 
 
+def archive_folders():
+    """The Archive page: one folder per student, named after them, holding their archived
+    attempts (newest first). Every student account has a folder, even with nothing in it,
+    so a new student gets one automatically; a deleted account's attempts stay together
+    in a folder under the name it had. Sorted by name.
+    Returns [{'key', 'name', 'user' (None if the account is gone), 'items'}]."""
+    from app.user.models import User
+    users = {u.id: u for u in User.query.all()}
+    folders = {}
+    for u in users.values():
+        if not u.is_admin:
+            folders[('user', u.id)] = {'key': 'student-{}'.format(u.id), 'name': u.username, 'user': u, 'items': []}
+    for a in ArchivedAttempt.query.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()):
+        u = users.get(a.student_id) if a.student_id else None
+        if u is not None:
+            key = ('user', u.id)
+            folders.setdefault(key, {'key': 'student-{}'.format(u.id), 'name': u.username, 'user': u, 'items': []})
+        else:
+            key = ('gone', a.student_name.lower())
+            folders.setdefault(key, {'key': 'gone-{}'.format(a.id), 'name': a.student_name, 'user': None, 'items': []})
+        folders[key]['items'].append(a)
+    return sorted(folders.values(), key=lambda f: (f['name'].lower(), f['user'] is None))
+
+
 def archived_student(a):
     """The student's account, if it still exists."""
     from app.user.models import User

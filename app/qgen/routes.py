@@ -867,10 +867,9 @@ def attempt_gone(cidx):
 @pw_check
 @admin_only
 def archive():
-    choice = S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
-    rows = [(a, S.restore_blocker(a), S.archived_student(a) is not None) for a in S.archived_attempts(choice)]
-    return render_template('archive.html', rows=rows, choice=choice, choices=S.subject_choices('quizzes'),
-                           title='Archive')
+    folders = S.archive_folders()
+    blockers = {a.id: S.restore_blocker(a) for f in folders for a in f['items']}
+    return render_template('archive.html', folders=folders, blockers=blockers, total=len(blockers), title='Archive')
 
 #route to look at one archived attempt
 @qgen_bp.route('/quiz/archive/<int:aid>', methods=['GET'])

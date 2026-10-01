@@ -27,9 +27,10 @@
     try { localStorage.setItem(key, JSON.stringify(open)); } catch (e) { /* private window: not remembered */ }
   }
 
-  //first visit: everything open, so nothing seems missing
+  //first visit: everything open, so nothing seems missing (except empty folders, marked data-empty)
   var saved = load();
-  boxes.forEach(function (b) { b.open = saved ? saved.indexOf(b.dataset.box) !== -1 : true; });
+  function firstOpen(b) { return !('empty' in b.dataset); }
+  boxes.forEach(function (b) { b.open = saved ? saved.indexOf(b.dataset.box) !== -1 : firstOpen(b); });
   boxes.forEach(function (b) { b.addEventListener('toggle', store); });
 
   document.querySelectorAll('[data-boxes]').forEach(function (btn) {
@@ -90,7 +91,7 @@
     } else if (searching) {
       searching = false;
       var back = load();
-      boxes.forEach(function (b) { b.hidden = false; b.open = back ? back.indexOf(b.dataset.box) !== -1 : true; });
+      boxes.forEach(function (b) { b.hidden = false; b.open = back ? back.indexOf(b.dataset.box) !== -1 : firstOpen(b); });
     }
   });
 
