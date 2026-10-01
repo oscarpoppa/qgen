@@ -14,7 +14,7 @@
     <tbody>
     {% for item in ulst %}
       <tr>
-        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span>{% if item.logged_in %} <span class="badge badge-ok">logged in</span>{% endif %}</td>
+        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span>{% if item.online %} <span class="badge badge-ok" title="A page was open in the last 2 minutes">online</span>{% endif %}</td>
         <td data-label="Email">{% if item.email %}{{ item.email }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
         <td class="actions">

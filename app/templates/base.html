@@ -33,7 +33,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       {% set s = site() %}
-      <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">
+      <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
       {% if current_user.is_authenticated %}
         {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
@@ -50,6 +50,7 @@
               onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Review)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}</button>
       <nav class="nav" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
+          {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
           <a href="{{ url_for('user.mypage') }}">My quizzes</a>
           {% if current_user.is_admin %}
             <details class="menu">

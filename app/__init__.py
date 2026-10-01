@@ -85,7 +85,8 @@ def page_helpers():
             return 0
         return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
     from app.user.avatars import initials, color
-    return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
+    from app.home import home_url
+    return dict(csrf_token=generate_csrf, home_url=home_url, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)
 
@@ -105,6 +106,16 @@ def _close_expired_quizzes():
     except Exception as exc:  # never let the sweep break a page
         db.session.rollback()
         app.logger.error('closing expired quizzes failed: {}'.format(exc))
+
+#who's using the site, for the Dashboard (the API notes its users in app/api/auth.py)
+@app.before_request
+def _note_seen():
+    from flask import request
+    from flask_login import current_user
+    if request.endpoint == 'static' or not current_user.is_authenticated:
+        return
+    from app.user.models import note_seen
+    note_seen(current_user._get_current_object())
 
 @app.cli.command('close-expired')
 def close_expired_command():

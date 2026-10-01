@@ -8,6 +8,7 @@ from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
 from secrets import token_urlsafe
 from app.jsoncsrf import json_csrf_ok, form_csrf_ok, post_form_only
+from app.home import home_url
 
 # Decorator to kick user back to mypage if already logged in
 def logout_required(func):
@@ -15,7 +16,7 @@ def logout_required(func):
     def inner(*args, **kwargs):
         if current_user.is_authenticated:
             flash('You are already logged in.')
-            return redirect(url_for('user.mypage'))
+            return redirect(home_url())
         return func(*args, **kwargs)
     return inner
 
@@ -84,7 +85,7 @@ def login():
         next_page = request.args.get('next')
         if next_page:
             return redirect(next_page)
-        return redirect(url_for('user.mypage'))
+        return redirect(home_url())
     return render_template('login.html', title='Login Now!', form=form)
 
 # route to user registration action
@@ -122,7 +123,7 @@ def chpass():
         user.pw_man_reset = False
         user.save()
         flash('Password changed.', 'success')
-        return redirect(url_for('user.mypage'))
+        return redirect(home_url())
     return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
 
 # route to admin-initiated user password-reset action
@@ -265,7 +266,7 @@ def remove_avatar(uid):
     from . import avatars
     if not form_csrf_ok():
         flash('Your session expired. Please try again.', 'error')
-        return redirect(request.referrer or url_for('user.mypage'))
+        return redirect(request.referrer or home_url())
     if uid != current_user.id and not current_user.is_admin:
         flash('You can only remove your own picture.', 'error')
         return redirect(url_for('user.mypage'))

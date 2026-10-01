@@ -5,6 +5,6 @@
   <span class="big">⚠️</span>
   <h1>Something went wrong</h1>
   <p>Sorry, that didn't work. Please try again; if it keeps happening, tell your teacher or administrator.</p>
-  <a class="btn" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a>
+  <a class="btn" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a>
 </div>
 {% endblock %}

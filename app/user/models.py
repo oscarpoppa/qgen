@@ -1,6 +1,10 @@
 from . import db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
+from datetime import timedelta
+
+#"online": seen within this long
+ONLINE_WINDOW = timedelta(minutes=2)
 
 @login.user_loader
 def load_user(id):
@@ -17,6 +21,14 @@ class User(UserMixin, db.Model):
     logged_in = db.Column(db.Boolean, default=False)
     #file name of the profile picture's square thumbnail (in the static folder)
     avatar = db.Column(db.String(128))
+    #when this user last used the site (at most a minute out of date); see app/__init__.py
+    last_seen = db.Column(db.DateTime, nullable=True, index=True)
+
+    @property
+    def online(self):
+        """Active in the last couple of minutes (an open page checks in every 30 seconds)."""
+        from datetime import datetime
+        return bool(self.last_seen and datetime.now() - self.last_seen < ONLINE_WINDOW)
 
     def set_password(self, pswd):
         self.password_hash = generate_password_hash(pswd)
@@ -34,4 +46,21 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
+
+
+#last_seen is written at most this often per user
+SEEN_EVERY = timedelta(minutes=1)
+
+
+def note_seen(user, now=None):
+    """Record that this user is using the site (commits; never raises)."""
+    from datetime import datetime
+    now = now or datetime.now()
+    if user.last_seen and timedelta(0) <= now - user.last_seen < SEEN_EVERY:
+        return
+    try:
+        user.last_seen = now
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 

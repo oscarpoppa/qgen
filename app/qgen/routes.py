@@ -1,6 +1,7 @@
 from . import db, qgen_bp
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
+from app.home import home_url
 from .formfact import quiz_form_class, quiz_items, form_answers, transcript_html, transcript_item, fieldname_base
 from . import services as S
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
@@ -410,7 +411,7 @@ def qtake(cidx):
         return attempt_gone(cidx)
     if not cq.taker:
         flash('That quiz is not assigned to anyone.', 'error')
-        return redirect(url_for('user.mypage'))
+        return redirect(home_url())
     if current_user != cq.taker and not current_user.is_admin:
         flash('That quiz belongs to someone else.', 'error')
         return redirect(url_for('user.mypage'))
@@ -988,3 +989,35 @@ def purge_archived(aid):
     flash('Deleted {}\'s attempt at "{}" for good.'.format(name, title), 'success')
     current_app.logger.info('{} purged archived CQuiz ({}) of {} "{}"'.format(current_user.username, original, name, title))
     return redirect(url_for('qgen.archive'))
+
+
+# ---------------------------------------------------------------- the Dashboard
+
+def dashboard_now_data():
+    from . import dashboard as D
+    now = datetime.now()
+    return {'counts': D.counts(current_user, now), 'online': [u for u in D.online(now) if u.id != current_user.id],
+            'taking': D.taking_now(now),
+            'now': now, 'when': lambda d: D.when(d, now)}
+
+#route to the administrators' landing page: what needs doing and what's going on
+@qgen_bp.route('/dashboard', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard():
+    from . import dashboard as D
+    now = datetime.now()
+    queue, waiting = D.grading_queue()
+    return render_template('dashboard.html', title='Dashboard', queue=queue, waiting=waiting,
+                           handins=D.recent_handins(), to_check=D.students_to_check(now),
+                           progress=D.quiz_progress(now), messages=D.recent_messages(current_user),
+                           glance=D.site_glance(now), **dashboard_now_data())
+
+#route to the Dashboard's live part (counters and "Right now"), refreshed every minute
+@qgen_bp.route('/dashboard/now', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard_now():
+    return render_template('_dashboard_now.html', **dashboard_now_data())

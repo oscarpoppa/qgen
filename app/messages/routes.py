@@ -5,6 +5,7 @@ from app import db
 from app.user.models import User
 from app.jsoncsrf import post_form_only
 from app.user.routes import admin_only, pw_check
+from app.home import home_url
 from . import messages_bp
 from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, unread_for_student, unread_for_teachers,
@@ -103,12 +104,12 @@ def delete(message_id):
         if wants_json():
             return jsonify(ok=False, error=str(exc)), 403
         flash(str(exc), 'error')
-        return redirect(request.referrer or url_for('user.mypage'))
+        return redirect(request.referrer or home_url())
     current_app.logger.info('{} deleted {} message{}'.format(current_user.username, count, '' if count == 1 else 's'))
     if wants_json():
         return jsonify(ok=True, deleted=count)
     flash('Message deleted{}.'.format(' for all {} students who got it'.format(count) if count > 1 else ''), 'success')
-    return redirect(request.referrer or url_for('user.mypage'))
+    return redirect(request.referrer or home_url())
 
 #route to clear one notice (or, without an id, all of them) from your Notices panel
 @messages_bp.route('/messages/notices/clear', methods=['POST'])
@@ -123,10 +124,10 @@ def clear_notices(notice_id=None):
         if wants_json():
             return jsonify(ok=False, error=str(exc)), 404
         flash(str(exc), 'error')
-        return redirect(request.referrer or url_for('user.mypage'))
+        return redirect(request.referrer or home_url())
     if wants_json():
         return jsonify(ok=True, cleared=count)
-    return redirect(request.referrer or url_for('user.mypage'))
+    return redirect(request.referrer or home_url())
 
 
 # ---------------------------------------------------------------- students
