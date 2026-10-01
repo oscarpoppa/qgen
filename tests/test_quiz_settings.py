@@ -417,3 +417,45 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     # several attempts: one line each, ending in a small "Results" button
     assert home.count('class="attempt-row"') == 2 and home.count('btn-xs" href="/quiz/take/') == 2
     assert '>Results</a>' in home and '>View results</a>' not in home
+
+
+def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Badge', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    new_badge = 'class="badge badge-warn quiz-new">New</span>'
+    # on the box's title row, however often the page is opened, and shown once
+    for _ in range(2):
+        home = sam.get('/mypage').data.decode()
+        assert home.count(new_badge) == 1 and home.count('>New</span>') == 2  # the box's, and the attempt's status
+    sam.get('/quiz/take/{}'.format(cq.id))  # started
+    assert new_badge not in sam.get('/mypage').data.decode()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)  # a new attempt in the same box
+    assert sam.get('/mypage').data.decode().count(new_badge) == 1
+
+
+def test_quiz_box_says_how_many_attempts_it_holds(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    assert '<span class="quiz-count muted small">1 attempt</span>' in sam.get('/mypage').data.decode()
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    assert '<span class="quiz-count muted small">2 attempts</span>' in sam.get('/mypage').data.decode()

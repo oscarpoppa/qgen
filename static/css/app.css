@@ -637,6 +637,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
 .quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
 .quiz-card .quiz-flag { flex: 0 0 auto; }
+.quiz-card .quiz-new { flex: 0 0 auto; }
+.quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
 .quiz-card[open] .quiz-flag { display: none; }
 
 /* View pages: problems and quizzes as students see them */

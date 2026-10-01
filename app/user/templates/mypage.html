@@ -47,8 +47,13 @@
     <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-sig="{{ sig }}" open>
       <summary class="card-head">
         <span class="fold" aria-hidden="true"></span><h2>{{ g.vquiz.title }}</h2>
+        {# how many attempts are in this box #}
+        <span class="quiz-count muted small">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
+        {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
+        {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
+        {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span>
-        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% else %}{{ status(latest, g.best == latest) }}{% endif %}</span>
+        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, g.best == latest) }}{% endif %}</span>
       </summary>
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
@@ -113,6 +118,8 @@
     if (before.sig !== d.dataset.sig) {
       var had = (before.attempts || '').split(','), now = d.dataset.attempts.split(',');
       var added = now.some(function (a) { return had.indexOf(a) === -1; });
+      //a new attempt the student hasn't started already shows "New" on the box
+      if (added && d.querySelector('.quiz-new')) return;
       flag(d, added ? 'New' : 'Updated');
     }
   });
