@@ -550,6 +550,11 @@ def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
     assert db.session.get(VQuiz, vq.id).retake_rule == 'latest'
     assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
     assert 'differs' not in teacher.get('/quiz/listvq').data.decode()
+    # sam's own My quizzes and the teacher's Results by student count it the new way
+    sam = login(app, 'sam')
+    assert '(the latest attempt)' in sam.get('/mypage').data.decode()
+    results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    assert 'Just for sam' not in results and "The quiz's own rule" not in results
 
     # the same through the API
     from app.api.models import ApiToken
