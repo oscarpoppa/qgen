@@ -502,7 +502,7 @@ def del_cquiz(cqid):
 def ret_cquiz(cqid):
     cq0 = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     try:
-        cq = S.retake(cq0)
+        cq = S.retake(cq0, by=current_user)
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         current_app.logger.error(str(exc))

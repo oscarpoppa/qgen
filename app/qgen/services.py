@@ -320,8 +320,9 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
     notify_teachers(by.id if by else created[0].assignee, body, _link('qgen.list_vquiz', vqid=vquiz.id))
 
 
-def retake(cq):
-    """A fresh copy, with new values, of a quiz the student has taken."""
+def retake(cq, by=None):
+    """A fresh copy, with new values, of a quiz the student has taken. `by` is the
+    teacher giving it: the student and the teachers each get a notice."""
     if not (cq.completed or cq.needs_review):
         raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.username, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
@@ -329,6 +330,9 @@ def retake(cq):
     #answers released to this student stay released on the new attempt
     new.answers_released = cq.answers_released
     notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
+    #for the teachers; "Open" goes to that student's results
+    notify_teachers(cq.assignee, '{} gave {} a retake of "{}".'.format(by.username if by else 'A teacher', cq.taker.username, cq.vquiz.title),
+                    _link('qgen.list_user', uid=cq.assignee))
     db.session.commit()
     return new
 

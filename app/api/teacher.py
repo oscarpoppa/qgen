@@ -287,7 +287,7 @@ def delete_attempt(aid):
 @teacher
 def retake(aid):
     try:
-        new = S.retake(get_or_404(CQuiz, aid, 'That attempt'))
+        new = S.retake(get_or_404(CQuiz, aid, 'That attempt'), by=g.api_user)
     except S.ServiceError as exc:
         raise conflict(str(exc))
     return jsonify(attempt_summary(new)), 201

@@ -572,3 +572,35 @@ def test_all_messages_view_shows_an_announcement_once(app_db):
     sam_id = User.query.filter_by(username='sam').one().id
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'Only from sam' in box and 'From every student who got it' in box and 'to all 2 students' not in box
+
+
+def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Again', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '5'})
+    teacher.get('/messages/notices')  # read what's there so far
+    # the Retake button: a notice for the teachers, and still one for the student
+    assert teacher.post('/quiz/retcq/{}'.format(cq.id)).status_code == 302
+    poll = teacher.get('/messages/poll').get_json()
+    assert poll['notices'] == 1 and poll['notice_preview']['text'] == 'teach gave sam a retake of "Again".'
+    notice = Message.query.filter_by(body='teach gave sam a retake of "Again".').one()
+    assert not notice.from_teacher and notice.link == '/quiz/listuser/{}'.format(sam_id)
+    page = login(app, 'sam').get('/messages/notices').data.decode()
+    assert 'You can try &#34;Again&#34; again.' in page and 'gave sam a retake' not in page
+    # through the API too
+    from test_api import Api
+    new = CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first()
+    with app.test_request_context():
+        S.submit(new, {1: '4'})
+    Api(app, 'teach').post('/attempts/{}/retake'.format(new.id))
+    assert Message.query.filter_by(body='teach gave sam a retake of "Again".').count() == 2
