@@ -16,8 +16,6 @@ def app_db():
         db.drop_all()
         db.create_all()
         from app.user.models import User
-        from app.qgen.models import VPGroup, VQGroup
-        db.session.add_all([VPGroup(title='Archive'), VQGroup(title='Archive')])
         for name, admin in (('teach', True), ('sam', False), ('kim', False)):
             u = User(username=name, is_admin=admin)
             u.set_password('pw-for-tests')

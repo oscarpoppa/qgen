@@ -6,6 +6,16 @@
 
 <form method="post" class="card" style="max-width:640px" novalidate>
   {{ form.hidden_tag() }}
+  {# narrows the Quiz menu (needs the page's script, so it starts hidden) #}
+  <div class="field" id="assign-subject-field" hidden{% if quiz_chosen %} data-keep-quiz{% endif %}>
+    <label class="label" for="assign-subject">Subject</label>
+    <select id="assign-subject">
+      {% for value, label, count in choices %}
+        <option value="{{ value }}"{% if value == choice %} selected{% endif %}>{{ label }} ({{ count }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <script type="application/json" id="quiz-subjects">{{ quiz_subjects|tojson }}</script>
   {{ field(form.vquiz) }}
   <div class="field{% if form.users.errors %} has-error{% endif %}">
     <span class="label">Students</span>
@@ -35,6 +45,38 @@
 
 {% block scripts %}
 <script>
+/* The Subject menu rebuilds the Quiz menu with that subject's quizzes (hiding options
+ * doesn't work in Safari). A quiz already chosen that isn't in the subject (e.g. after
+ * a form error) switches the menu to All rather than quietly changing the quiz. */
+(function () {
+  var subject = document.getElementById('assign-subject');
+  var quiz = document.getElementById('vquiz');
+  if (!subject || !quiz) return;
+  var bySubject = JSON.parse(document.getElementById('quiz-subjects').textContent);
+  var all = Array.prototype.map.call(quiz.options, function (o) { return { value: o.value, text: o.text }; });
+  function fits(id, v) {
+    var subs = (bySubject[id] || []).map(String);
+    return v === 'all' || (v === 'none' ? subs.length === 0 : subs.indexOf(v) !== -1);
+  }
+  function rebuild() {
+    var v = subject.value, keep = quiz.value;
+    quiz.innerHTML = '';
+    all.forEach(function (o) {
+      if (fits(o.value, v)) quiz.add(new Option(o.text, o.value, false, o.value === keep));
+    });
+    if (!quiz.options.length) {
+      var none = new Option('No quizzes in this subject', '');
+      none.disabled = true;
+      quiz.add(none);
+      none.selected = true;
+    }
+  }
+  var field = document.getElementById('assign-subject-field');
+  if ('keepQuiz' in field.dataset && quiz.value && !fits(quiz.value, subject.value)) subject.value = 'all';
+  subject.addEventListener('change', rebuild);
+  field.hidden = false;
+  rebuild();
+})();
 (function () {
   var items = document.querySelectorAll('.choice-list li');
   document.querySelector('.filter-list').addEventListener('input', function () {

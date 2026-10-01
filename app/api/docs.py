@@ -51,7 +51,11 @@ ENDPOINTS = [
     ('GET', '/students', 'teacher', 'All students.', None),
     ('GET', '/students/{student_id}/results', 'teacher', "A student's quizzes, attempts and counted scores.", None),
     ('GET', '/attempts/{attempt_id}', 'teacher', 'One attempt in full: answers, correct answers, grading.', None),
-    ('DELETE', '/attempts/{attempt_id}', 'teacher', 'Delete an attempt and its answers.', None),
+    ('DELETE', '/attempts/{attempt_id}', 'teacher', 'Move an attempt to the archive (it can be viewed or restored later).', None),
+    ('GET', '/archive', 'teacher', 'Deleted attempts, newest first (?subject= a quiz subject id, or none).', None),
+    ('GET', '/archive/{archived_id}', 'teacher', 'One archived attempt, with its results page as HTML.', None),
+    ('POST', '/archive/{archived_id}/restore', 'teacher', 'Put it back as it was (not if the student, quiz or a problem is gone).', None),
+    ('DELETE', '/archive/{archived_id}', 'teacher', 'Delete an archived attempt for good.', None),
     ('POST', '/attempts/{attempt_id}/retake', 'teacher', 'Give the student a fresh copy with new values.', None),
     ('PUT', '/attempts/{attempt_id}/scoring-rule', 'teacher', "How this student's attempts combine (null = quiz's rule).", {'rule': 'average'}),
 

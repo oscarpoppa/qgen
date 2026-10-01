@@ -122,3 +122,35 @@
   });
   render();
 })();
+
+/* The Subject menu above the problem list shows one subject's problems. Rows are only
+ * hidden (with filter.js's qgenHideRow, so the filter box still works too): problems
+ * ticked in other subjects stay in the quiz, and a note says how many aren't shown. */
+(function () {
+  var menu = document.getElementById('builder-subject');
+  var table = document.getElementById('all-problems');
+  if (!menu || !table || !window.qgenHideRow) return;
+  var note = document.getElementById('hidden-ticked');
+  var rows = table.querySelectorAll('tbody tr');
+
+  function count() {
+    var n = 0;
+    rows.forEach(function (r) { if (r.hidden && r.querySelector('input.pick').checked) n++; });
+    note.hidden = !n;
+    note.textContent = n ? n + ' ticked problem' + (n === 1 ? ' isn’t' : 's aren’t') +
+      ' shown here (another subject, or the filter). ' + (n === 1 ? 'It’s' : 'They’re') + ' still in the quiz.' : '';
+  }
+  function apply() {
+    var v = menu.value;
+    rows.forEach(function (r) {
+      var subs = (r.dataset.subjects || '').split(' ').filter(Boolean);
+      var hide = v === 'all' ? false : v === 'none' ? subs.length > 0 : subs.indexOf(v) === -1;
+      window.qgenHideRow(r, 'subject', hide);
+    });
+    count();
+  }
+  menu.addEventListener('change', apply);
+  table.addEventListener('change', count);
+  document.addEventListener('qgen-filtered', count);
+  apply();
+})();

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Archived attempt</h1>
+  <div class="actions">
+    <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.archive') }}">Back to the archive</a>
+  </div>
+</div>
+<div class="alert alert-info archived-banner">
+  <div>Archived {{ a.archived_at.strftime('%b %d %Y, %I:%M %p') }}{% if a.archiver %} by {{ a.archiver.username }}{% endif %}
+    ({{ 'the student’s account was deleted' if a.reason == 'student deleted' else 'attempt deleted' }}).
+    {{ a.student_name }} doesn't see it. This is the results page as it was then, with every answer.</div>
+  <div class="btn-row" style="margin-top:8px">
+    {% if blocker %}
+      <span class="small">{{ blocker }}</span>
+    {% else %}
+      <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
+            data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Restore</button></form>
+    {% endif %}
+    <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
+          data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm">Delete for good</button></form>
+  </div>
+</div>
+{{ results }}
+{% endblock %}

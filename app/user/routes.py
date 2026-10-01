@@ -157,6 +157,9 @@ def deluser(uid):
         flash("I can't let you do that, {}".format(current_user.username))
         return redirect(url_for('user.userdet'))
     from . import avatars
+    from app.qgen import services as S
+    #their quiz attempts are kept in the archive
+    S.archive_student(usr, by=current_user)
     avatars.remove(usr, commit=False)
     usrquery.delete()
     db.session.commit()

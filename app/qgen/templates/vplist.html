@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
+{% from "_subjects.html" import subject_bar, file_bar, subject_labels with context %}
 
 {% block content %}
 <div class="page-head">
@@ -7,15 +8,19 @@
   <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
 </div>
 
+{% if not single %}{{ subject_bar('problems', choices, choice, subject, 'qgen.list_vprobs') }}{% endif %}
+
 {% if vplst %}
+  {% if not single %}{{ file_bar('problems', all_subjects, subject) }}{% endif %}
   {% if vplst|length > 5 %}<input type="search" class="filter" data-filter="#problems" placeholder="Filter problems…" aria-label="Filter problems">{% endif %}
   <div class="table-wrap stack">
     <table id="problems">
-      <thead><tr><th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <thead><tr>{% if not single %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in vplst %}
         <tr>
-          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong>
+          {% if not single %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title or 'Untitled' }}”"></td>{% endif %}
+          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong> {{ subject_labels(item.vpgroups) }}
             <div class="small muted">
               {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
@@ -29,16 +34,19 @@
           <td class="actions">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
-            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?') }}
+            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem')) }}
           </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+{% elif choice and choice != 'all' %}
+  <div class="card empty"><span class="big">📂</span>No problems {{ 'without a subject' if choice == 'none' else 'in “' ~ subject.title ~ '” yet' }}.
+    {% if subject %}Choose <em>All</em> above, tick some problems and use “Add to subject”.{% endif %}</div>
 {% else %}
   <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}

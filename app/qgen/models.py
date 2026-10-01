@@ -2,6 +2,7 @@ from . import db
 from app.user.models import User
 from datetime import datetime, timedelta
 import json
+from sqlalchemy.dialects import mysql
 
 #add save method
 class SaveMixin:
@@ -23,19 +24,23 @@ vproblem_vquiz = db.Table('vproblem_vquiz',
     db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
     db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')))
     
-# for many-to-many between vprobs and vpgroups
+# which problems are in which problem subjects (a problem can be in several)
 vproblem_vpgroup = db.Table('vproblem_vpgroup',
-    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
-    db.Column('vpgroup_id', db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE')))
+    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE'), nullable=False),
+    db.Column('vpgroup_id', db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('vproblem_id', 'vpgroup_id', name='uq_vproblem_vpgroup'))
 
-# for many-to-many between vquizzes and vqgroups
+# which quizzes are in which quiz subjects
 vquiz_vqgroup = db.Table('vquiz_vqgroup',
-    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')),
-    db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE')))
+    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE'), nullable=False),
+    db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('vquiz_id', 'vqgroup_id', name='uq_vquiz_vqgroup'))
 
-#for grouping of virtual problems
+#a teacher's subject for sorting problems (shown as "Subjects"; not the "2 of these 6"
+#question groups inside a quiz)
 class VPGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vpgroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_vpgroup_title'),)
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
@@ -45,9 +50,10 @@ class VPGroup(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<VProblem Group: {}>'.format(self.title)
 
-#for grouping of virtual quizzes
+#a teacher's subject for sorting quizzes
 class VQGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vqgroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_vqgroup_title'),)
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
@@ -308,3 +314,44 @@ def attempts_by_quiz(cquizzes):
                     'overridden': bool(override)})
     #newest activity first
     return sorted(out, key=lambda g: -g['attempts'][-1].id)
+
+
+#a long text column: MySQL's plain TEXT stops at 64 KB
+LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
+
+
+#a student's attempt the teacher deleted (or whose account was deleted), kept so it can
+#be looked at, restored or deleted for good later. The attempt is moved here whole, so
+#the rest of the site never has to tell archived attempts from live ones.
+class ArchivedAttempt(db.Model):
+    __tablename__ = 'archived_attempt'
+    id = db.Column(db.Integer, primary_key=True)
+    #the attempt's id while it was live (restore puts it back under the same one)
+    original_id = db.Column(db.Integer, nullable=False)
+    vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id', ondelete='SET NULL'), index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), index=True)
+    #kept as they were, so the record still reads right after a quiz or student is deleted
+    student_name = db.Column(db.String(64), nullable=False)
+    quiz_title = db.Column(db.String(64), nullable=False)
+    score = db.Column(db.Float)
+    completed = db.Column(db.Boolean, default=False, nullable=False)
+    needs_review = db.Column(db.Boolean, default=False, nullable=False)
+    startdate = db.Column(db.DateTime)
+    compdate = db.Column(db.DateTime)
+    assigned = db.Column(db.DateTime)
+    archived_at = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
+    #",3,7," - the problems it used, so deleting a problem can say it is used here
+    problem_ids = db.Column(db.Text, nullable=False, default=',')
+    #'deleted' (the attempt) or 'student deleted' (the account)
+    reason = db.Column(db.String(16), default='deleted', nullable=False)
+    #the results page as it looked when archived
+    results_html = db.deferred(db.Column(LongText, nullable=False))
+    #JSON of the attempt and its questions, for restoring
+    data = db.deferred(db.Column(LongText, nullable=False))
+
+    vquiz = db.relationship('VQuiz', lazy=True)
+    archiver = db.relationship('User', foreign_keys=[archived_by], lazy=True)
+
+    def __repr__(self):
+        return '<Archived attempt {}: {} : {}>'.format(self.original_id, self.student_name, self.quiz_title)

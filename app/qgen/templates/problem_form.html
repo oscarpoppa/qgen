@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field, check, errors as error_box, image_drop, tip %}
+{% from "_subjects.html" import subject_checks with context %}
 
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
 {% set tip_ai %}<p>Describe it the way you'd tell a colleague. Claude fills in the form below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
@@ -180,6 +181,7 @@
   <div class="card">
     <div class="card-head"><span class="step-num" aria-hidden="true">5</span><h2>Check and save</h2></div>
     {{ check(form.calculator_ok, tip_body=tip_calc) }}
+    {{ subject_checks('problems', all_subjects, ticked_subjects, 'qgen.list_vprobs') }}
     <p class="muted small">Tip: press <b>Show me 3 examples</b> first to see three students' versions. Saving checks every possible combination of values for problems like dividing by zero.</p>
     <div class="btn-row">
       {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}

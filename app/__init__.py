@@ -123,9 +123,6 @@ def init_db_command():
         print('This database already has tables; use "flask db upgrade" to bring it up to date.')
         return
     db.create_all()
-    from app.qgen.models import VPGroup, VQGroup
-    db.session.add_all([VPGroup(title='Archive'), VQGroup(title='Archive')])
-    db.session.commit()
     stamp()
     print('Database ready. Next: flask create-admin')
 

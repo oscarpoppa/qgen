@@ -102,10 +102,25 @@ def results_json(cq, show_answers):
 
 # ---------------------------------------------------------------- teacher side
 
+def subjects_json(groups):
+    return [{'id': g.id, 'name': g.title} for g in sorted(groups, key=lambda g: (g.title or '').lower())]
+
+
+def archived_json(a):
+    """An attempt in the archive (its results page is only in the single-item answer)."""
+    return {'id': a.id, 'attempt_id': a.original_id, 'quiz_id': a.vquiz_id, 'quiz_title': a.quiz_title,
+            'student_id': a.student_id, 'student_name': a.student_name,
+            'student_account_deleted': S.archived_student(a) is None,
+            'score': a.score, 'completed': a.completed, 'needs_review': a.needs_review,
+            'started': iso(a.startdate), 'submitted': iso(a.compdate), 'assigned': iso(a.assigned),
+            'archived': iso(a.archived_at), 'archived_by': a.archiver.username if a.archiver else None,
+            'reason': a.reason, 'restore_blocked': S.restore_blocker(a)}
+
+
 def problem_json(vp, full=False):
     out = {'id': vp.id, 'title': vp.title, 'type': vp.qtype, 'question': vp.raw_prob,
            'calculator_ok': bool(vp.calculator_ok), 'created': iso(vp.create_date),
-           'used_in_quizzes': [q.id for q in vp.vquizzes]}
+           'used_in_quizzes': [q.id for q in vp.vquizzes], 'subjects': subjects_json(vp.vpgroups)}
     if full:
         out['answer'] = vp.raw_ansr
         out['options'] = vp.options
@@ -118,7 +133,7 @@ def vquiz_json(vq, full=False):
            'calculator_ok': bool(vq.calculator_ok), 'shuffle_order': bool(vq.shuffle_order),
            'retake_rule': vq.retake_rule, 'hide_answers': bool(vq.hide_answers),
            'answers_released': bool(vq.answers_released), 'image_url': static_url(vq.image),
-           'times_assigned': len(vq.cquizzes)}
+           'times_assigned': len(vq.cquizzes), 'subjects': subjects_json(vq.vqgroups)}
     if full:
         out['problems'] = lay
         out['image'] = vq.image

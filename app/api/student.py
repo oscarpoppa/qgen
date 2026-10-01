@@ -5,7 +5,7 @@ from app import db
 from app.messages import services as M
 from app.messages.routes import student_panel
 from app.qgen import services as S
-from app.qgen.models import CQuiz
+from app.qgen.models import CQuiz, ArchivedAttempt
 from app.qgen.qtypes import get_qtype
 from . import api_bp
 from .auth import token_required, body
@@ -17,6 +17,8 @@ MAX_ANSWER = 20000
 
 def my_attempt(attempt_id):
     cq = db.session.get(CQuiz, attempt_id)
+    if not cq and ArchivedAttempt.query.filter_by(original_id=attempt_id, student_id=g.api_user.id).first():
+        raise ApiError(410, 'removed', 'Your teacher has removed this quiz attempt.')
     if not cq or cq.assignee != g.api_user.id:
         raise not_found('That quiz')
     return cq

@@ -1,18 +1,18 @@
 """What a teacher app needs: problems, quizzes, assigning, results, grading, messages."""
 from datetime import datetime
 
-from flask import g, jsonify
+from flask import g, jsonify, request
 
 from app import db
 from app.messages import services as M
 from app.qgen import services as S
-from app.qgen.models import CQuiz, VQuiz, VProblem, RETAKE_RULES
+from app.qgen.models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
 from app.qgen.qtypes import REGISTRY, PRECISIONS
 from app.user.models import User
 from . import api_bp
 from .auth import token_required, body
 from .errors import ApiError, bad_request, not_found, conflict, invalid
-from .serialize import (problem_json, vquiz_json, teacher_attempt_json, attempt_summary, student_results_json,
+from .serialize import (archived_json, problem_json, vquiz_json, teacher_attempt_json, attempt_summary, student_results_json,
                         user_json, message_json)
 
 teacher = token_required(teacher=True)
@@ -279,7 +279,38 @@ def get_attempt(aid):
 @api_bp.route('/attempts/<int:aid>', methods=['DELETE'])
 @teacher
 def delete_attempt(aid):
-    S.delete_attempt(get_or_404(CQuiz, aid, 'That attempt'))
+    """Moves the attempt to the archive (see /archive)."""
+    S.delete_attempt(get_or_404(CQuiz, aid, 'That attempt'), by=g.api_user)
+    return '', 204
+
+
+@api_bp.route('/archive', methods=['GET'])
+@teacher
+def archive():
+    return jsonify(archive=[archived_json(a) for a in S.archived_attempts(request.args.get('subject', 'all'))])
+
+
+@api_bp.route('/archive/<int:aid>', methods=['GET'])
+@teacher
+def get_archived(aid):
+    a = get_or_404(ArchivedAttempt, aid, 'That archived attempt')
+    return jsonify(dict(archived_json(a), results_html=a.results_html))
+
+
+@api_bp.route('/archive/<int:aid>/restore', methods=['POST'])
+@teacher
+def restore_archived(aid):
+    try:
+        cq = S.restore_attempt(get_or_404(ArchivedAttempt, aid, 'That archived attempt'))
+    except S.ServiceError as exc:
+        raise invalid([str(exc)])
+    return jsonify(attempt=teacher_attempt_json(cq))
+
+
+@api_bp.route('/archive/<int:aid>', methods=['DELETE'])
+@teacher
+def purge_archived(aid):
+    S.purge_archived(get_or_404(ArchivedAttempt, aid, 'That archived attempt'))
     return '', 204
 
 

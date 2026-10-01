@@ -4,11 +4,12 @@ from app.user.routes import admin_only, pw_check
 from .formfact import quiz_form_class, quiz_items, form_answers, transcript_html, transcript_item, fieldname_base
 from . import services as S
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
-from .models import CQuiz, VQuiz, VProblem
+from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
-from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
+from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify, session
+from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
 from datetime import datetime, timedelta
@@ -20,6 +21,39 @@ def parse_vplist(text):
     return layout.parse(text)
 
 
+# ---------------------------------------------------------------- subjects
+
+LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes'}
+
+
+def remembered_subject(kind):
+    """The subject a list opens on: ?subject= (which is then remembered for this
+    teacher), or the one they last had open; 'all' if that one was deleted."""
+    key = 'subject_' + kind
+    if 'subject' in request.args:
+        session[key] = S.valid_subject_choice(kind, request.args['subject'])
+    return S.valid_subject_choice(kind, session.get(key, 'all'))
+
+
+def ticked_subjects(item, rel):
+    """The subject ids ticked on an edit form (as sent, or as saved)."""
+    if request.method == 'POST':
+        return {int(i) for i in request.form.getlist('subjects') if i.isdigit()}
+    return {g.id for g in getattr(item, rel)} if item is not None else set()
+
+
+def save_subjects(kind, item):
+    """File the item as ticked on its form (only forms that show the Subjects row)."""
+    if request.form.get('subjects_shown'):
+        S.set_subjects(kind, item, request.form.getlist('subjects'))
+        db.session.commit()
+
+
+def subject_page_data(kind, item=None, rel=None):
+    return {'subject_kind': kind, 'all_subjects': S.subjects(kind),
+            'ticked_subjects': ticked_subjects(item, rel) if rel else set()}
+
+
 # ---------------------------------------------------------------- problems
 
 def problem_page(form, vp, errors, title):
@@ -28,7 +62,8 @@ def problem_page(form, vp, errors, title):
     blank.values.append_entry()
     blank.images.append_entry()
     return render_template('problem_form.html', form=form, vp=vp, errors=errors, title=title, blank=blank,
-                           kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')))
+                           kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
+                           **subject_page_data('problems', vp, 'vpgroups'))
 
 def save_from_form(form, vp):
     return S.save_problem(vp, form.qtype.data, form.title.data, form.question.data, form.answer.data,
@@ -46,6 +81,7 @@ def mkvprob():
         nuprob = VProblem(author_id=current_user.id)
         errors = save_from_form(form, nuprob)
         if not errors:
+            save_subjects('problems', nuprob)
             flash('Saved problem "{}".'.format(nuprob.title), 'success')
             current_app.logger.info('{} created VProblem: ({}) "{}"'.format(current_user.username, nuprob.id, nuprob.title))
             return redirect(url_for('qgen.list_vprobs'))
@@ -81,6 +117,7 @@ def edvprob(vpid):
     elif form.validate_on_submit():
         errors = save_from_form(form, vpobj)
         if not errors:
+            save_subjects('problems', vpobj)
             flash('Updated problem "{}". Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
             return redirect(url_for('qgen.list_vprobs'))
@@ -104,8 +141,12 @@ def preview_vprob():
 @pw_check
 @admin_only
 def list_vprobs():
-    vplst = VProblem.query.order_by(VProblem.id.desc()).all()
-    return render_template('vplist.html', vplst=vplst, qtypes=REGISTRY, title='Problems')
+    choice = remembered_subject('problems')
+    vplst = S.filter_by_subject(VProblem.query, 'problems', choice).order_by(VProblem.id.desc()).all()
+    return render_template('vplist.html', vplst=vplst, qtypes=REGISTRY, title='Problems', kind='problems',
+                           choice=choice, choices=S.subject_choices('problems'), all_subjects=S.subjects('problems'),
+                           subject=S.get_subject('problems', choice), archived=S.archived_counts()[1],
+                           archive_warning=S.archive_warning)
 
 #route to list a specific virtual problem
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
@@ -114,7 +155,8 @@ def list_vprobs():
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
-    return render_template('vplist.html', vplst=[vplst], qtypes=REGISTRY, title='Problem {}'.format(vpid))
+    return render_template('vplist.html', vplst=[vplst], qtypes=REGISTRY, title='Problem {}'.format(vpid), kind='problems',
+                           single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual problem
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['POST'])
@@ -140,7 +182,9 @@ def del_vprob(vpid):
 def quiz_page(form, title, vq=None):
     probs = VProblem.query.order_by(VProblem.id.desc()).all()
     return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq,
-                           ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')))
+                           ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
+                           problem_choices=S.subject_choices('problems'), problem_choice=remembered_subject('problems'),
+                           **subject_page_data('quizzes', vq, 'vqgroups'))
 
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
@@ -160,6 +204,7 @@ def mkvquiz():
     if form.validate_on_submit():
         nq = VQuiz()
         if not save_quiz_from_form(form, nq):
+            save_subjects('quizzes', nq)
             count = layout.question_count(layout.parse(nq.vpid_lst))
             flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
@@ -191,6 +236,7 @@ def edvquiz(vqid):
         form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
     elif form.validate_on_submit():
         if not save_quiz_from_form(form, vqobj):
+            save_subjects('quizzes', vqobj)
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
             return redirect(url_for('qgen.list_vquizzes'))
@@ -202,8 +248,12 @@ def edvquiz(vqid):
 @pw_check
 @admin_only
 def list_vquizzes():
-    vqlst = VQuiz.query.order_by(VQuiz.id.desc()).all()
-    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', layout=layout)
+    choice = remembered_subject('quizzes')
+    vqlst = S.filter_by_subject(VQuiz.query, 'quizzes', choice).order_by(VQuiz.id.desc()).all()
+    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', layout=layout, kind='quizzes',
+                           choice=choice, choices=S.subject_choices('quizzes'), all_subjects=S.subjects('quizzes'),
+                           subject=S.get_subject('quizzes', choice), archived=S.archived_counts()[0],
+                           archive_warning=S.archive_warning)
 
 #route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -212,7 +262,8 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout)
+    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout, kind='quizzes',
+                           single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['POST'])
@@ -288,8 +339,11 @@ def set_retake_rule(cqid):
 @admin_only
 def assign():
     form = AssignForm()
-    form.vquiz.choices = [(q.id, q.title) for q in VQuiz.query.order_by(VQuiz.title).all()]
+    quizzes = VQuiz.query.order_by(VQuiz.title).all()
+    form.vquiz.choices = [(q.id, q.title) for q in quizzes]
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
+    #a link for one quiz opens on All, so that quiz is in the list
+    choice = 'all' if request.args.get('vq', '').isdigit() else remembered_subject('quizzes')
     if request.method == 'GET' and request.args.get('vq', '').isdigit():
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
@@ -305,7 +359,12 @@ def assign():
         if created:
             flash('Assigned "{}" to {}.'.format(vquiz.title, ', '.join(cq.taker.username for cq in created)), 'success')
         return redirect(url_for('qgen.assign'))
-    return render_template('assign.html', title='Assign a quiz', form=form)
+    #for the Subject menu, which narrows the Quiz menu in the page
+    quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
+    #a quiz really chosen (from a link, or sent back after a form error) is kept on show
+    quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
+    return render_template('assign.html', title='Assign a quiz', form=form, choices=S.subject_choices('quizzes'),
+                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen)
 
 
 # ---------------------------------------------------------------- taking
@@ -328,7 +387,9 @@ def prefill(cq, form):
 @login_required
 @pw_check
 def qtake(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
+    cq = CQuiz.query.filter_by(id=cidx).first()
+    if cq is None:
+        return attempt_gone(cidx)
     if not cq.taker:
         flash('That quiz is not assigned to anyone.', 'error')
         return redirect(url_for('user.mypage'))
@@ -373,7 +434,11 @@ def qtake(cidx):
 @login_required
 @pw_check
 def qsave(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404()
+    cq = CQuiz.query.filter_by(id=cidx).first()
+    if cq is None:
+        if archived_for(cidx):
+            return jsonify(ok=False, error='Your teacher has removed this quiz attempt.'), 410
+        abort(404)
     if current_user != cq.taker:
         return jsonify(ok=False, error='Not your quiz.'), 403
     if not json_csrf_ok():
@@ -488,9 +553,10 @@ def list_cquiz(cqid):
 def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.username
-    S.delete_attempt(cq)
-    flash('Deleted {}\'s "{}".'.format(owner, title), 'success')
-    current_app.logger.info("{} deleted {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
+    archived = S.delete_attempt(cq, by=current_user)
+    flash(Markup('Moved {}\'s attempt at "{}" to the archive. <a href="{}">View it</a>').format(
+        owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
+    current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(request.referrer or url_for('qgen.list_users'))
 
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
@@ -674,3 +740,164 @@ def check_vquiz():
     others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
     return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
                                     lay=lay, shuffle_order=form.shuffle_order.data))
+
+
+# ---------------------------------------------------------------- subjects
+
+def subject_list(kind, **values):
+    if kind not in LIST_PAGES:
+        abort(404)
+    return redirect(url_for(LIST_PAGES[kind], **values))
+
+def subject_or_404(kind, sid):
+    if kind not in LIST_PAGES:
+        abort(404)
+    return S.get_subject(kind, sid) or abort(404)
+
+#route to make a new problem (or quiz) subject
+@qgen_bp.route('/quiz/subjects/<kind>/new', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def new_subject(kind):
+    if kind not in LIST_PAGES:
+        abort(404)
+    try:
+        subject = S.create_subject(kind, request.form.get('name'))
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return subject_list(kind)
+    flash('Made the subject "{}". Tick {} below and choose "Add to subject" to put them in it.'.format(subject.title, kind), 'success')
+    current_app.logger.info('{} made {} subject ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
+    return subject_list(kind, subject='all')
+
+#route to rename a subject
+@qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def rename_subject(kind, sid):
+    subject = subject_or_404(kind, sid)
+    try:
+        S.rename_subject(kind, subject, request.form.get('name'))
+        flash('Renamed the subject to "{}".'.format(subject.title), 'success')
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+    return subject_list(kind, subject=sid)
+
+#route to delete a subject (the problems or quizzes in it are kept)
+@qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_subject(kind, sid):
+    subject = subject_or_404(kind, sid)
+    name = subject.title
+    S.delete_subject(subject)
+    flash('Deleted the subject "{}". Its {} are kept.'.format(name, kind), 'success')
+    current_app.logger.info('{} deleted {} subject ({}) "{}"'.format(current_user.username, kind, sid, name))
+    return subject_list(kind, subject='all')
+
+#route to put the ticked problems (or quizzes) in a subject, or take them out of it
+@qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def file_subject(kind):
+    if kind not in LIST_PAGES:
+        abort(404)
+    #"Add to subject" sends the subject chosen in its menu; "Remove from this subject"
+    #sends the open one as remove_from
+    add = not request.form.get('remove_from')
+    subject = S.get_subject(kind, request.form.get('subject') if add else request.form.get('remove_from'))
+    items = request.form.getlist('items')
+    if subject is None:
+        flash('Choose a subject first.', 'error')
+    elif not items:
+        flash('Tick at least one first.', 'error')
+    else:
+        count = S.file_items(kind, items, subject, add=add)
+        what = kind if count != 1 else kind[:-1] if kind == 'problems' else 'quiz'
+        flash('{} {} {} "{}".'.format(count, what, 'added to' if add else 'taken out of', subject.title), 'success')
+    return subject_list(kind)
+
+
+# ---------------------------------------------------------------- the archive
+
+def archived_for(cidx):
+    """The archived copy of a live attempt's number, if there is one."""
+    try:
+        return ArchivedAttempt.query.filter_by(original_id=int(cidx)).order_by(ArchivedAttempt.id.desc()).first()
+    except (TypeError, ValueError):
+        return None
+
+def attempt_gone(cidx):
+    """An attempt that isn't there: archived (tell the student plainly; teachers see the
+    archived copy), or never existed."""
+    a = archived_for(cidx)
+    if a is None:
+        abort(404)
+    if current_user.is_admin:
+        return redirect(url_for('qgen.archived', aid=a.id))
+    if a.student_id != current_user.id:
+        abort(404)
+    flash('Your teacher has removed this quiz attempt.', 'info')
+    return redirect(url_for('user.mypage'))
+
+#route to the archive of deleted attempts
+@qgen_bp.route('/quiz/archive', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def archive():
+    choice = S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
+    rows = [(a, S.restore_blocker(a), S.archived_student(a) is not None) for a in S.archived_attempts(choice)]
+    return render_template('archive.html', rows=rows, choice=choice, choices=S.subject_choices('quizzes'),
+                           title='Archive')
+
+#route to look at one archived attempt
+@qgen_bp.route('/quiz/archive/<int:aid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    return render_template('archived.html', a=a, blocker=S.restore_blocker(a),
+                           student=S.archived_student(a), results=Markup(a.results_html),
+                           title='Archived: {}'.format(a.quiz_title))
+
+#route to put an archived attempt back
+@qgen_bp.route('/quiz/archive/<int:aid>/restore', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def restore_archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    name, title = a.student_name, a.quiz_title
+    try:
+        cq = S.restore_attempt(a)
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('qgen.archived', aid=aid))
+    flash('Restored {}\'s attempt at "{}"; {} can see it again.'.format(name, title, name), 'success')
+    current_app.logger.info('{} restored {}\'s CQuiz ({}) "{}"'.format(current_user.username, name, cq.id, title))
+    return redirect(url_for('qgen.list_user', uid=cq.assignee))
+
+#route to delete an archived attempt for good
+@qgen_bp.route('/quiz/archive/<int:aid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def purge_archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    name, title, original = a.student_name, a.quiz_title, a.original_id
+    S.purge_archived(a)
+    flash('Deleted {}\'s attempt at "{}" for good.'.format(name, title), 'success')
+    current_app.logger.info('{} purged archived CQuiz ({}) of {} "{}"'.format(current_user.username, original, name, title))
+    return redirect(url_for('qgen.archive'))

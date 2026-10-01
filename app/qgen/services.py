@@ -11,13 +11,15 @@ import random
 from datetime import datetime, timedelta
 
 from flask import url_for
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.messages.models import notify, notify_teachers
 from . import layout
-from .formfact import record_answers, finalize
+from .formfact import record_answers, finalize, build_transcript, transcript_html, TRANSCRIPT_V2
 from .friendly import FriendlyError
-from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, RETAKE_RULES
+from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, RETAKE_RULES
 from .qtypes import get_qtype
 
 #answers are still accepted this long after the deadline (slow connections, the auto-submit)
@@ -28,10 +30,142 @@ class ServiceError(ValueError):
     """Something that was asked for can't be done, worded for people to read."""
 
 
-def archive(obj, group_cls, rel):
-    group = group_cls.query.filter_by(title='Archive').first()
-    if group:
-        getattr(obj, rel).append(group)
+# ---------------------------------------------------------------- subjects
+
+#a teacher's own subjects for sorting problems and quizzes (separate lists; an item can
+#be in several, or none). Stored in the old VPGroup / VQGroup tables. Not the "2 of
+#these 6" question groups inside a quiz (layout.py).
+SUBJECT_KINDS = {'problems': (VPGroup, VProblem, 'vpgroups', 'vproblems'),
+                 'quizzes': (VQGroup, VQuiz, 'vqgroups', 'vquizzes')}
+SUBJECT_NAME_MAX = 64
+
+
+def subject_kind(kind):
+    if kind not in SUBJECT_KINDS:
+        raise ServiceError('Unknown kind of subject "{}".'.format(kind))
+    return SUBJECT_KINDS[kind]
+
+
+def subjects(kind):
+    """The subjects of one kind, by name."""
+    group_cls = subject_kind(kind)[0]
+    return sorted(group_cls.query.all(), key=lambda g: (g.title or '').lower())
+
+
+def _subject_name(kind, name, subject=None):
+    name = ' '.join((name or '').split())
+    if not name:
+        raise ServiceError('Please give the subject a name.')
+    if len(name) > SUBJECT_NAME_MAX:
+        raise ServiceError('Subject names can be at most {} characters.'.format(SUBJECT_NAME_MAX))
+    for other in subjects(kind):
+        if other is not subject and (other.title or '').lower() == name.lower():
+            raise ServiceError('There\'s already a subject called "{}".'.format(other.title))
+    return name
+
+
+def create_subject(kind, name):
+    group_cls = subject_kind(kind)[0]
+    subject = group_cls(title=_subject_name(kind, name))
+    db.session.add(subject)
+    _commit_subject()
+    return subject
+
+
+def rename_subject(kind, subject, name):
+    subject.title = _subject_name(kind, name, subject)
+    _commit_subject()
+
+
+def _commit_subject():
+    try:
+        db.session.commit()
+    except IntegrityError:
+        #another teacher made one with the same name a moment ago
+        db.session.rollback()
+        raise ServiceError('There\'s already a subject with that name.')
+
+
+def delete_subject(subject):
+    """Delete a subject; the problems or quizzes in it are kept."""
+    db.session.delete(subject)
+    db.session.commit()
+
+
+def get_subject(kind, subject_id):
+    try:
+        return db.session.get(subject_kind(kind)[0], int(subject_id))
+    except (TypeError, ValueError):
+        return None
+
+
+def _ids(values):
+    out = set()
+    for v in values or []:
+        try:
+            out.add(int(v))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def set_subjects(kind, item, ids):
+    """Put an item in exactly these subjects (from its edit form; committed by the caller).
+    Unknown ids are ignored."""
+    group_cls, _item_cls, rel, _back = subject_kind(kind)
+    wanted = _ids(ids)
+    setattr(item, rel, group_cls.query.filter(group_cls.id.in_(wanted)).all() if wanted else [])
+
+
+def file_items(kind, item_ids, subject, add=True):
+    """Add several problems (or quizzes) to a subject, or take them out of it. Items
+    already (or not) in it are skipped. Returns how many changed."""
+    _group_cls, item_cls, rel, _back = subject_kind(kind)
+    ids = _ids(item_ids)
+    changed = 0
+    for item in item_cls.query.filter(item_cls.id.in_(ids)).all() if ids else []:
+        current = getattr(item, rel)
+        if add and subject not in current:
+            current.append(subject)
+            changed += 1
+        elif not add and subject in current:
+            current.remove(subject)
+            changed += 1
+    try:
+        db.session.commit()
+    except IntegrityError:
+        #another teacher filed the same item at the same moment: it's in there either way
+        db.session.rollback()
+    return changed
+
+
+def subject_choices(kind):
+    """The subject menu: [(value, label, count)] for All, No subject and each subject."""
+    _group_cls, item_cls, rel, back = subject_kind(kind)
+    out = [('all', 'All', item_cls.query.count()),
+           ('none', 'No subject', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
+    for g in subjects(kind):
+        out.append((str(g.id), g.title, len(getattr(g, back))))
+    return out
+
+
+def valid_subject_choice(kind, choice):
+    """'all', 'none' or an existing subject's id (as text); anything else is 'all'."""
+    if choice in ('all', 'none'):
+        return choice
+    subject = get_subject(kind, choice)
+    return str(subject.id) if subject else 'all'
+
+
+def filter_by_subject(query, kind, choice):
+    """Narrow a problem (or quiz) query to 'all', 'none' or a subject id."""
+    group_cls, item_cls, rel, _back = subject_kind(kind)
+    choice = valid_subject_choice(kind, choice)
+    if choice == 'none':
+        return query.filter(~getattr(item_cls, rel).any())
+    if choice == 'all':
+        return query
+    return query.filter(getattr(item_cls, rel).any(group_cls.id == int(choice)))
 
 
 # ---------------------------------------------------------------- problems
@@ -61,8 +195,6 @@ def save_problem(vp, qtype, title, question, answer, options, calculator_ok=Fals
     images = options.get('images') or []
     vp.image = images[0]['file'] if images else None
     vp.calculator_ok = bool(calculator_ok)
-    if new:
-        archive(vp, VPGroup, 'vpgroups')
     vp.save()
     return []
 
@@ -154,8 +286,6 @@ def save_vquiz(vq, title, problems, author_id=None, **settings):
             setattr(vq, key, settings[key])
     vq.vpid_lst = layout.dumps(lay)
     vq.vproblems = [db.session.get(VProblem, a) for a in set(layout.all_ids(lay))]
-    if new:
-        archive(vq, VQGroup, 'vqgroups')
     vq.save()
     return []
 
@@ -339,13 +469,175 @@ def retake(cq, by=None):
     return new
 
 
-def delete_attempt(cq):
-    """Delete one attempt (and notices pointing to it). The student's last attempt at a
-    quiz takes the quiz's box off their My quizzes."""
+def _erase_attempt(cq):
+    """Remove one attempt from the live tables (and notices pointing to it); not committed."""
     _forget_notices(_attempt_links(cq))
     CProblem.query.filter_by(cquiz_id=cq.id).delete()
     db.session.delete(cq)
+
+
+def delete_attempt(cq, by=None, reason='deleted'):
+    """Take one attempt away from the student and keep it in the Archive, where a teacher
+    can look at it, restore it or delete it for good. The student's last attempt at a
+    quiz takes the quiz's box off their My quizzes."""
+    archived = archive_attempt(cq, by, reason)
     db.session.commit()
+    return archived
+
+
+# ---------------------------------------------------------------- the archive
+
+ARCHIVE_FORMAT = 1
+
+
+def _plain(value):
+    if isinstance(value, datetime):
+        return {'datetime': value.isoformat()}
+    return value
+
+
+def _row_data(obj):
+    """Every stored field of a row, by attribute name, as JSON-safe values."""
+    return {attr.key: _plain(getattr(obj, attr.key)) for attr in sa_inspect(obj).mapper.column_attrs}
+
+
+def _fill_row(obj, data):
+    """Set the fields this version of the app knows; anything else is skipped, and
+    fields added later keep their defaults."""
+    for attr in sa_inspect(type(obj)).column_attrs:
+        if attr.key not in data:
+            continue
+        value = data[attr.key]
+        if isinstance(value, dict) and set(value) == {'datetime'}:
+            value = datetime.fromisoformat(value['datetime'])
+        setattr(obj, attr.key, value)
+
+
+def _archive_results(cq):
+    """The results page as a teacher sees it, with every answer and the correct ones."""
+    stored = cq.transcript or ''
+    if cq.completed and stored and not stored.startswith(TRANSCRIPT_V2):
+        #saved before the upgrade, in the old format
+        return str(transcript_html(cq, cq.vquiz.title))
+    return build_transcript(cq, show_answers=True)
+
+
+def archive_attempt(cq, by=None, reason='deleted'):
+    """Move an attempt into the archive (not committed: the caller commits, so the copy
+    and the removal happen together or not at all)."""
+    problems = [_row_data(cp) for cp in cq.cproblems]
+    archived = ArchivedAttempt(
+        original_id=cq.id, vquiz_id=cq.vquiz_id, student_id=cq.assignee,
+        student_name=cq.taker.username if cq.taker else '(unknown)',
+        quiz_title=cq.vquiz.title or 'Untitled',
+        score=cq.score, completed=bool(cq.completed), needs_review=bool(cq.needs_review),
+        startdate=cq.startdate, compdate=cq.compdate, assigned=cq.create_date,
+        archived_at=datetime.now(), archived_by=by.id if by else None, reason=reason,
+        problem_ids=',' + ''.join('{},'.format(p['vproblem_id']) for p in problems),
+        results_html=_archive_results(cq),
+        data=json.dumps({'v': ARCHIVE_FORMAT, 'attempt': _row_data(cq), 'problems': problems}))
+    db.session.add(archived)
+    db.session.flush()
+    _erase_attempt(cq)
+    return archived
+
+
+def archive_student(user, by=None):
+    """Before a student's account is deleted: keep all their attempts in the archive."""
+    for cq in CQuiz.query.filter_by(assignee=user.id).order_by(CQuiz.id).all():
+        archive_attempt(cq, by, 'student deleted')
+
+
+def archived_attempts(subject='all'):
+    """The archive, newest first; subject narrows it by the quiz's subjects."""
+    q = ArchivedAttempt.query
+    choice = valid_subject_choice('quizzes', subject)
+    if choice == 'none':
+        q = q.filter(~ArchivedAttempt.vquiz.has(VQuiz.vqgroups.any()))
+    elif choice != 'all':
+        q = q.filter(ArchivedAttempt.vquiz.has(VQuiz.vqgroups.any(VQGroup.id == int(choice))))
+    return q.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()).all()
+
+
+def archived_student(a):
+    """The student's account, if it still exists."""
+    from app.user.models import User
+    return db.session.get(User, a.student_id) if a.student_id else None
+
+
+def restore_blocker(a):
+    """Why this archived attempt can't be put back, or None if it can."""
+    if archived_student(a) is None:
+        return 'Restore isn\'t possible: {}\'s account was deleted. You can still view it.'.format(a.student_name)
+    vq = db.session.get(VQuiz, a.vquiz_id) if a.vquiz_id else None
+    if vq is None:
+        return 'Restore isn\'t possible: the quiz "{}" was deleted. You can still view it.'.format(a.quiz_title)
+    data = json.loads(a.data)
+    missing = [p['vproblem_id'] for p in data['problems'] if db.session.get(VProblem, p['vproblem_id']) is None]
+    if missing:
+        return 'Restore isn\'t possible: {} of its problems {} deleted. You can still view it.'.format(
+            len(missing), 'was' if len(missing) == 1 else 'were')
+    if db.session.get(CQuiz, a.original_id) is not None:
+        return 'Restore isn\'t possible: its old number is in use. You can still view it.'
+    return None
+
+
+def restore_attempt(a):
+    """Put an archived attempt back, as it was and under the same number, so the
+    student sees it again and its old links work."""
+    blocker = restore_blocker(a)
+    if blocker:
+        raise ServiceError(blocker)
+    data = json.loads(a.data)
+    cq = CQuiz()
+    _fill_row(cq, data['attempt'])
+    cq.id = a.original_id
+    db.session.add(cq)
+    db.session.flush()
+    for row in data['problems']:
+        cp = CProblem()
+        _fill_row(cp, row)
+        cp.cquiz_id = cq.id
+        #question rows aren't linked to from anywhere; a new number is fine if the old one is taken
+        if cp.id is not None and db.session.get(CProblem, cp.id) is not None:
+            cp.id = None
+        db.session.add(cp)
+    db.session.delete(a)
+    db.session.commit()
+    return cq
+
+
+def purge_archived(a):
+    """Delete an archived attempt for good."""
+    db.session.delete(a)
+    db.session.commit()
+
+
+def archived_using_quiz(vq):
+    return ArchivedAttempt.query.filter_by(vquiz_id=vq.id).count()
+
+
+def archived_using_problem(vp):
+    return ArchivedAttempt.query.filter(ArchivedAttempt.problem_ids.like('%,{},%'.format(int(vp.id)))).count()
+
+
+def archived_counts():
+    """How many archived attempts use each quiz and each problem: ({quiz id: n}, {problem id: n})."""
+    quizzes, problems = {}, {}
+    for vquiz_id, ids in ArchivedAttempt.query.with_entities(ArchivedAttempt.vquiz_id, ArchivedAttempt.problem_ids):
+        if vquiz_id:
+            quizzes[vquiz_id] = quizzes.get(vquiz_id, 0) + 1
+        for pid in {int(x) for x in (ids or '').split(',') if x.strip().isdigit()}:
+            problems[pid] = problems.get(pid, 0) + 1
+    return quizzes, problems
+
+
+def archive_warning(count, what):
+    """For the delete question of a quiz or problem that archived attempts use."""
+    if not count:
+        return ''
+    return ' {} archived attempt{} use{} this {}; after deleting it {} can still be viewed but not restored.'.format(
+        count, '' if count == 1 else 's', 's' if count == 1 else '', what, 'it' if count == 1 else 'they')
 
 
 def set_retake_rule(cq, rule):

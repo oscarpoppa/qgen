@@ -697,3 +697,30 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-radius: 10px; padding: 8px 10px 10px; }
 .pinned-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn); margin-bottom: 6px; }
 .pinned-box .msg-pinned { background: var(--surface); border-left: 3px solid var(--warn); max-width: 100%; }
+
+/* ---- subjects (the teacher's own lists for sorting problems and quizzes) ---- */
+.subject-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; }
+.subject-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; font-weight: 600; }
+.subject-pick select { width: auto; min-width: 12rem; max-width: 100%; font-weight: normal; }
+.subject-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin-left: auto; }
+.subject-tools details > summary { list-style: none; }
+.subject-tools details > summary::-webkit-details-marker { display: none; }
+.subject-tools details[open] > summary { background: var(--accent-soft); }
+.subject-name-form { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.subject-name-form input { width: 14rem; max-width: 100%; }
+.file-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.file-bar select { width: auto; max-width: 14rem; }
+.file-count.error { color: var(--bad); }
+th.tick-col, td.tick-col { width: 36px; }
+.subject-label { font-weight: 500; font-size: .75rem; margin-left: 2px; vertical-align: middle; }
+.subject-checks { border: 0; padding: 0; margin: 12px 0; }
+.subject-checks legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.subject-check-list { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.subject-check { display: inline-flex; align-items: center; gap: 6px; font-weight: normal; }
+.builder-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.builder-filters .filter { margin-bottom: 0; }
+.archived-banner .btn-row form { margin: 0; }
+@media (max-width: 640px) {
+  .subject-tools { margin-left: 0; }
+  td.tick-col { width: auto; }
+}
