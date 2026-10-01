@@ -217,6 +217,38 @@ def release_answers_to(vq, student_id, released):
     return attempts
 
 
+# ---------------------------------------------------------------- viewing (nothing saved)
+
+def _sample_item(vp, rng, num=None):
+    """One student's version of a problem, for viewing only."""
+    qt = get_qtype(vp.qtype)
+    prob, ansr, opts = instantiate_problem(vp, rng)
+    return {'num': num, 'vpid': vp.id, 'title': vp.title, 'qtype': qt.label, 'essay': not qt.auto_graded,
+            'text': prob, 'correct': qt.show_correct(ansr, opts), 'choices': opts.get('choices'),
+            'right': opts.get('correct', []), 'image': opts.get('image')}
+
+
+def sample_problem(vp, count=3):
+    """A few versions of a saved problem, as different students would get them."""
+    rng = random.Random()
+    return [_sample_item(vp, rng, n) for n in range(1, count + 1)]
+
+
+def sample_quiz(vq):
+    """One student's version of a whole quiz, drawn the way create_cquiz draws it
+    (groups picked, order shuffled if the quiz says so), without saving anything."""
+    rng = random.Random()
+    ordered = layout.draw(layout.parse(vq.vpid_lst), rng)
+    if vq.shuffle_order:
+        rng.shuffle(ordered)
+    items = []
+    for pid in ordered:
+        vp = db.session.get(VProblem, pid)
+        if vp is not None:
+            items.append(_sample_item(vp, rng, len(items) + 1))
+    return items
+
+
 # ---------------------------------------------------------------- assigning
 
 def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None):

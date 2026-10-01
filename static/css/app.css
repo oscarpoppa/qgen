@@ -638,3 +638,12 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
 .quiz-card .quiz-flag { flex: 0 0 auto; }
 .quiz-card[open] .quiz-flag { display: none; }
+
+/* View pages: problems and quizzes as students see them */
+.sample-item .card-head { align-items: center; }
+.sample-item .qtext { margin: 4px 0 12px; }
+.sample-item .essay-box, .sample-item .answer-line { border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.sample-item .ans-mark { display: inline-block; width: 1.2em; }
+.sample-item .q-only { display: none; }
+.answers-off .ans { display: none; }
+.answers-off .q-only { display: inline; }

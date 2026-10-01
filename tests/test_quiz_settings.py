@@ -354,3 +354,42 @@ def test_a_newly_assigned_quiz_says_new(app_db):
     sam.get('/quiz/take/{}'.format(CQuiz.query.one().id))
     home = sam.get('/mypage').data.decode()
     assert '<span class="badge badge-warn">New</span>' not in home and 'In progress' in home
+
+
+def test_view_problems_and_quizzes_without_editing(app_db):
+    app, db = app_db
+    from test_flow import AB
+    from app.qgen.models import VProblem, VQuiz, CQuiz, CProblem
+    teacher = login(app, 'teach')
+    forms = [
+        problem_form('numeric', 'Add', '[a] + [b] = ?', 'a + b', AB),
+        problem_form('choice_one', 'Times', '[a] × [b] = ?', '', AB, choices='*[a*b]\n[a*b+1]\n[a+b]'),
+        problem_form('choice_many', 'Evens', 'Which are even?', '', [], choices='*2\n*4\n3\n5'),
+        problem_form('truefalse', 'Bigger', 'True or false: [a] > [b]', 'a > b', AB),
+        problem_form('text', 'Capital', 'Capital of France?', 'Paris'),
+        problem_form('essay', 'Why', 'Explain why.', 'Because.', [], grading_notes='x'),
+    ]
+    for f in forms:
+        assert teacher.post('/quiz/makevprob', data=f).status_code == 302
+    probs = VProblem.query.order_by(VProblem.id).all()
+    # every problem: View on the list, three versions on its page
+    plist = teacher.get('/quiz/listvp').data.decode()
+    assert all('/quiz/viewvprob/{}'.format(p.id) in plist for p in probs)
+    for p in probs:
+        page = teacher.get('/quiz/viewvprob/{}'.format(p.id)).data.decode()
+        assert page.count('class="card sample-item"') == 3, p.qtype
+    assert 'Model answer (only you see it)' in teacher.get('/quiz/viewvprob/{}'.format(probs[-1].id)).data.decode()
+    # a quiz with a group ("1 of these 2"): one student's version, numbered, answers hideable
+    layout = json.dumps([probs[0].id, probs[1].id, {'pick': 1, 'from': [probs[2].id, probs[3].id]}])
+    teacher.post('/quiz/makevquiz', data={'title': 'Viewable', 'vplist': layout})
+    vq = VQuiz.query.one()
+    assert '/quiz/viewvquiz/{}'.format(vq.id) in teacher.get('/quiz/listvq').data.decode()
+    page = teacher.get('/quiz/viewvquiz/{}'.format(vq.id)).data.decode()
+    assert page.count('class="card sample-item"') == 3  # 2 + 1 drawn from the group
+    assert 'answers-off' in page and 'id="show-answers"' in page and '3 questions' in page
+    # nothing was saved or sent, and students can't see these pages
+    assert CQuiz.query.count() == 0 and CProblem.query.count() == 0
+    sam = login(app, 'sam')
+    assert sam.get('/quiz/viewvquiz/{}'.format(vq.id)).status_code == 302
+    assert sam.get('/quiz/viewvprob/{}'.format(probs[0].id)).status_code == 302
+    assert teacher.get('/quiz/viewvquiz/999999').status_code == 404

@@ -27,6 +27,7 @@
           <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
           <td data-label="Answer"><div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div></td>
           <td class="actions">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
             {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?') }}
           </td>

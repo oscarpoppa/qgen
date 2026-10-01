@@ -53,6 +53,20 @@ def mkvprob():
         form.values.append_entry()
     return problem_page(form, None, errors, 'New problem')
 
+#route to view a problem as students get it (three sample versions), without editing
+@qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def view_vprob(vpid):
+    vp = db.get_or_404(VProblem, vpid)
+    try:
+        samples, error = S.sample_problem(vp), None
+    except S.ServiceError as exc:
+        samples, error = [], str(exc)
+    return render_template('view_problem.html', vp=vp, qt=get_qtype(vp.qtype), samples=samples, error=error,
+                           title='View: {}'.format(vp.title))
+
 #route to edit a specific virtual problem
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
 @login_required
@@ -151,6 +165,19 @@ def mkvquiz():
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
             return redirect(url_for('qgen.list_vquizzes'))
     return quiz_page(form, 'New quiz')
+
+#route to view a quiz as one student would get it, without editing or assigning
+@qgen_bp.route('/quiz/viewvquiz/<vqid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def view_vquiz(vqid):
+    vq = db.get_or_404(VQuiz, vqid)
+    try:
+        items, error = S.sample_quiz(vq), None
+    except S.ServiceError as exc:
+        items, error = [], str(exc)
+    return render_template('view_quiz.html', vq=vq, items=items, error=error, title='View: {}'.format(vq.title))
 
 #route to edit a specific virtual quiz
 @qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
