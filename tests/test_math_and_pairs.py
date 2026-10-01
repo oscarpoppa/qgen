@@ -146,3 +146,17 @@ def test_api_reads_yes_and_no_text(app_db):
                                   'options': {'values': XY, 'ordered': 'false', 'shuffle': 'no'}, 'calculator_ok': 'false'})
     got = t.get('/problems/{}'.format(r.get_json()['id'])).get_json()
     assert got['options']['ordered'] is False and got['options']['shuffle'] is False and got['calculator_ok'] is False
+
+
+def test_math_helpers_are_for_numeric_problems_only(app_db):
+    # they sit in a "t-numeric" box, which the page shows only for Numeric problems
+    app, db = app_db
+    page = login(app, 'teach').get('/quiz/makevprob').data.decode()
+    toolbar = page.index('class="math-toolbar"')
+    preview = page.index('id="math-preview"')
+    for spot in (toolbar, preview):
+        opening = page.rfind('<div class="t-numeric">', 0, spot)
+        assert opening != -1, spot
+        # nothing closes the t-numeric box between its start and the helper
+        between = page[opening:spot]
+        assert between.count('<div') - between.count('</div>') >= 1

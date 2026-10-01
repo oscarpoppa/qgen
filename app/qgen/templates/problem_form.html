@@ -107,9 +107,12 @@
       {{ field(form.qtype, tip_body=tip_qtype) }}
       {{ field(form.title, attrs={'placeholder': 'e.g. Train distance'}, tip_body=tip_title) }}
     </div>
-    {% include "_math_toolbar.html" %}
+    {# the math helpers are for Numeric problems only; hidden for other types #}
+    <div class="t-numeric">{% include "_math_toolbar.html" %}</div>
     {{ field(form.question, 'Put a random value in square brackets, like [speed]. You can do math inside too: [speed * 2].', attrs={'rows': 4, 'placeholder': 'A train goes [speed] mph for [hours] hours. How far does it travel?'}, tip_body=tip_question) }}
-    <div class="math-preview" id="math-preview" hidden aria-live="polite"><span class="label">How the math will look</span><div class="math-preview-body"></div></div>
+    <div class="t-numeric">
+      <div class="math-preview" id="math-preview" hidden aria-live="polite"><span class="label">How the math will look</span><div class="math-preview-body"></div></div>
+    </div>
     <div class="name-chips" data-default="question" hidden><span class="muted">Insert a value:</span></div>
   </div>
 
