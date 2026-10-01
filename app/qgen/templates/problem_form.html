@@ -181,7 +181,7 @@
   <div class="card">
     <div class="card-head"><span class="step-num" aria-hidden="true">5</span><h2>Check and save</h2></div>
     {{ check(form.calculator_ok, tip_body=tip_calc) }}
-    {{ subject_checks('problems', all_subjects, ticked_subjects, 'qgen.list_vprobs') }}
+    {{ subject_checks('problems', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
     <p class="muted small">Tip: press <b>Show me 3 examples</b> first to see three students' versions. Saving checks every possible combination of values for problems like dividing by zero.</p>
     <div class="btn-row">
       {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}

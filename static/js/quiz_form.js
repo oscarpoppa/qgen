@@ -8,8 +8,14 @@
   var empty = document.getElementById('order-empty');
   var groupsBox = document.getElementById('groups');
   var LETTERS = 'ABCDEFGH'.split('');
+  //a problem in several subjects has a tick box in each of their containers
   var boxes = {};
-  document.querySelectorAll('input.pick').forEach(function (b) { boxes[b.value] = b; });
+  document.querySelectorAll('input.pick').forEach(function (b) { (boxes[b.value] = boxes[b.value] || []).push(b); });
+  var container = document.getElementById('all-problems');
+  function tick(id, on) {
+    boxes[id].forEach(function (b) { b.checked = on; });
+    if (container) container.dispatchEvent(new Event('qgen-ticks-changed'));
+  }
 
   var order = [];      // [{id: '5', group: ''|'A'}]
   var picks = {};      // {A: 2}
@@ -72,8 +78,8 @@
     list.innerHTML = '';
     empty.hidden = order.length > 0;
     order.forEach(function (item, i) {
-      boxes[item.id].checked = true;
-      var title = boxes[item.id].dataset.title;
+      tick(item.id, true);
+      var title = boxes[item.id][0].dataset.title;
       var li = document.createElement('li');
       var name = document.createElement('span');
       name.style.flex = '1';
@@ -97,7 +103,7 @@
         btn.addEventListener('click', function () {
           if (b[1] === 0) {
             order.splice(i, 1);
-            if (!order.some(function (o) { return o.id === item.id; })) boxes[item.id].checked = false;
+            if (!order.some(function (o) { return o.id === item.id; })) tick(item.id, false);
           } else {
             var j = i + b[1];
             if (j < 0 || j >= order.length) return;
@@ -114,43 +120,15 @@
   }
 
   Object.keys(boxes).forEach(function (id) {
-    boxes[id].addEventListener('change', function () {
-      if (this.checked) { if (!order.some(function (o) { return o.id === id; })) order.push({ id: id, group: '' }); }
-      else order = order.filter(function (o) { return o.id !== id; });
-      render();
+    boxes[id].forEach(function (box) {
+      box.addEventListener('change', function () {
+        if (this.checked) { if (!order.some(function (o) { return o.id === id; })) order.push({ id: id, group: '' }); }
+        else order = order.filter(function (o) { return o.id !== id; });
+        tick(id, this.checked);
+        render();
+      });
     });
   });
   render();
 })();
 
-/* The Subject menu above the problem list shows one subject's problems. Rows are only
- * hidden (with filter.js's qgenHideRow, so the filter box still works too): problems
- * ticked in other subjects stay in the quiz, and a note says how many aren't shown. */
-(function () {
-  var menu = document.getElementById('builder-subject');
-  var table = document.getElementById('all-problems');
-  if (!menu || !table || !window.qgenHideRow) return;
-  var note = document.getElementById('hidden-ticked');
-  var rows = table.querySelectorAll('tbody tr');
-
-  function count() {
-    var n = 0;
-    rows.forEach(function (r) { if (r.hidden && r.querySelector('input.pick').checked) n++; });
-    note.hidden = !n;
-    note.textContent = n ? n + ' ticked problem' + (n === 1 ? ' isn’t' : 's aren’t') +
-      ' shown here (another subject, or the filter). ' + (n === 1 ? 'It’s' : 'They’re') + ' still in the quiz.' : '';
-  }
-  function apply() {
-    var v = menu.value;
-    rows.forEach(function (r) {
-      var subs = (r.dataset.subjects || '').split(' ').filter(Boolean);
-      var hide = v === 'all' ? false : v === 'none' ? subs.length > 0 : subs.indexOf(v) === -1;
-      window.qgenHideRow(r, 'subject', hide);
-    });
-    count();
-  }
-  menu.addEventListener('change', apply);
-  table.addEventListener('change', count);
-  document.addEventListener('qgen-filtered', count);
-  apply();
-})();

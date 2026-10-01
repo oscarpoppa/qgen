@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field, check, image_drop %}
-{% from "_subjects.html" import subject_checks, subject_labels with context %}
+{% from "_subjects.html" import subject_checks, subject_labels, subject_box with context %}
 
 {% block content %}
 <div class="page-head">
@@ -17,38 +17,42 @@
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
     {{ check(form.hide_answers, 'Students always see their score. With this on, they see which questions were right or wrong, but not the correct answers, until you press “Release answers” on the quiz list (e.g. once everyone has finished).') }}
     {{ field(form.retake_rule, 'Every attempt stays visible and the best one is marked. You can change this for one student on “Results by student”.') }}
-    {{ subject_checks('quizzes', all_subjects, ticked_subjects, 'qgen.list_vquizzes') }}
+    {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
   </div>
 
   <div class="split">
     <div class="card">
       <div class="card-head"><h2>Problems</h2><span class="muted small">tick the ones to include</span></div>
-      {% if probs %}
+      {% if has_problems %}
         <div class="builder-filters">
-          <label class="subject-pick">Subject
-            <select id="builder-subject" aria-controls="all-problems">
-              {% for value, label, count in problem_choices %}
-                <option value="{{ value }}"{% if value == problem_choice %} selected{% endif %}>{{ label }} ({{ count }})</option>
-              {% endfor %}
-            </select>
-          </label>
-          <input type="search" class="filter" data-filter="#all-problems" placeholder="Filter problems…" aria-label="Filter problems">
+          <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+          <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
         </div>
-        <p id="hidden-ticked" class="muted small" hidden></p>
-        <div class="table-wrap">
-          <table id="all-problems">
-            <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
-            <tbody>
-            {% for p in probs %}
-              <tr data-subjects="{{ p.vpgroups|map(attribute='id')|join(' ') }}">
-                <td><input type="checkbox" class="pick" value="{{ p.id }}" id="pick-{{ p.id }}" data-title="{{ p.title or 'Untitled' }}"></td>
-                <td><label for="pick-{{ p.id }}"><strong>{{ p.title or 'Untitled' }}</strong></label> {{ subject_labels(p.vpgroups) }}
-                  <div class="small muted clamp">{{ p.raw_prob }}</div></td>
-                <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+        <p class="muted small">Open any subjects and tick problems from as many of them as you like; they all go in this quiz.</p>
+        <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
+          {% for subject, items in problem_boxes %}
+            {% if subject or items %}
+              {% call subject_box('problems', subject, items, tools=false) %}
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
+                  <tbody>
+                  {% for p in items %}
+                    {% set box_id = 'pick-' ~ (subject.id if subject else 'u') ~ '-' ~ p.id %}
+                    <tr>
+                      <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
+                      <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label> {{ subject_labels(p.vpgroups) }}
+                        <div class="small muted clamp">{{ p.raw_prob }}</div></td>
+                      <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% endcall %}
+            {% endif %}
+          {% endfor %}
         </div>
       {% else %}
         <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create one first</a>.</div>
@@ -83,5 +87,6 @@
 {% block scripts %}
 <script src="{{ asset('js/filter.js') }}"></script>
 <script src="{{ asset('js/quiz_form.js') }}"></script>
+<script src="{{ asset('js/subjects.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>
 {% endblock %}

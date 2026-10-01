@@ -1,75 +1,86 @@
-{# Subjects: the teacher's own lists for sorting problems and quizzes.
-   Use: {% from "_subjects.html" import subject_bar, file_bar, subject_labels, subject_checks with context %} #}
+{# Subjects: the teacher's own containers for sorting problems and quizzes.
+   Use: {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels, subject_checks with context %} #}
 {% from "_macros.html" import tip %}
 
-{% set subjects_help %}<p>Subjects are your own lists for sorting, e.g. “Algebra” or “Period 2”. Each problem or quiz can be in several subjects, or in none.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
+{% set subjects_help %}<p>Subjects are your own containers for sorting, e.g. “Algebra” or “Period 2”. Each problem or quiz can be in several subjects; one that isn't in any waits in <b>Unsorted</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
 
-{# the Subject menu at the top of the problem and quiz lists, with New / Rename / Delete #}
-{% macro subject_bar(kind, choices, choice, subject, endpoint) %}
+{# above the containers: new subject, open/close them all, and a search across all of them #}
+{% macro subject_toolbar(kind, filter_target, count) %}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
 <div class="card subject-bar">
-  <form method="get" action="{{ url_for(endpoint) }}" class="subject-pick">
-    <label for="subject-choice">Subject</label>
-    <select id="subject-choice" name="subject" data-autosubmit>
-      {% for value, label, count in choices %}
-        <option value="{{ value }}"{% if value == choice %} selected{% endif %}>{{ label }} ({{ count }})</option>
-      {% endfor %}
-    </select>
-    <noscript><button class="btn btn-secondary btn-sm">Show</button></noscript>
-    {{ tip('subjects', subjects_help) }}
-  </form>
-  <div class="subject-tools">
-    <details class="subject-new">
-      <summary class="btn btn-secondary btn-sm">+ New subject</summary>
-      <form method="post" action="{{ url_for('qgen.new_subject', kind=kind) }}" class="subject-name-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label class="sr-only" for="new-subject-name">Name of the new subject</label>
-        <input id="new-subject-name" name="name" maxlength="64" required placeholder="e.g. Algebra">
-        <button class="btn btn-sm">Make it</button>
-      </form>
-    </details>
-    {% if subject %}
-    <details class="subject-rename">
-      <summary class="btn btn-secondary btn-sm">Rename</summary>
-      <form method="post" action="{{ url_for('qgen.rename_subject', kind=kind, sid=subject.id) }}" class="subject-name-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label class="sr-only" for="rename-subject-name">New name for “{{ subject.title }}”</label>
-        <input id="rename-subject-name" name="name" maxlength="64" required value="{{ subject.title }}">
-        <button class="btn btn-sm">Rename</button>
-      </form>
-    </details>
-    {% set n = (subject.vproblems if kind == 'problems' else subject.vquizzes)|length %}
-    {% set what = noun if n != 1 else ('problem' if kind == 'problems' else 'quiz') %}
-    {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' are' if n != 1 else ' is') ~ ' kept.') if n else 'It is empty.' %}
-    <form method="post" action="{{ url_for('qgen.delete_subject', kind=kind, sid=subject.id) }}" class="inline-form"
-          data-confirm="Delete the subject “{{ subject.title }}”? {{ kept }}"
-          data-confirm-ok="Delete subject">
+  <details class="subject-new">
+    <summary class="btn btn-secondary btn-sm">+ New subject</summary>
+    <form method="post" action="{{ url_for('qgen.new_subject', kind=kind) }}" class="subject-name-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-danger btn-sm">Delete subject</button>
+      <label class="sr-only" for="new-subject-name">Name of the new subject</label>
+      <input id="new-subject-name" name="name" maxlength="64" required placeholder="e.g. Algebra">
+      <button class="btn btn-sm">Make it</button>
     </form>
-    {% endif %}
-  </div>
+  </details>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  {{ tip('subjects', subjects_help) }}
+  {% if count > 5 %}<input type="search" class="filter" data-filter="{{ filter_target }}" placeholder="Search all {{ noun }}…" aria-label="Search all {{ noun }}">{% endif %}
 </div>
 {% endmacro %}
 
-{# "Add to subject" / "Remove from this subject" for the ticked rows (each row's tick box
-   has form="file-form") #}
-{% macro file_bar(kind, all_subjects, subject) %}
+{# "Add to" / "Remove from" a subject, for the ticked rows (each tick box has form="file-form") #}
+{% macro file_bar(kind, all_subjects) %}
 <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button type="button" class="btn btn-secondary btn-sm" data-select-shown>Select all shown</button>
   <span class="muted small file-count" aria-live="polite">0 ticked</span>
   {% if all_subjects %}
-    <label class="sr-only" for="file-subject">Subject to add the ticked ones to</label>
+    <label class="sr-only" for="file-subject">Subject</label>
     <select id="file-subject" name="subject">
-      {% for g in all_subjects %}<option value="{{ g.id }}"{% if subject and g.id == subject.id %} selected{% endif %}>{{ g.title }}</option>{% endfor %}
+      {% for g in all_subjects %}<option value="{{ g.id }}">{{ g.title }}</option>{% endfor %}
     </select>
-    <button class="btn btn-sm">Add to subject</button>
-    {% if subject %}<button class="btn btn-secondary btn-sm" name="remove_from" value="{{ subject.id }}">Remove from “{{ subject.title }}”</button>{% endif %}
+    <button class="btn btn-sm" name="action" value="add">Add to subject</button>
+    <button class="btn btn-secondary btn-sm" name="action" value="remove">Remove from subject</button>
   {% else %}
-    <span class="muted small">Make a subject first (+ New subject), then tick {{ 'problems' if kind == 'problems' else 'quizzes' }} to add to it.</span>
+    <span class="muted small">Make a subject first (+ New subject), then tick {{ 'problems' if kind == 'problems' else 'quizzes' }} to put in it.</span>
   {% endif %}
 </form>
+{% endmacro %}
+
+{# one collapsible container; the caller draws its rows #}
+{% macro subject_box(kind, subject, items, tools=true) %}
+{% set key = subject.id if subject else 'unsorted' %}
+{% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
+<details class="card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}">
+  <summary>
+    <span class="box-name">{{ '📁 ' ~ subject.title if subject else '📥 Unsorted' }}</span>
+    <span class="badge" aria-label="{{ items|length }} {{ noun }}">{{ items|length }}</span>
+    <span class="badge badge-accent box-ticked" hidden></span>
+  </summary>
+  <div class="box-body">
+    {% if subject and tools %}
+    <div class="box-tools">
+      <details class="subject-rename">
+        <summary class="btn btn-secondary btn-sm">Rename</summary>
+        <form method="post" action="{{ url_for('qgen.rename_subject', kind=kind, sid=subject.id) }}" class="subject-name-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="sr-only" for="rename-{{ key }}">New name for “{{ subject.title }}”</label>
+          <input id="rename-{{ key }}" name="name" maxlength="64" required value="{{ subject.title }}">
+          <button class="btn btn-sm">Rename</button>
+        </form>
+      </details>
+      {% set n = items|length %}
+      {% set what = noun if n != 1 else ('problem' if kind == 'problems' else 'quiz') %}
+      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' are' if n != 1 else ' is') ~ ' kept (in Unsorted, or their other subjects).') if n else 'It is empty.' %}
+      <form method="post" action="{{ url_for('qgen.delete_subject', kind=kind, sid=subject.id) }}" class="inline-form"
+            data-confirm="Delete the subject “{{ subject.title }}”? {{ kept }}" data-confirm-ok="Delete subject">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-danger btn-sm">Delete subject</button>
+      </form>
+    </div>
+    {% endif %}
+    {% if items %}
+      {{ caller() }}
+    {% else %}
+      <p class="muted small box-empty">{{ ('Empty. Tick ' ~ noun ~ ' in other containers and choose “Add to subject”.' if tools else 'No ' ~ noun ~ ' in this subject yet.') if subject else 'Nothing unsorted: every one is in a subject.' }}</p>
+    {% endif %}
+  </div>
+</details>
 {% endmacro %}
 
 {# small labels after an item's title #}
@@ -77,19 +88,25 @@
   {% for g in groups|sort(attribute='title') %}<span class="badge subject-label">{{ g.title }}</span>{% endfor %}
 {% endmacro %}
 
-{# the Subjects row of tick boxes on the problem and quiz forms #}
-{% macro subject_checks(kind, all_subjects, ticked, endpoint) %}
-<fieldset class="subject-checks">
-  <legend>Subjects <span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}</legend>
+{# the Subjects question on the problem and quiz forms; a new one must be put somewhere #}
+{% macro subject_checks(kind, all_subjects, ticked, new_item, unsorted_ticked, new_subject_name, error) %}
+{% set noun = 'problem' if kind == 'problems' else 'quiz' %}
+<fieldset class="subject-checks{{ ' has-error' if error }}" id="subject-question">
+  <legend>Subject{% if new_item %} <span class="muted small">(required: where should this {{ noun }} go?)</span>{% endif %} {{ tip('subjects', subjects_help) }}</legend>
   <input type="hidden" name="subjects_shown" value="1">
-  {% if all_subjects %}
-    <div class="subject-check-list">
+  <div class="subject-check-list">
     {% for g in all_subjects %}
-      <label class="subject-check"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ g.title }}</label>
+      <label class="subject-check"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> 📁 {{ g.title }}</label>
     {% endfor %}
-    </div>
-  {% else %}
-    <p class="muted small">No subjects yet. You can make some on the <a href="{{ url_for(endpoint) }}">{{ 'Problems' if kind == 'problems' else 'Quizzes' }} page</a> (+ New subject).</p>
-  {% endif %}
+    {% if new_item %}
+      <label class="subject-check"><input type="checkbox" name="unsorted" value="1"{% if unsorted_ticked %} checked{% endif %}> 📥 Unsorted <span class="muted small">(file it later)</span></label>
+    {% endif %}
+  </div>
+  <div class="subject-new-inline">
+    <label for="new-subject-inline">{{ 'Or a new subject' if all_subjects else 'A new subject' }}:</label>
+    <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
+  </div>
+  <div class="help">You can tick more than one.{% if not new_item %} With none ticked, it goes to Unsorted.{% endif %}</div>
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

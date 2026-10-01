@@ -1,25 +1,15 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
-{% from "_subjects.html" import subject_bar, file_bar, subject_labels with context %}
+{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
 
-{% block content %}
-<div class="page-head">
-  <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
-</div>
-
-{% if not single %}{{ subject_bar('problems', choices, choice, subject, 'qgen.list_vprobs') }}{% endif %}
-
-{% if vplst %}
-  {% if not single %}{{ file_bar('problems', all_subjects, subject) }}{% endif %}
-  {% if vplst|length > 5 %}<input type="search" class="filter" data-filter="#problems" placeholder="Filter problems…" aria-label="Filter problems">{% endif %}
+{% macro problem_table(items, ticks=true) %}
   <div class="table-wrap stack">
-    <table id="problems">
-      <thead><tr>{% if not single %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+    <table>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
-      {% for item in vplst %}
-        <tr>
-          {% if not single %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title or 'Untitled' }}”"></td>{% endif %}
+      {% for item in items %}
+        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title or 'Untitled' }}”"></td>{% endif %}
           <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong> {{ subject_labels(item.vpgroups) }}
             <div class="small muted">
               {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
@@ -41,11 +31,29 @@
       </tbody>
     </table>
   </div>
-{% elif choice and choice != 'all' %}
-  <div class="card empty"><span class="big">📂</span>No problems {{ 'without a subject' if choice == 'none' else 'in “' ~ subject.title ~ '” yet' }}.
-    {% if subject %}Choose <em>All</em> above, tick some problems and use “Add to subject”.{% endif %}</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
+</div>
+
+{% if single %}
+  {{ problem_table(items, ticks=false) }}
 {% else %}
-  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+  {{ subject_toolbar('problems', '#containers', total) }}
+  {% if total %}{{ file_bar('problems', all_subjects) }}{% endif %}
+  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-problems">
+    {% for subject, items in boxes %}
+      {% if subject or items %}
+        {% call subject_box('problems', subject, items) %}{{ problem_table(items) }}{% endcall %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not total %}
+    <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+  {% endif %}
 {% endif %}
 {% endblock %}
 

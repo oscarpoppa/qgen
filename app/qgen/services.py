@@ -149,23 +149,45 @@ def subject_choices(kind):
     return out
 
 
+def subject_boxes(kind):
+    """The containers on the Problems (Quizzes) page: [(subject, items)] by subject name,
+    then (None, the items in no subject) for Unsorted. An item in several subjects is in
+    each of their containers. Newest items first."""
+    group_cls, item_cls, rel, back = subject_kind(kind)
+    newest = lambda items: sorted(items, key=lambda i: i.id, reverse=True)
+    boxes = [(g, newest(getattr(g, back))) for g in subjects(kind)]
+    boxes.append((None, item_cls.query.filter(~getattr(item_cls, rel).any()).order_by(item_cls.id.desc()).all()))
+    return boxes
+
+
+def new_subject_name_error(kind, name):
+    """For the "or make a new subject" box on the edit forms: a problem with the name,
+    or None. A name that is already a subject (in any case) is fine: that one is used."""
+    name = ' '.join((name or '').split())
+    if name and len(name) > SUBJECT_NAME_MAX:
+        return 'Subject names can be at most {} characters.'.format(SUBJECT_NAME_MAX)
+    return None
+
+
+def subject_named(kind, name):
+    """The subject with this name (any case), made if there isn't one yet; committed."""
+    name = ' '.join((name or '').split())
+    for g in subjects(kind):
+        if (g.title or '').lower() == name.lower():
+            return g
+    try:
+        return create_subject(kind, name)
+    except ServiceError:
+        #made by someone else a moment ago
+        return next(g for g in subjects(kind) if (g.title or '').lower() == name.lower())
+
+
 def valid_subject_choice(kind, choice):
     """'all', 'none' or an existing subject's id (as text); anything else is 'all'."""
     if choice in ('all', 'none'):
         return choice
     subject = get_subject(kind, choice)
     return str(subject.id) if subject else 'all'
-
-
-def filter_by_subject(query, kind, choice):
-    """Narrow a problem (or quiz) query to 'all', 'none' or a subject id."""
-    group_cls, item_cls, rel, _back = subject_kind(kind)
-    choice = valid_subject_choice(kind, choice)
-    if choice == 'none':
-        return query.filter(~getattr(item_cls, rel).any())
-    if choice == 'all':
-        return query
-    return query.filter(getattr(item_cls, rel).any(group_cls.id == int(choice)))
 
 
 # ---------------------------------------------------------------- problems

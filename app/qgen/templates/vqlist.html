@@ -1,27 +1,17 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
-{% from "_subjects.html" import subject_bar, file_bar, subject_labels with context %}
+{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
 
-{% block content %}
-<div class="page-head">
-  <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
-</div>
-
-{% if not single %}{{ subject_bar('quizzes', choices, choice, subject, 'qgen.list_vquizzes') }}{% endif %}
-
-{% if vqlst %}
-  {% if not single %}{{ file_bar('quizzes', all_subjects, subject) }}{% endif %}
-  {% if vqlst|length > 5 %}<input type="search" class="filter" data-filter="#quizzes" placeholder="Filter quizzes…" aria-label="Filter quizzes">{% endif %}
+{% macro quiz_table(items, ticks=true) %}
   <div class="table-wrap stack">
-    <table id="quizzes">
-      <thead><tr>{% if not single %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+    <table>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
-      {% for item in vqlst %}
+      {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
-        <tr>
-          {% if not single %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title }}”"></td>{% endif %}
+        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title }}”"></td>{% endif %}
           <td data-label="Quiz"><strong>{{ item.title }}</strong> {{ subject_labels(item.vqgroups) }}
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
               · {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
@@ -52,11 +42,29 @@
       </tbody>
     </table>
   </div>
-{% elif choice and choice != 'all' %}
-  <div class="card empty"><span class="big">📂</span>No quizzes {{ 'without a subject' if choice == 'none' else 'in “' ~ subject.title ~ '” yet' }}.
-    {% if subject %}Choose <em>All</em> above, tick some quizzes and use “Add to subject”.{% endif %}</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
+</div>
+
+{% if single %}
+  {{ quiz_table(items, ticks=false) }}
 {% else %}
-  <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
+  {{ subject_toolbar('quizzes', '#containers', total) }}
+  {% if total %}{{ file_bar('quizzes', all_subjects) }}{% endif %}
+  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-quizzes">
+    {% for subject, items in boxes %}
+      {% if subject or items %}
+        {% call subject_box('quizzes', subject, items) %}{{ quiz_table(items) }}{% endcall %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not total %}
+    <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
+  {% endif %}
 {% endif %}
 {% endblock %}
 

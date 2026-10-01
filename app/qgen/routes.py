@@ -8,7 +8,7 @@ from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
-from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify, session
+from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
 from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
@@ -26,15 +26,6 @@ def parse_vplist(text):
 LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes'}
 
 
-def remembered_subject(kind):
-    """The subject a list opens on: ?subject= (which is then remembered for this
-    teacher), or the one they last had open; 'all' if that one was deleted."""
-    key = 'subject_' + kind
-    if 'subject' in request.args:
-        session[key] = S.valid_subject_choice(kind, request.args['subject'])
-    return S.valid_subject_choice(kind, session.get(key, 'all'))
-
-
 def ticked_subjects(item, rel):
     """The subject ids ticked on an edit form (as sent, or as saved)."""
     if request.method == 'POST':
@@ -42,28 +33,49 @@ def ticked_subjects(item, rel):
     return {g.id for g in getattr(item, rel)} if item is not None else set()
 
 
+def subject_form_error(kind, new):
+    """The Subjects question on the edit forms: a new problem (quiz) must go in a subject,
+    in a new one typed there, or in Unsorted. None when it's answered."""
+    if not request.form.get('subjects_shown'):
+        return None
+    name = request.form.get('new_subject', '')
+    error = S.new_subject_name_error(kind, name)
+    if error:
+        return error
+    chosen = [i for i in request.form.getlist('subjects') if S.get_subject(kind, i)]
+    if new and not (chosen or name.strip() or request.form.get('unsorted')):
+        return 'Choose a subject for this {}, or Unsorted to file it later.'.format('problem' if kind == 'problems' else 'quiz')
+    return None
+
+
 def save_subjects(kind, item):
     """File the item as ticked on its form (only forms that show the Subjects row)."""
     if request.form.get('subjects_shown'):
         S.set_subjects(kind, item, request.form.getlist('subjects'))
         db.session.commit()
+        name = request.form.get('new_subject', '')
+        if name.strip():
+            S.file_items(kind, [item.id], S.subject_named(kind, name))
 
 
-def subject_page_data(kind, item=None, rel=None):
+def subject_page_data(kind, item=None, rel=None, error=None):
     return {'subject_kind': kind, 'all_subjects': S.subjects(kind),
-            'ticked_subjects': ticked_subjects(item, rel) if rel else set()}
+            'ticked_subjects': ticked_subjects(item, rel) if rel else set(),
+            'subject_error': error, 'new_item': item is None or item.id is None,
+            'unsorted_ticked': bool(request.form.get('unsorted')) if request.method == 'POST' else False,
+            'new_subject_name': request.form.get('new_subject', '') if request.method == 'POST' else ''}
 
 
 # ---------------------------------------------------------------- problems
 
-def problem_page(form, vp, errors, title):
+def problem_page(form, vp, errors, title, subject_error=None):
     #unbound copy with one empty row of each kind, cloned by problem_form.js for "+ Add"
     blank = ProblemForm(formdata=None)
     blank.values.append_entry()
     blank.images.append_entry()
     return render_template('problem_form.html', form=form, vp=vp, errors=errors, title=title, blank=blank,
                            kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
-                           **subject_page_data('problems', vp, 'vpgroups'))
+                           **subject_page_data('problems', vp, 'vpgroups', subject_error))
 
 def save_from_form(form, vp):
     return S.save_problem(vp, form.qtype.data, form.title.data, form.question.data, form.answer.data,
@@ -76,18 +88,19 @@ def save_from_form(form, vp):
 @admin_only
 def mkvprob():
     form = ProblemForm()
-    errors = []
+    errors, subject_error = [], None
     if form.validate_on_submit():
         nuprob = VProblem(author_id=current_user.id)
-        errors = save_from_form(form, nuprob)
+        subject_error = subject_form_error('problems', new=True)
+        errors = [subject_error] if subject_error else save_from_form(form, nuprob)
         if not errors:
             save_subjects('problems', nuprob)
             flash('Saved problem "{}".'.format(nuprob.title), 'success')
             current_app.logger.info('{} created VProblem: ({}) "{}"'.format(current_user.username, nuprob.id, nuprob.title))
-            return redirect(url_for('qgen.list_vprobs'))
+            return redirect(url_for('qgen.list_vprobs', show=nuprob.id))
     elif request.method == 'GET' and not form.values.entries:
         form.values.append_entry()
-    return problem_page(form, None, errors, 'New problem')
+    return problem_page(form, None, errors, 'New problem', subject_error)
 
 #route to view a problem as students get it (three sample versions), without editing
 @qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
@@ -111,17 +124,18 @@ def view_vprob(vpid):
 def edvprob(vpid):
     vpobj = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
     form = ProblemForm()
-    errors = []
+    errors, subject_error = [], None
     if request.method == 'GET':
         form.load(vpobj)
     elif form.validate_on_submit():
-        errors = save_from_form(form, vpobj)
+        subject_error = subject_form_error('problems', new=False)
+        errors = [subject_error] if subject_error else save_from_form(form, vpobj)
         if not errors:
             save_subjects('problems', vpobj)
             flash('Updated problem "{}". Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
-            return redirect(url_for('qgen.list_vprobs'))
-    return problem_page(form, vpobj, errors, 'Edit problem')
+            return redirect(url_for('qgen.list_vprobs', show=vpobj.id))
+    return problem_page(form, vpobj, errors, 'Edit problem', subject_error)
 
 #"Show me 3 examples": run the problem without saving it
 @qgen_bp.route('/quiz/previewvprob', methods=['POST'])
@@ -141,11 +155,9 @@ def preview_vprob():
 @pw_check
 @admin_only
 def list_vprobs():
-    choice = remembered_subject('problems')
-    vplst = S.filter_by_subject(VProblem.query, 'problems', choice).order_by(VProblem.id.desc()).all()
-    return render_template('vplist.html', vplst=vplst, qtypes=REGISTRY, title='Problems', kind='problems',
-                           choice=choice, choices=S.subject_choices('problems'), all_subjects=S.subjects('problems'),
-                           subject=S.get_subject('problems', choice), archived=S.archived_counts()[1],
+    return render_template('vplist.html', boxes=S.subject_boxes('problems'), total=VProblem.query.count(),
+                           qtypes=REGISTRY, title='Problems', kind='problems', all_subjects=S.subjects('problems'),
+                           show=request.args.get('show', ''), archived=S.archived_counts()[1],
                            archive_warning=S.archive_warning)
 
 #route to list a specific virtual problem
@@ -155,8 +167,8 @@ def list_vprobs():
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
-    return render_template('vplist.html', vplst=[vplst], qtypes=REGISTRY, title='Problem {}'.format(vpid), kind='problems',
-                           single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
+    return render_template('vplist.html', boxes=None, items=[vplst], total=1, qtypes=REGISTRY, title='Problem {}'.format(vpid),
+                           kind='problems', single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual problem
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['POST'])
@@ -179,12 +191,11 @@ def del_vprob(vpid):
 
 # ---------------------------------------------------------------- quizzes
 
-def quiz_page(form, title, vq=None):
-    probs = VProblem.query.order_by(VProblem.id.desc()).all()
-    return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq,
+def quiz_page(form, title, vq=None, subject_error=None):
+    return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'),
+                           has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
-                           problem_choices=S.subject_choices('problems'), problem_choice=remembered_subject('problems'),
-                           **subject_page_data('quizzes', vq, 'vqgroups'))
+                           **subject_page_data('quizzes', vq, 'vqgroups', subject_error))
 
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
@@ -201,15 +212,17 @@ def save_quiz_from_form(form, vq):
 @admin_only
 def mkvquiz():
     form = QuizForm()
+    subject_error = None
     if form.validate_on_submit():
         nq = VQuiz()
-        if not save_quiz_from_form(form, nq):
+        subject_error = subject_form_error('quizzes', new=True)
+        if not subject_error and not save_quiz_from_form(form, nq):
             save_subjects('quizzes', nq)
             count = layout.question_count(layout.parse(nq.vpid_lst))
             flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
-            return redirect(url_for('qgen.list_vquizzes'))
-    return quiz_page(form, 'New quiz')
+            return redirect(url_for('qgen.list_vquizzes', show=nq.id))
+    return quiz_page(form, 'New quiz', subject_error=subject_error)
 
 #route to view a quiz as one student would get it, without editing or assigning
 @qgen_bp.route('/quiz/viewvquiz/<vqid>', methods=['GET'])
@@ -234,13 +247,15 @@ def edvquiz(vqid):
     form = QuizForm(obj=vqobj)
     if request.method == 'GET':
         form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
-    elif form.validate_on_submit():
-        if not save_quiz_from_form(form, vqobj):
+    subject_error = None
+    if request.method == 'POST' and form.validate_on_submit():
+        subject_error = subject_form_error('quizzes', new=False)
+        if not subject_error and not save_quiz_from_form(form, vqobj):
             save_subjects('quizzes', vqobj)
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
-            return redirect(url_for('qgen.list_vquizzes'))
-    return quiz_page(form, 'Edit quiz', vqobj)
+            return redirect(url_for('qgen.list_vquizzes', show=vqobj.id))
+    return quiz_page(form, 'Edit quiz', vqobj, subject_error)
 
 #route to list all virtual quizzes
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
@@ -248,11 +263,9 @@ def edvquiz(vqid):
 @pw_check
 @admin_only
 def list_vquizzes():
-    choice = remembered_subject('quizzes')
-    vqlst = S.filter_by_subject(VQuiz.query, 'quizzes', choice).order_by(VQuiz.id.desc()).all()
-    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', layout=layout, kind='quizzes',
-                           choice=choice, choices=S.subject_choices('quizzes'), all_subjects=S.subjects('quizzes'),
-                           subject=S.get_subject('quizzes', choice), archived=S.archived_counts()[0],
+    return render_template('vqlist.html', boxes=S.subject_boxes('quizzes'), total=VQuiz.query.count(),
+                           title='Quizzes', layout=layout, kind='quizzes', all_subjects=S.subjects('quizzes'),
+                           show=request.args.get('show', ''), archived=S.archived_counts()[0],
                            archive_warning=S.archive_warning)
 
 #route to list a specific virtual quiz
@@ -262,8 +275,8 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout, kind='quizzes',
-                           single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
+    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title='Quiz {}'.format(vqid), layout=layout,
+                           kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['POST'])
@@ -343,7 +356,7 @@ def assign():
     form.vquiz.choices = [(q.id, q.title) for q in quizzes]
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
     #a link for one quiz opens on All, so that quiz is in the list
-    choice = 'all' if request.args.get('vq', '').isdigit() else remembered_subject('quizzes')
+    choice = 'all' if request.args.get('vq', '').isdigit() else S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
     if request.method == 'GET' and request.args.get('vq', '').isdigit():
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
@@ -768,9 +781,9 @@ def new_subject(kind):
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         return subject_list(kind)
-    flash('Made the subject "{}". Tick {} below and choose "Add to subject" to put them in it.'.format(subject.title, kind), 'success')
+    flash('Made the subject "{}". Tick {} and choose "Add to subject" to put them in it.'.format(subject.title, kind), 'success')
     current_app.logger.info('{} made {} subject ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
-    return subject_list(kind, subject='all')
+    return subject_list(kind, _anchor='subject-{}'.format(subject.id))
 
 #route to rename a subject
 @qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/rename', methods=['POST'])
@@ -785,7 +798,7 @@ def rename_subject(kind, sid):
         flash('Renamed the subject to "{}".'.format(subject.title), 'success')
     except S.ServiceError as exc:
         flash(str(exc), 'error')
-    return subject_list(kind, subject=sid)
+    return subject_list(kind, _anchor='subject-{}'.format(sid))
 
 #route to delete a subject (the problems or quizzes in it are kept)
 @qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/delete', methods=['POST'])
@@ -799,7 +812,7 @@ def delete_subject(kind, sid):
     S.delete_subject(subject)
     flash('Deleted the subject "{}". Its {} are kept.'.format(name, kind), 'success')
     current_app.logger.info('{} deleted {} subject ({}) "{}"'.format(current_user.username, kind, sid, name))
-    return subject_list(kind, subject='all')
+    return subject_list(kind)
 
 #route to put the ticked problems (or quizzes) in a subject, or take them out of it
 @qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
@@ -810,10 +823,9 @@ def delete_subject(kind, sid):
 def file_subject(kind):
     if kind not in LIST_PAGES:
         abort(404)
-    #"Add to subject" sends the subject chosen in its menu; "Remove from this subject"
-    #sends the open one as remove_from
-    add = not request.form.get('remove_from')
-    subject = S.get_subject(kind, request.form.get('subject') if add else request.form.get('remove_from'))
+    #"Add to" or "Remove from" the subject chosen in the menu
+    add = request.form.get('action') != 'remove'
+    subject = S.get_subject(kind, request.form.get('subject'))
     items = request.form.getlist('items')
     if subject is None:
         flash('Choose a subject first.', 'error')
