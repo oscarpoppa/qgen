@@ -251,8 +251,14 @@
     if (document.hidden) return;
     fetch(pollUrl, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
       if (!res) return;
-      [['.nav-unread', res.unread], ['.nav-notices', res.notices]].forEach(function (pair) {
-        document.querySelectorAll(pair[0]).forEach(function (b) { b.textContent = pair[1]; b.hidden = !pair[1]; });
+      var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
+      if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Review
+      counts.forEach(function (pair) {
+        document.querySelectorAll(pair[0]).forEach(function (b) {
+          b.textContent = pair[1];
+          b.hidden = !pair[1];
+          if (pair[0] === '.nav-review') b.setAttribute('aria-label', pair[1] + ' waiting for grading');
+        });
       });
       var waiting = (isOpen('messages') ? 0 : res.unread) + (isOpen('notices') ? 0 : res.notices);
       document.title = (waiting ? '(' + waiting + ') ' : '') + baseTitle;

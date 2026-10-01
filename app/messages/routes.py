@@ -250,7 +250,15 @@ def poll():
                    latest=latest.id if latest else 0, latest_notice=latest_notice.id if latest_notice else 0,
                    message_preview=preview(new_msg), notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
-                   quizzes_state=quizzes_state())
+                   quizzes_state=quizzes_state(), review=review_waiting())
+
+
+def review_waiting():
+    """For teachers: quizzes waiting for grading (the count next to Review)."""
+    if not current_user.is_admin:
+        return None
+    from app.qgen.models import CQuiz
+    return CQuiz.query.filter_by(needs_review=True, completed=False).count()
 
 
 def messages_state():

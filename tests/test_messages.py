@@ -604,3 +604,29 @@ def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
         S.submit(new, {1: '4'})
     Api(app, 'teach').post('/attempts/{}/retake'.format(new.id))
     assert Message.query.filter_by(body='teach gave sam a retake of "Again".').count() == 2
+
+
+def test_review_count_next_to_review_stays_current(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('class="count nav-review"') == 2 and 'nav-review" aria-label="0 waiting" hidden' in page
+    assert teacher.get('/messages/poll').get_json()['review'] == 0
+    teacher.post('/quiz/makevprob', data=problem_form('essay', 'Why', 'Explain.', '', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Essay', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: 'Because.'})
+    # the poll tells open pages; a fresh page shows it next to Review and on the Menu button
+    assert teacher.get('/messages/poll').get_json()['review'] == 1
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('aria-label="1 waiting" >1</span>') + page.count('aria-label="1 waiting for grading" >1</span>') == 2
+    # students' polls don't carry it, and their pages don't show it
+    sam = login(app, 'sam')
+    assert sam.get('/messages/poll').get_json()['review'] is None
+    assert 'nav-review' not in sam.get('/mypage').data.decode()
