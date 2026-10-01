@@ -408,8 +408,8 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
-    # one attempt: the box has room for the full button
-    assert 'btn btn-secondary btn-sm" href="/quiz/take/{}">View results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
+    # one attempt: the same one-line row, with the same small button
+    assert 'btn btn-secondary btn-xs" href="/quiz/take/{}">Results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
     with app.test_request_context():
         again = S.retake(cq)
         S.submit(again, {1: '4'})
@@ -459,3 +459,25 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
         S.submit(cq, {1: '4'})
         S.retake(cq)
     assert '<span class="quiz-count muted small">2 attempts</span>' in sam.get('/mypage').data.decode()
+
+
+def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
+    app, db = app_db
+    import re
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Dated', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    rows = lambda: re.findall(r'<(?:div|li) class="attempt-row"><span class="nowrap">([^<]+)</span>', sam.get('/mypage').data.decode())
+    assert rows() == [cq.when_label] and rows()[0].startswith('assigned ')  # a box with one attempt
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    assert rows() == [CQuiz.query.get(cq.id).when_label]  # now the hand-in date and time
+    with app.test_request_context():
+        S.retake(cq)
+    assert len(rows()) == 2  # several: each dated

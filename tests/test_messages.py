@@ -428,7 +428,7 @@ def test_student_pages_refresh_when_graded(app_db):
     waiting = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert flag in waiting
     home = sam.get('/mypage').data.decode()
-    assert flag in home and 'Waiting for grading' in home
+    assert flag in home and 'Being graded' in home
     assert flag not in teacher.get('/mypage').data.decode()
     # graded: the notice the page is waiting for arrives, and the reloaded page shows the result
     before = sam.get('/messages/poll').get_json()['latest_notice']
@@ -436,7 +436,7 @@ def test_student_pages_refresh_when_graded(app_db):
         S.grade_essays(cq, {cq.cproblems[0].id: {'credit': 80}}, finish=True)
     assert sam.get('/messages/poll').get_json()['latest_notice'] != before
     home = sam.get('/mypage').data.decode()
-    assert 'Waiting for grading' not in home and '80%' in home
+    assert 'Being graded' not in home and '80%' in home
 
 
 def test_results_page_refreshes_when_answers_are_released(app_db):

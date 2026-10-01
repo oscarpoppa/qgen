@@ -625,6 +625,13 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 
 /* My quizzes: each quiz folds down to its title and score */
 .quiz-grid { align-items: start; }
+/* quiz boxes are never narrower than an attempt row needs (date, status, button on one
+   line): with less room there are fewer, wider columns instead of squeezed boxes */
+.grid.quiz-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); }
+/* the title row stays on one line: a long quiz name ends in "…" (full name on hover) */
+.quiz-card > summary { flex-wrap: nowrap; }
+.quiz-card > summary h2 { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quiz-card > summary > :not(h2) { flex-shrink: 0; }
 .quiz-card > summary { list-style: none; cursor: pointer; margin-bottom: 0; align-items: center; }
 .quiz-card > summary::-webkit-details-marker { display: none; }
 .quiz-card[open] > summary { margin-bottom: 10px; }

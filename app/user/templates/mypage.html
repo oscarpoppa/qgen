@@ -21,7 +21,7 @@
 
 {% macro status(cq, best=false) %}
   {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if best else '' }}">{{ '★ ' if best }}{{ '%.0f' % (cq.score or 0) }}%</span>
-  {% elif cq.status == 'review' %}<span class="badge badge-warn">Waiting for grading</span>
+  {% elif cq.status == 'review' %}<span class="badge badge-warn" title="Your teacher is grading the written answers">Being graded</span>
   {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
   {# assigned and not opened yet: new to the student #}
   {% else %}<span class="badge badge-warn">New</span>{% endif %}
@@ -46,7 +46,7 @@
     {% set sig = g.attempts|map(attribute='id')|join(',') ~ '|' ~ g.attempts|map(attribute='status')|join(',') ~ '|' ~ g.attempts|map(attribute='score')|join(',') %}
     <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-sig="{{ sig }}" open>
       <summary class="card-head">
-        <span class="fold" aria-hidden="true"></span><h2>{{ g.vquiz.title }}</h2>
+        <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
         {# how many attempts are in this box #}
         <span class="quiz-count muted small">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
@@ -59,7 +59,8 @@
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
         {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
       {% if g.attempts|length == 1 %}
-        <div class="btn-row">{{ status(latest, g.best == latest) }} {{ action(latest) }}</div>
+        {# one attempt: dated like the rows of a box with several #}
+        <div class="attempt-row"><span class="nowrap">{{ latest.when_label }}</span> {{ status(latest, g.best == latest) }} {{ action(latest, compact=true) }}</div>
       {% else %}
         {% if g.combined is not none %}
           <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ g.rule|lower }})</span></p>
