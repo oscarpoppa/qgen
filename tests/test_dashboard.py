@@ -239,3 +239,48 @@ def test_site_at_a_glance(app_db):
     assert g['signup_open'] is True and g['ai_calls'] == 1 and g['ai_tokens'] == 150
     page = teacher.get('/dashboard').data.decode()
     assert 'Site at a glance' in page and 'badge-ok">open' in page
+
+
+def test_who_is_logged_in(app_db):
+    # online now (you included), active in the last hour, "last seen" on Users, and the
+    # top bar's count: all for teachers only
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen import dashboard as D
+    now = datetime.now()
+    teacher = login(app, 'teach')
+    teacher.get('/dashboard')
+    sam, kim = db.session.get(User, ids('sam')), db.session.get(User, ids('kim'))
+    sam.last_seen = now - timedelta(minutes=12)
+    kim.last_seen = now - timedelta(days=3)
+    db.session.commit()
+    assert sam.seen_label(now) == '12 min ago' and not sam.online
+    assert kim.seen_label(now) == '{:%b} {}'.format(kim.last_seen, kim.last_seen.day)
+    assert User(username='x').seen_label(now) == 'never'
+    assert [u.username for u in D.recently_active(now)] == ['sam']
+
+    page = teacher.get('/dashboard').data.decode()
+    assert 'Online now' in page and '(you)' in page and 'Active in the last hour' in page and '12 min ago' in page
+    part = teacher.get('/dashboard/online').data.decode()
+    assert 'teach' in part and '(you)' in part and 'sam' in part and 'kim' not in part
+    users = teacher.get('/userdet').data.decode()
+    assert '<th>Last seen</th>' in users and 'online now' in users and '12 min ago' in users
+    assert '<span class="nav-online">1</span>' in page  # the top bar: just this teacher so far
+    assert teacher.get('/messages/poll').get_json()['online'] == 1
+
+    s = login(app, 'sam')
+    mine = s.get('/mypage').data.decode()
+    assert 'online-menu' not in mine and 'nav-online' not in mine and 'js/online.js' not in mine
+    assert s.get('/messages/poll').get_json()['online'] is None
+    r = s.get('/dashboard/online')
+    assert r.status_code == 302 and r.headers['Location'].endswith('/mypage')
+
+
+def test_dashboard_boxes_open_and_close(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    page = teacher.get('/dashboard').data.decode()
+    for key in ('now', 'queue', 'handins', 'check', 'messages', 'progress', 'glance'):
+        assert 'data-box="{}" open>'.format(key) in page
+    assert 'data-dash-boxes="open"' in page and 'data-dash-boxes="close"' in page and 'js/dashboard.js' in page
+    assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()

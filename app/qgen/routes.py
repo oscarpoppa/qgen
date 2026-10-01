@@ -996,9 +996,8 @@ def purge_archived(aid):
 def dashboard_now_data():
     from . import dashboard as D
     now = datetime.now()
-    return {'counts': D.counts(current_user, now), 'online': [u for u in D.online(now) if u.id != current_user.id],
-            'taking': D.taking_now(now),
-            'now': now, 'when': lambda d: D.when(d, now)}
+    return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
+            'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now)}
 
 #route to the administrators' landing page: what needs doing and what's going on
 @qgen_bp.route('/dashboard', methods=['GET'])
@@ -1013,6 +1012,16 @@ def dashboard():
                            handins=D.recent_handins(), to_check=D.students_to_check(now),
                            progress=D.quiz_progress(now), messages=D.recent_messages(current_user),
                            glance=D.site_glance(now), **dashboard_now_data())
+
+#route to the top bar's "online" list (opened from any teacher page)
+@qgen_bp.route('/dashboard/online', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard_online():
+    from . import dashboard as D
+    now = datetime.now()
+    return render_template('_online_list.html', online=D.online(now), recent=D.recently_active(now), now=now)
 
 #route to the Dashboard's live part (counters and "Right now"), refreshed every minute
 @qgen_bp.route('/dashboard/now', methods=['GET'])

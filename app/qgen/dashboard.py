@@ -53,6 +53,16 @@ def online(now):
     return User.query.filter(User.last_seen >= now - ONLINE_WINDOW).order_by(User.username).all()
 
 
+#"active recently": seen within this long (but not online now)
+RECENTLY = timedelta(hours=1)
+
+
+def recently_active(now):
+    """People seen in the last hour who aren't online now, most recent first."""
+    return (User.query.filter(User.last_seen >= now - RECENTLY, User.last_seen < now - ONLINE_WINDOW)
+            .order_by(User.last_seen.desc()).all())
+
+
 def taking_now(now):
     """Students online with a started attempt they can still answer:
     [{'cq', 'started', 'left' (timedelta, or None without a limit or close time)}]."""

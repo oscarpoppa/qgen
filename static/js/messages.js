@@ -253,6 +253,9 @@
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
       if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Review
+      if (typeof res.online === 'number') {  // teachers: who's online (always shown, never hidden)
+        document.querySelectorAll('.nav-online').forEach(function (b) { b.textContent = res.online; });
+      }
       counts.forEach(function (pair) {
         document.querySelectorAll(pair[0]).forEach(function (b) {
           b.textContent = pair[1];

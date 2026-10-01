@@ -251,7 +251,16 @@ def poll():
                    latest=latest.id if latest else 0, latest_notice=latest_notice.id if latest_notice else 0,
                    message_preview=preview(new_msg), notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
-                   quizzes_state=quizzes_state(), review=review_waiting())
+                   quizzes_state=quizzes_state(), review=review_waiting(), online=online_now())
+
+
+def online_now():
+    """For teachers: how many people are online (the count in the top bar)."""
+    if not current_user.is_admin:
+        return None
+    from datetime import datetime
+    from app.user.models import ONLINE_WINDOW
+    return User.query.filter(User.last_seen >= datetime.now() - ONLINE_WINDOW).count()
 
 
 def review_waiting():

@@ -10,13 +10,16 @@
 {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#users" placeholder="Filter users…" aria-label="Filter users">{% endif %}
 <div class="table-wrap stack">
   <table id="users">
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
     <tbody>
     {% for item in ulst %}
       <tr>
-        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span>{% if item.online %} <span class="badge badge-ok" title="A page was open in the last 2 minutes">online</span>{% endif %}</td>
+        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span></td>
         <td data-label="Email">{% if item.email %}{{ item.email }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
+        <td data-label="Last seen">{% if item.online %}<span class="badge badge-ok" title="A page is open (checked every 30 seconds)">online now</span>
+          {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
+          {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
         <td class="actions">
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>

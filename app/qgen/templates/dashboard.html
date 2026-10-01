@@ -8,6 +8,8 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="close">Close all</button>
   <div class="actions dash-actions" aria-label="Quick actions">
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a>
@@ -22,9 +24,10 @@
 </div>
 
 <div class="dash-grid">
-  <section class="card dash-card" aria-labelledby="dash-queue-title">
-    <div class="dash-head"><h2 id="dash-queue-title">Waiting for grading</h2>
-      {% if waiting > queue|length %}<a class="small" href="{{ url_for('qgen.review_list') }}">All {{ waiting }} →</a>{% endif %}</div>
+  <details class="card dash-card" data-box="queue" open>
+    <summary class="dash-head"><h2>Waiting for grading</h2><span class="badge{{ ' badge-warn' if waiting }}">{{ waiting }}</span></summary>
+    <div class="dash-body">
+    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}">All {{ waiting }} on Review →</a></p>{% endif %}
     {% if queue %}
       <ul class="dash-list">
       {% for cq in queue %}
@@ -37,11 +40,13 @@
     {% else %}
       <p class="muted small">Nobody is waiting for grading.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 
-  <section class="card dash-card" aria-labelledby="dash-handins-title">
-    <div class="dash-head"><h2 id="dash-handins-title">Recent hand-ins</h2>
-      <a class="small" href="{{ url_for('qgen.list_users') }}">Results by student →</a></div>
+  <details class="card dash-card" data-box="handins" open>
+    <summary class="dash-head"><h2>Recent hand-ins</h2><span class="badge">{{ handins|length }}</span></summary>
+    <div class="dash-body">
+    <p class="dash-links small"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
@@ -55,11 +60,13 @@
     {% else %}
       <p class="muted small">Nothing handed in yet.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 
-  <section class="card dash-card" aria-labelledby="dash-check-title">
-    <div class="dash-head"><h2 id="dash-check-title">Students to check on</h2>
-      <span class="muted small">quiz closing soon, missed, or average under 50%</span></div>
+  <details class="card dash-card" data-box="check" open>
+    <summary class="dash-head"><h2>Students to check on</h2><span class="badge{{ ' badge-warn' if to_check }}">{{ to_check|length }}</span></summary>
+    <div class="dash-body">
+    <p class="dash-links muted small">A quiz closing soon not started, a quiz missed, or an average under 50%.</p>
     {% if to_check %}
       <ul class="dash-list">
       {% for row in to_check %}
@@ -70,11 +77,14 @@
     {% else %}
       <p class="muted small">Everyone looks fine.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 
-  <section class="card dash-card" aria-labelledby="dash-msg-title">
-    <div class="dash-head"><h2 id="dash-msg-title">Recent messages from students</h2>
-      <a class="small" href="{{ url_for('messages.inbox') }}">All messages →</a></div>
+  {% set new_msgs = messages|selectattr(1)|list|length %}
+  <details class="card dash-card" data-box="messages" open>
+    <summary class="dash-head"><h2>Recent messages from students</h2>{% if new_msgs %}<span class="badge badge-accent">{{ new_msgs }} new</span>{% endif %}</summary>
+    <div class="dash-body">
+    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}">All messages →</a></p>
     {% if messages %}
       <ul class="dash-list">
       {% for m, unread in messages %}
@@ -87,12 +97,14 @@
     {% else %}
       <p class="muted small">No messages from students yet.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 
-  <section class="card dash-card dash-wide" id="dash-progress" aria-labelledby="dash-progress-title">
-    <div class="dash-head"><h2 id="dash-progress-title">Quiz progress</h2>
-      <span class="muted small">quizzes out now, or handed in during the last 2 weeks</span>
-      <a class="small" href="{{ url_for('qgen.list_vquizzes') }}">All quizzes →</a></div>
+  <details class="card dash-card dash-wide" id="dash-progress" data-box="progress" open>
+    <summary class="dash-head"><h2>Quiz progress</h2><span class="badge">{{ progress|length }}</span></summary>
+    <div class="dash-body">
+    <p class="dash-links small"><span class="muted">Quizzes out now, or handed in during the last 2 weeks.</span>
+      <a href="{{ url_for('qgen.list_vquizzes') }}">All quizzes →</a></p>
     {% if progress %}
       <div class="table-wrap stack">
         <table>
@@ -114,10 +126,12 @@
     {% else %}
       <p class="muted small">No quizzes out right now. <a href="{{ url_for('qgen.assign') }}">Assign one</a>.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 
-  <section class="card dash-card dash-wide" aria-labelledby="dash-glance-title">
-    <div class="dash-head"><h2 id="dash-glance-title">Site at a glance</h2></div>
+  <details class="card dash-card dash-wide" data-box="glance" open>
+    <summary class="dash-head"><h2>Site at a glance</h2></summary>
+    <div class="dash-body">
     <div class="dash-glance">
       <a href="{{ url_for('user.userdet') }}"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
       <a href="{{ url_for('user.userdet') }}"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
@@ -134,7 +148,8 @@
         <span class="muted">{{ glance.ai_calls }} request{{ '' if glance.ai_calls == 1 else 's' }} in {{ glance.month }}{% if glance.ai_tokens %} ({{ '{:,}'.format(glance.ai_tokens) }} tokens){% endif %}</span>
       {% else %}<span class="badge">off</span>{% endif %}
     </p>
-  </section>
+    </div>
+  </details>
 </div>
 {% endblock %}
 

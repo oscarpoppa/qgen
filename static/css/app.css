@@ -839,3 +839,31 @@ main.container { container: page / inline-size; }
 @container editform (max-width: 640px) {
   .split { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Dashboard boxes open and close (static/js/dashboard.js remembers which) */
+details.dash-card > summary { list-style: none; cursor: pointer; align-items: center; margin: -4px -6px; padding: 4px 6px; border-radius: 8px; }
+details.dash-card > summary::-webkit-details-marker { display: none; }
+details.dash-card > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+details.dash-card[open] > summary::before { transform: rotate(90deg); }
+details.dash-card > summary:hover { background: var(--accent-soft); }
+details.dash-card[open] > summary { margin-bottom: 6px; }
+.dash-body > .dash-links { margin: 0 0 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+.dash-body > .dash-links a { margin-left: auto; }
+.online-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.online-people li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { details.dash-card > summary::before { transition: none; } }
+
+/* the top bar's "online" menu (teachers) */
+.online-menu > summary::after { content: none; }
+.online-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 5px 10px; font-size: .9rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.online-btn:hover { background: var(--surface-2); }
+.online-menu[open] > .online-btn { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); flex: none; }
+.online-pop { position: absolute; top: calc(100% + 6px); right: 0; width: min(300px, 90vw); max-height: 70vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 10px 12px; z-index: 40; }
+.online-pop .dash-sub:first-child { margin-top: 0; }
+@media (max-width: 760px) {
+  .online-pop { position: fixed; top: calc(var(--topbar-h) + 4px); left: 12px; right: 12px; width: auto; }
+}

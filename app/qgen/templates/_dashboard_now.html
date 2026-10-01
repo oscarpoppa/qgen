@@ -8,34 +8,29 @@
     <span class="dash-num">{{ counts.messages }}</span><span>unread message{{ '' if counts.messages == 1 else 's' }}</span></a>
   <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices">
     <span class="dash-num">{{ counts.notices }}</span><span>unread notice{{ '' if counts.notices == 1 else 's' }}</span></button>
-  <a class="dash-count{{ ' has' if counts.closing }}" href="#dash-progress">
-    <span class="dash-num">{{ counts.closing }}</span><span>unfinished, closing in 2 days</span></a>
+  <a class="dash-count{{ ' has' if counts.closing }}" href="#dash-progress"
+     title="Assigned quizzes with a closing time in the next 2 days that the student hasn't handed in yet (one per student)">
+    <span class="dash-num">{{ counts.closing }}</span><span>not handed in, due within 2 days</span></a>
 </div>
 
-<section class="card dash-card" id="dash-right-now" aria-labelledby="dash-now-title">
-  <div class="dash-head"><h2 id="dash-now-title">Right now</h2>
-    <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></div>
-  <h3 class="dash-sub">Taking a quiz</h3>
-  {% if taking %}
-    <ul class="dash-list">
-    {% for t in taking %}
-      <li><span class="person">{{ avatar(t.cq.taker, 24) }}<strong>{{ t.cq.taker.username }}</strong></span>
-        <span>“{{ t.cq.vquiz.title }}”</span>
-        <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
-    {% endfor %}
-    </ul>
-  {% else %}
-    <p class="muted small">Nobody is taking a quiz right now.</p>
-  {% endif %}
-  <h3 class="dash-sub">Online <span class="badge">{{ online|length }}</span></h3>
-  {% if online %}
-    <div class="dash-people">
-    {% for u in online %}
-      <span class="person">{{ avatar(u, 24) }}{{ u.username }}{% if u.is_admin %} <span class="badge">teacher</span>{% endif %}</span>
-    {% endfor %}
-    </div>
-  {% else %}
-    <p class="muted small">Nobody else is online.</p>
-  {% endif %}
-  <p class="muted small dash-note">“Online” means a page was open in the last 2 minutes.</p>
-</section>
+<details class="card dash-card" id="dash-right-now" data-box="now" open>
+  <summary class="dash-head"><h2>Right now</h2>
+    <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
+    {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}
+    <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></summary>
+  <div class="dash-body">
+    <h3 class="dash-sub">Taking a quiz</h3>
+    {% if taking %}
+      <ul class="dash-list">
+      {% for t in taking %}
+        <li><span class="person">{{ avatar(t.cq.taker, 24) }}<strong>{{ t.cq.taker.username }}</strong></span>
+          <span>“{{ t.cq.vquiz.title }}”</span>
+          <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">Nobody is taking a quiz right now.</p>
+    {% endif %}
+    {% include "_online_list.html" %}
+  </div>
+</details>

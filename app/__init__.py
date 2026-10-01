@@ -84,9 +84,12 @@ def page_helpers():
         if not current_user.is_authenticated:
             return 0
         return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
+    def online_count():
+        from app.user.models import User, ONLINE_WINDOW
+        return User.query.filter(User.last_seen >= datetime.now() - ONLINE_WINDOW).count()
     from app.user.avatars import initials, color
     from app.home import home_url
-    return dict(csrf_token=generate_csrf, home_url=home_url, review_count=review_count, now=datetime.now,
+    return dict(csrf_token=generate_csrf, home_url=home_url, online_count=online_count, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)
 

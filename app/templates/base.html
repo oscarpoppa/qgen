@@ -38,6 +38,14 @@
       {% if current_user.is_authenticated %}
         {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
         <div class="dock-buttons">
+          {% if current_user.is_admin %}{% set nav_online = online_count() %}
+          {# who's on the site (teachers only); the list loads when opened #}
+          <details class="menu online-menu" data-url="{{ url_for('qgen.dashboard_online') }}" data-dashboard="{{ url_for('qgen.dashboard') }}">
+            <summary class="online-btn" title="Who's online"><span class="online-dot" aria-hidden="true"></span>
+              <span class="nav-online">{{ nav_online }}</span><span class="dock-btn-label">online</span></summary>
+            <div class="online-pop" role="region" aria-label="Who's online"><p class="muted small">Loading…</p></div>
+          </details>
+          {% endif %}
           <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide notices">
             <span aria-hidden="true">🔔</span><span class="dock-btn-label">Notices</span>
             <span class="count nav-notices" {% if not nav_notices %}hidden{% endif %}>{{ nav_notices }}</span></button>
@@ -147,6 +155,7 @@
   </script>
   {% if current_user.is_authenticated and current_user.is_admin %}
   <script src="{{ asset('js/dropzone.js') }}" defer></script>
+  <script src="{{ asset('js/online.js') }}" defer></script>
   {% endif %}
   <script src="{{ asset('js/calendar.js') }}" defer></script>
   <script src="{{ asset('js/tips.js') }}" defer></script>

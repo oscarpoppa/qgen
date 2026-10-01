@@ -44,6 +44,24 @@ class User(UserMixin, db.Model):
             db.session.rollback()
             raise
 
+    def seen_label(self, now=None):
+        """When this user was last on the site, in words: 'online now', '12 min ago',
+        '3 h ago', 'yesterday', 'Sep 28', or 'never'."""
+        from datetime import datetime
+        if not self.last_seen:
+            return 'never'
+        now = now or datetime.now()
+        ago = now - self.last_seen
+        if ago < ONLINE_WINDOW:
+            return 'online now'
+        if ago < timedelta(hours=1):
+            return '{} min ago'.format(int(ago.total_seconds() // 60))
+        if self.last_seen.date() == now.date():
+            return '{} h ago'.format(int(ago.total_seconds() // 3600))
+        if (now.date() - self.last_seen.date()).days == 1:
+            return 'yesterday'
+        return '{:%b} {}'.format(self.last_seen, self.last_seen.day)
+
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
