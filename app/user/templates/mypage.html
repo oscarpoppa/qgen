@@ -21,7 +21,8 @@
   {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if best else '' }}">{{ '★ ' if best }}{{ '%.0f' % (cq.score or 0) }}%</span>
   {% elif cq.status == 'review' %}<span class="badge badge-warn">Waiting for grading</span>
   {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
-  {% else %}<span class="badge">Not started</span>{% endif %}
+  {# assigned and not opened yet: new to the student #}
+  {% else %}<span class="badge badge-warn">New</span>{% endif %}
 {% endmacro %}
 
 {% block content %}

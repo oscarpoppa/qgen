@@ -337,3 +337,20 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     assert VQuiz.query.get(vq.id) is not None
     # teachers' polls don't carry it
     assert teacher.get('/messages/poll').get_json()['quizzes_state'] is None
+
+
+def test_a_newly_assigned_quiz_says_new(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Fresh', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    home = sam.get('/mypage').data.decode()
+    assert '<span class="badge badge-warn">New</span>' in home and 'Not started' not in home
+    # opened: no longer new
+    sam.get('/quiz/take/{}'.format(CQuiz.query.one().id))
+    home = sam.get('/mypage').data.decode()
+    assert '<span class="badge badge-warn">New</span>' not in home and 'In progress' in home
