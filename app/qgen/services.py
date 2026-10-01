@@ -42,7 +42,7 @@ SUBJECT_NAME_MAX = 64
 
 def subject_kind(kind):
     if kind not in SUBJECT_KINDS:
-        raise ServiceError('Unknown kind of subject "{}".'.format(kind))
+        raise ServiceError('Unknown kind of folder "{}".'.format(kind))
     return SUBJECT_KINDS[kind]
 
 
@@ -55,12 +55,12 @@ def subjects(kind):
 def _subject_name(kind, name, subject=None):
     name = ' '.join((name or '').split())
     if not name:
-        raise ServiceError('Please give the subject a name.')
+        raise ServiceError('Please give the folder a name.')
     if len(name) > SUBJECT_NAME_MAX:
-        raise ServiceError('Subject names can be at most {} characters.'.format(SUBJECT_NAME_MAX))
+        raise ServiceError('Folder names can be at most {} characters.'.format(SUBJECT_NAME_MAX))
     for other in subjects(kind):
         if other is not subject and (other.title or '').lower() == name.lower():
-            raise ServiceError('There\'s already a subject called "{}".'.format(other.title))
+            raise ServiceError('There\'s already a folder called "{}".'.format(other.title))
     return name
 
 
@@ -83,7 +83,7 @@ def _commit_subject():
     except IntegrityError:
         #another teacher made one with the same name a moment ago
         db.session.rollback()
-        raise ServiceError('There\'s already a subject with that name.')
+        raise ServiceError('There\'s already a folder with that name.')
 
 
 def delete_subject(subject):
@@ -143,7 +143,7 @@ def subject_choices(kind):
     """The subject menu: [(value, label, count)] for All, No subject and each subject."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     out = [('all', 'All', item_cls.query.count()),
-           ('none', 'No subject', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
+           ('none', 'No folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
     for g in subjects(kind):
         out.append((str(g.id), g.title, len(getattr(g, back))))
     return out
@@ -165,7 +165,7 @@ def new_subject_name_error(kind, name):
     or None. A name that is already a subject (in any case) is fine: that one is used."""
     name = ' '.join((name or '').split())
     if name and len(name) > SUBJECT_NAME_MAX:
-        return 'Subject names can be at most {} characters.'.format(SUBJECT_NAME_MAX)
+        return 'Folder names can be at most {} characters.'.format(SUBJECT_NAME_MAX)
     return None
 
 

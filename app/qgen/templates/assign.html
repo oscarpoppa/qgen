@@ -8,7 +8,7 @@
   {{ form.hidden_tag() }}
   {# narrows the Quiz menu (needs the page's script, so it starts hidden) #}
   <div class="field" id="assign-subject-field" hidden{% if quiz_chosen %} data-keep-quiz{% endif %}>
-    <label class="label" for="assign-subject">Subject</label>
+    <label class="label" for="assign-subject">Folder</label>
     <select id="assign-subject">
       {% for value, label, count in choices %}
         <option value="{{ value }}"{% if value == choice %} selected{% endif %}>{{ label }} ({{ count }})</option>
@@ -45,8 +45,8 @@
 
 {% block scripts %}
 <script>
-/* The Subject menu rebuilds the Quiz menu with that subject's quizzes (hiding options
- * doesn't work in Safari). A quiz already chosen that isn't in the subject (e.g. after
+/* The Folder menu rebuilds the Quiz menu with that folder's quizzes (hiding options
+ * doesn't work in Safari). A quiz already chosen that isn't in the folder (e.g. after
  * a form error) switches the menu to All rather than quietly changing the quiz. */
 (function () {
   var subject = document.getElementById('assign-subject');
@@ -65,7 +65,7 @@
       if (fits(o.value, v)) quiz.add(new Option(o.text, o.value, false, o.value === keep));
     });
     if (!quiz.options.length) {
-      var none = new Option('No quizzes in this subject', '');
+      var none = new Option('No quizzes in this folder', '');
       none.disabled = true;
       quiz.add(none);
       none.selected = true;

@@ -116,8 +116,8 @@ def test_deleting_a_subject_keeps_its_items_in_unsorted(app_db):
     t = VPGroup.query.one()
     teacher.post('/quiz/subjects/problems/file', data={'subject': t.id, 'items': [probs['Add'].id]})
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Its 1 problem moves to Unsorted (unless also in another subject).' in page
-    assert 'aria-label="Rename the subject “Temp”"' in page and 'aria-label="Delete the subject “Temp”"' in page
+    assert 'Its 1 problem moves to Unsorted (unless also in another folder).' in page
+    assert 'aria-label="Rename the folder “Temp”"' in page and 'aria-label="Delete the folder “Temp”"' in page
     teacher.post('/quiz/subjects/problems/{}/delete'.format(t.id))
     assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Unsorted': ['Add']}
 
@@ -135,7 +135,7 @@ def test_new_items_must_be_given_a_subject(app_db):
     # no answer: not saved, and asked again
     r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1'))
     assert VProblem.query.count() == 0
-    assert 'Choose a subject for this problem, or Unsorted to file it later.' in r.data.decode()
+    assert 'Choose a folder for this problem, or Unsorted to file it later.' in r.data.decode()
     # a subject: saved in it, and the list opens where it is
     r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1', subjects=[str(alg.id)]))
     vp = VProblem.query.one()
@@ -172,7 +172,7 @@ def test_new_items_must_be_given_a_subject(app_db):
     teacher.post('/quiz/subjects/quizzes/new', data={'name': 'Period 2'})
     p2 = VQGroup.query.one()
     r = teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1'})
-    assert VQuiz.query.count() == 0 and 'Choose a subject for this quiz' in r.data.decode()
+    assert VQuiz.query.count() == 0 and 'Choose a folder for this quiz' in r.data.decode()
     teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1', 'subjects': [str(p2.id)]})
     vq = VQuiz.query.one()
     assert [g.title for g in vq.vqgroups] == ['Period 2']
@@ -221,8 +221,8 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     teacher.post('/quiz/assign', data={'vquiz': q1.id, 'users': [sam_id]})
     assert len(q1.cquizzes) == 1
     from app.api.serialize import problem_json, vquiz_json
-    assert problem_json(probs['Add'])['subjects'] == [{'id': alg.id, 'name': 'Algebra'}, {'id': geo.id, 'name': 'Geometry'}]
-    assert vquiz_json(q2)['subjects'] == [{'id': p2.id, 'name': 'Period 2'}]
+    assert problem_json(probs['Add'])['labels'] == [{'id': alg.id, 'name': 'Algebra'}, {'id': geo.id, 'name': 'Geometry'}]
+    assert vquiz_json(q2)['labels'] == [{'id': p2.id, 'name': 'Period 2'}]
 
 
 def test_subject_changes_are_for_teachers_with_the_page_token(app_db):
@@ -255,3 +255,22 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     results = teacher.get('/quiz/listuser').data.decode()
     assert 'data-store="qgen-open-results-students"' in results and '<details class="card subject-box student"' in results
     assert 'data-boxes="open"' in results and 'js/subjects.js' in results
+
+
+def test_they_are_called_folders_on_screen(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    make_problems(teacher, 'Add')
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert '+ New folder' in page and 'Make a folder first' in page
+    r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
+    assert 'Made the folder' in r.data.decode()
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'Add to folder' in page and 'Remove from folder' in page and 'Delete the folder “Algebra”' in page
+    r = teacher.post('/quiz/subjects/problems/new', data={'name': 'algebra'}, follow_redirects=True)
+    assert 'There&#39;s already a folder called' in r.data.decode()
+    form = teacher.get('/quiz/makevprob').data.decode()
+    assert '<legend>Folder' in form and 'Or a new folder' in form
+    for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/makevprob', '/quiz/makevquiz', '/quiz/assign'):
+        text = teacher.get(url).data.decode()
+        assert '>Subject' not in text and 'subject “' not in text and 'New subject' not in text, url

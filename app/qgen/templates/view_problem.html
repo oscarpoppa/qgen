@@ -10,7 +10,7 @@
   </div>
 </div>
 <p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.
-  {% if vp.vpgroups %}<br>Subjects: {{ subject_labels(vp.vpgroups) }}{% endif %}</p>
+  {% if vp.vpgroups %}<br>Folders: {{ subject_labels(vp.vpgroups) }}{% endif %}</p>
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div class="grid">
   {% for s in samples %}{% with show_titles = false %}{% include "_sample_item.html" %}{% endwith %}{% endfor %}

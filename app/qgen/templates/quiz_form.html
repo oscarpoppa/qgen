@@ -41,7 +41,7 @@
           <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
           <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
         </div>
-        <p class="muted small">Open any subjects and tick problems from as many of them as you like; they all go in this quiz.</p>
+        <p class="muted small">Open any folders and tick problems from as many of them as you like; they all go in this quiz.</p>
         <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
           {% for subject, items in problem_boxes %}
             {% if subject or items %}

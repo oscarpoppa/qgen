@@ -287,7 +287,7 @@ def delete_attempt(aid):
 @api_bp.route('/archive', methods=['GET'])
 @teacher
 def archive():
-    return jsonify(archive=[archived_json(a) for a in S.archived_attempts(request.args.get('subject', 'all'))])
+    return jsonify(archive=[archived_json(a) for a in S.archived_attempts(request.args.get('label', request.args.get('subject', 'all')))])
 
 
 @api_bp.route('/archive/<int:aid>', methods=['GET'])

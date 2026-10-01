@@ -1,5 +1,5 @@
 /* <input class="filter" data-filter="#table-id">: hide table rows that don't match.
- * A row can be hidden by more than one filter (the typed text, the Subject menu in the
+ * A row can be hidden by more than one filter (the typed text, the Folder menu in the
  * quiz builder): each sets its own flag with qgenHideRow(row, 'name', true/false), and
  * the row shows only when no filter hides it. */
 window.qgenHideRow = function (row, key, hide) {

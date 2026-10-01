@@ -44,7 +44,7 @@ def subject_form_error(kind, new):
         return error
     chosen = [i for i in request.form.getlist('subjects') if S.get_subject(kind, i)]
     if new and not (chosen or name.strip() or request.form.get('unsorted')):
-        return 'Choose a subject for this {}, or Unsorted to file it later.'.format('problem' if kind == 'problems' else 'quiz')
+        return 'Choose a folder for this {}, or Unsorted to file it later.'.format('problem' if kind == 'problems' else 'quiz')
     return None
 
 
@@ -782,8 +782,8 @@ def new_subject(kind):
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         return subject_list(kind)
-    flash('Made the subject "{}". Tick {} and choose "Add to subject" to put them in it.'.format(subject.title, kind), 'success')
-    current_app.logger.info('{} made {} subject ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
+    flash('Made the folder "{}". Tick {} and choose "Add to folder" to put them in it.'.format(subject.title, kind), 'success')
+    current_app.logger.info('{} made {} folder ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
     return subject_list(kind, _anchor='subject-{}'.format(subject.id))
 
 #route to rename a subject
@@ -796,7 +796,7 @@ def rename_subject(kind, sid):
     subject = subject_or_404(kind, sid)
     try:
         S.rename_subject(kind, subject, request.form.get('name'))
-        flash('Renamed the subject to "{}".'.format(subject.title), 'success')
+        flash('Renamed the folder to "{}".'.format(subject.title), 'success')
     except S.ServiceError as exc:
         flash(str(exc), 'error')
     return subject_list(kind, _anchor='subject-{}'.format(sid))
@@ -811,8 +811,8 @@ def delete_subject(kind, sid):
     subject = subject_or_404(kind, sid)
     name = subject.title
     S.delete_subject(subject)
-    flash('Deleted the subject "{}". Its {} are kept: in Unsorted, or in their other subjects.'.format(name, kind), 'success')
-    current_app.logger.info('{} deleted {} subject ({}) "{}"'.format(current_user.username, kind, sid, name))
+    flash('Deleted the folder "{}". Its {} are kept: in Unsorted, or in their other folders.'.format(name, kind), 'success')
+    current_app.logger.info('{} deleted {} folder ({}) "{}"'.format(current_user.username, kind, sid, name))
     return subject_list(kind)
 
 #route to put the ticked problems (or quizzes) in a subject, or take them out of it
@@ -829,7 +829,7 @@ def file_subject(kind):
     subject = S.get_subject(kind, request.form.get('subject'))
     items = request.form.getlist('items')
     if subject is None:
-        flash('Choose a subject first.', 'error')
+        flash('Choose a folder first.', 'error')
     elif not items:
         flash('Tick at least one first.', 'error')
     else:

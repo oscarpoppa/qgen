@@ -273,6 +273,13 @@ def test_archive_through_the_api(app_db):
     assert c.delete('/api/v2/attempts/{}'.format(cqid), headers=T).status_code == 204
     listed = c.get('/api/v2/archive', headers=T).get_json()['archive']
     assert [(x['attempt_id'], x['student_name'], x['restore_blocked']) for x in listed] == [(cqid, 'sam', None)]
+    # narrowed by the quiz's label (?subject= still works for older scripts)
+    from app.qgen import services as Svc
+    lab = Svc.create_subject('quizzes', 'Period 2')
+    for q in ('label=none', 'subject=none'):
+        assert len(c.get('/api/v2/archive?' + q, headers=T).get_json()['archive']) == 1
+    for q in ('label={}', 'subject={}'):
+        assert c.get('/api/v2/archive?' + q.format(lab.id), headers=T).get_json()['archive'] == []
     one = c.get('/api/v2/archive/{}'.format(listed[0]['id']), headers=T).get_json()
     assert 'Week 1' in one['results_html']
     r = c.get('/api/v2/my/attempts/{}'.format(cqid), headers=S_)

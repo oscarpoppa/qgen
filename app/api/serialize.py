@@ -102,7 +102,7 @@ def results_json(cq, show_answers):
 
 # ---------------------------------------------------------------- teacher side
 
-def subjects_json(groups):
+def labels_json(groups):
     return [{'id': g.id, 'name': g.title} for g in sorted(groups, key=lambda g: (g.title or '').lower())]
 
 
@@ -121,7 +121,7 @@ def archived_json(a):
 def problem_json(vp, full=False):
     out = {'id': vp.id, 'title': vp.title, 'type': vp.qtype, 'question': vp.raw_prob,
            'calculator_ok': bool(vp.calculator_ok), 'created': iso(vp.create_date),
-           'used_in_quizzes': [q.id for q in vp.vquizzes], 'subjects': subjects_json(vp.vpgroups)}
+           'used_in_quizzes': [q.id for q in vp.vquizzes], 'labels': labels_json(vp.vpgroups)}
     if full:
         out['answer'] = vp.raw_ansr
         out['options'] = vp.options
@@ -134,7 +134,7 @@ def vquiz_json(vq, full=False):
            'calculator_ok': bool(vq.calculator_ok), 'shuffle_order': bool(vq.shuffle_order),
            'retake_rule': vq.retake_rule, 'hide_answers': bool(vq.hide_answers),
            'answers_released': bool(vq.answers_released), 'image_url': static_url(vq.image),
-           'times_assigned': len(vq.cquizzes), 'subjects': subjects_json(vq.vqgroups)}
+           'times_assigned': len(vq.cquizzes), 'labels': labels_json(vq.vqgroups)}
     if full:
         out['problems'] = lay
         out['image'] = vq.image
