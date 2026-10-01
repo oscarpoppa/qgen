@@ -138,6 +138,9 @@ class TranscriptItem:
     correct: str
     credit: Optional[float]
     feedback: Optional[str]
+    #pick-one / pick-several / true-false: every choice the student saw, in their order,
+    #as {'text', 'picked', 'right'}; None for other types
+    choices: Optional[list] = None
 
     @property
     def mark(self):
@@ -145,6 +148,17 @@ class TranscriptItem:
         if self.credit == 1:
             return 'ok'
         return 'bad' if not self.credit else 'partial'
+
+
+def transcript_choices(qt, cp):
+    """The choices this student saw, which they picked, and which are correct
+    (left unmarked when several combinations of ticks count, as in combos)."""
+    opts = cp.conc_opts or {}
+    if not hasattr(qt, 'picked') or not opts.get('choices'):
+        return None
+    picked = set(qt.picked(cp.submitted))
+    right = set() if opts.get('combos') else set(opts.get('correct') or [])
+    return [{'text': text, 'picked': i in picked, 'right': i in right} for i, text in enumerate(opts['choices'])]
 
 
 def transcript_item(cp):
@@ -157,6 +171,7 @@ def transcript_item(cp):
         correct=qt.show_correct(cp.conc_ansr, cp.conc_opts),
         credit=cp.credit,
         feedback=cp.feedback,
+        choices=transcript_choices(qt, cp),
     )
 
 

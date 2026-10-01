@@ -9,11 +9,13 @@ problem, the "Show me 3 examples" preview, and the AI helper:
 
     question  text with [name] placeholders (or legacy {{...}} markup)
     answer    meaning depends on the type (formula, accepted answers, ...)
-    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, ordered, complex,
+    options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, ordered,
+              answer_display (Numeric: exact form shown on results), complex,
               grading_notes, markup, images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
 import json
+import math
 import random
 import re
 from decimal import Decimal, ROUND_HALF_UP
@@ -119,6 +121,44 @@ def _close_enough(got, want, precision):
     if want == 0:
         return abs(got) < 0.01
     return abs(got - want) / abs(want) <= 0.01
+
+
+#a student's answer with math in it (2√3, π/2, 2^0.5, (1+√5)/2), not just plain numbers
+_MATHY = re.compile(r'[√π^*()]|sqrt|pi', re.I)
+_REAL_MATH = re.compile(r'[√π^]|sqrt|pi', re.I)
+
+
+def _student_expr(part):
+    """A student's way of writing math -> a formula the calculator reads:
+    2√3 -> 2*sqrt(3), √(x) -> sqrt(x), 2π -> 2*pi, (a)(b) -> (a)*(b)."""
+    e = part.strip().replace('−', '-').replace('π', 'pi').replace('√', 'sqrt')
+    e = re.sub(r'sqrt\s*(\d+(?:\.\d+)?|pi)', r'sqrt(\1)', e)    # √3 -> sqrt(3)
+    e = re.sub(r'(\d|\)|pi)\s*(sqrt|pi|\()', r'\1*\2', e)       # 2√3, 2π, 2(…), )(
+    e = re.sub(r'(\)|pi)\s*(\d)', r'\1*\2', e)                   # (…)2, π2
+    return e
+
+
+def student_numbers(text):
+    """The numbers in a student's answer when it contains math, worked out
+    ("2√3" -> "3.4641016151"), as a comma list; None when it's plain numbers
+    (read as before, including 3/4 and 1 1/2); '' (never right) when it has
+    √, π or ^ but can't be worked out."""
+    if not text or not _MATHY.search(text):
+        return None
+    parts, _ = F.split_list(text)
+    out = []
+    for part in parts:
+        try:
+            value = F.evaluate(_student_expr(part), {'pi': math.pi})
+        except (F.FriendlyError, KeyError, SyntaxError):
+            value = None
+        if value is None or isinstance(value, complex):
+            #math that can't be worked out (√-4, √(x)) isn't read for its plain numbers
+            #(that would turn √-4 into -4); only brackets/× around plain numbers fall back
+            return '' if _REAL_MATH.search(text) else None
+        #written out in full (never 1e-05), which the number reader understands
+        out.append(format(float(value), '.10f').rstrip('0').rstrip('.') or '0')
+    return ', '.join(out)
 
 
 def numbers_match(subm, corr, precision='close', ordered=False):
@@ -312,8 +352,10 @@ class Numeric(QType):
     def validate_parts(self, answer, options, known):
         if not (answer or '').strip():
             return ['Please give the answer formula.']
+        display_errors = F.check_text('exact form', options['answer_display'], known) \
+            if (options.get('answer_display') or '').strip() else []
         if '[' in answer:
-            return F.check_text('answer', answer, known)
+            return F.check_text('answer', answer, known) + display_errors
         parts, _ = F.split_list(answer)
         if len(parts) > 1 and not all(parts):
             return ['The answer has an empty spot between commas. For a pair, write it like: x, y']
@@ -326,7 +368,7 @@ class Numeric(QType):
                 continue
             errors += ['The answer uses "{}", which isn\'t in your values table.{}'
                        .format(n, F._suggest(n, known)) for n in sorted(F.names_in(tree) - set(known))]
-        return list(dict.fromkeys(errors))
+        return list(dict.fromkeys(errors + display_errors))
 
     def render_answer(self, answer, env):
         return F.fill_answer(answer, env)
@@ -335,6 +377,9 @@ class Numeric(QType):
         prob, ansr, opts = super().render(question, answer, options, env, rng)
         if uses_complex(options):
             opts['complex'] = True  # the quiz page tells the student how to type i
+        if (options.get('answer_display') or '').strip():
+            #how results show the correct answer, e.g. \\( 2\\sqrt{[n]} \\), with this student's values
+            opts['display'] = F.fill_question(options['answer_display'].strip(), env)
         return prob, ansr, opts
 
     def grade(self, stored, conc_ansr, conc_opts, options):
@@ -342,7 +387,23 @@ class Numeric(QType):
         ordered = bool(options.get('ordered'))
         if uses_complex(options):
             return 1.0 if complex_match(stored, conc_ansr, precision, ordered) else 0.0
-        return 1.0 if numbers_match(stored, conc_ansr, precision, ordered) else 0.0
+        #math the student typed (2√3, π/2) is worked out first
+        worked = student_numbers(stored)
+        return 1.0 if numbers_match(worked if worked is not None else stored, conc_ansr, precision, ordered) else 0.0
+
+    def show_submitted(self, stored, conc_opts):
+        worked = student_numbers(stored)
+        if worked is None or (conc_opts or {}).get('complex'):
+            return stored or ''
+        if worked == '':
+            return "{} (couldn't be worked out)".format(stored)
+        shown = ', '.join(F.format_num(float(v)) for v in worked.split(', '))
+        return '{} (= {})'.format(stored, shown)
+
+    def show_correct(self, conc_ansr, conc_opts):
+        """With an exact form, e.g. \\( 2\\sqrt{3} \\), shown alongside the number."""
+        display = (conc_opts or {}).get('display')
+        return '{}  (≈ {})'.format(display, conc_ansr) if display else (conc_ansr or '')
 
 
 class Text(QType):

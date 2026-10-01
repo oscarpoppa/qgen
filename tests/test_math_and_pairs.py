@@ -94,7 +94,8 @@ def test_pair_problem_through_the_pages(app_db):
     teacher = login(app, 'teach')
     page = teacher.get('/quiz/makevprob').data.decode()
     assert 'class="math-toolbar"' in page and 'id="math-preview"' in page and 'name="ordered"' in page
-    assert page.count('class="math-btn"') == 18
+    assert page.count('class="math-btn"') == 54  # three bars of 18: question, choices, exact form
+    assert all('data-target="{}"'.format(t) in page for t in ('question', 'choices', 'answer_display'))
     r = teacher.post('/quiz/makevprob', data=problem_form('numeric', 'Point', r'Plot \( ([x], [y]) \)', '(x, y)', XY, ordered='y'))
     assert r.status_code == 302
     vp = VProblem.query.one()
@@ -160,3 +161,82 @@ def test_math_helpers_are_for_numeric_problems_only(app_db):
         # nothing closes the t-numeric box between its start and the helper
         between = page[opening:spot]
         assert between.count('<div') - between.count('</div>') >= 1
+
+
+# ---------------------------------------------------------------- math in answers
+
+def test_students_may_type_math_answers():
+    from app.qgen.qtypes import student_numbers
+    assert student_numbers('2√3') == '3.4641016151' and student_numbers('√(12)') == '3.4641016151'
+    assert student_numbers('(1+√5)/2') == '1.6180339887' and student_numbers('π/2') == '1.5707963268'
+    assert student_numbers('2π') == '6.2831853072' and student_numbers('3^2') == '9'
+    assert student_numbers('(√2, √3)') == '1.4142135624, 1.7320508076'
+    # plain numbers are read as before (fractions, mixed numbers, lists)
+    for plain in ('3/4', '1 1/2', '-2.5', '3, 5', ''):
+        assert student_numbers(plain) is None
+    # math that can't be worked out is never right (√-4 isn't read as -4)
+    assert student_numbers('√-4') == '' and student_numbers('√(x)') == '' and student_numbers('9^9^9') == ''
+    qt = get_qtype('numeric')
+    assert qt.grade('2√3', '3.4641', {}, {}) == 1.0 and qt.grade('√-4', '-4', {}, {}) == 0.0
+    assert qt.grade('3.46', '3.4641', {}, {}) == 1.0 and qt.grade('3/4', '0.75', {}, {}) == 1.0
+    assert qt.show_submitted('2√3', {}) == '2√3 (= 3.4641)' and qt.show_submitted('3/4', {}) == '3/4'
+    assert qt.show_submitted('√-4', {}) == "√-4 (couldn't be worked out)"
+
+
+def test_exact_form_of_a_numeric_answer(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    N = [{'name': 'n', 'kind': 'whole', 'min': '2', 'max': '7'}]
+    qt = get_qtype('numeric')
+    assert qt.validate('Root of [n]?', 'sqrt(n)', {'values': N, 'answer_display': r'\( \sqrt{[n]} \)'}) == []
+    errors = qt.validate('Root?', 'sqrt(n)', {'values': N, 'answer_display': r'\( \sqrt{[m]} \)'})
+    assert any('"m"' in e for e in errors)  # checked like the question
+    teacher = login(app, 'teach')
+    r = teacher.post('/quiz/makevprob', data=problem_form('numeric', 'Root', r'What is \( \sqrt{[n]} \)?', 'sqrt(n)', N,
+                                                          answer_display=r'\( \sqrt{[n]} \)'))
+    assert r.status_code == 302
+    vp = VProblem.query.one()
+    assert vp.options['answer_display'] == r'\( \sqrt{[n]} \)'
+    assert r'value="\( \sqrt{[n]} \)"' in teacher.get('/quiz/editvprob/{}'.format(vp.id)).data.decode()
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher.post('/quiz/makevquiz', data={'title': 'Roots', 'vplist': str(vp.id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    cp = cq.cproblems[0]
+    n = int(cp.conc_prob.split('{')[1].split('}')[0])
+    assert cp.conc_opts['display'] == r'\( \sqrt{%d} \)' % n
+    # the student types math with the keypad's symbols; it's worked out and graded
+    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'class="keypad"' in page and 'data-ins="√"' in page
+    with app.test_request_context():
+        S.submit(cq, {1: '√{}'.format(n)})
+    assert cq.score == 100
+    results = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert r'\( \sqrt{%d} \)  (≈ ' % n in results and '√{} (= '.format(n) in results
+
+
+def test_results_list_the_choices(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('choice_one', 'Pick', 'Which is 4?', '', [], choices='*4\n5\n6'))
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    ids = [p.id for p in VProblem.query.order_by(VProblem.id)]
+    teacher.post('/quiz/makevquiz', data={'title': 'Mixed', 'vplist': '{}, {}'.format(*ids)})
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    pick = next(cp for cp in cq.cproblems if cp.conc_opts.get('choices'))
+    wrong = next(i for i, c in enumerate(pick.conc_opts['choices']) if c != '4')
+    with app.test_request_context():
+        S.submit(cq, {pick.ordinal: str(wrong)})
+    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    # all three choices listed; the student's pick and the correct one marked
+    assert page.count('class="choice-text"') == 3
+    assert 'is-picked' in page and '>your answer</span>' in page and '✓ correct' in page
+    # keypads only for numbers, and not on results
+    assert 'class="keypad"' not in page

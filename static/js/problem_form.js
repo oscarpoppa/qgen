@@ -166,13 +166,13 @@
     if (e.target.closest('.remove-image')) e.target.closest('.image-row').remove();
   });
 
-  /* ---------- math buttons and the math preview ---------- */
+  /* ---------- math buttons and the math previews ---------- */
 
-  //the buttons write into the question, or the choices if that's where you were typing
-  //(never into a Numeric answer: that's a formula, not something shown)
-  var MATH_BOXES = '[name=question], [name=choices], [name=combos]';
-  function mathTarget() {
-    return lastBox && lastBox.matches(MATH_BOXES) && !lastBox.closest('[hidden]') ? lastBox : form.querySelector('[name=question]');
+  //each button bar writes into its own box (data-target): the question (Numeric),
+  //the choices (Pick one / several), or the exact form of a Numeric answer
+  function mathTarget(button) {
+    var bar = button.closest('.math-toolbar');
+    return form.querySelector('[name="' + ((bar && bar.dataset.target) || 'question') + '"]');
   }
 
   //is the cursor already inside \( ... \) or \[ ... \] ?
@@ -187,7 +187,7 @@
     for (var i = 0; i < tex.length; i++) {
       var ch = tex.charAt(i);
       if (ch === '@') { at = out.length; out += sel; }
-      else if (ch === '\u00b6') { cursor = out.length; }
+      else if (ch === '¶') { cursor = out.length; }
       else out += ch;
     }
     if (!sel && at !== -1) cursor = at;
@@ -198,9 +198,11 @@
   form.addEventListener('click', function (e) {
     var b = e.target.closest('.math-btn');
     if (!b) return;
-    var box = mathTarget();
+    var box = mathTarget(b);
+    if (!box) return;
     var start = box.selectionStart, end = box.selectionEnd;
-    if (typeof start !== 'number' || document.activeElement !== box && lastBox !== box) { start = end = box.value.length; }
+    //not typing in this box yet: add at the end
+    if (typeof start !== 'number' || (document.activeElement !== box && lastBox !== box)) { start = end = box.value.length; }
     var before = box.value.slice(0, start);
     var piece = expand(b.dataset.tex, box.value.slice(start, end));
     var open = insideMath(before) ? '' : '\\( ', close = open ? ' \\)' : '';
@@ -208,31 +210,47 @@
     var pos = start + open.length + piece.cursor;
     box.focus();
     box.setSelectionRange(pos, pos);
+    lastBox = box;
     box.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  //how the question's math will look (values in [brackets] show as typed)
-  var question = form.querySelector('[name=question]'), mathPreview = document.getElementById('math-preview'), mathTimer = null;
-  function showMath() {
-    if (!mathPreview || !question) return;
-    var text = question.value, hasMath = /\\[\(\[]/.test(text);
-    var body = mathPreview.querySelector('.math-preview-body');
-    //math typed without \( \) shows as plain characters (x^2 with a caret): say so
+  //how each box's math will look (values in [brackets] show as typed)
+  var HINT = 'Students will see this as typed (e.g. x^2 with a caret). To show it as math, put it between \\( and \\), or use the buttons above.';
+  function showPreview(panel) {
+    var box = form.querySelector('[name="' + panel.dataset.source + '"]');
+    if (!box) return;
+    var text = box.value, hasMath = /\\[\(\[]/.test(text);
+    var body = panel.querySelector('.math-preview-body');
+    if (window.MathJax && MathJax.typesetClear) MathJax.typesetClear([body]);
+    //math typed without \( \) shows as plain characters: say so
     if (!hasMath && /\^|\\(sqrt|frac|pi|times|le|ge)\b/.test(text)) {
-      mathPreview.hidden = false;
-      if (window.MathJax && MathJax.typesetClear) MathJax.typesetClear([body]);
-      body.textContent = 'Students will see this as typed (e.g. x^2 with a caret). To show it as math, put it between \\( and \\), or use the buttons above.';
+      panel.hidden = false;
+      body.textContent = HINT;
       return;
     }
-    mathPreview.hidden = !hasMath;
-    if (!hasMath || !window.MathJax || !MathJax.typesetPromise) return;
-    if (MathJax.typesetClear) MathJax.typesetClear([body]);
-    body.textContent = text;
-    MathJax.typesetPromise([body]).catch(function () {});
+    panel.hidden = !hasMath;
+    if (!hasMath) return;
+    if (panel.dataset.source === 'choices') {
+      //one choice per line, the correct ones (*) ticked
+      body.textContent = text.split('\n').filter(function (l) { return l.trim(); })
+        .map(function (l) { return /^\s*\*/.test(l) ? '✓ ' + l.replace(/^\s*\*\s*/, '') : '○ ' + l.trim(); }).join('\n');
+    } else {
+      body.textContent = text;
+    }
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([body]).catch(function () {});
   }
-  if (question) question.addEventListener('input', function () { clearTimeout(mathTimer); mathTimer = setTimeout(showMath, 400); });
+  var previews = form.querySelectorAll('.math-preview[data-source]'), mathTimers = {};
+  previews.forEach(function (panel) {
+    var box = form.querySelector('[name="' + panel.dataset.source + '"]');
+    if (!box) return;
+    box.addEventListener('input', function () {
+      clearTimeout(mathTimers[panel.dataset.source]);
+      mathTimers[panel.dataset.source] = setTimeout(function () { showPreview(panel); }, 400);
+    });
+  });
+  function showAllPreviews() { previews.forEach(showPreview); }
   window.addEventListener('load', function () {
-    if (window.MathJax && MathJax.startup && MathJax.startup.promise) MathJax.startup.promise.then(showMath); else showMath();
+    if (window.MathJax && MathJax.startup && MathJax.startup.promise) MathJax.startup.promise.then(showAllPreviews); else showAllPreviews();
   });
 
   /* ---------- show me 3 examples ---------- */

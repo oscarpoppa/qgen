@@ -665,3 +665,19 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .attempt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
 .attempt-row > * { white-space: nowrap; }
 .attempt-row .btn { margin-left: auto; }
+
+/* math keys under a number answer on the quiz page */
+.keypad { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
+.keypad .key { min-width: 34px; min-height: 32px; padding: 2px 8px; font: 500 1rem/1 inherit;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; }
+.keypad .key:hover { background: var(--accent-soft); filter: none; }
+.keypad .muted { margin-left: 6px; }
+
+/* results: the choices a student saw, their pick and the right ones */
+.review-choices li { gap: 8px; }
+.review-choices .choice-text { flex: 1; }
+.review-choices li.is-picked { border-color: var(--accent); background: var(--accent-soft); }
+.review-choices li.is-right { border-color: var(--ok); }
+.review-choices li.is-picked.is-right { background: var(--ok-soft); }
+.review-choices .pick { color: var(--muted); width: 1em; }
+.review-choices li.is-picked .pick { color: var(--accent); }

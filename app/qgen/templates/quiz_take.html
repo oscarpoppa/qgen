@@ -40,7 +40,16 @@
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
       {% else %}
         {{ it.field(autocomplete='off', **{'aria-label': 'Your answer to question ' ~ it.num}) }}
-        {% if it.complex %}<div class="small muted" style="margin-top:4px">Write complex numbers like 3 + 2i (use i for √−1). Separate several answers with commas.</div>{% endif %}
+        {% if it.complex %}<div class="small muted" style="margin-top:4px">Write complex numbers like 3 + 2i (use i for √−1). Separate several answers with commas.</div>
+        {% elif it.qtype == 'numeric' and not preview %}
+          {# math keys for a number answer: worked out when graded (2√3, π/2, 3^2) #}
+          <div class="keypad" role="group" aria-label="Math keys for question {{ it.num }}">
+            {% for key, title in [('√', 'Square root'), ('π', 'Pi'), ('^', 'Power'), ('(', 'Open bracket'), (')', 'Close bracket'), ('/', 'Divided by (fraction)'), (',', 'Comma (several answers)')] %}
+              <button type="button" class="key" data-ins="{{ key }}" title="{{ title }}" aria-label="{{ title }}">{{ key }}</button>
+            {% endfor %}
+            <span class="small muted">You can type math like 2√3, π/2 or 3^2.</span>
+          </div>
+        {% endif %}
       {% endif %}
       {% for e in it.field.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </section>
@@ -56,6 +65,25 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+/* math keys under a number answer: put the symbol where the cursor is */
+(function () {
+  document.addEventListener('mousedown', function (e) { if (e.target.closest('.keypad .key')) e.preventDefault(); });
+  document.addEventListener('click', function (e) {
+    var key = e.target.closest('.keypad .key');
+    if (!key) return;
+    var box = key.closest('.question').querySelector('input[type=text], input:not([type])');
+    if (!box) return;
+    var start = typeof box.selectionStart === 'number' ? box.selectionStart : box.value.length;
+    var end = typeof box.selectionEnd === 'number' ? box.selectionEnd : start;
+    var text = key.dataset.ins;
+    box.value = box.value.slice(0, start) + text + box.value.slice(end);
+    box.focus();
+    box.setSelectionRange(start + text.length, start + text.length);
+    box.dispatchEvent(new Event('input', { bubbles: true }));  // counted and autosaved like typing
+  });
+})();
+</script>
 <script>
 (function () {
   var form = document.getElementById('take-form');
