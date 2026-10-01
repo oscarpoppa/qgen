@@ -8,7 +8,7 @@
 
 <div class="card subject-bar">
   <form method="get" action="{{ url_for('qgen.archive') }}" class="subject-pick">
-    <label for="subject-choice">Quiz subject</label>
+    <label for="subject-choice">Archive location</label>
     <select id="subject-choice" name="subject" data-autosubmit>
       {% for value, label, count in choices %}
         <option value="{{ value }}"{% if value == choice %} selected{% endif %}>{{ label }}</option>
