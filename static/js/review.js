@@ -34,24 +34,29 @@
     if (pos < text.length) area.appendChild(document.createTextNode(text.slice(pos)));
   }
 
-  /* character offset of a point inside the answer box */
+  /* character offset of a point inside the answer box (text or element positions alike) */
   function offset(area, node, off) {
-    var walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
-    var total = 0, n;
-    while ((n = walker.nextNode())) {
-      if (n === node) return total + off;
-      total += n.textContent.length;
-    }
-    return total;
+    var r = document.createRange();
+    r.setStart(area, 0);
+    r.setEnd(node, off);
+    return r.toString().length;
   }
 
+  /* the selected stretch of this answer, as [start, end]. A selection that runs past the
+   * answer (dragging past its end, triple-click, Ctrl+A) keeps just the part inside it,
+   * so selecting everything highlights the whole answer. */
   function selectionIn(area) {
     var sel = window.getSelection();
-    if (!sel.rangeCount || sel.isCollapsed) return null;
+    if (!area.dataset.text || !sel.rangeCount || sel.isCollapsed) return null;  // "(no answer)" isn't highlightable
     var r = sel.getRangeAt(0);
-    if (!area.contains(r.startContainer) || !area.contains(r.endContainer)) return null;
-    var a = offset(area, r.startContainer, r.startOffset);
-    var b = offset(area, r.endContainer, r.endOffset);
+    if (!r.intersectsNode(area)) return null;
+    var whole = document.createRange();
+    whole.selectNodeContents(area);
+    var length = whole.toString().length;
+    var a = whole.compareBoundaryPoints(Range.START_TO_START, r) > 0 ? 0 : offset(area, r.startContainer, r.startOffset);
+    var b = whole.compareBoundaryPoints(Range.END_TO_END, r) < 0 ? length : offset(area, r.endContainer, r.endOffset);
+    a = Math.max(0, Math.min(a, length));
+    b = Math.max(0, Math.min(b, length));
     return a < b ? [a, b] : null;
   }
 
