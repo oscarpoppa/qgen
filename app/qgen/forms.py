@@ -72,7 +72,7 @@ class ProblemForm(FlaskForm):
         images = [{'file': r['file'].strip(), 'label': (r.get('label') or '').strip()}
                   for r in self.images.data if (r.get('file') or '').strip()]
         return {
-            'markup': 'legacy' if '{{' in (self.question.data or '') else 'friendly',
+            'markup': 'friendly',
             'values': values,
             'choices': self.choices.data or '',
             'combos': self.combos.data or '',

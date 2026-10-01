@@ -87,7 +87,7 @@ def problem_input(data):
     for key in ('shuffle', 'case_sensitive', 'ordered', 'complex'):
         options[key] = flag(options[key])
     question = data.get('question') or ''
-    options['markup'] = 'legacy' if '{{' in question else 'friendly'
+    options['markup'] = 'friendly'
     return qtype, data.get('title') or '', question, data.get('answer') or '', options, flag(data.get('calculator_ok'))
 
 

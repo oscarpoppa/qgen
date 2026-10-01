@@ -112,6 +112,24 @@ def close_expired_command():
     from app.qgen.services import close_expired
     print('closed {} quiz attempt(s)'.format(close_expired()))
 
+@app.cli.command('remove-old-markup')
+@click.option('--yes', is_flag=True, help='Really delete (without it, only lists what would go).')
+def remove_old_markup_command(yes):
+    """Delete for good every problem in the old {{...}} markup, every quiz using one, and
+    every student attempt at those (not archived). Back up the database first."""
+    from app.qgen.services import old_markup_cleanup
+    found = old_markup_cleanup(apply=yes)
+    print('Problems ({}):'.format(len(found['problems'])))
+    for pid, title in found['problems']:
+        print('  {}  {}'.format(pid, title))
+    print('Quizzes ({}):'.format(len(found['quizzes'])))
+    for qid, title in found['quizzes']:
+        print('  {}  {}'.format(qid, title))
+    print('Student attempts ({}):'.format(len(found['attempts'])))
+    for cid, qid, student in found['attempts']:
+        print('  {}  quiz {}  student {}'.format(cid, qid, student))
+    print('Deleted.' if yes else 'Nothing deleted. Run again with --yes to delete these for good.')
+
 @app.cli.command('init-db')
 def init_db_command():
     """Set up an empty database: create every table and mark it as up to date.

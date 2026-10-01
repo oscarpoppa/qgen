@@ -4,7 +4,6 @@ import random
 import pytest
 
 from app.qgen.qtypes import get_qtype, numbers_match
-from app.qgen.probspec import process_spec
 
 VALUES = [{'name': 'a', 'kind': 'whole', 'min': 2, 'max': 9},
           {'name': 'b', 'kind': 'whole', 'min': 2, 'max': 9, 'different_from': ['a']},
@@ -126,14 +125,6 @@ def test_divide_by_zero_found_before_saving():
     o = {'values': [{'name': 'a', 'kind': 'whole', 'min': 0, 'max': 3}], 'markup': 'friendly'}
     errors = get_qtype('numeric').validate('6 / [a]', '6 / a', o)
     assert errors == ['"6 / a" divides by zero for some values.']
-
-
-@pytest.mark.parametrize('seed', range(5))
-def test_legacy_markup_unchanged(seed):
-    q, a = '{{a:ri(1,4)}} + {{b:ri(1,4)}} = ?', '{{a+b}}'
-    prob, ansr, co = get_qtype('numeric').instantiate(q, a, {'markup': 'legacy'})
-    x, y = numbers(prob)
-    assert int(ansr) == x + y and co == {}
 
 
 def test_each_student_can_get_a_different_picture_with_matching_answer():

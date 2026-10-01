@@ -7,11 +7,11 @@ To add a type, subclass QType and add it to REGISTRY.
 A problem is described by plain data so the same code serves the saved
 problem, the "Show me 3 examples" preview, and the AI helper:
 
-    question  text with [name] placeholders (or legacy {{...}} markup)
+    question  text with [name] placeholders
     answer    meaning depends on the type (formula, accepted answers, ...)
     options   dict: values, choices, combos, shuffle, show_n, case_sensitive, precision, ordered,
               answer_display (Numeric: exact form shown on results), complex,
-              grading_notes, markup, images ([{file, label}], one picked
+              grading_notes, markup ('friendly'), images ([{file, label}], one picked
               at random per student; its label is [picture])
 """
 import ast
@@ -25,13 +25,6 @@ from wtforms import StringField, TextAreaField, RadioField, SelectMultipleField
 from wtforms.widgets import ListWidget, CheckboxInput
 
 from . import friendly as F
-from .probspec import process_spec
-
-
-def is_legacy(question, options):
-    if options.get('markup'):
-        return options['markup'] == 'legacy'
-    return '{{' in (question or '')
 
 
 # ---------------------------------------------------------------- pictures
@@ -313,8 +306,6 @@ class QType:
         """Plain-language errors for this problem; empty if it's ready."""
         if not (question or '').strip():
             return ['Please write the question.']
-        if is_legacy(question, options):
-            return self.validate_legacy(question, answer, options)
         values = options.get('values') or []
         errors = F.validate_values(values)
         known = F.known_names(values)
@@ -343,9 +334,6 @@ class QType:
                 errors.append(str(exc))
         return errors
 
-    def validate_legacy(self, question, answer, options):
-        return ['Old-style {{...}} markup only works with Numeric questions.']
-
     def validate_parts(self, answer, options, known):
         return []
 
@@ -353,14 +341,10 @@ class QType:
         """One student's version: (question text, correct answer, extra data)."""
         rng = rng or random.Random()
         picture = pick_picture(options, rng)
-        if is_legacy(question, options):
-            prob, ansr = process_spec(question, answer or '')
-            opts = {}
-        else:
-            env = F.draw_values(options.get('values') or [], rng, uses_complex(options))
-            if picture and picture.get('label'):
-                env[PICTURE_NAME] = picture['label']
-            prob, ansr, opts = self.render(question, answer, options, env, rng)
+        env = F.draw_values(options.get('values') or [], rng, uses_complex(options))
+        if picture and picture.get('label'):
+            env[PICTURE_NAME] = picture['label']
+        prob, ansr, opts = self.render(question, answer, options, env, rng)
         if picture:
             opts = dict(opts, image=picture['file'])
         return prob, ansr, opts
@@ -399,14 +383,6 @@ class Numeric(QType):
     label = 'Numeric'
     answer_label = 'Answer (a formula)'
     answer_help = 'Example: speed * hours. For a pair or list, separate with commas: x, y'
-
-    def validate_legacy(self, question, answer, options):
-        try:
-            for _ in range(5):
-                process_spec(question, answer or '')
-        except Exception as exc:
-            return ['The old-style markup has a problem: {}'.format(exc)]
-        return []
 
     def validate_parts(self, answer, options, known):
         if not (answer or '').strip():

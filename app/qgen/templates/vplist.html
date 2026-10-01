@@ -17,8 +17,7 @@
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div>
           </td>
-          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
-            {% if item.options.get('markup') == 'legacy' %}<div class="small muted">old markup</div>{% endif %}</td>
+          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span></td>
           <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
           <td data-label="Answer">
             {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}

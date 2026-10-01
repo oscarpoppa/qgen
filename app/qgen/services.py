@@ -241,6 +241,53 @@ def delete_problem(vp):
     db.session.commit()
 
 
+def _old_markup(vp):
+    """Written in the old {{...}} markup (no longer supported)."""
+    options = vp.options or {}
+    if options.get('markup'):
+        return options['markup'] == 'legacy'
+    return '{{' in (vp.raw_prob or '')
+
+
+def old_markup_cleanup(apply=False):
+    """Everything still tied to the old {{...}} markup: its problems, every quiz that uses
+    one (whole quizzes, even if they also have new problems), and every student attempt
+    at those quizzes or with one of those problems in it. With apply, deletes it all for
+    good (attempts are not archived) and commits. Returns what was (or would be) removed:
+    {'problems': [(id, title)], 'quizzes': [(id, title)], 'attempts': [(id, quiz id, student)]}."""
+    problems = [vp for vp in VProblem.query.order_by(VProblem.id).all() if _old_markup(vp)]
+    pids = {vp.id for vp in problems}
+    quizzes = [vq for vq in VQuiz.query.order_by(VQuiz.id).all()
+               if pids & ({p.id for p in vq.vproblems} | set(layout.all_ids(_safe_layout(vq.vpid_lst))))]
+    qids = {vq.id for vq in quizzes}
+    attempts = CQuiz.query.filter(db.or_(
+        CQuiz.vquiz_id.in_(qids or [0]),
+        CQuiz.id.in_(db.session.query(CProblem.cquiz_id).filter(CProblem.vproblem_id.in_(pids or [0]))),
+    )).order_by(CQuiz.id).all()
+    found = {'problems': [(vp.id, vp.title) for vp in problems],
+             'quizzes': [(vq.id, vq.title) for vq in quizzes],
+             'attempts': [(cq.id, cq.vquiz_id, cq.taker.username if cq.taker else str(cq.assignee)) for cq in attempts]}
+    if apply:
+        for cq in attempts:
+            _erase_attempt(cq)
+        db.session.flush()
+        for vq in quizzes:
+            _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
+            db.session.delete(vq)
+        db.session.flush()
+        for vp in problems:
+            db.session.delete(vp)
+        db.session.commit()
+    return found
+
+
+def _safe_layout(text):
+    try:
+        return layout.parse(text or '[]')
+    except (layout.LayoutError, TypeError, ValueError):
+        return []
+
+
 def instantiate_problem(vprob, rng=random):
     """One student's own random version of a problem: (text, answer, extra data)."""
     qt = get_qtype(vprob.qtype)
