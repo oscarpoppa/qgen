@@ -345,9 +345,8 @@ class ArchivedAttempt(db.Model):
     problem_ids = db.Column(db.Text, nullable=False, default=',')
     #'deleted' (the attempt) or 'student deleted' (the account)
     reason = db.Column(db.String(16), default='deleted', nullable=False)
-    #the results page as it looked when archived
-    results_html = db.deferred(db.Column(LongText, nullable=False))
-    #JSON of the attempt and its questions, for restoring
+    #a compact JSON record of the attempt and its questions (no page markup): the
+    #results page is drawn from it, and restoring rebuilds the attempt from it
     data = db.deferred(db.Column(LongText, nullable=False))
 
     vquiz = db.relationship('VQuiz', lazy=True)

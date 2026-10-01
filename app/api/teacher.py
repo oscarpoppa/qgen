@@ -294,7 +294,7 @@ def archive():
 @teacher
 def get_archived(aid):
     a = get_or_404(ArchivedAttempt, aid, 'That archived attempt')
-    return jsonify(dict(archived_json(a), results_html=a.results_html))
+    return jsonify(dict(archived_json(a), results_html=str(S.archived_results(a))))
 
 
 @api_bp.route('/archive/<int:aid>/restore', methods=['POST'])

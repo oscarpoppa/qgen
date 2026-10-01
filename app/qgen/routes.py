@@ -879,7 +879,7 @@ def archive():
 def archived(aid):
     a = db.get_or_404(ArchivedAttempt, aid)
     return render_template('archived.html', a=a, blocker=S.restore_blocker(a),
-                           student=S.archived_student(a), results=Markup(a.results_html),
+                           student=S.archived_student(a), results=S.archived_results(a),
                            title='Archived: {}'.format(a.quiz_title))
 
 #route to put an archived attempt back

@@ -312,3 +312,28 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     assert 'Week 1' in sam and 'aria-label="1 archived"' in sam
     assert 'Week 1' not in kim and 'Nothing archived for kim.' in kim
     assert 'id="folder-student-{}" data-box="student-{}">'.format(ids('sam'), ids('sam')) in page  # not empty now
+
+
+def test_an_archived_attempt_is_kept_as_a_small_readable_record(app_db):
+    import json
+    app, db = app_db
+    from app.qgen.models import CQuiz, ArchivedAttempt
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq, probs = setup_quiz(app, teacher, 'numeric', 'essay')
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
+    cq = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4', 2: 'Plants <b>use</b> light.'})
+    stored_page = len(cq.transcript or '')
+    teacher.post('/quiz/delcq/{}'.format(cq.id))
+    a = ArchivedAttempt.query.one()
+    record = json.loads(a.data)                       # plain JSON anyone can read
+    assert record['v'] == 2 and [p['qtype'] for p in record['problems']] == ['numeric', 'essay']
+    assert '<div' not in a.data and '<section' not in a.data and 'class=' not in a.data  # no page markup
+    assert record['attempt']['transcript'] in (None, '<!--transcript v2-->')
+    assert 'Plants <b>use</b> light.' in a.data                                          # the answer, as written
+    assert len(a.data) < 2000 and (not stored_page or len(a.data) < stored_page + 1500)
+    # the page drawn from it shows everything, the student's answer still escaped
+    view = teacher.get('/quiz/archive/{}'.format(a.id)).data.decode()
+    assert 'Plants &lt;b&gt;use&lt;/b&gt; light.' in view and 'Correct answer' in view

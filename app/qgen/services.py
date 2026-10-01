@@ -10,14 +10,14 @@ import json
 import random
 from datetime import datetime, timedelta
 
-from flask import url_for
+from flask import url_for, render_template
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.messages.models import notify, notify_teachers
 from . import layout
-from .formfact import record_answers, finalize, build_transcript, transcript_html, TRANSCRIPT_V2
+from .formfact import record_answers, finalize, TRANSCRIPT_V2
 from .friendly import FriendlyError
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, RETAKE_RULES
 from .qtypes import get_qtype
@@ -509,7 +509,10 @@ def delete_attempt(cq, by=None, reason='deleted'):
 
 # ---------------------------------------------------------------- the archive
 
-ARCHIVE_FORMAT = 1
+#what an archived attempt keeps: a compact, readable JSON record (no page markup). The
+#results page is drawn from it when looked at. Format 2: each question also notes its
+#question type and picture, so it still reads right after the problem is deleted.
+ARCHIVE_FORMAT = 2
 
 
 def _plain(value):
@@ -535,19 +538,27 @@ def _fill_row(obj, data):
         setattr(obj, attr.key, value)
 
 
-def _archive_results(cq):
-    """The results page as a teacher sees it, with every answer and the correct ones."""
-    stored = cq.transcript or ''
-    if cq.completed and stored and not stored.startswith(TRANSCRIPT_V2):
-        #saved before the upgrade, in the old format
-        return str(transcript_html(cq, cq.vquiz.title))
-    return build_transcript(cq, show_answers=True)
+def archive_record(cq):
+    """The JSON kept for an archived attempt: the attempt and each question as stored,
+    without the saved results page (it's drawn from this same data), except for
+    results saved before the upgrade, whose old page is the only record."""
+    attempt = _row_data(cq)
+    if (attempt.get('transcript') or '').startswith(TRANSCRIPT_V2):
+        attempt['transcript'] = TRANSCRIPT_V2
+    problems = []
+    for cp in cq.cproblems:
+        row = _row_data(cp)
+        row['qtype'] = cp.vproblem.qtype if cp.vproblem else 'numeric'
+        row['problem_image'] = cp.vproblem.image if cp.vproblem else None
+        problems.append(row)
+    return {'v': ARCHIVE_FORMAT, 'attempt': attempt, 'problems': problems,
+            'quiz_image': cq.vquiz.image if cq.vquiz else None}
 
 
 def archive_attempt(cq, by=None, reason='deleted'):
     """Move an attempt into the archive (not committed: the caller commits, so the copy
     and the removal happen together or not at all)."""
-    problems = [_row_data(cp) for cp in cq.cproblems]
+    record = archive_record(cq)
     archived = ArchivedAttempt(
         original_id=cq.id, vquiz_id=cq.vquiz_id, student_id=cq.assignee,
         student_name=cq.taker.username if cq.taker else '(unknown)',
@@ -555,13 +566,43 @@ def archive_attempt(cq, by=None, reason='deleted'):
         score=cq.score, completed=bool(cq.completed), needs_review=bool(cq.needs_review),
         startdate=cq.startdate, compdate=cq.compdate, assigned=cq.create_date,
         archived_at=datetime.now(), archived_by=by.id if by else None, reason=reason,
-        problem_ids=',' + ''.join('{},'.format(p['vproblem_id']) for p in problems),
-        results_html=_archive_results(cq),
-        data=json.dumps({'v': ARCHIVE_FORMAT, 'attempt': _row_data(cq), 'problems': problems}))
+        problem_ids=',' + ''.join('{},'.format(p['vproblem_id']) for p in record['problems']),
+        data=json.dumps(record, separators=(',', ':'), ensure_ascii=False))
     db.session.add(archived)
     db.session.flush()
     _erase_attempt(cq)
     return archived
+
+
+def archived_results(a):
+    """The results page of an archived attempt, drawn from its record, as a teacher
+    sees it (every answer and the correct ones)."""
+    from types import SimpleNamespace as NS
+    from markupsafe import Markup
+    from .formfact import legacy_transcript, transcript_item
+    data = json.loads(a.data)
+    attempt = data['attempt']
+    stored = attempt.get('transcript') or ''
+    if attempt.get('completed') and stored and not stored.startswith(TRANSCRIPT_V2):
+        return Markup('<div class="card legacy-transcript">{}</div>'.format(legacy_transcript(stored, a.quiz_title)))
+    when = lambda key: datetime.fromisoformat(attempt[key]['datetime']) if isinstance(attempt.get(key), dict) else None
+    items = []
+    for row in sorted(data['problems'], key=lambda r: r.get('ordinal') or 0):
+        #older records (format 1) don't note the type: ask the problem, if it's still there
+        qtype = row.get('qtype')
+        if not qtype:
+            vp = db.session.get(VProblem, row.get('vproblem_id')) if row.get('vproblem_id') else None
+            qtype = vp.qtype if vp else 'numeric'
+        cp = NS(ordinal=row.get('ordinal'), conc_prob=row.get('conc_prob'), conc_ansr=row.get('conc_ansr'),
+                conc_opts=json.loads(row.get('conc_opts_json') or '{}'), submitted=row.get('submitted'),
+                credit=row.get('credit'), feedback=row.get('feedback'),
+                highlights=json.loads(row.get('highlights_json') or '[]'),
+                vproblem=NS(qtype=qtype, image=row.get('problem_image')))
+        items.append(transcript_item(cp))
+    cq = NS(score=a.score, completed=a.completed, needs_review=a.needs_review,
+            startdate=when('startdate'), compdate=when('compdate'), graded_date=when('graded_date'),
+            vquiz=NS(title=a.quiz_title, image=data.get('quiz_image')), taker=NS(username=a.student_name))
+    return Markup(render_template('transcript_body.html', cq=cq, items=items, show_answers=True))
 
 
 def archive_student(user, by=None):
