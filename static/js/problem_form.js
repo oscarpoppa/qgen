@@ -216,9 +216,16 @@
   function showMath() {
     if (!mathPreview || !question) return;
     var text = question.value, hasMath = /\\[\(\[]/.test(text);
+    var body = mathPreview.querySelector('.math-preview-body');
+    //math typed without \( \) shows as plain characters (x^2 with a caret): say so
+    if (!hasMath && /\^|\\(sqrt|frac|pi|times|le|ge)\b/.test(text)) {
+      mathPreview.hidden = false;
+      if (window.MathJax && MathJax.typesetClear) MathJax.typesetClear([body]);
+      body.textContent = 'Students will see this as typed (e.g. x^2 with a caret). To show it as math, put it between \\( and \\), or use the buttons above.';
+      return;
+    }
     mathPreview.hidden = !hasMath;
     if (!hasMath || !window.MathJax || !MathJax.typesetPromise) return;
-    var body = mathPreview.querySelector('.math-preview-body');
     if (MathJax.typesetClear) MathJax.typesetClear([body]);
     body.textContent = text;
     MathJax.typesetPromise([body]).catch(function () {});

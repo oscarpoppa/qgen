@@ -50,3 +50,9 @@ def test_my_quizzes_fold():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     page = open(os.path.join(root, 'app', 'user', 'templates', 'mypage.html')).read()
     assert '<details class="card quiz-card"' in page and 'id="collapse-all"' in page and 'qgen-folded-quizzes' in page
+
+
+def test_tests_always_use_a_throwaway_database():
+    # the tests empty their database; it must be the in-memory one whatever the shell has
+    from app import app
+    assert app.config['SQLALCHEMY_DATABASE_URI'] == 'sqlite://'

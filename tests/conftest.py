@@ -1,9 +1,11 @@
 import os
 import sys
 
-#tests never touch a real database or need a real .env
-os.environ.setdefault('DATABASE_URL', 'sqlite://')
-os.environ.setdefault('SECRET_KEY', 'test-only-secret')
+#tests never touch a real database or need a real .env. Always set, never
+#"if not set": the tests empty the database they use, so a DATABASE_URL left in
+#the shell (e.g. the live or sandbox one) must not be picked up
+os.environ['DATABASE_URL'] = 'sqlite://'
+os.environ['SECRET_KEY'] = 'test-only-secret'
 #uploads during tests go to a throwaway folder
 import tempfile
 os.environ['STATIC_DIR'] = tempfile.mkdtemp(prefix='qgen-test-static-')

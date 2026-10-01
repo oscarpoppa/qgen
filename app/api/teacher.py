@@ -17,6 +17,14 @@ from .serialize import (problem_json, vquiz_json, teacher_attempt_json, attempt_
 
 teacher = token_required(teacher=True)
 
+def flag(value):
+    """A yes/no value from an app: true/false, 1/0, or text like "true", "no", "off"
+    (bool() alone would call the text "false" true)."""
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on', 'y', 't')
+    return bool(value)
+
+
 #problem settings an app may send, with their defaults
 OPTION_DEFAULTS = {'values': [], 'choices': '', 'combos': '', 'shuffle': True, 'show_n': None,
                    'case_sensitive': False, 'precision': 'close', 'ordered': False, 'complex': False, 'grading_notes': '',
@@ -57,7 +65,7 @@ def problem_input(data):
         clean = {}
         for k, v in row.items():
             if k == 'nonzero':
-                clean[k] = bool(v)
+                clean[k] = flag(v)
             elif k == 'different_from':
                 if not isinstance(v, list):
                     raise bad_request('"different_from" must be a list of names.')
@@ -76,10 +84,10 @@ def problem_input(data):
     for key in ('choices', 'combos', 'grading_notes'):
         options[key] = str(options[key] or '')
     for key in ('shuffle', 'case_sensitive', 'ordered', 'complex'):
-        options[key] = bool(options[key])
+        options[key] = flag(options[key])
     question = data.get('question') or ''
     options['markup'] = 'legacy' if '{{' in question else 'friendly'
-    return qtype, data.get('title') or '', question, data.get('answer') or '', options, bool(data.get('calculator_ok'))
+    return qtype, data.get('title') or '', question, data.get('answer') or '', options, flag(data.get('calculator_ok'))
 
 
 # ---------------------------------------------------------------- problems
@@ -147,7 +155,7 @@ def quiz_settings(data):
     settings = {}
     for key in ('calculator_ok', 'shuffle_order', 'hide_answers'):
         if key in data:
-            settings[key] = bool(data[key])
+            settings[key] = flag(data[key])
     if 'retake_rule' in data:
         if data['retake_rule'] not in RETAKE_RULES:
             raise bad_request('"retake_rule" must be one of: {}.'.format(', '.join(RETAKE_RULES)))
@@ -209,7 +217,7 @@ def delete_vquiz(qid):
 def release_vquiz(qid):
     """{"released": true} shows correct answers to students who have finished; false hides them again."""
     vq = get_or_404(VQuiz, qid, 'That quiz')
-    S.release_answers(vq, bool(body(required=('released',))['released']))
+    S.release_answers(vq, flag(body(required=('released',))['released']))
     return jsonify(vquiz_json(vq))
 
 
@@ -315,7 +323,7 @@ def grade(aid):
     if not isinstance(data['grades'], dict):
         raise bad_request('"grades" must be an object keyed by answer id.')
     try:
-        ungraded = S.grade_essays(cq, data['grades'], finish=bool(data.get('finish')), grader_id=g.api_user.id)
+        ungraded = S.grade_essays(cq, data['grades'], finish=flag(data.get('finish')), grader_id=g.api_user.id)
     except S.ServiceError as exc:
         raise conflict(str(exc))
     except (ValueError, TypeError):
@@ -351,7 +359,7 @@ def send_message():
     """{"to": "all" | student id | [ids], "body": "...", "pin"?: true}"""
     data = body(required=('to', 'body'))
     try:
-        students = M.send(g.api_user, data['to'], data['body'], pinned=bool(data.get('pin')))
+        students = M.send(g.api_user, data['to'], data['body'], pinned=flag(data.get('pin')))
     except M.MessageError as exc:
         raise ApiError(422, 'invalid', str(exc))
     return jsonify(sent_to=[s.id for s in students]), 201
@@ -363,6 +371,6 @@ def pin_message(message_id):
     """{"pinned": true|false}: also applies to every copy sent with it."""
     from app.messages.models import Message
     msg = get_or_404(Message, message_id, 'That message')
-    count = M.set_pinned(msg, bool(body(required=('pinned',))['pinned']))
+    count = M.set_pinned(msg, flag(body(required=('pinned',))['pinned']))
     return jsonify(updated=count)
 

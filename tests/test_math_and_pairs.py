@@ -73,6 +73,8 @@ def test_tidy_inside_math():
     # left alone: a number before a command, 10x, and [placeholders]
     assert tidy(r'\(1\times 10^3\)') == r'\(1\times 10^3\)'
     assert tidy('10x + 1') == '10x + 1' and tidy('[1, 5]') == '[1, 5]'
+    assert tidy(r'\( \text{1kg} \)') == r'\( \text{1kg} \)' and tidy(r'\frac{1}{2}x') == r'\frac{1}{2}x'
+    assert tidy(r'\[ 1x^{1y} \]') == r'\[ x^{y} \]'
 
 
 def test_placeholders_fill_inside_math():
@@ -130,3 +132,17 @@ def test_ordered_option_through_the_api(app_db):
     r = t.post('/problems', json={'type': 'numeric', 'title': 'R', 'question': 'Roots?', 'answer': 'x, y',
                                   'options': {'values': XY}})
     assert t.get('/problems/{}'.format(r.get_json()['id'])).get_json()['options']['ordered'] is False
+
+
+def test_api_reads_yes_and_no_text(app_db):
+    # "false" as text must mean no (bool("false") is True in Python)
+    app, db = app_db
+    from test_api import Api
+    from app.api.teacher import flag
+    assert flag('false') is False and flag('No') is False and flag('0') is False and flag('') is False
+    assert flag('true') is True and flag('YES') is True and flag(1) is True and flag(None) is False
+    t = Api(app, 'teach')
+    r = t.post('/problems', json={'type': 'numeric', 'title': 'P', 'question': 'Point?', 'answer': '(x, y)',
+                                  'options': {'values': XY, 'ordered': 'false', 'shuffle': 'no'}, 'calculator_ok': 'false'})
+    got = t.get('/problems/{}'.format(r.get_json()['id'])).get_json()
+    assert got['options']['ordered'] is False and got['options']['shuffle'] is False and got['calculator_ok'] is False
