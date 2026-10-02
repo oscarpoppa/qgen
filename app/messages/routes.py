@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, request, flash, jsonify, abort, current_app
 from flask_login import current_user, login_required
 
-from app import db
+from app import db, live
 from app.user.models import User
 from app.jsoncsrf import post_form_only
 from app.user.routes import admin_only, pw_check
@@ -251,7 +251,7 @@ def poll():
                    latest=latest.id if latest else 0, latest_notice=latest_notice.id if latest_notice else 0,
                    message_preview=preview(new_msg), notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
-                   quizzes_state=quizzes_state(), review=review_waiting(), online=online_now())
+                   watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now())
 
 
 def online_now():
@@ -281,17 +281,6 @@ def messages_state():
     rows = q.with_entities(Message.id, Message.pinned, Message.hidden_for_student).all()
     return '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
                                 sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))
-
-
-def quizzes_state():
-    """For a student: changes when a quiz or attempt is assigned, deleted, handed in or
-    graded, so an open My quizzes page reloads (a deleted quiz's box disappears)."""
-    if current_user.is_admin:
-        return None
-    from app.qgen.models import CQuiz
-    rows = CQuiz.query.filter_by(assignee=current_user.id) \
-        .with_entities(CQuiz.id, CQuiz.completed, CQuiz.needs_review, CQuiz.score).order_by(CQuiz.id).all()
-    return ';'.join('{}:{}{}:{}'.format(i, int(bool(c)), int(bool(r)), s) for i, c, r, s in rows)
 
 
 def notices_state():

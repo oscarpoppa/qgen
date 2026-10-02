@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{# grading finishes elsewhere: reload when the "graded" notice arrives #}
-{% block body_attrs %} data-refresh-on-notice{% endblock %}
+{# grading finishes elsewhere: the page shows the result as soon as it's graded (app/live.py) #}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
 <div class="card card-narrow empty">

@@ -421,20 +421,24 @@ def test_student_pages_refresh_when_graded(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Essay 1', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
-    flag = 'data-refresh-on-notice'
-    assert flag not in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()  # taking it: never reload
+    key = 'attempt:{}'.format(cq.id)
+    watch = lambda c, k: c.get('/messages/poll?watch=' + k).get_json()['watch']
+    taking = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'data-watch="{}"'.format(key) in taking and 'data-watch-ask' in taking  # taking it: never reloaded, only offered
     with app.test_request_context():
         S.submit(cq, {1: 'Because.'})
     waiting = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert flag in waiting
+    assert 'data-watch="{}"'.format(key) in waiting and 'data-watch-ask' not in waiting
     home = sam.get('/mypage').data.decode()
-    assert flag in home and 'Being graded' in home
-    assert flag not in teacher.get('/mypage').data.decode()
-    # graded: the notice the page is waiting for arrives, and the reloaded page shows the result
-    before = sam.get('/messages/poll').get_json()['latest_notice']
+    assert 'data-watch="mine"' in home and 'Being graded' in home
+    assert 'data-watch' not in teacher.get('/mypage').data.decode()
+    # graded: what both pages show changes, so they reload and show the result
+    before = watch(sam, key), watch(sam, 'mine')
+    assert 'data-watch-state="{}"'.format(before[0]) in waiting
     with app.test_request_context():
         S.grade_essays(cq, {cq.cproblems[0].id: {'credit': 80}}, finish=True)
-    assert sam.get('/messages/poll').get_json()['latest_notice'] != before
+    after = watch(sam, key), watch(sam, 'mine')
+    assert after[0] != before[0] and after[1] != before[1]
     home = sam.get('/mypage').data.decode()
     assert 'Being graded' not in home and '80%' in home
 
@@ -456,11 +460,19 @@ def test_results_page_refreshes_when_answers_are_released(app_db):
     with app.test_request_context():
         S.submit(cq, {1: '999'})  # wrong
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'data-refresh-on-notice' in page and '<dt>Correct answer</dt>' not in page
+    key = 'attempt:{}'.format(cq.id)
+    before = sam.get('/messages/poll?watch=' + key).get_json()['watch']
+    assert 'data-watch-state="{}"'.format(before) in page and '<dt>Correct answer</dt>' not in page
     teacher.post('/quiz/releasevq/{}'.format(vq.id))
     db.session.expire_all()
+    released = sam.get('/messages/poll?watch=' + key).get_json()['watch']
+    assert released != before
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert '<dt>Correct answer</dt>' in page and 'data-refresh-on-notice' not in page
+    assert '<dt>Correct answer</dt>' in page
+    # hidden again: the page follows that too
+    teacher.post('/quiz/releasevq/{}'.format(vq.id))
+    db.session.expire_all()
+    assert sam.get('/messages/poll?watch=' + key).get_json()['watch'] == before
     assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
 
 

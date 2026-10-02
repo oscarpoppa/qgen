@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# the student taking it is never reloaded mid-answer: offered instead (a teacher's view just updates) #}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='Your teacher has changed this quiz attempt.', button='Reload', ask=True) if not preview else watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
 <div class="page-head">

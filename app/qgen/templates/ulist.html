@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 
 {% block content %}
 <div class="page-head">

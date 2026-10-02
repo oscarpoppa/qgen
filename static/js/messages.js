@@ -4,7 +4,11 @@
  *
  * Every 30 seconds (Technical settings) the page asks whether anything new has arrived: the buttons'
  * counts update, an open panel reloads, and a hidden one gets a pop-up and a
- * pulsing button. Opening a panel marks what it shows as seen. */
+ * pulsing button. Opening a panel marks what it shows as seen.
+ *
+ * The same check-in keeps the page itself up to date: a page that names what it shows
+ * (<body data-watch>, see app/live.py) reloads when that changes, keeping its place, or,
+ * when someone is typing on it, offers a Refresh button instead. */
 (function () {
   var me = document.currentScript || document.querySelector('script[data-poll]');
   var pollUrl = me && me.dataset.poll;
@@ -16,7 +20,9 @@
   var root = document.documentElement;
   var PANES = ['notices', 'messages'];
   var latest = { messages: null, notices: null };
-  var quizzes = null;  // a student's quizzes and attempts, as last seen
+  //this page's contents, as drawn (app/live.py); changes are noticed at each check-in
+  var watchKey = document.body.dataset.watch || '', watched = document.body.dataset.watchState || null;
+  var edited = false;  // something typed or chosen on the page itself (not in the panels)
   //what each panel shows (pins, deletions...): an open panel reloads when it changes
   var shown = { messages: null, notices: null };
   var loaded = { messages: false, notices: false };
@@ -247,11 +253,65 @@
     });
   }
 
+  /* ---------- keeping the page itself up to date ---------- */
+
+  var SCROLL = 'qgen-live-scroll';
+  document.addEventListener('input', noteEdit, true);
+  document.addEventListener('change', noteEdit, true);
+  function noteEdit(e) {
+    if (e.target.closest && !e.target.closest('.dock')) edited = true;
+  }
+  //reloading now would lose something: typing on the page or in Messages, or a question open
+  function busy() {
+    return edited || busyTyping() || !!document.querySelector('dialog[open]');
+  }
+  function reloadHere() {
+    try { sessionStorage.setItem(SCROLL, location.pathname + location.search + '|' + Math.round(window.scrollY)); } catch (e) {}
+    window.location.reload();
+  }
+  function offerRefresh() {
+    if (document.getElementById('live-bar')) return;
+    var box = document.getElementById('toasts');
+    if (!box) return;
+    var t = document.createElement('div');
+    t.className = 'toast toast-live';
+    t.id = 'live-bar';
+    var text = document.createElement('div');
+    text.className = 'toast-text';
+    text.textContent = document.body.dataset.watchNote || 'This page has changed since you opened it.';
+    var row = document.createElement('div');
+    row.className = 'btn-row';
+    var go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'btn btn-sm';
+    go.textContent = document.body.dataset.watchButton || 'Refresh';
+    go.addEventListener('click', reloadHere);
+    var later = document.createElement('button');
+    later.type = 'button';
+    later.className = 'btn btn-secondary btn-sm';
+    later.textContent = 'Not now';
+    later.addEventListener('click', function () { t.remove(); });
+    row.appendChild(go); row.appendChild(later);
+    t.appendChild(text); t.appendChild(row);
+    box.appendChild(t);
+  }
+  function pageChanged() {
+    if (document.body.hasAttribute('data-watch-ask') || busy()) offerRefresh();
+    else reloadHere();
+  }
+  //back where it was after a reload of its own
+  window.addEventListener('load', function () {
+    var saved = null;
+    try { saved = sessionStorage.getItem(SCROLL); sessionStorage.removeItem(SCROLL); } catch (e) {}
+    if (!saved) return;
+    var cut = saved.lastIndexOf('|');
+    if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
+  });
+
   var baseTitle = document.title;
-  var refreshWanted = false;
   function check() {
     if (document.hidden) return;
-    fetch(pollUrl, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
+    fetch(pollUrl + (watchKey ? (pollUrl.indexOf('?') < 0 ? '?' : '&') + 'watch=' + encodeURIComponent(watchKey) : ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
       if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Review
@@ -276,9 +336,6 @@
         var restyled = shown[p] !== null && state !== undefined && state !== shown[p];  // pinned, deleted...
         latest[p] = id;
         if (state !== undefined) shown[p] = state;
-        //pages whose content a notice changes (a student's quiz list, "waiting for grading")
-        //reload to show it, but not while a message is being written
-        if (p === 'notices' && changed && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
         if (isOpen(p)) {
           if ((changed || restyled) && !(p === 'messages' && busyTyping())) load(p);
         } else if (changed && count) {
@@ -288,13 +345,11 @@
           pulse(p);  // unread from before this page opened: a nudge, no pop-up
         }
       });
-      //a student's quiz list (My quizzes, "waiting for grading"...) changed: assigned,
-      //deleted, handed in or graded
-      if (res.quizzes_state !== undefined && res.quizzes_state !== null) {
-        if (quizzes !== null && res.quizzes_state !== quizzes && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
-        quizzes = res.quizzes_state;
+      //what this page shows has changed (assigned, handed in, graded, deleted, opened...)
+      if (watchKey && typeof res.watch === 'string' && watched !== null && res.watch !== watched) {
+        watched = res.watch;
+        pageChanged();
       }
-      if (refreshWanted && !busyTyping()) window.location.reload();
     }, function () {});
   }
 

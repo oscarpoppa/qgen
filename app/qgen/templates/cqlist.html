@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block body_attrs %}{{ watch('attempt:%d' % cqlst[0].id) }}{% endblock %}
 
 {% block content %}
 {% for item in cqlst %}

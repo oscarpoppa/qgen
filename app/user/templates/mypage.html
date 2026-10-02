@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
-{# a student's quiz list changes when quizzes are assigned or graded: reload when a notice arrives #}
-{% block body_attrs %}{% if not current_user.is_admin %} data-refresh-on-notice{% endif %}{% endblock %}
+{# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
+{% block body_attrs %}{% if not current_user.is_admin %}{{ watch('mine') }}{% endif %}{% endblock %}
 
 {# compact: the small version for a row in a list of attempts, so the row stays on one line #}
 {% macro action(cq, compact=false) %}
@@ -11,7 +11,10 @@
   {% elif cq.status == 'review' %}
     <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
   {% elif cq.not_open_yet() %}
-    <span class="muted small">Opens {{ cq.opens_at.strftime('%b %d, %I:%M %p') }}</span>
+    {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
+    {% set opens = cq.opens_at.strftime('%a %b %d, %I:%M %p') %}
+    <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">🔒 Start</button>
+    <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
     <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
   {% else %}

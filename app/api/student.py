@@ -80,7 +80,7 @@ def open_attempt(attempt_id):
         S.submit(cq)
         state = S.attempt_state(cq)
     if state == 'not_open':
-        raise ApiError(409, 'not_open', 'This quiz opens {}.'.format(cq.opens_at.isoformat(timespec='minutes')),
+        raise ApiError(409, 'not_open', 'You can\'t start this quiz yet. It opens {}.'.format(cq.opens_at.isoformat(timespec='minutes')),
                        {'opens_at': cq.opens_at.isoformat(timespec='seconds')})
     if state == 'open':
         S.start(cq)

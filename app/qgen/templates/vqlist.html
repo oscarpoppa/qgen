@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
+{% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
 
 {% macro quiz_table(items, ticks=true) %}
   <div class="table-wrap stack">

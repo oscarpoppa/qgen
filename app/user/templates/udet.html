@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('users') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>Users</h1>

@@ -76,10 +76,18 @@ def test_open_and_close_window(app_db):
     assign(teacher, vq, [student(db, 'sam')], opens_at=later.strftime(fmt), closes_at=(later + timedelta(hours=1)).strftime(fmt))
     cq = CQuiz.query.one()
     sam = login(app, 'sam')
-    assert b'This quiz opens' in sam.get('/quiz/take/{}'.format(cq.id)).data
-    assert b'Opens ' in sam.get('/mypage').data
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert "You can't start this quiz yet" in page and 'It opens' in page and 'and closes' in page
+    assert 'name="Number1"' not in page  # no questions
+    home = sam.get('/mypage').data.decode()
+    assert "You can't start this yet. It opens" in home and 'disabled' in home
+    assert '>Start</a>' not in home  # no way in
+    # handing in or saving answers early is refused too
+    sam.post('/quiz/take/{}'.format(cq.id), data={'Number1': '4'})
+    assert sam.post('/quiz/take/{}/save'.format(cq.id), data={'Number1': '4'}).status_code == 409
     db.session.expire_all()
     assert db.session.get(CQuiz, cq.id).startdate is None  # peeking early doesn't start the clock
+    assert not db.session.get(CQuiz, cq.id).completed and db.session.get(CQuiz, cq.id).cproblems[0].submitted is None
     cq.opens_at, cq.closes_at = datetime.now() - timedelta(hours=2), datetime.now() - timedelta(hours=1)
     db.session.commit()
     sam.get('/quiz/take/{}'.format(cq.id))
@@ -313,7 +321,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     with app.test_request_context():
         S.submit(first, {1: '4'})
         second = S.retake(first)
-    state = lambda: sam.get('/messages/poll').get_json()['quizzes_state']
+    state = lambda: sam.get('/messages/poll?watch=mine').get_json()['watch']
     home = sam.get('/mypage').data.decode()
     assert home.count('class="card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
     s0 = state()
@@ -338,8 +346,8 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     teacher.post('/quiz/delvq/{}'.format(vq.id))
     db.session.expire_all()
     assert VQuiz.query.get(vq.id) is not None
-    # teachers' polls don't carry it
-    assert teacher.get('/messages/poll').get_json()['quizzes_state'] is None
+    # a teacher has no My quizzes to follow
+    assert teacher.get('/messages/poll?watch=mine').get_json()['watch'] is None
 
 
 def test_a_newly_assigned_quiz_says_new(app_db):

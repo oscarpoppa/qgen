@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_subjects.html" import box_actions, rename_form with context %}
+{% block body_attrs %}{{ watch('archive') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1></div>
