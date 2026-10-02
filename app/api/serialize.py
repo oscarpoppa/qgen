@@ -180,5 +180,7 @@ def message_json(m):
     return {'id': m.id, 'student_id': m.student_id, 'from_teacher': m.from_teacher, 'kind': m.kind,
             'sender': m.sender.username if m.sender else None, 'body': m.body, 'link': m.link,
             'created': iso(m.created), 'pinned': bool(m.pinned),
-            'seen_by_student': m.seen_by_student, 'seen_by_teacher': m.seen_by_teacher}
+            'seen_by_student': m.seen_by_student, 'seen_by_teacher': m.seen_by_teacher,
+            #a student's message: 'all' teachers, or the ones it went to (only they see it)
+            'to': None if m.from_teacher else ('all' if m.to_all else [user.username for user in m.recipients])}
 

@@ -8,7 +8,7 @@ from app.user.routes import admin_only, pw_check
 from app.home import home_url
 from . import messages_bp
 from . import services as M
-from .models import (Message, NOT_NOTICE, IS_NOTICE, unread_for_student, unread_for_teachers,
+from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_student, unread_for_teachers,
                      unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by)
 
 
@@ -29,7 +29,7 @@ def inbox():
 @admin_only
 def conversation(student_id):
     student = db.get_or_404(User, student_id)
-    items = M.conversation(student.id)
+    items = M.conversation(student.id, teacher=current_user)
     M.mark_seen_by_teachers(current_user, student.id)
     return render_template('conversation.html', student=student, items=items, rows=M.inbox(current_user),
                            title='Messages: {}'.format(student.username))
@@ -140,15 +140,17 @@ def clear_notices(notice_id=None):
 def reply():
     if current_user.is_admin:
         abort(404)
+    #to: 'all' (every teacher) or one teacher's id (only they see it)
+    to = request.form.get('to')
     if wants_json():
         try:
-            M.reply(current_user, request.form.get('body'))
+            M.reply(current_user, request.form.get('body'), to)
         except M.MessageError as exc:
             return jsonify(ok=False, error=str(exc)), 400
         return jsonify(ok=True)
     try:
-        M.reply(current_user, request.form.get('body'))
-        flash('Message sent to your teacher.', 'success')
+        msg = M.reply(current_user, request.form.get('body'), to)
+        flash('Message sent to {}.'.format(msg.recipients[0].username if msg.recipients else 'your teachers'), 'success')
     except M.MessageError as exc:
         flash(str(exc), 'error')
     return redirect(request.referrer or url_for('user.mypage'))
@@ -165,7 +167,7 @@ def wants_json():
 def panel():
     if current_user.is_admin:
         return render_template('_teacher_messages.html', **teacher_panel(request.args.get('student', 'all')))
-    return render_template('_student_messages.html', **student_panel(current_user))
+    return render_template('_student_messages.html', **student_panel(current_user, request.args.get('student')))
 
 #the notices side panel: automatic notices, apart from the conversation; showing them marks them seen
 @messages_bp.route('/messages/notices', methods=['GET'])
@@ -183,15 +185,27 @@ def notices():
     return render_template('_notices.html', items=items, unread_ids=unread_ids, teacher=current_user.is_admin)
 
 
-def student_panel(user, mark_seen=True):
-    """Pinned announcements and recent messages for a student's home page;
-    opening it marks them seen."""
-    items = M.conversation(user.id, limit=30, for_student=True, unread=M.unread_by_student())
+def student_panel(user, choice=None, mark_seen=True):
+    """A student's messages panel: pinned announcements, then the conversation with all
+    the teachers (choice 'all', the default) or with one teacher (their id), and a box
+    to write to them. Opening it marks what it shows as seen."""
+    try:
+        teacher = M.teacher_choice(choice)
+    except M.MessageError:
+        teacher = None  # e.g. a choice remembered from someone else in this browser
+    items = M.conversation(user.id, limit=30, for_student=True, unread=M.unread_by_student(), only=teacher)
     pinned = M.pinned_for(user.id)
     unread_ids = {m.id for m in items + pinned if m.from_teacher and not m.seen_by_student}
     if mark_seen:
         M.mark_seen_by_student(user.id, items + pinned)
-    return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.max_len()}
+    #each teacher, online first, with how many of their messages are still unread
+    waiting = dict(db.session.query(Message.sender_id, db.func.count(Message.id))
+                   .filter(Message.student_id == user.id, Message.from_teacher.is_(True), NOT_NOTICE,
+                           Message.seen_by_student.is_(False), Message.hidden_for_student.is_(False))
+                   .group_by(Message.sender_id).all())
+    teachers = [{'teacher': t, 'online': t.online, 'unread': waiting.get(t.id, 0)} for t in M.teachers_for_student()]
+    return {'items': items, 'pinned': pinned, 'unread_ids': unread_ids, 'max_len': M.max_len(),
+            'teachers': teachers, 'teacher': teacher}
 
 
 def teacher_panel(choice='all', mark_seen=True):
@@ -206,7 +220,7 @@ def teacher_panel(choice='all', mark_seen=True):
         student_id = None
     chosen = next((r for r in rows if r['student'].id == student_id), None) if student_id else None
     if chosen is None:
-        items = M.everyone(unread=M.unread_by_teacher(current_user))
+        items = M.everyone(unread=M.unread_by_teacher(current_user), teacher=current_user)
         unread_ids = M.unseen_ids(current_user, items)
         if mark_seen:
             M.mark_messages_seen_by_teachers(current_user, items)
@@ -215,7 +229,7 @@ def teacher_panel(choice='all', mark_seen=True):
         return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
                 'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True}
     student = chosen['student']
-    items = M.conversation(student.id, limit=30, unread=M.unread_by_teacher(current_user))
+    items = M.conversation(student.id, limit=30, unread=M.unread_by_teacher(current_user), teacher=current_user)
     unread_ids = M.unseen_ids(current_user, items)
     if mark_seen:
         M.mark_seen_by_teachers(current_user, student.id)
@@ -244,7 +258,7 @@ def poll():
             db.session.rollback()
             current_app.logger.error('announcing opened quizzes failed: {}'.format(exc))
     if current_user.is_admin:
-        mine = Message.query.filter(Message.from_teacher.is_(False))
+        mine = Message.query.filter(Message.from_teacher.is_(False), for_teacher(current_user.id))
         unseen = ~seen_by(current_user.id)
         unread, notices = unread_for_teachers(current_user.id), unread_notices_for_teachers(current_user.id)
     else:
@@ -283,12 +297,18 @@ def messages_state():
     written or deleted, pinned or unpinned, or removed from a student's view. Open
     panels reload when it changes, so a pin shows on every screen without a reload."""
     q = Message.query.filter(NOT_NOTICE)
-    if not current_user.is_admin:
+    if current_user.is_admin:
+        q = q.filter(for_teacher(current_user.id))
+    else:
         q = q.filter(Message.student_id == current_user.id,
                      db.or_(Message.hidden_for_student.is_(False), Message.pinned.is_(True)))
     rows = q.with_entities(Message.id, Message.pinned, Message.hidden_for_student).all()
-    return '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
-                                sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))
+    state = '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
+                                 sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))
+    if not current_user.is_admin:
+        #a student's panel lists the teachers, online ones marked
+        state += ':' + ','.join(str(t.id) for t in M.teachers_for_student() if t.online)
+    return state
 
 
 def notices_state():

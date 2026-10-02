@@ -6,7 +6,7 @@ from app import db
 from app.user.models import User
 from sqlalchemy.exc import IntegrityError
 
-from .models import Message, MessageRead, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by
+from .models import Message, MessageRead, MessageTo, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by, for_teacher
 
 def max_len():
     """The longest a message can be (Technical settings)."""
@@ -58,13 +58,48 @@ def send(sender, to, body, pinned=False):
     return students
 
 
-def reply(student, body):
-    """From a student to the teachers."""
+def teachers_for_student():
+    """The teachers a student can write to: online ones first, then by name."""
+    teachers = User.query.filter_by(is_admin=True).order_by(User.username).all()
+    return sorted(teachers, key=lambda t: (not t.online, t.username.lower()))
+
+
+def teacher_choice(value):
+    """'all' (or nothing) -> None; a teacher's id -> that teacher. Anything else is refused."""
+    if value in (None, '', 'all'):
+        return None
+    try:
+        teacher = db.session.get(User, int(value))
+    except (TypeError, ValueError):
+        teacher = None
+    if teacher is None or not teacher.is_admin:
+        raise MessageError('Please choose one of your teachers.')
+    return teacher
+
+
+def reply(student, body, to=None):
+    """From a student to all the teachers, or (to: a teacher, or 'all'/None) to one of
+    them, in which case only that teacher sees it."""
     if student.is_admin:
         raise MessageError('Teachers write from Messages.')
-    db.session.add(Message(student_id=student.id, sender_id=student.id, from_teacher=False,
-                           body=clean_body(body), seen_by_student=True))
+    teacher = to if isinstance(to, User) else teacher_choice(to)
+    body = clean_body(body)
+    msg = Message(student_id=student.id, sender_id=student.id, from_teacher=False, body=body,
+                  seen_by_student=True, to_all=teacher is None)
+    if teacher is not None:
+        msg.to.append(MessageTo(user_id=teacher.id))
+    db.session.add(msg)
     db.session.commit()
+    return msg
+
+
+def with_teacher(teacher):
+    """Condition, for a student's view: the conversation with one teacher (what that
+    teacher wrote, and what the student sent to all teachers or to that teacher)."""
+    return db.or_(db.and_(Message.from_teacher.is_(True), Message.sender_id == teacher.id),
+                  db.and_(Message.from_teacher.is_(False),
+                          db.or_(Message.to_all.is_(True),
+                                 db.exists().where(MessageTo.message_id == Message.id, MessageTo.user_id == teacher.id))))
 
 
 def set_pinned(message, pinned):
@@ -104,30 +139,41 @@ def unread_by_teacher(teacher):
     return db.and_(Message.from_teacher.is_(False), ~seen_by(teacher.id))
 
 
-def thread(student_id, limit=None):
+def thread(student_id, limit=None, teacher=None):
     """Everything in a student's record the student may see: the conversation,
     announcements and the student's own notices (not teachers' notices about the student)."""
     q = Message.query.filter(Message.student_id == student_id,
                              db.or_(NOT_NOTICE, Message.from_teacher.is_(True)), VISIBLE_TO_STUDENT)
+    if teacher is not None:  # a teacher reading it: only what they may see
+        q = q.filter(for_teacher(teacher.id))
     return _oldest_first(q, limit)
 
 
-def conversation(student_id, limit=None, for_student=False, unread=None):
+def conversation(student_id, limit=None, for_student=False, unread=None, teacher=None, only=None):
     """Just what people wrote (messages and announcements), oldest first. for_student
     leaves out teachers' messages the student removed from their view, and pinned
     ones: the student sees those once, in the pinned box at the top. With a limit,
-    anything unread (the condition `unread`) is included even if older."""
+    anything unread (the condition `unread`) is included even if older. teacher: the
+    teacher looking (only what they may see); only: a student's view of the
+    conversation with that one teacher."""
     q = Message.query.filter(Message.student_id == student_id, NOT_NOTICE)
     if for_student:
         q = q.filter(VISIBLE_TO_STUDENT, Message.pinned.is_(False))
+    if teacher is not None:
+        q = q.filter(for_teacher(teacher.id))
+    if only is not None:
+        q = q.filter(with_teacher(only))
     return _oldest_first(q, limit, unread)
 
 
-def everyone(limit=60, unread=None):
+def everyone(limit=60, unread=None, teacher=None):
     """The newest messages from all conversations together (no notices), oldest first.
     An announcement sent to several students appears once (its first copy), with
     `.copies` saying how many students got it."""
-    items = _oldest_first(Message.query.filter(NOT_NOTICE), limit * 4, unread)
+    q = Message.query.filter(NOT_NOTICE)
+    if teacher is not None:
+        q = q.filter(for_teacher(teacher.id))
+    items = _oldest_first(q, limit * 4, unread)
     out, seen = [], set()
     for m in items:
         if m.batch and m.kind == 'announcement':
@@ -141,7 +187,7 @@ def everyone(limit=60, unread=None):
     #the newest `limit`, and anything older still unread
     newest = {m.id for m in out[-limit:]}
     unread_ids = set() if unread is None else \
-        {r[0] for r in Message.query.filter(NOT_NOTICE, unread).with_entities(Message.id)}
+        {r[0] for r in q.filter(unread).with_entities(Message.id)}
     return [m for m in out if m.id in newest or m.id in unread_ids]
 
 
@@ -224,21 +270,22 @@ def mark_seen_by_student(student_id, messages):
 def mark_seen_by_teachers(teacher, student_id):
     """This teacher has read this student's messages (notices are marked in their own panel)."""
     ids = [r[0] for r in Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
-                                              NOT_NOTICE, ~seen_by(teacher.id)).with_entities(Message.id)]
+                                              NOT_NOTICE, ~seen_by(teacher.id), for_teacher(teacher.id))
+           .with_entities(Message.id)]
     _mark_for_teacher(teacher, ids)
 
 
 def unread_from(teacher, student_id):
     """Messages from this student the teacher hasn't seen."""
     return Message.query.filter(Message.student_id == student_id, Message.from_teacher.is_(False),
-                                NOT_NOTICE, ~seen_by(teacher.id)).count()
+                                NOT_NOTICE, ~seen_by(teacher.id), for_teacher(teacher.id)).count()
 
 
 def inbox(teacher):
     """Every student's conversation for teachers: unread first, then most recent."""
     rows = []
     for s in User.query.filter_by(is_admin=False).order_by(User.username).all():
-        last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE) \
+        last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE, for_teacher(teacher.id)) \
             .order_by(Message.created.desc(), Message.id.desc()).first()
         unread = unread_from(teacher, s.id)
         rows.append({'student': s, 'last': last, 'unread': unread})
@@ -266,7 +313,8 @@ def can_delete(user, m):
     if m.kind == 'notice':
         return False
     if user.is_admin:
-        return True
+        #a student's message to another teacher isn't theirs to see, or delete
+        return m.from_teacher or m.to_all or any(t.user_id == user.id for t in m.to)
     #a pinned message stays on the student's page until the teacher unpins it
     return m.student_id == user.id and not (m.from_teacher and m.pinned)
 

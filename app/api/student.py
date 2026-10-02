@@ -141,14 +141,19 @@ def my_messages():
     panel = student_panel(g.api_user)
     return jsonify(pinned=[message_json(m) for m in panel['pinned']],
                    messages=[message_json(m) for m in M.thread(g.api_user.id)],
-                   unread_before=len(panel['unread_ids']))
+                   unread_before=len(panel['unread_ids']),
+                   #who "to" can name when writing (online ones first)
+                   teachers=[{'id': t['teacher'].id, 'username': t['teacher'].username, 'online': t['online']}
+                             for t in panel['teachers']])
 
 
 @api_bp.route('/my/messages', methods=['POST'])
 @token_required()
 def my_reply():
     try:
-        M.reply(g.api_user, body(required=('body',))['body'])
+        data = body(required=('body',))
+        #"to": a teacher's id (only they see it), or "all"/left out for every teacher
+        M.reply(g.api_user, data['body'], data.get('to'))
     except M.MessageError as exc:
         raise ApiError(422, 'invalid', str(exc))
     return jsonify(sent=True), 201

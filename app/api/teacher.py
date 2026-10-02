@@ -380,7 +380,7 @@ def inbox():
 @teacher
 def conversation(student_id):
     student = get_or_404(User, student_id, 'That student')
-    items = M.thread(student.id)
+    items = M.thread(student.id, teacher=g.api_user)
     M.mark_seen_by_teachers(g.api_user, student.id)
     return jsonify(student=user_json(student), messages=[message_json(m) for m in items])
 
