@@ -186,7 +186,7 @@ def notices():
 def student_panel(user, mark_seen=True):
     """Pinned announcements and recent messages for a student's home page;
     opening it marks them seen."""
-    items = M.conversation(user.id, limit=30, for_student=True)
+    items = M.conversation(user.id, limit=30, for_student=True, unread=M.unread_by_student())
     pinned = M.pinned_for(user.id)
     unread_ids = {m.id for m in items + pinned if m.from_teacher and not m.seen_by_student}
     if mark_seen:
@@ -206,7 +206,7 @@ def teacher_panel(choice='all', mark_seen=True):
         student_id = None
     chosen = next((r for r in rows if r['student'].id == student_id), None) if student_id else None
     if chosen is None:
-        items = M.everyone()
+        items = M.everyone(unread=M.unread_by_teacher(current_user))
         unread_ids = M.unseen_ids(current_user, items)
         if mark_seen:
             M.mark_messages_seen_by_teachers(current_user, items)
@@ -215,7 +215,7 @@ def teacher_panel(choice='all', mark_seen=True):
         return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
                 'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True}
     student = chosen['student']
-    items = M.conversation(student.id, limit=30)
+    items = M.conversation(student.id, limit=30, unread=M.unread_by_teacher(current_user))
     unread_ids = M.unseen_ids(current_user, items)
     if mark_seen:
         M.mark_seen_by_teachers(current_user, student.id)

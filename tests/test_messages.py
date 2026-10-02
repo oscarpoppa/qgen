@@ -395,6 +395,7 @@ def test_delete_and_clear_need_the_page_token(app_db):
     app, db = app_db
     from app.user.models import User
     from app.messages.models import Message, notify
+    from app.user.models import User
     sam_id = User.query.filter_by(username='sam').one().id
     sam = login(app, 'sam')
     sam.post('/messages/reply', data={'body': 'keep me'})
@@ -762,3 +763,76 @@ def test_a_pinned_message_shows_once_and_stays_until_unpinned(app_db):
     panel = sam.get('/messages/panel').data.decode()
     assert 'Pinned by your teacher' not in panel and 'Bring a calculator' in panel.split('class="thread-scroll"')[1]
     assert sam.post('/messages/delete/{}'.format(pin.id), headers=J).get_json()['ok']
+
+
+def test_nothing_unread_is_left_out_however_long_a_student_was_away(app_db):
+    # the panels list the newest 30, plus every older one still unread; opening them
+    # marks everything read, so the counts always go back to 0
+    app, db = app_db
+    from datetime import datetime, timedelta
+    from app.messages.models import Message, notify
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    t0 = datetime.now() - timedelta(days=10)
+    for i in range(5):  # waiting from before sam went away...
+        notify(sam_id, 'Old notice {}'.format(i)).created = t0 + timedelta(minutes=i)
+        db.session.add(Message(student_id=sam_id, body='Old message {}'.format(i), kind='message', from_teacher=True,
+                               seen_by_teacher=True, created=t0 + timedelta(minutes=i)))
+    for i in range(40):  # ...then a lot more, already read
+        notify(sam_id, 'Read notice {}'.format(i)).created = t0 + timedelta(hours=1, minutes=i)
+        db.session.add(Message(student_id=sam_id, body='Read message {}'.format(i), kind='message', from_teacher=True,
+                               seen_by_teacher=True, seen_by_student=True, created=t0 + timedelta(hours=1, minutes=i)))
+    db.session.commit()
+    Message.query.filter(Message.body.like('Read notice%')).update({'seen_by_student': True}, synchronize_session=False)
+    db.session.commit()
+    sam = login(app, 'sam')
+    poll = sam.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (5, 5)
+    page = sam.get('/mypage').data.decode()
+    assert '<span class="count nav-notices" >5</span>' in page and '<span class="count nav-unread" >5</span>' in page  # shown on signing in
+    notices = sam.get('/messages/notices').data.decode()
+    messages = sam.get('/messages/panel').data.decode()
+    assert all('Old notice {}'.format(i) in notices for i in range(5)) and 'Read notice 39' in notices
+    assert all('Old message {}'.format(i) in messages for i in range(5)) and 'Read message 39' in messages
+    assert 'Read notice 0<' not in notices  # older read ones still drop off
+    poll = sam.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (0, 0)
+
+
+def test_teachers_panels_keep_everything_unseen_too(app_db):
+    app, db = app_db
+    from datetime import datetime, timedelta
+    from app.messages.models import Message, MessageRead, notify_teachers
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    t0 = datetime.now() - timedelta(days=3)
+    notify_teachers(sam_id, 'Very old notice').created = t0
+    db.session.add(Message(student_id=sam_id, body='Very old question', kind='message', from_teacher=False, created=t0))
+    teacher = login(app, 'teach')
+    for i in range(70):
+        db.session.add(Message(student_id=sam_id, body='Question {}'.format(i), kind='message', from_teacher=False,
+                               created=t0 + timedelta(minutes=i + 1)))
+        notify_teachers(sam_id, 'Notice {}'.format(i)).created = t0 + timedelta(minutes=i + 1)
+    db.session.commit()
+    teacher.get('/messages/notices')
+    teacher.get('/messages/panel?student={}'.format(sam_id))
+    # all read now except the two oldest, which the teacher reads next...
+    for m in Message.query.filter(Message.body.in_(['Very old notice', 'Very old question'])):
+        MessageRead.query.filter_by(message_id=m.id).delete()
+    db.session.commit()
+    assert 'Very old notice' in teacher.get('/messages/notices').data.decode()
+    assert 'Very old question' in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    MessageRead.query.filter(MessageRead.message_id == Message.query.filter_by(body='Very old question').one().id).delete()
+    db.session.commit()
+    assert 'Very old question' in teacher.get('/messages/panel').data.decode()  # "everyone" view too
+    poll = teacher.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (0, 0)
+
+
+def test_the_first_page_after_signing_in_says_whats_waiting(app_db):
+    app, db = app_db
+    sam = login(app, 'sam')
+    first = sam.get('/mypage').data.decode()
+    assert 'data-welcome' in first
+    assert 'data-welcome' not in sam.get('/mypage').data.decode()  # once
+    assert "'Welcome back'" in open('static/js/messages.js').read()

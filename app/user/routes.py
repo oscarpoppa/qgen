@@ -1,7 +1,7 @@
 from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
-from flask import flash, render_template, redirect, url_for, request, current_app
+from flask import flash, render_template, redirect, url_for, request, current_app, session
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
@@ -83,6 +83,8 @@ def login():
         u.logged_in = True
         u.save()
         current_app.logger.info('{} has logged in'.format(u.username))
+        #the first page after signing in says what's waiting (messages.js)
+        session['qgen_welcome'] = True
         next_page = request.args.get('next')
         if next_page:
             return redirect(next_page)

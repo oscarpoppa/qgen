@@ -16,6 +16,8 @@
   var every = Math.max(10000, +(me && me.dataset.every) || 30000);
   var dock = document.getElementById('dock');
   if (!pollUrl || !dock) return;
+  //just signed in: the first check-in says what arrived while away
+  var welcome = me.hasAttribute('data-welcome');
 
   var root = document.documentElement;
   var PANES = ['notices', 'messages'];
@@ -247,6 +249,41 @@
     setTimeout(function () { if (t.parentNode) t.remove(); }, 15000);
   }
 
+  //"Welcome back": what's waiting, with a button for each panel that has something
+  function welcomeBack(unread, notices) {
+    var box = document.getElementById('toasts');
+    if (!box || !(unread || notices)) return;
+    var t = document.createElement('div');
+    t.className = 'toast toast-notices';
+    var title = document.createElement('strong');
+    title.textContent = 'Welcome back';
+    var parts = [];
+    if (notices) parts.push(notices + ' new notice' + (notices === 1 ? '' : 's'));
+    if (unread) parts.push(unread + ' new message' + (unread === 1 ? '' : 's'));
+    var text = document.createElement('div');
+    text.className = 'toast-text';
+    text.textContent = 'While you were away: ' + parts.join(' and ') + '.';
+    var row = document.createElement('div');
+    row.className = 'btn-row';
+    [['notices', notices, 'Open notices'], ['messages', unread, 'Open messages']].forEach(function (x) {
+      if (!x[1]) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-sm toast-open';
+      b.dataset.pane = x[0];
+      b.textContent = x[2];
+      row.appendChild(b);
+    });
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn btn-secondary btn-sm toast-close';
+    close.textContent = 'Dismiss';
+    row.appendChild(close);
+    t.appendChild(title); t.appendChild(text); t.appendChild(row);
+    box.appendChild(t);
+    //stays until dismissed or opened: easy to miss otherwise
+  }
+
   function pulse(p) {
     document.querySelectorAll('.dock-btn[data-pane="' + p + '"]').forEach(function (b) {
       b.classList.remove('pulse');
@@ -334,6 +371,10 @@
         });
       });
       var waiting = (isOpen('messages') ? 0 : res.unread) + (isOpen('notices') ? 0 : res.notices);
+      if (welcome) {
+        welcome = false;
+        welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
+      }
       document.title = (waiting ? '(' + waiting + ') ' : '') + baseTitle;
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],

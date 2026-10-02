@@ -76,10 +76,32 @@ def set_pinned(message, pinned):
     return len(rows)
 
 
-def _oldest_first(q, limit):
-    q = q.order_by(Message.created.desc(), Message.id.desc())
-    items = q.limit(limit).all() if limit else q.all()
-    return list(reversed(items))
+def _newest(q, limit, unread=None):
+    """The newest `limit` rows, newest first, plus every older one still unread (the
+    condition `unread`), so nothing waiting to be read is ever left out of a panel,
+    however long someone was away."""
+    order = (Message.created.desc(), Message.id.desc())
+    if not limit:
+        return q.order_by(*order).all()
+    items = q.order_by(*order).limit(limit).all()
+    if unread is not None and len(items) == limit:
+        older = q.filter(unread, Message.id.notin_([m.id for m in items])).order_by(*order).all()
+        items = sorted(items + older, key=lambda m: (m.created, m.id), reverse=True)
+    return items
+
+
+def _oldest_first(q, limit, unread=None):
+    return list(reversed(_newest(q, limit, unread)))
+
+
+def unread_by_student():
+    """For a student's panels: what a teacher sent that the student hasn't seen."""
+    return db.and_(Message.from_teacher.is_(True), Message.seen_by_student.is_(False))
+
+
+def unread_by_teacher(teacher):
+    """For a teacher's panels: what students sent (or notices) this teacher hasn't seen."""
+    return db.and_(Message.from_teacher.is_(False), ~seen_by(teacher.id))
 
 
 def thread(student_id, limit=None):
@@ -90,21 +112,22 @@ def thread(student_id, limit=None):
     return _oldest_first(q, limit)
 
 
-def conversation(student_id, limit=None, for_student=False):
+def conversation(student_id, limit=None, for_student=False, unread=None):
     """Just what people wrote (messages and announcements), oldest first. for_student
     leaves out teachers' messages the student removed from their view, and pinned
-    ones: the student sees those once, in the pinned box at the top."""
+    ones: the student sees those once, in the pinned box at the top. With a limit,
+    anything unread (the condition `unread`) is included even if older."""
     q = Message.query.filter(Message.student_id == student_id, NOT_NOTICE)
     if for_student:
         q = q.filter(VISIBLE_TO_STUDENT, Message.pinned.is_(False))
-    return _oldest_first(q, limit)
+    return _oldest_first(q, limit, unread)
 
 
-def everyone(limit=60):
+def everyone(limit=60, unread=None):
     """The newest messages from all conversations together (no notices), oldest first.
     An announcement sent to several students appears once (its first copy), with
     `.copies` saying how many students got it."""
-    items = _oldest_first(Message.query.filter(NOT_NOTICE), limit * 4)
+    items = _oldest_first(Message.query.filter(NOT_NOTICE), limit * 4, unread)
     out, seen = [], set()
     for m in items:
         if m.batch and m.kind == 'announcement':
@@ -115,7 +138,11 @@ def everyone(limit=60):
         else:
             m.copies = 1
         out.append(m)
-    return out[-limit:]
+    #the newest `limit`, and anything older still unread
+    newest = {m.id for m in out[-limit:]}
+    unread_ids = set() if unread is None else \
+        {r[0] for r in Message.query.filter(NOT_NOTICE, unread).with_entities(Message.id)}
+    return [m for m in out if m.id in newest or m.id in unread_ids]
 
 
 def _mark_for_teacher(teacher, ids, cleared=False):
@@ -160,16 +187,16 @@ def mark_messages_seen_by_teachers(teacher, messages):
 
 
 def notices_for_student(student_id, limit=30):
-    """A student's automatic notices, newest first."""
-    return Message.query.filter(Message.student_id == student_id, IS_NOTICE, Message.from_teacher.is_(True)) \
-        .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
+    """A student's automatic notices, newest first (and every unread one)."""
+    return _newest(Message.query.filter(Message.student_id == student_id, IS_NOTICE, Message.from_teacher.is_(True)),
+                   limit, unread_by_student())
 
 
 def notices_for_teachers(teacher, limit=50):
-    """Automatic notices for teachers (about all students), newest first, less the
-    ones this teacher has cleared."""
-    return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~cleared_by(teacher.id)) \
-        .order_by(Message.created.desc(), Message.id.desc()).limit(limit).all()
+    """Automatic notices for teachers (about all students), newest first (and every one
+    this teacher hasn't seen), less the ones this teacher has cleared."""
+    return _newest(Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~cleared_by(teacher.id)),
+                   limit, unread_by_teacher(teacher))
 
 
 def mark_notices_seen_by_teachers(teacher):
