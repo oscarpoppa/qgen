@@ -64,9 +64,9 @@
     if (!narrow.matches) store('qgen-dock-' + p, open ? 'open' : 'closed');
     syncButtons();
     if (open) {
-      //its pop-ups are answered
+      //its pop-ups are answered; opening Notices with its button (or a pop-up's) marks them seen
       document.querySelectorAll('.toast-' + p).forEach(function (t) { t.remove(); });
-      load(p);
+      load(p, true);
     }
     //the conversation's panel changed size: keep the newest message in view
     if (isOpen('messages')) requestAnimationFrame(showNewest);
@@ -74,8 +74,9 @@
 
   /* ---------- loading a panel ---------- */
 
-  function paneUrl(p) {
+  function paneUrl(p, markSeen) {
     var url = pane(p).dataset.url;
+    if (p === 'notices') return markSeen ? url + '?seen=1' : url;
     var student = p === 'messages' && stored('qgen-dock-view');
     return student ? url + '?student=' + encodeURIComponent(student) : url;
   }
@@ -85,9 +86,11 @@
     if (box) box.scrollTop = box.scrollHeight;
   }
 
-  function load(p) {
+  //markSeen: the person opened the panel themselves (only Notices uses it: loading it
+  //otherwise, e.g. because a notice arrived while it was open, leaves new ones new)
+  function load(p, markSeen) {
     var body = pane(p).querySelector('.dock-body');
-    return fetch(paneUrl(p), { credentials: 'same-origin' })
+    return fetch(paneUrl(p, markSeen), { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) {
         if (html === null) { body.innerHTML = '<p class="muted small">Couldn\'t load this. Please reload the page.</p>'; return; }
@@ -186,6 +189,22 @@
         }
       }, function () { note.textContent = 'Couldn\'t reach the server. Please try again.'; })
       .then(function () { button.disabled = false; });
+  });
+
+  //clicking a new notice (or its Open link) marks that one seen; the panel then shows it as read
+  document.addEventListener('click', function (e) {
+    var li = e.target.closest('#dock-notices .notice[data-seen-url]');
+    if (!li || e.target.closest('form')) return;
+    var data = new FormData();
+    var token = document.querySelector('meta[name=csrf-token]');
+    if (token) data.append('csrf_token', token.content);
+    var url = li.dataset.seenUrl;
+    li.removeAttribute('data-seen-url');
+    li.classList.remove('notice-new');
+    //keepalive: the Open link may be leaving the page
+    fetch(url, { method: 'POST', body: data, credentials: 'same-origin', keepalive: true,
+                 headers: { 'X-Requested-With': 'fetch' } })
+      .then(function () { if (document.contains(li)) load('notices'); }, function () {});
   });
 
   //deleting, clearing notices and pinning inside a panel: done without leaving the page,
@@ -387,6 +406,8 @@
         if (state !== undefined) shown[p] = state;
         if (isOpen(p)) {
           if ((changed || restyled) && !(p === 'messages' && busyTyping())) load(p);
+          //a new notice stays new in an open panel, so it's announced like anywhere else
+          if (p === 'notices' && changed && count) { toast(p, info); pulse(p); }
         } else if (changed && count) {
           toast(p, info);
           pulse(p);

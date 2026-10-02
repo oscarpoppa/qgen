@@ -111,6 +111,19 @@ def delete(message_id):
     flash('Message deleted{}.'.format(' for all {} students who got it'.format(count) if count > 1 else ''), 'success')
     return redirect(request.referrer or home_url())
 
+#route to mark one notice seen (it was clicked in the Notices panel)
+@messages_bp.route('/messages/notices/seen/<int:notice_id>', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def notice_seen(notice_id):
+    try:
+        M.mark_notice_seen(current_user, notice_id)
+    except M.MessageError as exc:
+        return jsonify(ok=False, error=str(exc)), 404
+    return jsonify(ok=True)
+
+
 #route to clear one notice (or, without an id, all of them) from your Notices panel
 @messages_bp.route('/messages/notices/clear', methods=['POST'])
 @messages_bp.route('/messages/notices/clear/<int:notice_id>', methods=['POST'])
@@ -169,19 +182,25 @@ def panel():
         return render_template('_teacher_messages.html', **teacher_panel(request.args.get('student', 'all')))
     return render_template('_student_messages.html', **student_panel(current_user, request.args.get('student')))
 
-#the notices side panel: automatic notices, apart from the conversation; showing them marks them seen
+#the notices side panel: automatic notices, apart from the conversation. Showing them
+#doesn't mark them seen (an open panel reloads by itself as notices arrive); seen=1 does,
+#sent when the person opens the panel with its button. A single notice is marked when
+#it's clicked (notice_seen below), so a new one stays gold and counted until then.
 @messages_bp.route('/messages/notices', methods=['GET'])
 @login_required
 @pw_check
 def notices():
+    mark = request.args.get('seen') == '1'
     if current_user.is_admin:
         items = M.notices_for_teachers(current_user)
         unread_ids = M.unseen_ids(current_user, items)
-        M.mark_notices_seen_by_teachers(current_user)
+        if mark:
+            M.mark_notices_seen_by_teachers(current_user)
     else:
         items = M.notices_for_student(current_user.id)
         unread_ids = {m.id for m in items if not m.seen_by_student}
-        M.mark_seen_by_student(current_user.id, items)
+        if mark:
+            M.mark_seen_by_student(current_user.id, items)
     return render_template('_notices.html', items=items, unread_ids=unread_ids, teacher=current_user.is_admin)
 
 

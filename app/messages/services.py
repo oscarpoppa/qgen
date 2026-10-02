@@ -367,6 +367,20 @@ def clear_notices(user, notice_id=None):
     return len(rows)
 
 
+def mark_notice_seen(user, notice_id):
+    """This person has seen one notice in their own Notices panel (clicked it)."""
+    q = _my_notices(user).filter(Message.id == notice_id)
+    if user.is_admin:
+        q = q.filter(~cleared_by(user.id))
+    m = q.first()
+    if m is None:
+        raise MessageError('That notice isn\'t in your notices.')
+    if user.is_admin:
+        _mark_for_teacher(user, [m.id])
+    else:
+        mark_seen_by_student(user.id, [m])
+
+
 def _delete_if_all_cleared(ids):
     """Delete the notices every teacher has now cleared."""
     teachers = [t[0] for t in User.query.filter_by(is_admin=True).with_entities(User.id)]

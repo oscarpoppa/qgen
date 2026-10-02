@@ -57,7 +57,7 @@ def test_two_way_messages_announcements_and_notices(app_db):
     # ...in the notices panel, not the conversation, with its own count
     assert sam.get('/messages/poll').get_json()['notices'] == 1
     assert 'New quiz' not in sam.get('/messages/panel').data.decode()
-    assert 'New quiz: &#34;Quiz 9&#34;' in sam.get('/messages/notices').data.decode()
+    assert 'New quiz: &#34;Quiz 9&#34;' in sam.get('/messages/notices?seen=1').data.decode()
     assert sam.get('/messages/poll').get_json()['notices'] == 0
 
     # deleting a student removes their conversation
@@ -174,7 +174,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Quiz 5', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
-    assert 'teach assigned &#34;Quiz 5&#34;' in teacher.get('/messages/notices').data.decode()  # read it
+    assert 'teach assigned &#34;Quiz 5&#34;' in teacher.get('/messages/notices?seen=1').data.decode()  # read it
 
     # sam hands in: the teachers get a notice, not a message
     from app.qgen import services as S
@@ -183,7 +183,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     poll = teacher.get('/messages/poll').get_json()
     assert poll['notices'] == 1 and poll['unread'] == 0
     assert poll['notice_preview']['from'] is None and 'sam handed in "Quiz 5"' in poll['notice_preview']['text']
-    panel = teacher.get('/messages/notices').data.decode()
+    panel = teacher.get('/messages/notices?seen=1').data.decode()
     assert 'sam handed in &#34;Quiz 5&#34;' in panel and 'notice-new' in panel
     # its Open goes to that attempt's results, which a teacher can see
     from app.messages.models import Message
@@ -195,7 +195,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     assert 'handed in' not in teacher.get('/messages/{}'.format(sam_id)).data.decode()
     assert 'handed in' not in teacher.get('/messages').data.decode()
     sam = login(app, 'sam')
-    assert 'handed in' not in sam.get('/messages/notices').data.decode()
+    assert 'handed in' not in sam.get('/messages/notices?seen=1').data.decode()
     assert 'handed in' not in sam.get('/messages/panel').data.decode()
     # ...nor through the API (whose student messages come from thread())
     from app.messages import services as M
@@ -207,7 +207,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     app.test_client().post('/register', data={'class_code': 'maple-7', 'username': 'dee', 'email': '',
                                              'password': 'pw-for-tests', 'retype_password': 'pw-for-tests'})
     assert User.query.filter_by(username='dee').count() == 1
-    assert 'New student signed up: dee.' in teacher.get('/messages/notices').data.decode()
+    assert 'New student signed up: dee.' in teacher.get('/messages/notices?seen=1').data.decode()
 
 
 def test_message_actions_need_the_page_token(app_db):
@@ -292,10 +292,10 @@ def test_teachers_get_a_notice_when_a_quiz_is_assigned(app_db):
     assert notices[0].link == '/quiz/listvq/{}'.format(VQuiz.query.one().id)
     assert 'Quiz 7' in teacher.get(notices[0].link).data.decode()
     assert teacher.get('/messages/poll').get_json()['notices'] == 1
-    assert 'teach assigned &#34;Quiz 7&#34;' in teacher.get('/messages/notices').data.decode()
+    assert 'teach assigned &#34;Quiz 7&#34;' in teacher.get('/messages/notices?seen=1').data.decode()
     # students still get their own "New quiz" notice, and never see the teachers' one
     sam = login(app, 'sam')
-    page = sam.get('/messages/notices').data.decode()
+    page = sam.get('/messages/notices?seen=1').data.decode()
     assert 'New quiz: &#34;Quiz 7&#34;' in page and 'assigned' not in page
     # the API's assign does the same
     from test_api import Api
@@ -377,7 +377,7 @@ def test_clearing_notices(app_db):
     a = notify(sam_id, 'New quiz: "A".'); b = notify(sam_id, 'New quiz: "B".'); k = notify(kim_id, 'New quiz: "K".')
     t = notify_teachers(sam_id, 'sam handed in "A": 90%.')
     db.session.commit()
-    page = sam.get('/messages/notices').data.decode()
+    page = sam.get('/messages/notices?seen=1').data.decode()
     assert page.count('aria-label="Clear this notice"') == 2 and 'Clear all' in page
     # each person clears only their own notices
     assert sam.post('/messages/notices/clear/{}'.format(k.id), headers=J).status_code == 404
@@ -474,7 +474,7 @@ def test_results_page_refreshes_when_answers_are_released(app_db):
     teacher.post('/quiz/releasevq/{}'.format(vq.id))
     db.session.expire_all()
     assert sam.get('/messages/poll?watch=' + key).get_json()['watch'] == before
-    assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
+    assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices?seen=1').data.decode()
 
 
 def test_questions_are_asked_in_the_page_and_delete_is_always_an_x(app_db):
@@ -601,14 +601,14 @@ def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '5'})
-    teacher.get('/messages/notices')  # read what's there so far
+    teacher.get('/messages/notices?seen=1')  # read what's there so far
     # the Retake button: a notice for the teachers, and still one for the student
     assert teacher.post('/quiz/retcq/{}'.format(cq.id)).status_code == 302
     poll = teacher.get('/messages/poll').get_json()
     assert poll['notices'] == 1 and poll['notice_preview']['text'] == 'teach gave sam a retake of "Again".'
     notice = Message.query.filter_by(body='teach gave sam a retake of "Again".').one()
     assert not notice.from_teacher and notice.link == '/quiz/listuser/{}'.format(sam_id)
-    page = login(app, 'sam').get('/messages/notices').data.decode()
+    page = login(app, 'sam').get('/messages/notices?seen=1').data.decode()
     assert 'You can try &#34;Again&#34; again.' in page and 'gave sam a retake' not in page
     # through the API too
     from test_api import Api
@@ -675,7 +675,7 @@ def test_every_teacher_gets_every_alert(app_db):
 
     # teach reads the message (All view) and the notices; coach still has both alerts
     assert 'msg-new' in teach.get('/messages/panel').data.decode()
-    assert 'notice-new' in teach.get('/messages/notices').data.decode()
+    assert 'notice-new' in teach.get('/messages/notices?seen=1').data.decode()
     p = teach.get('/messages/poll').get_json()
     assert (p['unread'], p['notices'], p['message_preview'], p['notice_preview']) == (0, 0, None, None)
     p = coach.get('/messages/poll').get_json()
@@ -683,14 +683,14 @@ def test_every_teacher_gets_every_alert(app_db):
     assert 'aria-label="1 unread"' in coach.get('/messages').data.decode()
     # ...and it's still shown to coach as new
     assert 'msg-new' in coach.get('/messages/panel?student={}'.format(sam_id)).data.decode()
-    assert 'notice-new' in coach.get('/messages/notices').data.decode()
+    assert 'notice-new' in coach.get('/messages/notices?seen=1').data.decode()
     assert coach.get('/messages/poll').get_json()['unread'] == 0
     assert db.session.get(Message, t.id).seen_by_teacher  # "seen by a teacher" still kept
 
     # clearing is per teacher; the notice goes for good once both have cleared it
     assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).get_json() == {'ok': True, 'cleared': 1}
-    assert 'handed in' not in teach.get('/messages/notices').data.decode()
-    assert 'handed in' in coach.get('/messages/notices').data.decode()
+    assert 'handed in' not in teach.get('/messages/notices?seen=1').data.decode()
+    assert 'handed in' in coach.get('/messages/notices?seen=1').data.decode()
     assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).status_code == 404  # already gone for teach
     assert db.session.get(Message, t.id) is not None
     assert coach.post('/messages/notices/clear', headers=J).get_json()['cleared'] == 1
@@ -722,7 +722,7 @@ def test_deleting_an_attempt_also_forgets_teachers_read_marks(app_db):
     t = notify_teachers(sam_id, 'sam handed in "A".', link='/quiz/review/7')
     db.session.commit()
     tid = t.id
-    teach.get('/messages/notices')
+    teach.get('/messages/notices?seen=1')
     assert MessageRead.query.filter_by(message_id=tid).count() == 1
     _forget_notices(['/quiz/review/7']); db.session.commit()
     assert Message.query.filter_by(id=tid).count() == 0 and MessageRead.query.count() == 0
@@ -790,7 +790,7 @@ def test_nothing_unread_is_left_out_however_long_a_student_was_away(app_db):
     assert (poll['unread'], poll['notices']) == (5, 5)
     page = sam.get('/mypage').data.decode()
     assert '<span class="count nav-notices" >5</span>' in page and '<span class="count nav-unread" >5</span>' in page  # shown on signing in
-    notices = sam.get('/messages/notices').data.decode()
+    notices = sam.get('/messages/notices?seen=1').data.decode()
     messages = sam.get('/messages/panel').data.decode()
     assert all('Old notice {}'.format(i) in notices for i in range(5)) and 'Read notice 39' in notices
     assert all('Old message {}'.format(i) in messages for i in range(5)) and 'Read message 39' in messages
@@ -814,13 +814,13 @@ def test_teachers_panels_keep_everything_unseen_too(app_db):
                                created=t0 + timedelta(minutes=i + 1)))
         notify_teachers(sam_id, 'Notice {}'.format(i)).created = t0 + timedelta(minutes=i + 1)
     db.session.commit()
-    teacher.get('/messages/notices')
+    teacher.get('/messages/notices?seen=1')
     teacher.get('/messages/panel?student={}'.format(sam_id))
     # all read now except the two oldest, which the teacher reads next...
     for m in Message.query.filter(Message.body.in_(['Very old notice', 'Very old question'])):
         MessageRead.query.filter_by(message_id=m.id).delete()
     db.session.commit()
-    assert 'Very old notice' in teacher.get('/messages/notices').data.decode()
+    assert 'Very old notice' in teacher.get('/messages/notices?seen=1').data.decode()
     assert 'Very old question' in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     MessageRead.query.filter(MessageRead.message_id == Message.query.filter_by(body='Very old question').one().id).delete()
     db.session.commit()
@@ -836,3 +836,47 @@ def test_the_first_page_after_signing_in_says_whats_waiting(app_db):
     assert 'data-welcome' in first
     assert 'data-welcome' not in sam.get('/mypage').data.decode()  # once
     assert "'Welcome back'" in open('static/js/messages.js').read()
+
+
+def test_a_new_notice_stays_new_until_it_is_clicked(app_db):
+    # an open Notices panel reloads by itself when one arrives (and the page may reload
+    # itself too): that doesn't mark it read; opening the panel with its button, or
+    # clicking the notice, does
+    app, db = app_db
+    from app.messages.models import Message
+    from app.qgen.models import Setting
+    teacher = login(app, 'teach')
+    Setting.put('class_code', 'oak-3')
+    for name in ('dee', 'eli'):
+        app.test_client().post('/register', data={'class_code': 'oak-3', 'username': name, 'email': '',
+                                                  'password': 'long-enough', 'retype_password': 'long-enough'})
+    count = lambda: teacher.get('/messages/poll').get_json()['notices']
+    assert count() == 2
+    for _ in range(3):  # the panel reloading on its own, any number of times
+        panel = teacher.get('/messages/notices').data.decode()
+        assert panel.count('notice notice-new') == 2 and count() == 2
+    # clicking one: just that one is read
+    dee = Message.query.filter(Message.body.like('%dee.')).one()
+    assert 'data-seen-url="/messages/notices/seen/{}"'.format(dee.id) in panel
+    r = teacher.post('/messages/notices/seen/{}'.format(dee.id), headers={'X-Requested-With': 'fetch'})
+    assert r.get_json() == {'ok': True} and count() == 1
+    panel = teacher.get('/messages/notices').data.decode()
+    assert panel.count('notice notice-new') == 1 and 'signed up: eli.' in panel
+    # opening the panel with the bell: everything read
+    teacher.get('/messages/notices?seen=1')
+    assert count() == 0
+    # students' notices work the same way; nobody can mark someone else's
+    sam = login(app, 'sam')
+    from app.messages.models import notify
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    note = notify(sam_id, 'Hello sam')
+    db.session.commit()
+    sam.get('/messages/notices')
+    assert sam.get('/messages/poll').get_json()['notices'] == 1
+    assert login(app, 'kim').post('/messages/notices/seen/{}'.format(note.id),
+                                  headers={'X-Requested-With': 'fetch'}).status_code == 404
+    sam.post('/messages/notices/seen/{}'.format(note.id), headers={'X-Requested-With': 'fetch'})
+    assert sam.get('/messages/poll').get_json()['notices'] == 0
+    js = open('static/js/messages.js').read()
+    assert "load(p, true)" in js and "if (p === 'notices' && changed && count) { toast(p, info); pulse(p); }" in js

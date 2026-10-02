@@ -9,7 +9,8 @@
     </form>
     <ol class="notice-list" aria-label="Notices">
       {% for m in items %}
-        <li class="notice{{ ' notice-new' if m.id in unread_ids }}">
+        {# a new one stays marked until it's clicked (or the panel is opened with its button) #}
+        <li class="notice{{ ' notice-new' if m.id in unread_ids }}"{% if m.id in unread_ids %} data-seen-url="{{ url_for('messages.notice_seen', notice_id=m.id) }}"{% endif %}>
           {% if teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">🔔</span>{% endif %}
           <div class="notice-text">
             <div>{{ m.body }}</div>
