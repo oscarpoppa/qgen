@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
+  {% if site %}{% set s_icon = site() %}{% if s_icon.icon %}
+  <link rel="icon" {% if s_icon.icon_svg %}type="image/svg+xml"{% else %}type="image/png" sizes="32x32"{% endif %} href="{{ url_for('user.site_icon', size=32, v=s_icon.icon) }}">
+  <link rel="apple-touch-icon" href="{{ url_for('user.site_icon', size=180, v=s_icon.icon) }}">{% endif %}{% endif %}
   <link rel="stylesheet" href="{{ asset('css/app.css') }}">
   <script>
     /* the "safe" extension stops typed math from making links or styles, so a

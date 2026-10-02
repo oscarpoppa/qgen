@@ -1,7 +1,7 @@
 from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
-from flask import flash, render_template, redirect, url_for, request, current_app, session
+from flask import flash, render_template, redirect, url_for, request, current_app, session, abort
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
@@ -218,17 +218,47 @@ def settings():
     if request.method == 'GET':
         form.site_name.data = Setting.get('site_name', 'Quizzes')
         form.logo.data = Setting.get('logo', '')
+        form.favicon.data = Setting.get('favicon', '')
         form.code.data = Setting.get('class_code', '')
     elif form.validate_on_submit():
         code = (form.code.data or '').strip()
         Setting.put('site_name', form.site_name.data.strip())
         Setting.put('logo', (form.logo.data or '').strip() or None)
+        Setting.put('favicon', (form.favicon.data or '').strip() or None)
         Setting.put('class_code', code or None)
         flash('Settings saved. ' + ('Students can sign up with the class code "{}".'.format(code) if code
               else 'Sign-up is off until you set a class code.'), 'success')
         current_app.logger.info('{} changed the site settings'.format(current_user.username))
         return redirect(url_for('user.settings'))
     return render_template('settings.html', form=form, title='Settings')
+
+
+# the picture in the browser tab: /favicon.ico for browsers that ask for it by that name,
+# and sized copies the pages link to (their address changes when the picture does)
+@user_bp.route('/favicon.ico')
+def favicon():
+    return site_icon_png(32, cache=24 * 3600)
+
+@user_bp.route('/site-icon/<int:size>.png')
+def site_icon(size):
+    from app import site_icon as icon
+    if size not in icon.SIZES:
+        abort(404)
+    return site_icon_png(size, cache=365 * 24 * 3600 if request.args.get('v') else 3600)
+
+def site_icon_png(size, cache):
+    from app import site_icon as icon
+    name = icon.chosen()
+    if name and icon.is_svg(name) and size == 32:
+        resp = current_app.send_static_file(name)
+    else:
+        data = icon.png(name, size)
+        if data is None:
+            abort(404)
+        resp = current_app.response_class(data, mimetype='image/png')
+    resp.cache_control.public = True
+    resp.cache_control.max_age = cache
+    return resp
 
 
 # route to the technical settings: time spans, limits and the AI model (app/tuning.py)

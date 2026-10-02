@@ -71,5 +71,6 @@ class LoginForm(FlaskForm):
 class SettingsForm(FlaskForm):
     site_name = StringField('Site name', validators=[DataRequired(message='Please give the site a name.')])
     logo = StringField('Logo')
+    favicon = StringField('Browser tab icon')
     code = StringField('Class code for sign-up')
     submit = SubmitField('Save settings')

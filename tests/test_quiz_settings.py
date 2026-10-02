@@ -742,3 +742,59 @@ def test_the_attempts_that_count_are_the_ones_marked(app_db):
     assert '★' not in teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
     S.set_retake_rule(first, 'best')
     assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['100']
+
+
+def test_the_browser_tab_icon(app_db):
+    """The tab icon is the picture chosen in Settings, else the logo, made square; every
+    page links to it, and its address changes when the picture does."""
+    import io
+    import os
+    import re
+    from PIL import Image
+    app, db = app_db
+    folder = app.config['STATIC_DIR']
+    Image.new('RGB', (300, 60), (200, 30, 30)).save(os.path.join(folder, 'wide-logo.png'))
+    Image.new('RGBA', (40, 40), (0, 90, 200, 255)).save(os.path.join(folder, 'tree.png'))
+    anon = app.test_client()
+    # nothing chosen and no logo: no icon (the browser shows its own)
+    assert 'rel="icon"' not in anon.get('/login').data.decode()
+    assert anon.get('/favicon.ico').status_code == 404
+    teacher = login(app, 'teach')
+
+    def icon_url(client, path='/login'):
+        return re.search(r'rel="icon" type="image/png" sizes="32x32" href="([^"]+)"', client.get(path).data.decode()).group(1)
+
+    def picture(r, size):
+        assert r.status_code == 200 and r.mimetype == 'image/png'
+        im = Image.open(io.BytesIO(r.data))
+        assert im.size == (size, size)
+        return im.convert('RGBA')
+
+    # the logo, until a separate icon is chosen: a wide logo is centred, with clear space above and below
+    teacher.post('/settings', data={'site_name': 'School', 'logo': 'wide-logo.png', 'code': ''})
+    url = icon_url(anon)
+    assert url.startswith('/site-icon/32.png?v=') and icon_url(teacher, '/dashboard') == url  # every page, signed in or not
+    im = picture(anon.get(url), 32)
+    assert im.getpixel((16, 16))[:3] == (200, 30, 30) and im.getpixel((16, 0))[3] == 0
+    assert 'max-age=31536000' in anon.get(url).headers['Cache-Control']
+    picture(anon.get('/favicon.ico'), 32)
+    assert 'apple-touch-icon' in anon.get('/login').data.decode()
+    picture(anon.get('/site-icon/180.png'), 180)
+    assert anon.get('/site-icon/77.png').status_code == 404
+
+    # a separate icon
+    teacher.post('/settings', data={'site_name': 'School', 'logo': 'wide-logo.png', 'favicon': 'tree.png', 'code': ''})
+    assert 'tree.png' in teacher.get('/settings').data.decode()
+    new = icon_url(anon)
+    assert new != url
+    assert picture(anon.get(new), 32).getpixel((0, 0))[:3] == (0, 90, 200)
+    # removing it brings back the logo
+    teacher.post('/settings', data={'site_name': 'School', 'logo': 'wide-logo.png', 'favicon': '', 'code': ''})
+    assert icon_url(anon) == url
+
+    # a picture that isn't there, or outside the pictures folder: no icon, nothing breaks
+    from app.qgen.models import Setting
+    for bad in ('gone.png', '../config.py', '/etc/passwd'):
+        Setting.put('favicon', bad)
+        assert 'rel="icon"' not in anon.get('/login').data.decode()
+        assert anon.get('/favicon.ico').status_code == 404

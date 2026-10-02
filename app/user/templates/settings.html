@@ -9,6 +9,7 @@
   <h2>Your site</h2>
   {{ field(form.site_name, 'Shown at the top of every page, next to the logo.') }}
   {{ image_drop(form.logo, 'Drag your school’s logo here, or click to choose it. A wide or square picture works best.') }}
+  {{ image_drop(form.favicon, 'The little picture in the browser tab. Leave it empty to use the logo. A square picture works best: a wide one is shrunk to fit, which makes it tiny.') }}
   <h2>Sign-up</h2>
   {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
   {{ form.submit(class='btn') }}

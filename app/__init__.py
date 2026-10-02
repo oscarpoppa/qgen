@@ -57,11 +57,14 @@ def page_helpers():
         return CQuiz.query.filter_by(needs_review=True, completed=False).count()
     def site():
         try:
-            return {'name': Setting.get('site_name', 'Quizzes'), 'logo': Setting.get('logo')}
+            from app import site_icon
+            icon = site_icon.chosen()
+            return {'name': Setting.get('site_name', 'Quizzes'), 'logo': Setting.get('logo'),
+                    'icon': icon and site_icon.version(icon), 'icon_svg': bool(icon and site_icon.is_svg(icon))}
         except Exception:
             #e.g. before the database is upgraded
             db.session.rollback()
-            return {'name': 'Quizzes', 'logo': None}
+            return {'name': 'Quizzes', 'logo': None, 'icon': None, 'icon_svg': False}
     def asset(filename):
         """A stylesheet's or script's address stamped with when the file last changed,
         so browsers fetch the new copy after an update instead of a saved old one."""
