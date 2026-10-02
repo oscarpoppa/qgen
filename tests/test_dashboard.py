@@ -148,19 +148,21 @@ def test_grading_queue_and_recent_handins(app_db):
     assert 'badge-ok">100%' in page and 'being graded' in page
 
 
-def test_recent_messages_are_shown_but_not_marked_read(app_db):
+def test_student_messages_are_counted_but_not_listed(app_db):
+    # the Dashboard has no messages box; it only counts unread ones, and opening it marks nothing read
     app, db = app_db
-    from app.messages.models import Message, MessageRead
+    from app.messages.models import MessageRead
     sam = login(app, 'sam')
-    for text in ('First question', 'Second question'):
-        sam.post('/messages/reply', data={'body': text})
+    sam.post('/messages/reply', data={'body': 'First question'})
     teacher = login(app, 'teach')
     before = MessageRead.query.count()
     page = teacher.get('/dashboard').data.decode()
-    assert page.index('Second question') < page.index('First question')
-    assert 'dash-unread' in page and '>new</span>' in page
+    assert 'First question' not in page and 'Recent messages' not in page and 'data-box="messages"' not in page
+    # the order: Right now beside Site at a glance, then Assigned, then grading and hand-ins
+    order = [page.index('data-box="{}"'.format(k)) for k in ('now', 'glance', 'out', 'queue', 'handins')]
+    assert order == sorted(order) and page.index('dash-counters') < order[0]
     assert MessageRead.query.count() == before
-    assert Message.query.filter_by(from_teacher=False, kind='message').count() == 2
+    assert '1</span><span>unread message</span>' in page
 
 
 def test_site_at_a_glance(app_db):
@@ -223,7 +225,7 @@ def test_dashboard_boxes_open_and_close(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
-    for key in ('now', 'queue', 'handins', 'out', 'messages', 'glance'):
+    for key in ('now', 'glance', 'out', 'queue', 'handins'):
         assert 'data-box="{}" open>'.format(key) in page
     assert 'data-dash-boxes="open"' in page and 'data-dash-boxes="close"' in page and 'js/dashboard.js' in page
     assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()
@@ -242,7 +244,7 @@ def test_the_whole_dashboard_refreshes(app_db):
         S.submit(cq, {1: '4'})
     part = teacher.get('/dashboard/now').data.decode()
     assert 'Nothing handed in yet.' not in part and '/quiz/take/{}'.format(cq.id) in part  # Recent hand-ins
-    for key in ('now', 'queue', 'handins', 'out', 'messages', 'glance'):
+    for key in ('now', 'glance', 'out', 'queue', 'handins'):
         assert 'data-box="{}" open>'.format(key) in part
 
 

@@ -49,8 +49,6 @@ TUNABLES = [
        'items', 10, 3, 50),
     _t('list_assigned', 'online', 'Dashboard: "Assigned, not handed in yet" shows', 'How many are listed.',
        'items', 10, 3, 50),
-    _t('list_messages', 'online', 'Dashboard: recent messages shows', 'How many student messages are listed.',
-       'items', 5, 3, 50),
     _t('grace_minutes', 'quizzes', 'Grace after a quiz\'s time is up',
        'Answers still count for this long after the time limit or closing time (for slow connections).',
        'minutes', 2, 0, 15),

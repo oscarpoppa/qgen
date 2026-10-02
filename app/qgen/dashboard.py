@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy.orm import joinedload
 
 from app import db, tuning
-from app.messages.models import Message, NOT_NOTICE, seen_by, unread_for_teachers, unread_notices_for_teachers
+from app.messages.models import unread_for_teachers, unread_notices_for_teachers
 from app.user.models import User
 from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, AICall, Setting
 from .services import attempt_state
@@ -116,16 +116,6 @@ def when(d, now):
     if -6 <= days <= 6:
         return '{:%a} {}'.format(d, clock)
     return '{:%b} {}'.format(d, d.day)
-
-
-def recent_messages(teacher, limit=None):
-    """The newest messages from students: [(message, unread for this teacher)]. Marks nothing."""
-    limit = limit or tuning.get('list_messages')
-    rows = (Message.query.filter(Message.from_teacher.is_(False), NOT_NOTICE)
-            .options(joinedload(Message.student)).order_by(Message.created.desc(), Message.id.desc()).limit(limit).all())
-    unread = {r[0] for r in db.session.query(Message.id).filter(Message.id.in_([m.id for m in rows] or [0]),
-                                                                ~seen_by(teacher.id))}
-    return [(m, m.id in unread) for m in rows]
 
 
 def site_glance(now):

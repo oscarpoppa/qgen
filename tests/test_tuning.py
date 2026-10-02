@@ -28,7 +28,8 @@ def test_defaults_are_what_the_site_used_before(app_db):
     from app import tuning
     v = tuning.values()
     assert (v['online_window'], v['recently'], v['poll_seconds'], v['dashboard_seconds'], v['due_soon_days']) == (2, 60, 30, 30, 2)
-    assert (v['list_grading'], v['list_handins'], v['list_assigned'], v['list_messages']) == (5, 10, 10, 5)
+    assert (v['list_grading'], v['list_handins'], v['list_assigned']) == (5, 10, 10)
+    assert 'list_messages' not in v
     assert (v['grace_minutes'], v['max_api_answer'], v['max_message']) == (2, 20000, 2000)
     assert (v['ai_hourly'], v['ai_model']) == (30, 'claude-opus-5')
     assert (v['min_password'], v['lockout_tries'], v['lockout_minutes'], v['token_days']) == (8, 10, 15, 90)
@@ -143,6 +144,7 @@ def test_dashboard_settings_take_effect(app_db):
     assert D.counts(db.session.get(User, ids('teach')), now)['closing'] == 0
     set_values(due_soon_days=4, list_assigned=3)
     assert D.counts(db.session.get(User, ids('teach')), now)['closing'] == 4
+    assert 'due within 4 days' in teacher.get('/dashboard').data.decode()
     rows, total = D.out_now(now)
     assert len(rows) == 3 and total == 4
 

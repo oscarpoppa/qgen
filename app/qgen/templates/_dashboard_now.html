@@ -1,17 +1,5 @@
-{# The Dashboard's to-do counters and "Right now" (part of _dashboard_live.html). #}
+{# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
 {% from "_macros.html" import avatar with context %}
-<div class="dash-counters" aria-label="To do">
-  <a class="dash-count{{ ' has' if counts.grading }}" href="{{ url_for('qgen.review_list') }}">
-    <span class="dash-num">{{ counts.grading }}</span><span>waiting for grading</span></a>
-  <a class="dash-count{{ ' has' if counts.messages }}" href="{{ url_for('messages.inbox') }}">
-    <span class="dash-num">{{ counts.messages }}</span><span>unread message{{ '' if counts.messages == 1 else 's' }}</span></a>
-  <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices">
-    <span class="dash-num">{{ counts.notices }}</span><span>unread notice{{ '' if counts.notices == 1 else 's' }}</span></button>
-  <a class="dash-count{{ ' has' if counts.closing }}" href="{{ url_for('qgen.list_vquizzes') }}"
-     title="Assigned quizzes with a closing time in the next 2 days that the student hasn't handed in yet (one per student)">
-    <span class="dash-num">{{ counts.closing }}</span><span>not handed in, due within 2 days</span></a>
-</div>
-
 <details class="card dash-card" id="dash-right-now" data-box="now" open>
   <summary class="dash-head"><h2>Right now</h2>
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>

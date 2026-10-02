@@ -782,7 +782,6 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .dash-wide { grid-column: 1 / -1; }
 .dash-card { margin-bottom: 0; min-width: 0; }
-#dash-right-now { margin-bottom: 16px; }
 .dash-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .dash-head h2 { margin: 0; font-size: 1.1rem; }
 .dash-head > a { margin-left: auto; }
@@ -792,8 +791,6 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .dash-list > li:first-child { border-top: 0; }
 .dash-list .dash-go { margin-left: auto; }
 .dash-list a.person { color: inherit; text-decoration: none; }
-.dash-unread .dash-snippet { font-weight: 600; }
-.dash-snippet { flex-basis: 100%; overflow-wrap: anywhere; }
 .dash-reasons { margin: 0; padding-left: 18px; flex-basis: 100%; color: var(--muted); }
 .dash-people { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .dash-note { margin: 10px 0 0; }
