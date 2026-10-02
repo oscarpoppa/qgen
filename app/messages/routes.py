@@ -235,6 +235,14 @@ def teacher_panel(choice='all', mark_seen=True):
 @messages_bp.route('/messages/poll', methods=['GET'])
 @login_required
 def poll():
+    if not current_user.is_admin:
+        #a quiz of theirs that has just opened: its notice comes with this check-in
+        from app.qgen.services import announce_opened
+        try:
+            announce_opened(student_id=current_user.id)
+        except Exception as exc:  # never let it break the check-in
+            db.session.rollback()
+            current_app.logger.error('announcing opened quizzes failed: {}'.format(exc))
     if current_user.is_admin:
         mine = Message.query.filter(Message.from_teacher.is_(False))
         unseen = ~seen_by(current_user.id)

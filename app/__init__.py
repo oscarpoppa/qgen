@@ -105,12 +105,18 @@ def _close_expired_quizzes():
     if _time.monotonic() - _last_sweep[0] < 60 or app.config.get('TESTING'):
         return
     _last_sweep[0] = _time.monotonic()
-    from app.qgen.services import close_expired
+    from app.qgen.services import close_expired, announce_opened
     try:
         close_expired()
     except Exception as exc:  # never let the sweep break a page
         db.session.rollback()
         app.logger.error('closing expired quizzes failed: {}'.format(exc))
+    #quizzes whose start time has come: tell their students
+    try:
+        announce_opened()
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error('announcing opened quizzes failed: {}'.format(exc))
 
 #who's using the site, for the Dashboard (the API notes its users in app/api/auth.py)
 @app.before_request
@@ -124,9 +130,11 @@ def _note_seen():
 
 @app.cli.command('close-expired')
 def close_expired_command():
-    """Hand in and score every quiz whose time is up (for cron)."""
-    from app.qgen.services import close_expired
+    """Hand in and score every quiz whose time is up, and tell students about quizzes
+    that have opened (for cron)."""
+    from app.qgen.services import close_expired, announce_opened
     print('closed {} quiz attempt(s)'.format(close_expired()))
+    print('told {} student(s) a quiz is open'.format(announce_opened()))
 
 @app.cli.command('remove-old-markup')
 @click.option('--yes', is_flag=True, help='Really delete (without it, only lists what would go).')

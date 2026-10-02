@@ -95,6 +95,87 @@ def test_open_and_close_window(app_db):
     assert db.session.get(CQuiz, cq.id).completed
 
 
+
+def test_students_are_told_when_a_quiz_opens(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt), closes_at=(opens + timedelta(hours=2)).strftime(fmt))
+    assign(teacher, vq, [student(db, 'kim')])  # no start time: nothing to announce later
+    later_cq = CQuiz.query.filter_by(assignee=student(db, 'sam').id).one()
+    now_cq = CQuiz.query.filter_by(assignee=student(db, 'kim').id).one()
+    assert not later_cq.open_notice_sent and now_cq.open_notice_sent
+    told = lambda c: Message.query.filter(Message.link == '/quiz/take/{}'.format(c.id), Message.body.like('%is open now%')).all()
+    with app.test_request_context():
+        assert S.announce_opened(opens - timedelta(minutes=1)) == 0  # not yet
+        assert S.announce_opened(opens + timedelta(minutes=1)) == 1
+        assert S.announce_opened(opens + timedelta(minutes=2)) == 0  # only once
+    notes = told(later_cq)
+    assert len(notes) == 1 and not told(now_cq)
+    assert notes[0].body.startswith('"Settings quiz" is open now. You can start it. It closes ')
+    assert notes[0].from_teacher and notes[0].student_id == later_cq.assignee  # Sam's own notice, unread
+    sam = login(app, 'sam')
+    assert sam.get('/messages/poll').get_json()['notices'] >= 1
+    assert 'is open now' in sam.get('/messages/notices').data.decode()
+    assert 'is open now' not in login(app, 'teach').get('/messages/notices').data.decode()
+    # a student on the site gets it at their next check-in, together with the page change
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt))
+    cq = CQuiz.query.filter_by(open_notice_sent=False).one()
+    before = sam.get('/messages/poll?watch=mine').get_json()
+    cq.opens_at = datetime.now() - timedelta(seconds=5)
+    db.session.commit()
+    after = sam.get('/messages/poll?watch=mine').get_json()
+    assert after['latest_notice'] != before['latest_notice'] and after['watch'] != before['watch']
+    assert '"Settings quiz" is open now' in after['notice_preview']['text']
+    assert len(told(cq)) == 1
+    sam.get('/messages/poll?watch=mine')
+    assert len(told(cq)) == 1  # still once
+    # a teacher's check-in announces nothing for students
+    assign(teacher, vq, [student(db, 'kim')], opens_at=opens.strftime(fmt))
+    kims = CQuiz.query.filter_by(open_notice_sent=False).one()
+    kims.opens_at = datetime.now() - timedelta(seconds=5)
+    db.session.commit()
+    teacher.get('/messages/poll')
+    assert not told(kims)
+
+
+def test_no_open_notice_when_it_no_longer_makes_sense(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    assign(teacher, vq, [student(db, 'sam'), student(db, 'kim')], opens_at=opens.strftime(fmt),
+           closes_at=(opens + timedelta(hours=1)).strftime(fmt))
+    # the server was off the whole time it was open: by now it has closed again
+    with app.test_request_context():
+        assert S.announce_opened(opens + timedelta(hours=3)) == 0
+    assert all(c.open_notice_sent for c in CQuiz.query.all())  # and never later either
+    assert not Message.query.filter(Message.body.like('%is open now%')).count()
+    # an attempt archived and restored after it opened isn't announced
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt))
+    cq = CQuiz.query.filter_by(open_notice_sent=False).one()
+    with app.test_request_context():
+        a = S.archive_attempt(cq)
+        db.session.commit()
+        restored = S.restore_attempt(a)
+    assert not restored.open_notice_sent  # still waiting to open: still to be announced
+    restored.opens_at = datetime.now() - timedelta(minutes=5)
+    db.session.commit()
+    with app.test_request_context():
+        a = S.archive_attempt(restored)
+        db.session.commit()
+        assert S.restore_attempt(a).open_notice_sent
+
+
 def test_hidden_answers_and_release(app_db):
     app, db = app_db
     from app.qgen.models import CQuiz, VQuiz

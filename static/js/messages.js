@@ -223,9 +223,11 @@
 
   /* ---------- something new while a panel is hidden ---------- */
 
+  var recentToasts = [];  // shown in the last few seconds: carried over if the page reloads itself
   function toast(p, info) {
     var box = document.getElementById('toasts');
     if (!box || !info) return;
+    recentToasts.push({ p: p, info: info, at: Date.now() });
     var t = document.createElement('div');
     t.className = 'toast toast-' + p;
     var title = document.createElement('strong');
@@ -255,7 +257,7 @@
 
   /* ---------- keeping the page itself up to date ---------- */
 
-  var SCROLL = 'qgen-live-scroll';
+  var SCROLL = 'qgen-live-scroll', TOASTS = 'qgen-live-toasts';
   document.addEventListener('input', noteEdit, true);
   document.addEventListener('change', noteEdit, true);
   function noteEdit(e) {
@@ -267,6 +269,9 @@
   }
   function reloadHere() {
     try { sessionStorage.setItem(SCROLL, location.pathname + location.search + '|' + Math.round(window.scrollY)); } catch (e) {}
+    //a pop-up that just arrived (often what changed the page) is shown again after the reload
+    var keep = recentToasts.filter(function (t) { return Date.now() - t.at < 15000; });
+    try { if (keep.length) sessionStorage.setItem(TOASTS, JSON.stringify(keep)); } catch (e) {}
     window.location.reload();
   }
   function offerRefresh() {
@@ -301,6 +306,9 @@
   }
   //back where it was after a reload of its own
   window.addEventListener('load', function () {
+    var carried = null;
+    try { carried = JSON.parse(sessionStorage.getItem(TOASTS) || 'null'); sessionStorage.removeItem(TOASTS); } catch (e) {}
+    (carried || []).forEach(function (t) { toast(t.p, t.info); pulse(t.p); });
     var saved = null;
     try { saved = sessionStorage.getItem(SCROLL); sessionStorage.removeItem(SCROLL); } catch (e) {}
     if (!saved) return;

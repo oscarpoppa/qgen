@@ -461,6 +461,8 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
     """One student's own copy of a quiz. Raises ServiceError if it can't be made."""
     try:
         cq = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id, opens_at=opens_at, closes_at=closes_at, time_limit=time_limit)
+        #only a quiz that opens later gets an "it's open now" notice (see announce_opened)
+        cq.open_notice_sent = not (opens_at and opens_at > datetime.now())
         #groups ("2 of these 6") are drawn separately for each student
         ordered = layout.draw(layout.parse(vquiz.vpid_lst), random)
         #so "question 1 is B" means nothing to the student next door
@@ -824,6 +826,9 @@ def restore_attempt(a):
     cq = CQuiz()
     _fill_row(cq, data['attempt'])
     cq.id = a.original_id
+    #archived before this was kept, or already open: no "it's open now" notice for it
+    if 'open_notice_sent' not in data['attempt'] or not cq.not_open_yet():
+        cq.open_notice_sent = True
     db.session.add(cq)
     db.session.flush()
     for row in data['problems']:
@@ -923,6 +928,33 @@ def close_expired(now=None):
             submit(cq)
             closed += 1
     return closed
+
+
+def announce_opened(now=None, student_id=None):
+    """Tell each student whose quiz had a future start time that it's open now (a
+    notice, which pops up if they're on the site). Once per attempt, even with several
+    server processes; not for a quiz already closed again, handed in, or started.
+    Returns how many were told. Run with close_expired (about once a minute), and for
+    one student (student_id) when their page checks in, so the notice arrives together
+    with the page showing the quiz as open."""
+    now = now or datetime.now()
+    due = CQuiz.query.filter(CQuiz.open_notice_sent.is_(False), CQuiz.opens_at.isnot(None), CQuiz.opens_at <= now)
+    if student_id is not None:
+        due = due.filter(CQuiz.assignee == student_id)
+    due = due.all()
+    told = 0
+    for cq in due:
+        #claim it: only one process gets rowcount 1
+        claimed = db.session.execute(db.update(CQuiz).where(CQuiz.id == cq.id, CQuiz.open_notice_sent.is_(False))
+                                     .values(open_notice_sent=True)).rowcount
+        if claimed != 1 or attempt_state(cq, now) != 'open' or cq.startdate:
+            continue
+        closes = ' It closes {}.'.format(cq.closes_at.strftime('%b %d at %I:%M %p')) if cq.closes_at else ''
+        notify(cq.assignee, '"{}" is open now. You can start it.{}'.format(cq.vquiz.title, closes),
+               _link('qgen.qtake', cidx=cq.id))
+        told += 1
+    db.session.commit()
+    return told
 
 
 def start(cq):

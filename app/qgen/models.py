@@ -189,6 +189,8 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     time_limit = db.Column(db.Integer, nullable=True)
     #the teacher can override the quiz's retake rule for this student
     retake_rule = db.Column(db.String(16), nullable=True)
+    #a quiz with a future start: the student has been told it's open (or there's nothing to tell)
+    open_notice_sent = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
