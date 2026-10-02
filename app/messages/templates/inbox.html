@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>Messages</h1></div>
@@ -31,7 +32,7 @@
   </fieldset>
   <div class="field">
     <label for="body">Message</label>
-    <textarea id="body" name="body" rows="3" maxlength="2000" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
+    <textarea id="body" name="body" rows="3" maxlength="{{ tuning.get('max_message') }}" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
   </div>
   <div class="check field"><input type="checkbox" name="pin" value="1" id="pin"><label for="pin">Pin it to the top of their messages (until you unpin it)</label></div>
   <button class="btn">Send</button>

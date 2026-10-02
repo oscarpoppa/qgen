@@ -1,26 +1,25 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
+{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
+{% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
 
-{% block content %}
-<div class="page-head">
-  <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
-</div>
-
-{% if vqlst %}
-  {% if vqlst|length > 5 %}<input type="search" class="filter" data-filter="#quizzes" placeholder="Filter quizzes…" aria-label="Filter quizzes">{% endif %}
+{% macro quiz_table(items, ticks=true) %}
   <div class="table-wrap stack">
-    <table id="quizzes">
-      <thead><tr><th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+    <table>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
-      {% for item in vqlst %}
+      {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
-        <tr>
-          <td data-label="Quiz"><strong>{{ item.title }}</strong>
+        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title }}”"></td>{% endif %}
+          <td data-label="Quiz"><strong>{{ item.title }}</strong> {{ subject_labels(item.vqgroups) }}
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
               · {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
               {% if item.shuffle_order %}· order shuffled{% endif %}
+              {% set own = item.cquizzes|selectattr('retake_rule')|map(attribute='assignee')|unique|list|length %}
+              · retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
+              <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}
               {% if item.hide_answers %}· answers {{ 'released' if item.answers_released else 'hidden' }}{% endif %}</div></td>
           <td data-label="Problems">
             <ol class="small" style="margin:0;padding-left:1.2em">
@@ -40,16 +39,37 @@
             {% if item.hide_answers %}{{ post_button(url_for('qgen.release_vquiz', vqid=item.id), 'Hide answers' if item.answers_released else 'Release answers', 'btn btn-secondary btn-sm', 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title ~ '”?') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
-            {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?') }}
+            {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
           </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
+</div>
+
+{% if single %}
+  {{ quiz_table(items, ticks=false) }}
 {% else %}
-  <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
+  {{ subject_toolbar('quizzes', '#containers', total) }}
+  {% if total %}{{ file_bar('quizzes', all_subjects) }}{% endif %}
+  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-quizzes">
+    {% for subject, items in boxes %}
+      {% if subject or items %}
+        {% call subject_box('quizzes', subject, items) %}{{ quiz_table(items) }}{% endcall %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not total %}
+    <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
+  {% endif %}
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}

@@ -1,6 +1,6 @@
 """Answers with several numbers ("x, y", "(x, y)") and math that looks like math."""
 from app.qgen import friendly as F
-from app.qgen.probspec import tidy
+from app.qgen.friendly import tidy
 from app.qgen.qtypes import get_qtype, numbers_match, complex_match
 from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
 

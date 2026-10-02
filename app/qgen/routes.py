@@ -1,14 +1,16 @@
 from . import db, qgen_bp
 from app.user.models import User
 from app.user.routes import admin_only, pw_check
+from app.home import home_url
 from .formfact import quiz_form_class, quiz_items, form_answers, transcript_html, transcript_item, fieldname_base
 from . import services as S
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
-from .models import CQuiz, VQuiz, VProblem
+from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
+from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
 from datetime import datetime, timedelta
@@ -20,15 +22,61 @@ def parse_vplist(text):
     return layout.parse(text)
 
 
+# ---------------------------------------------------------------- subjects
+
+LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes'}
+
+
+def ticked_subjects(item, rel):
+    """The subject ids ticked on an edit form (as sent, or as saved)."""
+    if request.method == 'POST':
+        return {int(i) for i in request.form.getlist('subjects') if i.isdigit()}
+    return {g.id for g in getattr(item, rel)} if item is not None else set()
+
+
+def subject_form_error(kind, new):
+    """The Subjects question on the edit forms: a new problem (quiz) must go in a subject,
+    in a new one typed there, or in Unsorted. None when it's answered."""
+    if not request.form.get('subjects_shown'):
+        return None
+    name = request.form.get('new_subject', '')
+    error = S.new_subject_name_error(kind, name)
+    if error:
+        return error
+    chosen = [i for i in request.form.getlist('subjects') if S.get_subject(kind, i)]
+    if new and not (chosen or name.strip() or request.form.get('unsorted')):
+        return 'Choose a folder for this {}, or Unsorted to file it later.'.format('problem' if kind == 'problems' else 'quiz')
+    return None
+
+
+def save_subjects(kind, item):
+    """File the item as ticked on its form (only forms that show the Subjects row)."""
+    if request.form.get('subjects_shown'):
+        S.set_subjects(kind, item, request.form.getlist('subjects'))
+        db.session.commit()
+        name = request.form.get('new_subject', '')
+        if name.strip():
+            S.file_items(kind, [item.id], S.subject_named(kind, name))
+
+
+def subject_page_data(kind, item=None, rel=None, error=None):
+    return {'subject_kind': kind, 'all_subjects': S.subjects(kind),
+            'ticked_subjects': ticked_subjects(item, rel) if rel else set(),
+            'subject_error': error, 'new_item': item is None or item.id is None,
+            'unsorted_ticked': bool(request.form.get('unsorted')) if request.method == 'POST' else False,
+            'new_subject_name': request.form.get('new_subject', '') if request.method == 'POST' else ''}
+
+
 # ---------------------------------------------------------------- problems
 
-def problem_page(form, vp, errors, title):
+def problem_page(form, vp, errors, title, subject_error=None):
     #unbound copy with one empty row of each kind, cloned by problem_form.js for "+ Add"
     blank = ProblemForm(formdata=None)
     blank.values.append_entry()
     blank.images.append_entry()
     return render_template('problem_form.html', form=form, vp=vp, errors=errors, title=title, blank=blank,
-                           kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')))
+                           kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
+                           **subject_page_data('problems', vp, 'vpgroups', subject_error))
 
 def save_from_form(form, vp):
     return S.save_problem(vp, form.qtype.data, form.title.data, form.question.data, form.answer.data,
@@ -41,17 +89,19 @@ def save_from_form(form, vp):
 @admin_only
 def mkvprob():
     form = ProblemForm()
-    errors = []
+    errors, subject_error = [], None
     if form.validate_on_submit():
         nuprob = VProblem(author_id=current_user.id)
-        errors = save_from_form(form, nuprob)
+        subject_error = subject_form_error('problems', new=True)
+        errors = [subject_error] if subject_error else save_from_form(form, nuprob)
         if not errors:
+            save_subjects('problems', nuprob)
             flash('Saved problem "{}".'.format(nuprob.title), 'success')
             current_app.logger.info('{} created VProblem: ({}) "{}"'.format(current_user.username, nuprob.id, nuprob.title))
-            return redirect(url_for('qgen.list_vprobs'))
+            return redirect(url_for('qgen.list_vprobs', show=nuprob.id))
     elif request.method == 'GET' and not form.values.entries:
         form.values.append_entry()
-    return problem_page(form, None, errors, 'New problem')
+    return problem_page(form, None, errors, 'New problem', subject_error)
 
 #route to view a problem as students get it (three sample versions), without editing
 @qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
@@ -75,16 +125,18 @@ def view_vprob(vpid):
 def edvprob(vpid):
     vpobj = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
     form = ProblemForm()
-    errors = []
+    errors, subject_error = [], None
     if request.method == 'GET':
         form.load(vpobj)
     elif form.validate_on_submit():
-        errors = save_from_form(form, vpobj)
+        subject_error = subject_form_error('problems', new=False)
+        errors = [subject_error] if subject_error else save_from_form(form, vpobj)
         if not errors:
+            save_subjects('problems', vpobj)
             flash('Updated problem "{}". Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
-            return redirect(url_for('qgen.list_vprobs'))
-    return problem_page(form, vpobj, errors, 'Edit problem')
+            return redirect(url_for('qgen.list_vprobs', show=vpobj.id))
+    return problem_page(form, vpobj, errors, 'Edit problem', subject_error)
 
 #"Show me 3 examples": run the problem without saving it
 @qgen_bp.route('/quiz/previewvprob', methods=['POST'])
@@ -104,8 +156,10 @@ def preview_vprob():
 @pw_check
 @admin_only
 def list_vprobs():
-    vplst = VProblem.query.order_by(VProblem.id.desc()).all()
-    return render_template('vplist.html', vplst=vplst, qtypes=REGISTRY, title='Problems')
+    return render_template('vplist.html', boxes=S.subject_boxes('problems'), total=VProblem.query.count(),
+                           qtypes=REGISTRY, title='Problems', kind='problems', all_subjects=S.subjects('problems'),
+                           show=request.args.get('show', ''), archived=S.archived_counts()[1],
+                           archive_warning=S.archive_warning)
 
 #route to list a specific virtual problem
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
@@ -114,7 +168,8 @@ def list_vprobs():
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
-    return render_template('vplist.html', vplst=[vplst], qtypes=REGISTRY, title='Problem {}'.format(vpid))
+    return render_template('vplist.html', boxes=None, items=[vplst], total=1, qtypes=REGISTRY, title='Problem {}'.format(vpid),
+                           kind='problems', single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual problem
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['POST'])
@@ -137,10 +192,12 @@ def del_vprob(vpid):
 
 # ---------------------------------------------------------------- quizzes
 
-def quiz_page(form, title, vq=None):
-    probs = VProblem.query.order_by(VProblem.id.desc()).all()
-    return render_template('quiz_form.html', form=form, title=title, probs=probs, qtypes=REGISTRY, vq=vq,
-                           ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')))
+def quiz_page(form, title, vq=None, subject_error=None):
+    return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'),
+                           has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
+                           ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
+                           retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],
+                           rules=RETAKE_RULES, **subject_page_data('quizzes', vq, 'vqgroups', subject_error))
 
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
@@ -157,14 +214,17 @@ def save_quiz_from_form(form, vq):
 @admin_only
 def mkvquiz():
     form = QuizForm()
+    subject_error = None
     if form.validate_on_submit():
         nq = VQuiz()
-        if not save_quiz_from_form(form, nq):
+        subject_error = subject_form_error('quizzes', new=True)
+        if not subject_error and not save_quiz_from_form(form, nq):
+            save_subjects('quizzes', nq)
             count = layout.question_count(layout.parse(nq.vpid_lst))
             flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
-            return redirect(url_for('qgen.list_vquizzes'))
-    return quiz_page(form, 'New quiz')
+            return redirect(url_for('qgen.list_vquizzes', show=nq.id))
+    return quiz_page(form, 'New quiz', subject_error=subject_error)
 
 #route to view a quiz as one student would get it, without editing or assigning
 @qgen_bp.route('/quiz/viewvquiz/<vqid>', methods=['GET'])
@@ -189,12 +249,19 @@ def edvquiz(vqid):
     form = QuizForm(obj=vqobj)
     if request.method == 'GET':
         form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
-    elif form.validate_on_submit():
-        if not save_quiz_from_form(form, vqobj):
+    subject_error = None
+    if request.method == 'POST' and form.validate_on_submit():
+        subject_error = subject_form_error('quizzes', new=False)
+        old_rule, had_own = vqobj.retake_rule, len(S.retake_overrides(vqobj))
+        if not subject_error and not save_quiz_from_form(form, vqobj):
+            save_subjects('quizzes', vqobj)
             flash('Updated quiz "{}". Quizzes already assigned keep the version they were given.'.format(vqobj.title), 'success')
+            if vqobj.retake_rule != old_rule and had_own:
+                flash('The new retake scoring now applies to every student, including the {} who had their own.'.format(
+                    'one' if had_own == 1 else had_own), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
-            return redirect(url_for('qgen.list_vquizzes'))
-    return quiz_page(form, 'Edit quiz', vqobj)
+            return redirect(url_for('qgen.list_vquizzes', show=vqobj.id))
+    return quiz_page(form, 'Edit quiz', vqobj, subject_error)
 
 #route to list all virtual quizzes
 @qgen_bp.route('/quiz/listvq', methods=['GET'])
@@ -202,8 +269,10 @@ def edvquiz(vqid):
 @pw_check
 @admin_only
 def list_vquizzes():
-    vqlst = VQuiz.query.order_by(VQuiz.id.desc()).all()
-    return render_template('vqlist.html', vqlst=vqlst, title='Quizzes', layout=layout)
+    return render_template('vqlist.html', boxes=S.subject_boxes('quizzes'), total=VQuiz.query.count(),
+                           title='Quizzes', layout=layout, kind='quizzes', all_subjects=S.subjects('quizzes'), rules=RETAKE_RULES,
+                           show=request.args.get('show', ''), archived=S.archived_counts()[0],
+                           archive_warning=S.archive_warning)
 
 #route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -212,7 +281,8 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', vqlst=[vqlst], title='Quiz {}'.format(vqid), layout=layout)
+    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title='Quiz {}'.format(vqid), layout=layout, rules=RETAKE_RULES,
+                           kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['POST'])
@@ -288,8 +358,11 @@ def set_retake_rule(cqid):
 @admin_only
 def assign():
     form = AssignForm()
-    form.vquiz.choices = [(q.id, q.title) for q in VQuiz.query.order_by(VQuiz.title).all()]
+    quizzes = VQuiz.query.order_by(VQuiz.title).all()
+    form.vquiz.choices = [(q.id, q.title) for q in quizzes]
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
+    #a link for one quiz opens on All, so that quiz is in the list
+    choice = 'all' if request.args.get('vq', '').isdigit() else S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
     if request.method == 'GET' and request.args.get('vq', '').isdigit():
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
@@ -305,7 +378,12 @@ def assign():
         if created:
             flash('Assigned "{}" to {}.'.format(vquiz.title, ', '.join(cq.taker.username for cq in created)), 'success')
         return redirect(url_for('qgen.assign'))
-    return render_template('assign.html', title='Assign a quiz', form=form)
+    #for the Subject menu, which narrows the Quiz menu in the page
+    quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
+    #a quiz really chosen (from a link, or sent back after a form error) is kept on show
+    quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
+    return render_template('assign.html', title='Assign a quiz', form=form, choices=S.subject_choices('quizzes'),
+                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen)
 
 
 # ---------------------------------------------------------------- taking
@@ -328,10 +406,12 @@ def prefill(cq, form):
 @login_required
 @pw_check
 def qtake(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404('No CQuiz with id {}'.format(cidx))
+    cq = CQuiz.query.filter_by(id=cidx).first()
+    if cq is None:
+        return attempt_gone(cidx)
     if not cq.taker:
         flash('That quiz is not assigned to anyone.', 'error')
-        return redirect(url_for('user.mypage'))
+        return redirect(home_url())
     if current_user != cq.taker and not current_user.is_admin:
         flash('That quiz belongs to someone else.', 'error')
         return redirect(url_for('user.mypage'))
@@ -373,7 +453,11 @@ def qtake(cidx):
 @login_required
 @pw_check
 def qsave(cidx):
-    cq = CQuiz.query.filter_by(id=cidx).first_or_404()
+    cq = CQuiz.query.filter_by(id=cidx).first()
+    if cq is None:
+        if archived_for(cidx):
+            return jsonify(ok=False, error='Your teacher has removed this quiz attempt.'), 410
+        abort(404)
     if current_user != cq.taker:
         return jsonify(ok=False, error='Not your quiz.'), 403
     if not json_csrf_ok():
@@ -467,7 +551,7 @@ def list_users():
 def list_user(uid):
     ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     from .models import RETAKE_RULES
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, title="{}'s quizzes".format(ulst.username))
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.username))
 
 #route to list contents/transcript of a specific concrete quiz
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
@@ -488,9 +572,10 @@ def list_cquiz(cqid):
 def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.username
-    S.delete_attempt(cq)
-    flash('Deleted {}\'s "{}".'.format(owner, title), 'success')
-    current_app.logger.info("{} deleted {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
+    archived = S.delete_attempt(cq, by=current_user)
+    flash(Markup('Moved {}\'s attempt at "{}" to the archive. <a href="{}">View it</a>').format(
+        owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
+    current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(request.referrer or url_for('qgen.list_users'))
 
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
@@ -502,7 +587,7 @@ def del_cquiz(cqid):
 def ret_cquiz(cqid):
     cq0 = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     try:
-        cq = S.retake(cq0)
+        cq = S.retake(cq0, by=current_user)
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         current_app.logger.error(str(exc))
@@ -518,7 +603,9 @@ def ai_call(kind, text, work):
     """Every AI button goes through here: session check, API key, size and hourly
     limits, and the call log. `work(key, text)` returns (result, usage)."""
     from datetime import timedelta
-    from .ai_helper import AIError, HOURLY_LIMIT
+    from .ai_helper import AIError
+    from app import tuning
+    hourly = tuning.get('ai_hourly')
     from .models import AICall
     if not json_csrf_ok():
         return None, (jsonify(ok=False, error='Your session expired. Please reload the page.'), 400)
@@ -531,8 +618,8 @@ def ai_call(kind, text, work):
     if len(text) > 8000:
         return None, (jsonify(ok=False, error='That\'s too long for the AI helper; please shorten it.'), 400)
     since = datetime.now() - timedelta(hours=1)
-    if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= HOURLY_LIMIT:
-        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(HOURLY_LIMIT)), 429)
+    if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= hourly:
+        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(hourly)), 429)
     call = AICall(user_id=current_user.id, created=datetime.now(), kind=kind, request=text, ok=False)
     try:
         result, usage = work(key, text)
@@ -674,3 +761,273 @@ def check_vquiz():
     others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
     return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
                                     lay=lay, shuffle_order=form.shuffle_order.data))
+
+
+# ---------------------------------------------------------------- subjects
+
+def subject_list(kind, **values):
+    if kind not in LIST_PAGES:
+        abort(404)
+    return redirect(url_for(LIST_PAGES[kind], **values))
+
+def subject_or_404(kind, sid):
+    if kind not in LIST_PAGES:
+        abort(404)
+    return S.get_subject(kind, sid) or abort(404)
+
+#route to make a new problem (or quiz) subject
+@qgen_bp.route('/quiz/subjects/<kind>/new', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def new_subject(kind):
+    if kind not in LIST_PAGES:
+        abort(404)
+    try:
+        subject = S.create_subject(kind, request.form.get('name'))
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return subject_list(kind)
+    flash('Made the folder "{}". Tick {} and choose "Add to folder" to put them in it.'.format(subject.title, kind), 'success')
+    current_app.logger.info('{} made {} folder ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
+    return subject_list(kind, _anchor='subject-{}'.format(subject.id))
+
+#route to rename a subject
+@qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def rename_subject(kind, sid):
+    subject = subject_or_404(kind, sid)
+    try:
+        S.rename_subject(kind, subject, request.form.get('name'))
+        flash('Renamed the folder to "{}".'.format(subject.title), 'success')
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+    return subject_list(kind, _anchor='subject-{}'.format(sid))
+
+#route to delete a subject (the problems or quizzes in it are kept)
+@qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_subject(kind, sid):
+    subject = subject_or_404(kind, sid)
+    name = subject.title
+    S.delete_subject(subject)
+    flash('Deleted the folder "{}". Its {} are kept: in Unsorted, or in their other folders.'.format(name, kind), 'success')
+    current_app.logger.info('{} deleted {} folder ({}) "{}"'.format(current_user.username, kind, sid, name))
+    return subject_list(kind)
+
+#route to put the ticked problems (or quizzes) in a subject, or take them out of it
+@qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def file_subject(kind):
+    if kind not in LIST_PAGES:
+        abort(404)
+    #"Add to" or "Remove from" the subject chosen in the menu
+    add = request.form.get('action') != 'remove'
+    subject = S.get_subject(kind, request.form.get('subject'))
+    items = request.form.getlist('items')
+    if subject is None:
+        flash('Choose a folder first.', 'error')
+    elif not items:
+        flash('Tick at least one first.', 'error')
+    else:
+        count = S.file_items(kind, items, subject, add=add)
+        what = kind if count != 1 else kind[:-1] if kind == 'problems' else 'quiz'
+        flash('{} {} {} "{}".'.format(count, what, 'added to' if add else 'taken out of', subject.title), 'success')
+    return subject_list(kind)
+
+
+# ---------------------------------------------------------------- the archive
+
+def archived_for(cidx):
+    """The archived copy of a live attempt's number, if there is one."""
+    try:
+        return ArchivedAttempt.query.filter_by(original_id=int(cidx)).order_by(ArchivedAttempt.id.desc()).first()
+    except (TypeError, ValueError):
+        return None
+
+def attempt_gone(cidx):
+    """An attempt that isn't there: archived (tell the student plainly; teachers see the
+    archived copy), or never existed."""
+    a = archived_for(cidx)
+    if a is None:
+        abort(404)
+    if current_user.is_admin:
+        return redirect(url_for('qgen.archived', aid=a.id))
+    if a.student_id != current_user.id:
+        abort(404)
+    flash('Your teacher has removed this quiz attempt.', 'info')
+    return redirect(url_for('user.mypage'))
+
+#route to the archive of deleted attempts
+@qgen_bp.route('/quiz/archive', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def archive():
+    folders = S.archive_folders()
+    blockers = {a.id: S.restore_blocker(a) for f in folders for a in f['items']}
+    return render_template('archive.html', folders=folders, blockers=blockers, total=len(blockers), title='Archive',
+                           move_to=[f['folder'] for f in folders if f['folder'] is not None])
+
+def archive_folder_or_404(fid):
+    from .models import ArchiveFolder
+    folder = db.session.get(ArchiveFolder, fid)
+    if folder is None or folder.removed:
+        abort(404)
+    return folder
+
+#route to make an Archive folder of the teacher's own
+@qgen_bp.route('/quiz/archive/folders/new', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def new_archive_folder():
+    try:
+        folder = S.create_archive_folder(request.form.get('name'))
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('qgen.archive'))
+    flash('Made the folder "{}". Tick archived attempts and choose "Move to folder" to put them in it.'.format(folder.name), 'success')
+    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(folder.id)))
+
+#route to rename an Archive folder
+@qgen_bp.route('/quiz/archive/folders/<int:fid>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def rename_archive_folder(fid):
+    folder = archive_folder_or_404(fid)
+    try:
+        S.rename_archive_folder(folder, request.form.get('name'))
+        flash('Renamed the folder to "{}".'.format(folder.name), 'success')
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(fid)))
+
+#route to delete an Archive folder (what's in it moves to Unsorted)
+@qgen_bp.route('/quiz/archive/folders/<int:fid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_archive_folder(fid):
+    folder = archive_folder_or_404(fid)
+    name = folder.name
+    moved = S.delete_archive_folder(folder)
+    flash('Deleted the folder "{}".{}'.format(name, ' Its {} attempt{} moved to Unsorted.'.format(moved, '' if moved == 1 else 's') if moved else ''), 'success')
+    current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
+    return redirect(url_for('qgen.archive'))
+
+#route to move the ticked archived attempts to a folder (or to Unsorted)
+@qgen_bp.route('/quiz/archive/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def move_archived():
+    target = request.form.get('folder', '')
+    folder = None if target == 'unsorted' else (archive_folder_or_404(int(target)) if target.isdigit() else None)
+    if target != 'unsorted' and folder is None:
+        flash('Choose a folder first.', 'error')
+        return redirect(url_for('qgen.archive'))
+    moved = S.move_archived(request.form.getlist('items'), folder)
+    if not moved:
+        flash('Tick at least one first.', 'error')
+    else:
+        flash('Moved {} attempt{} to "{}".'.format(moved, '' if moved == 1 else 's', folder.name if folder else S.UNSORTED), 'success')
+    return redirect(url_for('qgen.archive'))
+
+#route to look at one archived attempt
+@qgen_bp.route('/quiz/archive/<int:aid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    return render_template('archived.html', a=a, blocker=S.restore_blocker(a),
+                           student=S.archived_student(a), results=S.archived_results(a),
+                           title='Archived: {}'.format(a.quiz_title))
+
+#route to put an archived attempt back
+@qgen_bp.route('/quiz/archive/<int:aid>/restore', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def restore_archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    name, title = a.student_name, a.quiz_title
+    try:
+        cq = S.restore_attempt(a)
+    except S.ServiceError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('qgen.archived', aid=aid))
+    flash('Restored {}\'s attempt at "{}"; {} can see it again.'.format(name, title, name), 'success')
+    current_app.logger.info('{} restored {}\'s CQuiz ({}) "{}"'.format(current_user.username, name, cq.id, title))
+    return redirect(url_for('qgen.list_user', uid=cq.assignee))
+
+#route to delete an archived attempt for good
+@qgen_bp.route('/quiz/archive/<int:aid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def purge_archived(aid):
+    a = db.get_or_404(ArchivedAttempt, aid)
+    name, title, original = a.student_name, a.quiz_title, a.original_id
+    S.purge_archived(a)
+    flash('Deleted {}\'s attempt at "{}" for good.'.format(name, title), 'success')
+    current_app.logger.info('{} purged archived CQuiz ({}) of {} "{}"'.format(current_user.username, original, name, title))
+    return redirect(url_for('qgen.archive'))
+
+
+# ---------------------------------------------------------------- the Dashboard
+
+def dashboard_data():
+    """Everything the Dashboard shows, fresh."""
+    from . import dashboard as D
+    now = datetime.now()
+    queue, waiting = D.grading_queue()
+    out, out_total = D.out_now(now)
+    return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
+            'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
+            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now)}
+
+#route to the administrators' landing page: what needs doing and what's going on
+@qgen_bp.route('/dashboard', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard():
+    from app import tuning
+    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), **dashboard_data())
+
+#route to the top bar's "online" list (opened from any teacher page)
+@qgen_bp.route('/dashboard/online', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard_online():
+    from . import dashboard as D
+    now = datetime.now()
+    return render_template('_online_list.html', online=D.online(now), recent=D.recently_active(now), now=now)
+
+#route to the Dashboard's contents again, for its refresh every 30 seconds
+@qgen_bp.route('/dashboard/now', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def dashboard_now():
+    return render_template('_dashboard_live.html', **dashboard_data())

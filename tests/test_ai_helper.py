@@ -40,6 +40,7 @@ def test_request_shape():
     assert call['output_config']['format']['type'] == 'json_schema'
     assert call['system'][0]['cache_control'] == {'type': 'ephemeral'}
     assert 'a train problem' in call['messages'][0]['content']
+    assert 'Always use American (US customary) units' in call['system'][0]['text'] and 'miles per hour (mph)' in call['system'][0]['text']  # the teacher's standing rule
     assert fill['values'][0] == {'name': 'speed', 'kind': 'whole', 'min': '40', 'max': '80', 'step': '5'}
     assert usage == {'input_tokens': 10, 'output_tokens': 20}
     assert ai_helper.problems_with(fill, 'problem') == []
@@ -72,6 +73,7 @@ def test_unreadable_answer():
 def test_review():
     fake = FakeClient({'suggestions': [{'level': 'warn', 'text': 'Say whether to round.'}, {'level': 'odd', 'text': 'Nice.'}]})
     tips, _ = ai_helper.review('key', 'Question: ...', client=fake)
+    assert 'a measurement not in American units' in fake.calls[0]['system'][0]['text']
     assert tips == [{'level': 'warn', 'text': 'Say whether to round.', 'action': None},
                     {'level': 'tip', 'text': 'Nice.', 'action': None}]
 
@@ -97,7 +99,8 @@ def test_routes_guard_key_limit_and_log(app_db, monkeypatch):
         r = teacher.post('/quiz/ai/reviewproblem', data=form)
         assert r.get_json()['hints'][0]['text'] == 'Clear.'
         # hourly limit
-        for _ in range(ai_helper.HOURLY_LIMIT):
+        from app import tuning
+        for _ in range(tuning.get('ai_hourly')):
             db.session.add(AICall(user_id=1, kind='values', request='x', ok=True))
         db.session.commit()
         r = teacher.post('/quiz/ai/problem', json=body)

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_subjects.html" import subject_labels with context %}
 {% block content %}
 <div class="page-head">
   <h1>{{ vp.title }}</h1>
@@ -8,7 +9,8 @@
     <a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Back to problems</a>
   </div>
 </div>
-<p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.</p>
+<p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.
+  {% if vp.vpgroups %}<br>Folders: {{ subject_labels(vp.vpgroups) }}{% endif %}</p>
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div class="grid">
   {% for s in samples %}{% with show_titles = false %}{% include "_sample_item.html" %}{% endwith %}{% endfor %}

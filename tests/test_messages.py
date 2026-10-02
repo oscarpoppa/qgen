@@ -160,7 +160,7 @@ def test_side_panels_on_every_page(app_db):
 
     # students get their own panel, never the teacher's
     box = login(app, 'sam').get('/messages/panel').data.decode()
-    assert 'id="messages"' in box and 'id="msg-student"' not in box and 'Write to your teacher' in box
+    assert 'id="messages"' in box and 'id="msg-student"' in box and 'Write to all your teachers' in box  # picks a teacher too
 
 
 def test_teachers_get_notices_apart_from_messages(app_db):
@@ -395,6 +395,7 @@ def test_delete_and_clear_need_the_page_token(app_db):
     app, db = app_db
     from app.user.models import User
     from app.messages.models import Message, notify
+    from app.user.models import User
     sam_id = User.query.filter_by(username='sam').one().id
     sam = login(app, 'sam')
     sam.post('/messages/reply', data={'body': 'keep me'})
@@ -421,22 +422,26 @@ def test_student_pages_refresh_when_graded(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Essay 1', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
-    flag = 'data-refresh-on-notice'
-    assert flag not in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()  # taking it: never reload
+    key = 'attempt:{}'.format(cq.id)
+    watch = lambda c, k: c.get('/messages/poll?watch=' + k).get_json()['watch']
+    taking = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'data-watch="{}"'.format(key) in taking and 'data-watch-ask' in taking  # taking it: never reloaded, only offered
     with app.test_request_context():
         S.submit(cq, {1: 'Because.'})
     waiting = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert flag in waiting
+    assert 'data-watch="{}"'.format(key) in waiting and 'data-watch-ask' not in waiting
     home = sam.get('/mypage').data.decode()
-    assert flag in home and 'Waiting for grading' in home
-    assert flag not in teacher.get('/mypage').data.decode()
-    # graded: the notice the page is waiting for arrives, and the reloaded page shows the result
-    before = sam.get('/messages/poll').get_json()['latest_notice']
+    assert 'data-watch="mine"' in home and 'Being graded' in home
+    assert 'data-watch' not in teacher.get('/mypage').data.decode()
+    # graded: what both pages show changes, so they reload and show the result
+    before = watch(sam, key), watch(sam, 'mine')
+    assert 'data-watch-state="{}"'.format(before[0]) in waiting
     with app.test_request_context():
         S.grade_essays(cq, {cq.cproblems[0].id: {'credit': 80}}, finish=True)
-    assert sam.get('/messages/poll').get_json()['latest_notice'] != before
+    after = watch(sam, key), watch(sam, 'mine')
+    assert after[0] != before[0] and after[1] != before[1]
     home = sam.get('/mypage').data.decode()
-    assert 'Waiting for grading' not in home and '80%' in home
+    assert 'Being graded' not in home and '80%' in home
 
 
 def test_results_page_refreshes_when_answers_are_released(app_db):
@@ -456,11 +461,19 @@ def test_results_page_refreshes_when_answers_are_released(app_db):
     with app.test_request_context():
         S.submit(cq, {1: '999'})  # wrong
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'data-refresh-on-notice' in page and '<dt>Correct answer</dt>' not in page
+    key = 'attempt:{}'.format(cq.id)
+    before = sam.get('/messages/poll?watch=' + key).get_json()['watch']
+    assert 'data-watch-state="{}"'.format(before) in page and '<dt>Correct answer</dt>' not in page
     teacher.post('/quiz/releasevq/{}'.format(vq.id))
     db.session.expire_all()
+    released = sam.get('/messages/poll?watch=' + key).get_json()['watch']
+    assert released != before
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert '<dt>Correct answer</dt>' in page and 'data-refresh-on-notice' not in page
+    assert '<dt>Correct answer</dt>' in page
+    # hidden again: the page follows that too
+    teacher.post('/quiz/releasevq/{}'.format(vq.id))
+    db.session.expire_all()
+    assert sam.get('/messages/poll?watch=' + key).get_json()['watch'] == before
     assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
 
 
@@ -572,3 +585,254 @@ def test_all_messages_view_shows_an_announcement_once(app_db):
     sam_id = User.query.filter_by(username='sam').one().id
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'Only from sam' in box and 'From every student who got it' in box and 'to all 2 students' not in box
+
+
+def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Again', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '5'})
+    teacher.get('/messages/notices')  # read what's there so far
+    # the Retake button: a notice for the teachers, and still one for the student
+    assert teacher.post('/quiz/retcq/{}'.format(cq.id)).status_code == 302
+    poll = teacher.get('/messages/poll').get_json()
+    assert poll['notices'] == 1 and poll['notice_preview']['text'] == 'teach gave sam a retake of "Again".'
+    notice = Message.query.filter_by(body='teach gave sam a retake of "Again".').one()
+    assert not notice.from_teacher and notice.link == '/quiz/listuser/{}'.format(sam_id)
+    page = login(app, 'sam').get('/messages/notices').data.decode()
+    assert 'You can try &#34;Again&#34; again.' in page and 'gave sam a retake' not in page
+    # through the API too
+    from test_api import Api
+    new = CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first()
+    with app.test_request_context():
+        S.submit(new, {1: '4'})
+    Api(app, 'teach').post('/attempts/{}/retake'.format(new.id))
+    assert Message.query.filter_by(body='teach gave sam a retake of "Again".').count() == 2
+
+
+def test_review_count_next_to_review_stays_current(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('class="count nav-review"') == 2 and 'nav-review" aria-label="0 waiting" hidden' in page
+    assert teacher.get('/messages/poll').get_json()['review'] == 0
+    teacher.post('/quiz/makevprob', data=problem_form('essay', 'Why', 'Explain.', '', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Essay', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: 'Because.'})
+    # the poll tells open pages; a fresh page shows it next to Review and on the Menu button
+    assert teacher.get('/messages/poll').get_json()['review'] == 1
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('aria-label="1 waiting" >1</span>') + page.count('aria-label="1 waiting for grading" >1</span>') == 2
+    # students' polls don't carry it, and their pages don't show it
+    sam = login(app, 'sam')
+    assert sam.get('/messages/poll').get_json()['review'] is None
+    assert 'nav-review' not in sam.get('/mypage').data.decode()
+
+
+def _second_teacher(app, db, name='coach'):
+    from app.user.models import User
+    u = User(username=name, is_admin=True)
+    u.set_password('pw-for-tests')
+    db.session.add(u)
+    db.session.commit()
+    return login(app, name)
+
+
+def test_every_teacher_gets_every_alert(app_db):
+    """Two teachers signed in at once: one reading or clearing doesn't take the
+    other's alerts away."""
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, MessageRead, notify_teachers
+    teach, coach = login(app, 'teach'), _second_teacher(app, db)
+    sam = login(app, 'sam')
+    sam_id = User.query.filter_by(username='sam').one().id
+    J = {'X-Requested-With': 'fetch'}
+
+    sam.post('/messages/reply', data={'body': 'Is quiz 3 open book?'})
+    t = notify_teachers(sam_id, 'sam handed in "A": 90%.'); db.session.commit()
+    for c in (teach, coach):
+        p = c.get('/messages/poll').get_json()
+        assert (p['unread'], p['notices']) == (1, 1)
+        assert p['message_preview']['text'] == 'Is quiz 3 open book?'
+        assert p['notice_preview']['text'] == 'sam handed in "A": 90%.'
+
+    # teach reads the message (All view) and the notices; coach still has both alerts
+    assert 'msg-new' in teach.get('/messages/panel').data.decode()
+    assert 'notice-new' in teach.get('/messages/notices').data.decode()
+    p = teach.get('/messages/poll').get_json()
+    assert (p['unread'], p['notices'], p['message_preview'], p['notice_preview']) == (0, 0, None, None)
+    p = coach.get('/messages/poll').get_json()
+    assert (p['unread'], p['notices']) == (1, 1) and p['message_preview'] and p['notice_preview']
+    assert 'aria-label="1 unread"' in coach.get('/messages').data.decode()
+    # ...and it's still shown to coach as new
+    assert 'msg-new' in coach.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'notice-new' in coach.get('/messages/notices').data.decode()
+    assert coach.get('/messages/poll').get_json()['unread'] == 0
+    assert db.session.get(Message, t.id).seen_by_teacher  # "seen by a teacher" still kept
+
+    # clearing is per teacher; the notice goes for good once both have cleared it
+    assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).get_json() == {'ok': True, 'cleared': 1}
+    assert 'handed in' not in teach.get('/messages/notices').data.decode()
+    assert 'handed in' in coach.get('/messages/notices').data.decode()
+    assert teach.post('/messages/notices/clear/{}'.format(t.id), headers=J).status_code == 404  # already gone for teach
+    assert db.session.get(Message, t.id) is not None
+    assert coach.post('/messages/notices/clear', headers=J).get_json()['cleared'] == 1
+    db.session.expire_all()
+    assert db.session.get(Message, t.id) is None
+    assert MessageRead.query.filter_by(message_id=t.id).count() == 0
+
+
+def test_one_teacher_clearing_changes_only_their_notices_panel_state(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import notify_teachers
+    teach, coach = login(app, 'teach'), _second_teacher(app, db)
+    sam_id = User.query.filter_by(username='sam').one().id
+    notify_teachers(sam_id, 'sam signed up.'); db.session.commit()
+    before = coach.get('/messages/poll').get_json()['notices_state']
+    teach.post('/messages/notices/clear', headers={'X-Requested-With': 'fetch'})
+    assert teach.get('/messages/poll').get_json()['notices_state'] != before
+    assert coach.get('/messages/poll').get_json()['notices_state'] == before  # coach's open panel doesn't reload
+
+
+def test_deleting_an_attempt_also_forgets_teachers_read_marks(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message, MessageRead, notify_teachers
+    from app.qgen.services import _forget_notices
+    teach = login(app, 'teach')
+    sam_id = User.query.filter_by(username='sam').one().id
+    t = notify_teachers(sam_id, 'sam handed in "A".', link='/quiz/review/7')
+    db.session.commit()
+    tid = t.id
+    teach.get('/messages/notices')
+    assert MessageRead.query.filter_by(message_id=tid).count() == 1
+    _forget_notices(['/quiz/review/7']); db.session.commit()
+    assert Message.query.filter_by(id=tid).count() == 0 and MessageRead.query.count() == 0
+
+
+def test_a_pinned_message_shows_once_and_stays_until_unpinned(app_db):
+    """A pinned message is in the student's pinned box only (not also in the conversation),
+    and the student can't remove it; once unpinned it's an ordinary message again."""
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    sam_id = User.query.filter_by(username='sam').one().id
+    J = {'X-Requested-With': 'fetch'}
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Bring a calculator', 'pin': '1'})
+    teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Nice work today'})
+    pin = Message.query.filter_by(body='Bring a calculator').one()
+    panel = sam.get('/messages/panel').data.decode()
+    assert panel.count('Bring a calculator') == 1 and 'Pinned by your teacher' in panel
+    thread = panel.split('class="thread-scroll"')[1]
+    assert 'Bring a calculator' not in thread and 'Nice work today' in thread
+    # the student can't remove it
+    r = sam.post('/messages/delete/{}'.format(pin.id), headers=J)
+    assert r.status_code >= 400 and 'stays until your teacher unpins it' in r.get_json()['error']
+    db.session.expire_all()
+    assert not db.session.get(Message, pin.id).hidden_for_student
+    assert 'Bring a calculator' in sam.get('/messages/panel').data.decode()
+    # a pin a student removed under the old rule still shows while it's pinned
+    db.session.get(Message, pin.id).hidden_for_student = True
+    db.session.commit()
+    assert sam.get('/messages/panel').data.decode().count('Bring a calculator') == 1
+    db.session.get(Message, pin.id).hidden_for_student = False
+    db.session.commit()
+    # unpinned: an ordinary message in the conversation, which the student may remove
+    teacher.post('/messages/pin/{}'.format(pin.id), headers=J)
+    db.session.expire_all()
+    assert not db.session.get(Message, pin.id).pinned
+    panel = sam.get('/messages/panel').data.decode()
+    assert 'Pinned by your teacher' not in panel and 'Bring a calculator' in panel.split('class="thread-scroll"')[1]
+    assert sam.post('/messages/delete/{}'.format(pin.id), headers=J).get_json()['ok']
+
+
+def test_nothing_unread_is_left_out_however_long_a_student_was_away(app_db):
+    # the panels list the newest 30, plus every older one still unread; opening them
+    # marks everything read, so the counts always go back to 0
+    app, db = app_db
+    from datetime import datetime, timedelta
+    from app.messages.models import Message, notify
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    t0 = datetime.now() - timedelta(days=10)
+    for i in range(5):  # waiting from before sam went away...
+        notify(sam_id, 'Old notice {}'.format(i)).created = t0 + timedelta(minutes=i)
+        db.session.add(Message(student_id=sam_id, body='Old message {}'.format(i), kind='message', from_teacher=True,
+                               seen_by_teacher=True, created=t0 + timedelta(minutes=i)))
+    for i in range(40):  # ...then a lot more, already read
+        notify(sam_id, 'Read notice {}'.format(i)).created = t0 + timedelta(hours=1, minutes=i)
+        db.session.add(Message(student_id=sam_id, body='Read message {}'.format(i), kind='message', from_teacher=True,
+                               seen_by_teacher=True, seen_by_student=True, created=t0 + timedelta(hours=1, minutes=i)))
+    db.session.commit()
+    Message.query.filter(Message.body.like('Read notice%')).update({'seen_by_student': True}, synchronize_session=False)
+    db.session.commit()
+    sam = login(app, 'sam')
+    poll = sam.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (5, 5)
+    page = sam.get('/mypage').data.decode()
+    assert '<span class="count nav-notices" >5</span>' in page and '<span class="count nav-unread" >5</span>' in page  # shown on signing in
+    notices = sam.get('/messages/notices').data.decode()
+    messages = sam.get('/messages/panel').data.decode()
+    assert all('Old notice {}'.format(i) in notices for i in range(5)) and 'Read notice 39' in notices
+    assert all('Old message {}'.format(i) in messages for i in range(5)) and 'Read message 39' in messages
+    assert 'Read notice 0<' not in notices  # older read ones still drop off
+    poll = sam.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (0, 0)
+
+
+def test_teachers_panels_keep_everything_unseen_too(app_db):
+    app, db = app_db
+    from datetime import datetime, timedelta
+    from app.messages.models import Message, MessageRead, notify_teachers
+    from app.user.models import User
+    sam_id = User.query.filter_by(username='sam').one().id
+    t0 = datetime.now() - timedelta(days=3)
+    notify_teachers(sam_id, 'Very old notice').created = t0
+    db.session.add(Message(student_id=sam_id, body='Very old question', kind='message', from_teacher=False, created=t0))
+    teacher = login(app, 'teach')
+    for i in range(70):
+        db.session.add(Message(student_id=sam_id, body='Question {}'.format(i), kind='message', from_teacher=False,
+                               created=t0 + timedelta(minutes=i + 1)))
+        notify_teachers(sam_id, 'Notice {}'.format(i)).created = t0 + timedelta(minutes=i + 1)
+    db.session.commit()
+    teacher.get('/messages/notices')
+    teacher.get('/messages/panel?student={}'.format(sam_id))
+    # all read now except the two oldest, which the teacher reads next...
+    for m in Message.query.filter(Message.body.in_(['Very old notice', 'Very old question'])):
+        MessageRead.query.filter_by(message_id=m.id).delete()
+    db.session.commit()
+    assert 'Very old notice' in teacher.get('/messages/notices').data.decode()
+    assert 'Very old question' in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    MessageRead.query.filter(MessageRead.message_id == Message.query.filter_by(body='Very old question').one().id).delete()
+    db.session.commit()
+    assert 'Very old question' in teacher.get('/messages/panel').data.decode()  # "everyone" view too
+    poll = teacher.get('/messages/poll').get_json()
+    assert (poll['unread'], poll['notices']) == (0, 0)
+
+
+def test_the_first_page_after_signing_in_says_whats_waiting(app_db):
+    app, db = app_db
+    sam = login(app, 'sam')
+    first = sam.get('/mypage').data.decode()
+    assert 'data-welcome' in first
+    assert 'data-welcome' not in sam.get('/mypage').data.decode()  # once
+    assert "'Welcome back'" in open('static/js/messages.js').read()

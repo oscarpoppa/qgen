@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field, check, image_drop %}
+{% from "_subjects.html" import subject_checks, subject_labels, subject_box with context %}
 
 {% block content %}
 <div class="page-head">
@@ -15,42 +16,78 @@
     {{ check(form.calculator_ok) }}
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
     {{ check(form.hide_answers, 'Students always see their score. With this on, they see which questions were right or wrong, but not the correct answers, until you press “Release answers” on the quiz list (e.g. once everyone has finished).') }}
-    {{ field(form.retake_rule, 'Every attempt stays visible and the best one is marked. You can change this for one student on “Results by student”.') }}
+    {{ field(form.retake_rule, 'Every attempt stays visible, and the one whose score counts is marked ★ (none is marked for an average). You can change this for one student on “Results by student”; changing it here later applies to every student again.') }}
+    {% if retake_overrides %}
+      {# students given their own rule on "Results by student": this setting doesn't apply to them #}
+      <div class="alert alert-info small retake-overrides" role="note">
+        <strong>{{ retake_overrides|length }} student{{ '' if retake_overrides|length == 1 else 's' }} {{ 'has' if retake_overrides|length == 1 else 'have' }} a different rule</strong>
+        (set on “Results by student”, so the setting above doesn't apply to {{ 'them' }}).
+        Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
+        <ul>
+        {% for student, rule in retake_overrides %}
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ student.username }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+        {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+    {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
   </div>
 
   <div class="split">
     <div class="card">
       <div class="card-head"><h2>Problems</h2><span class="muted small">tick the ones to include</span></div>
-      {% if probs %}
-        <input type="search" class="filter" data-filter="#all-problems" placeholder="Filter problems…" aria-label="Filter problems">
-        <div class="table-wrap">
-          <table id="all-problems">
-            <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
-            <tbody>
-            {% for p in probs %}
-              <tr>
-                <td><input type="checkbox" class="pick" value="{{ p.id }}" id="pick-{{ p.id }}" data-title="{{ p.title or 'Untitled' }}"></td>
-                <td><label for="pick-{{ p.id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
-                  <div class="small muted clamp">{{ p.raw_prob }}</div></td>
-                <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
+      {% if has_problems %}
+        <div class="builder-filters">
+          <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+          <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
+        </div>
+        <p class="muted small">Open any folders and tick problems from as many of them as you like; they all go in this quiz.</p>
+        <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
+          {% for subject, items in problem_boxes %}
+            {% if subject or items %}
+              {% call subject_box('problems', subject, items, tools=false) %}
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
+                  <tbody>
+                  {% for p in items %}
+                    {% set box_id = 'pick-' ~ (subject.id if subject else 'u') ~ '-' ~ p.id %}
+                    <tr>
+                      <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
+                      <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label> {{ subject_labels(p.vpgroups) }}
+                        <div class="small muted clamp">{{ p.raw_prob }}</div></td>
+                      <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% endcall %}
+            {% endif %}
+          {% endfor %}
         </div>
       {% else %}
         <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create one first</a>.</div>
       {% endif %}
     </div>
 
-    <div class="card">
-      <div class="card-head"><h2>Order in the quiz</h2></div>
-      <p class="muted small shuffle-note">With shuffling on, this is just the order you see here; each student gets a separately shuffled order.</p>
-      <ol id="order" class="choice-list"></ol>
-      <p id="order-empty" class="muted small">Nothing ticked yet.</p>
-      <div id="groups" class="small"></div>
-      <p class="muted small">To give each student only some problems from a set, put them in the same group
-        (A, B, …) and choose how many each student gets.</p>
+    <div class="card" id="quiz-contents">
+      <div class="card-head"><h2>Questions in this quiz</h2></div>
+      <p class="order-total" id="order-total" aria-live="polite"></p>
+      <p class="muted small" id="order-shuffled">Each student gets them in a different order (you chose that above).
+        So the order of this list doesn't matter.</p>
+      <p class="muted small" id="order-fixed" hidden>Every student gets them in this order. Use ↑ and ↓ to change it.</p>
+      <ol id="order" class="order-list"></ol>
+      <p id="order-empty" class="muted small">Nothing yet. Tick problems on the left and they appear here.</p>
+      <div id="groups" class="order-groups"></div>
+      <details class="order-help">
+        <summary>Want each student to get only some of these?</summary>
+        <p>Put those problems in the same <b>group</b> with the menu under each one, then choose how many each student gets.
+          Every student gets their own random pick.</p>
+        <p>Example: put 5 fraction problems in group A and choose 2. Each student answers 2 of those 5, and the student
+          next door probably gets a different 2.</p>
+      </details>
       {{ form.vplist() }}
       {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </div>
@@ -71,5 +108,6 @@
 {% block scripts %}
 <script src="{{ asset('js/filter.js') }}"></script>
 <script src="{{ asset('js/quiz_form.js') }}"></script>
+<script src="{{ asset('js/subjects.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>
 {% endblock %}

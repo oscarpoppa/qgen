@@ -7,6 +7,7 @@ from flask import g, request
 from app import db
 from .errors import ApiError
 from .models import ApiToken
+from app.user.models import note_seen
 
 #last_used is written at most this often, not on every request
 TOUCH_EVERY = timedelta(minutes=1)
@@ -41,6 +42,7 @@ def token_required(teacher=False):
                 row.last_used = now
                 db.session.commit()
             g.api_user, g.api_token = user, row
+            note_seen(user, now)
             return view(*args, **kwargs)
         return inner
     return wrap

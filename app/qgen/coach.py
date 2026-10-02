@@ -14,7 +14,7 @@ import re
 from difflib import get_close_matches
 
 from . import friendly as F
-from .qtypes import get_qtype, is_legacy, parse_choices, picture_labels, PICTURE_NAME, uses_complex
+from .qtypes import get_qtype, parse_choices, picture_labels, PICTURE_NAME, uses_complex
 
 
 def hint(level, text, action=None):
@@ -66,10 +66,6 @@ def problem_hints(qtype_key, question, answer, options):
     hints = []
     if not question.strip():
         return [hint('tip', 'Start by writing the question. Put a random value in square brackets, like [speed].')]
-
-    if is_legacy(question, options):
-        hints.append(hint('tip', 'This problem uses the old {{…}} markup. It still works, but the new [name] style with a values table is easier to read and check.'))
-        return hints + [hint('error', e) for e in qt.validate(question, answer, options)]
 
     values = options.get('values') or []
     known = F.known_names(values)
@@ -205,7 +201,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     elif title.strip().lower() in existing_titles:
         hints.append(hint('warn', 'Another quiz is already called "{}". A different title avoids mix-ups.'.format(title.strip())))
     if not vpids:
-        return hints + [hint('tip', 'Tick the problems to include. They\'ll appear in the order you tick them; use ↑ ↓ to reorder.')]
+        return hints + [hint('tip', 'Tick the problems to include. They\'ll appear under “Questions in this quiz”.')]
     for pid in sorted({p for p in vpids if vpids.count(p) > 1}):
         p = problems.get(pid)
         hints.append(hint('tip', '"{}" is included {} times. Each copy gets different random values — fine if that\'s what you want.'
@@ -230,7 +226,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     if len(vpids) >= 6 and len(kinds) == 1:
         only = get_qtype(next(iter(kinds))).label
         hints.append(hint('tip', 'All {} problems are {}. Mixing in another type can check understanding in a different way.'.format(len(vpids), only)))
-    fixed = [p for p in problems.values() if not p.options.get('values') and not is_legacy(p.raw_prob, p.options)
+    fixed = [p for p in problems.values() if not p.options.get('values')
              and get_qtype(p.qtype).key != 'essay' and len(p.options.get('images') or []) < 2]
     if fixed and len(fixed) == len(problems):
         hints.append(hint('tip', 'None of these problems has random values, so every student gets identical questions.'))

@@ -21,7 +21,20 @@ import random
 import re
 from difflib import get_close_matches
 
-from .probspec import tidy
+def tidy(prob):
+    """Aesthetics for a filled-in question: '+ -3' becomes '- 3', '+ 0x' goes, '1x' becomes 'x'."""
+    #turn '...+/- -...' into '...-/+ ...'
+    prob = re.sub(r'\+\s*\-', '- ', prob)
+    prob = re.sub(r'\-\s*\-', '+ ', prob)
+    #turn '+ 0x' into ''
+    prob = re.sub(r'[\+\-]\s*0[a-zA-Z]+', '', prob)
+    #turn '+ 1x' into '+ x'
+    prob = re.sub(r'([\+\-\(\=\,]\s*)1([a-zA-Z]+)', '\\1\\2', prob)
+    #...and right after a math opener \[ or inside braces, {1x} -> {x}: one-letter
+    #variables only, so units like \text{1kg} stay as typed
+    prob = re.sub(r'(\\\[\s*|\{\s*)1([a-zA-Z])(?![a-zA-Z])', '\\1\\2', prob)
+    return prob
+
 
 KINDS = {
     'whole': 'Whole number',

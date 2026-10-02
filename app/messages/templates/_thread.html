@@ -45,6 +45,12 @@
         {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
         <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
+        {% if not m.from_teacher and not m.to_all %}
+          {# a student's message to chosen teachers: the teacher reads "to you only" #}
+          <span class="badge" title="Only {{ m.recipients|map(attribute='username')|join(', ') }} can see this">
+            {%- if me_teacher and m.recipients|length == 1 and m.recipients[0].id == current_user.id %}to you only
+            {%- else %}to {{ m.recipients|map(attribute='username')|join(', ') or 'a teacher' }} only{% endif %}</span>
+        {% elif not m.from_teacher and m.kind != 'notice' and not me_teacher %}<span class="muted">to all teachers</span>{% endif %}
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.username }}</span>{% endif %}
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>

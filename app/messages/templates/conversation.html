@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('conversation:%d' % student.id) }}{% endblock %}
 
 {% block content %}
 <div class="page-head">
@@ -22,7 +23,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="to" value="{{ student.id }}">
     <label for="body" class="sr-only">Message to {{ student.username }}</label>
-    <textarea id="body" name="body" rows="2" maxlength="2000" required placeholder="Write to {{ student.username }}…"></textarea>
+    <textarea id="body" name="body" rows="2" maxlength="{{ tuning.get('max_message') }}" required placeholder="Write to {{ student.username }}…"></textarea>
     <button class="btn">Send</button>
   </form>
 </div>

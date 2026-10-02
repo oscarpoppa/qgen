@@ -139,7 +139,6 @@ against that student's version.
   `[picture]` in the answer ("What animal is this?").
 - **Math:** `+ - * / ^`, parentheses, `sqrt`, `abs`, `round(x, 2)`, `min`, `max`.
   With complex numbers switched on you also get `i`, `re`, `im` and `conj`.
-- **Old `{{a: ri(1,10)}}` markup** still works for existing problems.
 
 The problem page includes an example of every question type.
 

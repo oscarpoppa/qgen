@@ -77,15 +77,25 @@ def page_helpers():
         from flask_login import current_user
         if not current_user.is_authenticated:
             return 0
-        return unread_for_teachers() if current_user.is_admin else unread_for_student(current_user.id)
+        return unread_for_teachers(current_user.id) if current_user.is_admin else unread_for_student(current_user.id)
     def unread_notices():
         from app.messages.models import unread_notices_for_student, unread_notices_for_teachers
         from flask_login import current_user
         if not current_user.is_authenticated:
             return 0
-        return unread_notices_for_teachers() if current_user.is_admin else unread_notices_for_student(current_user.id)
+        return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
+    def online_count():
+        from app.user.models import User
+        return User.query.filter(User.online_condition(datetime.now())).count()
     from app.user.avatars import initials, color
-    return dict(csrf_token=generate_csrf, review_count=review_count, now=datetime.now,
+    from app.home import home_url
+    def just_signed_in():
+        """True once, on the first page after signing in."""
+        from flask import session
+        return bool(session.pop('qgen_welcome', False))
+    from app import tuning, live
+    return dict(watch=live.watch, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, tuning=tuning,
+                tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)
 
@@ -99,18 +109,54 @@ def _close_expired_quizzes():
     if _time.monotonic() - _last_sweep[0] < 60 or app.config.get('TESTING'):
         return
     _last_sweep[0] = _time.monotonic()
-    from app.qgen.services import close_expired
+    from app.qgen.services import close_expired, announce_opened
     try:
         close_expired()
     except Exception as exc:  # never let the sweep break a page
         db.session.rollback()
         app.logger.error('closing expired quizzes failed: {}'.format(exc))
+    #quizzes whose start time has come: tell their students
+    try:
+        announce_opened()
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error('announcing opened quizzes failed: {}'.format(exc))
+
+#who's using the site, for the Dashboard (the API notes its users in app/api/auth.py)
+@app.before_request
+def _note_seen():
+    from flask import request
+    from flask_login import current_user
+    if request.endpoint == 'static' or not current_user.is_authenticated:
+        return
+    from app.user.models import note_seen
+    note_seen(current_user._get_current_object())
 
 @app.cli.command('close-expired')
 def close_expired_command():
-    """Hand in and score every quiz whose time is up (for cron)."""
-    from app.qgen.services import close_expired
+    """Hand in and score every quiz whose time is up, and tell students about quizzes
+    that have opened (for cron)."""
+    from app.qgen.services import close_expired, announce_opened
     print('closed {} quiz attempt(s)'.format(close_expired()))
+    print('told {} student(s) a quiz is open'.format(announce_opened()))
+
+@app.cli.command('remove-old-markup')
+@click.option('--yes', is_flag=True, help='Really delete (without it, only lists what would go).')
+def remove_old_markup_command(yes):
+    """Delete for good every problem in the old {{...}} markup, every quiz using one, and
+    every student attempt at those (not archived). Back up the database first."""
+    from app.qgen.services import old_markup_cleanup
+    found = old_markup_cleanup(apply=yes)
+    print('Problems ({}):'.format(len(found['problems'])))
+    for pid, title in found['problems']:
+        print('  {}  {}'.format(pid, title))
+    print('Quizzes ({}):'.format(len(found['quizzes'])))
+    for qid, title in found['quizzes']:
+        print('  {}  {}'.format(qid, title))
+    print('Student attempts ({}):'.format(len(found['attempts'])))
+    for cid, qid, student in found['attempts']:
+        print('  {}  quiz {}  student {}'.format(cid, qid, student))
+    print('Deleted.' if yes else 'Nothing deleted. Run again with --yes to delete these for good.')
 
 @app.cli.command('init-db')
 def init_db_command():
@@ -123,9 +169,6 @@ def init_db_command():
         print('This database already has tables; use "flask db upgrade" to bring it up to date.')
         return
     db.create_all()
-    from app.qgen.models import VPGroup, VQGroup
-    db.session.add_all([VPGroup(title='Archive'), VQGroup(title='Archive')])
-    db.session.commit()
     stamp()
     print('Database ready. Next: flask create-admin')
 
@@ -137,10 +180,10 @@ def create_admin_command(username):
     if User.query.filter_by(username=username).first():
         print('"{}" already exists.'.format(username))
         return
-    from app.user.forms import MIN_PASSWORD
+    from app.user.forms import min_password
     password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
-    if len(password) < MIN_PASSWORD:
-        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+    if len(password) < min_password():
+        print('Please use at least {} characters.'.format(min_password()))
         return
     u = User(username=username, is_admin=True)
     u.set_password(password)
@@ -153,14 +196,14 @@ def create_admin_command(username):
 def set_password_command(username):
     """Set a new password for an account (asks for it privately), e.g. a forgotten one."""
     from app.user.models import User
-    from app.user.forms import MIN_PASSWORD
+    from app.user.forms import min_password
     u = User.query.filter_by(username=username).first()
     if not u:
         print('No account called "{}".'.format(username))
         return
     password = click.prompt('New password', hide_input=True, confirmation_prompt=True)
-    if len(password) < MIN_PASSWORD:
-        print('Please use at least {} characters.'.format(MIN_PASSWORD))
+    if len(password) < min_password():
+        print('Please use at least {} characters.'.format(min_password()))
         return
     u.set_password(password)
     u.pw_man_reset = False

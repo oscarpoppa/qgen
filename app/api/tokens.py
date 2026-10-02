@@ -6,7 +6,8 @@ from app.user.models import User
 from . import api_bp
 from .auth import token_required, body
 from .errors import ApiError, not_found
-from .models import ApiToken, LoginFailure, TOKEN_DAYS
+from app import tuning
+from .models import ApiToken, LoginFailure, token_days
 from .serialize import user_json, token_json
 
 
@@ -16,14 +17,14 @@ def create_token():
     data = body(required=('username', 'password'))
     username = str(data['username'])
     if LoginFailure.too_many(username):
-        raise ApiError(429, 'too_many_attempts', 'Too many wrong passwords. Please wait 15 minutes and try again.')
+        raise ApiError(429, 'too_many_attempts', 'Too many wrong passwords. Please wait {} minutes and try again.'.format(tuning.get('lockout_minutes')))
     user = User.query.filter_by(username=username).first()
     if not user or not user.check_password(str(data['password'])):
         LoginFailure.record(username)
         raise ApiError(401, 'unauthorized', 'That username and password don\'t match.')
     if user.pw_man_reset:
         raise ApiError(403, 'password_change_required', 'This account\'s password was reset. Change it on the website first.')
-    days = data.get('days', TOKEN_DAYS)
+    days = data.get('days', token_days())
     if not isinstance(days, int) or not 1 <= days <= 365:
         raise ApiError(400, 'bad_request', '"days" must be a whole number from 1 to 365.')
     row, token = ApiToken.issue(user, str(data.get('name') or 'App'), days)

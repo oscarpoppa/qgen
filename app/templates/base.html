@@ -33,11 +33,19 @@
   <header class="topbar">
     <div class="topbar-inner">
       {% set s = site() %}
-      <a class="brand" href="{{ url_for('user.mypage') if current_user.is_authenticated else url_for('user.login') }}">
+      <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
       {% if current_user.is_authenticated %}
         {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
         <div class="dock-buttons">
+          {% if current_user.is_admin %}{% set nav_online = online_count() %}
+          {# who's on the site (teachers only); the list loads when opened #}
+          <details class="menu online-menu" data-url="{{ url_for('qgen.dashboard_online') }}" data-dashboard="{{ url_for('qgen.dashboard') }}">
+            <summary class="online-btn" title="Who's online"><span class="online-dot" aria-hidden="true"></span>
+              <span class="nav-online">{{ nav_online }}</span><span class="dock-btn-label">online</span></summary>
+            <div class="online-pop" role="region" aria-label="Who's online"><p class="muted small">Loading…</p></div>
+          </details>
+          {% endif %}
           <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide notices">
             <span aria-hidden="true">🔔</span><span class="dock-btn-label">Notices</span>
             <span class="count nav-notices" {% if not nav_notices %}hidden{% endif %}>{{ nav_notices }}</span></button>
@@ -47,9 +55,10 @@
         </div>
       {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
-              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu</button>
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Review)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}</button>
       <nav class="nav" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
+          {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
           <a href="{{ url_for('user.mypage') }}">My quizzes</a>
           {% if current_user.is_admin %}
             <details class="menu">
@@ -68,11 +77,13 @@
                 <a href="{{ url_for('qgen.list_users') }}">Results by student</a>
               </div>
             </details>
+            {# written answers waiting for grading; kept current by messages.js #}
             <a href="{{ url_for('qgen.review_list') }}">Review
-              {% set nav_review_count = review_count() %}{% if nav_review_count %}<span class="count" aria-label="{{ nav_review_count }} waiting">{{ nav_review_count }}</span>{% endif %}
+              {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             </a>
             <a href="{{ url_for('messages.inbox') }}">Messages</a>
             <a href="{{ url_for('user.userdet') }}">Users</a>
+            <a href="{{ url_for('qgen.archive') }}">Archive</a>
             <details class="menu">
               <summary>Files</summary>
               <div class="menu-list">
@@ -144,12 +155,13 @@
   </script>
   {% if current_user.is_authenticated and current_user.is_admin %}
   <script src="{{ asset('js/dropzone.js') }}" defer></script>
+  <script src="{{ asset('js/online.js') }}" defer></script>
   {% endif %}
   <script src="{{ asset('js/calendar.js') }}" defer></script>
   <script src="{{ asset('js/tips.js') }}" defer></script>
   <script src="{{ asset('js/confirm.js') }}" defer></script>
   {% if current_user.is_authenticated %}
-  <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" defer></script>
+  <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" data-every="{{ tuning_poll_ms() }}"{% if just_signed_in() %} data-welcome{% endif %} defer></script>
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

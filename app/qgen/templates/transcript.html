@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{# answers still hidden: reload when the "answers released" notice arrives #}
-{% block body_attrs %}{% if answers_hidden %} data-refresh-on-notice{% endif %}{% endblock %}
+{# kept up to date: grading, answers released or hidden again, the attempt deleted (app/live.py) #}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
 <div class="page-head">

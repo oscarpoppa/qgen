@@ -2,19 +2,29 @@
  * graded...) and Messages (the conversation). Each can be shown or hidden with
  * its button in the top bar; the choice is remembered in this browser.
  *
- * Every 30 seconds the page asks whether anything new has arrived: the buttons'
+ * Every 30 seconds (Technical settings) the page asks whether anything new has arrived: the buttons'
  * counts update, an open panel reloads, and a hidden one gets a pop-up and a
- * pulsing button. Opening a panel marks what it shows as seen. */
+ * pulsing button. Opening a panel marks what it shows as seen.
+ *
+ * The same check-in keeps the page itself up to date: a page that names what it shows
+ * (<body data-watch>, see app/live.py) reloads when that changes, keeping its place, or,
+ * when someone is typing on it, offers a Refresh button instead. */
 (function () {
   var me = document.currentScript || document.querySelector('script[data-poll]');
   var pollUrl = me && me.dataset.poll;
+  //how often to check in (Technical settings), 30 seconds if not given
+  var every = Math.max(10000, +(me && me.dataset.every) || 30000);
   var dock = document.getElementById('dock');
   if (!pollUrl || !dock) return;
+  //just signed in: the first check-in says what arrived while away
+  var welcome = me.hasAttribute('data-welcome');
 
   var root = document.documentElement;
   var PANES = ['notices', 'messages'];
   var latest = { messages: null, notices: null };
-  var quizzes = null;  // a student's quizzes and attempts, as last seen
+  //this page's contents, as drawn (app/live.py); changes are noticed at each check-in
+  var watchKey = document.body.dataset.watch || '', watched = document.body.dataset.watchState || null;
+  var edited = false;  // something typed or chosen on the page itself (not in the panels)
   //what each panel shows (pins, deletions...): an open panel reloads when it changes
   var shown = { messages: null, notices: null };
   var loaded = { messages: false, notices: false };
@@ -215,9 +225,11 @@
 
   /* ---------- something new while a panel is hidden ---------- */
 
+  var recentToasts = [];  // shown in the last few seconds: carried over if the page reloads itself
   function toast(p, info) {
     var box = document.getElementById('toasts');
     if (!box || !info) return;
+    recentToasts.push({ p: p, info: info, at: Date.now() });
     var t = document.createElement('div');
     t.className = 'toast toast-' + p;
     var title = document.createElement('strong');
@@ -237,6 +249,41 @@
     setTimeout(function () { if (t.parentNode) t.remove(); }, 15000);
   }
 
+  //"Welcome back": what's waiting, with a button for each panel that has something
+  function welcomeBack(unread, notices) {
+    var box = document.getElementById('toasts');
+    if (!box || !(unread || notices)) return;
+    var t = document.createElement('div');
+    t.className = 'toast toast-notices';
+    var title = document.createElement('strong');
+    title.textContent = 'Welcome back';
+    var parts = [];
+    if (notices) parts.push(notices + ' new notice' + (notices === 1 ? '' : 's'));
+    if (unread) parts.push(unread + ' new message' + (unread === 1 ? '' : 's'));
+    var text = document.createElement('div');
+    text.className = 'toast-text';
+    text.textContent = 'While you were away: ' + parts.join(' and ') + '.';
+    var row = document.createElement('div');
+    row.className = 'btn-row';
+    [['notices', notices, 'Open notices'], ['messages', unread, 'Open messages']].forEach(function (x) {
+      if (!x[1]) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-sm toast-open';
+      b.dataset.pane = x[0];
+      b.textContent = x[2];
+      row.appendChild(b);
+    });
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn btn-secondary btn-sm toast-close';
+    close.textContent = 'Dismiss';
+    row.appendChild(close);
+    t.appendChild(title); t.appendChild(text); t.appendChild(row);
+    box.appendChild(t);
+    //stays until dismissed or opened: easy to miss otherwise
+  }
+
   function pulse(p) {
     document.querySelectorAll('.dock-btn[data-pane="' + p + '"]').forEach(function (b) {
       b.classList.remove('pulse');
@@ -245,16 +292,89 @@
     });
   }
 
+  /* ---------- keeping the page itself up to date ---------- */
+
+  var SCROLL = 'qgen-live-scroll', TOASTS = 'qgen-live-toasts';
+  document.addEventListener('input', noteEdit, true);
+  document.addEventListener('change', noteEdit, true);
+  function noteEdit(e) {
+    if (e.target.closest && !e.target.closest('.dock')) edited = true;
+  }
+  //reloading now would lose something: typing on the page or in Messages, or a question open
+  function busy() {
+    return edited || busyTyping() || !!document.querySelector('dialog[open]');
+  }
+  function reloadHere() {
+    try { sessionStorage.setItem(SCROLL, location.pathname + location.search + '|' + Math.round(window.scrollY)); } catch (e) {}
+    //a pop-up that just arrived (often what changed the page) is shown again after the reload
+    var keep = recentToasts.filter(function (t) { return Date.now() - t.at < 15000; });
+    try { if (keep.length) sessionStorage.setItem(TOASTS, JSON.stringify(keep)); } catch (e) {}
+    window.location.reload();
+  }
+  function offerRefresh() {
+    if (document.getElementById('live-bar')) return;
+    var box = document.getElementById('toasts');
+    if (!box) return;
+    var t = document.createElement('div');
+    t.className = 'toast toast-live';
+    t.id = 'live-bar';
+    var text = document.createElement('div');
+    text.className = 'toast-text';
+    text.textContent = document.body.dataset.watchNote || 'This page has changed since you opened it.';
+    var row = document.createElement('div');
+    row.className = 'btn-row';
+    var go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'btn btn-sm';
+    go.textContent = document.body.dataset.watchButton || 'Refresh';
+    go.addEventListener('click', reloadHere);
+    var later = document.createElement('button');
+    later.type = 'button';
+    later.className = 'btn btn-secondary btn-sm';
+    later.textContent = 'Not now';
+    later.addEventListener('click', function () { t.remove(); });
+    row.appendChild(go); row.appendChild(later);
+    t.appendChild(text); t.appendChild(row);
+    box.appendChild(t);
+  }
+  function pageChanged() {
+    if (document.body.hasAttribute('data-watch-ask') || busy()) offerRefresh();
+    else reloadHere();
+  }
+  //back where it was after a reload of its own
+  window.addEventListener('load', function () {
+    var carried = null;
+    try { carried = JSON.parse(sessionStorage.getItem(TOASTS) || 'null'); sessionStorage.removeItem(TOASTS); } catch (e) {}
+    (carried || []).forEach(function (t) { toast(t.p, t.info); pulse(t.p); });
+    var saved = null;
+    try { saved = sessionStorage.getItem(SCROLL); sessionStorage.removeItem(SCROLL); } catch (e) {}
+    if (!saved) return;
+    var cut = saved.lastIndexOf('|');
+    if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
+  });
+
   var baseTitle = document.title;
-  var refreshWanted = false;
   function check() {
     if (document.hidden) return;
-    fetch(pollUrl, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
+    fetch(pollUrl + (watchKey ? (pollUrl.indexOf('?') < 0 ? '?' : '&') + 'watch=' + encodeURIComponent(watchKey) : ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
       if (!res) return;
-      [['.nav-unread', res.unread], ['.nav-notices', res.notices]].forEach(function (pair) {
-        document.querySelectorAll(pair[0]).forEach(function (b) { b.textContent = pair[1]; b.hidden = !pair[1]; });
+      var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
+      if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Review
+      if (typeof res.online === 'number') {  // teachers: who's online (always shown, never hidden)
+        document.querySelectorAll('.nav-online').forEach(function (b) { b.textContent = res.online; });
+      }
+      counts.forEach(function (pair) {
+        document.querySelectorAll(pair[0]).forEach(function (b) {
+          b.textContent = pair[1];
+          b.hidden = !pair[1];
+          if (pair[0] === '.nav-review') b.setAttribute('aria-label', pair[1] + ' waiting for grading');
+        });
       });
       var waiting = (isOpen('messages') ? 0 : res.unread) + (isOpen('notices') ? 0 : res.notices);
+      if (welcome) {
+        welcome = false;
+        welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
+      }
       document.title = (waiting ? '(' + waiting + ') ' : '') + baseTitle;
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
@@ -265,9 +385,6 @@
         var restyled = shown[p] !== null && state !== undefined && state !== shown[p];  // pinned, deleted...
         latest[p] = id;
         if (state !== undefined) shown[p] = state;
-        //pages whose content a notice changes (a student's quiz list, "waiting for grading")
-        //reload to show it, but not while a message is being written
-        if (p === 'notices' && changed && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
         if (isOpen(p)) {
           if ((changed || restyled) && !(p === 'messages' && busyTyping())) load(p);
         } else if (changed && count) {
@@ -277,13 +394,11 @@
           pulse(p);  // unread from before this page opened: a nudge, no pop-up
         }
       });
-      //a student's quiz list (My quizzes, "waiting for grading"...) changed: assigned,
-      //deleted, handed in or graded
-      if (res.quizzes_state !== undefined && res.quizzes_state !== null) {
-        if (quizzes !== null && res.quizzes_state !== quizzes && document.body.hasAttribute('data-refresh-on-notice')) refreshWanted = true;
-        quizzes = res.quizzes_state;
+      //what this page shows has changed (assigned, handed in, graded, deleted, opened...)
+      if (watchKey && typeof res.watch === 'string' && watched !== null && res.watch !== watched) {
+        watched = res.watch;
+        pageChanged();
       }
-      if (refreshWanted && !busyTyping()) window.location.reload();
     }, function () {});
   }
 
@@ -294,6 +409,6 @@
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
   if (!PANES.some(isOpen)) check();
-  setInterval(check, 30000);
+  setInterval(check, every);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
 })();

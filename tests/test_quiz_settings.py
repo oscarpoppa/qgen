@@ -76,15 +76,144 @@ def test_open_and_close_window(app_db):
     assign(teacher, vq, [student(db, 'sam')], opens_at=later.strftime(fmt), closes_at=(later + timedelta(hours=1)).strftime(fmt))
     cq = CQuiz.query.one()
     sam = login(app, 'sam')
-    assert b'This quiz opens' in sam.get('/quiz/take/{}'.format(cq.id)).data
-    assert b'Opens ' in sam.get('/mypage').data
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert "You can't start this quiz yet" in page and 'It opens' in page and 'and closes' in page
+    assert 'name="Number1"' not in page  # no questions
+    home = sam.get('/mypage').data.decode()
+    assert "You can't start this yet. It opens" in home and 'disabled' in home
+    assert '>Start</a>' not in home  # no way in
+    # handing in or saving answers early is refused too
+    sam.post('/quiz/take/{}'.format(cq.id), data={'Number1': '4'})
+    assert sam.post('/quiz/take/{}/save'.format(cq.id), data={'Number1': '4'}).status_code == 409
     db.session.expire_all()
     assert db.session.get(CQuiz, cq.id).startdate is None  # peeking early doesn't start the clock
+    assert not db.session.get(CQuiz, cq.id).completed and db.session.get(CQuiz, cq.id).cproblems[0].submitted is None
     cq.opens_at, cq.closes_at = datetime.now() - timedelta(hours=2), datetime.now() - timedelta(hours=1)
     db.session.commit()
     sam.get('/quiz/take/{}'.format(cq.id))
     db.session.expire_all()
     assert db.session.get(CQuiz, cq.id).completed
+
+
+
+
+def test_a_time_limit_fits_between_opening_and_closing(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    when = {'opens_at': opens.strftime(fmt), 'closes_at': (opens + timedelta(minutes=30)).strftime(fmt)}
+    # 45 minutes in a 30-minute window: refused, said next to the field, nothing assigned
+    r = teacher.post('/quiz/assign', data=dict({'vquiz': vq.id, 'users': [student(db, 'sam').id], 'time_limit': '45'}, **when))
+    page = r.data.decode()
+    assert r.status_code == 200 and 'The time limit (45 minutes) is longer than the time between opening and closing (30 minutes)' in page
+    assert CQuiz.query.count() == 0
+    # exactly the window, or less: fine
+    assign(teacher, vq, [student(db, 'sam')], time_limit='30', **when)
+    assign(teacher, vq, [student(db, 'kim')], time_limit='20', **when)
+    assert sorted(c.time_limit for c in CQuiz.query.all()) == [20, 30]
+    # only a closing time, or only an opening time: nothing to compare with
+    assign(teacher, vq, [student(db, 'sam')], time_limit='120', closes_at=when['closes_at'])
+    assign(teacher, vq, [student(db, 'sam')], time_limit='120', opens_at=when['opens_at'])
+    assert CQuiz.query.count() == 4
+    # the same rule however it's assigned (the app API too)
+    try:
+        S.assign(vq, [student(db, 'sam')], opens, opens + timedelta(minutes=10), 11)
+        assert False, 'too long was accepted'
+    except S.ServiceError as exc:
+        assert '(11 minutes)' in str(exc) and 'Make it 10 minutes or less' in str(exc)
+    from app.api.models import ApiToken
+    token = ApiToken.issue(student(db, 'teach'), 't')[1]
+    r = app.test_client().post('/api/v2/quizzes/{}/assign'.format(vq.id), headers={'Authorization': 'Bearer ' + token},
+                               json={'students': [student(db, 'sam').id], 'opens_at': when['opens_at'],
+                                     'closes_at': when['closes_at'], 'time_limit_minutes': 31})
+    assert r.status_code == 422 and 'longer than the time between opening and closing' in str(r.get_json())
+    assert CQuiz.query.count() == 4
+    # the page says the most it can be as the times are typed
+    assert 'id="limit-window"' in teacher.get('/quiz/assign').data.decode()
+
+
+def test_students_are_told_when_a_quiz_opens(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt), closes_at=(opens + timedelta(hours=2)).strftime(fmt))
+    assign(teacher, vq, [student(db, 'kim')])  # no start time: nothing to announce later
+    later_cq = CQuiz.query.filter_by(assignee=student(db, 'sam').id).one()
+    now_cq = CQuiz.query.filter_by(assignee=student(db, 'kim').id).one()
+    assert not later_cq.open_notice_sent and now_cq.open_notice_sent
+    told = lambda c: Message.query.filter(Message.link == '/quiz/take/{}'.format(c.id), Message.body.like('%is open now%')).all()
+    with app.test_request_context():
+        assert S.announce_opened(opens - timedelta(minutes=1)) == 0  # not yet
+        assert S.announce_opened(opens + timedelta(minutes=1)) == 1
+        assert S.announce_opened(opens + timedelta(minutes=2)) == 0  # only once
+    notes = told(later_cq)
+    assert len(notes) == 1 and not told(now_cq)
+    assert notes[0].body.startswith('"Settings quiz" is open now. You can start it. It closes ')
+    assert notes[0].from_teacher and notes[0].student_id == later_cq.assignee  # Sam's own notice, unread
+    sam = login(app, 'sam')
+    assert sam.get('/messages/poll').get_json()['notices'] >= 1
+    assert 'is open now' in sam.get('/messages/notices').data.decode()
+    assert 'is open now' not in login(app, 'teach').get('/messages/notices').data.decode()
+    # a student on the site gets it at their next check-in, together with the page change
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt))
+    cq = CQuiz.query.filter_by(open_notice_sent=False).one()
+    before = sam.get('/messages/poll?watch=mine').get_json()
+    cq.opens_at = datetime.now() - timedelta(seconds=5)
+    db.session.commit()
+    after = sam.get('/messages/poll?watch=mine').get_json()
+    assert after['latest_notice'] != before['latest_notice'] and after['watch'] != before['watch']
+    assert '"Settings quiz" is open now' in after['notice_preview']['text']
+    assert len(told(cq)) == 1
+    sam.get('/messages/poll?watch=mine')
+    assert len(told(cq)) == 1  # still once
+    # a teacher's check-in announces nothing for students
+    assign(teacher, vq, [student(db, 'kim')], opens_at=opens.strftime(fmt))
+    kims = CQuiz.query.filter_by(open_notice_sent=False).one()
+    kims.opens_at = datetime.now() - timedelta(seconds=5)
+    db.session.commit()
+    teacher.get('/messages/poll')
+    assert not told(kims)
+
+
+def test_no_open_notice_when_it_no_longer_makes_sense(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    assign(teacher, vq, [student(db, 'sam'), student(db, 'kim')], opens_at=opens.strftime(fmt),
+           closes_at=(opens + timedelta(hours=1)).strftime(fmt))
+    # the server was off the whole time it was open: by now it has closed again
+    with app.test_request_context():
+        assert S.announce_opened(opens + timedelta(hours=3)) == 0
+    assert all(c.open_notice_sent for c in CQuiz.query.all())  # and never later either
+    assert not Message.query.filter(Message.body.like('%is open now%')).count()
+    # an attempt archived and restored after it opened isn't announced
+    assign(teacher, vq, [student(db, 'sam')], opens_at=opens.strftime(fmt))
+    cq = CQuiz.query.filter_by(open_notice_sent=False).one()
+    with app.test_request_context():
+        a = S.archive_attempt(cq)
+        db.session.commit()
+        restored = S.restore_attempt(a)
+    assert not restored.open_notice_sent  # still waiting to open: still to be announced
+    restored.opens_at = datetime.now() - timedelta(minutes=5)
+    db.session.commit()
+    with app.test_request_context():
+        a = S.archive_attempt(restored)
+        db.session.commit()
+        assert S.restore_attempt(a).open_notice_sent
 
 
 def test_hidden_answers_and_release(app_db):
@@ -124,11 +253,13 @@ def test_retake_scoring_rules(app_db):
     second = CQuiz.query.filter(CQuiz.id != first.id).one()
     sam.post('/quiz/take/{}'.format(second.id), data={})  # 0%
     page = sam.get('/mypage').data.decode()
-    assert 'Your score: 25%' in page and '★ 50%' in page and 'Attempt 2' not in page
-    # the teacher counts only sam's best attempt
+    # an average: no single attempt is marked as the one that counts
+    assert 'Your score: 25%' in page and '★' not in page and 'Attempt 2' not in page
+    # the teacher counts only sam's best attempt: that one is marked
     r = teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': 'best'})
     assert r.status_code == 302
-    assert 'Your score: 50%' in sam.get('/mypage').data.decode()
+    page = sam.get('/mypage').data.decode()
+    assert 'Your score: 50%' in page and '★ 50%' in page and '★ 0%' not in page
     ulist = teacher.get('/quiz/listuser').data.decode()
     assert 'selected>The best attempt' in ulist.replace('"selected" ', 'selected').replace('selected ', 'selected') or 'The best attempt' in ulist
     teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': ''})
@@ -283,13 +414,14 @@ def test_folded_quiz_box_knows_what_it_holds(app_db):
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     before = sam.get('/mypage').data.decode()
-    assert 'data-attempts="{}"'.format(cq.id) in before and 'data-sig="{}|new|None"'.format(cq.id) in before
+    assert 'data-attempts="{}"'.format(cq.id) in before and 'data-states="{}:new:"'.format(cq.id) in before
     assert 'class="badge badge-warn quiz-flag" hidden' in before
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         new = S.retake(cq)
     after = sam.get('/mypage').data.decode()
     assert 'data-attempts="{},{}"'.format(cq.id, new.id) in after or 'data-attempts="{},{}"'.format(new.id, cq.id) in after
+    assert 'data-states="{}:completed:100.0;{}:new:"'.format(cq.id, new.id) in after
 
 
 def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
@@ -310,7 +442,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     with app.test_request_context():
         S.submit(first, {1: '4'})
         second = S.retake(first)
-    state = lambda: sam.get('/messages/poll').get_json()['quizzes_state']
+    state = lambda: sam.get('/messages/poll?watch=mine').get_json()['watch']
     home = sam.get('/mypage').data.decode()
     assert home.count('class="card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
     s0 = state()
@@ -335,8 +467,8 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     teacher.post('/quiz/delvq/{}'.format(vq.id))
     db.session.expire_all()
     assert VQuiz.query.get(vq.id) is not None
-    # teachers' polls don't carry it
-    assert teacher.get('/messages/poll').get_json()['quizzes_state'] is None
+    # a teacher has no My quizzes to follow
+    assert teacher.get('/messages/poll?watch=mine').get_json()['watch'] is None
 
 
 def test_a_newly_assigned_quiz_says_new(app_db):
@@ -408,8 +540,8 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
-    # one attempt: the box has room for the full button
-    assert 'btn btn-secondary btn-sm" href="/quiz/take/{}">View results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
+    # one attempt: the same one-line row, with the same small button
+    assert 'btn btn-secondary btn-xs" href="/quiz/take/{}">Results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
     with app.test_request_context():
         again = S.retake(cq)
         S.submit(again, {1: '4'})
@@ -417,3 +549,196 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     # several attempts: one line each, ending in a small "Results" button
     assert home.count('class="attempt-row"') == 2 and home.count('btn-xs" href="/quiz/take/') == 2
     assert '>Results</a>' in home and '>View results</a>' not in home
+
+
+def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Badge', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    new_badge = 'class="badge badge-warn quiz-new">New</span>'
+    # on the box's title row, however often the page is opened, and shown once
+    for _ in range(2):
+        home = sam.get('/mypage').data.decode()
+        assert home.count(new_badge) == 1 and home.count('>New</span>') == 2  # the box's, and the attempt's status
+    sam.get('/quiz/take/{}'.format(cq.id))  # started
+    assert new_badge not in sam.get('/mypage').data.decode()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)  # a new attempt in the same box
+    assert sam.get('/mypage').data.decode().count(new_badge) == 1
+
+
+def test_quiz_box_says_how_many_attempts_it_holds(app_db):
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    assert '<span class="quiz-count muted small">1 attempt</span>' in sam.get('/mypage').data.decode()
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    assert '<span class="quiz-count muted small">2 attempts</span>' in sam.get('/mypage').data.decode()
+
+
+def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
+    app, db = app_db
+    import re
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Dated', 'vplist': str(VProblem.query.one().id)})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    cq = CQuiz.query.filter_by(assignee=sam_id).one()
+    rows = lambda: re.findall(r'<(?:div|li) class="attempt-row"><span class="nowrap">([^<]+)</span>', sam.get('/mypage').data.decode())
+    assert rows() == [cq.when_label] and rows()[0].startswith('assigned ')  # a box with one attempt
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    assert rows() == [CQuiz.query.get(cq.id).when_label]  # now the hand-in date and time
+    with app.test_request_context():
+        S.retake(cq)
+    assert len(rows()) == 2  # several: each dated
+
+
+def test_a_students_own_retake_rule_is_shown_where_the_quiz_is(app_db):
+    # the quiz's rule applies to everyone except students given their own rule on
+    # "Results by student": the quiz list, the quiz page and that page all say so
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Rules', 'vplist': str(VProblem.query.one().id), 'retake_rule': 'best'})
+    vq = VQuiz.query.one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    cq = CQuiz.query.one()
+    listing = teacher.get('/quiz/listvq').data.decode()
+    assert 'retakes score best attempt' in listing and 'differs' not in listing
+    assert 'have a different rule' not in teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    S.set_retake_rule(cq, 'average')
+    listing = teacher.get('/quiz/listvq').data.decode()
+    assert '1 student differs' in listing
+    page = teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert '1 student has a different rule' in page and 'sam</a>: the average of all attempts' in page
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    assert 'Just for sam' in results and "The quiz's own rule is the best attempt." in results
+
+
+def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
+    # students given their own rule go back to the quiz's when the quiz's rule changes;
+    # saving the quiz without changing it leaves them alone
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    pid = str(VProblem.query.one().id)
+    teacher.post('/quiz/makevquiz', data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'best'})
+    vq = VQuiz.query.one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    cq = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+        S.retake(cq)
+    S.set_retake_rule(cq, 'average')
+    assert [c.retake_rule for c in CQuiz.query.all()] == ['average', 'average']
+    page = teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert 'Changing the setting above puts everyone on the new rule, this student too' in page
+
+    # same rule: kept
+    r = teacher.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'best'},
+                     follow_redirects=True)
+    assert 'applies to every student' not in r.data.decode()
+    assert [c.retake_rule for c in CQuiz.query.all()] == ['average', 'average']
+
+    # a new rule: everyone, sam included
+    r = teacher.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Rules', 'vplist': pid, 'retake_rule': 'latest'},
+                     follow_redirects=True)
+    assert 'The new retake scoring now applies to every student, including the one who had their own.' in r.data.decode()
+    db.session.expire_all()
+    assert db.session.get(VQuiz, vq.id).retake_rule == 'latest'
+    assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
+    assert 'differs' not in teacher.get('/quiz/listvq').data.decode()
+    # sam's own My quizzes and the teacher's Results by student count it the new way
+    sam = login(app, 'sam')
+    assert '(the latest attempt)' in sam.get('/mypage').data.decode()
+    results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    assert 'Just for sam' not in results and "The quiz's own rule" not in results
+
+    # the same through the API
+    from app.api.models import ApiToken
+    S.set_retake_rule(CQuiz.query.first(), 'first')
+    token = ApiToken.issue(db.session.get(User, User.query.filter_by(username='teach').one().id), 'test')[1]
+    r = app.test_client().put('/api/v2/quizzes/{}'.format(vq.id), headers={'Authorization': 'Bearer ' + token},
+                              json={'title': 'Rules', 'problems': [int(pid)], 'retake_rule': 'average'})
+    assert r.status_code == 200
+    db.session.expire_all()
+    assert [c.retake_rule for c in CQuiz.query.all()] == [None, None]
+
+
+def test_the_attempts_that_count_are_the_ones_marked(app_db):
+    # the green ★ follows the retake rule, not just the highest score
+    import re
+    from types import SimpleNamespace as NS
+    from app.qgen.models import counted_attempts, combined_score
+    a, b, c = NS(id=1, score=100.0), NS(id=2, score=40.0), NS(id=3, score=70.0)
+    done = [a, b, c]
+    assert counted_attempts('best', done) == [a]
+    assert counted_attempts('latest', done) == [c]
+    assert counted_attempts('first', done) == [a]
+    # an average of several scores: none of them is marked
+    assert counted_attempts('average', done) == [] and counted_attempts('best2', done) == []
+    assert counted_attempts('latest', []) == []
+    # one finished attempt: its score is the score, whatever the rule
+    for rule in ('best', 'latest', 'first', 'average', 'best2'):
+        assert counted_attempts(rule, [b]) == [b]
+    # the marked one's score is the score that counts
+    for rule in ('best', 'latest', 'first'):
+        assert counted_attempts(rule, done)[0].score == combined_score(rule, [x.score for x in done])
+
+    # on the pages: 100% then 0%, scored by the latest attempt
+    app, db = app_db
+    from app.user.models import User
+    from app.qgen.models import VProblem, VQuiz, CQuiz
+    from app.qgen import services as S
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
+    teacher.post('/quiz/makevquiz', data={'title': 'Pick', 'vplist': str(VProblem.query.one().id), 'retake_rule': 'latest'})
+    teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
+    first = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(first, {1: '4'})
+        second = S.retake(first)
+        S.submit(second, {1: '5'})
+    stars = lambda html: re.findall(r'<span class="badge badge-ok"[^>]*>★ (\d+)%', html)
+    sam = login(app, 'sam')
+    assert stars(sam.get('/mypage').data.decode()) == ['0']
+    assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['0']
+    S.set_retake_rule(first, 'average')
+    assert stars(sam.get('/mypage').data.decode()) == []
+    assert '★' not in teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    S.set_retake_rule(first, 'best')
+    assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['100']

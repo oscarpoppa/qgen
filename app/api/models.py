@@ -4,11 +4,23 @@ from datetime import datetime, timedelta
 
 from app import db
 
-TOKEN_DAYS = 90
 TOKEN_PREFIX = 'qg_'
-#failed API sign-ins allowed per username in the window below
-MAX_FAILURES = 10
-FAILURE_WINDOW = timedelta(minutes=15)
+
+
+#how long new tokens last, and the wrong-password pause: Technical settings (app/tuning.py)
+def token_days():
+    from app import tuning
+    return tuning.get('token_days')
+
+
+def max_failures():
+    from app import tuning
+    return tuning.get('lockout_tries')
+
+
+def failure_window():
+    from app import tuning
+    return timedelta(minutes=tuning.get('lockout_minutes'))
 
 
 def fingerprint(token):
@@ -36,8 +48,9 @@ class ApiToken(db.Model):
         return not self.revoked and self.expires_at > datetime.now()
 
     @staticmethod
-    def issue(user, name, days=TOKEN_DAYS):
+    def issue(user, name, days=None):
         """Make a new token. Returns (row, the token text, which is shown only now)."""
+        days = days or token_days()
         token = TOKEN_PREFIX + secrets.token_urlsafe(32)
         row = ApiToken(user_id=user.id, name=(name or 'App')[:64], token_hash=fingerprint(token),
                        prefix=token[:10], expires_at=datetime.now() + timedelta(days=days))
@@ -64,12 +77,12 @@ class LoginFailure(db.Model):
 
     @staticmethod
     def too_many(username):
-        since = datetime.now() - FAILURE_WINDOW
-        return LoginFailure.query.filter(LoginFailure.username == username, LoginFailure.created >= since).count() >= MAX_FAILURES
+        since = datetime.now() - failure_window()
+        return LoginFailure.query.filter(LoginFailure.username == username, LoginFailure.created >= since).count() >= max_failures()
 
     @staticmethod
     def record(username):
         db.session.add(LoginFailure(username=(username or '')[:64]))
         #old rows are no longer needed
-        LoginFailure.query.filter(LoginFailure.created < datetime.now() - FAILURE_WINDOW * 4).delete()
+        LoginFailure.query.filter(LoginFailure.created < datetime.now() - failure_window() * 4).delete()
         db.session.commit()

@@ -2,6 +2,7 @@ from . import db
 from app.user.models import User
 from datetime import datetime, timedelta
 import json
+from sqlalchemy.dialects import mysql
 
 #add save method
 class SaveMixin:
@@ -13,9 +14,10 @@ class SaveMixin:
             db.session.rollback()
             raise
 
-#add create_date method
+#when a row was made, in the app's local time (like every other time it stores; the
+#database's NOW() is UTC on SQLite)
 class DateMixin:
-    create_date = db.Column(db.DateTime, default=db.func.now())
+    create_date = db.Column(db.DateTime, default=datetime.now)
 
 
 # for many-to-many between vprobs and vquizzes
@@ -23,19 +25,23 @@ vproblem_vquiz = db.Table('vproblem_vquiz',
     db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
     db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')))
     
-# for many-to-many between vprobs and vpgroups
+# which problems are in which problem subjects (a problem can be in several)
 vproblem_vpgroup = db.Table('vproblem_vpgroup',
-    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE')),
-    db.Column('vpgroup_id', db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE')))
+    db.Column('vproblem_id', db.Integer, db.ForeignKey('vproblem.id', ondelete='CASCADE'), nullable=False),
+    db.Column('vpgroup_id', db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('vproblem_id', 'vpgroup_id', name='uq_vproblem_vpgroup'))
 
-# for many-to-many between vquizzes and vqgroups
+# which quizzes are in which quiz subjects
 vquiz_vqgroup = db.Table('vquiz_vqgroup',
-    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE')),
-    db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE')))
+    db.Column('vquiz_id', db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE'), nullable=False),
+    db.Column('vqgroup_id', db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('vquiz_id', 'vqgroup_id', name='uq_vquiz_vqgroup'))
 
-#for grouping of virtual problems
+#a teacher's subject for sorting problems (shown as "Subjects"; not the "2 of these 6"
+#question groups inside a quiz)
 class VPGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vpgroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_vpgroup_title'),)
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
@@ -45,9 +51,10 @@ class VPGroup(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<VProblem Group: {}>'.format(self.title)
 
-#for grouping of virtual quizzes
+#a teacher's subject for sorting quizzes
 class VQGroup(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vqgroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_vqgroup_title'),)
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
@@ -182,6 +189,8 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     time_limit = db.Column(db.Integer, nullable=True)
     #the teacher can override the quiz's retake rule for this student
     retake_rule = db.Column(db.String(16), nullable=True)
+    #a quiz with a future start: the student has been told it's open (or there's nothing to tell)
+    open_notice_sent = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
@@ -270,6 +279,20 @@ def combined_score(rule, scores):
     return max(scores)
 
 
+def counted_attempts(rule, done):
+    """The finished attempt (oldest first) whose score is the one that counts, to mark it:
+    [that attempt], or [] when none is or the score combines several (an average)."""
+    if len(done) == 1:
+        return list(done)
+    if not done or rule in ('average', 'best2'):
+        return []
+    if rule == 'latest':
+        return [done[-1]]
+    if rule == 'first':
+        return [done[0]]
+    return [max(done, key=lambda c: c.score)]
+
+
 #simple site-wide settings, e.g. the class code needed to sign up
 class Setting(db.Model):
     __tablename__ = 'setting'
@@ -291,7 +314,8 @@ class Setting(db.Model):
 
 def attempts_by_quiz(cquizzes):
     """A student's assigned quizzes grouped by quiz, for showing retakes:
-    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined'}]"""
+    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined',
+      'counted' (the attempt to mark as the one that counts, if one does)}]"""
     groups = {}
     for cq in sorted(cquizzes, key=lambda c: c.id):
         groups.setdefault(cq.vquiz_id, []).append(cq)
@@ -304,7 +328,68 @@ def attempts_by_quiz(cquizzes):
         rule = override or vq.retake_rule
         out.append({'vquiz': vq, 'attempts': attempts, 'best': best, 'latest': attempts[-1],
                     'combined': combined_score(rule, [c.score for c in done]),
+                    'counted': counted_attempts(rule, done),
                     'rule': RETAKE_RULES.get(rule, RETAKE_RULES['best']), 'rule_key': rule,
                     'overridden': bool(override)})
     #newest activity first
     return sorted(out, key=lambda g: -g['attempts'][-1].id)
+
+
+#a long text column: MySQL's plain TEXT stops at 64 KB
+LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
+
+
+#a folder on the Archive page. Each student gets one automatically (student_id), named
+#after them; the teacher can also make their own. Renaming a student's folder makes it
+#an ordinary folder (the student gets a new one in their name). Deleting a folder moves
+#what's in it to Unsorted (attempts with no folder); a deleted student folder's row is
+#kept (removed=True) so it isn't made again on its own, and the student's next archived
+#attempt brings it back under their name. If the account is deleted, the folder stays.
+class ArchiveFolder(db.Model):
+    __tablename__ = 'archive_folder'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), unique=True)
+    removed = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+
+    def __repr__(self):
+        return '<Archive folder {}>'.format(self.name)
+
+
+#a student's attempt the teacher deleted (or whose account was deleted), kept so it can
+#be looked at, restored or deleted for good later. The attempt is moved here whole, so
+#the rest of the site never has to tell archived attempts from live ones.
+class ArchivedAttempt(db.Model):
+    __tablename__ = 'archived_attempt'
+    id = db.Column(db.Integer, primary_key=True)
+    #the attempt's id while it was live (restore puts it back under the same one)
+    original_id = db.Column(db.Integer, nullable=False)
+    vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id', ondelete='SET NULL'), index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), index=True)
+    #kept as they were, so the record still reads right after a quiz or student is deleted
+    student_name = db.Column(db.String(64), nullable=False)
+    quiz_title = db.Column(db.String(64), nullable=False)
+    score = db.Column(db.Float)
+    completed = db.Column(db.Boolean, default=False, nullable=False)
+    needs_review = db.Column(db.Boolean, default=False, nullable=False)
+    startdate = db.Column(db.DateTime)
+    compdate = db.Column(db.DateTime)
+    assigned = db.Column(db.DateTime)
+    archived_at = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
+    archived_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
+    #",3,7," - the problems it used, so deleting a problem can say it is used here
+    problem_ids = db.Column(db.Text, nullable=False, default=',')
+    #the Archive folder it's in; none means Unsorted
+    folder_id = db.Column(db.Integer, db.ForeignKey('archive_folder.id', ondelete='SET NULL'), index=True)
+    #'deleted' (the attempt) or 'student deleted' (the account)
+    reason = db.Column(db.String(16), default='deleted', nullable=False)
+    #a compact JSON record of the attempt and its questions (no page markup): the
+    #results page is drawn from it, and restoring rebuilds the attempt from it
+    data = db.deferred(db.Column(LongText, nullable=False))
+
+    vquiz = db.relationship('VQuiz', lazy=True)
+    archiver = db.relationship('User', foreign_keys=[archived_by], lazy=True)
+    folder = db.relationship('ArchiveFolder', lazy=True)
+
+    def __repr__(self):
+        return '<Archived attempt {}: {} : {}>'.format(self.original_id, self.student_name, self.quiz_title)

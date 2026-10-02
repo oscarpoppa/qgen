@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{# when it opens (or the teacher changes it) the student is offered the quiz; never started for them #}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz may be open now.', button='Go to the quiz', ask=True) }}{% endblock %}
 
 {% block content %}
 <div class="card card-narrow empty">
   <span class="big">🔒</span>
-  <h1>{{ cq.vquiz.title }}</h1>
-  <p>This quiz opens <strong>{{ cq.opens_at.strftime('%A %b %d at %I:%M %p') }}</strong>.</p>
+  <h1>You can't start this quiz yet</h1>
+  <p class="muted">{{ cq.vquiz.title }}</p>
+  <p>It opens <strong>{{ cq.opens_at.strftime('%A %b %d at %I:%M %p') }}</strong>{% if cq.closes_at %}
+    and closes <strong>{{ cq.closes_at.strftime('%A %b %d at %I:%M %p') }}</strong>{% endif %}.</p>
   {% if cq.time_limit %}<p class="muted">You'll have {{ cq.time_limit }} minutes once you start.</p>{% endif %}
   <p><a href="{{ url_for('user.mypage') }}">Back to my quizzes</a></p>
 </div>

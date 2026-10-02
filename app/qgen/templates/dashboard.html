@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="close">Close all</button>
+  <div class="actions dash-actions" aria-label="Quick actions">
+    <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}">Assign a quiz</a>
+    <button type="button" class="btn btn-secondary btn-sm" data-open-pane="messages">Message students</button>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('upload.upload') }}">Upload</a>
+  </div>
+</div>
+
+<div id="dash-live" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
+{% include "_dashboard_live.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/dashboard.js') }}" defer></script>{% endblock %}

@@ -90,6 +90,8 @@ code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
 .topbar-inner {
   display: flex; align-items: center; gap: 12px;
   min-height: 56px; flex-wrap: wrap;
+  /* the top bar uses the whole window width, so the menu stays on one line */
+  max-width: none;
 }
 .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; margin-right: 8px; }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; flex: 1; }
@@ -524,7 +526,8 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 #dock-messages .reply-box { flex-direction: column; align-items: stretch; }
 #dock-messages .reply-box textarea { min-height: 64px; }
 #dock-messages .msg { max-width: 100%; }
-#dock-messages .pinned-list { flex: 0 0 auto; max-height: 40%; min-height: 3.6em; overflow-y: auto; margin-bottom: 8px; }
+#dock-messages .pinned-box { flex: 0 0 auto; max-height: 40%; min-height: 4.6em; display: flex; flex-direction: column; margin-bottom: 10px; }
+#dock-messages .pinned-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; }
 .send-error { color: var(--bad); }
 
 .notice-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -557,6 +560,7 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 .toast { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .22); padding: 12px 14px; animation: toast-in .25s ease-out; }
 .toast-notices { border-left-color: var(--warn); }
+.toast-live { border-left-color: var(--ok); }
 .toast-text { margin: 4px 0 10px; font-size: .92rem; overflow-wrap: anywhere; }
 @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
@@ -624,6 +628,13 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 
 /* My quizzes: each quiz folds down to its title and score */
 .quiz-grid { align-items: start; }
+/* quiz boxes are never narrower than an attempt row needs (date, status, button on one
+   line): with less room there are fewer, wider columns instead of squeezed boxes */
+.grid.quiz-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); }
+/* the title row stays on one line: a long quiz name ends in "…" (full name on hover) */
+.quiz-card > summary { flex-wrap: nowrap; }
+.quiz-card > summary h2 { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quiz-card > summary > :not(h2) { flex-shrink: 0; }
 .quiz-card > summary { list-style: none; cursor: pointer; margin-bottom: 0; align-items: center; }
 .quiz-card > summary::-webkit-details-marker { display: none; }
 .quiz-card[open] > summary { margin-bottom: 10px; }
@@ -637,6 +648,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
 .quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
 .quiz-card .quiz-flag { flex: 0 0 auto; }
+.quiz-card .quiz-new { flex: 0 0 auto; }
+.quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
 .quiz-card[open] .quiz-flag { display: none; }
 
 /* View pages: problems and quizzes as students see them */
@@ -665,6 +678,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .attempt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
 .attempt-row > * { white-space: nowrap; }
 .attempt-row .btn { margin-left: auto; }
+.attempt-row > .not-open-note { white-space: normal; flex-basis: 100%; text-align: right; }
+.not-open-note { overflow-wrap: anywhere; }
 
 /* math keys under a number answer on the quiz page */
 .keypad { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
@@ -681,3 +696,184 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .review-choices li.is-picked.is-right { background: var(--ok-soft); }
 .review-choices .pick { color: var(--muted); width: 1em; }
 .review-choices li.is-picked .pick { color: var(--accent); }
+
+/* a student's pinned messages: clearly apart from the conversation */
+.pinned-box { border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); background: var(--warn-soft);
+  border-radius: 10px; padding: 8px 10px 10px; }
+.pinned-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn); margin-bottom: 6px; }
+.pinned-box .msg-pinned { background: var(--surface); border-left: 3px solid var(--warn); max-width: 100%; }
+
+/* ---- subjects (the teacher's own lists for sorting problems and quizzes) ---- */
+.subject-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; }
+.subject-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; font-weight: 600; }
+.subject-pick select { width: auto; min-width: 12rem; max-width: 100%; font-weight: normal; }
+.subject-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin-left: auto; }
+.subject-tools details > summary { list-style: none; }
+.subject-tools details > summary::-webkit-details-marker { display: none; }
+.subject-tools details[open] > summary { background: var(--accent-soft); }
+.subject-name-form { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.subject-name-form input { width: 14rem; max-width: 100%; }
+.file-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.file-bar select { width: auto; max-width: 14rem; }
+.file-count.error { color: var(--bad); }
+th.tick-col, td.tick-col { width: 36px; }
+.subject-label { font-weight: 500; font-size: .75rem; margin-left: 2px; vertical-align: middle; }
+.subject-checks { border: 0; padding: 0; margin: 12px 0; }
+.subject-checks legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.subject-check-list { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.subject-check { display: inline-flex; align-items: center; gap: 6px; font-weight: normal; }
+.builder-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.builder-filters .filter { margin-bottom: 0; }
+.archived-banner .btn-row form { margin: 0; }
+@media (max-width: 640px) {
+  .subject-tools { margin-left: 0; }
+  td.tick-col { width: auto; }
+}
+/* subject containers */
+.subject-bar > details.subject-new { flex-basis: auto; }
+.subject-bar .filter { margin: 0 0 0 auto; }
+.subject-boxes { display: flex; flex-direction: column; gap: 12px; }
+/* never squeezed by the column they sit in (that cut containers off in the quiz builder) */
+.subject-box { padding: 0; overflow: hidden; flex-shrink: 0; }
+.subject-box > summary { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer;
+  font-weight: 600; list-style: none; user-select: none; }
+.subject-box > summary::-webkit-details-marker { display: none; }
+.subject-box > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+.subject-box[open] > summary::before { transform: rotate(90deg); }
+.subject-box > summary:hover { background: var(--accent-soft); }
+.subject-box .box-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subject-box .box-body { padding: 0 12px 12px; }
+.subject-box .box-body .table-wrap { margin: 0; }
+.unsorted-box > summary { color: var(--muted); }
+.box-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; margin: 0 4px 10px; }
+.box-tools details > summary { list-style: none; }
+.box-tools details > summary::-webkit-details-marker { display: none; }
+.box-empty { margin: 4px 4px 0; }
+.builder-boxes .subject-box > summary { padding: 8px 12px; }
+/* quiz builder: each open container scrolls on its own, so every problem can be reached */
+.builder-boxes .table-wrap { max-height: 22rem; overflow: auto; overscroll-behavior: contain; }
+.builder-boxes .table-wrap thead th { position: sticky; top: 0; z-index: 1; }
+tr.just-saved td { animation: just-saved 2.5s ease-out; }
+@keyframes just-saved { from { background: var(--accent-soft); } to { background: transparent; } }
+.subject-checks.has-error { border-left: 3px solid var(--bad); padding-left: 10px; }
+.subject-new-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.subject-new-inline input { width: 16rem; max-width: 100%; }
+/* small laptops: tighter menu so the top bar stays on one line (below 1001px it becomes the Menu button) */
+@media (min-width: 1001px) and (max-width: 1240px) {
+  .topbar-inner { gap: 8px; }
+  .nav { gap: 0; }
+  .nav a, .menu > summary { padding-left: 7px; padding-right: 7px; font-size: .92rem; }
+  .brand { margin-right: 0; }
+  .dock-btn-label { display: none; }
+}
+/* Rename / Delete in a container's heading */
+.subject-box > summary .box-actions { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+.subject-box > summary .box-actions form { margin: 0; }
+.box-rename { margin: 0 4px 10px; }
+
+/* ---------- the Dashboard (administrators) ---------- */
+.dash-actions .btn { white-space: nowrap; }
+.dash-counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.dash-count { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px;
+  padding: 12px 14px; text-align: left; font: inherit;
+  color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  text-decoration: none; cursor: pointer; }
+.dash-count:hover { border-color: var(--accent); }
+.dash-count.has { color: var(--text, inherit); border-color: var(--warn); background: var(--warn-soft); }
+.dash-num { font-size: 1.6rem; font-weight: 700; line-height: 1.1; color: inherit; }
+.dash-count.has .dash-num { color: var(--warn); }
+.dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.dash-wide { grid-column: 1 / -1; }
+.dash-card { margin-bottom: 0; min-width: 0; }
+.dash-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.dash-head h2 { margin: 0; font-size: 1.1rem; }
+.dash-head > a { margin-left: auto; }
+.dash-sub { font-size: .95rem; margin: 10px 0 6px; }
+.dash-list { list-style: none; margin: 0; padding: 0; }
+.dash-list > li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; border-top: 1px solid var(--border); }
+.dash-list > li:first-child { border-top: 0; }
+.dash-list .dash-go { margin-left: auto; }
+.dash-list a.person { color: inherit; text-decoration: none; }
+.dash-reasons { margin: 0; padding-left: 18px; flex-basis: 100%; color: var(--muted); }
+.dash-people { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.dash-note { margin: 10px 0 0; }
+.dash-glance { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 10px; }
+.dash-glance a { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: 6px; }
+.dash-glance a:hover { color: var(--accent); }
+@media (max-width: 760px) {
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
+  .dash-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the same by the room the page really has (the side panels can take half of it) */
+@container page (max-width: 760px) {
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container page (max-width: 520px) {
+  .dash-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- quiz builder: the questions in this quiz ---------- */
+.order-total { font-weight: 600; margin: 0 0 6px; }
+.order-list { list-style: none; padding: 0; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.order-item { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.order-item.in-group { border-left: 4px solid var(--accent); }
+.order-top, .order-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.order-title { flex: 1 1 8rem; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.order-bottom select { width: auto; max-width: 100%; min-height: 30px; padding: 2px 6px; font-size: .9rem; }
+.order-groups { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.order-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .9rem; }
+.order-group input.order-pick { width: 4.5rem; flex: 0 0 auto; min-height: 30px; padding: 2px 6px; }
+.order-help { font-size: .9rem; }
+.order-help > summary { cursor: pointer; color: var(--accent); }
+.order-help p { margin: 6px 0; color: var(--muted); }
+
+/* the editors (problem and quiz forms) stack by the room they really have, which the
+   Notices / Messages panels can halve, not just by the window's width */
+main.container { container: page / inline-size; }
+.editor > form { container: editform / inline-size; min-width: 0; }
+@container page (max-width: 900px) {
+  .editor { grid-template-columns: minmax(0, 1fr); }
+  .editor > .helper { position: static; max-height: none; order: -1; }
+}
+@container editform (max-width: 640px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Dashboard boxes open and close (static/js/dashboard.js remembers which) */
+details.dash-card > summary { list-style: none; cursor: pointer; align-items: center; margin: -4px -6px; padding: 4px 6px; border-radius: 8px; }
+details.dash-card > summary::-webkit-details-marker { display: none; }
+details.dash-card > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+details.dash-card[open] > summary::before { transform: rotate(90deg); }
+details.dash-card > summary:hover { background: var(--accent-soft); }
+details.dash-card[open] > summary { margin-bottom: 6px; }
+.dash-body > .dash-links { margin: 0 0 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+.dash-body > .dash-links a { margin-left: auto; }
+.online-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.online-people li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { details.dash-card > summary::before { transition: none; } }
+
+/* the top bar's "online" menu (teachers) */
+.online-menu > summary::after { content: none; }
+.online-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 5px 10px; font-size: .9rem;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.online-btn:hover { background: var(--surface-2); }
+.online-menu[open] > .online-btn { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); flex: none; }
+.online-pop { position: absolute; top: calc(100% + 6px); right: 0; width: min(300px, 90vw); max-height: 70vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 10px 12px; z-index: 40; }
+.online-pop .dash-sub:first-child { margin-top: 0; }
+@media (max-width: 760px) {
+  .online-pop { position: fixed; top: calc(var(--topbar-h) + 4px); left: 12px; right: 12px; width: auto; }
+}
+
+/* Technical settings */
+.tech-group { margin-bottom: 16px; }
+.tech-row { padding: 10px 0; border-top: 1px solid var(--border); }
+.tech-row:first-child { border-top: 0; }
+.tech-input { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tech-input input[type=number] { width: 9rem; flex: 0 0 auto; }
+.tech-input select { width: auto; max-width: 100%; }
+.tech-unit { color: var(--muted); }
+.tech-reset-all { margin-top: 16px; }

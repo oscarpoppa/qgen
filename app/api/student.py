@@ -5,18 +5,20 @@ from app import db
 from app.messages import services as M
 from app.messages.routes import student_panel
 from app.qgen import services as S
-from app.qgen.models import CQuiz
+from app.qgen.models import CQuiz, ArchivedAttempt
 from app.qgen.qtypes import get_qtype
 from . import api_bp
 from .auth import token_required, body
+from app import tuning
 from .errors import ApiError, bad_request, not_found, conflict
 from .serialize import (my_quizzes_json, attempt_json, attempt_summary, results_json, message_json)
 
-MAX_ANSWER = 20000
 
 
 def my_attempt(attempt_id):
     cq = db.session.get(CQuiz, attempt_id)
+    if not cq and ArchivedAttempt.query.filter_by(original_id=attempt_id, student_id=g.api_user.id).first():
+        raise ApiError(410, 'removed', 'Your teacher has removed this quiz attempt.')
     if not cq or cq.assignee != g.api_user.id:
         raise not_found('That quiz')
     return cq
@@ -52,7 +54,7 @@ def clean_answers(cq, answers):
             if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                 raise bad_request('Question {} takes text.'.format(number))
             text = str(value)
-            if len(text) > MAX_ANSWER:
+            if len(text) > tuning.get('max_api_answer'):
                 raise bad_request('The answer to question {} is too long.'.format(number))
             out[number] = text
     return out
@@ -78,7 +80,7 @@ def open_attempt(attempt_id):
         S.submit(cq)
         state = S.attempt_state(cq)
     if state == 'not_open':
-        raise ApiError(409, 'not_open', 'This quiz opens {}.'.format(cq.opens_at.isoformat(timespec='minutes')),
+        raise ApiError(409, 'not_open', 'You can\'t start this quiz yet. It opens {}.'.format(cq.opens_at.isoformat(timespec='minutes')),
                        {'opens_at': cq.opens_at.isoformat(timespec='seconds')})
     if state == 'open':
         S.start(cq)
@@ -139,14 +141,19 @@ def my_messages():
     panel = student_panel(g.api_user)
     return jsonify(pinned=[message_json(m) for m in panel['pinned']],
                    messages=[message_json(m) for m in M.thread(g.api_user.id)],
-                   unread_before=len(panel['unread_ids']))
+                   unread_before=len(panel['unread_ids']),
+                   #who "to" can name when writing (online ones first)
+                   teachers=[{'id': t['teacher'].id, 'username': t['teacher'].username, 'online': t['online']}
+                             for t in panel['teachers']])
 
 
 @api_bp.route('/my/messages', methods=['POST'])
 @token_required()
 def my_reply():
     try:
-        M.reply(g.api_user, body(required=('body',))['body'])
+        data = body(required=('body',))
+        #"to": a teacher's id (only they see it), or "all"/left out for every teacher
+        M.reply(g.api_user, data['body'], data.get('to'))
     except M.MessageError as exc:
         raise ApiError(422, 'invalid', str(exc))
     return jsonify(sent=True), 201

@@ -1,28 +1,33 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('users') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>Users</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
+    <a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
 
 {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#users" placeholder="Filter users…" aria-label="Filter users">{% endif %}
 <div class="table-wrap stack">
   <table id="users">
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
     <tbody>
     {% for item in ulst %}
       <tr>
-        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span>{% if item.logged_in %} <span class="badge badge-ok">logged in</span>{% endif %}</td>
+        <td data-label="Name"><span class="person">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span></td>
         <td data-label="Email">{% if item.email %}{{ item.email }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
+        <td data-label="Last seen">{% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>
+          {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
+          {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
         <td class="actions">
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
           <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
           {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" data-confirm="Remove {{ item.username }}’s picture?" data-confirm-ok="Remove">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary btn-sm">Remove picture</button></form>{% endif %}
           {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.username)|string ~ '’s password? You’ll be shown a temporary one to pass on.') }}
-          {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Quizzes and answers belonging to this account are deleted too.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept.')|string) }}{% endif %}
+          {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string) }}{% endif %}
         </td>
       </tr>
     {% endfor %}

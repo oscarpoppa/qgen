@@ -1,13 +1,18 @@
-{# The permanent record of a finished quiz. Rendered once and saved in CQuiz.transcript. #}
+{# The permanent record of a finished quiz. Rendered once and saved in CQuiz.transcript.
+   Also drawn for archived attempts, which may not have been handed in or graded yet. #}
 <div class="card">
   <div class="result-head">
+    {% if cq.score is not none %}
     <div class="score" aria-label="Score {{ '%.0f' % cq.score }} percent">{{ '%.0f' % cq.score }}%<small>score</small></div>
+    {% else %}
+    <div class="score" aria-label="No score yet">–<small>{{ 'being graded' if cq.needs_review else 'not handed in' }}</small></div>
+    {% endif %}
     <div>
       <h2 style="margin:0">{{ cq.vquiz.title }}</h2>
       <div class="muted small">{{ cq.taker.username }}</div>
       <div class="muted small">
         {% if cq.startdate %}Started {{ cq.startdate.strftime('%b %d %Y, %I:%M %p') }} · {% endif %}
-        Submitted {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}
+        {% if cq.compdate %}Submitted {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}{% else %}Not handed in{% endif %}
         {% if cq.graded_date %} · Graded {{ cq.graded_date.strftime('%b %d %Y') }}{% endif %}
       </div>
     </div>
@@ -18,8 +23,12 @@
   <section class="card question">
     <div class="card-head">
       <span class="qnum">{{ it.num }}</span>
+      {% if it.credit is none and not cq.completed %}
+      <span class="right badge">not graded</span>
+      {% else %}
       <span class="mark mark-{{ it.mark }}" aria-label="{{ {'ok': 'correct', 'bad': 'incorrect', 'partial': 'partly correct'}[it.mark] }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
       <span class="right badge {{ 'badge-ok' if it.mark == 'ok' else 'badge-bad' if it.mark == 'bad' else 'badge-warn' }}">{{ '%.0f' % ((it.credit or 0) * 100) }}%</span>
+      {% endif %}
     </div>
     {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
     <div class="qtext">{{ it.text }}</div>

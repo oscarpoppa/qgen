@@ -72,7 +72,7 @@ class ProblemForm(FlaskForm):
         images = [{'file': r['file'].strip(), 'label': (r.get('label') or '').strip()}
                   for r in self.images.data if (r.get('file') or '').strip()]
         return {
-            'markup': 'legacy' if '{{' in (self.question.data or '') else 'friendly',
+            'markup': 'friendly',
             'values': values,
             'choices': self.choices.data or '',
             'combos': self.combos.data or '',
@@ -145,6 +145,12 @@ class AssignForm(FlaskForm):
     def validate_closes_at(self, field):
         if field.data and self.opens_at.data and field.data <= self.opens_at.data:
             raise ValidationError('The closing time must be after the opening time.')
+
+    def validate_time_limit(self, field):
+        from .services import time_limit_error
+        message = time_limit_error(self.opens_at.data, self.closes_at.data, field.data)
+        if message:
+            raise ValidationError(message)
 
 
 #instructor grading of one essay answer

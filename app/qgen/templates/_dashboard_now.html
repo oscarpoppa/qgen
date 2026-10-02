@@ -1,0 +1,23 @@
+{# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
+{% from "_macros.html" import avatar with context %}
+<details class="card dash-card" id="dash-right-now" data-box="now" open>
+  <summary class="dash-head"><h2>Right now</h2>
+    <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
+    {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}
+    <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></summary>
+  <div class="dash-body">
+    <h3 class="dash-sub">Taking a quiz</h3>
+    {% if taking %}
+      <ul class="dash-list">
+      {% for t in taking %}
+        <li><span class="person">{{ avatar(t.cq.taker, 24) }}<strong>{{ t.cq.taker.username }}</strong></span>
+          <span>“{{ t.cq.vquiz.title }}”</span>
+          <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">Nobody is taking a quiz right now.</p>
+    {% endif %}
+    {% include "_online_list.html" %}
+  </div>
+</details>

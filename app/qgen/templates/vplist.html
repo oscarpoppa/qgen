@@ -1,5 +1,44 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
+{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
+
+{% macro problem_table(items, ticks=true) %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title or 'Untitled' }}”"></td>{% endif %}
+          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong> {{ subject_labels(item.vpgroups) }}
+            <div class="small muted">
+              {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
+              {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
+              {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
+            </div>
+          </td>
+          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span></td>
+          <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
+          <td data-label="Answer">
+            {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}
+              {# written answers: no answer key; a model answer, if given, is only a guide #}
+              <span class="badge">Teacher-graded</span>
+              {% if item.raw_ansr %}<div class="clamp small muted" onclick="this.classList.toggle('open')">Model answer: {{ item.raw_ansr }}</div>{% endif %}
+            {% else %}
+              <div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div>
+            {% endif %}
+          </td>
+          <td class="actions">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
+            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem')) }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endmacro %}
 
 {% block content %}
 <div class="page-head">
@@ -7,38 +46,22 @@
   <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
 </div>
 
-{% if vplst %}
-  {% if vplst|length > 5 %}<input type="search" class="filter" data-filter="#problems" placeholder="Filter problems…" aria-label="Filter problems">{% endif %}
-  <div class="table-wrap stack">
-    <table id="problems">
-      <thead><tr><th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
-      <tbody>
-      {% for item in vplst %}
-        <tr>
-          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong>
-            <div class="small muted">
-              {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
-              {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
-              {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
-            </div>
-          </td>
-          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
-            {% if item.options.get('markup') == 'legacy' %}<div class="small muted">old markup</div>{% endif %}</td>
-          <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
-          <td data-label="Answer"><div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div></td>
-          <td class="actions">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
-            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?') }}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{% if single %}
+  {{ problem_table(items, ticks=false) }}
 {% else %}
-  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+  {{ subject_toolbar('problems', '#containers', total) }}
+  {% if total %}{{ file_bar('problems', all_subjects) }}{% endif %}
+  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-problems">
+    {% for subject, items in boxes %}
+      {% if subject or items %}
+        {% call subject_box('problems', subject, items) %}{{ problem_table(items) }}{% endcall %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not total %}
+    <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+  {% endif %}
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_subjects.html" import box_actions, rename_form with context %}
+{% block body_attrs %}{{ watch('archive') }}{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+<p class="muted">Attempts you deleted, and the quiz results of deleted student accounts. Each student has a folder;
+  you can make your own folders too, and rename or delete them (what's in a deleted folder moves to Unsorted).
+  Students don't see any of this. You can look at each attempt, put it back, or delete it for good.</p>
+
+<div class="card subject-bar">
+  <details class="subject-new">
+    <summary class="btn btn-secondary btn-sm">+ New folder</summary>
+    <form method="post" action="{{ url_for('qgen.new_archive_folder') }}" class="subject-name-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="sr-only" for="new-folder-name">Name of the new folder</label>
+      <input id="new-folder-name" name="name" maxlength="64" required placeholder="e.g. 2025-26">
+      <button class="btn btn-sm">Make it</button>
+    </form>
+  </details>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  {% if total > 5 %}<input type="search" class="filter" data-filter="#containers" placeholder="Search the archive…" aria-label="Search the archive">{% endif %}
+</div>
+
+{% if total %}
+<form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <span class="muted small file-count" aria-live="polite">0 ticked</span>
+  <label class="sr-only" for="move-folder">Folder to move the ticked attempts to</label>
+  <select id="move-folder" name="folder">
+    {% for f in move_to|sort(attribute='name') %}<option value="{{ f.id }}">📁 {{ f.name }}</option>{% endfor %}
+    <option value="unsorted">📥 Unsorted</option>
+  </select>
+  <button class="btn btn-sm">Move to folder</button>
+</form>
+{% endif %}
+
+{% if folders %}
+<div id="containers" class="subject-boxes" data-store="qgen-open-archive-folders">
+  {% for f in folders %}
+    {% set n = f['items']|length %}
+    <details class="card subject-box{{ ' unsorted-box' if f.folder is none }}" id="folder-{{ f.key }}" data-box="{{ f.key }}"{% if not n %} data-empty{% endif %}>
+      <summary>
+        <span class="box-name">{{ '📥 ' if f.folder is none else '📁 ' }}{{ f.name }}</span>
+        <span class="badge" aria-label="{{ n }} archived">{{ n }}</span>
+        <span class="badge badge-accent box-ticked" hidden></span>
+        {% if f.folder is not none %}
+          {{ box_actions(f.key, f.name, url_for('qgen.rename_archive_folder', fid=f.folder.id), url_for('qgen.delete_archive_folder', fid=f.folder.id),
+                         'Delete the folder “' ~ f.name ~ '”? ' ~ (('Its ' ~ n ~ ' attempt' ~ ('s move' if n != 1 else ' moves') ~ ' to Unsorted.') if n else 'It is empty.'), 'folder') }}
+        {% endif %}
+      </summary>
+      <div class="box-body">
+        {% if f.folder is not none %}{{ rename_form(f.key, f.name, url_for('qgen.rename_archive_folder', fid=f.folder.id), 'folder') }}{% endif %}
+        {% if f['items'] %}
+        <div class="table-wrap stack">
+          <table>
+            <thead><tr><th class="tick-col"><span class="sr-only">Tick</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>Taken</th><th>Archived</th><th></th></tr></thead>
+            <tbody>
+            {% for a in f['items'] %}
+              {% set blocker = blockers[a.id] %}
+              <tr>
+                <td class="tick-col"><input type="checkbox" name="items" value="{{ a.id }}" form="file-form" aria-label="Tick {{ a.student_name }}’s “{{ a.quiz_title }}”"></td>
+                <td data-label="Student">{{ a.student_name }}{% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
+                <td data-label="Quiz"><strong>{{ a.quiz_title }}</strong>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
+                <td data-label="Result">
+                  {% if a.completed and a.score is not none %}<span class="badge {{ 'badge-ok' if a.score >= 70 else 'badge-warn' if a.score >= 50 else 'badge-bad' }}">{{ '%.0f' % a.score }}%</span>
+                  {% elif a.needs_review %}<span class="badge badge-warn">Being graded</span>
+                  {% elif a.startdate %}<span class="badge">Not handed in</span>
+                  {% else %}<span class="badge">Not started</span>{% endif %}</td>
+                <td data-label="Taken">{{ (a.compdate or a.startdate).strftime('%b %d %Y') if (a.compdate or a.startdate) else '–' }}</td>
+                <td data-label="Archived">{{ a.archived_at.strftime('%b %d %Y') }}{% if a.archiver %}<div class="small muted">by {{ a.archiver.username }}</div>{% endif %}</td>
+                <td class="actions">
+                  <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}">View</a>
+                  {% if blocker %}
+                    <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ blocker }}">Restore</button>
+                  {% else %}
+                    <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
+                          data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Restore</button></form>
+                  {% endif %}
+                  <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
+                        data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm">Delete for good</button></form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <p class="muted small box-empty">{{ 'Nothing archived for ' ~ f.name ~ ' yet.' if f.student else 'Empty. Tick archived attempts and choose “Move to folder”.' }}</p>
+        {% endif %}
+      </div>
+    </details>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="card empty"><span class="big">🗄️</span>No students yet. Each student gets a folder here, for any of their attempts you delete.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}

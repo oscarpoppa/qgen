@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
+{% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 
 {% block content %}
 <div class="page-head">
@@ -8,13 +9,21 @@
   <div class="actions"><a class="btn" href="{{ url_for('qgen.assign') }}">Assign a quiz</a></div>
 </div>
 
-{% if ulst|length > 3 %}<input type="search" class="filter-cards" placeholder="Filter students…" aria-label="Filter students" style="max-width:320px;margin-bottom:12px">{% endif %}
+{# each student is a box that opens and closes (remembered in this browser) #}
+<div class="card subject-bar">
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  {% if ulst|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter students…" aria-label="Filter students" style="margin:0 0 0 auto">{% endif %}
+</div>
+<div class="subject-boxes" data-store="qgen-open-results-students">
 {% for item in ulst %}
-  <section class="card student" data-name="{{ item.username|lower }}">
-    <div class="card-head">
-      <h2 class="person">{{ avatar(item, 36) }}{{ item.username }}</h2>
-      <span class="muted small">{{ item.cquizzes|length }} quiz{{ '' if item.cquizzes|length == 1 else 'zes' }}</span>
-    </div>
+  {% set n = item.cquizzes|length %}
+  <details class="card subject-box student" id="student-{{ item.id }}" data-box="{{ item.id }}" data-name="{{ item.username|lower }}"{% if not n %} data-empty{% endif %}>
+    <summary>
+      <span class="box-name person">{{ avatar(item, 30) }}{{ item.username }}</span>
+      <span class="badge" aria-label="{{ n }} quiz{{ '' if n == 1 else 'zes' }}">{{ n }} quiz{{ '' if n == 1 else 'zes' }}</span>
+    </summary>
+    <div class="box-body">
     {% if item.cquizzes %}
       <div class="table-wrap stack">
         <table>
@@ -27,13 +36,13 @@
                 {% for cq in g.attempts %}
                   <div class="btn-row" style="margin:2px 0">
                     <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap">{{ cq.when_label }}</a>
-                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if g.best == cq else '' }}">{{ '★ ' if g.best == cq }}{{ '%.0f' % (cq.score or 0) }}%</span>
+                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
                     {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
                     {% else %}<span class="badge">not started</span>{% endif %}
                     {% if cq.closes_at and not cq.completed %}<span class="small muted">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</span>{% endif %}
                     <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '”? This removes the answers too.') }}
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Move ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the archive? You can view or restore it later.') }}
                   </div>
                 {% endfor %}
               </td>
@@ -47,6 +56,8 @@
                     {% for key, label in rules.items() %}<option value="{{ key }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ label }}</option>{% endfor %}
                   </select>
                 </form>
+                {% if g.overridden %}<div class="small"><span class="badge badge-warn">Just for {{ item.username }}</span>
+                  <span class="muted">The quiz's own rule is {{ rules[g.vquiz.retake_rule]|lower }}.</span></div>{% endif %}
                 {% endif %}
               </td>
               <td class="actions">
@@ -71,13 +82,16 @@
         </table>
       </div>
     {% else %}
-      <p class="muted">No quizzes assigned yet.</p>
+      <p class="muted small box-empty">No quizzes assigned yet.</p>
     {% endif %}
-  </section>
+    </div>
+  </details>
 {% endfor %}
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ asset('js/subjects.js') }}"></script>
 <script>
 var fc = document.querySelector('.filter-cards');
 if (fc) fc.addEventListener('input', function () {
