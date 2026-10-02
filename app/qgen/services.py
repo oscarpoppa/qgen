@@ -484,6 +484,19 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         raise ServiceError('Couldn\'t create "{}" for {}: {}'.format(vquiz.title, assignee.username, exc))
 
 
+def time_limit_error(opens_at, closes_at, time_limit):
+    """A time limit can't be longer than the time between opening and closing: a
+    message saying so, or None if it fits (or there's no limit or no full window)."""
+    if not (opens_at and closes_at and time_limit) or closes_at <= opens_at:
+        return None
+    window = int((closes_at - opens_at).total_seconds() // 60)
+    if time_limit <= window:
+        return None
+    return ('The time limit ({} minutes) is longer than the time between opening and closing ({} minute{}). '
+            'Make it {} minutes or less, or give more time between opening and closing.'
+            .format(time_limit, window, '' if window == 1 else 's', window))
+
+
 def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None):
     """Give each student a separate copy; returns (created quizzes, [(student, error), ...]).
     `by` is the teacher assigning it: the teachers' notices say who assigned what."""
@@ -491,6 +504,9 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
         raise ServiceError('The closing time must be after the opening time.')
     if time_limit is not None and not 1 <= time_limit <= 600:
         raise ServiceError('The time limit must be between 1 and 600 minutes.')
+    too_long = time_limit_error(opens_at, closes_at, time_limit)
+    if too_long:
+        raise ServiceError(too_long)
     created, failed = [], []
     for student in students:
         try:

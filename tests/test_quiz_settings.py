@@ -96,6 +96,46 @@ def test_open_and_close_window(app_db):
 
 
 
+
+def test_a_time_limit_fits_between_opening_and_closing(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    fmt = '%Y-%m-%dT%H:%M'
+    opens = (datetime.now() + timedelta(days=1)).replace(second=0, microsecond=0)
+    when = {'opens_at': opens.strftime(fmt), 'closes_at': (opens + timedelta(minutes=30)).strftime(fmt)}
+    # 45 minutes in a 30-minute window: refused, said next to the field, nothing assigned
+    r = teacher.post('/quiz/assign', data=dict({'vquiz': vq.id, 'users': [student(db, 'sam').id], 'time_limit': '45'}, **when))
+    page = r.data.decode()
+    assert r.status_code == 200 and 'The time limit (45 minutes) is longer than the time between opening and closing (30 minutes)' in page
+    assert CQuiz.query.count() == 0
+    # exactly the window, or less: fine
+    assign(teacher, vq, [student(db, 'sam')], time_limit='30', **when)
+    assign(teacher, vq, [student(db, 'kim')], time_limit='20', **when)
+    assert sorted(c.time_limit for c in CQuiz.query.all()) == [20, 30]
+    # only a closing time, or only an opening time: nothing to compare with
+    assign(teacher, vq, [student(db, 'sam')], time_limit='120', closes_at=when['closes_at'])
+    assign(teacher, vq, [student(db, 'sam')], time_limit='120', opens_at=when['opens_at'])
+    assert CQuiz.query.count() == 4
+    # the same rule however it's assigned (the app API too)
+    try:
+        S.assign(vq, [student(db, 'sam')], opens, opens + timedelta(minutes=10), 11)
+        assert False, 'too long was accepted'
+    except S.ServiceError as exc:
+        assert '(11 minutes)' in str(exc) and 'Make it 10 minutes or less' in str(exc)
+    from app.api.models import ApiToken
+    token = ApiToken.issue(student(db, 'teach'), 't')[1]
+    r = app.test_client().post('/api/v2/quizzes/{}/assign'.format(vq.id), headers={'Authorization': 'Bearer ' + token},
+                               json={'students': [student(db, 'sam').id], 'opens_at': when['opens_at'],
+                                     'closes_at': when['closes_at'], 'time_limit_minutes': 31})
+    assert r.status_code == 422 and 'longer than the time between opening and closing' in str(r.get_json())
+    assert CQuiz.query.count() == 4
+    # the page says the most it can be as the times are typed
+    assert 'id="limit-window"' in teacher.get('/quiz/assign').data.decode()
+
+
 def test_students_are_told_when_a_quiz_opens(app_db):
     app, db = app_db
     from app.qgen.models import CQuiz

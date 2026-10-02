@@ -36,6 +36,8 @@
     </div>
     <div style="max-width:240px">
       {{ field(form.time_limit, 'Starts when the student opens the quiz.', attrs={'min': 1, 'placeholder': 'no limit'}) }}
+      {# filled in by the page: the most the limit can be with both times set #}
+      <div class="help" id="limit-window" hidden></div>
     </div>
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
   </fieldset>
@@ -86,6 +88,27 @@
   function set(v) { items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = v; }); }
   document.getElementById('all').onclick = function () { set(true); };
   document.getElementById('none').onclick = function () { set(false); };
+})();
+/* the time limit can't be longer than the time between opening and closing (checked
+ * again when assigning): say the most it can be, and warn as soon as it's too long */
+(function () {
+  var opens = document.getElementById('opens_at'), closes = document.getElementById('closes_at');
+  var limit = document.getElementById('time_limit'), note = document.getElementById('limit-window');
+  if (!opens || !closes || !limit || !note) return;
+  function update() {
+    var a = Date.parse(opens.value), b = Date.parse(closes.value);
+    var room = isNaN(a) || isNaN(b) || b <= a ? null : Math.floor((b - a) / 60000);
+    limit.max = room === null ? 600 : Math.min(600, room);
+    note.hidden = room === null;
+    if (room === null) return;
+    var too = limit.value && +limit.value > room;
+    note.textContent = too
+      ? 'Too long: there are only ' + room + ' minute' + (room === 1 ? '' : 's') + ' between opening and closing.'
+      : 'At most ' + room + ' minute' + (room === 1 ? '' : 's') + ' (the time between opening and closing).';
+    note.classList.toggle('error', !!too);
+  }
+  [opens, closes, limit].forEach(function (el) { el.addEventListener('input', update); el.addEventListener('change', update); });
+  update();
 })();
 </script>
 {% endblock %}

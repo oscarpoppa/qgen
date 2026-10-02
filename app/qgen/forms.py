@@ -146,6 +146,12 @@ class AssignForm(FlaskForm):
         if field.data and self.opens_at.data and field.data <= self.opens_at.data:
             raise ValidationError('The closing time must be after the opening time.')
 
+    def validate_time_limit(self, field):
+        from .services import time_limit_error
+        message = time_limit_error(self.opens_at.data, self.closes_at.data, field.data)
+        if message:
+            raise ValidationError(message)
+
 
 #instructor grading of one essay answer
 class ReviewItem(Form):
