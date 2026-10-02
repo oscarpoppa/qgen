@@ -37,7 +37,9 @@ else
     echo "nginx: started"
 fi
 
-running=$(pgrep -o -f "gunicorn --bind unix:/tmp/qgen.sock")
+#the gunicorn master itself (anchored, so a command that only mentions gunicorn doesn't count)
+GUNICORN='^[^ ]*python[^ ]* [^ ]*/gunicorn --bind unix:/tmp/qgen.sock'
+running=$(pgrep -o -f "$GUNICORN")
 if [ -S /tmp/qgen.sock ] && [ -n "$running" ]; then
     from=$(readlink "/proc/$running/cwd")
     echo "gunicorn: already running (from $from)"
@@ -50,7 +52,7 @@ else
         [ -S /tmp/qgen.sock ] && break
         sleep 1
     done
-    if [ -S /tmp/qgen.sock ] && pgrep -f "gunicorn --bind unix:/tmp/qgen.sock" >/dev/null; then
+    if [ -S /tmp/qgen.sock ] && pgrep -f "$GUNICORN" >/dev/null; then
         echo "gunicorn: started"
     else
         echo "gunicorn: NOT running (it started, then stopped). To see why, run it in this terminal:"
