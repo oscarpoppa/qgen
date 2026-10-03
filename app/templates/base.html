@@ -27,6 +27,8 @@
         if (v === 'open' || (v === null && wide)) c.add('dock-' + p);
       });
       if (!wide) c.remove('dock-notices', 'dock-messages');  // on phones they open when tapped
+      //where the divider between the two panels was left (messages.js)
+      try { var split = +localStorage.getItem('qgen-dock-split'); if (split >= 10 && split <= 90) document.documentElement.style.setProperty('--dock-split', split + '%'); } catch (e) {}
     })();
   </script>
   {% endif %}
@@ -138,6 +140,9 @@
         <button type="button" class="dock-close" data-pane="notices" aria-label="Hide notices" title="Hide notices">✕</button></div>
       <div class="dock-body"><p class="muted small">Loading…</p></div>
     </section>
+    {# drag (or use the arrow keys) to give one panel more room than the other #}
+    <div class="dock-split" id="dock-split" role="separator" aria-orientation="horizontal" aria-controls="dock-notices dock-messages"
+         aria-label="Resize notices and messages" title="Drag to resize; double-click to reset" tabindex="0"></div>
     <section class="dock-pane" id="dock-messages" data-url="{{ url_for('messages.panel') }}" aria-labelledby="dock-messages-title">
       <div class="dock-head"><h2 id="dock-messages-title" tabindex="-1"><span aria-hidden="true">💬</span> Messages</h2>
         <button type="button" class="dock-close" data-pane="messages" aria-label="Hide messages" title="Hide messages">✕</button></div>

@@ -520,9 +520,19 @@ th .tip-wrap { margin-left: 4px; }
 }
 .dock-pane { display: none; flex-direction: column; min-height: 0; flex: 1 1 0; }
 html.dock-notices #dock-notices, html.dock-messages #dock-messages { display: flex; }
-/* both open: notices take the top third, the conversation the rest */
-html.dock-notices.dock-messages #dock-notices { flex: 0 1 34%; border-bottom: 1px solid var(--border); }
-html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
+/* both open: notices take the top third, the conversation the rest, until the divider
+   between them is dragged (--dock-split, set by messages.js) */
+html.dock-notices.dock-messages #dock-notices { flex: 0 0 var(--dock-split, 34%); }
+html.dock-notices.dock-messages #dock-messages { flex: 1 1 0; }
+.dock-split { display: none; flex: 0 0 9px; margin: -4px 0; position: relative; z-index: 1; cursor: row-resize; touch-action: none; }
+html.dock-notices.dock-messages .dock-split { display: block; }
+.dock-split::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 1px; background: var(--border); }
+.dock-split::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; height: 5px; margin-left: -18px;
+  border-radius: 3px; background: var(--border); }
+.dock-split:hover::before, .dock-split.dragging::before, .dock-split:focus-visible::before { background: var(--accent); height: 3px; top: 3px; }
+.dock-split:hover::after, .dock-split.dragging::after, .dock-split:focus-visible::after { background: var(--accent); }
+.dock-split:focus { outline: none; }
+html.dock-resizing, html.dock-resizing * { cursor: row-resize !important; user-select: none !important; }
 .dock-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
 .dock-head h2 { font-size: 1rem; margin: 0; flex: 1; }
 .dock-head h2:focus { outline: none; }
@@ -531,7 +541,7 @@ html.dock-notices.dock-messages #dock-messages { flex: 1 1 66%; }
 .dock-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 14px; }
 
 /* the conversation fills its panel: messages scroll, the reply box stays at the bottom */
-#dock-messages .dock-body { display: flex; flex-direction: column; overflow: hidden; }
+#dock-messages .dock-body { display: flex; flex-direction: column; overflow: hidden auto; }  /* scrolls only if squeezed */
 #dock-messages #messages { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #dock-messages .thread-scroll { flex: 1 1 auto; min-height: 60px; max-height: none; }
 #dock-messages .reply-box { flex-direction: column; align-items: stretch; }

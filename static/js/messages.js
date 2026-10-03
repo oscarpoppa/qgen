@@ -96,7 +96,7 @@
         if (html === null) { body.innerHTML = '<p class="muted small">Couldn\'t load this. Please reload the page.</p>'; return; }
         body.innerHTML = html;
         loaded[p] = true;
-        if (p === 'messages') showNewest();
+        if (p === 'messages') { splitFit(); showNewest(); }
         //opening it marked things seen: the counts change
         check();
       }, function () {});
@@ -423,10 +423,79 @@
     }, function () {});
   }
 
+  /* ---------- the divider between the two panels ---------- */
+
+  //drag it (or focus it and use the arrow keys) to share the height between Notices and
+  //Messages; double-click puts it back. Remembered in this browser (base.html applies it early).
+  var SPLIT_DEFAULT = 34;
+  function setupSplit() {
+    var bar = document.getElementById('dock-split');
+    if (!bar) return;
+    //each panel keeps its heading and a little of its content (squeezed, Messages scrolls)
+    function limits() {
+      var h = dock.clientHeight || 1;
+      var lo = Math.min(45, 110 / h * 100), hi = Math.max(55, 100 - 200 / h * 100);
+      return [lo, hi];
+    }
+    function current() {
+      return pane('notices').getBoundingClientRect().height / (dock.clientHeight || 1) * 100;
+    }
+    function apply(pct, keep) {
+      var l = limits();
+      pct = Math.round(Math.min(l[1], Math.max(l[0], pct)) * 10) / 10;
+      root.style.setProperty('--dock-split', pct + '%');
+      bar.setAttribute('aria-valuenow', Math.round(pct));
+      if (keep) store('qgen-dock-split', String(pct));
+      if (isOpen('messages')) requestAnimationFrame(showNewest);
+    }
+    bar.setAttribute('aria-valuemin', '10');
+    bar.setAttribute('aria-valuemax', '90');
+    bar.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      bar.classList.add('dragging');
+      root.classList.add('dock-resizing');
+      var top = dock.getBoundingClientRect().top, h = dock.clientHeight || 1;
+      function move(ev) { apply((ev.clientY - top) / h * 100, false); }
+      function up() {
+        bar.removeEventListener('pointermove', move);
+        bar.removeEventListener('pointerup', up);
+        bar.removeEventListener('pointercancel', up);
+        bar.classList.remove('dragging');
+        root.classList.remove('dock-resizing');
+        apply(current(), true);
+      }
+      bar.addEventListener('pointermove', move);
+      bar.addEventListener('pointerup', up);
+      bar.addEventListener('pointercancel', up);
+    });
+    bar.addEventListener('dblclick', function () {
+      apply(SPLIT_DEFAULT, false);
+      store('qgen-dock-split', null);
+    });
+    bar.addEventListener('keydown', function (e) {
+      var step = { ArrowUp: -5, ArrowDown: 5, PageUp: -15, PageDown: 15 }[e.key];
+      if (step) apply(current() + step, true);
+      else if (e.key === 'Home') apply(0, true);
+      else if (e.key === 'End') apply(100, true);
+      else return;
+      e.preventDefault();
+    });
+    //a smaller window, or the conversation's panel just loaded: keep both panels usable
+    function fit() {
+      if (isOpen('notices') && isOpen('messages') && stored('qgen-dock-split')) apply(current(), false);
+    }
+    window.addEventListener('resize', fit);
+    splitFit = fit;
+  }
+  var splitFit = function () {};
+
   /* ---------- start ---------- */
 
   measure();
   window.addEventListener('resize', measure);
+  setupSplit();
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
   if (!PANES.some(isOpen)) check();

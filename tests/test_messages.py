@@ -880,3 +880,14 @@ def test_a_new_notice_stays_new_until_it_is_clicked(app_db):
     assert sam.get('/messages/poll').get_json()['notices'] == 0
     js = open('static/js/messages.js').read()
     assert "load(p, true)" in js and "if (p === 'notices' && changed && count) { toast(p, info); pulse(p); }" in js
+
+
+def test_both_panels_have_a_divider_to_resize_them(app_db):
+    """Teachers and students alike: the divider between Notices and Messages, and the
+    remembered position applied before the page draws."""
+    app, db = app_db
+    for name, page in (('teach', '/dashboard'), ('sam', '/mypage')):
+        html = login(app, name).get(page).data.decode()
+        assert 'id="dock-split" role="separator"' in html, name
+        assert "localStorage.getItem('qgen-dock-split')" in html, name
+    assert 'dock-split' not in app.test_client().get('/login').data.decode()  # no panels when signed out
