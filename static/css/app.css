@@ -388,6 +388,17 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .msg-mine.msg-with-avatar { flex-direction: row-reverse; }
 
 .inline-form { display: inline; margin: 0; }
+/* Results by student: on wider screens each attempt (date, score, Details, Delete) stays on
+   one line; the table makes the column wide enough, and the score column's picker gives way */
+.result-attempt { margin: 2px 0; }
+.result-attempt-note { margin: -2px 0 4px; }
+.btn-row.result-attempt-buttons { flex-wrap: nowrap; }  /* Details and Delete stay together */
+@media (min-width: 641px) {
+  td.attempts { white-space: nowrap; }
+  .btn-row.result-attempt { flex-wrap: nowrap; }
+  td.attempts + td select { max-width: 100%; }
+}
+@media (max-width: 640px) { .result-attempt { margin: 0 0 12px; } .result-attempt-note { margin: -8px 0 12px; } }
 td.actions .inline-form .btn { margin-left: 4px; }
 
 /* ---------- calendar control (static/js/calendar.js) ---------- */

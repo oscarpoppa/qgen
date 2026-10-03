@@ -32,18 +32,18 @@
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr>
               <td data-label="Quiz"><strong>{{ g.vquiz.title }}</strong></td>
-              <td data-label="Attempts">
+              <td data-label="Attempts" class="attempts">
                 {% for cq in g.attempts %}
-                  <div class="btn-row" style="margin:2px 0">
+                  <div class="btn-row result-attempt">
                     <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap">{{ cq.when_label }}</a>
                     {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
                     {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
                     {% else %}<span class="badge">not started</span>{% endif %}
-                    {% if cq.closes_at and not cq.completed %}<span class="small muted">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</span>{% endif %}
-                    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Move ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the archive? You can view or restore it later.') }}
+                    <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Move ' ~ (item.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the archive? You can view or restore it later.') }}</span>
                   </div>
+                  {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</div>{% endif %}
                 {% endfor %}
               </td>
               <td data-label="Score counted">
