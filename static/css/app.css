@@ -706,6 +706,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .attempt-row > .not-open-note { white-space: normal; flex-basis: 100%; text-align: right; }
 .not-open-note { overflow-wrap: anywhere; }
 
+/* the worked example under "Show the correct answer as" */
+.display-example { display: block; margin-top: 4px; }
+.display-example code { white-space: nowrap; }
+
 /* math keys under a number answer on the quiz page */
 .keypad { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
 .keypad .key { min-width: 34px; min-height: 32px; padding: 2px 8px; font: 500 1rem/1 inherit;

@@ -307,3 +307,6 @@ def test_each_row_of_math_buttons_sits_under_its_label(app_db):
         box = page.index('name="{}"'.format(target), bar)
         assert label < bar < box, target
         assert '<label' not in page[label + 6:bar], target  # its own label, not another field's
+    # the exact form has a worked example with a value, kept as written (inside <code>, which the math display skips)
+    assert 'if the answer is <code>sqrt([a])</code>, write <code>\\( \\sqrt{[a]} \\)</code>' in page
+    assert 'sees √3 (≈ 1.7321)' in page

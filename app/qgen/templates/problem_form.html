@@ -162,7 +162,12 @@
     <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
     <div class="t-numeric">
       {% set display_bar %}{% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
-      {{ field(form.answer_display, 'Optional. The exact form results show next to the number, e.g. 2√3 instead of 3.4641 (use the buttons above). Students are still graded on the number.', attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display, above=display_bar) }}
+      {# a worked example: what to write, with a value in [brackets], and what a student then sees #}
+      {% set display_help %}Optional. Shows the exact form next to the number; students are still graded on the number.
+        <span class="display-example">For example, if the answer is <code>sqrt([a])</code>, write <code>\( \sqrt{[a]} \)</code>
+        (press √, then type <code>[a]</code> between the brackets, using your own value's name).
+        A student whose <code>a</code> is 3 then sees √3 (≈ 1.7321) instead of just 1.7321.</span>{% endset %}
+      {{ field(form.answer_display, display_help, attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display, above=display_bar) }}
       <div class="math-preview" data-source="answer_display" hidden aria-live="polite"><span class="label">How the correct answer will look</span><div class="math-preview-body"></div></div>
     </div>
     <div class="t-numeric">{{ check(form.ordered, 'Only for answers with several numbers. Off: any order counts (like the two roots of an equation). On: same order as your answer, like a point (x, y).', tip_body=tip_ordered) }}</div>
