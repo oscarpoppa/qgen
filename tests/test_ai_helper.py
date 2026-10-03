@@ -93,11 +93,14 @@ def test_routes_guard_key_limit_and_log(app_db, monkeypatch):
         assert r.get_json()['ok'] and r.get_json()['fill']['title'] == 'Train'
         assert AICall.query.one().ok and AICall.query.one().output_tokens == 20
         assert teacher.post('/quiz/ai/values', json={'text': ''}).status_code == 400
-        # the review buttons send the form itself
-        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient({'suggestions': [{'level': 'tip', 'text': 'Clear.'}]}))
-        form = problem_form('numeric', 'T', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
-        r = teacher.post('/quiz/ai/reviewproblem', data=form)
-        assert r.get_json()['hints'][0]['text'] == 'Clear.'
+        # the problem page has no "Review with AI" (the quiz builder still has its own)
+        page = teacher.get('/quiz/makevprob').data.decode()
+        assert 'Fill in for me' in page and 'Review with AI' not in page and 'data-review-url' not in page
+        from app.qgen.models import VProblem
+        teacher.post('/quiz/makevprob', data=problem_form('numeric', 'T', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}]))
+        edit = teacher.get('/quiz/editvprob/{}'.format(VProblem.query.first().id)).data.decode()
+        assert 'id="helper"' in edit and 'Review with AI' not in edit and 'data-review-url' not in edit  # editing too
+        assert teacher.post('/quiz/ai/reviewproblem').status_code == 404
         # hourly limit
         from app import tuning
         for _ in range(tuning.get('ai_hourly')):
@@ -160,7 +163,7 @@ def test_school_quiz_problems_only(app_db, monkeypatch):
         assert teacher.post('/quiz/ai/problem', json={'text': 'a train problem'}).get_json()['ok']
         # students can't reach any AI action (so they can't ask it for answers)
         sam = login(app, 'sam')
-        for url in ('/quiz/ai/problem', '/quiz/ai/values', '/quiz/ai/reviewproblem', '/quiz/ai/reviewquiz'):
+        for url in ('/quiz/ai/problem', '/quiz/ai/values', '/quiz/ai/reviewquiz'):
             r = sam.post(url, json={'text': 'what is the answer to question 1?'})
             assert r.status_code == 302 and '/mypage' in r.headers['Location']
     finally:

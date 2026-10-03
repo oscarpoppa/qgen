@@ -15,7 +15,6 @@ from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
 from datetime import datetime, timedelta
 import json
-import random
 
 def parse_vplist(text):
     """The quiz's problem list from the form: single ids and groups."""
@@ -688,33 +687,6 @@ def ai_fill(kind):
         return jsonify(ok=False, error='The AI helper only writes school quiz problems. Please describe a quiz question for your students.'), 422
     return jsonify(ok=True, fill=fill, note=fill.get('cannot_do'), problems=problems_with(fill, kind))
 
-def describe_problem(form):
-    """A problem as plain text for the AI reviewer, with two sample versions."""
-    opts = form.options()
-    qt = get_qtype(form.qtype.data)
-    lines = ['Question type: ' + qt.label, 'Question: ' + (form.question.data or '')]
-    for v in opts['values']:
-        lines.append('Value {}: {}'.format(v.get('name'), ', '.join('{}={}'.format(k, v[k]) for k in v if k != 'name')))
-    if qt.uses_choices:
-        lines.append('Choices (* = correct):\n' + opts['choices'])
-        if opts.get('combos'):
-            lines.append('Other correct combinations:\n' + opts['combos'])
-        lines.append('Shuffled per student: {}; show only: {}'.format(opts['shuffle'], opts['show_n'] or 'all'))
-    else:
-        lines.append('{}: {}'.format(qt.answer_label, form.answer.data or ''))
-    if qt.key == 'numeric':
-        lines.append('Answer must be: ' + opts['precision'])
-        lines.append('Order of several numbers matters: {}'.format(opts['ordered']))
-    if opts['images']:
-        lines.append('Pictures: ' + ', '.join('{} ({})'.format(i['file'], i['label'] or 'no label') for i in opts['images']))
-    if not qt.validate(form.question.data, form.answer.data, opts):
-        rng = random.Random(1)
-        for n in (1, 2):
-            prob, ansr, co = qt.instantiate(form.question.data, form.answer.data, opts, rng)
-            lines.append('Sample student version {}: {} | correct: {}{}'.format(
-                n, prob, qt.show_correct(ansr, co), ' | choices: ' + ' / '.join(co['choices']) if co.get('choices') else ''))
-    return '\n'.join(lines)
-
 def describe_quiz(form):
     try:
         lay = parse_vplist(form.vplist.data)
@@ -734,17 +706,6 @@ def describe_quiz(form):
         else:
             one(e)
     return '\n'.join(lines)
-
-@qgen_bp.route('/quiz/ai/reviewproblem', methods=['POST'])
-@login_required
-@pw_check
-@admin_only
-def ai_review_problem():
-    from .ai_helper import review
-    form = ProblemForm()
-    form.validate()
-    tips, failed = ai_call('review', describe_problem(form), review)
-    return failed or jsonify(ok=True, hints=tips)
 
 @qgen_bp.route('/quiz/ai/reviewquiz', methods=['POST'])
 @login_required
