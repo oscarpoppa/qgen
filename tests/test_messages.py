@@ -129,7 +129,11 @@ def test_side_panels_on_every_page(app_db):
     assert teacher.get('/messages/poll').get_json()['unread'] == 0
     # a teacher's own message in that view says who it went to
     teacher.post('/messages/send', data={'to': str(kim_id), 'body': 'Yes, 20 minutes.'}, headers={'X-Requested-With': 'fetch'})
-    assert 'to kim' in teacher.get('/messages/panel').data.decode()
+    everything = teacher.get('/messages/panel').data.decode()
+    assert 'to kim' in everything
+    # its link opens the conversation (a "reply" only to what a student wrote)
+    mine = everything.split('Yes, 20 minutes.')[1].split('</li>')[0]
+    assert 'Open conversation with kim' in mine and 'Reply to' not in mine
     # one student's conversation shows only that student's messages
     box = teacher.get('/messages/panel?student={}'.format(kim_id)).data.decode()
     assert 'Is the quiz timed?' in box and 'Can I retake it?' not in box

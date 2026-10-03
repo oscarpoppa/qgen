@@ -60,7 +60,8 @@
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
       {% if everyone is defined and everyone and not grouped %}
-        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">Reply to {{ m.student.username }}</button>
+        {# opens the conversation with that student: a reply to what they wrote, or more to what a teacher wrote #}
+        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.username }}</button>
       {% endif %}
       {% set can_pin = me_teacher and m.from_teacher %}
       {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.username }} removed this from their messages</div>{% endif %}
