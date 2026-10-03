@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
-{% block body_attrs %}{% if not current_user.is_admin %}{{ watch('mine') }}{% endif %}{% endblock %}
+{% block body_attrs %}{{ watch('mine') }}{% endblock %}
 
 {# compact: the small version for a row in a list of attempts, so the row stays on one line #}
 {% macro action(cq, compact=false) %}

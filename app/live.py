@@ -60,7 +60,8 @@ def _attempt(cqid, now):
     cq = db.session.get(CQuiz, cqid)
     if cq is None:
         return 'archived' if archived_for(cqid) else 'gone'
-    if current_user.is_admin:
+    #a teacher taking a quiz themselves is its taker here: their own saving isn't news
+    if current_user.is_admin and cq.assignee != current_user.id:
         return (_attempt_row(cq, now), cq.startdate, cq.compdate, cq.answers_visible,
                 [(cp.id, cp.submitted, cp.credit, cp.feedback) for cp in cq.cproblems])
     if cq.assignee != current_user.id:
@@ -130,7 +131,7 @@ def _messages(student_id, now):
 
 # key -> (teachers only?, function(argument, now))
 KINDS = {
-    'mine': (False, lambda arg, now: _mine(now) if not current_user.is_admin else None),
+    'mine': (False, lambda arg, now: _mine(now)),  # a teacher's own quizzes too
     'attempt': (False, _attempt),
     'students': (True, lambda arg, now: _students(None, now)),
     'student': (True, _students),

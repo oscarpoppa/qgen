@@ -204,3 +204,31 @@ def test_who_may_follow_what(app_db):
     assert 'data-watch' not in teacher.get('/quiz/makevprob').data.decode()  # forms being written never reload
     r = app.test_client().get('/messages/poll?watch=students')
     assert r.status_code == 302
+
+
+def test_a_teacher_taking_their_own_quiz_isnt_told_they_changed_it(app_db):
+    """Their own saving doesn't change what their quiz page watches (as for a student);
+    a teacher looking at someone else's attempt still follows the answers."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, teacher)
+    mine, sams = give(vq, 'teach'), give(vq, 'sam')
+    db.session.commit()
+    key, state = drawn(teacher.get('/quiz/take/{}'.format(mine.id)).data.decode())
+    assert key == 'attempt:{}'.format(mine.id) and watch(teacher, key) == state
+    r = teacher.post('/quiz/take/{}/save'.format(mine.id), data={'Number1': '5', 'Number1_present': '1'})
+    assert r.get_json()['ok']
+    db.session.expire_all()
+    assert mine.cproblems[0].submitted == '5'  # it was saved...
+    assert watch(teacher, key) == state  # ...and that isn't "a change by the teacher"
+    # their own My quizzes follows what happens to their attempts, as a student's does
+    key, state = drawn(teacher.get('/mypage').data.decode())
+    assert key == 'mine' and watch(teacher, 'mine') == state
+    give(vq, 'teach')
+    db.session.commit()
+    assert watch(teacher, 'mine') != state
+    sam = login(app, 'sam')
+    sam.get('/quiz/take/{}'.format(sams.id))
+    before = watch(teacher, 'attempt:{}'.format(sams.id))
+    sam.post('/quiz/take/{}/save'.format(sams.id), data={'Number1': '5', 'Number1_present': '1'})
+    assert watch(teacher, 'attempt:{}'.format(sams.id)) != before

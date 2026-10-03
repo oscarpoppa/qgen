@@ -432,7 +432,7 @@ def test_student_pages_refresh_when_graded(app_db):
     assert 'data-watch="{}"'.format(key) in waiting and 'data-watch-ask' not in waiting
     home = sam.get('/mypage').data.decode()
     assert 'data-watch="mine"' in home and 'Being graded' in home
-    assert 'data-watch' not in teacher.get('/mypage').data.decode()
+    assert 'data-watch="mine"' in teacher.get('/mypage').data.decode()  # a teacher's own quizzes (none here)
     # graded: what both pages show changes, so they reload and show the result
     before = watch(sam, key), watch(sam, 'mine')
     assert 'data-watch-state="{}"'.format(before[0]) in waiting

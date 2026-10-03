@@ -467,8 +467,10 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     teacher.post('/quiz/delvq/{}'.format(vq.id))
     db.session.expire_all()
     assert VQuiz.query.get(vq.id) is not None
-    # a teacher has no My quizzes to follow
-    assert teacher.get('/messages/poll?watch=mine').get_json()['watch'] is None
+    # a teacher's My quizzes follows only their own attempts: sam's new one doesn't change it
+    mine = teacher.get('/messages/poll?watch=mine').get_json()['watch']
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
+    assert mine is not None and teacher.get('/messages/poll?watch=mine').get_json()['watch'] == mine
 
 
 def test_a_newly_assigned_quiz_says_new(app_db):
