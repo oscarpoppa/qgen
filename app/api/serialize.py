@@ -146,7 +146,7 @@ def teacher_attempt_json(cq):
     """Everything about one attempt, for a teacher: the student's answers, the correct ones, grading."""
     out = attempt_summary(cq)
     out['student'] = user_json(cq.taker)
-    out['scoring_rule_override'] = cq.retake_rule
+    out['scoring_rule_override'] = cq.own_retake_rule
     items = []
     for cp in cq.cproblems:
         it = transcript_item(cp)

@@ -115,10 +115,18 @@ def test_a_time_limit_fits_between_opening_and_closing(app_db):
     assign(teacher, vq, [student(db, 'sam')], time_limit='30', **when)
     assign(teacher, vq, [student(db, 'kim')], time_limit='20', **when)
     assert sorted(c.time_limit for c in CQuiz.query.all()) == [20, 30]
-    # only a closing time, or only an opening time: nothing to compare with
+    # only a closing time: measured from now (a day and a half hour away: 120 minutes fits);
+    # only an opening time: nothing to compare with
     assign(teacher, vq, [student(db, 'sam')], time_limit='120', closes_at=when['closes_at'])
     assign(teacher, vq, [student(db, 'sam')], time_limit='120', opens_at=when['opens_at'])
     assert CQuiz.query.count() == 4
+    soon = (datetime.now() + timedelta(minutes=31)).replace(second=0, microsecond=0)
+    r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [student(db, 'sam').id], 'time_limit': '45',
+                                           'closes_at': soon.strftime(fmt)})
+    assert 'The time limit (45 minutes) is longer than the time left until the quiz closes (' in r.data.decode()
+    assert CQuiz.query.count() == 4
+    assert S.time_limit_error(None, soon, 45, now=soon - timedelta(minutes=50)) is None  # measured from now
+    assert S.time_limit_error(None, soon - timedelta(days=1), 45) is None  # already closed: not this message
     # the same rule however it's assigned (the app API too)
     try:
         S.assign(vq, [student(db, 'sam')], opens, opens + timedelta(minutes=10), 11)
@@ -644,6 +652,24 @@ def test_a_students_own_retake_rule_is_shown_where_the_quiz_is(app_db):
         S.retake(cq)
     results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
     assert 'Just for sam' in results and "The quiz's own rule is the best attempt." in results
+
+    # set back to the same rule as the quiz's: no longer a difference anywhere
+    S.set_retake_rule(cq, 'best')
+    assert all(c.retake_rule is None for c in CQuiz.query.all())  # follows the quiz again
+    # (an old one saved the same as the quiz's, from before this, doesn't count either)
+    for c in CQuiz.query.all():
+        c.retake_rule = 'best'
+    db.session.commit()
+    listing = teacher.get('/quiz/listvq').data.decode()
+    assert 'differs' not in listing
+    assert 'have a different rule' not in teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert 'Just for sam' not in teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
+    assert S.retake_overrides(vq) == []
+    from app import live
+    with app.test_request_context():
+        from flask_login import login_user
+        login_user(User.query.filter_by(username='teach').one())
+        assert live._quizzes(vq.id, None)[0][0][-1] == 0  # the quiz list's own count
 
 
 def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):

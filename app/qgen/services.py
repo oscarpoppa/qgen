@@ -484,16 +484,24 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         raise ServiceError('Couldn\'t create "{}" for {}: {}'.format(vquiz.title, assignee.username, exc))
 
 
-def time_limit_error(opens_at, closes_at, time_limit):
-    """A time limit can't be longer than the time between opening and closing: a
-    message saying so, or None if it fits (or there's no limit or no full window)."""
-    if not (opens_at and closes_at and time_limit) or closes_at <= opens_at:
+def time_limit_error(opens_at, closes_at, time_limit, now=None):
+    """A time limit can't be longer than the time a student has: from opening (or, with
+    no opening time, from now) until closing. A message saying so, or None if it fits
+    (or there's no limit or no closing time)."""
+    if not (closes_at and time_limit):
         return None
-    window = int((closes_at - opens_at).total_seconds() // 60)
+    start = opens_at or (now or datetime.now())
+    if closes_at <= start:
+        return None  # closing before opening is its own error; already closed isn't this one
+    window = int((closes_at - start).total_seconds() // 60)
     if time_limit <= window:
         return None
-    return ('The time limit ({} minutes) is longer than the time between opening and closing ({} minute{}). '
-            'Make it {} minutes or less, or give more time between opening and closing.'
+    if opens_at:
+        return ('The time limit ({} minutes) is longer than the time between opening and closing ({} minute{}). '
+                'Make it {} minutes or less, or give more time between opening and closing.'
+                .format(time_limit, window, '' if window == 1 else 's', window))
+    return ('The time limit ({} minutes) is longer than the time left until the quiz closes ({} minute{}). '
+            'Make it {} minutes or less, or close it later.'
             .format(time_limit, window, '' if window == 1 else 's', window))
 
 
@@ -898,8 +906,8 @@ def retake_overrides(vq):
     quiz's: [(student, rule key)], by name."""
     seen = {}
     for cq in vq.cquizzes:
-        if cq.retake_rule and cq.taker and cq.assignee not in seen:
-            seen[cq.assignee] = (cq.taker, cq.retake_rule)
+        if cq.own_retake_rule and cq.taker and cq.assignee not in seen:
+            seen[cq.assignee] = (cq.taker, cq.own_retake_rule)
     return sorted(seen.values(), key=lambda pair: pair[0].username.lower())
 
 
@@ -907,6 +915,9 @@ def set_retake_rule(cq, rule):
     """How this student's attempts at this quiz combine; None = the quiz's own rule."""
     if rule and rule not in RETAKE_RULES:
         raise ServiceError('Unknown retake rule "{}".'.format(rule))
+    #the same as the quiz's is no rule of their own: they follow the quiz's
+    if rule == cq.vquiz.retake_rule:
+        rule = None
     #kept on every attempt so it survives deleting one
     for other in CQuiz.query.filter_by(assignee=cq.assignee, vquiz_id=cq.vquiz_id):
         other.retake_rule = rule or None
@@ -941,8 +952,20 @@ def close_expired(now=None):
     closed = 0
     for cq in candidates:
         if attempt_state(cq, now) == 'time_up':
-            submit(cq)
+            #the student may be away: a notice tells them it was handed in, why, and how it went
+            started = bool(cq.startdate)
+            why = 'it closed' if cq.closes_at and now >= cq.closes_at else 'your time ran out'
+            outcome = submit(cq, timed_out=True)
+            result = 'Your teacher will grade the written answers.' if outcome == 'review' \
+                else 'Your score: {:.0f}%.'.format(cq.score or 0)
+            if started:
+                text = '"{}" was handed in automatically because {}, with the answers you had saved. {}'.format(
+                    cq.vquiz.title, why, result)
+            else:
+                text = '"{}" closed before you started it, so it was handed in with no answers. {}'.format(cq.vquiz.title, result)
+            notify(cq.assignee, text, _link('qgen.qtake', cidx=cq.id))
             closed += 1
+    db.session.commit()
     return closed
 
 
@@ -1011,9 +1034,10 @@ def autosave(cq, answers):
     db.session.commit()
 
 
-def submit(cq, answers=None):
+def submit(cq, answers=None, timed_out=False):
     """Hand in: grade what can be graded now. With answers=None (time ran out),
-    the autosaved answers are used. Returns 'completed' or 'review'."""
+    the autosaved answers are used. timed_out: handed in by the app because time ran
+    out (the teachers' notice says so). Returns 'completed' or 'review'."""
     if attempt_state(cq) in ('completed', 'review'):
         raise ServiceError('This quiz has already been submitted.')
     if attempt_state(cq) == 'not_open':
@@ -1021,15 +1045,21 @@ def submit(cq, answers=None):
     if answers is not None:
         answers = _answers_by_ordinal(cq, answers)
     who = cq.taker.username if cq.taker else 'A student'
+    #what the teachers' notice says happened
+    said = '{} handed in "{}"'.format(who, cq.vquiz.title)
+    if timed_out:
+        reason = 'it closed' if cq.closes_at and datetime.now() >= cq.closes_at else 'time ran out'
+        said = ('{}\'s "{}" was handed in automatically ({})' if cq.startdate else
+                '{} never started "{}"; it was handed in automatically ({})').format(who, cq.vquiz.title, reason)
     if record_answers(cq, answers):
         cq.needs_review = True
-        notify_teachers(cq.assignee, '{} handed in "{}": written answers are waiting for grading.'.format(who, cq.vquiz.title),
+        notify_teachers(cq.assignee, '{}: written answers are waiting for grading.'.format(said),
                         _link('qgen.review', cqid=cq.id))
         cq.save()
         return 'review'
     finalize(cq)
     #"Open" goes to this attempt's results (answers and score)
-    notify_teachers(cq.assignee, '{} handed in "{}": {:.0f}%.'.format(who, cq.vquiz.title, cq.score or 0),
+    notify_teachers(cq.assignee, '{}: {:.0f}%.'.format(said, cq.score or 0),
                     _link('qgen.qtake', cidx=cq.id))
     cq.save()
     return 'completed'

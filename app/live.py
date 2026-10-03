@@ -95,8 +95,11 @@ def _quizzes(vqid, now):
     if vqid is not None:
         quizzes = quizzes.filter(VQuiz.id == vqid)
     counts = dict(db.session.query(CQuiz.vquiz_id, db.func.count(CQuiz.id)).group_by(CQuiz.vquiz_id).all())
+    #students with a rule of their own that really differs from the quiz's
     own = dict(db.session.query(CQuiz.vquiz_id, db.func.count(db.distinct(CQuiz.assignee)))
-               .filter(CQuiz.retake_rule.isnot(None)).group_by(CQuiz.vquiz_id).all())
+               .join(VQuiz, VQuiz.id == CQuiz.vquiz_id)
+               .filter(CQuiz.retake_rule.isnot(None), CQuiz.retake_rule != VQuiz.retake_rule)
+               .group_by(CQuiz.vquiz_id).all())
     return ([_quiz_row(vq) + (counts.get(vq.id, 0), own.get(vq.id, 0)) for vq in quizzes],
             ArchivedAttempt.query.count())
 

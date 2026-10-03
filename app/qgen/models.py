@@ -199,6 +199,13 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     time_limit = db.Column(db.Integer, nullable=True)
     #the teacher can override the quiz's retake rule for this student
     retake_rule = db.Column(db.String(16), nullable=True)
+    @property
+    def own_retake_rule(self):
+        """This student's own rule, only when it really differs from the quiz's (a rule
+        set to the same thing as the quiz's isn't a difference)."""
+        rule = self.retake_rule
+        return rule if rule and self.vquiz and rule != self.vquiz.retake_rule else None
+
     #a quiz with a future start: the student has been told it's open (or there's nothing to tell)
     open_notice_sent = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
@@ -334,7 +341,7 @@ def attempts_by_quiz(cquizzes):
         done = [c for c in attempts if c.completed and c.score is not None]
         vq = attempts[0].vquiz
         best = max(done, key=lambda c: c.score) if done else None
-        override = next((c.retake_rule for c in reversed(attempts) if c.retake_rule), None)
+        override = next((c.own_retake_rule for c in reversed(attempts) if c.own_retake_rule), None)
         rule = override or vq.retake_rule
         out.append({'vquiz': vq, 'attempts': attempts, 'best': best, 'latest': attempts[-1],
                     'combined': combined_score(rule, [c.score for c in done]),

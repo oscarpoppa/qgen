@@ -96,15 +96,17 @@
   var limit = document.getElementById('time_limit'), note = document.getElementById('limit-window');
   if (!opens || !closes || !limit || !note) return;
   function update() {
-    var a = Date.parse(opens.value), b = Date.parse(closes.value);
+    //from opening, or with no opening time from now, until closing
+    var fromNow = !opens.value, a = fromNow ? Date.now() : Date.parse(opens.value), b = Date.parse(closes.value);
     var room = isNaN(a) || isNaN(b) || b <= a ? null : Math.floor((b - a) / 60000);
     limit.max = room === null ? 600 : Math.min(600, room);
     note.hidden = room === null;
     if (room === null) return;
     var too = limit.value && +limit.value > room;
+    var span = fromNow ? 'left until it closes' : 'between opening and closing';
     note.textContent = too
-      ? 'Too long: there are only ' + room + ' minute' + (room === 1 ? '' : 's') + ' between opening and closing.'
-      : 'At most ' + room + ' minute' + (room === 1 ? '' : 's') + ' (the time between opening and closing).';
+      ? 'Too long: there are only ' + room + ' minute' + (room === 1 ? '' : 's') + ' ' + span + '.'
+      : 'At most ' + room + ' minute' + (room === 1 ? '' : 's') + ' (the time ' + span + ').';
     note.classList.toggle('error', !!too);
   }
   [opens, closes, limit].forEach(function (el) { el.addEventListener('input', update); el.addEventListener('change', update); });
