@@ -3,9 +3,11 @@
 {# A small "?" next to a label: hover, focus or tap shows `body` (trusted template markup). #}
 {% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
 
-{% macro field(f, help=None, attrs={}, tip_body=None) %}
+{# above: markup between the label and the box, e.g. a row of math buttons for that box #}
+{% macro field(f, help=None, attrs={}, tip_body=None, above=None) %}
   <div class="field{% if f.errors %} has-error{% endif %}">
     {% if tip_body %}<div class="label-line">{{ f.label }}{{ tip(f.label.text, tip_body) }}</div>{% else %}{{ f.label }}{% endif %}
+    {% if above %}{{ above }}{% endif %}
     {{ f(**attrs) }}
     {% if help %}<div class="help">{{ help }}</div>{% endif %}
     {% for e in f.errors %}<div class="error">{{ e }}</div>{% endfor %}

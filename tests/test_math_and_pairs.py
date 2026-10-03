@@ -294,3 +294,16 @@ def test_examples_and_details_show_numbers(app_db):
     A = [{'name': 'a', 'kind': 'whole', 'min': '2', 'max': '9'}]
     page = teacher.post('/quiz/previewvprob', data=problem_form('numeric', 'Roots', r'\( x^2 = [a] \)', 'sqrt([a]), -sqrt([a])', A)).data.decode()
     assert 'Correct answer' in page and 'sqrt' not in page.split('Three example versions')[1]
+
+
+def test_each_row_of_math_buttons_sits_under_its_label(app_db):
+    """Label, then its buttons, then the box they write into (not above the label, where
+    they looked like part of the field before)."""
+    app, db = app_db
+    page = login(app, 'teach').get('/quiz/makevprob').data.decode()
+    for target in ('question', 'choices', 'answer_display'):
+        label = page.index('<label for="{}"'.format(target))
+        bar = page.index('data-target="{}"'.format(target))
+        box = page.index('name="{}"'.format(target), bar)
+        assert label < bar < box, target
+        assert '<label' not in page[label + 6:bar], target  # its own label, not another field's

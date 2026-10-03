@@ -109,9 +109,10 @@
       {{ field(form.qtype, tip_body=tip_qtype) }}
       {{ field(form.title, attrs={'placeholder': 'e.g. Train distance'}, tip_body=tip_title) }}
     </div>
-    {# the math helpers are for Numeric problems only; hidden for other types #}
-    <div class="t-numeric">{% include "_math_toolbar.html" %}</div>
-    {{ field(form.question, 'Put a random value in square brackets, like [speed]. You can do math inside too: [speed * 2].', attrs={'rows': 4, 'placeholder': 'A train goes [speed] mph for [hours] hours. How far does it travel?'}, tip_body=tip_question) }}
+    {# the math helpers are for Numeric problems only; hidden for other types. Each row of buttons
+       sits under its box's label, right above the box it writes into #}
+    {% set question_bar %}<div class="t-numeric">{% include "_math_toolbar.html" %}</div>{% endset %}
+    {{ field(form.question, 'Put a random value in square brackets, like [speed]. You can do math inside too: [speed * 2].', attrs={'rows': 4, 'placeholder': 'A train goes [speed] mph for [hours] hours. How far does it travel?'}, tip_body=tip_question, above=question_bar) }}
     <div class="t-numeric">
       <div class="math-preview" id="math-preview" data-source="question" hidden aria-live="polite"><span class="label">How the math will look</span><div class="math-preview-body"></div></div>
     </div>
@@ -137,8 +138,8 @@
   <div class="card" id="answer-card">
     <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Answer</h2></div>
     <div class="t-choice_one t-choice_many">
-      {% with math_target = 'choices' %}{% include "_math_toolbar.html" %}{% endwith %}
-      {{ field(form.choices, 'Put * in front of each correct choice. Choices can use values too, like [speed * hours + 10].', attrs={'rows': 5, 'placeholder': '*[speed * hours]\n[speed + hours]\n[speed * hours + 10]'}, tip_body=tip_choices) }}
+      {% set choices_bar %}{% with math_target = 'choices' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
+      {{ field(form.choices, 'Put * in front of each correct choice. Choices can use values too, like [speed * hours + 10].', attrs={'rows': 5, 'placeholder': '*[speed * hours]\n[speed + hours]\n[speed * hours + 10]'}, tip_body=tip_choices, above=choices_bar) }}
       <div class="math-preview" data-source="choices" hidden aria-live="polite"><span class="label">How the choices will look</span><div class="math-preview-body"></div></div>
       <div class="t-choice_many">
         {{ field(form.combos, 'When different sets of checked choices can each be right. One combination per line, choices separated by commas, written exactly as in the list above. A student is right if what they checked matches any one of them (or the * set).', attrs={'rows': 3, 'placeholder': '[a], [10 - a]\n[b], [10 - b]'}, tip_body=tip_combos) }}
@@ -160,8 +161,8 @@
     </div>
     <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
     <div class="t-numeric">
-      {% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}
-      {{ field(form.answer_display, 'Optional. The exact form results show next to the number, e.g. 2√3 instead of 3.4641 (use the buttons above). Students are still graded on the number.', attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display) }}
+      {% set display_bar %}{% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
+      {{ field(form.answer_display, 'Optional. The exact form results show next to the number, e.g. 2√3 instead of 3.4641 (use the buttons above). Students are still graded on the number.', attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display, above=display_bar) }}
       <div class="math-preview" data-source="answer_display" hidden aria-live="polite"><span class="label">How the correct answer will look</span><div class="math-preview-body"></div></div>
     </div>
     <div class="t-numeric">{{ check(form.ordered, 'Only for answers with several numbers. Off: any order counts (like the two roots of an equation). On: same order as your answer, like a point (x, y).', tip_body=tip_ordered) }}</div>
