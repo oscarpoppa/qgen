@@ -687,36 +687,6 @@ def ai_fill(kind):
         return jsonify(ok=False, error='The AI helper only writes school quiz problems. Please describe a quiz question for your students.'), 422
     return jsonify(ok=True, fill=fill, note=fill.get('cannot_do'), problems=problems_with(fill, kind))
 
-def describe_quiz(form):
-    try:
-        lay = parse_vplist(form.vplist.data)
-    except layout.LayoutError:
-        lay = []
-    lines = ['Quiz title: ' + (form.title.data or ''), 'Calculator allowed: {}'.format(form.calculator_ok.data),
-             'Question order shuffled per student: {}'.format(form.shuffle_order.data)]
-    def one(pid, prefix=''):
-        p = db.session.get(VProblem, pid)
-        if p:
-            lines.append('{}- [{}] {}: {}'.format(prefix, get_qtype(p.qtype).label, p.title, p.raw_prob))
-    for e in lay:
-        if layout.is_group(e):
-            lines.append('Group: each student gets {} of these {}:'.format(e['pick'], len(e['from'])))
-            for pid in e['from']:
-                one(pid, '  ')
-        else:
-            one(e)
-    return '\n'.join(lines)
-
-@qgen_bp.route('/quiz/ai/reviewquiz', methods=['POST'])
-@login_required
-@pw_check
-@admin_only
-def ai_review_quiz():
-    from .ai_helper import review
-    form = QuizForm()
-    tips, failed = ai_call('review', describe_quiz(form), review)
-    return failed or jsonify(ok=True, hints=tips)
-
 @qgen_bp.route('/quiz/ai/problem', methods=['POST'])
 @login_required
 @pw_check

@@ -1,15 +1,12 @@
 /* Live helper panel. A form with data-check-url is checked a moment after
  * each change; hints appear in the #helper panel. One-click fixes are sent
- * to the page as a "helper-action" event (see problem_form.js). An optional
- * data-review-url adds a "Review with AI" button. */
+ * to the page as a "helper-action" event (see problem_form.js). */
 (function () {
   var panel = document.getElementById('helper');
   if (!panel) return;
   var form = document.getElementById(panel.dataset.form);
   var list = panel.querySelector('.hints');
   var status = panel.querySelector('.helper-status');
-  var reviewBtn = panel.querySelector('.helper-review');
-  var aiBox = panel.querySelector('.ai-hints');
   var timer = null, seq = 0;
   var ICON = { error: '✗', warn: '!', tip: '💡', ok: '✓' };
 
@@ -58,16 +55,6 @@
   form.addEventListener('input', soon);
   form.addEventListener('change', soon);
   form.addEventListener('helper-refresh', soon);
-
-  if (reviewBtn) reviewBtn.addEventListener('click', function () {
-    reviewBtn.disabled = true;
-    aiBox.innerHTML = '<li class="muted small"><span class="spinner"></span> Reviewing… this can take up to a minute.</li>';
-    post(panel.dataset.reviewUrl).then(function (res) {
-      if (res.ok) render(aiBox, res.hints);
-      else render(aiBox, [{ level: 'warn', text: res.error }]);
-    }, function () { aiBox.innerHTML = '<li class="muted small">Couldn\'t reach the AI helper.</li>'; })
-      .then(function () { reviewBtn.disabled = false; });
-  });
 
   check();
 })();

@@ -101,7 +101,7 @@
     </div>
   </div>
 </form>
-{% with form_id='quiz-form', check_url=url_for('qgen.check_vquiz', vq=vq.id if vq else none), review_url=url_for('qgen.ai_review_quiz') if ai_enabled else none %}{% include "_helper.html" %}{% endwith %}
+{% with form_id='quiz-form', check_url=url_for('qgen.check_vquiz', vq=vq.id if vq else none) %}{% include "_helper.html" %}{% endwith %}
 </div>
 {% endblock %}
 
