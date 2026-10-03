@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
+{% from "_results.html" import result_cells with context %}
+{# follows every attempt, like Results by student: any change reloads it (or offers to) #}
+{% block body_attrs %}{{ watch('students') }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
+    <a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a></div>
+</div>
+
+{# each quiz is a box that opens and closes (remembered in this browser) #}
+<div class="card subject-bar">
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  {% if quizzes|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter quizzes…" aria-label="Filter quizzes" style="margin:0 0 0 auto">{% endif %}
+</div>
+<div class="subject-boxes" data-store="qgen-open-results-quizzes">
+{% for q in quizzes %}
+  {% set vq = q.vquiz %}
+  <details class="card subject-box quiz-result" id="quiz-{{ vq.id }}" data-box="{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
+    <summary>
+      <span class="box-name">{{ vq.title }}</span>
+      <span class="badge">{{ q.students }} student{{ '' if q.students == 1 else 's' }}</span>
+      {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">average {{ '%.0f' % q.average }}%</span>{% endif %}
+      {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
+    </summary>
+    <div class="box-body">
+    {% if q.rows %}
+      <div class="table-wrap stack">
+        <table>
+          <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
+          <tbody>
+          {% for student, g in q.rows %}
+            <tr>
+              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.username }}</a></td>
+              {{ result_cells(g, student, rules) }}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted small box-empty">Not assigned to anyone yet. <a href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign it</a></p>
+    {% endif %}
+    </div>
+  </details>
+{% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/subjects.js') }}"></script>
+<script>
+var fc = document.querySelector('.filter-cards');
+if (fc) fc.addEventListener('input', function () {
+  var q = this.value.trim().toLowerCase();
+  document.querySelectorAll('.quiz-result').forEach(function (c) { c.hidden = q && c.dataset.name.indexOf(q) === -1; });
+});
+</script>
+{% endblock %}

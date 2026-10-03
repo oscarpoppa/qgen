@@ -36,6 +36,7 @@
           <td data-label="Assigned">{{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</td>
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
+            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% endif %}
             {% if item.hide_answers %}{{ post_button(url_for('qgen.release_vquiz', vqid=item.id), 'Hide answers' if item.answers_released else 'Release answers', 'btn btn-secondary btn-sm', 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title ~ '”?') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>

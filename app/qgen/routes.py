@@ -553,6 +553,45 @@ def list_user(uid):
     from .models import RETAKE_RULES
     return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.username))
 
+#Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
+@qgen_bp.route('/quiz/results', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def results_by_quiz():
+    from .models import RETAKE_RULES
+    return render_template('results_by_quiz.html', quizzes=quiz_results(VQuiz.query.order_by(VQuiz.title).all()),
+                           rules=RETAKE_RULES, title='Results by quiz')
+
+#one quiz's results
+@qgen_bp.route('/quiz/results/<int:vqid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def quiz_results_page(vqid):
+    from .models import RETAKE_RULES
+    vq = db.get_or_404(VQuiz, vqid)
+    return render_template('results_by_quiz.html', quizzes=quiz_results([vq]), rules=RETAKE_RULES, single=True,
+                           title='Results: {}'.format(vq.title))
+
+def quiz_results(quizzes):
+    """[{'vquiz', 'rows': [(student, group from attempts_by_quiz)] by name, 'students', 'average'
+    (of the scores that count, or None), 'waiting' (for grading), 'done' (students with a score)}]."""
+    from .models import attempts_by_quiz
+    out = []
+    for vq in quizzes:
+        mine = {}
+        for cq in vq.cquizzes:
+            if cq.taker:
+                mine.setdefault(cq.assignee, []).append(cq)
+        rows = sorted(((attempts[0].taker, attempts_by_quiz(attempts)[0]) for attempts in mine.values()),
+                      key=lambda row: row[0].username.lower())
+        scores = [g['combined'] for _, g in rows if g['combined'] is not None]
+        out.append({'vquiz': vq, 'rows': rows, 'students': len(rows), 'done': len(scores),
+                    'average': sum(scores) / len(scores) if scores else None,
+                    'waiting': sum(1 for _, g in rows for cq in g['attempts'] if cq.status == 'review')})
+    return out
+
 #route to list contents/transcript of a specific concrete quiz
 @qgen_bp.route('/quiz/listcq/<cqid>', methods=['GET'])
 @login_required

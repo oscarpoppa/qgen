@@ -884,3 +884,35 @@ console.log(JSON.stringify(out));
                    'tan(90)': 'error: tan of 90° has no value', '2 3': "error: Something doesn't fit near the end",
                    '3+': 'error: Something is missing at the end',
                    'alert(1)': "error: “alert” isn't something the calculator knows"}
+
+
+def test_results_by_quiz(app_db):
+    """Each quiz with its students' attempts: the same rows as Results by student, the
+    other way round; linked from the menu, the quiz list and Results by student."""
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    assign(teacher, vq, [student(db, 'sam'), student(db, 'kim')])
+    sam_q = CQuiz.query.filter_by(assignee=student(db, 'sam').id).one()
+    with app.test_request_context():
+        S.submit(sam_q, {1: '0', 2: []})
+    page = teacher.get('/quiz/results').data.decode()
+    assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
+    box = page.split('id="quiz-{}"'.format(vq.id))[1]
+    assert box.index('kim</a>') < box.index('sam</a>')  # students by name
+    assert 'not started' in box and '%</span>' in box and 'Details' in box and 'Delete' in box
+    assert 'average 0%' in box  # sam's score counts; kim has none yet
+    one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert 'Results: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="students"' in one
+    assert teacher.get('/quiz/results/99999').status_code == 404
+    # where it's linked from
+    assert '/quiz/results' in teacher.get('/dashboard').data.decode()
+    assert '/quiz/results/{}'.format(vq.id) in teacher.get('/quiz/listvq').data.decode()
+    assert '/quiz/results"' in teacher.get('/quiz/listuser').data.decode()
+    # teachers only
+    assert login(app, 'sam').get('/quiz/results').status_code == 302
+    # Results by student still draws the same rows
+    by_student = teacher.get('/quiz/listuser/{}'.format(student(db, 'sam').id)).data.decode()
+    assert 'Settings quiz' in by_student and 'Details' in by_student and 'Retake' in by_student
