@@ -27,11 +27,19 @@
   <div class="thread-scroll">{% set me_teacher = false %}{% include "_thread.html" %}</div>
   <form method="post" action="{{ url_for('messages.reply') }}" class="reply-box" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="to" value="{{ teacher.id if teacher else 'all' }}">
-    {% set to_whom = teacher.username if teacher else 'all your teachers' %}
+    {% set to_whom = teacher.username if teacher else 'your teachers' %}
     <label for="reply" class="sr-only">Message to {{ to_whom }}</label>
     <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ to_whom }}…"></textarea>
-    <button class="btn">{{ 'Send to ' ~ teacher.username if teacher else 'Send to all' }}</button>
-    {% if teacher %}<p class="muted small" style="margin:4px 0 0">Only {{ teacher.username }} will see what you write here.</p>{% endif %}
+    {% if teachers|length > 1 %}
+      {# who it goes to: checked from the conversation picked above; only the checked teachers see it #}
+      <fieldset class="send-to">
+        <legend class="small muted">Send to</legend>
+        <input type="hidden" name="to_checked" value="1">
+        {% for t in teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not teacher or teacher.id == t.teacher.id }}>
+          {{ '● ' if t.online }}{{ t.teacher.username }}</label>{% endfor %}
+      </fieldset>
+    {% else %}<input type="hidden" name="to" value="all">{% endif %}
+    <button class="btn">Send</button>
+    {% if teachers|length > 1 %}<p class="muted small" style="margin:4px 0 0">Only the teachers you check will see it.</p>{% endif %}
   </form>
 </section>

@@ -77,16 +77,32 @@ def teacher_choice(value):
     return teacher
 
 
+def teachers_chosen(values):
+    """Who a student's message goes to: None for every teacher ('all', nothing given, or
+    every teacher checked), else the chosen teachers. values: one value or a list of
+    them ('all' or teachers' ids); an empty list means none was checked."""
+    if values is None or isinstance(values, (str, int, User)):
+        values = [values]
+    values = [v for v in values if v not in (None, '')] if values else []
+    if not values:
+        raise MessageError('Check at least one teacher to send it to.')
+    if 'all' in values:
+        return None
+    teachers = list({t.id: t for t in (v if isinstance(v, User) else teacher_choice(v) for v in values)}.values())
+    everyone = {t.id for t in User.query.filter_by(is_admin=True)}
+    return None if {t.id for t in teachers} >= everyone else teachers
+
+
 def reply(student, body, to=None):
-    """From a student to all the teachers, or (to: a teacher, or 'all'/None) to one of
-    them, in which case only that teacher sees it."""
+    """From a student to all the teachers, or to some of them (to: a teacher, teachers'
+    ids, or 'all'/None for all), in which case only those teachers see it."""
     if student.is_admin:
         raise MessageError('Teachers write from Messages.')
-    teacher = to if isinstance(to, User) else teacher_choice(to)
+    teachers = teachers_chosen('all' if to is None else to)
     body = clean_body(body)
     msg = Message(student_id=student.id, sender_id=student.id, from_teacher=False, body=body,
-                  seen_by_student=True, to_all=teacher is None)
-    if teacher is not None:
+                  seen_by_student=True, to_all=teachers is None)
+    for teacher in teachers or []:
         msg.to.append(MessageTo(user_id=teacher.id))
     db.session.add(msg)
     db.session.commit()

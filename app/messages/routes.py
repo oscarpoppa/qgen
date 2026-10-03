@@ -153,8 +153,9 @@ def clear_notices(notice_id=None):
 def reply():
     if current_user.is_admin:
         abort(404)
-    #to: 'all' (every teacher) or one teacher's id (only they see it)
-    to = request.form.get('to')
+    #to: 'all' (every teacher), or the checked teachers' ids (only they see it); a form
+    #with the checkboxes says so (to_checked), so none checked isn't taken as "all"
+    to = request.form.getlist('to') or (None if not request.form.get('to_checked') else [])
     if wants_json():
         try:
             M.reply(current_user, request.form.get('body'), to)
@@ -163,7 +164,7 @@ def reply():
         return jsonify(ok=True)
     try:
         msg = M.reply(current_user, request.form.get('body'), to)
-        flash('Message sent to {}.'.format(msg.recipients[0].username if msg.recipients else 'your teachers'), 'success')
+        flash('Message sent to {}.'.format(', '.join(t.username for t in msg.recipients) if msg.recipients else 'your teachers'), 'success')
     except M.MessageError as exc:
         flash(str(exc), 'error')
     return redirect(request.referrer or url_for('user.mypage'))

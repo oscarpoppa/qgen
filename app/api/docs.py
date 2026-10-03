@@ -23,7 +23,7 @@ ENDPOINTS = [
     ('POST', '/my/attempts/{attempt_id}/submit', 'signed in', 'Hand in (optionally with final answers).', {'answers': {'1': '42'}}),
     ('GET', '/my/attempts/{attempt_id}/results', 'signed in', 'Your results (correct answers only once the teacher allows).', None),
     ('GET', '/my/messages', 'student', 'Your messages and pinned announcements (reading marks them seen), and your teachers (online ones first).', None),
-    ('POST', '/my/messages', 'student', 'Write to all your teachers, or to one ("to": their id; only they see it).',
+    ('POST', '/my/messages', 'student', 'Write to all your teachers, or to some ("to": a teacher\'s id or a list of ids; only they see it).',
      {'body': 'Can I retake quiz 2?', 'to': 'all'}),
 
     ('GET', '/problems', 'teacher', 'All problems.', None),

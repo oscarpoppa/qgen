@@ -160,7 +160,7 @@ def test_side_panels_on_every_page(app_db):
 
     # students get their own panel, never the teacher's
     box = login(app, 'sam').get('/messages/panel').data.decode()
-    assert 'id="messages"' in box and 'id="msg-student"' in box and 'Write to all your teachers' in box  # picks a teacher too
+    assert 'id="messages"' in box and 'id="msg-student"' in box and 'Write to your teachers' in box  # picks a teacher too
 
 
 def test_teachers_get_notices_apart_from_messages(app_db):

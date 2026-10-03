@@ -546,6 +546,10 @@ html.dock-resizing, html.dock-resizing * { cursor: row-resize !important; user-s
 #dock-messages .thread-scroll { flex: 1 1 auto; min-height: 60px; max-height: none; }
 #dock-messages .reply-box { flex-direction: column; align-items: stretch; }
 #dock-messages .reply-box textarea { min-height: 64px; }
+/* a student choosing which teachers get their message */
+.send-to { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.send-to legend { float: left; margin-right: 4px; padding: 0; }
+.send-to label { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
 #dock-messages .msg { max-width: 100%; }
 #dock-messages .pinned-box { flex: 0 0 auto; max-height: 40%; min-height: 4.6em; display: flex; flex-direction: column; margin-bottom: 10px; }
 #dock-messages .pinned-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; }

@@ -48,7 +48,8 @@
         {% if not m.from_teacher and not m.to_all %}
           {# a student's message to chosen teachers: the teacher reads "to you only" #}
           <span class="badge" title="Only {{ m.recipients|map(attribute='username')|join(', ') }} can see this">
-            {%- if me_teacher and m.recipients|length == 1 and m.recipients[0].id == current_user.id %}to you only
+            {%- set others = m.recipients|rejectattr('id', 'equalto', current_user.id)|map(attribute='username')|list %}
+            {%- if me_teacher and others|length < m.recipients|length %}to you{{ ' and ' ~ others|join(', ') if others }} only
             {%- else %}to {{ m.recipients|map(attribute='username')|join(', ') or 'a teacher' }} only{% endif %}</span>
         {% elif not m.from_teacher and m.kind != 'notice' and not me_teacher %}<span class="muted">to all teachers</span>{% endif %}
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>

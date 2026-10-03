@@ -152,7 +152,7 @@ def my_messages():
 def my_reply():
     try:
         data = body(required=('body',))
-        #"to": a teacher's id (only they see it), or "all"/left out for every teacher
+        #"to": a teacher's id or a list of them (only they see it), or "all"/left out for every teacher
         M.reply(g.api_user, data['body'], data.get('to'))
     except M.MessageError as exc:
         raise ApiError(422, 'invalid', str(exc))

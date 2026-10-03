@@ -71,7 +71,10 @@ def test_the_students_panel_picks_a_teacher(app_db):
     assert first.index('>● lee (online)<') < first.index('>teach (1 new)<')
     panel = sam.get('/messages/panel').data.decode()  # all of them: everything read now
     assert '>● lee (online)<' in panel and '>teach<' in panel
-    assert 'All my teachers' in panel and 'name="to" value="all"' in panel
+    # writing: every teacher checked when looking at all of them
+    assert 'All my teachers' in panel and 'name="to_checked"' in panel
+    for name in ('teach', 'lee'):
+        assert 'name="to" value="{}" checked'.format(ids(name)) in panel
     for text in ('From teach', 'From lee', 'Sam to lee', 'Sam to all'):
         assert text in panel
     assert 'to lee only' in panel and 'to all teachers' in panel
@@ -79,7 +82,8 @@ def test_the_students_panel_picks_a_teacher(app_db):
     with_lee = sam.get('/messages/panel?student={}'.format(ids('lee'))).data.decode()
     assert 'From lee' in with_lee and 'Sam to lee' in with_lee and 'Sam to all' in with_lee
     assert 'From teach' not in with_lee
-    assert 'name="to" value="{}"'.format(ids('lee')) in with_lee and 'Only lee will see' in with_lee
+    assert 'name="to" value="{}" checked'.format(ids('lee')) in with_lee  # only lee checked
+    assert 'name="to" value="{}">'.format(ids('teach')) in with_lee and 'Only the teachers you check will see it' in with_lee
     with_teach = sam.get('/messages/panel?student={}'.format(ids('teach'))).data.decode()
     assert 'Sam to lee' not in with_teach and 'From teach' in with_teach
     # nonsense choices: the all-teachers view; and nobody but a teacher can be written to
@@ -111,3 +115,39 @@ def test_the_app_api_follows_the_same_rules(app_db):
     assert [m['body'] for m in lee_view] == ['Private to lee'] and teach_view == []
     r = c.post('/api/v2/my/messages', headers=token('sam'), json={'body': 'Hi', 'to': ids('kim')})
     assert r.status_code == 422
+
+
+def test_a_student_writes_to_several_teachers(app_db):
+    """Checked teachers only; all of them checked is the same as "all"; none checked is refused."""
+    app, db = app_db
+    from app.messages.models import Message
+    from app.user.models import User
+    second_teacher(db)
+    t3 = User(username='ray', is_admin=True)
+    t3.set_password('pw-for-tests')
+    db.session.add(t3)
+    db.session.commit()
+    teach, lee, ray, sam = login(app, 'teach'), login(app, 'lee'), login(app, 'ray'), login(app, 'sam')
+    r = sam.post('/messages/reply', data={'body': 'To two', 'to': [str(ids('teach')), str(ids('lee'))], 'to_checked': '1'},
+                 headers=FETCH)
+    assert r.get_json() == {'ok': True}
+    two = Message.query.filter_by(body='To two').one()
+    assert not two.to_all and sorted(t.username for t in two.recipients) == ['lee', 'teach']
+    assert 'To two' in teach.get('/messages/panel').data.decode() and 'To two' in lee.get('/messages/panel').data.decode()
+    assert 'To two' not in ray.get('/messages/panel').data.decode()
+    assert 'to you and lee only' in teach.get('/messages/panel').data.decode()
+    assert 'to lee, teach only' in sam.get('/messages/panel').data.decode() or 'to teach, lee only' in sam.get('/messages/panel').data.decode()
+    # every teacher checked: an ordinary message to all of them
+    sam.post('/messages/reply', data={'body': 'To all three', 'to': [str(ids(n)) for n in ('teach', 'lee', 'ray')],
+                                      'to_checked': '1'}, headers=FETCH)
+    assert Message.query.filter_by(body='To all three').one().to_all
+    # none checked: refused, nothing sent
+    r = sam.post('/messages/reply', data={'body': 'To nobody', 'to_checked': '1'}, headers=FETCH)
+    assert r.status_code == 400 and 'Check at least one teacher' in r.get_json()['error']
+    assert not Message.query.filter_by(body='To nobody').count()
+    # the app API takes a list too
+    from app.api.models import ApiToken
+    token = {'Authorization': 'Bearer ' + ApiToken.issue(User.query.filter_by(username='sam').one(), 't')[1]}
+    r = app.test_client().post('/api/v2/my/messages', headers=token, json={'body': 'API two', 'to': [ids('lee'), ids('ray')]})
+    assert r.status_code == 201
+    assert sorted(t.username for t in Message.query.filter_by(body='API two').one().recipients) == ['lee', 'ray']
