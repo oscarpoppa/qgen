@@ -422,9 +422,10 @@ class Numeric(QType):
         ordered = bool(options.get('ordered'))
         if uses_complex(options):
             return 1.0 if complex_match(stored, conc_ansr, precision, ordered) else 0.0
-        #math the student typed (2√3, π/2) is worked out first
+        #math the student typed (2√3, π/2) is worked out first; so is a saved answer like sqrt(3)
         worked = student_numbers(stored)
-        return 1.0 if numbers_match(worked if worked is not None else stored, conc_ansr, precision, ordered) else 0.0
+        return 1.0 if numbers_match(worked if worked is not None else stored, F.worked_answer(conc_ansr),
+                                    precision, ordered) else 0.0
 
     def show_submitted(self, stored, conc_opts):
         worked = student_numbers(stored)
@@ -439,6 +440,8 @@ class Numeric(QType):
     def show_correct(self, conc_ansr, conc_opts):
         """With an exact form, e.g. \\( 2\\sqrt{3} \\), shown alongside the number."""
         display = (conc_opts or {}).get('display')
+        if not (conc_opts or {}).get('complex'):
+            conc_ansr = F.worked_answer(conc_ansr)  # never "sqrt(3)": students see 1.7321
         return '{}  (≈ {})'.format(display, conc_ansr) if display else (conc_ansr or '')
 
 

@@ -523,12 +523,38 @@ def fill_answer(expr, env):
     """A numeric answer is a formula, a list of formulas like 'x, y' or
     '(x, y)', or text with placeholders."""
     if '[' in (expr or ''):
-        return fill(expr, env)
+        #sqrt([a]), pi * [r]^2: worked out as a formula, [a] meaning the value a
+        #(not filled in as text: "sqrt(3)" would be read as the number 3)
+        parts, wrapped = split_list(expr)
+        try:
+            text = ', '.join(format_num(evaluate(PLACEHOLDER_PATT.sub(r'(\1)', p), env)) for p in parts)
+        except Exception:
+            return fill(expr, env)  # not all math, e.g. "[a] mph"
+        return '({})'.format(text) if wrapped else text
     parts, wrapped = split_list(expr)
     if len(parts) == 1:
         return format_num(evaluate(expr, env))
     text = ', '.join(format_num(evaluate(p, env)) for p in parts)
     return '({})'.format(text) if wrapped else text
+
+
+def worked_answer(text):
+    """A saved Numeric answer as plain numbers: "sqrt(3), -sqrt(3)" -> "1.7321, -1.7321".
+    (Answers saved before formulas with [values] were worked out kept the formula.)
+    Anything that isn't all math comes back unchanged."""
+    if not text or not re.search(r'[A-Za-z√π^*+]|\d\s*[-/]', text):
+        return text
+    parts, wrapped = split_list(text)
+    try:
+        [float(p) for p in parts]
+        return text  # already plain numbers (e.g. 2.5e-05)
+    except ValueError:
+        pass
+    try:
+        nums = ', '.join(format_num(evaluate(p, {})) for p in parts)
+    except Exception:
+        return text
+    return '({})'.format(nums) if wrapped else nums
 
 
 # ---------------------------------------------------------------- checking

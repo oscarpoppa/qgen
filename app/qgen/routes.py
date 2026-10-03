@@ -561,7 +561,10 @@ def list_user(uid):
 def list_cquiz(cqid):
     cqlst = CQuiz.query.filter_by(id=cqid).first_or_404('No cquiz with id {}'.format(cqid))
     shown = lambda cp: get_qtype(cp.vproblem.qtype).show_submitted(cp.submitted, cp.conc_opts)
-    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, title='Assigned quiz {}'.format(cqid))
+    #a number answer as numbers (an old saved "sqrt(3)" shows as 1.7321), with its exact form
+    correct = lambda cp: get_qtype('numeric').show_correct(cp.conc_ansr, cp.conc_opts) \
+        if cp.vproblem.qtype == 'numeric' else cp.conc_ansr
+    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title='Assigned quiz {}'.format(cqid))
 
 #route to delete a specific concrete quiz from a user's record
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['POST'])

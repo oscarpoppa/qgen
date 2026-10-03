@@ -266,3 +266,31 @@ def test_the_answer_has_formula_buttons(app_db):
     assert 'data-formula="sqrt(@¶)"' in bar and 'data-formula="pi¶"' in bar and 'data-formula="pm"' in bar
     assert '\\sqrt' not in bar
     assert page.index('aria-label="Formula buttons"') < page.index('aria-label="Answer"')
+
+
+def test_formulas_with_bracketed_values_are_worked_out():
+    """sqrt([a]) means the square root of the value a: saved, graded and shown as numbers,
+    never as the text "sqrt(3)" (which grading read as the number 3)."""
+    env = {'a': 3, 'b': 4, 'r': 2, 'who': 'Maria'}
+    assert F.fill_answer('sqrt([a]), -sqrt([a])', env) == '1.7321, -1.7321'
+    assert F.fill_answer('pi * [r]^2', env) == '12.5664'
+    assert F.fill_answer('[a] + 1', env) == '4'
+    assert F.fill_answer('([a], [b])', env) == '(3, 4)'
+    assert F.fill_answer('[a] mph', env) == '3 mph' and F.fill_answer('[who]', env) == 'Maria'  # not math: as before
+    qt = get_qtype('numeric')
+    # answers already saved the old way are worked out when graded and shown
+    assert qt.grade('1.732, -1.732', 'sqrt(3), -sqrt(3)', {}, {}) == 1.0
+    assert qt.grade('3, 3', 'sqrt(3), -sqrt(3)', {}, {}) == 0.0
+    assert qt.grade('4', '3 + 1', {}, {}) == 1.0
+    assert qt.show_correct('sqrt(3), -sqrt(3)', {'display': r'\( \sqrt{3} \)'}) == r'\( \sqrt{3} \)  (≈ 1.7321, -1.7321)'
+    assert qt.show_correct('sqrt(3)', {}) == '1.7321'
+    for plain in ('1.7321, -1.7321', '-4', '2.5e-05', '1 1/2', 'Maria'):
+        assert F.worked_answer(plain) == plain
+
+
+def test_examples_and_details_show_numbers(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    A = [{'name': 'a', 'kind': 'whole', 'min': '2', 'max': '9'}]
+    page = teacher.post('/quiz/previewvprob', data=problem_form('numeric', 'Roots', r'\( x^2 = [a] \)', 'sqrt([a]), -sqrt([a])', A)).data.decode()
+    assert 'Correct answer' in page and 'sqrt' not in page.split('Three example versions')[1]
