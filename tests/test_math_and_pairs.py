@@ -246,3 +246,23 @@ def test_results_list_the_choices(app_db):
     assert 'is-picked' in page and '>your answer</span>' in page and '✓ correct' in page
     # keypads only for numbers, and not on results
     assert 'class="keypad"' not in page
+
+
+def test_formulas_know_pi():
+    assert abs(F.evaluate('pi * r^2', {'r': 2}) - 12.566370614359172) < 1e-12
+    assert F.evaluate('2 * π', {}) == F.evaluate('2 * pi', {})
+    assert F.names_in(F.parse_expr('pi * r^2')) == {'r'}  # pi isn't a value to define
+    assert F.evaluate('pi', {'pi': 3}) == 3  # a value of their own called pi wins
+    R = [{'name': 'r', 'kind': 'whole', 'min': '1', 'max': '9'}]
+    assert get_qtype('numeric').validate('Area of a circle with radius [r] feet?', 'pi * r^2', {'values': R}) == []
+    assert get_qtype('numeric').validate('Area of a circle with radius [r] feet?', 'pi * [r]^2', {'values': R}) == []
+
+
+def test_the_answer_has_formula_buttons(app_db):
+    """A Numeric answer has its own buttons, writing formulas (sqrt(), pi), not display math."""
+    app, db = app_db
+    page = login(app, 'teach').get('/quiz/makevprob').data.decode()
+    bar = page.split('aria-label="Formula buttons" data-target="answer"')[1].split('</div>')[0]
+    assert 'data-formula="sqrt(@¶)"' in bar and 'data-formula="pi¶"' in bar and 'data-formula="pm"' in bar
+    assert '\\sqrt' not in bar
+    assert page.index('aria-label="Formula buttons"') < page.index('aria-label="Answer"')

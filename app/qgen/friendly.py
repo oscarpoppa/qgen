@@ -59,6 +59,9 @@ FUNCS = {
     'conj': lambda z: z.conjugate(),
 }
 
+#names a formula may use without defining them (a value with the same name wins)
+CONSTANTS = {'pi': math.pi}
+
 #an env holding this key allows complex numbers, with i = sqrt(-1); only
 #problems with "Use complex numbers" ticked ever get it
 COMPLEX = '__complex__'
@@ -89,7 +92,7 @@ def normalize_expr(expr):
     """Accept the symbols people actually type: ^ for powers, x-like signs,
     and 2i for 2 times i."""
     expr = (expr.replace('^', '**').replace('×', '*').replace('÷', '/')
-                .replace('−', '-').replace('·', '*').replace('√', 'sqrt').strip())
+                .replace('−', '-').replace('·', '*').replace('√', 'sqrt').replace('π', 'pi').strip())
     #2i, (a+b)i, and "b i" (a name, a space, then i) all mean times i
     expr = re.sub(r'(\d|\))\s*i\b', r'\1*i', expr)
     return re.sub(r'\b([A-Za-z_]\w*)\s+i\b', r'\1*i', expr)
@@ -112,14 +115,14 @@ def parse_expr(expr):
                 and node.func.id in FUNCS and not node.keywords:
             continue
         raise FriendlyError('"{}" can only use numbers, value names, + - * / ^ and '
-                            'sqrt, abs, round, min, max (and re, im, conj for complex numbers).'.format(expr))
+                            'sqrt, abs, round, min, max, pi (and re, im, conj for complex numbers).'.format(expr))
     return tree
 
 
 def names_in(tree):
     """Value names used by a parsed formula (function names excluded)."""
     funcs = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call)}
-    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - funcs
+    return {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} - funcs - set(CONSTANTS)
 
 
 def _eval(node, env):
@@ -128,6 +131,8 @@ def _eval(node, env):
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Name):
+        if node.id not in env and node.id in CONSTANTS:
+            return CONSTANTS[node.id]
         return env[node.id]
     if isinstance(node, ast.UnaryOp):
         return _UNARY[type(node.op)](_eval(node.operand, env))
@@ -151,7 +156,7 @@ def evaluate(expr, env):
     from a pick-list work in placeholders.
     """
     tree = expr if isinstance(expr, ast.Expression) else parse_expr(expr)
-    if isinstance(tree.body, ast.Name):
+    if isinstance(tree.body, ast.Name) and tree.body.id in env:
         return env[tree.body.id]
     for name in names_in(tree):
         if isinstance(env[name], bool) or not isinstance(env[name], (int, float, complex)):

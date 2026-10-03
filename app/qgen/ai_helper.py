@@ -92,7 +92,7 @@ Any value may list other value names in different_from, e.g. b different from a.
 Fields that don't apply to the kind must be null (nonzero false, different_from []).
 
 # Placeholders and math
-In the question, answers, and choices, [name] is replaced by a value and [formula] by its result, e.g. [a + b]. Formulas may use + - * / ^ ( ) and sqrt, abs, round(x, 2), min, max. Brackets that don't contain a defined name are shown as typed.
+In the question, answers, and choices, [name] is replaced by a value and [formula] by its result, e.g. [a + b]. Formulas may use + - * / ^ ( ) and sqrt, abs, round(x, 2), min, max, pi. Brackets that don't contain a defined name are shown as typed.
 
 # Question types (qtype)
 - "numeric": answer is a formula such as "speed * hours" (no brackets), or formulas separated by commas like "x, y" (a pair) or "(x, y)" (a point) when there are several numbers.

@@ -194,10 +194,36 @@
     return { text: out, cursor: cursor === -1 ? out.length : cursor };
   }
 
+  //± : the selection and its negative, as two answers (bracketed when it's a sum)
+  function plusMinus(sel) {
+    sel = sel.trim();
+    if (!sel) return { text: ', -', cursor: 3 };
+    var simple = /^[\w.\[\]]+$/.test(sel) || /^\w+\((?:[^()]|\([^()]*\))*\)$/.test(sel);
+    var text = sel + ', -' + (simple ? sel : '(' + sel + ')');
+    return { text: text, cursor: text.length };
+  }
+
   form.addEventListener('mousedown', function (e) { if (e.target.closest('.math-btn')) e.preventDefault(); });
+  //formula buttons (a Numeric answer): plain formula text, no \( \)
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest('.formula-btn');
+    if (!b) return;
+    var box = mathTarget(b);
+    if (!box) return;
+    var start = box.selectionStart, end = box.selectionEnd;
+    if (typeof start !== 'number' || (document.activeElement !== box && lastBox !== box)) { start = end = box.value.length; }
+    var sel = box.value.slice(start, end);
+    var piece = b.dataset.formula === 'pm' ? plusMinus(sel) : expand(b.dataset.formula, sel);
+    box.value = box.value.slice(0, start) + piece.text + box.value.slice(end);
+    var pos = start + piece.cursor;
+    box.focus();
+    box.setSelectionRange(pos, pos);
+    lastBox = box;
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   form.addEventListener('click', function (e) {
     var b = e.target.closest('.math-btn');
-    if (!b) return;
+    if (!b || b.classList.contains('formula-btn')) return;
     var box = mathTarget(b);
     if (!box) return;
     var start = box.selectionStart, end = box.selectionEnd;

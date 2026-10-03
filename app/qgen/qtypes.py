@@ -382,7 +382,7 @@ class Numeric(QType):
     key = 'numeric'
     label = 'Numeric'
     answer_label = 'Answer (a formula)'
-    answer_help = 'Example: speed * hours. For a pair or list, separate with commas: x, y'
+    answer_help = 'Example: speed * hours. Use the buttons for roots, powers and π. For a pair or list, separate with commas: x, y'
 
     def validate_parts(self, answer, options, known):
         if not (answer or '').strip():

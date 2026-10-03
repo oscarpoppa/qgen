@@ -152,6 +152,7 @@
       {% for key, qt in qtypes.items() %}
         <div class="answer-help t-{{ key }}"><div class="label-line"><span class="label" style="margin:0">{{ qt.answer_label }}</span>{% if key in answer_tips %}{{ tip('the answer', answer_tips[key]|safe) }}{% endif %}</div>{% if qt.answer_help %}<div class="help muted small">{{ qt.answer_help }}</div>{% endif %}</div>
       {% endfor %}
+      <div class="t-numeric">{% include "_formula_toolbar.html" %}</div>
       <div class="field{% if form.answer.errors %} has-error{% endif %}">
         {{ form.answer(rows=3, **{'aria-label': 'Answer'}) }}
       </div>
