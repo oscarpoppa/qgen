@@ -789,7 +789,7 @@ def new_subject(kind):
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         return subject_list(kind)
-    flash('Made the folder "{}". Tick {} and choose "Add to folder" to put them in it.'.format(subject.title, kind), 'success')
+    flash('Made the folder "{}". Check {} and choose "Add to folder" to put them in it.'.format(subject.title, kind), 'success')
     current_app.logger.info('{} made {} folder ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
     return subject_list(kind, _anchor='subject-{}'.format(subject.id))
 
@@ -838,7 +838,7 @@ def file_subject(kind):
     if subject is None:
         flash('Choose a folder first.', 'error')
     elif not items:
-        flash('Tick at least one first.', 'error')
+        flash('Check at least one first.', 'error')
     else:
         count = S.file_items(kind, items, subject, add=add)
         what = kind if count != 1 else kind[:-1] if kind == 'problems' else 'quiz'
@@ -898,7 +898,7 @@ def new_archive_folder():
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         return redirect(url_for('qgen.archive'))
-    flash('Made the folder "{}". Tick archived attempts and choose "Move to folder" to put them in it.'.format(folder.name), 'success')
+    flash('Made the folder "{}". Check archived attempts and choose "Move to folder" to put them in it.'.format(folder.name), 'success')
     return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(folder.id)))
 
 #route to rename an Archive folder
@@ -944,7 +944,7 @@ def move_archived():
         return redirect(url_for('qgen.archive'))
     moved = S.move_archived(request.form.getlist('items'), folder)
     if not moved:
-        flash('Tick at least one first.', 'error')
+        flash('Check at least one first.', 'error')
     else:
         flash('Moved {} attempt{} to "{}".'.format(moved, '' if moved == 1 else 's', folder.name if folder else S.UNSORTED), 'success')
     return redirect(url_for('qgen.archive'))

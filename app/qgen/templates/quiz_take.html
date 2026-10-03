@@ -5,7 +5,8 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ cq.vquiz.title }}</h1>
-  <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_ok else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_ok else 'No calculator' }}</span>
+  <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_allowed else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span>
+  {% if cq.vquiz.calculator_allowed %}<div class="actions"><button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false"><span aria-hidden="true">🧮</span> Calculator</button></div>{% endif %}
 </div>
 
 {% if preview %}
@@ -36,7 +37,7 @@
       {% if it.qtype in ('choice_one', 'truefalse') %}
         {{ it.field(class='choice-list') }}
       {% elif it.qtype == 'choice_many' %}
-        <div class="small muted" style="margin-bottom:6px">Tick every correct answer.</div>
+        <div class="small muted" style="margin-bottom:6px">Check every correct answer.</div>
         {{ it.field(class='choice-list') }}
       {% elif it.qtype == 'essay' %}
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
@@ -64,9 +65,39 @@
     </div>
   {% endif %}
 </form>
+
+{% if cq.vquiz.calculator_allowed %}
+{# outside the quiz form: nothing typed here is saved or handed in (static/js/calculator.js) #}
+<section class="calc card" id="calc" role="dialog" aria-labelledby="calc-title" hidden>
+  <div class="calc-head" title="Drag to move">
+    <h2 id="calc-title"><span aria-hidden="true">🧮</span> Calculator</h2>
+    <button type="button" class="dock-close calc-close" aria-label="Close the calculator" title="Close">✕</button>
+  </div>
+  <input type="text" class="calc-input" aria-label="Calculation" autocomplete="off" spellcheck="false" placeholder="e.g. 45 × 2.5">
+  <div class="calc-result" aria-live="polite"></div>
+  <div class="calc-keys">
+    {% for key, label, title in [
+        ('sin(', 'sin', 'Sine (degrees)'), ('cos(', 'cos', 'Cosine (degrees)'), ('tan(', 'tan', 'Tangent (degrees)'), ('π', 'π', 'Pi'), ('clear', 'C', 'Clear'),
+        ('²', 'x²', 'Squared'), ('^', 'xʸ', 'To the power of'), ('√', '√', 'Square root'), ('(', '(', 'Open bracket'), (')', ')', 'Close bracket'),
+        ('7', '7', ''), ('8', '8', ''), ('9', '9', ''), ('÷', '÷', 'Divided by'), ('back', '⌫', 'Delete the last character'),
+        ('4', '4', ''), ('5', '5', ''), ('6', '6', ''), ('×', '×', 'Times'), ('Ans', 'Ans', 'The last answer'),
+        ('1', '1', ''), ('2', '2', ''), ('3', '3', ''), ('−', '−', 'Minus'), ('%', '%', 'Percent'),
+        ('0', '0', ''), ('.', '.', 'Decimal point'), ('=', '=', 'Equals'), ('+', '+', 'Plus')] %}
+      <button type="button" data-key="{{ key }}"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}
+              class="{{ 'calc-eq' if key == '=' else 'calc-num' if key in '0123456789.' else 'calc-fn' }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+  <div class="btn-row calc-actions">
+    <button type="button" class="btn btn-sm calc-use">Use in answer</button>
+    <button type="button" class="btn btn-secondary btn-sm calc-copy">Copy</button>
+  </div>
+  <div class="small muted calc-note" aria-live="polite"></div>
+</section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% if cq.vquiz.calculator_allowed %}<script src="{{ asset('js/calculator.js') }}" defer></script>{% endif %}
 <script>
 /* math keys under a number answer: put the symbol where the cursor is */
 (function () {

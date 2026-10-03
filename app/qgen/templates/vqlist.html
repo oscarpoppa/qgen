@@ -6,16 +6,16 @@
 {% macro quiz_table(items, ticks=true) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Select</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
         <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
-          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title }}”"></td>{% endif %}
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title }}”"></td>{% endif %}
           <td data-label="Quiz"><strong>{{ item.title }}</strong> {{ subject_labels(item.vqgroups) }}
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
-              · {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
+              · {% if item.calculator_allowed %}calculator OK{% else %}no calculator{% endif %}
               {% if item.shuffle_order %}· order shuffled{% endif %}
               {% set own = item.cquizzes|selectattr('retake_rule')|map(attribute='assignee')|unique|list|length %}
               · retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}

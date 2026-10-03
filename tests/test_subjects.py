@@ -55,7 +55,7 @@ def boxes_on(page):
     for m in re.finditer(r'<details class="card subject-box[^"]*" id="subject-[^"]+"[^>]*>(.*?)</details>\s*(?=<details class="card subject-box|</div>)', page, re.S):
         body = m.group(1)
         name = re.search(r'<span class="box-name">(?:📁 |📥 )([^<]+)</span>', body).group(1)
-        out[name] = re.findall(r'aria-label="Tick “([^”]+)”"', body)
+        out[name] = re.findall(r'aria-label="Check “([^”]+)”"', body)
     return out
 
 
@@ -86,7 +86,7 @@ def test_problems_page_shows_subject_containers(app_db):
     # an empty subject still has its container
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Calculus'})
     page = teacher.get('/quiz/listvp').data.decode()
-    assert boxes_on(page)['Calculus'] == [] and 'Empty. Tick problems' in page
+    assert boxes_on(page)['Calculus'] == [] and 'Empty. Check problems' in page
     # nothing ticked, or no subject chosen: nothing happens
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id})
     teacher.post('/quiz/subjects/problems/file', data={'items': [probs['Angles'].id]})

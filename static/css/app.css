@@ -709,6 +709,29 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .keypad .key:hover { background: var(--accent-soft); filter: none; }
 .keypad .muted { margin-left: 6px; }
 
+/* the on-screen calculator (quizzes marked "Calculator allowed"; static/js/calculator.js) */
+.calc { position: fixed; left: 16px; bottom: 16px; z-index: 35; width: 300px; margin: 0; padding: 10px 12px 12px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, .3); }
+.calc[hidden] { display: none; }
+.calc-head { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; cursor: move; touch-action: none; user-select: none; }
+.calc-head h2 { font-size: 1rem; margin: 0; flex: 1; }
+.calc-input { width: 100%; font: 500 1.15rem/1.3 inherit; text-align: right; padding: 8px 10px; }
+.calc-result { min-height: 1.6em; margin: 4px 2px 8px; text-align: right; font-weight: 700; font-size: 1.2rem; overflow-wrap: anywhere; }
+.calc-result.calc-error { color: var(--bad); font-weight: 500; font-size: .9rem; }
+.calc-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.calc-keys button { min-height: 38px; padding: 0; font: 600 .98rem/1 inherit; border-radius: 7px;
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.calc-keys .calc-num { background: var(--surface); }
+.calc-keys button:hover { background: var(--accent-soft); filter: none; }
+.calc-keys .calc-eq { grid-column: span 2; background: var(--accent); border-color: var(--accent); color: #fff; }
+.calc-keys .calc-eq:hover { background: var(--accent); filter: brightness(1.08); }
+.calc-actions { margin-top: 10px; }
+.calc-note { margin-top: 6px; min-height: 1.2em; }
+@media (max-width: 640px) {
+  .calc { left: 8px; right: 8px; bottom: 8px; width: auto; }
+  .calc-keys button { min-height: 42px; }
+}
+
 /* results: the choices a student saw, their pick and the right ones */
 .review-choices li { gap: 8px; }
 .review-choices .choice-text { flex: 1; }

@@ -98,7 +98,7 @@ In the question, answers, and choices, [name] is replaced by a value and [formul
 - "numeric": answer is a formula such as "speed * hours" (no brackets), or formulas separated by commas like "x, y" (a pair) or "(x, y)" (a point) when there are several numbers.
 - "text": answer lists accepted answers, one per line. case_sensitive is usually false.
 - "choice_one": choices, one per line, correct one starts with *. Example: "*[a + b]\\n[a + b + 1]\\n[a * b]". Optionally show_n to show only that many (needs enough wrong choices).
-- "choice_many": like choice_one but several choices start with *. If different sets of ticks can each be right (e.g. "tick two numbers that add to 10"), leave the * off and list each acceptable set in combos, one per line, choices separated by commas and written exactly as in choices, e.g. "[a], [10 - a]\n[b], [10 - b]". combos is null otherwise.
+- "choice_many": like choice_one but several choices start with *. If different sets of checked choices can each be right (e.g. "check two numbers that add to 10"), leave the * off and list each acceptable set in combos, one per line, choices separated by commas and written exactly as in choices, e.g. "[a], [10 - a]\n[b], [10 - b]". combos is null otherwise.
 - "truefalse": answer is True, False, or a comparison that decides it, like "a > b" or "a = b and b < 10".
 - "essay": students write freely and a teacher grades it. answer may be a short model answer; grading_notes may hold marking guidance.
 Unused fields are null (choices null unless a choice type; show_n null unless asked).

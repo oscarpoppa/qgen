@@ -136,7 +136,7 @@ class QuizForm(FlaskForm):
 #form for assigning a quiz to one or more students
 class AssignForm(FlaskForm):
     vquiz = SelectField('Quiz', coerce=int)
-    users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Tick at least one student.')])
+    users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Check at least one student.')])
     opens_at = DateTimeLocalField('Opens', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     closes_at = DateTimeLocalField('Closes', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     time_limit = IntegerField('Time limit (minutes)', validators=[Optional(), NumberRange(min=1, max=600, message='Between 1 and 600 minutes.')])

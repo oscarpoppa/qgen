@@ -39,7 +39,7 @@ def token_json(row, current=False):
 def attempt_summary(cq):
     return {'id': cq.id, 'quiz': {'id': cq.vquiz.id, 'title': cq.vquiz.title},
             'status': S.attempt_state(cq), 'score': cq.score if cq.completed else None,
-            'questions': len(cq.cproblems), 'calculator_ok': bool(cq.vquiz.calculator_ok),
+            'questions': len(cq.cproblems), 'calculator_ok': cq.vquiz.calculator_allowed,
             'assigned': iso(cq.create_date), 'started': iso(cq.startdate), 'submitted': iso(cq.compdate),
             'opens_at': iso(cq.opens_at), 'closes_at': iso(cq.closes_at), 'time_limit_minutes': cq.time_limit,
             'deadline': iso(cq.deadline())}
@@ -132,7 +132,7 @@ def problem_json(vp, full=False):
 def vquiz_json(vq, full=False):
     lay = layout.parse(vq.vpid_lst)
     out = {'id': vq.id, 'title': vq.title, 'questions_per_student': layout.question_count(lay),
-           'calculator_ok': bool(vq.calculator_ok), 'shuffle_order': bool(vq.shuffle_order),
+           'calculator_ok': bool(vq.calculator_ok), 'calculator_allowed': vq.calculator_allowed, 'shuffle_order': bool(vq.shuffle_order),
            'retake_rule': vq.retake_rule, 'hide_answers': bool(vq.hide_answers),
            'answers_released': bool(vq.answers_released), 'image_url': static_url(vq.image),
            'times_assigned': len(vq.cquizzes), 'labels': labels_json(vq.vqgroups)}

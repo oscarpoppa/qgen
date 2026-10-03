@@ -119,6 +119,16 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     def answers_visible(self):
         return not self.hide_answers or self.answers_released
 
+    @property
+    def calculator_problems(self):
+        """The problems in it (any group's too) that allow a calculator."""
+        return [p for p in self.vproblems if p.calculator_ok]
+
+    @property
+    def calculator_allowed(self):
+        """What students get: allowed if the quiz's box is checked or any problem it can give allows one."""
+        return bool(self.calculator_ok or self.calculator_problems)
+
     vqgroups = db.relationship('VQGroup', back_populates='vquizzes', secondary=vquiz_vqgroup, lazy=True)
     vproblems = db.relationship('VProblem', back_populates='vquizzes', secondary=vproblem_vquiz, lazy=True)
     cquizzes = db.relationship('CQuiz', backref='vquiz', lazy=True)

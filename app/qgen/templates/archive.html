@@ -26,8 +26,8 @@
 {% if total %}
 <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <span class="muted small file-count" aria-live="polite">0 ticked</span>
-  <label class="sr-only" for="move-folder">Folder to move the ticked attempts to</label>
+  <span class="muted small file-count" aria-live="polite">0 checked</span>
+  <label class="sr-only" for="move-folder">Folder to move the checked attempts to</label>
   <select id="move-folder" name="folder">
     {% for f in move_to|sort(attribute='name') %}<option value="{{ f.id }}">📁 {{ f.name }}</option>{% endfor %}
     <option value="unsorted">📥 Unsorted</option>
@@ -55,12 +55,12 @@
         {% if f['items'] %}
         <div class="table-wrap stack">
           <table>
-            <thead><tr><th class="tick-col"><span class="sr-only">Tick</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>Taken</th><th>Archived</th><th></th></tr></thead>
+            <thead><tr><th class="tick-col"><span class="sr-only">Select</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>Taken</th><th>Archived</th><th></th></tr></thead>
             <tbody>
             {% for a in f['items'] %}
               {% set blocker = blockers[a.id] %}
               <tr>
-                <td class="tick-col"><input type="checkbox" name="items" value="{{ a.id }}" form="file-form" aria-label="Tick {{ a.student_name }}’s “{{ a.quiz_title }}”"></td>
+                <td class="tick-col"><input type="checkbox" name="items" value="{{ a.id }}" form="file-form" aria-label="Check {{ a.student_name }}’s “{{ a.quiz_title }}”"></td>
                 <td data-label="Student">{{ a.student_name }}{% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
                 <td data-label="Quiz"><strong>{{ a.quiz_title }}</strong>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
                 <td data-label="Result">
@@ -89,7 +89,7 @@
           </table>
         </div>
         {% else %}
-          <p class="muted small box-empty">{{ 'Nothing archived for ' ~ f.name ~ ' yet.' if f.student else 'Empty. Tick archived attempts and choose “Move to folder”.' }}</p>
+          <p class="muted small box-empty">{{ 'Nothing archived for ' ~ f.name ~ ' yet.' if f.student else 'Empty. Check archived attempts and choose “Move to folder”.' }}</p>
         {% endif %}
       </div>
     </details>

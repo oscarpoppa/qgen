@@ -28,7 +28,7 @@
 {% macro file_bar(kind, all_subjects) %}
 <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <span class="muted small file-count" aria-live="polite">0 ticked</span>
+  <span class="muted small file-count" aria-live="polite">0 checked</span>
   {% if all_subjects %}
     <label class="sr-only" for="file-subject">Folder</label>
     <select id="file-subject" name="subject">
@@ -37,7 +37,7 @@
     <button class="btn btn-sm" name="action" value="add">Add to folder</button>
     <button class="btn btn-secondary btn-sm" name="action" value="remove">Remove from folder</button>
   {% else %}
-    <span class="muted small">Make a folder first (+ New folder), then tick {{ 'problems' if kind == 'problems' else 'quizzes' }} to put in it.</span>
+    <span class="muted small">Make a folder first (+ New folder), then check {{ 'problems' if kind == 'problems' else 'quizzes' }} to put in it.</span>
   {% endif %}
 </form>
 {% endmacro %}
@@ -87,7 +87,7 @@
     {% if items %}
       {{ caller() }}
     {% else %}
-      <p class="muted small box-empty">{{ ('Empty. Tick ' ~ noun ~ ' in other containers and choose “Add to folder”.' if tools else 'No ' ~ noun ~ ' in this folder yet.') if subject else 'Nothing unsorted: every one is in a folder.' }}</p>
+      <p class="muted small box-empty">{{ ('Empty. Check ' ~ noun ~ ' in other containers and choose “Add to folder”.' if tools else 'No ' ~ noun ~ ' in this folder yet.') if subject else 'Nothing unsorted: every one is in a folder.' }}</p>
     {% endif %}
   </div>
 </details>
@@ -116,7 +116,7 @@
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
-  <div class="help">You can tick more than one.{% if not new_item %} With none ticked, it goes to Unsorted.{% endif %}</div>
+  <div class="help">You can check more than one.{% if not new_item %} With none checked, it goes to Unsorted.{% endif %}</div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

@@ -151,7 +151,7 @@ def problem_hints(qtype_key, question, answer, options):
         hints.append(hint('tip', 'Questions that ask students to explain usually work best as a written answer that you grade.',
                           _switch('essay', 'Switch to Long text')))
     elif re.search(r'\b(select|choose|tick|check) all\b|\ball that apply\b', low) and qt.key != 'choice_many':
-        hints.append(hint('tip', '"Select all" questions need Pick several, so students can tick more than one.',
+        hints.append(hint('tip', '"Select all" questions need Pick several, so students can check more than one.',
                           _switch('choice_many', 'Switch to Pick several')))
     if qt.key == 'choice_one' and len([c for c in parse_choices(options.get('choices')) if c[1]]) > 1 and not options.get('show_n'):
         hints.append(hint('tip', 'You marked more than one correct choice.', _switch('choice_many', 'Switch to Pick several')))
@@ -201,15 +201,15 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     elif title.strip().lower() in existing_titles:
         hints.append(hint('warn', 'Another quiz is already called "{}". A different title avoids mix-ups.'.format(title.strip())))
     if not vpids:
-        return hints + [hint('tip', 'Tick the problems to include. They\'ll appear under “Questions in this quiz”.')]
+        return hints + [hint('tip', 'Check the problems to include. They\'ll appear under “Questions in this quiz”.')]
     for pid in sorted({p for p in vpids if vpids.count(p) > 1}):
         p = problems.get(pid)
         hints.append(hint('tip', '"{}" is included {} times. Each copy gets different random values — fine if that\'s what you want.'
                           .format(p.title if p else pid, vpids.count(pid))))
     calc = [p for p in problems.values() if p.calculator_ok]
     if calc and not calculator_ok:
-        hints.append(hint('warn', 'This quiz says “no calculator”, but {} {} marked as needing one: {}.'.format(
-            len(calc), 'problem is' if len(calc) == 1 else 'problems are', ', '.join('"{}"'.format(p.title) for p in calc))))
+        hints.append(hint('tip', 'Students will have a calculator: {} {}.'.format(
+            ', '.join('"{}"'.format(p.title) for p in calc), 'allows one' if len(calc) == 1 else 'allow one')))
     for p in problems.values():
         errors = get_qtype(p.qtype).validate(p.raw_prob, p.raw_ansr, p.options)
         if errors:

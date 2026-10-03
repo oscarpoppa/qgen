@@ -5,11 +5,11 @@
 {% macro problem_table(items, ticks=true) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Tick</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Select</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
-          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Tick “{{ item.title or 'Untitled' }}”"></td>{% endif %}
+          {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title or 'Untitled' }}”"></td>{% endif %}
           <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong> {{ subject_labels(item.vpgroups) }}
             <div class="small muted">
               {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}

@@ -76,12 +76,12 @@
     boxes.forEach(function (b) {
       var n = b.querySelectorAll('input[name="items"]:checked, input.pick:checked').length;
       var badge = b.querySelector('.box-ticked');
-      if (badge) { badge.hidden = !n; badge.textContent = n + ' ticked'; }
+      if (badge) { badge.hidden = !n; badge.textContent = n + ' checked'; }
     });
     if (count) {
       var ids = {};
       ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
-      count.textContent = Object.keys(ids).length + ' ticked';
+      count.textContent = Object.keys(ids).length + ' checked';
       count.classList.remove('error');
     }
   }
@@ -102,7 +102,7 @@
   if (form) form.addEventListener('submit', function (e) {
     if (!ticks.some(function (t) { return t.checked; })) {
       e.preventDefault();
-      if (count) { count.textContent = 'Tick at least one first'; count.classList.add('error'); }
+      if (count) { count.textContent = 'Check at least one first'; count.classList.add('error'); }
     }
   });
 

@@ -170,7 +170,7 @@ def evaluate(expr, env):
         elif not env.get(COMPLEX):
             #never let an imaginary number into an ordinary problem
             raise FriendlyError('"{}" gives an imaginary number for some values. If that\'s intended, '
-                                'tick "Use complex numbers"; otherwise change the formula or ranges.'.format(_show(expr)))
+                                'check "Use complex numbers"; otherwise change the formula or ranges.'.format(_show(expr)))
         elif not (math.isfinite(result.real) and math.isfinite(result.imag)):
             raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
     if isinstance(result, float) and not math.isfinite(result):

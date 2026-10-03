@@ -24,7 +24,7 @@ def parse(text):
         try:
             data = json.loads(text)
         except ValueError:
-            raise LayoutError('The list of problems couldn\'t be read. Please tick them again.')
+            raise LayoutError('The list of problems couldn\'t be read. Please check them again.')
     else:
         data = [int(n) for n in re.findall(r'\d+', text)]
     out = []

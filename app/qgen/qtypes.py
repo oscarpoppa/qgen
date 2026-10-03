@@ -446,7 +446,7 @@ class Text(QType):
     key = 'text'
     label = 'Short text'
     answer_label = 'Accepted answers (one per line)'
-    answer_help = 'Any of these counts as correct. Capitals and extra spaces are ignored unless you tick "Case sensitive".'
+    answer_help = 'Any of these counts as correct. Capitals and extra spaces are ignored unless you check "Case sensitive".'
 
     def validate_parts(self, answer, options, known):
         if not [a for a in (answer or '').splitlines() if a.strip()]:

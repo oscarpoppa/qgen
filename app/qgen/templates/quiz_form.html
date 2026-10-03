@@ -13,7 +13,7 @@
   {{ form.hidden_tag() }}
   <div class="card">
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
-    {{ check(form.calculator_ok) }}
+    {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
     {{ check(form.hide_answers, 'Students always see their score. With this on, they see which questions were right or wrong, but not the correct answers, until you press “Release answers” on the quiz list (e.g. once everyone has finished).') }}
     {{ field(form.retake_rule, 'Every attempt stays visible, and the one whose score counts is marked ★ (none is marked for an average). You can change this for one student on “Results by student”; changing it here later applies to every student again.') }}
@@ -35,14 +35,14 @@
 
   <div class="split">
     <div class="card">
-      <div class="card-head"><h2>Problems</h2><span class="muted small">tick the ones to include</span></div>
+      <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span></div>
       {% if has_problems %}
         <div class="builder-filters">
           <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
           <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
           <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
         </div>
-        <p class="muted small">Open any folders and tick problems from as many of them as you like; they all go in this quiz.</p>
+        <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
         <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
           {% for subject, items in problem_boxes %}
             {% if subject or items %}
@@ -79,7 +79,7 @@
         So the order of this list doesn't matter.</p>
       <p class="muted small" id="order-fixed" hidden>Every student gets them in this order. Use ↑ and ↓ to change it.</p>
       <ol id="order" class="order-list"></ol>
-      <p id="order-empty" class="muted small">Nothing yet. Tick problems on the left and they appear here.</p>
+      <p id="order-empty" class="muted small">Nothing yet. Check problems on the left and they appear here.</p>
       <div id="groups" class="order-groups"></div>
       <details class="order-help">
         <summary>Want each student to get only some of these?</summary>

@@ -53,7 +53,7 @@ def send():
     if to == 'chosen':
         to = request.form.getlist('students')
         if not to:
-            flash('Tick at least one student.', 'error')
+            flash('Check at least one student.', 'error')
             return redirect(back)
     try:
         students = M.send(current_user, to, request.form.get('body'), pinned=bool(request.form.get('pin')))

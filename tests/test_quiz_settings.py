@@ -798,3 +798,61 @@ def test_the_browser_tab_icon(app_db):
         Setting.put('favicon', bad)
         assert 'rel="icon"' not in anon.get('/login').data.decode()
         assert anon.get('/favicon.ico').status_code == 404
+
+
+def test_the_calculator_comes_up_only_where_its_allowed(app_db):
+    """A "Calculator allowed" quiz has the on-screen calculator, outside the quiz form so
+    nothing typed in it is saved or handed in; a "No calculator" quiz has none."""
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher, calculator_ok='y')
+    sam_u = student(db, 'sam')
+    assign(teacher, vq, [sam_u])
+    cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
+    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'id="calc-open"' in page and 'id="calc"' in page and 'js/calculator.js' in page
+    assert page.index('</form>') < page.index('id="calc"')  # not part of the answers
+    vq.calculator_ok = False
+    db.session.commit()
+    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'No calculator' in page and 'calc-open' not in page and 'calculator.js' not in page
+
+    # one problem that allows a calculator is enough, even with the quiz's own box unchecked
+    add = next(p for p in vq.vproblems if p.title == 'Add')
+    add.calculator_ok = True
+    db.session.commit()
+    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'Calculator allowed' in page and 'id="calc-open"' in page
+    view = teacher.get('/quiz/viewvquiz/{}'.format(vq.id)).data.decode()
+    assert 'Calculator allowed' in view and 'Because of: Add' in view
+    from app.qgen.coach import quiz_hints
+    hints = [h['text'] for h in quiz_hints('Q', [add.id], False, set(), {add.id: add})]
+    assert 'Students will have a calculator: "Add" allows one.' in hints
+
+
+def test_the_calculators_math():
+    """static/js/calculator.js works things out itself (no eval); checked with node when it's installed."""
+    import os
+    import shutil
+    import subprocess
+    node = shutil.which('node')
+    if not node:
+        pytest.skip('node is not installed')
+    js = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'calculator.js')
+    script = """
+global.window = {}; require(%s); const c = window.qgenCalc;
+const out = {};
+for (const e of %s) { try { out[e] = c.format(c.evaluate(e, 42)); } catch (x) { out[e] = 'error: ' + x.msg; } }
+console.log(JSON.stringify(out));
+""" % (json.dumps(js), json.dumps(['2+3*4', '-2^2', '2^-1', '√9+1', '2π', '3(4+1)', 'sin 30', 'cos(90)', 'tan(45)',
+                                    '0.1+0.2', '200*10%', '5²', '10÷4', '7−10', 'Ans/2', '1/3', '(3+4',
+                                    '1/0', '√-4', 'tan(90)', '2 3', '3+', 'alert(1)']))
+    got = json.loads(subprocess.run([node, '-e', script], capture_output=True, text=True, check=True).stdout)
+    assert got == {'2+3*4': '14', '-2^2': '-4', '2^-1': '0.5', '√9+1': '4', '2π': '6.283185307', '3(4+1)': '15',
+                   'sin 30': '0.5', 'cos(90)': '0', 'tan(45)': '1', '0.1+0.2': '0.3', '200*10%': '20', '5²': '25',
+                   '10÷4': '2.5', '7−10': '-3', 'Ans/2': '21', '1/3': '0.3333333333', '(3+4': '7',
+                   '1/0': "error: Can't divide by zero", '√-4': "error: Can't take the square root of a negative number",
+                   'tan(90)': 'error: tan of 90° has no value', '2 3': "error: Something doesn't fit near the end",
+                   '3+': 'error: Something is missing at the end',
+                   'alert(1)': "error: “alert” isn't something the calculator knows"}
