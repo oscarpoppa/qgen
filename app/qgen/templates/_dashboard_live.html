@@ -44,7 +44,7 @@
     <summary class="dash-head"><h2>Assigned, not handed in yet</h2><span class="badge">{{ out_total }}</span></summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
-      <a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></p>
+      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></span></p>
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
@@ -83,7 +83,7 @@
   <details class="card dash-card" data-box="handins" open>
     <summary class="dash-head"><h2>Recent hand-ins</h2><span class="badge">{{ handins|length }}</span></summary>
     <div class="dash-body">
-    <p class="dash-links small"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></p>
+    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></span></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}

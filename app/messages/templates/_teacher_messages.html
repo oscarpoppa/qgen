@@ -1,14 +1,46 @@
 {# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
-<section id="messages" data-panel-url="{{ url_for('messages.panel', student=student.id if student else 'all') }}" aria-labelledby="messages-title">
+{# what's shown: 'all' (every student), a student's id, 'teachers' (every teacher) or 't<id>' (one teacher) #}
+{% set current = ('t' ~ other.id if other else 'teachers') if teachers_view else (student.id if student else 'all') %}
+<section id="messages" data-panel-url="{{ url_for('messages.panel', student=current) }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
-  {% if rows %}
+  {% if rows or staff.teachers %}
     <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-pick">
       <label for="msg-student" class="small muted">Showing</label>
-      <select id="msg-student" name="student" data-current="{{ student.id if student else 'all' }}">
+      <select id="msg-student" name="student" data-current="{{ current }}">
+        <optgroup label="Students">
         <option value="all"{{ ' selected' if everyone }}>All messages (every student)</option>
         {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+        </optgroup>
+        {% if staff.teachers %}
+        <optgroup label="Teachers">
+        <option value="teachers"{{ ' selected' if teachers_view and not other }}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</option>
+        {% for t in staff.teachers %}<option value="t{{ t.teacher.id }}"{{ ' selected' if other and other.id == t.teacher.id }}>{{ '● ' if t.online }}{{ t.teacher.username }}{{ ' (online)' if t.online }}{% if t.unread %} ({{ t.unread }} new){% endif %}</option>{% endfor %}
+        </optgroup>
+        {% endif %}
       </select>
     </form>
+  {% endif %}
+  {% if teachers_view %}
+    {# between teachers: students never see any of this #}
+    <div class="thread-scroll">{% set show_with = not other %}{% include "_staff_thread.html" %}</div>
+    <form method="post" action="{{ url_for('messages.send_staff') }}" class="reply-box" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% set to_whom = other.username if other else 'all the teachers' %}
+      <label for="reply" class="sr-only">Message to {{ to_whom }}</label>
+      <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ to_whom }}…"></textarea>
+      {% if staff.teachers|length > 1 %}
+        <fieldset class="send-to">
+          <legend class="small muted">Send to</legend>
+          <input type="hidden" name="to_checked" value="1">
+          {% for t in staff.teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not other or other.id == t.teacher.id }}>
+            {{ '● ' if t.online }}{{ t.teacher.username }}</label>{% endfor %}
+        </fieldset>
+      {% else %}<input type="hidden" name="to" value="all">{% endif %}
+      <button class="btn">Send</button>
+      <p class="muted small" style="margin:4px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>
+    </form>
+    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}">Messages between teachers, as a page</a></p>
+  {% elif rows %}
     {% if everyone %}
       <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
       {# an announcement to every student, straight from the panel (asked first) #}
@@ -47,6 +79,6 @@
     {% endif %}
     <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}">Messages page: write to chosen students, see pinned messages</a></p>
   {% else %}
-    <p class="muted small">No students yet. Once students sign up, you can talk with them here.</p>
+    <p class="muted small">No students yet. Once students sign up, you can talk with them here.{% if staff.teachers %} To write to another teacher, pick them above.{% endif %}</p>
   {% endif %}
 </section>

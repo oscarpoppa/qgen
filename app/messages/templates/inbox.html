@@ -3,7 +3,8 @@
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1>Messages</h1></div>
+<div class="page-head"><h1>Messages</h1>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}">Messages between teachers{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
 
 <form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate data-students="{{ rows|length }}"
       data-confirm="Are you sure you want to send this to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}?" data-confirm-ok="Send to everyone">

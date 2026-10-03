@@ -9,7 +9,8 @@ from app.home import home_url
 from . import messages_bp
 from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_student, unread_for_teachers,
-                     unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by)
+                     unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by,
+                     unread_messages_for_teacher)
 
 
 # ---------------------------------------------------------------- teachers
@@ -20,7 +21,9 @@ from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_stu
 @pw_check
 @admin_only
 def inbox():
-    return render_template('inbox.html', rows=M.inbox(current_user), pinned=M.pinned_announcements(), title='Messages')
+    from .models import unread_staff
+    return render_template('inbox.html', rows=M.inbox(current_user), pinned=M.pinned_announcements(),
+                           staff_unread=unread_staff(current_user.id), title='Messages')
 
 #route to one student's conversation, as a teacher
 @messages_bp.route('/messages/<int:student_id>', methods=['GET'])
@@ -72,6 +75,52 @@ def send():
     flash('Announcement sent to {} student{}{}.'.format(len(students), '' if len(students) == 1 else 's', pinned), 'success')
     current_app.logger.info('{} sent an announcement to {} students'.format(current_user.username, len(students)))
     return redirect(back)
+
+#route for a teacher to write to other teachers (the checked ones, or all of them)
+@messages_bp.route('/messages/teachers/send', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def send_staff():
+    #a form with the checkboxes says so (to_checked): none checked isn't taken as "all"
+    to = request.form.getlist('to') or ([] if request.form.get('to_checked') else 'all')
+    try:
+        msg = M.send_to_teachers(current_user, request.form.get('body'), to)
+    except M.MessageError as exc:
+        if wants_json():
+            return jsonify(ok=False, error=str(exc)), 400
+        flash(str(exc), 'error')
+        return redirect(request.referrer or url_for('messages.teachers_page'))
+    if wants_json():
+        return jsonify(ok=True)
+    flash('Message sent to {}.'.format(', '.join(t.username for t in msg.recipients) if msg.recipients
+                                       else 'all the teachers'), 'success')
+    return redirect(request.referrer or url_for('messages.teachers_page'))
+
+#route for a teacher to delete a message they wrote to teachers
+@messages_bp.route('/messages/teachers/delete/<int:message_id>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_staff(message_id):
+    done = M.delete_staff_message(current_user, message_id)
+    if wants_json():
+        return (jsonify(ok=True), 200) if done else (jsonify(ok=False, error='You can only delete your own messages.'), 404)
+    flash('Message deleted.' if done else 'You can only delete your own messages.', 'success' if done else 'error')
+    return redirect(request.referrer or url_for('messages.teachers_page'))
+
+#route to the messages between teachers as a page (all of them, or with one teacher)
+@messages_bp.route('/messages/teachers', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def teachers_page():
+    choice = request.args.get('with') or 'teachers'
+    view = teachers_view(M.inbox(current_user), staff_picker(current_user),
+                         choice if choice == 'teachers' else 't' + choice.lstrip('t'))
+    return render_template('teachers_messages.html', title='Messages: teachers', **view)
 
 #route to pin or unpin a message (and every copy sent with it)
 @messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])
@@ -234,6 +283,9 @@ def teacher_panel(choice='all', mark_seen=True):
     a student's id shows just that conversation, with a reply box. What is shown
     is marked seen. The menu lists every student, unread first."""
     rows = M.inbox(current_user)
+    staff = staff_picker(current_user)
+    if choice == 'teachers' or (isinstance(choice, str) and choice[:1] == 't' and choice[1:].isdigit()):
+        return teachers_view(rows, staff, choice, mark_seen)
     try:
         student_id = int(choice)
     except (TypeError, ValueError):
@@ -246,7 +298,7 @@ def teacher_panel(choice='all', mark_seen=True):
             M.mark_messages_seen_by_teachers(current_user, items)
             for r in rows:
                 r['unread'] = M.unread_from(current_user, r['student'].id)
-        return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids,
+        return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
                 'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True}
     student = chosen['student']
     items = M.conversation(student.id, limit=30, unread=M.unread_by_teacher(current_user), teacher=current_user)
@@ -256,9 +308,34 @@ def teacher_panel(choice='all', mark_seen=True):
         chosen['unread'] = 0
     #other students waiting for an answer, most recent first: the "new from ..." button
     waiting = sorted((r for r in rows if r['unread']), key=lambda r: r['last'].created, reverse=True)
-    return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids,
+    return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
             'others_unread': sum(r['unread'] for r in rows), 'waiting': waiting,
             'max_len': M.max_len(), 'everyone': False}
+
+
+def staff_picker(me):
+    """The Teachers part of a teacher's picker: every other teacher (online first) with how
+    many of their messages are still unread, and the unread total."""
+    from .models import unread_staff
+    waiting = M.staff_unread_by_sender(me)
+    teachers = [{'teacher': t, 'online': t.online, 'unread': waiting.get(t.id, 0)} for t in M.other_teachers(me)]
+    return {'teachers': teachers, 'unread': unread_staff(me.id)}
+
+
+def teachers_view(rows, staff, choice, mark_seen=True):
+    """Messages between teachers in the side panel: all of them ('teachers'), or with one
+    other teacher ('t<id>'), and a box to write to the teachers checked under it."""
+    try:
+        other = M.staff_choice(current_user, choice)
+    except M.MessageError:
+        other = None  # e.g. a teacher since deleted, remembered in this browser
+    items = M.teachers_thread(current_user, other)
+    unread_ids = M.staff_unseen_ids(current_user, items)
+    if mark_seen and unread_ids:
+        M.mark_staff_seen(current_user, items)
+        staff = staff_picker(current_user)
+    return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
+            'teachers_view': True, 'other': other, 'max_len': M.max_len(), 'everyone': False}
 
 
 # ---------------------------------------------------------------- both
@@ -280,7 +357,7 @@ def poll():
     if current_user.is_admin:
         mine = Message.query.filter(Message.from_teacher.is_(False), for_teacher(current_user.id))
         unseen = ~seen_by(current_user.id)
-        unread, notices = unread_for_teachers(current_user.id), unread_notices_for_teachers(current_user.id)
+        unread, notices = unread_messages_for_teacher(current_user.id), unread_notices_for_teachers(current_user.id)
     else:
         mine = Message.query.filter(Message.student_id == current_user.id, Message.from_teacher.is_(True),
                                     Message.hidden_for_student.is_(False))
@@ -289,9 +366,20 @@ def poll():
     newest = lambda q: q.order_by(Message.id.desc()).first()
     latest, latest_notice = newest(mine.filter(NOT_NOTICE)), newest(mine.filter(IS_NOTICE))
     new_msg, new_notice = newest(mine.filter(NOT_NOTICE, unseen)), newest(mine.filter(IS_NOTICE, unseen))
+    latest_id, msg_preview = latest.id if latest else 0, preview(new_msg)
+    if current_user.is_admin:
+        #messages from other teachers count as messages too: the newest of either kind pops up
+        from .models import StaffMessage, staff_for, staff_seen_by
+        staff = StaffMessage.query.filter(staff_for(current_user.id))
+        newest_staff = staff.order_by(StaffMessage.id.desc()).first()
+        new_staff = staff.filter(StaffMessage.sender_id != current_user.id, ~staff_seen_by(current_user.id)) \
+            .order_by(StaffMessage.id.desc()).first()
+        latest_id = '{}-{}'.format(latest_id, newest_staff.id if newest_staff else 0)
+        if new_staff and (new_msg is None or new_staff.created >= new_msg.created):
+            msg_preview = staff_preview(new_staff)
     return jsonify(unread=unread, notices=notices,
-                   latest=latest.id if latest else 0, latest_notice=latest_notice.id if latest_notice else 0,
-                   message_preview=preview(new_msg), notice_preview=preview(new_notice),
+                   latest=latest_id, latest_notice=latest_notice.id if latest_notice else 0,
+                   message_preview=msg_preview, notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
                    watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now())
 
@@ -328,6 +416,9 @@ def messages_state():
     if not current_user.is_admin:
         #a student's panel lists the teachers, online ones marked
         state += ':' + ','.join(str(t.id) for t in M.teachers_for_student() if t.online)
+    else:
+        #and a teacher's has the messages between teachers
+        state += ':' + M.staff_state(current_user)
     return state
 
 
@@ -338,6 +429,13 @@ def notices_state():
         q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
     ids = [r[0] for r in q.with_entities(Message.id).all()]
     return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))
+
+
+def staff_preview(m):
+    """The pop-up for a message from another teacher: "Open messages" shows it (view)."""
+    body = m.body if len(m.body) <= 90 else m.body[:87].rstrip() + '…'
+    return {'id': 's{}'.format(m.id), 'from': m.sender.username if m.sender else 'a teacher', 'text': body,
+            'view': 't{}'.format(m.sender_id) if m.sender_id else 'teachers'}
 
 
 def preview(m):

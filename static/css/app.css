@@ -900,7 +900,8 @@ details.dash-card[open] > summary::before { transform: rotate(90deg); }
 details.dash-card > summary:hover { background: var(--accent-soft); }
 details.dash-card[open] > summary { margin-bottom: 6px; }
 .dash-body > .dash-links { margin: 0 0 6px; display: flex; gap: 12px; flex-wrap: wrap; }
-.dash-body > .dash-links a { margin-left: auto; }
+.dash-body > .dash-links a, .dash-body > .dash-links .dash-go-links { margin-left: auto; }
+.dash-body > .dash-links .dash-go-links a { margin-left: 0; }
 .online-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .online-people li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 @media (prefers-reduced-motion: reduce) { details.dash-card > summary::before { transition: none; } }

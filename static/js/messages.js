@@ -119,6 +119,8 @@
     }
     var open = e.target.closest('.toast-open');
     if (open) {
+      //a message from another teacher: open the panel on that conversation
+      if (open.dataset.view) store('qgen-dock-view', open.dataset.view);
       setOpen(open.dataset.pane, true);
       open.closest('.toast').remove();
       return;
@@ -261,6 +263,7 @@
     row.innerHTML = '<button type="button" class="btn btn-sm toast-open"></button>'
                   + '<button type="button" class="btn btn-secondary btn-sm toast-close">Dismiss</button>';
     row.querySelector('.toast-open').dataset.pane = p;
+    if (info.view) row.querySelector('.toast-open').dataset.view = info.view;
     row.querySelector('.toast-open').textContent = p === 'messages' ? 'Open messages' : 'Open notices';
     t.appendChild(title); t.appendChild(text); t.appendChild(row);
     box.appendChild(t);

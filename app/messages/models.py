@@ -122,3 +122,63 @@ def unread_for_teachers(teacher_id):
 
 def unread_notices_for_teachers(teacher_id):
     return Message.query.filter(Message.from_teacher.is_(False), IS_NOTICE, ~seen_by(teacher_id)).count()
+
+
+# ---------------------------------------------------------------- between teachers
+
+#a message from one teacher to other teachers: to all of them, or (to_all False) only to
+#those in StaffMessageTo. Kept apart from the students' conversations, so no student
+#query can ever reach one.
+class StaffMessage(db.Model):
+    __tablename__ = 'staff_message'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True, index=True)
+    body = db.Column(db.Text, nullable=False)
+    created = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
+    to_all = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    to = db.relationship('StaffMessageTo', cascade='all, delete-orphan', passive_deletes=True, lazy='selectin')
+    reads = db.relationship('StaffMessageRead', cascade='all, delete-orphan', passive_deletes=True)
+
+    @property
+    def recipients(self):
+        """The teachers it went to (empty: all of them)."""
+        return [] if self.to_all else [t.teacher for t in self.to if t.teacher]
+
+
+class StaffMessageTo(db.Model):
+    __tablename__ = 'staff_message_to'
+    message_id = db.Column(db.Integer, db.ForeignKey('staff_message.id', ondelete='CASCADE'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)
+
+    teacher = db.relationship('User')
+
+
+#a teacher has seen it (the sender's own messages count as seen)
+class StaffMessageRead(db.Model):
+    __tablename__ = 'staff_message_read'
+    message_id = db.Column(db.Integer, db.ForeignKey('staff_message.id', ondelete='CASCADE'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)
+
+
+def staff_for(teacher_id):
+    """Condition: this teacher may see the teachers' message (wrote it, or it's to them)."""
+    return db.or_(StaffMessage.sender_id == teacher_id, StaffMessage.to_all.is_(True),
+                  db.exists().where(StaffMessageTo.message_id == StaffMessage.id, StaffMessageTo.user_id == teacher_id))
+
+
+def staff_seen_by(teacher_id):
+    return db.exists().where(StaffMessageRead.message_id == StaffMessage.id, StaffMessageRead.user_id == teacher_id)
+
+
+def unread_staff(teacher_id):
+    """Messages from other teachers this teacher hasn't seen."""
+    return StaffMessage.query.filter(staff_for(teacher_id), db.or_(StaffMessage.sender_id.is_(None),
+                                                                   StaffMessage.sender_id != teacher_id),
+                                     ~staff_seen_by(teacher_id)).count()
+
+
+def unread_messages_for_teacher(teacher_id):
+    """The count on a teacher's Messages button: from students and from other teachers."""
+    return unread_for_teachers(teacher_id) + unread_staff(teacher_id)

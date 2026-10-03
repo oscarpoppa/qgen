@@ -128,8 +128,8 @@ def _users(now):
 def _messages(student_id, now):
     """The Messages page or one conversation (which marks what it shows as read)."""
     from app.messages.routes import messages_state
-    from app.messages.models import unread_for_teachers
-    return messages_state(), unread_for_teachers(current_user.id)
+    from app.messages.models import unread_messages_for_teacher
+    return messages_state(), unread_messages_for_teacher(current_user.id)
 
 
 # key -> (teachers only?, function(argument, now))

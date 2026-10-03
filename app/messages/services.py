@@ -409,3 +409,115 @@ def _delete_if_all_cleared(ids):
         for m in Message.query.filter(Message.id.in_(done)):
             db.session.delete(m)
         db.session.commit()
+
+
+# ---------------------------------------------------------------- between teachers
+
+def other_teachers(me):
+    """Every other teacher, online first, then by name."""
+    teachers = User.query.filter(User.is_admin.is_(True), User.id != me.id).order_by(User.username).all()
+    return sorted(teachers, key=lambda t: (not t.online, t.username.lower()))
+
+
+def staff_choice(me, value):
+    """'teachers' (or nothing) -> None, meaning all the teachers; 't<id>' or an id -> that
+    other teacher. Anything else (a student, yourself, nonsense) is refused."""
+    if value in (None, '', 'teachers', 'all'):
+        return None
+    try:
+        teacher = db.session.get(User, int(str(value).lstrip('t')))
+    except (TypeError, ValueError):
+        teacher = None
+    if teacher is None or not teacher.is_admin or teacher.id == me.id:
+        raise MessageError('Please choose one of the other teachers.')
+    return teacher
+
+
+def send_to_teachers(me, body, to):
+    """From one teacher to other teachers. to: 'all', or the chosen teachers' ids (a list;
+    empty means none was checked). Every other teacher chosen is the same as 'all'."""
+    from .models import StaffMessage, StaffMessageTo, StaffMessageRead
+    if not me.is_admin:
+        raise MessageError('Only teachers can write to teachers.')
+    values = [to] if isinstance(to, (str, int)) else list(to or [])
+    values = [v for v in values if v not in (None, '')]
+    if not values:
+        raise MessageError('Check at least one teacher to send it to.')
+    others = {t.id for t in other_teachers(me)}
+    if not others:
+        raise MessageError('There are no other teachers yet.')
+    if 'all' in values:
+        chosen = None
+    else:
+        chosen = list({t.id: t for t in (staff_choice(me, v) for v in values)}.values())
+        if {t.id for t in chosen} >= others:
+            chosen = None
+    msg = StaffMessage(sender_id=me.id, body=clean_body(body), to_all=chosen is None)
+    for t in chosen or []:
+        msg.to.append(StaffMessageTo(user_id=t.id))
+    msg.reads.append(StaffMessageRead(user_id=me.id))  # your own is never "new"
+    db.session.add(msg)
+    db.session.commit()
+    return msg
+
+
+def teachers_thread(me, other=None, limit=50):
+    """What this teacher can see of the teachers' messages, oldest first (the newest
+    `limit`): everything (other None), or just between them and one other teacher (what
+    either wrote to all teachers or to the other)."""
+    from .models import StaffMessage, StaffMessageTo, staff_for
+    q = StaffMessage.query.filter(staff_for(me.id))
+    if other is not None:
+        to_them = lambda uid: db.or_(StaffMessage.to_all.is_(True),
+                                     db.exists().where(StaffMessageTo.message_id == StaffMessage.id, StaffMessageTo.user_id == uid))
+        q = q.filter(db.or_(db.and_(StaffMessage.sender_id == me.id, to_them(other.id)),
+                            db.and_(StaffMessage.sender_id == other.id, to_them(me.id))))
+    rows = q.order_by(StaffMessage.created.desc(), StaffMessage.id.desc()).limit(limit).all()
+    return rows[::-1]
+
+
+def staff_unseen_ids(me, items):
+    from .models import StaffMessageRead
+    ids = [m.id for m in items]
+    if not ids:
+        return set()
+    seen = {r.message_id for r in StaffMessageRead.query.filter(StaffMessageRead.user_id == me.id,
+                                                                StaffMessageRead.message_id.in_(ids))}
+    return set(ids) - seen
+
+
+def mark_staff_seen(me, items):
+    from .models import StaffMessageRead
+    for mid in staff_unseen_ids(me, items):
+        db.session.add(StaffMessageRead(message_id=mid, user_id=me.id))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()  # marked by another request at the same moment
+
+
+def staff_unread_by_sender(me):
+    """{other teacher's id: how many of their messages this teacher hasn't seen}."""
+    from .models import StaffMessage, staff_for, staff_seen_by
+    return dict(db.session.query(StaffMessage.sender_id, db.func.count(StaffMessage.id))
+                .filter(staff_for(me.id), StaffMessage.sender_id.isnot(None), StaffMessage.sender_id != me.id,
+                        ~staff_seen_by(me.id))
+                .group_by(StaffMessage.sender_id).all())
+
+
+def delete_staff_message(me, message_id):
+    """A teacher removes a message they wrote (for everyone). True if removed."""
+    from .models import StaffMessage
+    msg = db.session.get(StaffMessage, message_id)
+    if msg is None or msg.sender_id != me.id:
+        return False
+    db.session.delete(msg)
+    db.session.commit()
+    return True
+
+
+def staff_state(me):
+    """Changes whenever what this teacher can see of the teachers' messages changes."""
+    from .models import StaffMessage, staff_for
+    ids = [r[0] for r in StaffMessage.query.filter(staff_for(me.id)).with_entities(StaffMessage.id).all()]
+    return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))

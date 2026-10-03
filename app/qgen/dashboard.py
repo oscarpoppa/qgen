@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy.orm import joinedload
 
 from app import db, tuning
-from app.messages.models import unread_for_teachers, unread_notices_for_teachers
+from app.messages.models import unread_messages_for_teacher, unread_notices_for_teachers
 from app.user.models import User
 from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, AICall, Setting
 from .services import attempt_state
@@ -38,7 +38,7 @@ def closing_soon(now):
 def counts(teacher, now):
     """The to-do numbers at the top."""
     return {'grading': _waiting().count(),
-            'messages': unread_for_teachers(teacher.id),
+            'messages': unread_messages_for_teacher(teacher.id),  # from students and from other teachers
             'notices': unread_notices_for_teachers(teacher.id),
             'closing': len(closing_soon(now))}
 
