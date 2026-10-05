@@ -149,12 +149,15 @@
     </nav>
   </details>
 
-  <section class="folder-main" aria-labelledby="folder-title">
+  {# the whole section is one level for Expand all / Collapse all (beside its title) #}
+  <section class="folder-main level" aria-labelledby="folder-title">
     {% if node %}
       {% set f = node.folder %}
       <div class="folder-title-row">
         <h2 id="folder-title" class="folder-title">
           {% for p in path[:-1] %}<a href="{{ url_for('user.userdet', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}📁 {{ f.name }}</h2>
+        <div class="title-actions">
+        {% if node and node.folders %}{{ level_buttons(node.folder.name) }}{% endif %}
         <details class="folder-tools">
           <summary class="btn btn-secondary btn-sm">Folder options</summary>
           <div class="folder-tools-box">
@@ -187,13 +190,13 @@
             </form>
           </div>
         </details>
+        </div>
       </div>
     {% else %}
-      <h2 id="folder-title" class="folder-title">{{ 'All users' if view == 'all' else 'Main list' }}</h2>
+      <div class="folder-title-row"><h2 id="folder-title" class="folder-title">{{ 'All users' if view == 'all' else 'Main list' }}</h2></div>
     {% endif %}
     {% if ulst|length > 5 %}<input type="search" class="filter" data-filter=".people-table" placeholder="Filter users…" aria-label="Filter users">{% endif %}
-    <div class="level">
-      {% if node and node.folders %}<div class="level-row">{{ level_buttons(node.folder.name) }}</div>{% endif %}
+    <div>
       {% if node %}{% for child in node.folders %}{{ sub_box(child) }}{% endfor %}{% endif %}
       {{ people_table(shown, node.folder if node else none) }}
     </div>

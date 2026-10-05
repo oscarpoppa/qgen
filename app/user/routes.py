@@ -95,7 +95,7 @@ def create_folder():
         f = folders.create_folder(current_user, request.form.get('name'), request.form.get('parent'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder "{}" made.'.format(f.name), show=f.id)
+    return _folder_done('Folder "{}" made.'.format(f.name))  # stay where you were
 
 
 @user_bp.route('/mypage/folders/<int:folder_id>/rename', methods=['POST'])
@@ -367,7 +367,7 @@ def create_user_folder():
         f = groups.create(request.form.get('name'), request.form.get('parent'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Folder "{}" made.'.format(f.name), show=f.id)
+    return _group_done('Folder "{}" made.'.format(f.name))  # stay where you were
 
 
 @user_bp.route('/users/folders/<int:folder_id>/rename', methods=['POST'])

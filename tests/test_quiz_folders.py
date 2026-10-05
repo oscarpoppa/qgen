@@ -164,7 +164,7 @@ def test_after_a_change_the_same_folder_shows(app_db):
     assign(teach, w1, 'sam')
     r = sam.post('/mypage/folders', data={'name': 'Unit 1', 'view': 'all'})
     unit = folder_id('Unit 1', 'sam')
-    assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))  # a new folder opens
+    assert r.headers['Location'].endswith('/mypage?folder=all')  # you stay where you were
     r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'main'})
     assert r.headers['Location'].endswith('/mypage')  # stays where you were
     r = sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'U1', 'view': str(unit)})

@@ -710,6 +710,9 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .folder-title-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
 .folder-title { margin: 0; font-size: 1.2rem; min-width: 0; overflow-wrap: anywhere; }
 .folders-layout > .folder-main > .folder-title { margin-bottom: 12px; }
+/* beside a folder's title: Expand all / Collapse all, and Folder options */
+.title-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+.folder-title-row .folder-title { align-self: center; }
 .folder-tools > summary { list-style: none; }
 .folder-tools > summary::-webkit-details-marker { display: none; }
 .folder-tools-box { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; padding: 12px; border: 1px solid var(--border);
