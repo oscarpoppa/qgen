@@ -977,7 +977,8 @@ def dashboard_data():
     out, out_total = D.out_now(now)
     return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
             'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
-            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now)}
+            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now),
+            'pinned': D.pinned()}
 
 #route to the administrators' landing page: what needs doing and what's going on
 @qgen_bp.route('/dashboard', methods=['GET'])

@@ -935,6 +935,11 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .dash-list > li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; border-top: 1px solid var(--border); }
 .dash-list > li:first-child { border-top: 0; }
 .dash-list .dash-go { margin-left: auto; }
+/* a pinned message: its text (three lines at most), then who it's for and who's read it */
+.dash-pinned > li { align-items: flex-start; }
+.dash-pin-text { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dash-pinned .muted { flex-basis: 100%; padding-left: 24px; }
+.dash-pinned form.dash-go { margin: 0 0 0 auto; }
 .dash-list a.person { color: inherit; text-decoration: none; }
 .dash-reasons { margin: 0; padding-left: 18px; flex-basis: 100%; color: var(--muted); }
 .dash-people { display: flex; flex-wrap: wrap; gap: 8px 16px; }

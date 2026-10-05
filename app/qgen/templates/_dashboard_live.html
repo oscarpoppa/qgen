@@ -80,6 +80,30 @@
     {% endif %}
     </div>
   </details>
+  {# what's pinned to the top of students' messages, and whether they've read it #}
+  <details class="card dash-card" data-box="pinned" open>
+    <summary class="dash-head"><h2>Pinned messages</h2><span class="badge">{{ pinned|length }}</span></summary>
+    <div class="dash-body">
+    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}">Messages →</a></p>
+    {% if pinned %}
+      <ul class="dash-list dash-pinned">
+      {% for p in pinned %}
+        <li><span aria-hidden="true">📌</span>
+          <span class="dash-pin-text">{{ p.msg.body }}</span>
+          <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
+                data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in their messages, just not at the top." data-confirm-ok="Unpin">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
+            <button class="btn btn-secondary btn-sm">Unpin</button>
+          </form>
+          <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].username }}{% else %}<span title="{{ p.to|map(attribute='username')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
+            · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.username }}{% endif %}</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">Nothing is pinned. Pin a message from <a href="{{ url_for('messages.inbox') }}">Messages</a> to keep it at the top of students' messages.</p>
+    {% endif %}
+    </div>
+  </details>
   <details class="card dash-card" data-box="handins" open>
     <summary class="dash-head"><h2>Recent hand-ins</h2><span class="badge">{{ handins|length }}</span></summary>
     <div class="dash-body">

@@ -133,3 +133,21 @@ def site_glance(now):
             'ai_on': bool(current_app.config.get('ANTHROPIC_API_KEY')),
             'ai_calls': calls[0], 'ai_tokens': int(calls[1]) + int(calls[2]),
             'month': '{:%B}'.format(now)}
+
+
+def pinned():
+    """The pinned messages, newest first: one entry per message sent together, with the
+    students it's pinned for and how many of them have read it."""
+    from app.messages.models import Message
+    groups = {}
+    for m in Message.query.filter(Message.pinned.is_(True)).options(joinedload(Message.student)) \
+            .order_by(Message.created.desc(), Message.id.desc()):
+        g = groups.setdefault(m.batch or m.id, {'msg': m, 'to': [], 'read': 0})
+        if m.student is not None:
+            g['to'].append(m.student)
+        g['read'] += 1 if m.seen_by_student else 0
+    out = list(groups.values())
+    for g in out:
+        g['to'].sort(key=lambda u: u.username.lower())
+        g['everyone'] = len(g['to']) > 1 and len(g['to']) == _students().count()
+    return out

@@ -304,3 +304,25 @@ def test_logging_out_takes_you_off_online(app_db):
     laptop.get('/messages/poll')
     db.session.expire_all()
     assert db.session.get(User, ids('sam')).online
+
+
+def test_pinned_messages_box(app_db):
+    app, db = app_db
+    import re
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    page = teach.get('/dashboard').data.decode()
+    assert '<h2>Pinned messages</h2><span class="badge">0</span>' in page and 'Nothing is pinned.' in page
+    teach.post('/messages/send', data={'to': 'all', 'body': 'No class Friday', 'pin': '1'})
+    teach.post('/messages/send', data={'to': str(ids('sam')), 'body': 'See me after class', 'pin': '1'})
+    teach.post('/messages/send', data={'to': 'all', 'body': 'Not pinned'})
+    sam.get('/messages/panel')  # sam reads his messages
+    page = teach.get('/dashboard/now').data.decode()
+    assert '<h2>Pinned messages</h2><span class="badge">2</span>' in page and 'Not pinned' not in page
+    assert re.search(r'No class Friday</span>.*?to every student\s*· read by 1 of 2', page, re.S)
+    assert re.search(r'See me after class</span>.*?to sam\s*· read ·', page, re.S)
+    # Unpin from the Dashboard: every copy
+    from app.messages.models import Message
+    mid = Message.query.filter_by(body='No class Friday').first().id
+    teach.post('/messages/pin/{}'.format(mid), data={'pinned': '0'})
+    assert Message.query.filter_by(body='No class Friday', pinned=True).count() == 0
+    assert '<h2>Pinned messages</h2><span class="badge">1</span>' in teach.get('/dashboard/now').data.decode()
