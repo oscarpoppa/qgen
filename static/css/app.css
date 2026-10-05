@@ -734,7 +734,11 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-folder-label a:hover { text-decoration: underline; }
 .move-form { margin-top: 8px; }
 .move-form select { width: auto; max-width: 100%; padding: 2px 6px; font-size: .85rem; }
-.quiz-card > summary[draggable] { -webkit-user-drag: element; }
+.quiz-card > summary[data-drag] { touch-action: auto; }
+.folder-dragging, .folder-dragging * { cursor: grabbing !important; user-select: none; }
+.drag-ghost { position: fixed; z-index: 1000; pointer-events: none; padding: 4px 10px; border-radius: 8px; max-width: 260px;
+  background: var(--accent); color: #fff; font-size: .9rem; font-weight: 600; box-shadow: 0 6px 18px rgba(16, 24, 40, .3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dragging { opacity: .5; }
 .folder-dragging .folder-side { border-color: var(--accent); }
 .drop-over { outline: 2px dashed var(--accent); outline-offset: 1px; background: var(--accent-soft); }

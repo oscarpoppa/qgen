@@ -77,7 +77,7 @@
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
     <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
-      <summary class="card-head" draggable="true">
+      <summary class="card-head" data-drag="quiz">
         <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
         {# how many attempts are in this box #}
         <span class="quiz-count muted small">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
@@ -119,7 +119,7 @@
     <div class="side-row{{ ' current' if view == f.id|string }}" data-drop="{{ f.id }}">
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="true" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
+      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="false" data-drag="folder" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
         <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
       <span class="side-count muted small">{{ n.groups|length or '' }}</span>
     </div>
@@ -370,7 +370,6 @@
   });
 
   var token = document.querySelector('meta[name="csrf-token"]');
-  var dragging = null;  // {kind: 'quiz'|'folder', id, el, home}
   function move(kind, id, to) {
     var data = new FormData();
     data.append('csrf_token', token ? token.content : '');
@@ -384,51 +383,74 @@
         alert(res.error || 'That didn\'t work. Please reload the page and try again.');
       });
   }
-  function start(e, kind, box) {
-    dragging = { kind: kind, id: box.dataset[kind], el: box, home: box.dataset.home };
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', kind + ':' + dragging.id);
-    box.classList.add('dragging');
-    document.body.classList.add('folder-dragging');
-  }
-  function end() {
-    if (dragging) dragging.el.classList.remove('dragging');
-    document.body.classList.remove('folder-dragging');
-    document.querySelectorAll('.drop-over').forEach(function (t) { t.classList.remove('drop-over'); });
-    dragging = null;
-  }
-  document.querySelectorAll('.quiz-card > summary[draggable]').forEach(function (h) {
-    h.addEventListener('dragstart', function (e) { start(e, 'quiz', h.parentElement); });
-    h.addEventListener('dragend', end);
-  });
-  document.querySelectorAll('.side-item > .side-row > .side-link[draggable]').forEach(function (a) {
-    var li = a.closest('.side-item');
-    a.addEventListener('dragstart', function (e) { start(e, 'folder', li); });
-    a.addEventListener('dragend', end);
-  });
-  //the folder under the pointer takes it: not where it already is, not a folder into itself
-  function target(e) {
-    var t = e.target.closest ? e.target.closest('[data-drop]') : null;
-    if (!t || !dragging || t.dataset.drop === dragging.home) return null;
-    if (dragging.kind === 'folder' && dragging.el.contains(t)) return null;
+
+  /* dragging, done here with the mouse (the browser's own drag and drop is unreliable on a
+   * box's title row and on links): press on a quiz's title row or a folder in the list, move
+   * a little, and a label follows the pointer; let go over a folder to move it there. A
+   * plain click still opens and closes the box (or opens the folder). Esc cancels. On a
+   * touch screen this is left alone (scrolling comes first; "Move to" does the job). */
+  var pending = null, dragging = null, ghost = null, over = null, swallowClick = false;
+  function targetAt(x, y) {
+    var el = document.elementFromPoint(x, y), t = el && el.closest ? el.closest('[data-drop]') : null;
+    if (!t || t.dataset.drop === dragging.home) return null;
+    if (dragging.kind === 'folder' && dragging.el.contains(t)) return null;  // not into itself
     return t;
   }
-  document.addEventListener('dragover', function (e) {
-    var t = target(e);
-    document.querySelectorAll('.drop-over').forEach(function (o) { if (o !== t) o.classList.remove('drop-over'); });
-    if (!t) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    t.classList.add('drop-over');
+  function highlight(t) {
+    if (over === t) return;
+    if (over) over.classList.remove('drop-over');
+    over = t;
+    if (over) over.classList.add('drop-over');
+  }
+  function stop() {
+    highlight(null);
+    if (ghost) ghost.remove();
+    if (dragging) dragging.el.classList.remove('dragging');
+    document.body.classList.remove('folder-dragging');
+    pending = dragging = ghost = null;
+  }
+  document.querySelectorAll('[data-drag]').forEach(function (h) {
+    h.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0 || e.pointerType === 'touch') return;
+      var kind = h.dataset.drag, box = kind === 'quiz' ? h.closest('.quiz-card') : h.closest('.side-item');
+      pending = { kind: kind, id: box.dataset[kind === 'quiz' ? 'quiz' : 'folder'], el: box, home: box.dataset.home, x: e.clientX, y: e.clientY,
+                  label: (kind === 'quiz' ? box.querySelector('h2') : h.querySelector('.side-name')).textContent };
+      e.preventDefault();  // no text selection while dragging; a click still goes through
+    });
   });
-  document.addEventListener('drop', function (e) {
-    var t = target(e);
-    if (!t) return;
-    e.preventDefault();
-    var d = dragging;
-    end();
-    move(d.kind, d.id, t.dataset.drop);
+  document.addEventListener('pointermove', function (e) {
+    if (pending && !dragging) {
+      if (Math.abs(e.clientX - pending.x) + Math.abs(e.clientY - pending.y) < 6) return;
+      dragging = pending;
+      ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.textContent = (dragging.kind === 'quiz' ? '' : '📁 ') + dragging.label;
+      document.body.appendChild(ghost);
+      dragging.el.classList.add('dragging');
+      document.body.classList.add('folder-dragging');
+    }
+    if (!dragging) return;
+    ghost.style.left = (e.clientX + 14) + 'px';
+    ghost.style.top = (e.clientY + 10) + 'px';
+    highlight(targetAt(e.clientX, e.clientY));
   });
+  document.addEventListener('pointerup', function (e) {
+    if (!dragging) { pending = null; return; }
+    var d = dragging, t = targetAt(e.clientX, e.clientY);
+    //the click that follows a drag shouldn't open the box or follow the link
+    swallowClick = true;
+    setTimeout(function () { swallowClick = false; }, 0);
+    stop();
+    if (t) move(d.kind, d.id, t.dataset.drop);
+  });
+  document.addEventListener('click', function (e) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (pending || dragging)) stop(); });
+  window.addEventListener('blur', stop);
 })();
 </script>
 {% endblock %}
