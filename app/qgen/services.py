@@ -517,8 +517,8 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
     body = '{} assigned "{}" to {} student{}: {}.{}'.format(
         by.username if by else 'A teacher', vquiz.title, len(names), '' if len(names) == 1 else 's', shown,
         (' ' + ' '.join(details)) if details else '')
-    #a notice belongs to one person's record: the assigning teacher's (so the panel shows that
-    #teacher's picture), or the first student's when assigned without a signed-in teacher
+    #a notice belongs to one person's record, whose picture the panel shows: the student's when
+    #it went to one; with several, the assigning teacher's (the panel shows a group icon then)
     #"Open" goes to what was assigned: one student's own copy of the quiz (for a teacher who
     #took it themselves, their results page, since opening their own copy would start it), or
     #with several students, the quiz's results page listing each one's copy
@@ -528,7 +528,7 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
         link = _link('qgen.list_user', uid=created[0].assignee)
     else:
         link = _link('qgen.quiz_results_page', vqid=vquiz.id)
-    notify_teachers(by.id if by else created[0].assignee, body, link)
+    notify_teachers(created[0].assignee if len(created) == 1 or not by else by.id, body, link)
 
 
 def retake(cq, by=None):

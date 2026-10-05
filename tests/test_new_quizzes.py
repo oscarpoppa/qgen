@@ -126,3 +126,23 @@ def test_the_assigned_notice_opens_what_was_assigned(app_db):
     # a teacher given it: their results page (opening their own copy would start it)
     assign(teach, vq, 'lee')
     assert shared().link == '/quiz/listuser/{}'.format(ids('lee'))
+
+
+def test_the_assigned_notice_shows_the_students_picture(app_db):
+    app, db = app_db
+    from app.messages.models import Message
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    shared = lambda: Message.query.filter_by(kind='notice', from_teacher=False).order_by(Message.id.desc()).first()
+    assign(teach, vq, 'sam')
+    assert shared().student_id == ids('sam')  # filed under sam: the panel shows sam's picture
+    panel = teach.get('/messages/notices').data.decode()
+    assert 'teach assigned' in panel and '👥' not in panel
+    # sam never sees the teachers' notice about him
+    sam = login(app, 'sam')
+    assert 'teach assigned' not in sam.get('/messages/notices').data.decode()
+    assert 'teach assigned' not in sam.get('/messages/panel').data.decode()
+    # several students: a group icon
+    assign(teach, vq, 'sam', 'kim')
+    assert shared().student_id == ids('teach')
+    assert '<span class="notice-icon" aria-hidden="true">👥</span>' in teach.get('/messages/notices').data.decode()
