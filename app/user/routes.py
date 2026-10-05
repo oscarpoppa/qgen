@@ -150,12 +150,15 @@ def move_to_folder():
         return _folder_done(str(exc), error=True)
     return _folder_done('Moved "{}" to {}.'.format(what, where))
 
+#Home's "Recently completed": how far back, and how many at most
+RECENT_DAYS, RECENT_MAX = 14, 10
+
 # route to a student's Home: what's waiting for them, and the awards they've earned
 @user_bp.route('/home')
 @login_required
 @pw_check
 def home():
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from app import tuning
     from app.qgen import awards
     now = datetime.now()
@@ -164,7 +167,11 @@ def home():
     #what to do next: the ones closing soonest first, then the rest, oldest first
     waiting.sort(key=lambda cq: (cq.closes_at is None, cq.closes_at or now, cq.id))
     have = awards.earned(current_user)
-    return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon,
+    #handed in during the last two weeks, newest first (at most 10); being graded included
+    since = now - timedelta(days=RECENT_DAYS)
+    recent = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate and cq.compdate >= since),
+                    key=lambda cq: cq.compdate, reverse=True)[:RECENT_MAX]
+    return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon, recent=recent, recent_days=RECENT_DAYS,
                            todo=sum(1 for cq in waiting if cq.status == 'new'),
                            started=sum(1 for cq in waiting if cq.status == 'started'),
                            awards=have, to_earn=awards.still_to_earn(current_user, have))

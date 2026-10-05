@@ -40,6 +40,25 @@
     {% endif %}
   </details>
 
+  <details class="card dash-card" data-box="recent" open>
+    <summary class="dash-head"><h2>Recently completed</h2><span class="badge">{{ recent|length }}</span></summary>
+    <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
+      <a href="{{ url_for('user.mypage', folder='all') }}">All my quizzes →</a></p>
+    {% if recent %}
+      <ul class="dash-list">
+      {% for cq in recent %}
+        <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+          {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
+          {% else %}<span class="badge badge-warn" title="Your teacher is grading the written answers">Being graded</span>{% endif %}
+          <span class="small muted">{{ cq.compdate.strftime('%a %b %d, %I:%M %p') }}</span>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">Nothing handed in during the last {{ recent_days }} days.</p>
+    {% endif %}
+  </details>
+
   <details class="card dash-card" data-box="awards" open>
     <summary class="dash-head"><h2>Your awards</h2><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
     {% if awards %}

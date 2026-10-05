@@ -35,7 +35,8 @@ def test_students_land_on_home_with_their_counts(app_db):
     counts = dict((label, int(n)) for n, label in re.findall(r'<span class="dash-num">(\d+)</span><span>([^<]+)</span>', page))
     assert counts == {'to do': 2, 'in progress': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
-    assert re.findall(r'<strong>“([^”]+)”</strong>', page) == ['Q2', 'Q3', 'Q1']
+    waiting = page.split('<h2>Waiting for you</h2>')[1].split('</details>')[0]
+    assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
     assert '<a href="/home">Home</a>' in page  # in the menu for students
     # the boxes fold away (remembered in the browser)
@@ -109,3 +110,39 @@ def test_a_perfect_score_means_the_score_that_counts(app_db):
     S.set_retake_rule(CQuiz.query.filter_by(vquiz_id=latest.id).order_by(CQuiz.id.desc()).first(), 'best')
     page = sam.get('/home').data.decode()
     assert sorted(re.findall(r'100% on (?:&#34;|")([^"&]+)', page.split('Still to earn')[0])) == ['Best', 'Latest']
+
+
+def test_recently_completed(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    now = datetime.now()
+    quizzes = [make_quiz(app, teach, 'R{}'.format(i)) for i in range(13)]
+    page = sam.get('/home').data.decode()
+    assert '<h2>Recently completed</h2><span class="badge">0</span>' in page and 'Nothing handed in during the last 14 days.' in page
+    finish(give(quizzes[0], 'sam'), 40, now - timedelta(days=20))       # too long ago
+    finish(give(quizzes[1], 'sam'), 85, now - timedelta(days=3))
+    being = give(quizzes[2], 'sam')                                       # being graded
+    being.needs_review, being.startdate, being.compdate = True, now - timedelta(hours=2), now - timedelta(hours=1)
+    db.session.commit()
+    give(quizzes[3], 'sam')                                               # not handed in
+    page = sam.get('/home').data.decode()
+    part = page.split('<h2>Recently completed</h2>')[1].split('</details>')[0]
+    assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
+    assert 'Being graded' in part and '>85%</span>' in part and '>View</a>' in part and '>Results</a>' in part
+    # at most 10
+    for i in range(4, 13):
+        finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))
+    part = sam.get('/home').data.decode().split('<h2>Recently completed</h2>')[1].split('</details>')[0]
+    assert len(re.findall(r'<strong>“', part)) == 10
+
+
+def test_home_follows_hand_ins(app_db):
+    # an open Home reloads itself when a quiz is handed in or graded (its watch key, "mine")
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    cq = give(make_quiz(app, teach, 'Live'), 'sam')
+    page = sam.get('/home').data.decode()
+    key, drawn = re.search(r'data-watch="([^"]+)" data-watch-state="([^"]+)"', page).groups()
+    assert key == 'mine' and sam.get('/messages/poll?watch=mine').get_json()['watch'] == drawn
+    finish(cq, 90, datetime.now())
+    assert sam.get('/messages/poll?watch=mine').get_json()['watch'] != drawn
