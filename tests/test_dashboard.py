@@ -40,8 +40,8 @@ def test_teachers_land_on_the_dashboard_and_students_dont(app_db):
 
     s = app.test_client()
     r = s.post('/login', data={'username': 'sam', 'password': 'pw-for-tests'})
-    assert r.headers['Location'].endswith('/mypage')
-    assert s.get('/login').headers['Location'].endswith('/mypage')
+    assert r.headers['Location'].endswith('/home')
+    assert s.get('/login').headers['Location'].endswith('/home')
 
 
 def test_the_dashboard_is_for_administrators_only(app_db):
@@ -62,7 +62,7 @@ def test_the_dashboard_is_for_administrators_only(app_db):
     for url in ('/mypage', '/profile'):
         page = sam.get(url).data.decode()
         assert '/dashboard' not in page and 'Dashboard' not in page and 'online' not in page.lower().replace('inline', '')
-        assert 'class="brand" href="/mypage"' in page
+        assert 'class="brand" href="/home"' in page
 
 
 def test_last_seen_and_who_is_online(app_db):

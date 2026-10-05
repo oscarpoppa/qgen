@@ -551,7 +551,9 @@ def list_users():
 def list_user(uid):
     ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     from .models import RETAKE_RULES
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.username))
+    from . import awards
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.username),
+                           awards=awards.earned(ulst))
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
 @qgen_bp.route('/quiz/results', methods=['GET'])

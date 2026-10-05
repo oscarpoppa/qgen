@@ -1,0 +1,10 @@
+{# a student's awards (app/qgen/awards.py): on their Home, and on their results page for teachers #}
+{% macro award_list(items, locked=false) %}
+  <ul class="awards{{ ' awards-locked' if locked }}">
+  {% for a in items %}
+    <li class="award{{ ' award-' ~ a.kind if a.kind }}"><span class="award-icon" aria-hidden="true">{{ a.icon }}</span>
+      <span class="award-text"><strong>{{ a.title }}</strong><span class="small">{{ a.detail }}</span>
+        {% if a.when %}<span class="small muted">{{ a.when.strftime('%b %d, %Y') }}</span>{% endif %}</span></li>
+  {% endfor %}
+  </ul>
+{% endmacro %}

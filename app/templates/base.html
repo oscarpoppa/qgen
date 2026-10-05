@@ -65,6 +65,7 @@
         {% if current_user.is_authenticated %}
           {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
           {# quizzes given since My quizzes was last opened (anyone: teachers take quizzes too); kept current by messages.js #}
+          {% if not current_user.is_admin %}<a href="{{ url_for('user.home') }}">Home</a>{% endif %}
           <a href="{{ url_for('user.mypage') }}">My quizzes
             <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span></a>
           {% if current_user.is_admin %}

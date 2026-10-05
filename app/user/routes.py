@@ -150,6 +150,25 @@ def move_to_folder():
         return _folder_done(str(exc), error=True)
     return _folder_done('Moved "{}" to {}.'.format(what, where))
 
+# route to a student's Home: what's waiting for them, and the awards they've earned
+@user_bp.route('/home')
+@login_required
+@pw_check
+def home():
+    from datetime import datetime
+    from app import tuning
+    from app.qgen import awards
+    now = datetime.now()
+    waiting = [cq for cq in current_user.cquizzes if cq.status in ('new', 'started')]
+    soon = [cq for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()]
+    #what to do next: the ones closing soonest first, then the rest, oldest first
+    waiting.sort(key=lambda cq: (cq.closes_at is None, cq.closes_at or now, cq.id))
+    have = awards.earned(current_user)
+    return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon,
+                           todo=sum(1 for cq in waiting if cq.status == 'new'),
+                           started=sum(1 for cq in waiting if cq.status == 'started'),
+                           awards=have, to_earn=awards.still_to_earn(current_user, have))
+
 # route to user logout action
 @user_bp.route('/logout')
 @login_required

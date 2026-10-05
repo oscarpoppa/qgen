@@ -924,6 +924,17 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .dash-count.has { color: var(--text, inherit); border-color: var(--warn); background: var(--warn-soft); }
 .dash-num { font-size: 1.6rem; font-weight: 700; line-height: 1.1; color: inherit; }
 .dash-count.has .dash-num { color: var(--warn); }
+/* a student's Home: three counts, and their awards */
+.home-counters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.home-due { color: var(--warn); font-weight: 600; }
+.awards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 10px; }
+.award { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
+.award-icon { font-size: 1.6rem; line-height: 1; }
+.award-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.awards-locked .award { background: var(--surface); border-style: dashed; }
+.awards-locked .award-icon { filter: grayscale(1); opacity: .5; }
+.awards-locked .award-text { color: var(--muted); }
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .dash-wide { grid-column: 1 / -1; }
 .dash-card { margin-bottom: 0; min-width: 0; }

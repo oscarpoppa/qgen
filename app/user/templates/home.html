@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar with context %}
+{% from "_awards.html" import award_list %}
+{# a student's Home: what's waiting for them, and the awards they've earned. It follows
+   their quizzes as they're assigned, graded and so on (app/live.py, "mine"). #}
+{% block body_attrs %}{{ watch('mine') }}{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.username }}!</h1>
+  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">My quizzes</a></div></div>
+
+{% set days = tuning.get('due_soon_days') %}
+<div class="dash-counters home-counters" aria-label="Your quizzes">
+  <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='all') }}">
+    <span class="dash-num">{{ todo }}</span><span>to do</span></a>
+  <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='all') }}">
+    <span class="dash-num">{{ started }}</span><span>in progress</span></a>
+  <a class="dash-count{{ ' has' if soon }}" href="#waiting"
+     title="Not handed in yet, and closing in the next {{ days }} day{{ '' if days == 1 else 's' }}">
+    <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
+</div>
+
+<div class="dash-grid">
+  <section class="card dash-card" id="waiting" aria-labelledby="waiting-title">
+    <div class="dash-head"><h2 id="waiting-title">Waiting for you</h2><span class="badge">{{ waiting|length }}</span></div>
+    {% if waiting %}
+      <ul class="dash-list">
+      {% for cq in waiting %}
+        <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+          {% if cq.status == 'started' %}<span class="badge badge-accent">In progress</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at.strftime('%a %b %d, %I:%M %p') }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
+          {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at.strftime('%a %b %d, %I:%M %p') }}</span>{% endif %}
+          {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">🔒 Start</button>
+          {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">You're all caught up. Nothing to do right now. 🎉</p>
+    {% endif %}
+  </section>
+
+  <section class="card dash-card" aria-labelledby="awards-title">
+    <div class="dash-head"><h2 id="awards-title">Your awards</h2><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></div>
+    {% if awards %}
+      {{ award_list(awards) }}
+    {% else %}
+      <p class="muted small">Finish quizzes to earn awards.</p>
+    {% endif %}
+    {% if to_earn %}
+      <h3 class="dash-sub">Still to earn</h3>
+      {{ award_list(to_earn, locked=true) }}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

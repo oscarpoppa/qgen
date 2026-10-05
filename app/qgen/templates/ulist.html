@@ -2,6 +2,7 @@
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_results.html" import result_cells with context %}
+{% from "_awards.html" import award_list %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 
 {% block content %}
@@ -10,6 +11,14 @@
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>
     <a class="btn" href="{{ url_for('qgen.assign') }}">Assign a quiz</a></div>
 </div>
+
+{# one student: the awards they've earned (they see these on their Home) #}
+{% if single %}
+<details class="card subject-box student-awards" open>
+  <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
+  <div class="box-body">{% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
+</details>
+{% endif %}
 
 {# each student is a box that opens and closes (remembered in this browser) #}
 <div class="card subject-bar">
