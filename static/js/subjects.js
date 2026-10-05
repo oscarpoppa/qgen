@@ -1,8 +1,8 @@
 /* Subject containers on the Problems and Quizzes pages and in the quiz builder:
  * - each container opens and closes; which are open is remembered in this browser
  *   (the wrapper's data-store names the key); "Open all" / "Close all"
- * - an item in several subjects is in several containers: ticking one copy ticks them all
- * - each container's heading says how many in it are ticked
+ * - an item in several subjects is in several containers: checking one copy checks them all
+ * - each container's heading says how many in it are checked
  * - searching opens the containers with matches and hides the rest; clearing the
  *   search puts them back as they were
  * - after saving, the saved item's containers open and it is scrolled to (data-show)
@@ -69,7 +69,7 @@
     });
   });
 
-  //tick boxes: list pages use name="items", the builder uses class="pick"
+  //checkboxes: list pages use name="items", the builder uses class="pick"
   var ticks = Array.prototype.slice.call(wrap.querySelectorAll('input[name="items"], input.pick'));
   var count = document.querySelector('.file-count');
   function update() {
@@ -95,7 +95,7 @@
       update();
     });
   });
-  //the builder sets ticks itself (e.g. removing a problem from the order)
+  //the builder checks boxes itself (e.g. removing a problem from the order)
   wrap.addEventListener('qgen-ticks-changed', update);
 
   var form = document.getElementById('file-form');

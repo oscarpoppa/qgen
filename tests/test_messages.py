@@ -79,7 +79,7 @@ def test_chosen_students_and_pinning_on_the_web(app_db):
     m = Message.query.one()
     assert m.pinned and m.student_id == sam_id
     assert teacher.post('/messages/send', data={'to': 'chosen', 'body': 'x'}).status_code == 302
-    assert Message.query.count() == 1  # nobody ticked: nothing sent
+    assert Message.query.count() == 1  # nobody checked: nothing sent
     # everyone, pinned: one pinned entry for the teacher, one per student
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday!', 'pin': '1'})
     home = login(app, 'kim').get('/messages/panel').data.decode()

@@ -24,7 +24,7 @@
 </div>
 {% endmacro %}
 
-{# "Add to" / "Remove from" a folder, for the ticked rows (each tick box has form="file-form") #}
+{# "Add to" / "Remove from" a folder, for the checked rows (each checkbox has form="file-form") #}
 {% macro file_bar(kind, all_subjects) %}
 <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -87,7 +87,7 @@ def test_problems_page_shows_subject_containers(app_db):
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Calculus'})
     page = teacher.get('/quiz/listvp').data.decode()
     assert boxes_on(page)['Calculus'] == [] and 'Empty. Check problems' in page
-    # nothing ticked, or no subject chosen: nothing happens
+    # nothing checked, or no subject chosen: nothing happens
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id})
     teacher.post('/quiz/subjects/problems/file', data={'items': [probs['Angles'].id]})
     db.session.expire_all()
@@ -157,7 +157,7 @@ def test_new_items_must_be_given_a_subject(app_db):
     r = teacher.post('/quiz/makevprob', data=dict(form, title='Long', subjects_shown='1', new_subject='x' * 65))
     assert VProblem.query.filter_by(title='Long').count() == 0 and 'at most 64 characters' in r.data.decode()
 
-    # editing: ticks shown; unticking everything puts it in Unsorted (no question needed)
+    # editing: checks shown; unchecking everything puts it in Unsorted (no question needed)
     assert 'value="{}" checked'.format(alg.id) in teacher.get('/quiz/editvprob/{}'.format(vp.id)).data.decode()
     teacher.post('/quiz/editvprob/{}'.format(vp.id), data=dict(form, subjects_shown='1'))
     db.session.expire_all()
@@ -195,7 +195,7 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
     teacher.post('/quiz/subjects/problems/file', data={'subject': geo.id, 'items': [probs['Add'].id, probs['Area'].id]})
     builder = teacher.get('/quiz/makevquiz').data.decode()
-    # each problem in each of its containers, with its own tick box (same value, different id)
+    # each problem in each of its containers, with its own checkbox (same value, different id)
     assert 'data-store="qgen-open-subjects-builder"' in builder and 'Rename' not in builder
     assert 'id="pick-{}-{}"'.format(alg.id, probs['Add'].id) in builder
     assert 'id="pick-{}-{}"'.format(geo.id, probs['Add'].id) in builder

@@ -27,7 +27,7 @@ LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes'}
 
 
 def ticked_subjects(item, rel):
-    """The subject ids ticked on an edit form (as sent, or as saved)."""
+    """The subject ids checked on an edit form (as sent, or as saved)."""
     if request.method == 'POST':
         return {int(i) for i in request.form.getlist('subjects') if i.isdigit()}
     return {g.id for g in getattr(item, rel)} if item is not None else set()
@@ -49,7 +49,7 @@ def subject_form_error(kind, new):
 
 
 def save_subjects(kind, item):
-    """File the item as ticked on its form (only forms that show the Subjects row)."""
+    """File the item as checked on its form (only forms that show the Subjects row)."""
     if request.form.get('subjects_shown'):
         S.set_subjects(kind, item, request.form.getlist('subjects'))
         db.session.commit()
@@ -469,7 +469,7 @@ def qsave(cidx):
     if not json_csrf_ok():
         return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
     form = quiz_form_class(cq)(meta={'csrf': False})
-    #only questions the page sent (a question with nothing ticked sends just its marker)
+    #only questions the page sent (a question with nothing checked sends just its marker)
     sent = {cp.ordinal: form[fieldname_base.format(cp.ordinal)].data for cp in cq.cproblems
             if fieldname_base.format(cp.ordinal) in request.form or fieldname_base.format(cp.ordinal) + '_present' in request.form}
     try:
@@ -724,7 +724,7 @@ def check_vprob():
     form.validate()
     return jsonify(hints=problem_hints(form.qtype.data, form.question.data, form.answer.data, form.options()))
 
-#quiz page: hints about the ticked problems
+#quiz page: hints about the checked problems
 @qgen_bp.route('/quiz/checkvquiz', methods=['POST'])
 @login_required
 @pw_check
@@ -804,7 +804,7 @@ def delete_subject(kind, sid):
     current_app.logger.info('{} deleted {} folder ({}) "{}"'.format(current_user.username, kind, sid, name))
     return subject_list(kind)
 
-#route to put the ticked problems (or quizzes) in a subject, or take them out of it
+#route to put the checked problems (or quizzes) in a subject, or take them out of it
 @qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
 @login_required
 @pw_check
@@ -912,7 +912,7 @@ def delete_archive_folder(fid):
     current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
     return redirect(url_for('qgen.archive'))
 
-#route to move the ticked archived attempts to a folder (or to Unsorted)
+#route to move the checked archived attempts to a folder (or to Unsorted)
 @qgen_bp.route('/quiz/archive/move', methods=['POST'])
 @login_required
 @pw_check

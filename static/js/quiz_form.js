@@ -1,4 +1,4 @@
-/* Quiz builder: tick problems, order them (when the order isn't shuffled), and
+/* Quiz builder: check problems, order them (when the order isn't shuffled), and
  * optionally put some in groups ("each student gets 2 of these 6"); the panel says
  * how many questions each student answers. Saved as JSON in the hidden vplist:
  *   [4, {"pick": 2, "from": [5, 6, 7]}, 9]
@@ -13,7 +13,7 @@
   var shuffledNote = document.getElementById('order-shuffled');
   var fixedNote = document.getElementById('order-fixed');
   var LETTERS = 'ABCDEFGH'.split('');
-  //a problem in several subjects has a tick box in each of their containers
+  //a problem in several subjects has a checkbox in each of their containers
   var boxes = {};
   document.querySelectorAll('input.pick').forEach(function (b) { (boxes[b.value] = boxes[b.value] || []).push(b); });
   var container = document.getElementById('all-problems');

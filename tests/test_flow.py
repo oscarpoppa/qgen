@@ -221,7 +221,7 @@ def test_pick_several_combinations_through_the_pages(app_db):
     app, db = app_db
     from app.qgen.models import VProblem
     teacher = login(app, 'teach')
-    form = problem_form('choice_many', 'Make ten', 'Tick two numbers that add up to 10.', '',
+    form = problem_form('choice_many', 'Make ten', 'Check two numbers that add up to 10.', '',
                         [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '4'}],
                         choices='[a]\n[10 - a]\n5\n9', combos='[a], [10 - a]')
     assert teacher.post('/quiz/previewvprob', data=form).data.count(b'Example ') == 3

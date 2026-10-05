@@ -35,7 +35,7 @@
   {{ field(form.vquiz) }}
   {# the people, in the Users page's folders (which open and close), then those in no folder,
      then everyone. Only the boxes under "All users" are sent; the ones in folders follow
-     them, so someone in two folders is ticked in both and gets one copy. #}
+     them, so someone in two folders is checked in both and gets one copy. #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     <span class="label">Students</span>
     <div class="btn-row small pick-bar">
@@ -58,7 +58,7 @@
       </details>
     </div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
-    <div class="help">Tick a folder to check everyone in it. Each student gets a different random version of the quiz.</div>
+    <div class="help">Check a folder to check everyone in it. Each student gets a different random version of the quiz.</div>
   </div>
   <fieldset>
     <legend>When (optional)</legend>
@@ -138,7 +138,7 @@
   people.forEach(function (i) { i.addEventListener('change', function () { set(i.dataset.user, i.checked); refresh(); }); });
   groups.forEach(function (g) {
     var head = g.querySelector(':scope > summary .pick-all');
-    //ticking the box doesn't open or close the folder
+    //checking the box doesn't open or close the folder
     head.addEventListener('click', function (e) { e.stopPropagation(); });
     head.addEventListener('change', function () {
       inGroup(g).forEach(function (i) { if (!i.closest('li').hidden) set(i.dataset.user, head.checked); });

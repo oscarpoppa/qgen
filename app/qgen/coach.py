@@ -188,7 +188,7 @@ def problem_hints(qtype_key, question, answer, options):
 
 
 def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None, shuffle_order=True):
-    """problems: {id: VProblem} for the ticked ids; lay: the quiz layout with groups."""
+    """problems: {id: VProblem} for the checked ids; lay: the quiz layout with groups."""
     from . import layout
     hints = []
     for err in layout.check(lay or []):

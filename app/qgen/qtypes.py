@@ -60,7 +60,7 @@ class OptionalRadioField(RadioField):
 
 
 class CheckboxField(SelectMultipleField):
-    """Several checkboxes; any number may be ticked."""
+    """Several checkboxes; any number may be checked."""
     widget = ListWidget(prefix_label=False)
     option_widget = CheckboxInput()
 
@@ -229,7 +229,7 @@ def numbers_match(subm, corr, precision='close', ordered=False):
 
 
 def uses_complex(options):
-    """Complex numbers are allowed only when the teacher ticked the box or chose
+    """Complex numbers are allowed only when the teacher checked the box or chose
     an imaginary/complex value, so they never turn up in ordinary arithmetic."""
     return bool(options.get('complex')) or F.uses_complex(options.get('values') or [])
 
@@ -508,7 +508,7 @@ class ChoiceOne(QType):
         show_n = min(show_n, len(choices))
         if self.multi:
             #at least one correct, and at least one wrong when there are any,
-            #so "tick them all" is never the answer by accident
+            #so "check them all" is never the answer by accident
             most = min(show_n - 1 if wrong else show_n, len(right))
             nright = rng.randint(max(1, show_n - len(wrong)), max(1, most))
         else:
@@ -569,7 +569,7 @@ def parse_combos(text):
 
 
 class ChoiceMany(ChoiceOne):
-    """Several boxes to tick. The right answer is the set of * choices, and/or
+    """Several boxes to check. The right answer is the set of * choices, and/or
     any of the teacher's "other correct combinations"."""
     key = 'choice_many'
     label = 'Pick several'

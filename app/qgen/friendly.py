@@ -63,7 +63,7 @@ FUNCS = {
 CONSTANTS = {'pi': math.pi}
 
 #an env holding this key allows complex numbers, with i = sqrt(-1); only
-#problems with "Use complex numbers" ticked ever get it
+#problems with "Use complex numbers" checked ever get it
 COMPLEX = '__complex__'
 
 MAX_TRIES = 100

@@ -152,7 +152,7 @@ class TranscriptItem:
 
 def transcript_choices(qt, cp):
     """The choices this student saw, which they picked, and which are correct
-    (left unmarked when several combinations of ticks count, as in combos)."""
+    (left unmarked when several combinations of checked boxes count, as in combos)."""
     opts = cp.conc_opts or {}
     if not hasattr(qt, 'picked') or not opts.get('choices'):
         return None

@@ -120,7 +120,7 @@ class CheckboxList(SelectMultipleField):
     option_widget = CheckboxInput()
 
 
-#form for creating and editing a quiz; problems are ticked on the page and their
+#form for creating and editing a quiz; problems are checked on the page and their
 #order kept in vplist ("4, 7, 5")
 class QuizForm(FlaskForm):
     title = StringField('Quiz title', validators=[DataRequired(message='Please give the quiz a title.')])

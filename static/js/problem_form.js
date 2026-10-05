@@ -257,7 +257,7 @@
     panel.hidden = !hasMath;
     if (!hasMath) return;
     if (panel.dataset.source === 'choices') {
-      //one choice per line, the correct ones (*) ticked
+      //one choice per line, the correct ones (*) checked
       body.textContent = text.split('\n').filter(function (l) { return l.trim(); })
         .map(function (l) { return /^\s*\*/.test(l) ? '✓ ' + l.replace(/^\s*\*\s*/, '') : '○ ' + l.trim(); }).join('\n');
     } else {
