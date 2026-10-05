@@ -927,6 +927,12 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 /* a student's Home: three counts, and their awards */
 .home-counters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .home-due { color: var(--warn); font-weight: 600; }
+.home-sub > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; width: fit-content; }
+.home-sub > summary::-webkit-details-marker { display: none; }
+.home-sub > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+.home-sub[open] > summary::before { transform: rotate(90deg); }
+.home-sub > summary h3 { margin: 10px 0 6px; }
+@media (prefers-reduced-motion: reduce) { .home-sub > summary::before { transition: none; } }
 .awards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 10px; }
 .award { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
   background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }

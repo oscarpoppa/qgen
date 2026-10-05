@@ -38,6 +38,8 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert re.findall(r'<strong>“([^”]+)”</strong>', page) == ['Q2', 'Q3', 'Q1']
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
     assert '<a href="/home">Home</a>' in page  # in the menu for students
+    # the boxes fold away (remembered in the browser)
+    assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page and 'qgen-home-closed' in page
     assert '<a href="/home">Home</a>' not in teach.get('/dashboard').data.decode()
 
 

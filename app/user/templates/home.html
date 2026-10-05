@@ -21,8 +21,9 @@
 </div>
 
 <div class="dash-grid">
-  <section class="card dash-card" id="waiting" aria-labelledby="waiting-title">
-    <div class="dash-head"><h2 id="waiting-title">Waiting for you</h2><span class="badge">{{ waiting|length }}</span></div>
+  {# each box folds away (remembered in this browser), like the Dashboard's #}
+  <details class="card dash-card" id="waiting" data-box="waiting" open>
+    <summary class="dash-head"><h2>Waiting for you</h2><span class="badge">{{ waiting|length }}</span></summary>
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
@@ -36,19 +37,40 @@
     {% else %}
       <p class="muted">You're all caught up. Nothing to do right now. 🎉</p>
     {% endif %}
-  </section>
+  </details>
 
-  <section class="card dash-card" aria-labelledby="awards-title">
-    <div class="dash-head"><h2 id="awards-title">Your awards</h2><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></div>
+  <details class="card dash-card" data-box="awards" open>
+    <summary class="dash-head"><h2>Your awards</h2><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
     {% if awards %}
       {{ award_list(awards) }}
     {% else %}
       <p class="muted small">Finish quizzes to earn awards.</p>
     {% endif %}
     {% if to_earn %}
-      <h3 class="dash-sub">Still to earn</h3>
-      {{ award_list(to_earn, locked=true) }}
+      <details class="home-sub" data-box="to-earn" open>
+        <summary><h3 class="dash-sub">Still to earn</h3></summary>
+        {{ award_list(to_earn, locked=true) }}
+      </details>
     {% endif %}
-  </section>
+  </details>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* the boxes that are folded stay folded next time (this browser only) */
+(function () {
+  var KEY = 'qgen-home-closed', shut = [];
+  try { shut = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) {}
+  var boxes = document.querySelectorAll('details[data-box]');
+  boxes.forEach(function (d) { if (shut.indexOf(d.dataset.box) !== -1) d.open = false; });
+  boxes.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      var now = [];
+      boxes.forEach(function (b) { if (!b.open) now.push(b.dataset.box); });
+      try { localStorage.setItem(KEY, JSON.stringify(now)); } catch (e) {}
+    });
+  });
+})();
+</script>
 {% endblock %}
