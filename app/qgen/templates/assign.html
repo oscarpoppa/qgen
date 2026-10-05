@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field %}
 
+{# a group of people that opens and closes, with a box that checks them all; these boxes
+   aren't sent (the ones under All users are) #}
+{% macro pick_group(key, title, members, children=()) %}
+  <details class="pick-group" data-group="{{ key }}">
+    <summary><input type="checkbox" class="pick-all" aria-label="Check everyone in {{ title }}"><span class="pick-name">{{ title }}</span>
+      <span class="muted small">{{ members|length }}</span></summary>
+    {% for c in children %}{{ pick_folder(c) }}{% endfor %}
+    {% if members %}<ul class="choice-list pick-list">
+      {% for u in members %}
+        <li><label><input type="checkbox" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}> {{ u.username }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
+      {% endfor %}
+    </ul>{% elif not children %}<p class="muted small">Nobody in it.</p>{% endif %}
+  </details>
+{% endmacro %}
+{% macro pick_folder(n) %}{{ pick_group(n.folder.id, '📁 ' ~ n.folder.name, n.people, n.folders) }}{% endmacro %}
+
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1></div>
 
@@ -17,19 +33,32 @@
   </div>
   <script type="application/json" id="quiz-subjects">{{ quiz_subjects|tojson }}</script>
   {{ field(form.vquiz) }}
-  <div class="field{% if form.users.errors %} has-error{% endif %}">
+  {# the people, in the Users page's folders (which open and close), then those in no folder,
+     then everyone. Only the boxes under "All users" are sent; the ones in folders follow
+     them, so someone in two folders is ticked in both and gets one copy. #}
+  <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     <span class="label">Students</span>
-    <input type="search" class="filter-list" placeholder="Filter students…" aria-label="Filter students" style="margin-bottom:8px">
-    <div class="btn-row small" style="margin-bottom:8px">
-      <button type="button" class="btn btn-secondary btn-sm" id="all">Select all</button>
-      <button type="button" class="btn btn-secondary btn-sm" id="none">Clear</button>
+    <div class="btn-row small pick-bar">
+      <input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
+      <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear">Clear</button>
     </div>
-    {# the Users page's folders: check everyone in one (and in the folders inside it) #}
-    {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
-      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}">{{ '\u00a0' * (uf.depth - 1) * 2 }}📁 {{ uf.name }}</button>{% endfor %}</div>{% endif %}
-    <div style="max-height:320px;overflow:auto">{{ form.users(class='choice-list') }}</div>
+    <div class="pick-groups">
+      {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
+      {% if root.folders %}{{ pick_group('none', '📥 Not in a folder', root.people) }}{% endif %}
+      <details class="pick-group" data-group="all"{% if not root.folders %} open{% endif %}>
+        <summary><input type="checkbox" class="pick-all" aria-label="Check everyone"><span class="pick-name">👥 All users</span>
+          <span class="muted small">{{ people|length }}</span></summary>
+        <ul class="choice-list pick-list">
+          {% for u in people %}
+            <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>
+              <label for="users-{{ u.id }}">{{ u.username }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
+          {% endfor %}
+        </ul>
+      </details>
+    </div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
-    <div class="help">Each student gets a different random version of the quiz.</div>
+    <div class="help">Tick a folder to check everyone in it. Each student gets a different random version of the quiz.</div>
   </div>
   <fieldset>
     <legend>When (optional)</legend>
@@ -82,21 +111,57 @@
   field.hidden = false;
   rebuild();
 })();
+/* choosing people: boxes for the same person stay alike in every folder; a folder's box
+ * checks everyone in it (and in the folders inside it), and shows a dash when only some are;
+ * typing a name shows only the matching people and opens the folders they're in */
 (function () {
-  var items = document.querySelectorAll('.choice-list li');
-  document.querySelector('.filter-list').addEventListener('input', function () {
-    var q = this.value.trim().toLowerCase();
-    items.forEach(function (li) { li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
-  });
-  function set(v) { items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = v; }); }
-  document.getElementById('all').onclick = function () { set(true); };
-  document.getElementById('none').onclick = function () { set(false); };
-  document.querySelectorAll('.folder-picks [data-ids]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var ids = JSON.parse(b.dataset.ids).map(String);
-      items.forEach(function (li) { var box = li.querySelector('input'); if (ids.indexOf(box.value) !== -1) box.checked = true; });
+  var box = document.getElementById('pick-people');
+  if (!box) return;
+  var people = box.querySelectorAll('input[data-user]'), groups = box.querySelectorAll('details.pick-group');
+  var count = box.querySelector('.pick-count');
+  function inGroup(g) { return g.querySelectorAll('input[data-user]'); }
+  function refresh() {
+    groups.forEach(function (g) {
+      var all = inGroup(g), on = 0;
+      all.forEach(function (i) { if (i.checked) on++; });
+      var head = g.querySelector(':scope > summary .pick-all');
+      head.checked = all.length > 0 && on === all.length;
+      head.indeterminate = on > 0 && on < all.length;
+      head.disabled = !all.length;
+    });
+    var picked = box.querySelectorAll('input[name="users"]:checked').length;
+    count.textContent = picked + ' chosen';
+  }
+  function set(id, on) {
+    box.querySelectorAll('input[data-user="' + id + '"]').forEach(function (i) { i.checked = on; });
+  }
+  people.forEach(function (i) { i.addEventListener('change', function () { set(i.dataset.user, i.checked); refresh(); }); });
+  groups.forEach(function (g) {
+    var head = g.querySelector(':scope > summary .pick-all');
+    //ticking the box doesn't open or close the folder
+    head.addEventListener('click', function (e) { e.stopPropagation(); });
+    head.addEventListener('change', function () {
+      inGroup(g).forEach(function (i) { if (!i.closest('li').hidden) set(i.dataset.user, head.checked); });
+      refresh();
     });
   });
+  box.querySelector('[data-pick="clear"]').addEventListener('click', function () {
+    people.forEach(function (i) { i.checked = false; });
+    refresh();
+  });
+  var opened = null;
+  box.querySelector('.filter-list').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (q && opened === null) { opened = []; groups.forEach(function (g) { if (g.open) opened.push(g); }); }
+    people.forEach(function (i) { var li = i.closest('li'); li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
+    groups.forEach(function (g) {
+      var match = Array.prototype.some.call(inGroup(g), function (i) { return !i.closest('li').hidden; });
+      g.hidden = q && !match;
+      if (q) g.open = match;
+    });
+    if (!q && opened !== null) { groups.forEach(function (g) { g.open = opened.indexOf(g) !== -1; }); opened = null; }
+  });
+  refresh();
 })();
 /* the time limit can't be longer than the time between opening and closing (checked
  * again when assigning): say the most it can be, and warn as soon as it's too long */

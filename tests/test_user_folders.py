@@ -128,9 +128,19 @@ def test_assigning_and_messaging_a_folder(app_db):
     p2 = folder('Period 2')
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': p2})
     teach.post('/users/folders/add', data={'user': ids('teach'), 'to': g7})  # a teacher in it gets no student message
-    # Assign: a button per folder that checks everyone in it (folders inside included)
+    # Assign: the people in the folders (folders inside them too), then those in no folder, then everyone
     page = teach.get('/quiz/assign').data.decode()
-    assert 'data-ids="[{}, {}]">📁 7th grade'.format(*sorted([ids('sam'), ids('teach')])) in page
+    assert '<details class="pick-group" data-group="{}">'.format(g7) in page
+    assert page.index('data-group="{}"'.format(g7)) < page.index('data-group="{}"'.format(p2)) < \
+        page.index('data-group="none"') < page.index('data-group="all"')
+    assert page.count('type="checkbox" name="users"') == 3  # only the boxes under All users are sent
+    assert page.count('data-user="{}"'.format(ids('sam'))) == 2  # in Period 2, and under All users
+    # someone checked twice gets one copy
+    from test_dashboard import make_quiz
+    from app.qgen.models import CQuiz
+    vq = make_quiz(app, teach, 'Twice')
+    teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam'), ids('sam')]})
+    assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 1
     # Messages: the folders down the side, a folder's students only
     page = teach.get('/messages').data.decode()
     assert '<span class="side-name">7th grade</span>' in page

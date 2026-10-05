@@ -366,7 +366,8 @@ def assign():
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
         vquiz = db.get_or_404(VQuiz, form.vquiz.data)
-        students = [db.session.get(User, uid) for uid in form.users.data]
+        #each person once, however many folders they were checked in
+        students = [db.session.get(User, uid) for uid in dict.fromkeys(form.users.data)]
         created, failed = S.assign(vquiz, [u for u in students if u], form.opens_at.data, form.closes_at.data, form.time_limit.data,
                                    by=current_user)
         for student, err in failed:
@@ -381,9 +382,14 @@ def assign():
     quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
     #a quiz really chosen (from a link, or sent back after a form error) is kept on show
     quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
+    #the people to choose from, in the Users page's folders
     from app.user import groups
+    people = User.query.order_by(User.username).all()
+    root, _, _, _ = groups.tree(people)
+    chosen = set(form.users.data or [])
     return render_template('assign.html', title='Assign a quiz', form=form, choices=S.subject_choices('quizzes'),
-                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen, user_folders=groups.picker())
+                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen,
+                           people=people, root=root, chosen=chosen)
 
 
 # ---------------------------------------------------------------- taking

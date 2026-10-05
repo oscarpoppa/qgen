@@ -211,6 +211,24 @@ legend { font-weight: 700; padding: 0 6px; }
 .form-row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
 /* radio / checkbox answer lists */
+/* Assign: people in folders that open and close, each with a box that checks them all */
+.pick-bar { align-items: center; margin-bottom: 8px; }
+.pick-bar .filter-list { flex: 1 1 180px; max-width: 260px; margin: 0; }
+.pick-count { margin-left: auto; }
+.pick-groups { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+.pick-group { border-radius: 8px; }
+.pick-group .pick-group { margin-left: 18px; }
+.pick-group > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; list-style: none; border-radius: 8px; }
+.pick-group > summary::-webkit-details-marker { display: none; }
+.pick-group > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+.pick-group[open] > summary::before { transform: rotate(90deg); }
+.pick-group > summary:hover { background: var(--accent-soft); }
+.pick-group > summary input { margin: 0; }
+.pick-name { font-weight: 600; }
+.pick-list { margin: 4px 0 8px 26px; gap: 4px; }
+.pick-list li { padding: 6px 10px; }
+.pick-list label { display: flex; align-items: center; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .pick-group > summary::before { transition: none; } }
 .choice-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .choice-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
