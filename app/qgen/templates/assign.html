@@ -119,6 +119,7 @@
   if (!box) return;
   var people = box.querySelectorAll('input[data-user]'), groups = box.querySelectorAll('details.pick-group');
   var count = box.querySelector('.pick-count');
+  var hasFolders = !!box.querySelector('details.pick-group:not([data-group="all"])');
   function inGroup(g) { return g.querySelectorAll('input[data-user]'); }
   function refresh() {
     groups.forEach(function (g) {
@@ -156,6 +157,9 @@
     people.forEach(function (i) { var li = i.closest('li'); li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
     groups.forEach(function (g) {
       var match = Array.prototype.some.call(inGroup(g), function (i) { return !i.closest('li').hidden; });
+      //while filtering, people show in their own folders only, not again under All users
+      //(unless there are no folders, when All users is the only list)
+      if (g.dataset.group === 'all' && hasFolders) match = false;
       g.hidden = q && !match;
       if (q) g.open = match;
     });
