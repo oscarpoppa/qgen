@@ -120,6 +120,8 @@ code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
 .btn.nav-toggle { display: none; }
 
 main.container { padding-top: 24px; padding-bottom: 48px; }
+/* pages with a side list (My quizzes): as wide as the window, with the usual margins */
+main.container.container-wide { max-width: none; }
 
 .page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .page-head h1 { margin: 0; }

@@ -2,6 +2,8 @@
 {% from "_macros.html" import avatar with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
+{# the folder list beside the quizzes needs the room: the whole width of the window #}
+{% block main_class %} container-wide{% endblock %}
 
 {# compact: the small version for a row in a list of attempts, so the row stays on one line #}
 {% macro action(cq, compact=false) %}

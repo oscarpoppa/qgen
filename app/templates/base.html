@@ -122,7 +122,8 @@
     </div>
   </header>
 
-  <main class="container">
+  {# a page can use the whole window's width by setting main_class to " container-wide" #}
+  <main class="container{% block main_class %}{% endblock %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="alerts" role="status">
