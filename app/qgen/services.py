@@ -562,6 +562,9 @@ def retake(cq, by=None):
     new.retake_rule = cq.retake_rule
     #answers released to this student stay released on the new attempt
     new.answers_released = cq.answers_released
+    #a quiz to take again comes out of the student's folders, back where they'll see it
+    from .models import QuizPlacement
+    QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)
     notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
     #for the teachers; "Open" goes to that student's results
     notify_teachers(cq.assignee, '{} gave {} a retake of "{}".'.format(by.username if by else 'A teacher', cq.taker.username, cq.vquiz.title),

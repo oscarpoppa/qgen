@@ -52,18 +52,35 @@ def mypage():
     mark_quizzes_seen(current_user.id)
     groups = attempts_by_quiz(current_user.cquizzes)
     root, all_folders = folders.tree(current_user, groups)
+    nodes, home = folders.index(root)
+    #which part the sidebar has chosen: 'all' quizzes, 'none' (not in a folder), or a folder's id;
+    #a folder that's gone (or isn't theirs) shows everything
+    view = request.args.get('folder', 'all')
+    node = nodes.get(int(view)) if view.isdigit() else None
+    if node is None and view != 'none':
+        view = 'all'
+    shown = node['groups'] if node else root['groups'] if view == 'none' else groups
+    #the chosen folder's parents, for "Practice › Hard ones"
+    path, up = [], node['folder'] if node else None
+    while up is not None:
+        path.insert(0, up)
+        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
     return render_template('mypage.html', current_user=current_user, title='My quizzes', groups=groups,
                            root=root, all_folders=all_folders, inside=folders.inside, max_depth=folders.MAX_DEPTH,
-                           max_name=folders.MAX_NAME)
+                           max_name=folders.MAX_NAME, view=view, node=node, shown=shown, home=home, path=path,
+                           open_ids={f.id for f in path})
 
 
-def _folder_done(message, error=False):
-    """After a folder change: JSON for the page's script (drag and drop), else back to My quizzes."""
+def _folder_done(message, error=False, show=None):
+    """After a folder change: JSON for the page's script (drag and drop), else back to My quizzes
+    showing the same folder (or `show`: a folder's id, or 'all')."""
     if request.headers.get('X-Requested-With') == 'fetch':
         from flask import jsonify
         return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
     flash(message, 'error' if error else 'success')
-    return redirect(url_for('user.mypage'))
+    if show is None:
+        show = request.form.get('view') or 'all'
+    return redirect(url_for('user.mypage', folder=show) if show != 'all' else url_for('user.mypage'))
 
 
 #routes for one's own folders on My quizzes (students and teachers alike)
@@ -77,7 +94,7 @@ def create_folder():
         f = folders.create_folder(current_user, request.form.get('name'), request.form.get('parent'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder "{}" made.'.format(f.name))
+    return _folder_done('Folder "{}" made.'.format(f.name), show=f.id)
 
 
 @user_bp.route('/mypage/folders/<int:folder_id>/rename', methods=['POST'])
@@ -99,11 +116,15 @@ def rename_folder(folder_id):
 @post_form_only
 def delete_folder(folder_id):
     from app.qgen import folders
+    from app.qgen.models import QuizFolder
+    f = db.session.get(QuizFolder, folder_id)
+    parent = f.parent_id if f is not None and f.owner_id == current_user.id else None
     try:
         name = folders.delete_folder(current_user, folder_id)
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name))
+    return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
+                        show=(parent or 'none') if request.form.get('view') == str(folder_id) else None)
 
 
 #move a quiz (quiz=<quiz id>) or a folder (folder=<id>) into a folder (to=<id>, or "top": the main list)

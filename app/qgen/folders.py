@@ -155,6 +155,20 @@ def tree(user, groups):
     return root, flat
 
 
+def index(root):
+    """{folder id: its node} for every folder in the tree, and {quiz id: the folder it's in}."""
+    nodes, home = {}, {}
+
+    def walk(node):
+        for g in node['groups']:
+            home[g['vquiz'].id] = node['folder']
+        for child in node['folders']:
+            nodes[child['folder'].id] = child
+            walk(child)
+    walk(root)
+    return nodes, home
+
+
 def inside(node):
     """The ids of a folder and every folder in it (it can't be moved into any of these)."""
     out = {node['folder'].id}

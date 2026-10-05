@@ -676,37 +676,77 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
 .quiz-card[open] .quiz-flag { display: none; }
 
-/* My quizzes: your own folders (they fold like quiz boxes, and can hold folders) */
-.folder-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+/* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
+.folders-layout { display: grid; grid-template-columns: minmax(170px, 230px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.folder-side { position: sticky; top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px;
+  background: var(--surface); max-height: calc(100vh - 24px); overflow: auto; }
+.folder-side-head { display: none; list-style: none; cursor: pointer; }
+.folder-side-head::-webkit-details-marker { display: none; }
+.side-list { list-style: none; margin: 0; padding: 0; }
+.side-list .side-list { padding-left: 14px; }
+.side-item.side-folded > .side-list { display: none; }
+.side-row { display: flex; align-items: center; gap: 2px; border-radius: 8px; min-width: 0; }
+.side-row.current { background: var(--accent-soft); }
+.side-row.current .side-link { font-weight: 600; }
+.side-link { flex: 1 1 auto; min-width: 0; padding: 5px 4px; color: var(--text); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-link:hover { text-decoration: underline; }
+.side-count { flex: 0 0 auto; padding-right: 6px; }
+.side-fold, .side-fold-space { flex: 0 0 18px; width: 18px; height: 22px; }
+.side-fold { border: 0; background: none; padding: 0; cursor: pointer; position: relative; }
+.side-fold::before { content: ""; position: absolute; left: 6px; top: 6px; border-style: solid; border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent var(--muted); transform: rotate(90deg); transition: transform .15s; }
+.side-fold[aria-expanded="false"]::before { transform: none; }
+.folder-side .new-folder { margin-top: 10px; padding: 0 4px; }
+.side-hint { margin: 8px 4px 0; }
 .new-folder > summary { list-style: none; display: inline-flex; }
 .new-folder > summary::-webkit-details-marker { display: none; }
 .new-folder[open] > summary { margin-bottom: 8px; }
 .folder-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
-.folder-form input[type=text] { width: auto; flex: 1 1 160px; min-width: 0; max-width: 260px; }
-.folder-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+.folder-form input[type=text] { width: auto; flex: 1 1 140px; min-width: 0; max-width: 260px; }
+.folder-main { min-width: 0; }
+.folder-title-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.folder-title { margin: 0; font-size: 1.2rem; min-width: 0; overflow-wrap: anywhere; }
+.folders-layout > .folder-main > .folder-title { margin-bottom: 12px; }
+.folder-tools > summary { list-style: none; }
+.folder-tools > summary::-webkit-details-marker { display: none; }
+.folder-tools-box { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; padding: 12px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface); }
+/* each level's Expand all / Collapse all (just what's directly in it) */
+.level-row { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
+.level-buttons { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+/* a folder inside the one being looked at: a box that opens to its own folders and quizzes */
+.sub-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
   background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.folder-box .folder-box { margin: 10px 0; }
-.folder-head { display: flex; gap: 8px; align-items: center; list-style: none; cursor: pointer; min-width: 0; }
-.folder-head::-webkit-details-marker { display: none; }
-.folder-head h2 { margin: 0; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folder-head .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
+.sub-head { display: flex; gap: 8px; align-items: center; list-style: none; cursor: pointer; min-width: 0; border-radius: 8px; }
+.sub-head::-webkit-details-marker { display: none; }
+.sub-head h3 { margin: 0; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-head .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
   border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
-.folder-box[open] > .folder-head .fold { transform: rotate(90deg); }
-.folder-body { margin-top: 10px; }
-.folder-tools { margin-bottom: 10px; }
-.folder-tools > summary { cursor: pointer; color: var(--muted); width: fit-content; }
-.folder-tools[open] > summary { margin-bottom: 8px; }
-.folder-tools-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 8px; }
-.folder-empty { margin: 4px 0; }
+.sub-box[open] > .sub-head .fold { transform: rotate(90deg); }
+.sub-body { margin-top: 10px; }
+.sub-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+@media (max-width: 600px) { .sub-box { padding: 8px; } }
+.quiz-folder-label { margin: -4px 0 6px; }
+.quiz-folder-label a { color: var(--muted); text-decoration: none; }
+.quiz-folder-label a:hover { text-decoration: underline; }
 .move-form { margin-top: 8px; }
 .move-form select { width: auto; max-width: 100%; padding: 2px 6px; font-size: .85rem; }
-.quiz-card > summary[draggable], .folder-head[draggable] { -webkit-user-drag: element; }
+.quiz-card > summary[draggable] { -webkit-user-drag: element; }
 .dragging { opacity: .5; }
-.drop-over { outline: 2px dashed var(--accent); outline-offset: 2px; }
-.main-drop { flex: 1 1 200px; border: 2px dashed var(--border); border-radius: 10px; padding: 8px 12px; color: var(--muted); text-align: center; }
-@media (prefers-reduced-motion: reduce) { .folder-head .fold { transition: none; } }
-/* phones: folders inside folders keep their quiz boxes wide enough to read */
-@media (max-width: 600px) { .folder-box { padding: 8px 8px; } .folder-box .folder-box { margin: 8px 0; } }
+.folder-dragging .folder-side { border-color: var(--accent); }
+.drop-over { outline: 2px dashed var(--accent); outline-offset: 1px; background: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) { .side-fold::before, .sub-head .fold { transition: none; } }
+/* phones and narrow windows: the folder list sits above the quizzes and folds away */
+@media (max-width: 760px) {
+  .folders-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .folder-side { position: static; max-height: none; }
+  .folder-side-head { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; }
+  .folder-side-head::before { content: "▸"; color: var(--muted); }
+  .folder-side[open] > .folder-side-head { margin-bottom: 8px; }
+  .folder-side[open] > .folder-side-head::before { content: "▾"; }
+  .folder-side-now { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 
 /* View pages: problems and quizzes as students see them */
 .sample-item .card-head { align-items: center; }

@@ -32,16 +32,17 @@
 {% endmacro %}
 
 {# "Move to" a folder: a pick list that moves as soon as one is chosen (a button without scripts).
-   what: 'quiz' or 'folder'; here: the folder it's in now (None: the main list);
+   what: 'quiz' or 'folder'; here: the folder it's in now (None: not in a folder);
    skip: folders it can't go into (a folder itself and the folders inside it) #}
 {% macro move_menu(what, ident, here, label, skip=()) %}
   {% if all_folders %}
   <form method="post" action="{{ url_for('user.move_to_folder') }}" class="move-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
+    <input type="hidden" name="view" value="{{ view }}">
     <label class="small muted">Move to
       <select name="to" class="move-select" aria-label="Move {{ label }} to a folder">
-        <option value="top"{% if here is none %} selected{% endif %}>Main list</option>
+        <option value="top"{% if here is none %} selected{% endif %}>{{ 'Not in a folder' if what == 'quiz' else 'Top level' }}</option>
         {% for f, depth in all_folders if f.id not in skip %}
           <option value="{{ f.id }}"{% if here is not none and here.id == f.id %} selected{% endif %}>{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}📁 {{ f.name }}</option>
         {% endfor %}
@@ -51,12 +52,13 @@
   {% endif %}
 {% endmacro %}
 
-{# a form to make a folder: in the main list, or inside `parent` #}
+{# a form to make a folder: at the top level, or inside `parent` #}
 {% macro new_folder(parent=none) %}
   <details class="new-folder">
     <summary class="btn btn-secondary btn-sm">+ New folder{{ ' inside' if parent }}</summary>
     <form method="post" action="{{ url_for('user.create_folder') }}" class="folder-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="view" value="{{ view }}">
       {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
       <input type="text" name="name" maxlength="{{ max_name }}" required placeholder="Folder name" aria-label="New folder's name">
       <button class="btn btn-sm">Make folder</button>
@@ -64,15 +66,15 @@
   </details>
 {% endmacro %}
 
-{% macro quiz_cards(gs, here) %}
+{% macro quiz_cards(gs) %}
   {% if gs %}
   <div class="grid quiz-grid">
   {% for g in gs %}
-    {% set latest = g.latest %}
+    {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
     {# each quiz folds down to its title and score; the page remembers which are folded #}
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
+    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
       <summary class="card-head" draggable="true">
         <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
         {# how many attempts are in this box #}
@@ -83,6 +85,7 @@
         <span class="badge badge-warn quiz-flag" hidden></span>
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}</span>
       </summary>
+      {% if view == 'all' and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
         {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
@@ -106,34 +109,45 @@
   {% endif %}
 {% endmacro %}
 
-{# a folder: folds like a quiz box; holds folders, then quizzes. Drop a quiz or folder on it to move it in. #}
-{% macro folder_box(node, parent) %}
-  {% set f = node.folder %}
-  <details class="folder-box" data-folder="{{ f.id }}" data-drop="{{ f.id }}" open>
-    <summary class="folder-head" draggable="true"><span class="fold" aria-hidden="true"></span>
-      <span class="folder-icon" aria-hidden="true">📁</span><h2 title="{{ f.name }}">{{ f.name }}</h2>
-      <span class="muted small nowrap">{{ node.count }} quiz{{ '' if node.count == 1 else 'zes' }}</span></summary>
-    <div class="folder-body">
-      <details class="folder-tools">
-        <summary class="small">Folder options</summary>
-        <div class="folder-tools-row">
-          <form method="post" action="{{ url_for('user.rename_folder', folder_id=f.id) }}" class="folder-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="text" name="name" value="{{ f.name }}" maxlength="{{ max_name }}" required aria-label="Folder name">
-            <button class="btn btn-secondary btn-xs">Rename</button>
-          </form>
-          {{ move_menu('folder', f.id, parent, f.name, inside(node)) }}
-          <form method="post" action="{{ url_for('user.delete_folder', folder_id=f.id) }}" class="folder-form"
-                data-confirm="Remove the folder &quot;{{ f.name }}&quot;? Nothing in it is deleted: its quizzes{{ ' and folders' if node.folders }} move up a level." data-confirm-ok="Remove folder">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-secondary btn-xs">Remove folder</button>
-          </form>
-        </div>
-        {% if node.depth < max_depth %}{{ new_folder(f) }}{% endif %}
-      </details>
-      {% for child in node.folders %}{{ folder_box(child, f) }}{% endfor %}
-      {{ quiz_cards(node.groups, f) }}
-      {% if not node.count and not node.folders %}<p class="muted small folder-empty">Empty. Drag a quiz here, or use a quiz's "Move to" list.</p>{% endif %}
+{# one folder in the sidebar, with the folders inside it (which fold away). Drop a quiz or
+   folder on it to move it in; drag it onto another to put it inside that one. #}
+{% macro side_folder(n) %}
+  {% set f = n.folder %}
+  <li class="side-item" data-folder="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}">
+    <div class="side-row{{ ' current' if view == f.id|string }}" data-drop="{{ f.id }}">
+      {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
+      {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
+      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="true" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
+        <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
+      <span class="side-count muted small">{{ n.groups|length or '' }}</span>
+    </div>
+    {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
+  </li>
+{% endmacro %}
+
+{# Expand all / Collapse all for one level: they open or close what's directly in it
+   (folder boxes and quiz boxes), not what's further down #}
+{% macro level_buttons(label) %}
+  <span class="level-buttons">
+    <button type="button" class="btn btn-secondary btn-xs" data-level="open" aria-label="Expand all in {{ label }}">Expand all</button>
+    <button type="button" class="btn btn-secondary btn-xs" data-level="close" aria-label="Collapse all in {{ label }}">Collapse all</button>
+  </span>
+{% endmacro %}
+
+{# a folder inside the one being looked at: a box that opens to show its own folders and
+   quizzes (folded to begin with; remembered). Drop a quiz on its title to move it in. #}
+{% macro sub_box(n) %}
+  {% set f = n.folder %}
+  <details class="sub-box" data-sub="{{ f.id }}">
+    <summary class="sub-head" data-drop="{{ f.id }}"><span class="fold" aria-hidden="true"></span>
+      <span aria-hidden="true">📁</span> <h3>{{ f.name }}</h3>
+      <span class="muted small nowrap">{{ n.count }} quiz{{ '' if n.count == 1 else 'zes' }}</span></summary>
+    <div class="sub-body level">
+      <div class="sub-tools">{% if n.folders or n.groups %}{{ level_buttons(f.name) }}{% endif %}
+        <a class="small" href="{{ url_for('user.mypage', folder=f.id) }}">Open this folder</a></div>
+      {% for child in n.folders %}{{ sub_box(child) }}{% endfor %}
+      {{ quiz_cards(n.groups) }}
+      {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
     </div>
   </details>
 {% endmacro %}
@@ -141,18 +155,72 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
   <div class="actions">
-    {% if current_user.cquizzes %}
-      <button type="button" class="btn btn-secondary btn-sm" id="collapse-all">Collapse all</button>
-      <button type="button" class="btn btn-secondary btn-sm" id="expand-all">Expand all</button>
-    {% endif %}
     <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 
 {% if groups or root.folders %}
-  <div class="folder-bar">{{ new_folder() }}
-    {# while dragging: drop here to take something out of its folders #}
-    <div class="main-drop" data-drop="top" hidden>Drop here for the main list</div></div>
-  {% for child in root.folders %}{{ folder_box(child, none) }}{% endfor %}
-  {{ quiz_cards(root.groups, none) }}
+<div class="folders-layout">
+  {# the folders down the side (on a phone: a list that folds away, above the quizzes) #}
+  <details class="folder-side" open>
+    <summary class="folder-side-head"><span class="small muted">Folders</span>
+      <span class="folder-side-now">{{ node.folder.name if node else 'Not in a folder' if view == 'none' else 'All quizzes' }}</span></summary>
+    <nav aria-label="Folders">
+      <ul class="side-list side-top">
+        <li><div class="side-row{{ ' current' if view == 'all' }}">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('user.mypage') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">📚</span> All quizzes</a>
+          <span class="side-count muted small">{{ groups|length }}</span></div></li>
+        {% if root.folders %}
+        <li><div class="side-row{{ ' current' if view == 'none' }}" data-drop="top">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('user.mypage', folder='none') }}" class="side-link"{% if view == 'none' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> Not in a folder</a>
+          <span class="side-count muted small">{{ root.groups|length or '' }}</span></div></li>
+        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
+        {% endif %}
+      </ul>
+      {{ new_folder() }}
+      {% if all_folders %}<p class="muted small side-hint">Drag a quiz onto a folder to move it there.</p>{% endif %}
+    </nav>
+  </details>
+
+  <section class="folder-main" aria-labelledby="folder-title">
+    {% if node %}
+      {% set f = node.folder %}
+      <div class="folder-title-row">
+        <h2 id="folder-title" class="folder-title">
+          {% for p in path[:-1] %}<a href="{{ url_for('user.mypage', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}📁 {{ f.name }}</h2>
+        <details class="folder-tools">
+          <summary class="btn btn-secondary btn-sm">Folder options</summary>
+          <div class="folder-tools-box">
+            <form method="post" action="{{ url_for('user.rename_folder', folder_id=f.id) }}" class="folder-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="view" value="{{ view }}">
+              <input type="text" name="name" value="{{ f.name }}" maxlength="{{ max_name }}" required aria-label="Folder name">
+              <button class="btn btn-secondary btn-xs">Rename</button>
+            </form>
+            {{ move_menu('folder', f.id, path[-2] if path|length > 1 else none, f.name, inside(node)) }}
+            {% if node.depth < max_depth %}{{ new_folder(f) }}{% endif %}
+            <form method="post" action="{{ url_for('user.delete_folder', folder_id=f.id) }}" class="folder-form"
+                  data-confirm="Remove the folder &quot;{{ f.name }}&quot;? Nothing in it is deleted: its quizzes{{ ' and folders' if node.folders }} move up a level." data-confirm-ok="Remove folder">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="view" value="{{ view }}">
+              <button class="btn btn-secondary btn-xs">Remove folder</button>
+            </form>
+          </div>
+        </details>
+      </div>
+    {% else %}
+      <h2 id="folder-title" class="folder-title">{{ 'Not in a folder' if view == 'none' else 'All quizzes' }}</h2>
+    {% endif %}
+    <div class="level">
+    {% if shown or (node and node.folders) %}<div class="level-row">{{ level_buttons(node.folder.name if node else 'this list') }}</div>{% endif %}
+    {% if node %}{% for child in node.folders %}{{ sub_box(child) }}{% endfor %}{% endif %}
+    {{ quiz_cards(shown) }}
+    </div>
+    {% if not shown %}
+      <p class="card empty small">{% if node %}No quizzes in this folder{{ ' itself' if node.folders }}. Drag a quiz onto it in the folder list, or use a quiz's "Move to" list.{% elif view == 'none' %}Every quiz is in a folder.{% endif %}</p>
+    {% endif %}
+  </section>
+</div>
 {% endif %}
 {% if not groups %}
   {% if current_user.is_admin %}
@@ -235,30 +303,61 @@
   }
   remember();
   cards.forEach(function (d) { d.addEventListener('toggle', remember); });
-  //Collapse all / Expand all: folders too (folding.js below keeps those)
-  function all(open) {
-    cards.forEach(function (d) { d.open = open; });
-    document.querySelectorAll('details.folder-box').forEach(function (d) { d.open = open; });
-    remember();
-  }
-  var c = document.getElementById('collapse-all'), x = document.getElementById('expand-all');
-  if (c) c.addEventListener('click', function () { all(false); });
-  if (x) x.addEventListener('click', function () { all(true); });
 })();
 
-/* folders: folded ones remembered in this browser; "Move to" moves when a folder is
- * picked; a quiz or folder can be dragged onto a folder (or onto "the main list") */
+/* Expand all / Collapse all: each level (the folder being looked at, and every folder
+ * box in it) opens or closes only the boxes directly in it, folders and quizzes alike.
+ * Folder boxes start folded; the ones left open are remembered in this browser. */
 (function () {
-  var KEY = 'qgen-folded-folders', boxes = document.querySelectorAll('details.folder-box');
-  var folded = {};
-  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { folded[id] = true; }); } catch (e) {}
-  boxes.forEach(function (d) { if (folded[d.dataset.folder]) d.open = false; });
+  var KEY = 'qgen-open-subfolders', subs = document.querySelectorAll('details.sub-box'), open = {};
+  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { open[id] = true; }); } catch (e) {}
+  subs.forEach(function (d) { if (open[d.dataset.sub]) d.open = true; });
   function remember() {
     var keep = [];
-    boxes.forEach(function (d) { if (!d.open) keep.push(d.dataset.folder); });
+    subs.forEach(function (d) { if (d.open) keep.push(d.dataset.sub); });
     try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
   }
-  boxes.forEach(function (d) { d.addEventListener('toggle', remember); });
+  subs.forEach(function (d) { d.addEventListener('toggle', remember); });
+  document.querySelectorAll('[data-level]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var level = btn.closest('.level'), want = btn.dataset.level === 'open';
+      level.querySelectorAll('details.sub-box, details.quiz-card').forEach(function (d) {
+        //only the boxes whose nearest level is this one
+        if (d.parentElement.closest('.level') === level) d.open = want;
+      });
+    });
+  });
+})();
+
+/* the folder sidebar: folders whose inner folders are hidden are remembered in this
+ * browser (the folder being looked at is always shown); on a phone the list folds away
+ * above the quizzes. "Move to" moves when a folder is picked; a quiz can be dragged onto
+ * a folder in the list, and a folder onto another folder (or onto "Not in a folder" to
+ * bring it to the top level). */
+(function () {
+  var KEY = 'qgen-folded-folders', current = {{ path|map(attribute='id')|list|tojson }};
+  var folded = {};
+  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { folded[id] = true; }); } catch (e) {}
+  current.forEach(function (id) { delete folded[id]; });
+  function remember() {
+    try { localStorage.setItem(KEY, JSON.stringify(Object.keys(folded))); } catch (e) {}
+  }
+  document.querySelectorAll('.side-item').forEach(function (li) {
+    var btn = li.querySelector(':scope > .side-row > .side-fold');
+    if (!btn) return;
+    function show(open) {
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      li.classList.toggle('side-folded', !open);
+      if (open) delete folded[li.dataset.folder]; else folded[li.dataset.folder] = true;
+    }
+    show(!folded[li.dataset.folder]);
+    btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); remember(); });
+  });
+  remember();
+
+  //on a phone the folder list starts folded (its heading says which folder is shown)
+  var side = document.querySelector('details.folder-side');
+  if (side && window.matchMedia('(max-width: 760px)').matches) side.open = false;
 
   document.querySelectorAll('.move-select').forEach(function (sel) {
     sel.addEventListener('change', function () { sel.form.requestSubmit ? sel.form.requestSubmit() : sel.form.submit(); });
@@ -268,8 +367,8 @@
     d.addEventListener('toggle', function () { if (d.open) d.querySelector('input[name=name]').focus(); });
   });
 
-  var token = document.querySelector('meta[name="csrf-token"]'), mainDrop = document.querySelector('.main-drop');
-  var dragging = null;  // {kind: 'quiz'|'folder', id, el}
+  var token = document.querySelector('meta[name="csrf-token"]');
+  var dragging = null;  // {kind: 'quiz'|'folder', id, el, home}
   function move(kind, id, to) {
     var data = new FormData();
     data.append('csrf_token', token ? token.content : '');
@@ -283,27 +382,33 @@
         alert(res.error || 'That didn\'t work. Please reload the page and try again.');
       });
   }
-  document.querySelectorAll('[draggable="true"]').forEach(function (handle) {
-    var box = handle.parentElement;
-    handle.addEventListener('dragstart', function (e) {
-      dragging = box.dataset.folder ? { kind: 'folder', id: box.dataset.folder, el: box } : { kind: 'quiz', id: box.dataset.quiz, el: box };
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', dragging.kind + ':' + dragging.id);
-      box.classList.add('dragging');
-      if (mainDrop) mainDrop.hidden = false;
-    });
-    handle.addEventListener('dragend', function () {
-      box.classList.remove('dragging');
-      document.querySelectorAll('.drop-over').forEach(function (t) { t.classList.remove('drop-over'); });
-      if (mainDrop) mainDrop.hidden = true;
-      dragging = null;
-    });
+  function start(e, kind, box) {
+    dragging = { kind: kind, id: box.dataset[kind], el: box, home: box.dataset.home };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', kind + ':' + dragging.id);
+    box.classList.add('dragging');
+    document.body.classList.add('folder-dragging');
+  }
+  function end() {
+    if (dragging) dragging.el.classList.remove('dragging');
+    document.body.classList.remove('folder-dragging');
+    document.querySelectorAll('.drop-over').forEach(function (t) { t.classList.remove('drop-over'); });
+    dragging = null;
+  }
+  document.querySelectorAll('.quiz-card > summary[draggable]').forEach(function (h) {
+    h.addEventListener('dragstart', function (e) { start(e, 'quiz', h.parentElement); });
+    h.addEventListener('dragend', end);
   });
-  //the folder (or main list) nearest the pointer takes it; not a folder into itself
+  document.querySelectorAll('.side-item > .side-row > .side-link[draggable]').forEach(function (a) {
+    var li = a.closest('.side-item');
+    a.addEventListener('dragstart', function (e) { start(e, 'folder', li); });
+    a.addEventListener('dragend', end);
+  });
+  //the folder under the pointer takes it: not where it already is, not a folder into itself
   function target(e) {
     var t = e.target.closest ? e.target.closest('[data-drop]') : null;
-    if (!t || !dragging) return null;
-    if (dragging.kind === 'folder' && (t === dragging.el || dragging.el.contains(t))) return null;
+    if (!t || !dragging || t.dataset.drop === dragging.home) return null;
+    if (dragging.kind === 'folder' && dragging.el.contains(t)) return null;
     return t;
   }
   document.addEventListener('dragover', function (e) {
@@ -319,10 +424,7 @@
     if (!t) return;
     e.preventDefault();
     var d = dragging;
-    t.classList.remove('drop-over');
-    //already there: nothing to do
-    var home = d.el.parentElement.closest('[data-folder]');
-    if ((home ? home.dataset.folder : 'top') === t.dataset.drop) return;
+    end();
     move(d.kind, d.id, t.dataset.drop);
   });
 })();

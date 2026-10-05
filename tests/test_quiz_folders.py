@@ -16,10 +16,11 @@ def folder_id(name, owner):
     return QuizFolder.query.filter_by(name=name, owner_id=ids(owner)).one().id
 
 
-def page_order(c, *titles):
-    """Where each quiz title or folder name first appears on My quizzes."""
-    page = c.get('/mypage').data.decode()
-    return [page.index('title="{}"'.format(t)) for t in titles]
+def cards(c, view=None):
+    """The quiz boxes My quizzes shows: everything, or one part of the folder list."""
+    import re
+    page = c.get('/mypage' + ('?folder={}'.format(view) if view is not None else '')).data.decode()
+    return re.findall(r'<h2 title="([^"]+)">', page)
 
 
 def test_make_folders_and_put_quizzes_in_them(app_db):
@@ -38,9 +39,16 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
         {'ok': True, 'message': 'Moved to "Unit 1".'}
-    folder_at, week1_at, week2_at = page_order(sam, 'Unit 1', 'Week 1', 'Week 2')
-    assert folder_at < week1_at < week2_at  # Week 1 is inside the folder, which comes first
-    assert '1 quiz<' in sam.get('/mypage').data.decode()
+    # the folder list: the folder shows only its quizzes; "Not in a folder" the rest; all of them
+    assert cards(sam, unit) == ['Week 1'] and cards(sam, 'none') == ['Week 2']
+    page = sam.get('/mypage').data.decode()
+    assert sorted(cards(sam)) == ['Week 1', 'Week 2'] and '📁 Unit 1</a></p>' in page  # all, each saying its folder
+    assert 'aria-current="page"><span aria-hidden="true">📚</span> All quizzes' in page
+    import re
+    assert re.search(r'aria-current="page">\s*<span aria-hidden="true">📁</span> <span class="side-name">Unit 1',
+                     sam.get('/mypage?folder={}'.format(unit)).data.decode())
+    # a folder that isn't theirs (or is gone) shows everything
+    assert cards(kim, unit) == ['Week 1']
     # only for sam: kim's page and folders are her own
     assert 'Unit 1' not in kim.get('/mypage').data.decode()
     assert kim.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).status_code == 400
@@ -52,12 +60,12 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved to the main list.'
-    assert '0 quizzes<' in sam.get('/mypage').data.decode()
+    assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
     assert not sam.post('/mypage/folders', data={'name': 'x' * 65}, headers=FETCH).get_json()['ok']
     assert sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'Unit One'}, headers=FETCH).get_json()['ok']
-    assert 'title="Unit One"' in sam.get('/mypage').data.decode()
+    assert '<span class="side-name">Unit One</span>' in sam.get('/mypage').data.decode()
 
 
 def test_folders_inside_folders_and_removing_them(app_db):
@@ -70,10 +78,12 @@ def test_folders_inside_folders_and_removing_them(app_db):
     sam.post('/mypage/folders', data={'name': 'Algebra', 'parent': folder_id('Math', 'sam')})
     math, algebra = folder_id('Math', 'sam'), folder_id('Algebra', 'sam')
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': algebra})
-    math_at, algebra_at, week_at = page_order(sam, 'Math', 'Algebra', 'Week 1')
-    assert math_at < algebra_at < week_at
-    page = sam.get('/mypage').data.decode()
-    assert '+ New folder inside' in page
+    assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == ['Week 1']  # in Algebra's box
+    page = sam.get('/mypage?folder={}'.format(math)).data.decode()
+    assert '+ New folder inside' in page and 'No quizzes in this folder itself' in page
+    assert '<details class="sub-box" data-sub="{}">'.format(algebra) in page
+    page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
+    assert '<a href="/mypage?folder={}">Math</a>'.format(math) in page  # Math › Algebra
     # a folder can't go inside itself, or inside a folder in it
     assert sam.post('/mypage/move', data={'folder': math, 'to': algebra}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'
@@ -140,3 +150,70 @@ def test_folders_need_the_page_token_and_go_with_the_account(app_db):
     db.session.delete(db.session.get(User, ids('sam')))
     db.session.commit()
     assert QuizFolder.query.filter_by(name='Mine').count() == 0 and QuizPlacement.query.count() == 0
+
+
+def test_after_a_change_the_same_folder_shows(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    w1 = make_quiz(app, teach, 'Week 1')
+    assign(teach, w1, 'sam')
+    r = sam.post('/mypage/folders', data={'name': 'Unit 1', 'view': 'all'})
+    unit = folder_id('Unit 1', 'sam')
+    assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))  # a new folder opens
+    r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'none'})
+    assert r.headers['Location'].endswith('/mypage?folder=none')  # stays where you were
+    r = sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'U1', 'view': str(unit)})
+    assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))
+    sam.post('/mypage/folders', data={'name': 'Inner', 'parent': unit})
+    inner = folder_id('Inner', 'sam')
+    # removing the folder you're looking at: its parent shows (or "Not in a folder")
+    assert sam.post('/mypage/folders/{}/delete'.format(inner), data={'view': str(inner)}).headers['Location'] \
+        .endswith('/mypage?folder={}'.format(unit))
+    assert sam.post('/mypage/folders/{}/delete'.format(unit), data={'view': str(unit)}).headers['Location'] \
+        .endswith('/mypage?folder=none')
+    assert cards(sam, 'none') == ['Week 1']
+
+
+def test_a_retake_brings_the_quiz_out_of_its_folder(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz, QuizPlacement
+    teach, sam, kim = login(app, 'teach'), login(app, 'sam'), login(app, 'kim')
+    w1 = make_quiz(app, teach, 'Week 1')
+    assign(teach, w1, 'sam', 'kim')
+    for c, name in ((sam, 'sam'), (kim, 'kim')):
+        c.post('/mypage/folders', data={'name': 'Done'})
+        c.post('/mypage/move', data={'quiz': w1.id, 'to': folder_id('Done', name)})
+    cq = CQuiz.query.filter_by(assignee=ids('sam')).one()
+    from app.qgen import services as S
+    S.submit(cq, {})
+    r = teach.post('/quiz/retcq/{}'.format(cq.id), data={})
+    assert r.status_code in (200, 302)
+    assert CQuiz.query.filter_by(assignee=ids('sam')).count() == 2
+    # sam's is back out of the folder; kim's stays put; the folder itself stays
+    assert cards(sam, 'none') == ['Week 1'] and cards(sam, folder_id('Done', 'sam')) == []
+    assert QuizPlacement.query.filter_by(owner_id=ids('kim')).count() == 1
+
+
+def test_folders_inside_show_as_boxes_with_their_own_expand_and_collapse(app_db):
+    app, db = app_db
+    import re
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    w1, w2 = make_quiz(app, teach, 'Week 1'), make_quiz(app, teach, 'Week 2')
+    assign(teach, w1, 'sam')
+    assign(teach, w2, 'sam')
+    sam.post('/mypage/folders', data={'name': 'Math'})
+    math = folder_id('Math', 'sam')
+    sam.post('/mypage/folders', data={'name': 'Algebra', 'parent': math})
+    algebra = folder_id('Algebra', 'sam')
+    sam.post('/mypage/move', data={'quiz': w1.id, 'to': math})
+    sam.post('/mypage/move', data={'quiz': w2.id, 'to': algebra})
+    page = sam.get('/mypage?folder={}'.format(math)).data.decode()
+    # Math's own quiz, and Algebra as a box holding its quiz
+    assert re.findall(r'<h2 title="([^"]+)">', page) == ['Week 2', 'Week 1']
+    assert '<details class="sub-box" data-sub="{}">'.format(algebra) in page
+    assert page.index('data-sub="{}"'.format(algebra)) < page.index('title="Week 2"') < page.index('title="Week 1"')
+    # Expand all / Collapse all for Math, and for Algebra's box
+    assert page.count('data-level="open"') == 2 and 'aria-label="Collapse all in Algebra"' in page
+    assert 'aria-label="Expand all in Math"' in page
+    # Algebra's box: drop a quiz on its title to move it in
+    assert '<summary class="sub-head" data-drop="{}">'.format(algebra) in page
