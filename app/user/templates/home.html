@@ -7,7 +7,8 @@
 
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.username }}!</h1>
-  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">My quizzes</a></div></div>
+  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">My quizzes</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 
 {% set days = tuning.get('due_soon_days') %}
 <div class="dash-counters home-counters" aria-label="Your quizzes">

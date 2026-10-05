@@ -155,9 +155,7 @@
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
-  <div class="actions">
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
 
 {% if groups or root.folders %}
 <div class="folders-layout" data-move-url="{{ url_for('user.move_to_folder') }}" data-view="{{ view }}"

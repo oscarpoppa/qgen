@@ -32,8 +32,8 @@ def test_student_sets_and_removes_own_picture(app_db):
     saved = Image.open(path)
     assert saved.size == (256, 256) and saved.format == 'PNG' and not saved.getexif()  # cropped, location data gone
     # shown on the home page and in the menu
-    home = sam.get('/mypage').data.decode()
-    assert u.avatar in home and 'My profile' in home
+    home = sam.get('/home').data.decode()
+    assert u.avatar in home and '>My profile</a></div></div>' in home  # a button on Home, and in the menu
     # not a picture
     r = sam.post('/profile/avatar', data={'file': (io.BytesIO(b'hello'), 'x.png')}, content_type='multipart/form-data')
     assert not r.get_json()['ok']
