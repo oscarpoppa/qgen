@@ -53,13 +53,14 @@ def mypage():
     groups = attempts_by_quiz(current_user.cquizzes)
     root, all_folders = folders.tree(current_user, groups)
     nodes, home = folders.index(root)
-    #which part the sidebar has chosen: 'all' quizzes, 'none' (not in a folder), or a folder's id;
-    #a folder that's gone (or isn't theirs) shows everything
-    view = request.args.get('folder', 'all')
+    #which part the sidebar has chosen: the main list (quizzes not in a folder: a quiz is in one
+    #place only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
+    #gone (or isn't theirs) shows the main list
+    view = request.args.get('folder', 'main')
     node = nodes.get(int(view)) if view.isdigit() else None
-    if node is None and view != 'none':
-        view = 'all'
-    shown = node['groups'] if node else root['groups'] if view == 'none' else groups
+    if node is None and view != 'all':
+        view = 'main'
+    shown = node['groups'] if node else groups if view == 'all' else root['groups']
     #the chosen folder's parents, for "Practice › Hard ones"
     path, up = [], node['folder'] if node else None
     while up is not None:
@@ -73,14 +74,14 @@ def mypage():
 
 def _folder_done(message, error=False, show=None):
     """After a folder change: JSON for the page's script (drag and drop), else back to My quizzes
-    showing the same folder (or `show`: a folder's id, or 'all')."""
+    showing the same folder (or `show`: a folder's id, or 'main')."""
     if request.headers.get('X-Requested-With') == 'fetch':
         from flask import jsonify
         return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
     flash(message, 'error' if error else 'success')
     if show is None:
-        show = request.form.get('view') or 'all'
-    return redirect(url_for('user.mypage', folder=show) if show != 'all' else url_for('user.mypage'))
+        show = request.form.get('view') or 'main'
+    return redirect(url_for('user.mypage', folder=show) if str(show).isdigit() or show == 'all' else url_for('user.mypage'))
 
 
 #routes for one's own folders on My quizzes (students and teachers alike)
@@ -124,7 +125,7 @@ def delete_folder(folder_id):
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
     return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
-                        show=(parent or 'none') if request.form.get('view') == str(folder_id) else None)
+                        show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
 
 
 #move a quiz (quiz=<quiz id>) or a folder (folder=<id>) into a folder (to=<id>, or "top": the main list)
@@ -144,7 +145,7 @@ def move_to_folder():
         else:
             target = folders.move_quiz(current_user, request.form.get('quiz'), to)
             what = db.session.get(VQuiz, int(request.form.get('quiz'))).title
-            where = '"{}"'.format(target.name) if target else '"Not in a folder"'
+            where = '"{}"'.format(target.name) if target else 'the main list'
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
     return _folder_done('Moved "{}" to {}.'.format(what, where))

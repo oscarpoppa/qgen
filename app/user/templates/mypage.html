@@ -44,7 +44,7 @@
     <input type="hidden" name="view" value="{{ view }}">
     <label class="small muted">Move to
       <select name="to" class="move-select" aria-label="Move {{ label }} to a folder">
-        <option value="top"{% if here is none %} selected{% endif %}>{{ 'Not in a folder' if what == 'quiz' else 'Top level' }}</option>
+        <option value="top"{% if here is none %} selected{% endif %}>{{ 'Main list' if what == 'quiz' else 'Top level' }}</option>
         {% for f, depth in all_folders if f.id not in skip %}
           <option value="{{ f.id }}"{% if here is not none and here.id == f.id %} selected{% endif %}>{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}📁 {{ f.name }}</option>
         {% endfor %}
@@ -164,20 +164,20 @@
   {# the folders down the side (on a phone: a list that folds away, above the quizzes) #}
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
-      <span class="folder-side-now">{{ node.folder.name if node else 'Not in a folder' if view == 'none' else 'All quizzes' }}</span></summary>
+      <span class="folder-side-now">{{ node.folder.name if node else 'All quizzes' if view == 'all' else 'Main list' }}</span></summary>
     <nav aria-label="Folders">
       <ul class="side-list side-top">
+        {# the main list: quizzes not in any folder (a quiz is in one place only) #}
+        <li><div class="side-row{{ ' current' if view == 'main' }}" data-drop="top">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('user.mypage') }}" class="side-link"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📚</span> Main list</a>
+          <span class="side-count muted small">{{ root.groups|length or '' }}</span></div></li>
+        {# every quiz, wherever it is (a quiz dropped here stays in its folder) #}
         <li><div class="side-row{{ ' current' if view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.mypage') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">📚</span> All quizzes</a>
+          <a href="{{ url_for('user.mypage', folder='all') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> All quizzes</a>
           <span class="side-count muted small">{{ groups|length }}</span></div></li>
-        {% if root.folders %}
-        <li><div class="side-row{{ ' current' if view == 'none' }}" data-drop="top">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.mypage', folder='none') }}" class="side-link"{% if view == 'none' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> Not in a folder</a>
-          <span class="side-count muted small">{{ root.groups|length or '' }}</span></div></li>
         {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
-        {% endif %}
       </ul>
       {{ new_folder() }}
       {% if all_folders %}<p class="muted small side-hint">Drag a quiz onto a folder to move it there.</p>{% endif %}
@@ -211,7 +211,7 @@
         </details>
       </div>
     {% else %}
-      <h2 id="folder-title" class="folder-title">{{ 'Not in a folder' if view == 'none' else 'All quizzes' }}</h2>
+      <h2 id="folder-title" class="folder-title">{{ 'All quizzes' if view == 'all' else 'Main list' }}</h2>
     {% endif %}
     <div class="level">
     {% if shown or (node and node.folders) %}<div class="level-row">{{ level_buttons(node.folder.name if node else 'this list') }}</div>{% endif %}
@@ -219,7 +219,7 @@
     {{ quiz_cards(shown) }}
     </div>
     {% if not shown %}
-      <p class="card empty small">{% if node %}No quizzes in this folder{{ ' itself' if node.folders }}. Drag a quiz onto it in the folder list, or use a quiz's "Move to" list.{% elif view == 'none' %}Every quiz is in a folder.{% endif %}</p>
+      <p class="card empty small">{% if node %}No quizzes in this folder{{ ' itself' if node.folders }}. Drag a quiz onto it in the folder list, or use a quiz's "Move to" list.{% else %}Every quiz is in a folder. Pick a folder on the left to see its quizzes.{% endif %}</p>
     {% endif %}
   </section>
 </div>
@@ -334,7 +334,7 @@
 /* the folder sidebar: folders whose inner folders are hidden are remembered in this
  * browser (the folder being looked at is always shown); on a phone the list folds away
  * above the quizzes. "Move to" moves when a folder is picked; a quiz can be dragged onto
- * a folder in the list, and a folder onto another folder (or onto "Not in a folder" to
+ * a folder in the list, and a folder onto another folder (or onto "Main list" to
  * bring it to the top level). */
 (function () {
   var KEY = 'qgen-folded-folders', current = {{ path|map(attribute='id')|list|tojson }};
@@ -400,7 +400,7 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .then(function (res) {
         if (res.ok) {
-          //say what happened once the page has reloaded (in "All quizzes" the box doesn't move)
+          //say what happened once the page has reloaded
           try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, kind: kind, id: id })); } catch (e) {}
           location.reload();
           return;

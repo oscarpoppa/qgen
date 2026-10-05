@@ -39,15 +39,19 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
         {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
-    # the folder list: the folder shows only its quizzes; "Not in a folder" the rest; all of them
-    assert cards(sam, unit) == ['Week 1'] and cards(sam, 'none') == ['Week 2']
+    # a quiz is in one place only: the folder shows it, and the main list doesn't any more
+    assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage').data.decode()
-    assert sorted(cards(sam)) == ['Week 1', 'Week 2'] and '📁 Unit 1</a></p>' in page  # all, each saying its folder
-    assert 'aria-current="page"><span aria-hidden="true">📚</span> All quizzes' in page
+    assert 'aria-current="page"><span aria-hidden="true">📚</span> Main list' in page
+    assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
+    # All quizzes: every one, each saying its folder
+    all_page = sam.get('/mypage?folder=all').data.decode()
+    assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and '📁 Unit 1</a></p>' in all_page
+    assert 'aria-current="page"><span aria-hidden="true">🗂️</span> All quizzes' in all_page
     import re
     assert re.search(r'aria-current="page">\s*<span aria-hidden="true">📁</span> <span class="side-name">Unit 1',
                      sam.get('/mypage?folder={}'.format(unit)).data.decode())
-    # a folder that isn't theirs (or is gone) shows everything
+    # a folder that isn't theirs (or is gone) shows the main list
     assert cards(kim, unit) == ['Week 1']
     # only for sam: kim's page and folders are her own
     assert 'Unit 1' not in kim.get('/mypage').data.decode()
@@ -59,7 +63,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert kim.post('/mypage/move', data={'quiz': w2.id, 'to': folder_id('K', 'kim')}, headers=FETCH).get_json() == \
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
-    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to "Not in a folder".'
+    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to the main list.'
     assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -161,18 +165,18 @@ def test_after_a_change_the_same_folder_shows(app_db):
     r = sam.post('/mypage/folders', data={'name': 'Unit 1', 'view': 'all'})
     unit = folder_id('Unit 1', 'sam')
     assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))  # a new folder opens
-    r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'none'})
-    assert r.headers['Location'].endswith('/mypage?folder=none')  # stays where you were
+    r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'main'})
+    assert r.headers['Location'].endswith('/mypage')  # stays where you were
     r = sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'U1', 'view': str(unit)})
     assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))
     sam.post('/mypage/folders', data={'name': 'Inner', 'parent': unit})
     inner = folder_id('Inner', 'sam')
-    # removing the folder you're looking at: its parent shows (or "Not in a folder")
+    # removing the folder you're looking at: its parent shows (or the main list)
     assert sam.post('/mypage/folders/{}/delete'.format(inner), data={'view': str(inner)}).headers['Location'] \
         .endswith('/mypage?folder={}'.format(unit))
     assert sam.post('/mypage/folders/{}/delete'.format(unit), data={'view': str(unit)}).headers['Location'] \
-        .endswith('/mypage?folder=none')
-    assert cards(sam, 'none') == ['Week 1']
+        .endswith('/mypage')
+    assert cards(sam) == ['Week 1']
 
 
 def test_a_retake_brings_the_quiz_out_of_its_folder(app_db):
@@ -191,7 +195,7 @@ def test_a_retake_brings_the_quiz_out_of_its_folder(app_db):
     assert r.status_code in (200, 302)
     assert CQuiz.query.filter_by(assignee=ids('sam')).count() == 2
     # sam's is back out of the folder; kim's stays put; the folder itself stays
-    assert cards(sam, 'none') == ['Week 1'] and cards(sam, folder_id('Done', 'sam')) == []
+    assert cards(sam) == ['Week 1'] and cards(sam, folder_id('Done', 'sam')) == []
     assert QuizPlacement.query.filter_by(owner_id=ids('kim')).count() == 1
 
 
