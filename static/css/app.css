@@ -1063,3 +1063,22 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 .tech-input select { width: auto; max-width: 100%; }
 .tech-unit { color: var(--muted); }
 .tech-reset-all { margin-top: 16px; }
+
+/* Printing (a finished quiz's Results, an archived attempt): just the page's content, in
+   dark ink on white whatever the screen's theme; no menu, side panels, pop-ups or buttons */
+@media print {
+  :root {
+    --bg: #ffffff; --surface: #ffffff; --surface-2: #f4f5f7; --text: #000000; --muted: #444b57;
+    --border: #c9ced6; --accent: #1f4bbf; --accent-soft: #eef2fb; --ok: #166b3b; --ok-soft: #e8f5ed;
+    --bad: #a3201a; --bad-soft: #fbeceb; --warn: #7a4f00; --warn-soft: #fbf3e2; --info-soft: #eef4fb;
+    --shadow: none; color-scheme: light;
+  }
+  body { background: #fff; color: #000; }
+  html.dock-notices body, html.dock-messages body { padding-right: 0 !important; }
+  .topbar, .dock, .toast, dialog, .no-print, ul.alerts, .archived-banner .btn-row, .calc, .skip-link { display: none !important; }
+  main.container { max-width: none; padding: 0; margin: 0; }
+  .card { box-shadow: none; }
+  /* a question isn't split across two pages when it fits on one */
+  .card.question, .result-head { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}

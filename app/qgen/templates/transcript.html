@@ -3,7 +3,7 @@
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
-<div class="page-head">
+<div class="page-head no-print">
   <h1>Results</h1>
   <div class="actions">
     <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>

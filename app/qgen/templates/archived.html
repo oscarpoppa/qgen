@@ -2,7 +2,7 @@
 {% block body_attrs %}{{ watch('archived:%d' % a.id) }}{% endblock %}
 
 {% block content %}
-<div class="page-head">
+<div class="page-head no-print">
   <h1>Archived attempt</h1>
   <div class="actions">
     <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>

@@ -56,3 +56,15 @@ def test_tests_always_use_a_throwaway_database():
     # the tests empty their database; it must be the in-memory one whatever the shell has
     from app import app
     assert app.config['SQLALCHEMY_DATABASE_URI'] == 'sqlite://'
+
+
+def test_printing_a_quiz_leaves_out_the_rest_of_the_screen():
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    css = open(os.path.join(root, 'static', 'css', 'app.css')).read()
+    printing = css[css.index('@media print'):]
+    for hidden in ('.topbar', '.dock', '.toast', '.no-print', 'ul.alerts'):
+        assert hidden in printing.split('display: none')[0]
+    assert '--text: #000000' in printing  # dark ink whatever the screen's theme
+    for page in ('transcript.html', 'archived.html'):
+        assert '<div class="page-head no-print">' in open(os.path.join(root, 'app', 'qgen', 'templates', page)).read()
