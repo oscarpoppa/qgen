@@ -49,11 +49,13 @@
   {% if people %}
   <div class="table-wrap stack">
     <table class="people-table">
-      <thead><tr><th>Name</th><th>Folders</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Folders</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
         <tr data-box="user:{{ item.id }}">
+          {# checked people can be given a quiz together (the bar above the list) #}
+          <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.username }}"></td>
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
               data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.username }}"
               title="Drag onto a folder to move {{ item.username }} there">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span></td>
@@ -86,6 +88,7 @@
             {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
             {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
           <td class="actions">
+            <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}">Assign</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
             {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" data-confirm="Remove {{ item.username }}’s picture?" data-confirm-ok="Remove">
@@ -111,7 +114,7 @@
       <span class="muted small nowrap">{{ n.count }} {{ 'person' if n.count == 1 else 'people' }}</span></summary>
     <div class="sub-body level">
       <div class="sub-tools">{% if n.folders %}{{ level_buttons(f.name) }}{% else %}<span></span>{% endif %}
-        <a class="small" href="{{ url_for('user.userdet', folder=f.id) }}">Open this folder</a></div>
+        <span class="small">{% if n.count %}<a href="{{ url_for('qgen.assign', folder=f.id) }}">Assign a quiz to this folder</a> · {% endif %}<a href="{{ url_for('user.userdet', folder=f.id) }}">Open this folder</a></span></div>
       {% for child in n.folders %}{{ sub_box(child) }}{% endfor %}
       {{ people_table(n.people, f) }}
       {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
@@ -158,6 +161,7 @@
           {% for p in path[:-1] %}<a href="{{ url_for('user.userdet', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}📁 {{ f.name }}</h2>
         <div class="title-actions">
         {% if node and node.folders %}{{ level_buttons(node.folder.name) }}{% endif %}
+        {% if node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=f.id) }}">Assign a quiz to this folder</a>{% endif %}
         <details class="folder-tools">
           <summary class="btn btn-secondary btn-sm">Folder options</summary>
           <div class="folder-tools-box">
@@ -195,6 +199,11 @@
     {% else %}
       <div class="folder-title-row"><h2 id="folder-title" class="folder-title">{{ 'All users' if view == 'all' else 'Main list' }}</h2></div>
     {% endif %}
+    <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
+      <span class="pick-users-count"></span>
+      <button class="btn btn-sm">Assign a quiz to them →</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear">Clear</button>
+    </form>
     {% if ulst|length > 5 %}<input type="search" class="filter" data-filter=".people-table" placeholder="Filter users…" aria-label="Filter users">{% endif %}
     <div>
       {% if node %}{% for child in node.folders %}{{ sub_box(child) }}{% endfor %}{% endif %}
@@ -207,4 +216,28 @@
 </div>
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>
+<script>
+/* checking people: someone listed twice (in a folder and a folder inside it) is checked in
+ * both; the bar says how many are checked and takes them to Assign */
+(function () {
+  var bar = document.getElementById('assign-people');
+  if (!bar) return;
+  var boxes = document.querySelectorAll('input.pick-person'), count = bar.querySelector('.pick-users-count');
+  function refresh() {
+    var ids = {};
+    boxes.forEach(function (b) { if (b.checked) ids[b.value] = 1; });
+    var n = Object.keys(ids).length;
+    bar.hidden = !n;
+    count.textContent = n + ' checked';
+  }
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      document.querySelectorAll('input.pick-person[value="' + b.value + '"]').forEach(function (o) { o.checked = b.checked; });
+      refresh();
+    });
+  });
+  bar.querySelector('[data-pick="clear"]').addEventListener('click', function () { boxes.forEach(function (b) { b.checked = false; }); refresh(); });
+  refresh();
+})();
+</script>{% endblock %}

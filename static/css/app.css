@@ -215,6 +215,10 @@ legend { font-weight: 700; padding: 0 6px; }
 .pick-bar { align-items: center; margin-bottom: 8px; }
 .pick-bar .filter-list { flex: 1 1 180px; max-width: 260px; margin: 0; }
 .pick-count { margin-left: auto; }
+/* Users page: when people are checked, a bar to give them a quiz */
+.pick-bar-users { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
+  padding: 8px 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+.pick-users-count { font-weight: 600; margin-right: auto; }
 .pick-groups { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
 .pick-group { border-radius: 8px; }
 .pick-group .pick-group { margin-left: 18px; }

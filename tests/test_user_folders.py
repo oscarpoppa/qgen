@@ -166,3 +166,45 @@ def test_open_pages_follow_folder_changes(app_db):
     users, messages = watch(teach, 'users'), watch(teach, 'messages')
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': folder('7th grade')})
     assert watch(teach, 'users') != users and watch(teach, 'messages') != messages
+
+
+def test_assigning_from_the_users_page(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    teach.post('/users/folders', data={'name': '7th grade'})
+    g7 = folder('7th grade')
+    teach.post('/users/folders', data={'name': 'Period 2', 'parent': g7})
+    p2 = folder('Period 2')
+    teach.post('/users/folders/add', data={'user': ids('sam'), 'to': p2})
+    teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
+    # each person: a box to check (for the bar) and a quick Assign; a folder: Assign a quiz to this folder
+    page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
+    assert 'name="users" value="{}" form="assign-people"'.format(ids('kim')) in page
+    assert '<form method="get" action="/quiz/assign" id="assign-people"' in page
+    assert 'href="/quiz/assign?users={}">Assign</a>'.format(ids('kim')) in page
+    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in page
+    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(p2) in page  # the box inside
+    checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" checked', page))
+    opened = lambda page: re.findall(r'<details class="pick-group" data-group="(\w+)" open>', page)
+    # a folder: everyone in it (and in the folders inside it), checked, with the folder open
+    page = teach.get('/quiz/assign?folder={}'.format(g7)).data.decode()
+    assert checked(page) == sorted([ids('sam'), ids('kim')]) and opened(page) == [str(g7)]
+    page = teach.get('/quiz/assign?folder={}'.format(p2)).data.decode()
+    assert checked(page) == [ids('sam')] and opened(page) == [str(g7), str(p2)]
+    # people by name (twice is once), with the folders they're in open; nonsense ignored
+    page = teach.get('/quiz/assign?users={0}&users={0}&users=x&users=99999'.format(ids('sam'))).data.decode()
+    assert checked(page) == [ids('sam')] and opened(page) == [str(g7), str(p2)]
+    page = teach.get('/quiz/assign?users={}'.format(ids('teach'))).data.decode()
+    assert checked(page) == [ids('teach')] and opened(page) == ['none']
+
+
+def test_results_pages_lead_back_to_users(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from test_dashboard import make_quiz
+    vq = make_quiz(app, teach, 'Week 1')
+    for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id)):
+        assert '<a class="btn btn-secondary" href="/userdet">← Users</a>' in teach.get(url).data.decode(), url
+    # one student's page: Assign a quiz to them
+    assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
+        teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()

@@ -4,7 +4,7 @@
 {# a group of people that opens and closes, with a box that checks them all; these boxes
    aren't sent (the ones under All users are) #}
 {% macro pick_group(key, title, members, children=()) %}
-  <details class="pick-group" data-group="{{ key }}">
+  <details class="pick-group" data-group="{{ key }}"{% if key in open_groups %} open{% endif %}>
     <summary><input type="checkbox" class="pick-all" aria-label="Check everyone in {{ title }}"><span class="pick-name">{{ title }}</span>
       <span class="muted small">{{ members|length }}</span></summary>
     {% for c in children %}{{ pick_folder(c) }}{% endfor %}
@@ -46,7 +46,7 @@
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
       {% if root.folders %}{{ pick_group('none', '📥 Not in a folder', root.people) }}{% endif %}
-      <details class="pick-group" data-group="all"{% if not root.folders %} open{% endif %}>
+      <details class="pick-group" data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
         <summary><input type="checkbox" class="pick-all" aria-label="Check everyone"><span class="pick-name">👥 All users</span>
           <span class="muted small">{{ people|length }}</span></summary>
         <ul class="choice-list pick-list">

@@ -7,7 +7,8 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.userdet') }}">← Users</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
     <a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a></div>
 </div>
 
