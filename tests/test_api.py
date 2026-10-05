@@ -363,3 +363,46 @@ def test_retake_only_after_finishing(app_db):
     aid = t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['sam']]}).get_json()['assigned'][0]['id']
     r = t.post('/attempts/{}/retake'.format(aid))
     assert r.status_code == 409 and "hasn't finished" in r.get_json()['error']['message']
+
+
+def test_teachers_message_teachers_through_the_api(app_db):
+    app, db = app_db
+    from test_staff_messages import teachers
+    from app.user.models import User
+    teachers(db, 'lee', 'ray')
+    tid = {u.username: u.id for u in User.query.filter_by(is_admin=True)}
+    teach, lee, ray, sam = Api(app, 'teach'), Api(app, 'lee'), Api(app, 'ray'), Api(app, 'sam')
+    # to every teacher
+    r = teach.post('/messages/teachers', json={'to': 'all', 'body': 'Staff meeting at 3'})
+    assert r.status_code == 201 and r.get_json()['to'] == 'all' and r.get_json()['sender'] == 'teach'
+    # to one, by id: only they see it; choosing every other teacher is the same as all
+    assert teach.post('/messages/teachers', json={'to': tid['lee'], 'body': 'Cover my class?'}).get_json()['to'] == ['lee']
+    assert teach.post('/messages/teachers', json={'to': [tid['lee'], tid['ray']], 'body': 'Both'}).get_json()['to'] == 'all'
+    assert lee.get('/messages').get_json()['teachers_unread'] == 3
+    got = lee.get('/messages/teachers').get_json()
+    assert [m['body'] for m in got['messages']] == ['Staff meeting at 3', 'Cover my class?', 'Both']
+    assert all(m['new'] for m in got['messages']) and got['unread'] == 0  # reading marks them seen
+    assert {t['teacher']['username']: t['unread'] for t in got['teachers']} == {'teach': 0, 'ray': 0}
+    assert not any(m['new'] for m in lee.get('/messages/teachers').get_json()['messages'])
+    assert [m['body'] for m in ray.get('/messages/teachers').get_json()['messages']] == ['Staff meeting at 3', 'Both']
+    # just the conversation with one teacher
+    assert [m['body'] for m in ray.get('/messages/teachers?with={}'.format(tid['lee'])).get_json()['messages']] == []
+    lee.post('/messages/teachers', json={'to': [tid['ray']], 'body': 'Lunch?'})
+    withlee = ray.get('/messages/teachers?with={}'.format(tid['lee'])).get_json()
+    assert withlee['with_teacher']['username'] == 'lee' and [m['body'] for m in withlee['messages']] == ['Lunch?']
+    assert ray.get('/messages/teachers?with={}'.format(tid['ray'])).status_code == 404  # not yourself
+    assert ray.get('/messages/teachers?with={}'.format(student_ids(db)['sam'])).status_code == 404  # not a student
+    # refused: students, yourself, a student, nonsense, nothing to say
+    assert sam.get('/messages/teachers').status_code == 403
+    assert sam.post('/messages/teachers', json={'to': 'all', 'body': 'hi'}).status_code == 403
+    assert teach.post('/messages/teachers', json={'to': tid['teach'], 'body': 'me'}).status_code == 422
+    assert teach.post('/messages/teachers', json={'to': [student_ids(db)['sam']], 'body': 'x'}).status_code == 422
+    assert teach.post('/messages/teachers', json={'to': [], 'body': 'x'}).status_code == 422
+    assert teach.post('/messages/teachers', json={'to': {'a': 1}, 'body': 'x'}).status_code == 400
+    assert teach.post('/messages/teachers', json={'to': True, 'body': 'x'}).status_code == 400
+    assert teach.post('/messages/teachers', json={'to': 'all', 'body': '  '}).status_code == 422
+    # only the writer can delete, and it's gone for everyone
+    mid = [m for m in lee.get('/messages/teachers').get_json()['messages'] if m['body'] == 'Both'][0]['id']
+    assert lee.delete('/messages/teachers/{}'.format(mid)).status_code == 404
+    assert teach.delete('/messages/teachers/{}'.format(mid)).status_code == 204
+    assert 'Both' not in [m['body'] for m in ray.get('/messages/teachers').get_json()['messages']]

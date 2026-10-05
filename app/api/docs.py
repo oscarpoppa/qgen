@@ -64,10 +64,13 @@ ENDPOINTS = [
     ('POST', '/review/{attempt_id}', 'teacher', 'Grade written answers; "finish" closes the quiz.',
      {'grades': {'123': {'credit': 80, 'feedback': 'Good, but say why.', 'highlights': [[0, 12, 'right']]}}, 'finish': True}),
 
-    ('GET', '/messages', 'teacher', 'Every student conversation, unread first, plus pinned announcements.', None),
+    ('GET', '/messages', 'teacher', 'Every student conversation, unread first, plus pinned announcements and how many teachers\' messages are unread.', None),
     ('GET', '/messages/{student_id}', 'teacher', "One student's conversation (reading marks it seen).", None),
     ('POST', '/messages', 'teacher', "Send to 'all', one student id, or a list; optionally pinned.", {'to': 'all', 'body': 'No class Friday.', 'pin': True}),
     ('PUT', '/messages/pin/{message_id}', 'teacher', 'Pin or unpin (with every copy sent together).', {'pinned': False}),
+    ('GET', '/messages/teachers', 'teacher', "Messages between teachers you can see (?with= a teacher's id: just with them), and the other teachers with unread counts. Reading marks them seen; students never see these.", None),
+    ('POST', '/messages/teachers', 'teacher', "Write to every other teacher ('all') or chosen ones (an id or a list; only they see it).", {'to': 'all', 'body': 'Staff meeting at 3.'}),
+    ('DELETE', '/messages/teachers/{message_id}', 'teacher', 'Remove a message you wrote to teachers (for everyone).', None),
 
     ('GET', '/openapi.json', 'anyone', 'This description, in OpenAPI 3.1.', None),
     ('GET', '/docs', 'anyone', 'This description, as a page.', None),

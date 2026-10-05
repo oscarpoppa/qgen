@@ -176,6 +176,14 @@ def student_results_json(user):
     return out
 
 
+def staff_message_json(m, new=False):
+    """A message between teachers: 'to' is 'all' (every teacher) or the usernames it went to;
+    'new' means the reader hadn't seen it before this request."""
+    return {'id': m.id, 'sender_id': m.sender_id, 'sender': m.sender.username if m.sender else None,
+            'body': m.body, 'created': iso(m.created),
+            'to': 'all' if m.to_all else [user.username for user in m.recipients], 'new': new}
+
+
 def message_json(m):
     return {'id': m.id, 'student_id': m.student_id, 'from_teacher': m.from_teacher, 'kind': m.kind,
             'sender': m.sender.username if m.sender else None, 'body': m.body, 'link': m.link,

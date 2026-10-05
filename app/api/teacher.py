@@ -5,6 +5,7 @@ from flask import g, jsonify, request
 
 from app import db
 from app.messages import services as M
+from app.messages.models import unread_staff
 from app.qgen import services as S
 from app.qgen.models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
 from app.qgen.qtypes import REGISTRY, PRECISIONS
@@ -13,7 +14,7 @@ from . import api_bp
 from .auth import token_required, body
 from .errors import ApiError, bad_request, not_found, conflict, invalid
 from .serialize import (archived_json, problem_json, vquiz_json, teacher_attempt_json, attempt_summary, student_results_json,
-                        user_json, message_json)
+                        user_json, message_json, staff_message_json)
 
 teacher = token_required(teacher=True)
 
@@ -373,7 +374,8 @@ def grade(aid):
 def inbox():
     return jsonify(conversations=[{'student': user_json(r['student']), 'unread': r['unread'],
                                    'last': message_json(r['last']) if r['last'] else None} for r in M.inbox(g.api_user)],
-                   pinned=[message_json(m) for m in M.pinned_announcements()])
+                   pinned=[message_json(m) for m in M.pinned_announcements()],
+                   teachers_unread=unread_staff(g.api_user.id))
 
 
 @api_bp.route('/messages/<int:student_id>', methods=['GET'])
@@ -406,3 +408,50 @@ def pin_message(message_id):
     count = M.set_pinned(msg, flag(body(required=('pinned',))['pinned']))
     return jsonify(updated=count)
 
+
+
+# ---------------------------------------------------------------- between teachers (students never see these)
+
+@api_bp.route('/messages/teachers', methods=['GET'])
+@teacher
+def teachers_messages():
+    """?with=<teacher id>: only the messages between you and that teacher (else all you can see).
+    Reading marks them seen; each says whether it was new."""
+    me = g.api_user
+    try:
+        other = M.staff_choice(me, request.args.get('with'))
+    except M.MessageError:
+        raise not_found('That teacher')
+    items = M.teachers_thread(me, other)
+    new = M.staff_unseen_ids(me, items)
+    M.mark_staff_seen(me, items)
+    waiting = M.staff_unread_by_sender(me)
+    return jsonify(teachers=[{'teacher': user_json(t), 'online': t.online, 'unread': waiting.get(t.id, 0)}
+                             for t in M.other_teachers(me)],
+                   unread=unread_staff(me.id), with_teacher=user_json(other) if other else None,
+                   messages=[staff_message_json(m, m.id in new) for m in items])
+
+
+@api_bp.route('/messages/teachers', methods=['POST'])
+@teacher
+def send_staff():
+    """{"to": "all" | teacher id | [ids], "body": "..."} -- every other teacher chosen is the same as "all"."""
+    data = body(required=('to', 'body'))
+    to = data['to']
+    if isinstance(to, bool) or not (to == 'all' or isinstance(to, int) or
+                                    (isinstance(to, list) and all(v == 'all' or (isinstance(v, int) and not isinstance(v, bool)) for v in to))):
+        raise bad_request('"to" must be "all", a teacher\'s id, or a list of ids.')
+    try:
+        msg = M.send_to_teachers(g.api_user, data['body'], to)
+    except M.MessageError as exc:
+        raise ApiError(422, 'invalid', str(exc))
+    return jsonify(staff_message_json(msg)), 201
+
+
+@api_bp.route('/messages/teachers/<int:message_id>', methods=['DELETE'])
+@teacher
+def delete_to_teachers(message_id):
+    """Remove a message you wrote to teachers (for everyone)."""
+    if not M.delete_staff_message(g.api_user, message_id):
+        raise not_found('That message')
+    return '', 204
