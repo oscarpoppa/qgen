@@ -1,13 +1,14 @@
 """Awards a student earns from their finished quizzes, worked out from their attempts each
 time (nothing is stored), so a regrade or a deleted attempt is always reflected:
 
-  Perfect score  100% on a quiz (one per quiz)
+  Perfect score  a quiz whose score that counts is 100% (by its retake rule, so with
+                 "average" a 100% retake after a 50% isn't enough); one per quiz
   Milestones     1, 5, 10 and 25 different quizzes finished
   Streak         3, 5 and 10 finished attempts in a row at 90% or more
   Comeback       a retake at least 20 points higher than the try before it (one per quiz)
 
 Attempts still being graded don't count until they're graded."""
-from .models import CQuiz
+from .models import CQuiz, combined_score
 
 MILESTONES = (1, 5, 10, 25)
 STREAKS = (3, 5, 10)
@@ -17,6 +18,13 @@ COMEBACK_POINTS = 20
 
 def _perfect(score):
     return score is not None and score >= 99.995
+
+
+def _rule(user, vquiz):
+    """How this student's attempts at a quiz combine: their own rule if a teacher set one
+    (on their latest attempt that has one, as the results pages do), else the quiz's."""
+    rows = CQuiz.query.filter(CQuiz.assignee == user.id, CQuiz.vquiz_id == vquiz.id).order_by(CQuiz.id.desc()).all()
+    return next((c.own_retake_rule for c in rows if c.own_retake_rule), None) or vquiz.retake_rule
 
 
 def _finished(user):
@@ -30,14 +38,23 @@ def earned(user):
     newest first."""
     done = _finished(user)
     out = []
-    #perfect scores: the first 100% on each quiz
-    first_perfect = {}
+    #perfect scores: quizzes whose score that counts (its retake rule, or this student's own
+    #rule if a teacher set one) is 100% now; dated when it last became 100%
+    by_quiz = {}
     for c in done:
-        if _perfect(c.score) and c.vquiz_id not in first_perfect:
-            first_perfect[c.vquiz_id] = c
-    for c in first_perfect.values():
-        out.append({'kind': 'perfect', 'icon': '🌟', 'title': 'Perfect score', 'detail': '100% on "{}"'.format(c.vquiz.title),
-                    'when': c.compdate, 'quiz': c.vquiz})
+        by_quiz.setdefault(c.vquiz_id, []).append(c)
+    for attempts in by_quiz.values():
+        rule = _rule(user, attempts[0].vquiz)
+        scores = [c.score for c in attempts]
+        if not _perfect(combined_score(rule, scores)):
+            continue
+        since = attempts[-1]
+        for i in range(len(attempts), 0, -1):
+            if not _perfect(combined_score(rule, scores[:i])):
+                break
+            since = attempts[i - 1]
+        out.append({'kind': 'perfect', 'icon': '🌟', 'title': 'Perfect score', 'detail': '100% on "{}"'.format(since.vquiz.title),
+                    'when': since.compdate, 'quiz': since.vquiz})
     #milestones: different quizzes finished
     seen = set()
     for c in done:
@@ -78,7 +95,7 @@ def still_to_earn(user, have):
     titles = {a['title'] for a in have}
     out = []
     if 'perfect' not in kinds:
-        out.append({'icon': '🌟', 'title': 'Perfect score', 'detail': 'Get 100% on a quiz'})
+        out.append({'icon': '🌟', 'title': 'Perfect score', 'detail': 'Have 100% as the score that counts on a quiz'})
     nxt = next((n for n in MILESTONES if ('First quiz' if n == 1 else '{} quizzes'.format(n)) not in titles), None)
     if nxt:
         out.append({'icon': '🏁' if nxt == 1 else '🏆', 'title': 'First quiz' if nxt == 1 else '{} quizzes'.format(nxt),

@@ -81,3 +81,31 @@ def test_awards(app_db):
     kim = login(app, 'kim')
     assert titles(kim.get('/home').data.decode()) == []
     assert kim.get('/quiz/listuser/{}'.format(ids('sam'))).status_code == 302
+
+
+def test_a_perfect_score_means_the_score_that_counts(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    t = datetime(2026, 9, 1, 10, 0)
+    avg, best, latest = (make_quiz(app, teach, n) for n in ('Avg', 'Best', 'Latest'))
+    for vq, rule in ((avg, 'average'), (best, 'best'), (latest, 'latest')):
+        vq.retake_rule = rule
+    db.session.commit()
+    # average: 50 then 100 counts as 75, so no award; a third 100 isn't enough either
+    finish(give(avg, 'sam'), 50, t)
+    finish(give(avg, 'sam'), 100, t + timedelta(hours=1))
+    # best: a 100% retake counts
+    finish(give(best, 'sam'), 60, t + timedelta(hours=2))
+    finish(give(best, 'sam'), 100, t + timedelta(hours=3))
+    # latest: 100 then 80 counts as 80, so no award
+    finish(give(latest, 'sam'), 100, t + timedelta(hours=4))
+    finish(give(latest, 'sam'), 80, t + timedelta(hours=5))
+    page = sam.get('/home').data.decode()
+    perfect = re.findall(r'100% on (?:&#34;|")([^"&]+)', page.split('Still to earn')[0])
+    assert perfect == ['Best']
+    # a teacher's own rule for this student changes it: "best" on Latest makes it count
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    S.set_retake_rule(CQuiz.query.filter_by(vquiz_id=latest.id).order_by(CQuiz.id.desc()).first(), 'best')
+    page = sam.get('/home').data.decode()
+    assert sorted(re.findall(r'100% on (?:&#34;|")([^"&]+)', page.split('Still to earn')[0])) == ['Best', 'Latest']
