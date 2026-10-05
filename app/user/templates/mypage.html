@@ -76,8 +76,8 @@
     {# each quiz folds down to its title and score; the page remembers which are folded #}
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
-      <summary class="card-head" data-drag="quiz">
+    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
+      <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
         {# how many attempts are in this box #}
         <span class="quiz-count muted small">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
@@ -115,11 +115,11 @@
    folder on it to move it in; drag it onto another to put it inside that one. #}
 {% macro side_folder(n) %}
   {% set f = n.folder %}
-  <li class="side-item" data-folder="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}">
+  <li class="side-item" data-folder="{{ f.id }}" data-box="folder:{{ f.id }}">
     <div class="side-row{{ ' current' if view == f.id|string }}" data-drop="{{ f.id }}">
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="false" data-drag="folder" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
+      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="false" data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ f.name }}" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
         <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
       <span class="side-count muted small">{{ n.groups|length or '' }}</span>
     </div>
@@ -160,7 +160,8 @@
     <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 
 {% if groups or root.folders %}
-<div class="folders-layout">
+<div class="folders-layout" data-move-url="{{ url_for('user.move_to_folder') }}" data-view="{{ view }}"
+     data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="qgen-folded-folders" data-open-key="qgen-open-subfolders">
   {# the folders down the side (on a phone: a list that folds away, above the quizzes) #}
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
@@ -307,175 +308,6 @@
   cards.forEach(function (d) { d.addEventListener('toggle', remember); });
 })();
 
-/* Expand all / Collapse all: each level (the folder being looked at, and every folder
- * box in it) opens or closes only the boxes directly in it, folders and quizzes alike.
- * Folder boxes start folded; the ones left open are remembered in this browser. */
-(function () {
-  var KEY = 'qgen-open-subfolders', subs = document.querySelectorAll('details.sub-box'), open = {};
-  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { open[id] = true; }); } catch (e) {}
-  subs.forEach(function (d) { if (open[d.dataset.sub]) d.open = true; });
-  function remember() {
-    var keep = [];
-    subs.forEach(function (d) { if (d.open) keep.push(d.dataset.sub); });
-    try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
-  }
-  subs.forEach(function (d) { d.addEventListener('toggle', remember); });
-  document.querySelectorAll('[data-level]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var level = btn.closest('.level'), want = btn.dataset.level === 'open';
-      level.querySelectorAll('details.sub-box, details.quiz-card').forEach(function (d) {
-        //only the boxes whose nearest level is this one
-        if (d.parentElement.closest('.level') === level) d.open = want;
-      });
-    });
-  });
-})();
-
-/* the folder sidebar: folders whose inner folders are hidden are remembered in this
- * browser (the folder being looked at is always shown); on a phone the list folds away
- * above the quizzes. "Move to" moves when a folder is picked; a quiz can be dragged onto
- * a folder in the list, and a folder onto another folder (or onto "Main list" to
- * bring it to the top level). */
-(function () {
-  var KEY = 'qgen-folded-folders', current = {{ path|map(attribute='id')|list|tojson }};
-  var folded = {};
-  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { folded[id] = true; }); } catch (e) {}
-  current.forEach(function (id) { delete folded[id]; });
-  function remember() {
-    try { localStorage.setItem(KEY, JSON.stringify(Object.keys(folded))); } catch (e) {}
-  }
-  document.querySelectorAll('.side-item').forEach(function (li) {
-    var btn = li.querySelector(':scope > .side-row > .side-fold');
-    if (!btn) return;
-    function show(open) {
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      li.classList.toggle('side-folded', !open);
-      if (open) delete folded[li.dataset.folder]; else folded[li.dataset.folder] = true;
-    }
-    show(!folded[li.dataset.folder]);
-    btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); remember(); });
-  });
-  remember();
-
-  //on a phone the folder list starts folded (its heading says which folder is shown)
-  var side = document.querySelector('details.folder-side');
-  if (side && window.matchMedia('(max-width: 760px)').matches) side.open = false;
-
-  document.querySelectorAll('.move-select').forEach(function (sel) {
-    sel.addEventListener('change', function () { sel.form.requestSubmit ? sel.form.requestSubmit() : sel.form.submit(); });
-  });
-  //a new folder's name box gets the cursor when its form opens
-  document.querySelectorAll('details.new-folder').forEach(function (d) {
-    d.addEventListener('toggle', function () { if (d.open) d.querySelector('input[name=name]').focus(); });
-  });
-
-  var token = document.querySelector('meta[name="csrf-token"]');
-  //after a drag: "Moved "train" to "abc"." at the top, and the moved quiz (or folder) lit up
-  (function () {
-    var done = null;
-    try { done = JSON.parse(sessionStorage.getItem('qgen-moved') || 'null'); sessionStorage.removeItem('qgen-moved'); } catch (e) {}
-    if (!done || !done.text) return;
-    var list = document.createElement('ul'), item = document.createElement('li');
-    list.className = 'alerts';
-    list.setAttribute('role', 'status');
-    item.className = 'alert alert-success';
-    item.textContent = done.text;
-    list.appendChild(item);
-    var main = document.querySelector('main');
-    main.insertBefore(list, main.firstChild);
-    var box = document.querySelector(done.kind === 'quiz' ? '.quiz-card[data-quiz="' + done.id + '"]'
-                                                          : '.side-item[data-folder="' + done.id + '"] > .side-row');
-    if (box) {
-      box.classList.add('just-moved');
-      setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
-    }
-  })();
-  function move(kind, id, to) {
-    var data = new FormData();
-    data.append('csrf_token', token ? token.content : '');
-    data.append(kind, id);
-    data.append('to', to);
-    fetch('{{ url_for("user.move_to_folder") }}', { method: 'POST', body: data, credentials: 'same-origin',
-                                                    headers: { 'X-Requested-With': 'fetch' } })
-      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
-      .then(function (res) {
-        if (res.ok) {
-          //say what happened once the page has reloaded
-          try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, kind: kind, id: id })); } catch (e) {}
-          location.reload();
-          return;
-        }
-        alert(res.error || 'That didn\'t work. Please reload the page and try again.');
-      });
-  }
-
-  /* dragging, done here with the mouse (the browser's own drag and drop is unreliable on a
-   * box's title row and on links): press on a quiz's title row or a folder in the list, move
-   * a little, and a label follows the pointer; let go over a folder to move it there. A
-   * plain click still opens and closes the box (or opens the folder). Esc cancels. On a
-   * touch screen this is left alone (scrolling comes first; "Move to" does the job). */
-  var pending = null, dragging = null, ghost = null, over = null, swallowClick = false;
-  function targetAt(x, y) {
-    var el = document.elementFromPoint(x, y), t = el && el.closest ? el.closest('[data-drop]') : null;
-    if (!t || t.dataset.drop === dragging.home) return null;
-    if (dragging.kind === 'folder' && dragging.el.contains(t)) return null;  // not into itself
-    return t;
-  }
-  function highlight(t) {
-    if (over === t) return;
-    if (over) over.classList.remove('drop-over');
-    over = t;
-    if (over) over.classList.add('drop-over');
-  }
-  function stop() {
-    highlight(null);
-    if (ghost) ghost.remove();
-    if (dragging) dragging.el.classList.remove('dragging');
-    document.body.classList.remove('folder-dragging');
-    pending = dragging = ghost = null;
-  }
-  document.querySelectorAll('[data-drag]').forEach(function (h) {
-    h.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0 || e.pointerType === 'touch') return;
-      var kind = h.dataset.drag, box = kind === 'quiz' ? h.closest('.quiz-card') : h.closest('.side-item');
-      pending = { kind: kind, id: box.dataset[kind === 'quiz' ? 'quiz' : 'folder'], el: box, home: box.dataset.home, x: e.clientX, y: e.clientY,
-                  label: (kind === 'quiz' ? box.querySelector('h2') : h.querySelector('.side-name')).textContent };
-      e.preventDefault();  // no text selection while dragging; a click still goes through
-    });
-  });
-  document.addEventListener('pointermove', function (e) {
-    if (pending && !dragging) {
-      if (Math.abs(e.clientX - pending.x) + Math.abs(e.clientY - pending.y) < 6) return;
-      dragging = pending;
-      ghost = document.createElement('div');
-      ghost.className = 'drag-ghost';
-      ghost.textContent = (dragging.kind === 'quiz' ? '' : '📁 ') + dragging.label;
-      document.body.appendChild(ghost);
-      dragging.el.classList.add('dragging');
-      document.body.classList.add('folder-dragging');
-    }
-    if (!dragging) return;
-    ghost.style.left = (e.clientX + 14) + 'px';
-    ghost.style.top = (e.clientY + 10) + 'px';
-    highlight(targetAt(e.clientX, e.clientY));
-  });
-  document.addEventListener('pointerup', function (e) {
-    if (!dragging) { pending = null; return; }
-    var d = dragging, t = targetAt(e.clientX, e.clientY);
-    //the click that follows a drag shouldn't open the box or follow the link
-    swallowClick = true;
-    setTimeout(function () { swallowClick = false; }, 0);
-    stop();
-    if (t) move(d.kind, d.id, t.dataset.drop);
-  });
-  document.addEventListener('click', function (e) {
-    if (!swallowClick) return;
-    swallowClick = false;
-    e.preventDefault();
-    e.stopPropagation();
-  }, true);
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (pending || dragging)) stop(); });
-  window.addEventListener('blur', stop);
-})();
 </script>
+<script src="{{ asset('js/folders.js') }}"></script>
 {% endblock %}

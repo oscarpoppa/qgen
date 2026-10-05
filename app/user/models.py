@@ -1,7 +1,7 @@
 from . import db, login
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 #"online": seen within this long (the default; see Technical settings, app/tuning.py)
 ONLINE_WINDOW = timedelta(minutes=2)
@@ -96,3 +96,19 @@ def note_seen(user, now=None):
     except Exception:
         db.session.rollback()
 
+
+
+#folders on the Users page (e.g. "7th grade"), shared by all the teachers; students never
+#see them. Folders can hold folders, and a person can be in several folders.
+class UserFolder(db.Model):
+    __tablename__ = 'user_folder'
+    id = db.Column(db.Integer, primary_key=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('user_folder.id', ondelete='CASCADE'), nullable=True, index=True)
+    name = db.Column(db.String(64), nullable=False)
+    created = db.Column(db.DateTime, default=datetime.now, nullable=False)
+
+
+class UserFolderMember(db.Model):
+    __tablename__ = 'user_folder_member'
+    folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id', ondelete='CASCADE'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)

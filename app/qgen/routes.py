@@ -381,8 +381,9 @@ def assign():
     quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
     #a quiz really chosen (from a link, or sent back after a form error) is kept on show
     quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
+    from app.user import groups
     return render_template('assign.html', title='Assign a quiz', form=form, choices=S.subject_choices('quizzes'),
-                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen)
+                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen, user_folders=groups.picker())
 
 
 # ---------------------------------------------------------------- taking

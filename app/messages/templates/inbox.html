@@ -2,6 +2,22 @@
 {% from "_macros.html" import avatar with context %}
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
+{# a Users page folder in the list down the side (folders are made and filled on the Users
+   page); shows its students' conversations, and how many messages wait unread in it #}
+{% macro side_folder(n) %}
+  {% set f = n.folder %}
+  <li class="side-item" data-folder="{{ f.id }}">
+    <div class="side-row{{ ' current' if view == f.id|string }}">
+      {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
+      {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
+      <a href="{{ url_for('messages.inbox', folder=f.id) }}" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
+        <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
+      {% if n.unread %}<span class="count" aria-label="{{ n.unread }} unread">{{ n.unread }}</span>{% endif %}
+    </div>
+    {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
+  </li>
+{% endmacro %}
+
 {% block content %}
 <div class="page-head"><h1>Messages</h1>
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}">Messages between teachers{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
@@ -15,7 +31,13 @@
     <select id="to" name="to">
       <option value="all">Everyone (announcement)</option>
       <option value="chosen">Chosen students…</option>
+      {% if user_folders %}<optgroup label="A folder (from the Users page)">
+        {% for uf in user_folders %}{% set n = uf.ids|select('in', students)|list|length %}
+          <option value="folder:{{ uf.id }}"{% if not n %} disabled{% endif %}>{{ '\u00a0\u00a0\u00a0' * (uf.depth - 1) }}📁 {{ uf.name }} ({{ n }} student{{ '' if n == 1 else 's' }})</option>
+        {% endfor %}</optgroup>{% endif %}
+      <optgroup label="One student">
       {% for r in rows %}<option value="{{ r.student.id }}">{{ r.student.username }}</option>{% endfor %}
+      </optgroup>
     </select>
   </div>
   <fieldset class="field" id="chosen" hidden>
@@ -25,6 +47,8 @@
       <button type="button" class="btn btn-secondary btn-sm" data-set="1">Select all</button>
       <button type="button" class="btn btn-secondary btn-sm" data-set="0">Clear</button>
     </div>
+    {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
+      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}">📁 {{ uf.name }}</button>{% endfor %}</div>{% endif %}
     <ul class="choice-list" style="max-height:240px;overflow:auto">
       {% for r in rows %}
         <li><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.username }}</label></li>
@@ -56,12 +80,36 @@
   </div>
 {% endif %}
 
-{% if rows %}
+<div class="folders-layout" data-view="{{ view }}" data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}"
+     data-fold-key="qgen-folded-user-folders" data-open-key="qgen-open-user-subfolders">
+  <details class="folder-side" open>
+    <summary class="folder-side-head"><span class="small muted">Folders</span>
+      <span class="folder-side-now">{{ node.folder.name if node else 'Not in a folder' if view == 'main' else 'All students' }}</span></summary>
+    <nav aria-label="Folders">
+      <ul class="side-list side-top">
+        <li><div class="side-row{{ ' current' if view == 'all' }}">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('messages.inbox') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> All students</a>
+          {% set total = rows|sum(attribute='unread') %}{% if total %}<span class="count" aria-label="{{ total }} unread">{{ total }}</span>{% endif %}</div></li>
+        {% if root.folders %}
+        <li><div class="side-row{{ ' current' if view == 'main' }}">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('messages.inbox', folder='main') }}" class="side-link"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> Not in a folder</a>
+          {% if root.unread %}<span class="count" aria-label="{{ root.unread }} unread">{{ root.unread }}</span>{% endif %}</div></li>
+        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
+        {% endif %}
+      </ul>
+      <p class="muted small side-hint">Folders are made on the <a href="{{ url_for('user.userdet') }}">Users page</a>.</p>
+    </nav>
+  </details>
+  <section class="folder-main" aria-labelledby="folder-title">
+    <h2 id="folder-title" class="folder-title">{% for p in path[:-1] %}<a href="{{ url_for('messages.inbox', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ ('📁 ' ~ node.folder.name) if node else 'Not in a folder' if view == 'main' else 'All students' }}</h2>
+{% if shown %}
   <div class="table-wrap stack">
     <table>
       <thead><tr><th>Student</th><th>Latest</th><th></th></tr></thead>
       <tbody>
-      {% for r in rows %}
+      {% for r in shown %}
         <tr>
           <td data-label="Student"><span class="person">{{ avatar(r.student, 28) }}<strong>{{ r.student.username }}</strong></span>
             {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
@@ -77,8 +125,10 @@
     </table>
   </div>
 {% else %}
-  <div class="card empty">No students yet.</div>
+  <div class="card empty">{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>
 {% endif %}
+  </section>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -97,6 +147,13 @@
     var q = this.value.trim().toLowerCase();
     items.forEach(function (li) { li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
   });
+  //"Check a folder": checks everyone in it (and in the folders inside it)
+  chosen.querySelectorAll('[data-ids]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var ids = JSON.parse(b.dataset.ids).map(String);
+      items.forEach(function (li) { var box = li.querySelector('input'); if (ids.indexOf(box.value) !== -1) box.checked = true; });
+    });
+  });
   chosen.querySelectorAll('[data-set]').forEach(function (b) {
     b.addEventListener('click', function () {
       items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = b.dataset.set === '1'; });
@@ -104,4 +161,5 @@
   });
 })();
 </script>
+<script src="{{ asset('js/folders.js') }}"></script>
 {% endblock %}

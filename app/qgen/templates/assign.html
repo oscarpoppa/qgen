@@ -24,6 +24,9 @@
       <button type="button" class="btn btn-secondary btn-sm" id="all">Select all</button>
       <button type="button" class="btn btn-secondary btn-sm" id="none">Clear</button>
     </div>
+    {# the Users page's folders: check everyone in one (and in the folders inside it) #}
+    {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
+      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}">{{ '\u00a0' * (uf.depth - 1) * 2 }}📁 {{ uf.name }}</button>{% endfor %}</div>{% endif %}
     <div style="max-height:320px;overflow:auto">{{ form.users(class='choice-list') }}</div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
     <div class="help">Each student gets a different random version of the quiz.</div>
@@ -88,6 +91,12 @@
   function set(v) { items.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = v; }); }
   document.getElementById('all').onclick = function () { set(true); };
   document.getElementById('none').onclick = function () { set(false); };
+  document.querySelectorAll('.folder-picks [data-ids]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var ids = JSON.parse(b.dataset.ids).map(String);
+      items.forEach(function (li) { var box = li.querySelector('input'); if (ids.indexOf(box.value) !== -1) box.checked = true; });
+    });
+  });
 })();
 /* the time limit can't be longer than the time between opening and closing (checked
  * again when assigning): say the most it can be, and warn as soon as it's too long */

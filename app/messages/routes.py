@@ -23,8 +23,29 @@ from app.qgen.models import new_quizzes
 @admin_only
 def inbox():
     from .models import unread_staff
-    return render_template('inbox.html', rows=M.inbox(current_user), pinned=M.pinned_announcements(),
-                           staff_unread=unread_staff(current_user.id), title='Messages')
+    from app.user import groups
+    rows = M.inbox(current_user)
+    #the Users page's folders down the side: all students, those in no folder, or one folder
+    #(with the folders inside it); each with how many unread messages are waiting in it
+    root, flat, nodes, _ = groups.tree([r['student'] for r in rows])
+    view = request.args.get('folder', 'all')
+    node = nodes.get(int(view)) if view.isdigit() else None
+    if node is None and view != 'main':
+        view = 'all'
+    unread = {r['student'].id: r['unread'] for r in rows}
+    for n in nodes.values():
+        n['unread'] = sum(unread.get(i, 0) for i in n['everyone'])
+    in_none = {u.id for u in root['people']}
+    root['unread'] = sum(unread.get(i, 0) for i in in_none)
+    shown = [r for r in rows if r['student'].id in node['everyone']] if node else \
+        [r for r in rows if r['student'].id in in_none] if view == 'main' else rows
+    path, up = [], node['folder'] if node else None
+    while up is not None:
+        path.insert(0, up)
+        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
+    return render_template('inbox.html', rows=rows, shown=shown, pinned=M.pinned_announcements(),
+                           staff_unread=unread_staff(current_user.id), title='Messages', root=root, node=node, view=view,
+                           path=path, user_folders=groups.picker(), students={r['student'].id for r in rows})
 
 #route to one student's conversation, as a teacher
 @messages_bp.route('/messages/<int:student_id>', methods=['GET'])
@@ -58,6 +79,18 @@ def send():
         to = request.form.getlist('students')
         if not to:
             flash('Check at least one student.', 'error')
+            return redirect(back)
+    elif to.startswith('folder:'):
+        #everyone in a Users page folder (and the folders inside it) who is a student
+        from app.user import groups
+        try:
+            ids = groups.everyone_in(to.split(':', 1)[1])
+        except groups.GroupError as exc:
+            flash(str(exc), 'error')
+            return redirect(back)
+        to = [u.id for u in User.query.filter(User.id.in_(ids), User.is_admin.is_(False))] if ids else []
+        if not to:
+            flash('Nobody in that folder is a student.', 'error')
             return redirect(back)
     try:
         students = M.send(current_user, to, request.form.get('body'), pinned=bool(request.form.get('pin')))

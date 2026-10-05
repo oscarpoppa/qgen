@@ -305,8 +305,143 @@ def eduser(uid):
 @pw_check
 @admin_only
 def userdet():
+    from . import groups
     ulst = User.query.order_by(User.username).all()
-    return render_template('udet.html', ulst=ulst, title='Users')
+    root, flat, nodes, folders_of = groups.tree(ulst)
+    #the main list (people in no folder), 'all', or a folder's id (a gone folder: the main list)
+    view = request.args.get('folder', 'main')
+    node = nodes.get(int(view)) if view.isdigit() else None
+    if node is None and view != 'all':
+        view = 'main'
+    shown = node['people'] if node else ulst if view == 'all' else root['people']
+    path, up = [], node['folder'] if node else None
+    while up is not None:
+        path.insert(0, up)
+        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
+    return render_template('udet.html', ulst=ulst, title='Users', root=root, all_folders=flat, node=node, view=view,
+                           shown=shown, path=path, folders_of=folders_of, inside=groups.inside,
+                           max_depth=groups.MAX_DEPTH, max_name=groups.MAX_NAME)
+
+
+def _group_done(message, error=False, show=None):
+    """After a change to the Users page's folders: JSON for the page's script, else back to
+    the Users page showing the same folder (or `show`)."""
+    if request.headers.get('X-Requested-With') == 'fetch':
+        from flask import jsonify
+        return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
+    flash(message, 'error' if error else 'success')
+    if show is None:
+        show = request.form.get('view') or 'main'
+    show = str(show)
+    return redirect(url_for('user.userdet', folder=show) if show.isdigit() or show == 'all' else url_for('user.userdet'))
+
+
+#routes for the Users page's folders (shared by the teachers)
+@user_bp.route('/users/folders', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def create_user_folder():
+    from . import groups
+    try:
+        f = groups.create(request.form.get('name'), request.form.get('parent'))
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Folder "{}" made.'.format(f.name), show=f.id)
+
+
+@user_bp.route('/users/folders/<int:folder_id>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def rename_user_folder(folder_id):
+    from . import groups
+    try:
+        f = groups.rename(folder_id, request.form.get('name'))
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Folder renamed to "{}".'.format(f.name))
+
+
+@user_bp.route('/users/folders/<int:folder_id>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_user_folder(folder_id):
+    from . import groups
+    from .models import UserFolder
+    f = db.session.get(UserFolder, folder_id)
+    parent = f.parent_id if f is not None else None
+    try:
+        name = groups.remove(folder_id)
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Folder "{}" removed; everyone in it moved up a level.'.format(name),
+                       show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
+
+
+#dragging: a person onto a folder (from a folder: moved out of that one; from the main list
+#or All users: put in it), onto the main list (out of the folder shown, or out of every
+#folder); or a folder onto a folder ("top": the top level). Also the folder's "Move to" list.
+@user_bp.route('/users/folders/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def move_user_or_folder():
+    from . import groups
+    from .models import UserFolder
+    to, came_from = request.form.get('to'), request.form.get('from') or ''
+    here = came_from if came_from.isdigit() else None  # the folder it was dragged out of
+    try:
+        if request.form.get('folder'):
+            target = groups.move_folder(request.form.get('folder'), to)
+            name = db.session.get(UserFolder, int(request.form.get('folder'))).name
+            message = 'Moved "{}" to {}.'.format(name, '"{}"'.format(target.name) if target else 'the top level')
+        elif to in (None, '', 'top', 'main'):
+            person, f = groups.take_out(request.form.get('user'), here)
+            message = ('Took {} out of "{}".'.format(person.username, f.name) if f
+                       else 'Took {} out of every folder.'.format(person.username))
+        else:
+            person, f = groups.add(request.form.get('user'), to, moving_from=here)
+            message = 'Moved {} to "{}".'.format(person.username, f.name) if here else \
+                'Put {} in "{}".'.format(person.username, f.name)
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done(message)
+
+
+#a person's "Add to folder" list (they stay in their other folders) and a folder's ✕
+@user_bp.route('/users/folders/add', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def add_to_user_folder():
+    from . import groups
+    try:
+        person, f = groups.add(request.form.get('user'), request.form.get('to'))
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Put {} in "{}".'.format(person.username, f.name))
+
+
+@user_bp.route('/users/folders/remove', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def remove_from_user_folder():
+    from . import groups
+    try:
+        person, f = groups.take_out(request.form.get('user'), request.form.get('folder'))
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Took {} out of "{}".'.format(person.username, f.name) if f else
+                       'Took {} out of every folder.'.format(person.username))
 
 # route to site-wide settings: name, logo, and the class code students need to sign up
 @user_bp.route('/settings', methods=['GET', 'POST'])

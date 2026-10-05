@@ -124,14 +124,17 @@ def _users(now):
         #and for the hour or day changing)
         label = u.seen_label(now)
         return 'minutes' if label == 'just now' or label.endswith(' min ago') else label
-    return [(u.id, u.username, u.email, u.is_admin, u.avatar, seen(u)) for u in User.query.order_by(User.id)]
+    from app.user import groups
+    return [(u.id, u.username, u.email, u.is_admin, u.avatar, seen(u)) for u in User.query.order_by(User.id)], groups.state()
 
 
 def _messages(student_id, now):
     """The Messages page or one conversation (which marks what it shows as read)."""
     from app.messages.routes import messages_state
     from app.messages.models import unread_messages_for_teacher
-    return messages_state(), unread_messages_for_teacher(current_user.id)
+    from app.user import groups
+    #the Messages page shows the Users page's folders too
+    return messages_state(), unread_messages_for_teacher(current_user.id), groups.state()
 
 
 # key -> (teachers only?, function(argument, now))
