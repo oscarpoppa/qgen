@@ -208,6 +208,9 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
 
     #a quiz with a future start: the student has been told it's open (or there's nothing to tell)
     open_notice_sent = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    #the taker has had My quizzes open since it was given to them (else it's counted next to
+    #"My quizzes" in the menu); set False only when a quiz is given (assign, retake)
+    seen_by_taker = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
@@ -326,6 +329,18 @@ class Setting(db.Model):
         row = db.session.get(Setting, key) or Setting(key=key)
         row.value = value
         db.session.add(row)
+        db.session.commit()
+
+
+def new_quizzes(user_id):
+    """Quizzes given to this person (student or teacher) since they last opened My quizzes."""
+    return CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)).count()
+
+
+def mark_quizzes_seen(user_id):
+    """They've opened My quizzes: nothing there is new to the menu any more."""
+    if CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)) \
+            .update({'seen_by_taker': True}, synchronize_session=False):
         db.session.commit()
 
 

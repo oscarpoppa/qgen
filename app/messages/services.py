@@ -6,7 +6,8 @@ from app import db
 from app.user.models import User
 from sqlalchemy.exc import IntegrityError
 
-from .models import Message, MessageRead, MessageTo, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by, for_teacher
+from .models import (Message, MessageRead, MessageTo, NOT_NOTICE, IS_NOTICE, VISIBLE_TO_STUDENT, seen_by, cleared_by, for_teacher,
+                     own_notices, unread_teacher_notices)
 
 def max_len():
     """The longest a message can be (Technical settings)."""
@@ -254,11 +255,22 @@ def notices_for_student(student_id, limit=30):
                    limit, unread_by_student())
 
 
+def _teacher_panel_notices(teacher):
+    """What's in a teacher's Notices panel: notices about the students, less the ones this
+    teacher has cleared, and notices about the teacher's own quizzes."""
+    return Message.query.filter(db.or_(db.and_(IS_NOTICE, Message.from_teacher.is_(False), ~cleared_by(teacher.id)),
+                                       own_notices(teacher.id)))
+
+
 def notices_for_teachers(teacher, limit=50):
-    """Automatic notices for teachers (about all students), newest first (and every one
-    this teacher hasn't seen), less the ones this teacher has cleared."""
-    return _newest(Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~cleared_by(teacher.id)),
-                   limit, unread_by_teacher(teacher))
+    """A teacher's notices, newest first (and every one this teacher hasn't seen)."""
+    return _newest(_teacher_panel_notices(teacher), limit, unread_teacher_notices(teacher.id))
+
+
+def teacher_unseen_notices(teacher, items):
+    """Which of these notices this teacher hasn't seen (about students, or their own quizzes)."""
+    own = {m.id for m in items if m.from_teacher and m.student_id == teacher.id and not m.seen_by_student}
+    return unseen_ids(teacher, items) | own
 
 
 def mark_notices_seen_by_teachers(teacher):
@@ -266,6 +278,15 @@ def mark_notices_seen_by_teachers(teacher):
     ids = [r[0] for r in Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False), ~seen_by(teacher.id))
            .with_entities(Message.id)]
     _mark_for_teacher(teacher, ids)
+    _mark_own_notices_seen(teacher.id)
+
+
+def _mark_own_notices_seen(user_id, ids=None):
+    q = Message.query.filter(own_notices(user_id), Message.seen_by_student.is_(False))
+    if ids is not None:
+        q = q.filter(Message.id.in_(ids))
+    if q.update({'seen_by_student': True}, synchronize_session=False):
+        db.session.commit()
 
 
 def pinned_for(student_id):
@@ -357,7 +378,7 @@ def delete_message(user, m, everyone=False):
 def _my_notices(user):
     """The notices shown in this person's Notices panel."""
     if user.is_admin:
-        return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(False))
+        return _teacher_panel_notices(user)
     return Message.query.filter(IS_NOTICE, Message.from_teacher.is_(True), Message.student_id == user.id)
 
 
@@ -366,32 +387,29 @@ def clear_notices(user, notice_id=None):
     clears their own copy; a notice is deleted once every teacher has cleared it.
     Returns how many were removed."""
     q = _my_notices(user)
-    if user.is_admin:
-        q = q.filter(~cleared_by(user.id))
     if notice_id is not None:
         q = q.filter(Message.id == notice_id)
     rows = q.all()
     if notice_id is not None and not rows:
         raise MessageError('That notice isn\'t in your notices.')
-    if not user.is_admin:
-        for row in rows:
-            db.session.delete(row)
-        db.session.commit()
-        return len(rows)
-    _mark_for_teacher(user, [r.id for r in rows], cleared=True)
-    _delete_if_all_cleared([r.id for r in rows])
+    #your own notices (a student's, or a teacher's about quizzes they take) are deleted
+    own = [r for r in rows if r.from_teacher]
+    for row in own:
+        db.session.delete(row)
+    db.session.commit()
+    shared = [r.id for r in rows if not r.from_teacher]
+    if shared:
+        _mark_for_teacher(user, shared, cleared=True)
+        _delete_if_all_cleared(shared)
     return len(rows)
 
 
 def mark_notice_seen(user, notice_id):
     """This person has seen one notice in their own Notices panel (clicked it)."""
-    q = _my_notices(user).filter(Message.id == notice_id)
-    if user.is_admin:
-        q = q.filter(~cleared_by(user.id))
-    m = q.first()
+    m = _my_notices(user).filter(Message.id == notice_id).first()
     if m is None:
         raise MessageError('That notice isn\'t in your notices.')
-    if user.is_admin:
+    if user.is_admin and not m.from_teacher:
         _mark_for_teacher(user, [m.id])
     else:
         mark_seen_by_student(user.id, [m])

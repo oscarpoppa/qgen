@@ -41,7 +41,7 @@
       <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
       {% if current_user.is_authenticated %}
-        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
+        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}{% set nav_new_quizzes = new_quiz_count() %}
         <div class="dock-buttons">
           {% if current_user.is_admin %}{% set nav_online = online_count() %}
           {# who's on the site (teachers only); the list loads when opened #}
@@ -60,11 +60,13 @@
         </div>
       {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
-              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Review)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}</button>
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Review)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
       <nav class="nav" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
           {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
-          <a href="{{ url_for('user.mypage') }}">My quizzes</a>
+          {# quizzes given since My quizzes was last opened (anyone: teachers take quizzes too); kept current by messages.js #}
+          <a href="{{ url_for('user.mypage') }}">My quizzes
+            <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span></a>
           {% if current_user.is_admin %}
             <details class="menu">
               <summary>Problems</summary>

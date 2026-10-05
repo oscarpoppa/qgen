@@ -47,6 +47,8 @@ def pw_check(func):
 @pw_check
 def mypage():
     #messages and notices are in the side panels every page has (see base.html)
+    from app.qgen.models import mark_quizzes_seen
+    mark_quizzes_seen(current_user.id)
     return render_template('mypage.html', current_user=current_user, title='My quizzes')
 
 # route to user logout action

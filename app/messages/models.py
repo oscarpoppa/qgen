@@ -120,8 +120,26 @@ def unread_for_teachers(teacher_id):
                                 for_teacher(teacher_id)).count()
 
 
+def own_notices(user_id):
+    """Condition: notices about this person's own quizzes (a new quiz, graded...). A teacher
+    who takes quizzes gets them too, alongside the notices about students."""
+    return db.and_(IS_NOTICE, Message.from_teacher.is_(True), Message.student_id == user_id)
+
+
+def teacher_notices(teacher_id):
+    """Condition: the notices in a teacher's Notices panel: about the students (shared by the
+    teachers), and about the teacher's own quizzes."""
+    return db.or_(db.and_(IS_NOTICE, Message.from_teacher.is_(False)), own_notices(teacher_id))
+
+
+def unread_teacher_notices(teacher_id):
+    """Condition: in a teacher's Notices panel and not seen yet (their own: seen_by_student)."""
+    return db.or_(db.and_(IS_NOTICE, Message.from_teacher.is_(False), ~seen_by(teacher_id)),
+                  db.and_(own_notices(teacher_id), Message.seen_by_student.is_(False)))
+
+
 def unread_notices_for_teachers(teacher_id):
-    return Message.query.filter(Message.from_teacher.is_(False), IS_NOTICE, ~seen_by(teacher_id)).count()
+    return Message.query.filter(unread_teacher_notices(teacher_id)).count()
 
 
 # ---------------------------------------------------------------- between teachers

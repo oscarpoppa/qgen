@@ -67,6 +67,8 @@ def show_answers_for(cq):
 @api_bp.route('/my/quizzes', methods=['GET'])
 @token_required()
 def my_quizzes():
+    from app.qgen.models import mark_quizzes_seen
+    mark_quizzes_seen(g.api_user.id)  # like opening My quizzes on the site
     return jsonify(quizzes=my_quizzes_json(g.api_user))
 
 

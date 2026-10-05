@@ -11,7 +11,8 @@
       {% for m in items %}
         {# a new one stays marked until it's clicked (or the panel is opened with its button) #}
         <li class="notice{{ ' notice-new' if m.id in unread_ids }}"{% if m.id in unread_ids %} data-seen-url="{{ url_for('messages.notice_seen', notice_id=m.id) }}"{% endif %}>
-          {% if teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">🔔</span>{% endif %}
+          {# a teacher's notices about students show the student; their own quizzes' notices, the bell #}
+          {% if teacher and not m.from_teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">🔔</span>{% endif %}
           <div class="notice-text">
             <div>{{ m.body }}</div>
             <div class="small muted">{{ m.created.strftime('%b %d, %I:%M %p') }}

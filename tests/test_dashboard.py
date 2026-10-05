@@ -31,7 +31,7 @@ def test_teachers_land_on_the_dashboard_and_students_dont(app_db):
     assert r.headers['Location'].endswith('/dashboard')
     page = c.get('/dashboard').data.decode()
     assert '<h1>Dashboard</h1>' in page and 'href="/dashboard">Dashboard</a>' in page
-    assert 'class="brand" href="/dashboard"' in page and 'href="/mypage">My quizzes</a>' in page
+    assert 'class="brand" href="/dashboard"' in page and 'href="/mypage">My quizzes' in page
     # ?next= still wins; going to the login page when signed in goes home
     c2 = app.test_client()
     r = c2.post('/login?next=/quiz/listvq', data={'username': 'teach', 'password': 'pw-for-tests'})

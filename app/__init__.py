@@ -87,6 +87,10 @@ def page_helpers():
         if not current_user.is_authenticated:
             return 0
         return unread_notices_for_teachers(current_user.id) if current_user.is_admin else unread_notices_for_student(current_user.id)
+    def new_quiz_count():
+        from app.qgen.models import new_quizzes
+        from flask_login import current_user
+        return new_quizzes(current_user.id) if current_user.is_authenticated else 0
     def online_count():
         from app.user.models import User
         return User.query.filter(User.online_condition(datetime.now())).count()
@@ -97,7 +101,7 @@ def page_helpers():
         from flask import session
         return bool(session.pop('qgen_welcome', False))
     from app import tuning, live
-    return dict(watch=live.watch, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, tuning=tuning,
+    return dict(watch=live.watch, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, new_quiz_count=new_quiz_count, tuning=tuning,
                 tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)

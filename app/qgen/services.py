@@ -463,6 +463,7 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         cq = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id, opens_at=opens_at, closes_at=closes_at, time_limit=time_limit)
         #only a quiz that opens later gets an "it's open now" notice (see announce_opened)
         cq.open_notice_sent = not (opens_at and opens_at > datetime.now())
+        cq.seen_by_taker = False  # counted next to "My quizzes" until they look
         #groups ("2 of these 6") are drawn separately for each student
         ordered = layout.draw(layout.parse(vquiz.vpid_lst), random)
         #so "question 1 is B" means nothing to the student next door
@@ -853,6 +854,7 @@ def restore_attempt(a):
     #archived before this was kept, or already open: no "it's open now" notice for it
     if 'open_notice_sent' not in data['attempt'] or not cq.not_open_yet():
         cq.open_notice_sent = True
+    cq.seen_by_taker = True  # coming back isn't a new quiz
     db.session.add(cq)
     db.session.flush()
     for row in data['problems']:

@@ -10,7 +10,8 @@ from . import messages_bp
 from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_student, unread_for_teachers,
                      unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by,
-                     unread_messages_for_teacher)
+                     unread_messages_for_teacher, own_notices, teacher_notices, unread_teacher_notices)
+from app.qgen.models import new_quizzes
 
 
 # ---------------------------------------------------------------- teachers
@@ -243,7 +244,7 @@ def notices():
     mark = request.args.get('seen') == '1'
     if current_user.is_admin:
         items = M.notices_for_teachers(current_user)
-        unread_ids = M.unseen_ids(current_user, items)
+        unread_ids = M.teacher_unseen_notices(current_user, items)
         if mark:
             M.mark_notices_seen_by_teachers(current_user)
     else:
@@ -346,26 +347,31 @@ def teachers_view(rows, staff, choice, mark_seen=True):
 @messages_bp.route('/messages/poll', methods=['GET'])
 @login_required
 def poll():
-    if not current_user.is_admin:
-        #a quiz of theirs that has just opened: its notice comes with this check-in
-        from app.qgen.services import announce_opened
-        try:
-            announce_opened(student_id=current_user.id)
-        except Exception as exc:  # never let it break the check-in
-            db.session.rollback()
-            current_app.logger.error('announcing opened quizzes failed: {}'.format(exc))
+    #a quiz of theirs that has just opened (teachers take quizzes too): its notice comes with this check-in
+    from app.qgen.services import announce_opened
+    try:
+        announce_opened(student_id=current_user.id)
+    except Exception as exc:  # never let it break the check-in
+        db.session.rollback()
+        current_app.logger.error('announcing opened quizzes failed: {}'.format(exc))
     if current_user.is_admin:
         mine = Message.query.filter(Message.from_teacher.is_(False), for_teacher(current_user.id))
         unseen = ~seen_by(current_user.id)
+        #a teacher's notices: about the students, and about quizzes they take themselves
+        notice_q, notice_unseen = Message.query.filter(teacher_notices(current_user.id)), unread_teacher_notices(current_user.id)
         unread, notices = unread_messages_for_teacher(current_user.id), unread_notices_for_teachers(current_user.id)
     else:
         mine = Message.query.filter(Message.student_id == current_user.id, Message.from_teacher.is_(True),
                                     Message.hidden_for_student.is_(False))
         unseen = Message.seen_by_student.is_(False)
+        notice_q, notice_unseen = mine.filter(IS_NOTICE), unseen
         unread, notices = unread_for_student(current_user.id), unread_notices_for_student(current_user.id)
     newest = lambda q: q.order_by(Message.id.desc()).first()
-    latest, latest_notice = newest(mine.filter(NOT_NOTICE)), newest(mine.filter(IS_NOTICE))
-    new_msg, new_notice = newest(mine.filter(NOT_NOTICE, unseen)), newest(mine.filter(IS_NOTICE, unseen))
+    latest, latest_notice = newest(mine.filter(NOT_NOTICE)), newest(notice_q)
+    new_msg, new_notice = newest(mine.filter(NOT_NOTICE, unseen)), newest(notice_q.filter(notice_unseen))
+    if current_user.is_admin:
+        #a quiz for the teacher themselves pops up ahead of the notices about students
+        new_notice = newest(Message.query.filter(own_notices(current_user.id), Message.seen_by_student.is_(False))) or new_notice
     latest_id, msg_preview = latest.id if latest else 0, preview(new_msg)
     if current_user.is_admin:
         #messages from other teachers count as messages too: the newest of either kind pops up
@@ -381,7 +387,8 @@ def poll():
                    latest=latest_id, latest_notice=latest_notice.id if latest_notice else 0,
                    message_preview=msg_preview, notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
-                   watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now())
+                   watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now(),
+                   quizzes=new_quizzes(current_user.id))
 
 
 def online_now():
@@ -425,8 +432,8 @@ def messages_state():
 def notices_state():
     """The same for the Notices panel: a notice added or cleared."""
     q = Message.query.filter(IS_NOTICE)
-    q = q.filter(Message.from_teacher.is_(False), ~cleared_by(current_user.id)) if current_user.is_admin else \
-        q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
+    q = q.filter(db.or_(db.and_(Message.from_teacher.is_(False), ~cleared_by(current_user.id)), own_notices(current_user.id))) \
+        if current_user.is_admin else q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
     ids = [r[0] for r in q.with_entities(Message.id).all()]
     return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))
 
