@@ -134,15 +134,20 @@ def delete_folder(folder_id):
 @post_form_only
 def move_to_folder():
     from app.qgen import folders
+    from app.qgen.models import QuizFolder, VQuiz
     to = request.form.get('to')
     try:
         if request.form.get('folder'):
             target = folders.move_folder(current_user, request.form.get('folder'), to)
+            what = db.session.get(QuizFolder, int(request.form.get('folder'))).name
+            where = '"{}"'.format(target.name) if target else 'the top level'
         else:
             target = folders.move_quiz(current_user, request.form.get('quiz'), to)
+            what = db.session.get(VQuiz, int(request.form.get('quiz'))).title
+            where = '"{}"'.format(target.name) if target else '"Not in a folder"'
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Moved to {}.'.format('"{}"'.format(target.name) if target else 'the main list'))
+    return _folder_done('Moved "{}" to {}.'.format(what, where))
 
 # route to user logout action
 @user_bp.route('/logout')

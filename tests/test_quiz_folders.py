@@ -38,7 +38,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert page.count('aria-label="Move Week 1 to a folder"') == 1 and '📁 Unit 1</option>' in page
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
-        {'ok': True, 'message': 'Moved to "Unit 1".'}
+        {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
     # the folder list: the folder shows only its quizzes; "Not in a folder" the rest; all of them
     assert cards(sam, unit) == ['Week 1'] and cards(sam, 'none') == ['Week 2']
     page = sam.get('/mypage').data.decode()
@@ -59,7 +59,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert kim.post('/mypage/move', data={'quiz': w2.id, 'to': folder_id('K', 'kim')}, headers=FETCH).get_json() == \
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
-    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved to the main list.'
+    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to "Not in a folder".'
     assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -89,7 +89,8 @@ def test_folders_inside_folders_and_removing_them(app_db):
         'A folder can\'t go inside itself.'
     assert not sam.post('/mypage/move', data={'folder': math, 'to': math}, headers=FETCH).get_json()['ok']
     # moving a folder (dragging it out to the main list)
-    assert sam.post('/mypage/move', data={'folder': algebra, 'to': 'top'}, headers=FETCH).get_json()['ok']
+    assert sam.post('/mypage/move', data={'folder': algebra, 'to': 'top'}, headers=FETCH).get_json()['message'] == \
+        'Moved "Algebra" to the top level.'
     assert db.session.get(QuizFolder, algebra).parent_id is None
     sam.post('/mypage/move', data={'folder': algebra, 'to': math})
     # removing Math: Algebra (with the quiz) moves up to the main list; no quiz is deleted

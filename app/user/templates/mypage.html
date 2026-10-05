@@ -370,6 +370,26 @@
   });
 
   var token = document.querySelector('meta[name="csrf-token"]');
+  //after a drag: "Moved "train" to "abc"." at the top, and the moved quiz (or folder) lit up
+  (function () {
+    var done = null;
+    try { done = JSON.parse(sessionStorage.getItem('qgen-moved') || 'null'); sessionStorage.removeItem('qgen-moved'); } catch (e) {}
+    if (!done || !done.text) return;
+    var list = document.createElement('ul'), item = document.createElement('li');
+    list.className = 'alerts';
+    list.setAttribute('role', 'status');
+    item.className = 'alert alert-success';
+    item.textContent = done.text;
+    list.appendChild(item);
+    var main = document.querySelector('main');
+    main.insertBefore(list, main.firstChild);
+    var box = document.querySelector(done.kind === 'quiz' ? '.quiz-card[data-quiz="' + done.id + '"]'
+                                                          : '.side-item[data-folder="' + done.id + '"] > .side-row');
+    if (box) {
+      box.classList.add('just-moved');
+      setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
+    }
+  })();
   function move(kind, id, to) {
     var data = new FormData();
     data.append('csrf_token', token ? token.content : '');
@@ -379,7 +399,12 @@
                                                     headers: { 'X-Requested-With': 'fetch' } })
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .then(function (res) {
-        if (res.ok) { location.reload(); return; }
+        if (res.ok) {
+          //say what happened once the page has reloaded (in "All quizzes" the box doesn't move)
+          try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, kind: kind, id: id })); } catch (e) {}
+          location.reload();
+          return;
+        }
         alert(res.error || 'That didn\'t work. Please reload the page and try again.');
       });
   }
