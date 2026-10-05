@@ -448,39 +448,6 @@ def test_student_pages_refresh_when_graded(app_db):
     assert 'Being graded' not in home and '80%' in home
 
 
-def test_results_page_refreshes_when_answers_are_released(app_db):
-    app, db = app_db
-    from app.user.models import User
-    from app.qgen.models import VProblem, VQuiz, CQuiz
-    from app.qgen import services as S
-    sam_id = User.query.filter_by(username='sam').one().id
-    teacher, sam = login(app, 'teach'), login(app, 'sam')
-    f = problem_form('numeric', 'N', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
-    teacher.post('/quiz/makevprob', data=f)
-    teacher.post('/quiz/makevquiz', data={'title': 'Hidden', 'vplist': str(VProblem.query.one().id), 'hide_answers': 'y'})
-    vq = VQuiz.query.one()
-    assert vq.hide_answers
-    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})
-    cq = CQuiz.query.filter_by(assignee=sam_id).one()
-    with app.test_request_context():
-        S.submit(cq, {1: '999'})  # wrong
-    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    key = 'attempt:{}'.format(cq.id)
-    before = sam.get('/messages/poll?watch=' + key).get_json()['watch']
-    assert 'data-watch-state="{}"'.format(before) in page and '<dt>Correct answer</dt>' not in page
-    teacher.post('/quiz/releasevq/{}'.format(vq.id))
-    db.session.expire_all()
-    released = sam.get('/messages/poll?watch=' + key).get_json()['watch']
-    assert released != before
-    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert '<dt>Correct answer</dt>' in page
-    # hidden again: the page follows that too
-    teacher.post('/quiz/releasevq/{}'.format(vq.id))
-    db.session.expire_all()
-    assert sam.get('/messages/poll?watch=' + key).get_json()['watch'] == before
-    assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices?seen=1').data.decode()
-
-
 def test_questions_are_asked_in_the_page_and_delete_is_always_an_x(app_db):
     # browsers can switch their own confirm() pop-ups off, after which buttons that
     # use them silently do nothing; every "are you sure?" is asked inside the page

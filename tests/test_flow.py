@@ -314,7 +314,7 @@ def test_deleting_people_and_problems_keeps_records_consistent(app_db):
 
 
 def test_changes_need_a_real_form_from_this_site(app_db):
-    """Delete/retake/release/reset can't be triggered by a link or by another website."""
+    """Delete/retake/reset can't be triggered by a link or by another website."""
     app, db = app_db
     from app.qgen.models import VProblem
     from app.user.models import User

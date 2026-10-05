@@ -224,20 +224,22 @@ def test_no_open_notice_when_it_no_longer_makes_sense(app_db):
         assert S.restore_attempt(a).open_notice_sent
 
 
-def test_hidden_answers_and_release(app_db):
+def test_correct_answers_always_show_once_finished(app_db):
+    # there's no "hide the answers until I release them" any more
     app, db = app_db
-    from app.qgen.models import CQuiz, VQuiz
+    from app.qgen.models import CQuiz
     teacher = login(app, 'teach')
-    vq = make_quiz(app, db, teacher, hide_answers='y')
+    vq = make_quiz(app, db, teacher)
     assign(teacher, vq, [student(db, 'sam')])
     cq = CQuiz.query.one()
     sam = login(app, 'sam')
     sam.post('/quiz/take/{}'.format(cq.id), data={})  # all blank -> all wrong
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'Correct answer' not in page and 'show the correct answers later' in page and '0%' in page
-    assert 'Correct answer' in teacher.get('/quiz/take/{}'.format(cq.id)).data.decode()  # teacher always sees them
-    teacher.post('/quiz/releasevq/{}'.format(vq.id))
-    assert 'Correct answer' in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'Correct answer' in page and 'show the correct answers later' not in page and '0%' in page
+    form = teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert 'hide_answers' not in form and 'Release answers' not in teacher.get('/quiz/listvq').data.decode()
+    assert teacher.post('/quiz/releasevq/{}'.format(vq.id)).status_code == 404
+    assert teacher.post('/quiz/releasecq/{}'.format(cq.id)).status_code == 404
 
 
 def test_retake_scoring_rules(app_db):
@@ -302,65 +304,6 @@ def test_attempts_are_named_by_date():
     assert cq.when_label == 'Sep 4, 1:45 PM'
     cq.needs_review, cq.completed, cq.compdate = False, True, datetime(2026, 9, 4, 0, 7)
     assert cq.when_label == 'Sep 4, 12:07 AM'
-
-
-def test_release_answers_to_one_student(app_db):
-    app, db = app_db
-    from app.user.models import User
-    from app.qgen.models import VProblem, VQuiz, CQuiz
-    from app.qgen import services as S
-    from app.messages.models import Message
-    ids = {u.username: u.id for u in User.query.filter_by(is_admin=False)}
-    teacher = login(app, 'teach')
-    f = problem_form('numeric', 'N', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}])
-    teacher.post('/quiz/makevprob', data=f)
-    teacher.post('/quiz/makevquiz', data={'title': 'Hidden', 'vplist': str(VProblem.query.one().id), 'hide_answers': 'y'})
-    vq = VQuiz.query.one()
-    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids['sam'], ids['kim']]})
-    for name in ('sam', 'kim'):
-        with app.test_request_context():
-            S.submit(CQuiz.query.filter_by(assignee=ids[name]).one(), {1: '999'})  # wrong
-    sam_cq = CQuiz.query.filter_by(assignee=ids['sam']).one()
-    kim_cq = CQuiz.query.filter_by(assignee=ids['kim']).one()
-    sam, kim = login(app, 'sam'), login(app, 'kim')
-    shown = lambda client, cq: '<dt>Correct answer</dt>' in client.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert not shown(sam, sam_cq) and not shown(kim, kim_cq)
-
-    # Results by student offers it per student
-    page = teacher.get('/quiz/listuser').data.decode()
-    assert page.count('/quiz/releasecq/') == 2 and 'Answers hidden' in page
-    # release to sam only: sam sees the answers (and gets a notice), kim still doesn't
-    teacher.post('/quiz/releasecq/{}'.format(sam_cq.id))
-    db.session.expire_all()
-    assert shown(sam, sam_cq) and not shown(kim, kim_cq)
-    assert 'correct answers for &#34;Hidden&#34;' in sam.get('/messages/notices').data.decode()
-    assert 'correct answers' not in kim.get('/messages/notices').data.decode()
-    assert 'answers released' in teacher.get('/quiz/listuser').data.decode()
-    # the API agrees
-    from test_api import Api
-    body = Api(app, 'sam').get('/my/attempts/{}/results'.format(sam_cq.id)).get_json()
-    assert body['answers_shown'] is True and 'correct_answer' in body['items'][0]
-    body = Api(app, 'kim').get('/my/attempts/{}/results'.format(kim_cq.id)).get_json()
-    assert body['answers_shown'] is False and 'correct_answer' not in body['items'][0]
-    # a retake keeps it released for sam
-    teacher.post('/quiz/retcq/{}'.format(sam_cq.id))
-    db.session.expire_all()
-    new = CQuiz.query.filter_by(assignee=ids['sam']).order_by(CQuiz.id.desc()).first()
-    assert new.id != sam_cq.id and new.answers_released
-    # hide again: back to hidden for sam
-    teacher.post('/quiz/releasecq/{}'.format(sam_cq.id))
-    db.session.expire_all()
-    assert not shown(sam, sam_cq)
-    assert not any(c.answers_released for c in CQuiz.query.filter_by(assignee=ids['sam']))
-    # releasing the whole quiz still works for everyone
-    teacher.post('/quiz/releasevq/{}'.format(vq.id))
-    db.session.expire_all()
-    assert shown(sam, sam_cq) and shown(kim, kim_cq)
-    assert 'Answers released to everyone' in teacher.get('/quiz/listuser').data.decode()
-    # students can't release answers to themselves
-    assert sam.post('/quiz/releasecq/{}'.format(kim_cq.id)).status_code == 302
-    db.session.expire_all()
-    assert not CQuiz.query.get(kim_cq.id).answers_released
 
 
 def test_correct_answer_shown_under_right_answers_too(app_db):

@@ -201,8 +201,7 @@ def quiz_page(form, title, vq=None, subject_error=None):
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
                           image=form.image.data or None, calculator_ok=form.calculator_ok.data,
-                          shuffle_order=form.shuffle_order.data, retake_rule=form.retake_rule.data,
-                          hide_answers=form.hide_answers.data)
+                          shuffle_order=form.shuffle_order.data, retake_rule=form.retake_rule.data)
     form.vplist.errors = errors
     return errors
 
@@ -300,34 +299,6 @@ def del_vquiz(vqid):
     flash('Deleted quiz "{}".'.format(title), 'success')
     current_app.logger.info("{} deleted VQuiz: ({}) '{}'".format(current_user.username, vqid, title))
     return redirect(url_for('qgen.list_vquizzes'))
-
-
-#route to show (or hide again) correct answers on students' results pages
-@qgen_bp.route('/quiz/releasevq/<vqid>', methods=['POST'])
-@login_required
-@pw_check
-@admin_only
-@post_form_only
-def release_vquiz(vqid):
-    vq = db.get_or_404(VQuiz, vqid)
-    S.release_answers(vq, not vq.answers_released)
-    flash('Correct answers for "{}" are now {} to students.'.format(vq.title, 'shown' if vq.answers_released else 'hidden'), 'success')
-    return redirect(request.referrer or url_for('qgen.list_vquizzes'))
-
-
-#route to show (or hide again) the correct answers to one student: all of that
-#student's attempts at the quiz of the attempt given
-@qgen_bp.route('/quiz/releasecq/<cqid>', methods=['POST'])
-@login_required
-@pw_check
-@admin_only
-@post_form_only
-def release_to_student(cqid):
-    cq = db.get_or_404(CQuiz, cqid)
-    released = not cq.answers_released
-    S.release_answers_to(cq.vquiz, cq.assignee, released)
-    flash('Correct answers for "{}" are now {} to {}.'.format(cq.vquiz.title, 'shown' if released else 'hidden', cq.taker.username), 'success')
-    return redirect(request.referrer or url_for('qgen.list_user', uid=cq.assignee))
 
 
 #route to set how one student's attempts at one quiz combine ('' = use the quiz's rule)
@@ -443,9 +414,7 @@ def qtake(cidx):
     is_taker = current_user == cq.taker
     state = S.attempt_state(cq)
     if state == 'completed':
-        show = cq.answers_visible or current_user.is_admin
-        return render_template('transcript.html', cq=cq, title=title,
-                               transcript=transcript_html(cq, title, show_answers=show), answers_hidden=not show)
+        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title))
     if state == 'review':
         return render_template('awaiting.html', cq=cq, title=title)
     if state == 'not_open' and is_taker:

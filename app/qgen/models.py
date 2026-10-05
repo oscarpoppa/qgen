@@ -111,14 +111,6 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     shuffle_order = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
     #how several attempts combine into one score: see RETAKE_RULES
     retake_rule = db.Column(db.String(16), default='best', nullable=False, server_default='best')
-    #keep correct answers off results pages until the teacher releases them
-    hide_answers = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
-    answers_released = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
-
-    @property
-    def answers_visible(self):
-        return not self.hide_answers or self.answers_released
-
     @property
     def calculator_problems(self):
         """The problems in it (any group's too) that allow a calculator."""
@@ -191,8 +183,6 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     needs_review = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
     graded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     graded_date = db.Column(db.DateTime, nullable=True)
-    #correct answers released to this student even though the quiz still hides them
-    answers_released = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
     #optional window and time limit (minutes) for this assignment
     opens_at = db.Column(db.DateTime, nullable=True)
     closes_at = db.Column(db.DateTime, nullable=True)
@@ -237,12 +227,6 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
         if self.startdate:
             return 'started {}'.format(day(self.startdate))
         return 'assigned {}'.format(day(self.create_date)) if self.create_date else 'not started'
-
-    @property
-    def answers_visible(self):
-        """Correct answers show on this attempt's results: the quiz doesn't hide them,
-        they were released for the whole quiz, or released to this student."""
-        return self.vquiz.answers_visible or bool(self.answers_released)
 
     @property
     def status(self):

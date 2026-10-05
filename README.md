@@ -37,14 +37,13 @@ Teachers don't need to be technical. Problems are written in plain words with
 - **Safe math.** Before a problem is saved, every possible set of values is tried, so
   division by zero, square roots of negatives and similar can't reach a student.
   Imaginary numbers only ever appear in problems that are about them.
-- **Quizzes** are built by ticking problems. Put problems in a **group** to give each student
+- **Quizzes** are built by checking problems. Put problems in a **group** to give each student
   "2 of these 6", shuffle question order per student, and choose how retakes count
   (best, latest, average, first, or the best two).
 - **Assign** to many students at once, with optional **open/close times** and a
   **time limit**.
 - **Grade essays** by highlighting right and wrong parts, giving partial credit and leaving
   a comment. Everything else is graded automatically.
-- **Hide correct answers** until you release them, if you prefer.
 - **Messages:** write to one student, chosen students or everyone. Pin announcements to the
   top of students' home pages.
 - **Settings:** your school's name and logo, and a class code that students need to sign up.
@@ -132,7 +131,7 @@ against that student's version.
 - **Pick one / Pick several:** write one choice per line and put `*` before correct ones.
   Choices can use values too, like `*[a + b]`. "Show only 4" gives each student a different
   4 drawn from a bigger pool. Pick several can also accept *other correct combinations*,
-  such as "tick two numbers that add up to 10".
+  such as "check two numbers that add up to 10".
 - **True/False:** the answer can be a comparison like `a > b`, so it's true for some
   students and false for others.
 - **Pictures:** add several and each student gets one at random. Give them labels and use

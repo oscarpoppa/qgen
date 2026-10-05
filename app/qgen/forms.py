@@ -129,7 +129,6 @@ class QuizForm(FlaskForm):
     calculator_ok = BooleanField('Calculator allowed')
     shuffle_order = BooleanField('Give each student the questions in a different order', default=True)
     retake_rule = SelectField('If a student takes this quiz more than once, the score is', choices=list(RETAKE_RULES.items()), default='best')
-    hide_answers = BooleanField('Hide the correct answers until I release them')
     submit = SubmitField('Save quiz')
 
 

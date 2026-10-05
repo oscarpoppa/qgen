@@ -179,8 +179,8 @@ def transcript_items(cquiz):
     return [transcript_item(cp) for cp in cquiz.cproblems]
 
 
-def build_transcript(cquiz, show_answers=True):
-    return render_template('transcript_body.html', cq=cquiz, items=transcript_items(cquiz), show_answers=show_answers)
+def build_transcript(cquiz):
+    return render_template('transcript_body.html', cq=cquiz, items=transcript_items(cquiz))
 
 
 def legacy_transcript(stored, title):
@@ -191,10 +191,10 @@ def legacy_transcript(stored, title):
     return body.replace('{{ title }}', escape(title or ''))
 
 
-def transcript_html(cquiz, title, show_answers=True):
+def transcript_html(cquiz, title):
     stored = cquiz.transcript or ''
     if stored.startswith(TRANSCRIPT_V2):
         #shown from the same saved data the stored record was made from, so pages
         #made before a change in how results look (or what's shown) get it too
-        return Markup(build_transcript(cquiz, show_answers=show_answers))
+        return Markup(build_transcript(cquiz))
     return Markup('<div class="card legacy-transcript">{}</div>'.format(legacy_transcript(stored, title)))

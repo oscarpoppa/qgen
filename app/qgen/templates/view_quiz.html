@@ -14,7 +14,6 @@
   {% if vq.vqgroups %}<span class="muted">Folders:</span> {{ subject_labels(vq.vqgroups) }}{% endif %}
   <span class="badge {{ 'badge-ok' if vq.calculator_allowed else 'badge-warn' }}"{% if vq.calculator_problems %} title="Because of: {{ vq.calculator_problems|map(attribute='title')|join(', ') }}"{% endif %}>{{ 'Calculator allowed' if vq.calculator_allowed else 'No calculator' }}</span>
   {% if vq.shuffle_order %}<span class="badge">order shuffled for each student</span>{% endif %}
-  {% if vq.hide_answers %}<span class="badge">answers hidden until released</span>{% endif %}
   <label class="check" style="margin-left:auto"><input type="checkbox" id="show-answers"> Show the answers</label>
 </div>
 <p class="muted small">One student's version: each student gets their own values{% if vq.shuffle_order %} and order{% endif %}, and their own picks from any question groups. Nothing is saved or sent.</p>

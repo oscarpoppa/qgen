@@ -27,7 +27,7 @@ def form_csrf_ok():
 
 
 def post_form_only(view):
-    """For actions that change things (delete, retake, release, reset password):
+    """For actions that change things (delete, retake, reset password):
     only a POSTed form with this site's session token may trigger them, so another
     website can't make a signed-in teacher's browser do it (cross-site request forgery)."""
     from functools import wraps

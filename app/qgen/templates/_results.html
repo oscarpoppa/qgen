@@ -1,5 +1,5 @@
 {# One student's attempts at one quiz, as table cells: their attempts (Details, Delete), the
-   score that counts (with this student's own retake rule) and Release / Retake. Shared by
+   score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
 {% from "_macros.html" import post_button with context %}
 {% macro result_cells(g, student, rules) %}
@@ -32,19 +32,6 @@
                 {% endif %}
               </td>
               <td class="actions">
-                {% if g.vquiz.hide_answers %}
-                  {% if g.vquiz.answers_released %}
-                    <div class="small muted" style="margin-bottom:4px">Answers released to everyone</div>
-                  {% elif g.latest.answers_released %}
-                    <div class="small" style="margin-bottom:4px"><span class="badge badge-ok">answers released</span></div>
-                    {{ post_button(url_for('qgen.release_to_student', cqid=g.latest.id), 'Hide answers', 'btn btn-secondary btn-sm',
-                                   'Hide the correct answers for “' ~ (g.vquiz.title)|string ~ '” from ' ~ (student.username)|string ~ ' again?') }}
-                  {% else %}
-                    <div class="small muted" style="margin-bottom:4px">Answers hidden</div>
-                    {{ post_button(url_for('qgen.release_to_student', cqid=g.latest.id), 'Release answers', 'btn btn-secondary btn-sm',
-                                   'Show the correct answers for “' ~ (g.vquiz.title)|string ~ '” to ' ~ (student.username)|string ~ ' only?') }}
-                  {% endif %}
-                {% endif %}
                 {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.username)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% endif %}
               </td>
 {% endmacro %}

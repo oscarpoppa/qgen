@@ -60,10 +60,6 @@ def clean_answers(cq, answers):
     return out
 
 
-def show_answers_for(cq):
-    return cq.answers_visible
-
-
 @api_bp.route('/my/quizzes', methods=['GET'])
 @token_required()
 def my_quizzes():
@@ -88,7 +84,7 @@ def open_attempt(attempt_id):
         S.start(cq)
         return jsonify(attempt_json(cq))
     if state == 'completed':
-        return jsonify(results_json(cq, show_answers_for(cq)))
+        return jsonify(results_json(cq))
     return jsonify({'attempt': attempt_summary(cq)})
 
 
@@ -121,7 +117,7 @@ def submit_attempt(attempt_id):
         raise conflict(str(exc))
     out = {'status': status, 'attempt': attempt_summary(cq)}
     if status == 'completed':
-        out['results'] = results_json(cq, show_answers_for(cq))
+        out['results'] = results_json(cq)
     return jsonify(out)
 
 
@@ -131,7 +127,7 @@ def my_results(attempt_id):
     cq = my_attempt(attempt_id)
     if not cq.completed:
         raise conflict('Results appear once the quiz is submitted{}.'.format(' and graded' if cq.needs_review else ''))
-    return jsonify(results_json(cq, show_answers_for(cq)))
+    return jsonify(results_json(cq))
 
 
 @api_bp.route('/my/messages', methods=['GET'])

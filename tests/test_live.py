@@ -85,8 +85,6 @@ def test_results_by_student_follow_what_happens(app_db):
     assert changed(everyone, just_sam)  # her own rule
     teacher.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1', 'vplist': vq.vpid_lst, 'retake_rule': 'latest'})
     assert changed(everyone, just_sam)  # the quiz's rule (her override cleared)
-    teacher.post('/quiz/releasecq/{}'.format(cq.id))
-    assert changed(everyone, just_sam)  # answers released to her
     teacher.post('/quiz/retcq/{}'.format(cq.id))
     assert changed(everyone, just_sam)  # a retake
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('kim')]})

@@ -1,7 +1,6 @@
 """How records look in API responses. Dates are ISO 8601 (local server time).
 
-A student's view never includes correct answers before the attempt is
-finished (and, when the teacher hides them, before they're released).
+A student's view never includes correct answers before the attempt is finished.
 """
 from flask import url_for
 
@@ -86,7 +85,7 @@ def attempt_json(cq):
     return out
 
 
-def results_json(cq, show_answers):
+def results_json(cq):
     items = []
     for cp in cq.cproblems:
         it = transcript_item(cp)
@@ -95,10 +94,9 @@ def results_json(cq, show_answers):
         if it.essay:
             row['feedback'] = it.feedback
             row['highlights'] = [{'start': s[0], 'end': s[1], 'kind': s[2]} for s in cp.highlights]
-        if show_answers:
-            row['correct_answer'] = it.correct
+        row['correct_answer'] = it.correct
         items.append(row)
-    return {'attempt': attempt_summary(cq), 'answers_shown': bool(show_answers), 'items': items}
+    return {'attempt': attempt_summary(cq), 'items': items}
 
 
 # ---------------------------------------------------------------- teacher side
@@ -133,8 +131,7 @@ def vquiz_json(vq, full=False):
     lay = layout.parse(vq.vpid_lst)
     out = {'id': vq.id, 'title': vq.title, 'questions_per_student': layout.question_count(lay),
            'calculator_ok': bool(vq.calculator_ok), 'calculator_allowed': vq.calculator_allowed, 'shuffle_order': bool(vq.shuffle_order),
-           'retake_rule': vq.retake_rule, 'hide_answers': bool(vq.hide_answers),
-           'answers_released': bool(vq.answers_released), 'image_url': static_url(vq.image),
+           'retake_rule': vq.retake_rule, 'image_url': static_url(vq.image),
            'times_assigned': len(vq.cquizzes), 'labels': labels_json(vq.vqgroups)}
     if full:
         out['problems'] = lay

@@ -19,8 +19,7 @@
               {% if item.shuffle_order %}· order shuffled{% endif %}
               {% set own = item.cquizzes|selectattr('own_retake_rule')|map(attribute='assignee')|unique|list|length %}
               · retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
-              <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}
-              {% if item.hide_answers %}· answers {{ 'released' if item.answers_released else 'hidden' }}{% endif %}</div></td>
+              <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</div></td>
           <td data-label="Problems">
             <ol class="small" style="margin:0;padding-left:1.2em">
               {% for e in entries %}
@@ -37,7 +36,6 @@
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% endif %}
-            {% if item.hide_answers %}{{ post_button(url_for('qgen.release_vquiz', vqid=item.id), 'Hide answers' if item.answers_released else 'Release answers', 'btn btn-secondary btn-sm', 'Hide the correct answers from students again?' if item.answers_released else 'Show the correct answers to students who have finished “' ~ item.title ~ '”?') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
             {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}

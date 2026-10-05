@@ -155,7 +155,7 @@ def delete_problem(pid):
 
 def quiz_settings(data):
     settings = {}
-    for key in ('calculator_ok', 'shuffle_order', 'hide_answers'):
+    for key in ('calculator_ok', 'shuffle_order'):
         if key in data:
             settings[key] = flag(data[key])
     if 'retake_rule' in data:
@@ -176,7 +176,7 @@ def list_vquizzes():
 @api_bp.route('/quizzes', methods=['POST'])
 @teacher
 def create_vquiz():
-    """{title, problems: [4, {"pick": 2, "from": [5, 6, 7]}], calculator_ok?, shuffle_order?, retake_rule?, hide_answers?, image?}"""
+    """{title, problems: [4, {"pick": 2, "from": [5, 6, 7]}], calculator_ok?, shuffle_order?, retake_rule?, image?}"""
     data = body(required=('title', 'problems'))
     vq = VQuiz()
     errors = S.save_vquiz(vq, str(data['title']), data['problems'], author_id=g.api_user.id, **quiz_settings(data))
@@ -212,15 +212,6 @@ def delete_vquiz(qid):
     except S.ServiceError as exc:
         raise conflict(str(exc))
     return '', 204
-
-
-@api_bp.route('/quizzes/<int:qid>/release', methods=['POST'])
-@teacher
-def release_vquiz(qid):
-    """{"released": true} shows correct answers to students who have finished; false hides them again."""
-    vq = get_or_404(VQuiz, qid, 'That quiz')
-    S.release_answers(vq, flag(body(required=('released',))['released']))
-    return jsonify(vquiz_json(vq))
 
 
 def parse_when(data, key):

@@ -40,23 +40,23 @@
       {# every choice the student saw: their pick, and (once answers are shown) the right ones #}
       <ul class="choice-list review-choices" aria-label="Choices">
         {% for c in it.choices %}
-          <li class="{{ 'is-picked' if c.picked }} {{ 'is-right' if show_answers and c.right }}">
+          <li class="{{ 'is-picked' if c.picked }} {{ 'is-right' if c.right }}">
             <span class="pick" aria-hidden="true">{{ '●' if c.picked else '○' }}</span>
             <span class="choice-text">{{ c.text }}</span>
             {% if c.picked %}<span class="badge">your answer</span>{% endif %}
-            {% if show_answers and c.right %}<span class="badge badge-ok">✓ correct</span>{% endif %}
+            {% if c.right %}<span class="badge badge-ok">✓ correct</span>{% endif %}
           </li>
         {% endfor %}
       </ul>
       {% if not it.submitted %}<p class="muted small">(no answer)</p>{% endif %}
-      {% if show_answers and not it.choices|selectattr('right')|list %}
+      {% if not it.choices|selectattr('right')|list %}
         <dl class="answer-row"><dt>Correct answer</dt><dd>{{ it.correct }}</dd></dl>
       {% endif %}
     {% else %}
       <dl class="answer-row">
         <dt>Your answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
         {# once answers are shown: under every question, right or wrong #}
-        {% if show_answers %}<dt>Correct answer</dt><dd>{{ it.correct }}</dd>{% endif %}
+        <dt>Correct answer</dt><dd>{{ it.correct }}</dd>
       </dl>
     {% endif %}
   </section>

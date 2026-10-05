@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{# kept up to date: grading, answers released or hidden again, the attempt deleted (app/live.py) #}
+{# kept up to date: grading, a regrade, the attempt deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
@@ -10,6 +10,5 @@
     <a class="btn btn-secondary" href="{{ url_for('user.mypage') if current_user == cq.taker else url_for('qgen.list_user', uid=cq.assignee) }}">Back</a>
   </div>
 </div>
-{% if answers_hidden %}<div class="alert alert-info">Your teacher will show the correct answers later. Your score and which questions you got right are below.</div>{% endif %}
 {{ transcript }}
 {% endblock %}

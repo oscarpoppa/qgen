@@ -28,7 +28,7 @@ A = {'name': 'a', 'kind': 'whole', 'min': 2, 'max': 40}
 B = {'name': 'b', 'kind': 'whole', 'min': 2, 'max': 40, 'different_from': ['a']}
 
 
-def make_quiz(t, hide_answers=False):
+def make_quiz(t):
     ids = []
     for p in [
         {'type': 'numeric', 'title': 'Add', 'question': '[a] + [b] = ?', 'answer': 'a + b', 'options': {'values': [A, B]}},
@@ -39,7 +39,7 @@ def make_quiz(t, hide_answers=False):
         r = t.post('/problems', json=p)
         assert r.status_code == 201, r.get_json()
         ids.append(r.get_json()['id'])
-    r = t.post('/quizzes', json={'title': 'API quiz', 'problems': ids, 'hide_answers': hide_answers})
+    r = t.post('/quizzes', json={'title': 'API quiz', 'problems': ids})
     assert r.status_code == 201, r.get_json()
     return r.get_json()['id'], ids
 
@@ -190,7 +190,7 @@ def test_student_and_teacher_round_trip(app_db):
                                                                            'highlights': [[0, 7, 'right']]}}, 'finish': True})
     assert r.status_code == 200 and r.get_json()['score'] == 100 * 3.5 / 4
     res = sam.get('/my/attempts/{}/results'.format(aid)).get_json()
-    assert res['answers_shown'] and all('correct_answer' in it for it in res['items'])
+    assert all('correct_answer' in it for it in res['items'])
     essay = [it for it in res['items'] if it['type'] == 'essay'][0]
     assert essay['feedback'] == 'Say more.' and essay['highlights'] == [{'start': 0, 'end': 7, 'kind': 'right'}]
 
@@ -222,11 +222,11 @@ def test_quiz_finished_and_scored_without_teacher(app_db):
     assert t.get('/review').get_json()['waiting'] == []
 
 
-def test_hidden_answers_and_windows(app_db):
+def test_opening_windows_and_results(app_db):
     app, db = app_db
     from app.qgen.models import CQuiz
     t, sam = Api(app, 'teach'), Api(app, 'sam')
-    qid, _ = make_quiz(t, hide_answers=True)
+    qid, _ = make_quiz(t)
     later = datetime.now() + timedelta(days=1)
     r = t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['sam']],
                                                         'opens_at': later.isoformat(timespec='minutes')})
@@ -239,9 +239,8 @@ def test_hidden_answers_and_windows(app_db):
     sam.get('/my/attempts/{}'.format(aid))
     sam.post('/my/attempts/{}/submit'.format(aid))  # all blank, essay too: scored at once
     res = sam.get('/my/attempts/{}/results'.format(aid)).get_json()
-    assert res['answers_shown'] is False and not any('correct_answer' in it for it in res['items'])
-    t.post('/quizzes/{}/release'.format(qid), json={'released': True})
-    assert sam.get('/my/attempts/{}/results'.format(aid)).get_json()['answers_shown'] is True
+    assert all('correct_answer' in it for it in res['items'])  # always, once handed in
+    assert t.post('/quizzes/{}/release'.format(qid), json={'released': True}).status_code == 404
     bad = t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['kim']], 'opens_at': 'soon'})
     assert bad.status_code == 400
 

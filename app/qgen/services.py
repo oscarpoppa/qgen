@@ -316,7 +316,7 @@ def preview_problem(qtype, question, answer, options, count=3):
 
 # ---------------------------------------------------------------- quizzes
 
-QUIZ_SETTINGS = ('image', 'calculator_ok', 'shuffle_order', 'retake_rule', 'hide_answers')
+QUIZ_SETTINGS = ('image', 'calculator_ok', 'shuffle_order', 'retake_rule')
 
 
 def check_layout(value):
@@ -355,8 +355,6 @@ def save_vquiz(vq, title, problems, author_id=None, **settings):
             cq.retake_rule = None
     for key in QUIZ_SETTINGS:
         if key in settings:
-            if key == 'hide_answers' and vq.hide_answers != settings[key]:
-                vq.answers_released = False
             setattr(vq, key, settings[key])
     vq.vpid_lst = layout.dumps(lay)
     vq.vproblems = [db.session.get(VProblem, a) for a in set(layout.all_ids(lay))]
@@ -393,34 +391,6 @@ def _forget_notices(links):
         ids = Message.query.filter(Message.kind == 'notice', Message.link.in_(links)).with_entities(Message.id)
         MessageRead.query.filter(MessageRead.message_id.in_(ids)).delete(synchronize_session=False)
         Message.query.filter(Message.kind == 'notice', Message.link.in_(links)).delete(synchronize_session=False)
-
-
-def release_answers(vq, released):
-    """Show (or hide again) correct answers on results pages; tells students when shown."""
-    vq.answers_released = bool(released)
-    if vq.answers_released:
-        for cq in {c.assignee: c for c in vq.cquizzes if c.completed}.values():
-            notify(cq.assignee, 'The correct answers for "{}" are now on your results page.'.format(vq.title),
-                   url_for('qgen.qtake', cidx=cq.id))
-    vq.save()
-
-
-def release_answers_to(vq, student_id, released):
-    """Show (or hide again) the correct answers to one student, on all of that student's
-    attempts at this quiz, while the quiz still hides them from everyone else. Tells the
-    student when shown. Returns the attempts changed."""
-    attempts = CQuiz.query.filter_by(vquiz_id=vq.id, assignee=student_id).all()
-    if not attempts:
-        raise ServiceError('That student doesn\'t have "{}".'.format(vq.title))
-    for cq in attempts:
-        cq.answers_released = bool(released)
-    finished = [cq for cq in attempts if cq.completed]
-    if released and finished:
-        latest = max(finished, key=lambda c: c.id)
-        notify(student_id, 'The correct answers for "{}" are now on your results page.'.format(vq.title),
-               url_for('qgen.qtake', cidx=latest.id))
-    db.session.commit()
-    return attempts
 
 
 # ---------------------------------------------------------------- viewing (nothing saved)
@@ -560,8 +530,6 @@ def retake(cq, by=None):
         raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.username, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
-    #answers released to this student stay released on the new attempt
-    new.answers_released = cq.answers_released
     #a quiz to take again comes out of the student's folders, back where they'll see it
     from .models import QuizPlacement
     QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)
@@ -685,7 +653,7 @@ def archived_results(a):
     cq = NS(score=a.score, completed=a.completed, needs_review=a.needs_review,
             startdate=when('startdate'), compdate=when('compdate'), graded_date=when('graded_date'),
             vquiz=NS(title=a.quiz_title, image=data.get('quiz_image')), taker=NS(username=a.student_name))
-    return Markup(render_template('transcript_body.html', cq=cq, items=items, show_answers=True))
+    return Markup(render_template('transcript_body.html', cq=cq, items=items))
 
 
 def archive_student(user, by=None):

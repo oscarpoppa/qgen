@@ -9,7 +9,7 @@ it, offers a Refresh button instead.
 
 A fingerprint covers what the page displays and nothing else, so a page only reloads
 when something on it would change: an attempt assigned, started, handed in, graded,
-retaken or deleted, answers released, a rule changed, a quiz opening, a new student...
+retaken or deleted, a rule changed, a quiz opening, a new student...
 Keys a person may not see give None (the page then never reloads).
 """
 import hashlib
@@ -28,11 +28,11 @@ def _digest(rows):
 def _attempt_row(cq, now):
     """What lists of attempts show about one: where it is, its score and its rules."""
     return (cq.id, cq.assignee, cq.vquiz_id, cq.status, cq.not_open_yet(now), cq.score,
-            cq.retake_rule, bool(cq.answers_released), cq.opens_at, cq.closes_at, cq.time_limit)
+            cq.retake_rule, cq.opens_at, cq.closes_at, cq.time_limit)
 
 
 def _quiz_row(vq):
-    return (vq.id, vq.title, vq.retake_rule, bool(vq.hide_answers), bool(vq.answers_released))
+    return (vq.id, vq.title, vq.retake_rule)
 
 
 def _attempts(query, now):
@@ -64,11 +64,11 @@ def _attempt(cqid, now):
         return 'archived' if archived_for(cqid) else 'gone'
     #a teacher taking a quiz themselves is its taker here: their own saving isn't news
     if current_user.is_admin and cq.assignee != current_user.id:
-        return (_attempt_row(cq, now), cq.startdate, cq.compdate, cq.answers_visible,
+        return (_attempt_row(cq, now), cq.startdate, cq.compdate,
                 [(cp.id, cp.submitted, cp.credit, cp.feedback) for cp in cq.cproblems])
     if cq.assignee != current_user.id:
         return None
-    return (cq.completed, cq.needs_review, cq.not_open_yet(now), cq.score, cq.answers_visible,
+    return (cq.completed, cq.needs_review, cq.not_open_yet(now), cq.score,
             cq.opens_at, cq.closes_at, cq.time_limit)
 
 
