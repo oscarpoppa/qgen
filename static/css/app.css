@@ -676,6 +676,38 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
 .quiz-card[open] .quiz-flag { display: none; }
 
+/* My quizzes: your own folders (they fold like quiz boxes, and can hold folders) */
+.folder-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+.new-folder > summary { list-style: none; display: inline-flex; }
+.new-folder > summary::-webkit-details-marker { display: none; }
+.new-folder[open] > summary { margin-bottom: 8px; }
+.folder-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+.folder-form input[type=text] { width: auto; flex: 1 1 160px; min-width: 0; max-width: 260px; }
+.folder-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+  background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.folder-box .folder-box { margin: 10px 0; }
+.folder-head { display: flex; gap: 8px; align-items: center; list-style: none; cursor: pointer; min-width: 0; }
+.folder-head::-webkit-details-marker { display: none; }
+.folder-head h2 { margin: 0; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-head .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
+  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+.folder-box[open] > .folder-head .fold { transform: rotate(90deg); }
+.folder-body { margin-top: 10px; }
+.folder-tools { margin-bottom: 10px; }
+.folder-tools > summary { cursor: pointer; color: var(--muted); width: fit-content; }
+.folder-tools[open] > summary { margin-bottom: 8px; }
+.folder-tools-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 8px; }
+.folder-empty { margin: 4px 0; }
+.move-form { margin-top: 8px; }
+.move-form select { width: auto; max-width: 100%; padding: 2px 6px; font-size: .85rem; }
+.quiz-card > summary[draggable], .folder-head[draggable] { -webkit-user-drag: element; }
+.dragging { opacity: .5; }
+.drop-over { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.main-drop { flex: 1 1 200px; border: 2px dashed var(--border); border-radius: 10px; padding: 8px 12px; color: var(--muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .folder-head .fold { transition: none; } }
+/* phones: folders inside folders keep their quiz boxes wide enough to read */
+@media (max-width: 600px) { .folder-box { padding: 8px 8px; } .folder-box .folder-box { margin: 8px 0; } }
+
 /* View pages: problems and quizzes as students see them */
 .sample-item .card-head { align-items: center; }
 .sample-item .qtext { margin: 4px 0 12px; }

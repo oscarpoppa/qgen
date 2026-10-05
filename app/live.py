@@ -45,9 +45,11 @@ def _attempts(query, now):
 # ---------------------------------------------------------------- one per kind of page
 
 def _mine(now):
-    """A student's My quizzes."""
-    from app.qgen.models import CQuiz
-    return _attempts(CQuiz.query.filter_by(assignee=current_user.id), now)
+    """Someone's My quizzes, and how they've arranged it in folders (another tab of theirs follows)."""
+    from app.qgen.models import CQuiz, QuizFolder, QuizPlacement
+    folders = [(f.id, f.parent_id, f.name) for f in QuizFolder.query.filter_by(owner_id=current_user.id).order_by(QuizFolder.id)]
+    placed = sorted((p.vquiz_id, p.folder_id) for p in QuizPlacement.query.filter_by(owner_id=current_user.id))
+    return _attempts(CQuiz.query.filter_by(assignee=current_user.id), now), folders, placed
 
 
 def _attempt(cqid, now):

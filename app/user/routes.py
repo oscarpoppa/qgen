@@ -47,9 +47,81 @@ def pw_check(func):
 @pw_check
 def mypage():
     #messages and notices are in the side panels every page has (see base.html)
-    from app.qgen.models import mark_quizzes_seen
+    from app.qgen.models import mark_quizzes_seen, attempts_by_quiz
+    from app.qgen import folders
     mark_quizzes_seen(current_user.id)
-    return render_template('mypage.html', current_user=current_user, title='My quizzes')
+    groups = attempts_by_quiz(current_user.cquizzes)
+    root, all_folders = folders.tree(current_user, groups)
+    return render_template('mypage.html', current_user=current_user, title='My quizzes', groups=groups,
+                           root=root, all_folders=all_folders, inside=folders.inside, max_depth=folders.MAX_DEPTH,
+                           max_name=folders.MAX_NAME)
+
+
+def _folder_done(message, error=False):
+    """After a folder change: JSON for the page's script (drag and drop), else back to My quizzes."""
+    if request.headers.get('X-Requested-With') == 'fetch':
+        from flask import jsonify
+        return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
+    flash(message, 'error' if error else 'success')
+    return redirect(url_for('user.mypage'))
+
+
+#routes for one's own folders on My quizzes (students and teachers alike)
+@user_bp.route('/mypage/folders', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def create_folder():
+    from app.qgen import folders
+    try:
+        f = folders.create_folder(current_user, request.form.get('name'), request.form.get('parent'))
+    except folders.FolderError as exc:
+        return _folder_done(str(exc), error=True)
+    return _folder_done('Folder "{}" made.'.format(f.name))
+
+
+@user_bp.route('/mypage/folders/<int:folder_id>/rename', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def rename_folder(folder_id):
+    from app.qgen import folders
+    try:
+        f = folders.rename_folder(current_user, folder_id, request.form.get('name'))
+    except folders.FolderError as exc:
+        return _folder_done(str(exc), error=True)
+    return _folder_done('Folder renamed to "{}".'.format(f.name))
+
+
+@user_bp.route('/mypage/folders/<int:folder_id>/delete', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def delete_folder(folder_id):
+    from app.qgen import folders
+    try:
+        name = folders.delete_folder(current_user, folder_id)
+    except folders.FolderError as exc:
+        return _folder_done(str(exc), error=True)
+    return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name))
+
+
+#move a quiz (quiz=<quiz id>) or a folder (folder=<id>) into a folder (to=<id>, or "top": the main list)
+@user_bp.route('/mypage/move', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def move_to_folder():
+    from app.qgen import folders
+    to = request.form.get('to')
+    try:
+        if request.form.get('folder'):
+            target = folders.move_folder(current_user, request.form.get('folder'), to)
+        else:
+            target = folders.move_quiz(current_user, request.form.get('quiz'), to)
+    except folders.FolderError as exc:
+        return _folder_done(str(exc), error=True)
+    return _folder_done('Moved to {}.'.format('"{}"'.format(target.name) if target else 'the main list'))
 
 # route to user logout action
 @user_bp.route('/logout')

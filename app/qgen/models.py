@@ -388,6 +388,25 @@ class ArchiveFolder(db.Model):
         return '<Archive folder {}>'.format(self.name)
 
 
+#a folder on someone's own My quizzes page (students and teachers each arrange their own;
+#nobody else sees them). Folders can hold folders (parent_id).
+class QuizFolder(db.Model):
+    __tablename__ = 'quiz_folder'
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('quiz_folder.id', ondelete='CASCADE'), nullable=True, index=True)
+    name = db.Column(db.String(64), nullable=False)
+    created = db.Column(db.DateTime, default=datetime.now, nullable=False)
+
+
+#which folder one person keeps a quiz in (all its attempts go together); no row: the main list
+class QuizPlacement(db.Model):
+    __tablename__ = 'quiz_placement'
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True)
+    vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id', ondelete='CASCADE'), primary_key=True)
+    folder_id = db.Column(db.Integer, db.ForeignKey('quiz_folder.id', ondelete='CASCADE'), nullable=False, index=True)
+
+
 #a student's attempt the teacher deleted (or whose account was deleted), kept so it can
 #be looked at, restored or deleted for good later. The attempt is moved here whole, so
 #the rest of the site never has to tell archived attempts from live ones.
