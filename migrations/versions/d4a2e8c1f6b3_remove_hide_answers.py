@@ -16,17 +16,15 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table('vquiz') as batch:
-        batch.drop_column('hide_answers')
-        batch.drop_column('answers_released')
-    with op.batch_alter_table('cquiz') as batch:
-        batch.drop_column('answers_released')
+    #plain DROP COLUMN (MySQL, and SQLite 3.35+): a batch rebuild of these tables trips over
+    #the foreign keys pointing at them on SQLite
+    op.drop_column('vquiz', 'hide_answers')
+    op.drop_column('vquiz', 'answers_released')
+    op.drop_column('cquiz', 'answers_released')
 
 
 def downgrade():
     #back as they started: nothing hidden
-    with op.batch_alter_table('vquiz') as batch:
-        batch.add_column(sa.Column('hide_answers', sa.Boolean(), nullable=False, server_default=sa.false()))
-        batch.add_column(sa.Column('answers_released', sa.Boolean(), nullable=False, server_default=sa.false()))
-    with op.batch_alter_table('cquiz') as batch:
-        batch.add_column(sa.Column('answers_released', sa.Boolean(), nullable=False, server_default=sa.false()))
+    op.add_column('vquiz', sa.Column('hide_answers', sa.Boolean(), nullable=False, server_default=sa.false()))
+    op.add_column('vquiz', sa.Column('answers_released', sa.Boolean(), nullable=False, server_default=sa.false()))
+    op.add_column('cquiz', sa.Column('answers_released', sa.Boolean(), nullable=False, server_default=sa.false()))
