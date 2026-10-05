@@ -103,3 +103,26 @@ def test_restored_quizzes_are_not_new_and_the_app_counts_as_looking(app_db):
     from test_api import Api
     assert Api(app, 'sam').get('/my/quizzes').status_code == 200
     assert new_quizzes(ids('sam')) == 0
+
+
+def test_the_assigned_notice_opens_what_was_assigned(app_db):
+    app, db = app_db
+    from app.messages.models import Message
+    from app.qgen.models import CQuiz
+    from test_staff_messages import teachers
+    teachers(db, 'lee')
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    shared = lambda: Message.query.filter_by(kind='notice', from_teacher=False).order_by(Message.id.desc()).first()
+    # one student: their own copy of the quiz
+    assign(teach, vq, 'sam')
+    cq = CQuiz.query.filter_by(assignee=ids('sam')).one()
+    assert shared().link == '/quiz/take/{}'.format(cq.id)
+    page = teach.get(shared().link).data.decode()
+    assert 'Only sam can submit it.' in page and CQuiz.query.get(cq.id).startdate is None  # a preview; looking doesn't start it
+    # several: the quiz's results, with each one's copy
+    assign(teach, vq, 'sam', 'kim')
+    assert shared().link == '/quiz/results/{}'.format(vq.id)
+    # a teacher given it: their results page (opening their own copy would start it)
+    assign(teach, vq, 'lee')
+    assert shared().link == '/quiz/listuser/{}'.format(ids('lee'))

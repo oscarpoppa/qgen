@@ -519,8 +519,16 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
         (' ' + ' '.join(details)) if details else '')
     #a notice belongs to one person's record: the assigning teacher's (so the panel shows that
     #teacher's picture), or the first student's when assigned without a signed-in teacher
-    #"Open" goes to the quiz that was assigned
-    notify_teachers(by.id if by else created[0].assignee, body, _link('qgen.list_vquiz', vqid=vquiz.id))
+    #"Open" goes to what was assigned: one student's own copy of the quiz (for a teacher who
+    #took it themselves, their results page, since opening their own copy would start it), or
+    #with several students, the quiz's results page listing each one's copy
+    if len(created) == 1 and created[0].taker and not created[0].taker.is_admin:
+        link = _link('qgen.qtake', cidx=created[0].id)
+    elif len(created) == 1:
+        link = _link('qgen.list_user', uid=created[0].assignee)
+    else:
+        link = _link('qgen.quiz_results_page', vqid=vquiz.id)
+    notify_teachers(by.id if by else created[0].assignee, body, link)
 
 
 def retake(cq, by=None):
