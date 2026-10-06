@@ -16,7 +16,7 @@ def folder_id(name, owner):
     return QuizFolder.query.filter_by(name=name, owner_id=ids(owner)).one().id
 
 
-def cards(c, view=None):
+def cards(c, view='main'):
     """The quiz boxes My quizzes shows: everything, or one part of the folder list."""
     import re
     page = c.get('/mypage' + ('?folder={}'.format(view) if view is not None else '')).data.decode()
@@ -41,7 +41,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
         {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
     # a quiz is in one place only: the folder shows it, and the main list doesn't any more
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
-    page = sam.get('/mypage').data.decode()
+    page = sam.get('/mypage?folder=main').data.decode()
     assert 'aria-current="page"><span aria-hidden="true">📥</span> Not in a folder' in page
     assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
     # All quizzes: every one, each saying its folder
@@ -166,7 +166,7 @@ def test_after_a_change_the_same_folder_shows(app_db):
     unit = folder_id('Unit 1', 'sam')
     assert r.headers['Location'].endswith('/mypage?folder=all')  # you stay where you were
     r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'main'})
-    assert r.headers['Location'].endswith('/mypage?moved=quiz:{}'.format(w1.id))  # stays where you were, the quiz lit up
+    assert r.headers['Location'].endswith('/mypage?folder=main&moved=quiz:{}'.format(w1.id))  # stays where you were, the quiz lit up
     r = sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'U1', 'view': str(unit)})
     assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))
     sam.post('/mypage/folders', data={'name': 'Inner', 'parent': unit})
@@ -175,7 +175,7 @@ def test_after_a_change_the_same_folder_shows(app_db):
     assert sam.post('/mypage/folders/{}/delete'.format(inner), data={'view': str(inner)}).headers['Location'] \
         .endswith('/mypage?folder={}'.format(unit))
     assert sam.post('/mypage/folders/{}/delete'.format(unit), data={'view': str(unit)}).headers['Location'] \
-        .endswith('/mypage')
+        .endswith('/mypage?folder=main')
     assert cards(sam) == ['Week 1']
 
 

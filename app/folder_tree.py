@@ -113,13 +113,27 @@ def path(nodes, node):
     return out
 
 
-def view_of(choice, nodes, default='main'):
+def view_of(choice, nodes, default='main', remember=True):
     """What a page shows for ?folder=: 'main' (in no folder), 'all', or a folder's id (as
-    text), with that folder's node (None for main and all). A folder that's gone: default."""
+    text), with that folder's node (None for main and all). A folder that's gone: default.
+
+    The choice is remembered for the page (by its endpoint, in the login session), so coming
+    back to the page without ?folder= (from the menu, Home...) shows the same folder again."""
+    from flask import has_request_context, request, session
+    key = request.endpoint if remember and has_request_context() else None
+    if choice is None and key:
+        choice = (session.get('folder_views') or {}).get(key)
     choice = str(choice if choice is not None else default)
     if choice.isdigit() and int(choice) in nodes:
-        return choice, nodes[int(choice)]
-    return (choice if choice in ('main', 'all') else default), None
+        view, node = choice, nodes[int(choice)]
+    else:
+        view, node = (choice if choice in ('main', 'all') else default), None
+    if key:
+        views = dict(session.get('folder_views') or {})
+        if views.get(key) != view:
+            views[key] = view
+            session['folder_views'] = views
+    return view, node
 
 
 def indent(depth):

@@ -1257,3 +1257,10 @@ details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 .floating-menu { position: fixed !important; z-index: 200; display: flex; flex-direction: column; min-width: 11rem; max-width: calc(100vw - 16px);
   background: var(--surface); border: 1px solid var(--border) !important; border-radius: var(--radius); box-shadow: var(--shadow) !important; padding: 6px !important; }
 .floating-menu.msg-del-choices { min-width: 0; gap: 6px; }
+
+/* My quizzes: the last few handed in, above the folders */
+.latest-finished { margin-bottom: 14px; padding-top: 10px; padding-bottom: 6px; }
+.latest-finished h2 { font-size: 1rem; margin: 0 0 4px; }
+/* My quizzes opened from a Home counter: what's shown, and the way back to everything */
+.showing-only { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.showing-only .btn { margin-left: auto; }

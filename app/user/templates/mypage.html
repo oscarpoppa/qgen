@@ -95,14 +95,37 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
 
+{# the last few handed in, whatever folder they're in, newest first #}
+{% if finished and not showing %}
+<section class="card latest-finished" aria-labelledby="latest-finished">
+  <h2 id="latest-finished">Just finished</h2>
+  <ul class="dash-list">
+  {% for cq in finished %}
+    <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+      {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
+      {% else %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>{% endif %}
+      <span class="small muted">{{ cq.compdate|when }}</span>
+      <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 {% if groups or fk.root.folders %}
 {% call folders_page(fk) %}
   {% if groups|length > 5 %}<input type="search" class="filter-cards" placeholder="Find a quiz…" aria-label="Find a quiz">{% endif %}
-  <div id="folder-items">
+  {% if showing %}
+    <p class="showing-only" role="status"><strong>{{ showing_label }}</strong>
+      <span class="muted small">{{ shown|length }} quiz{{ '' if shown|length == 1 else 'zes' }}</span>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">Show all my quizzes</a></p>
+  {% endif %}
+  <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
     {{ quiz_cards(shown, fk.view) }}
   </div>
-  {% if not shown %}
+  {% if not shown and showing %}
+    <p class="card empty small">Nothing here right now. 🎉</p>
+  {% elif not shown %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
 {% endcall %}
@@ -133,6 +156,8 @@
 (function () {
   var KEY = 'qgen-folded-quizzes', cards = document.querySelectorAll('details.quiz-card');
   if (!cards.length) return;
+  //opened from a Home counter (only those quizzes): all shown open, and nothing remembered
+  if (document.querySelector('[data-keep-open]')) return;
   var folded = {};
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || '{}');

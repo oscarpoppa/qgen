@@ -48,7 +48,7 @@ def test_making_renaming_and_deleting_subjects(app_db):
     assert teacher.post('/quiz/subjects/problems/999/delete').status_code == 404
 
 
-def shown(teacher, kind, folder=None):
+def shown(teacher, kind, folder='all'):
     """The titles listed on the Problems (or Quizzes) page for ?folder=, outside folder boxes."""
     import re
     url = '/quiz/listvp' if kind == 'problems' else '/quiz/listvq'

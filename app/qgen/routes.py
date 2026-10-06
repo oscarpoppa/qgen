@@ -585,7 +585,7 @@ def list_users():
     shown = node['people'] if node else ulst if view == 'all' else root['people']
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
-        page=lambda v: url_for('qgen.list_users', folder=v) if str(v) != 'all' else url_for('qgen.list_users'),
+        page=lambda v: url_for('qgen.list_users', folder=v),
         unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
         hint=Markup('The <a href="{}">Users page</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
         fold_key='qgen-folded-results-student-folders', open_key='qgen-open-results-student-subfolders',
@@ -625,7 +625,7 @@ def results_by_quiz():
     results = {q['vquiz'].id: q for q in quiz_results(quizzes)}
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
-        page=lambda v: url_for('qgen.results_by_quiz', folder=v) if str(v) != 'all' else url_for('qgen.results_by_quiz'),
+        page=lambda v: url_for('qgen.results_by_quiz', folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
         hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
         fold_key='qgen-folded-results-quiz-folders', open_key='qgen-open-results-quiz-subfolders',
@@ -1006,7 +1006,7 @@ def subject_kit(kind, view, node, root, flat, nodes):
     unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
     return folder_tree.kit(
         view, node, root, flat, nodes,
-        page=lambda v: url_for(page, folder=v) if str(v) != 'all' else url_for(page),
+        page=lambda v: url_for(page, folder=v),
         create_url=url_for('qgen.new_subject', kind=kind), move_url=url_for('qgen.move_subject', kind=kind),
         rename_url=lambda fid: url_for('qgen.rename_subject', kind=kind, sid=fid),
         delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
@@ -1066,7 +1066,7 @@ def archive_kit(view, node, root, flat, nodes, total):
     from app import folder_tree
     return folder_tree.kit(
         view, node, root, flat, nodes,
-        page=lambda v: url_for('qgen.archive', folder=v) if str(v) != 'all' else url_for('qgen.archive'),
+        page=lambda v: url_for('qgen.archive', folder=v),
         create_url=url_for('qgen.new_archive_folder'), move_url=url_for('qgen.move_archive_item'),
         rename_url=lambda fid: url_for('qgen.rename_archive_folder', fid=fid),
         delete_url=lambda fid: url_for('qgen.delete_archive_folder', fid=fid),

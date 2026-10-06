@@ -89,7 +89,7 @@
       <ul class="side-list side-top">
         <li><div class="side-row{{ ' current' if view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('messages.inbox') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> All students</a>
+          <a href="{{ url_for('messages.inbox', folder='all') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> All students</a>
           {% set total = rows|sum(attribute='unread') %}{% if total %}<span class="count" aria-label="{{ total }} unread">{{ total }}</span>{% endif %}</div></li>
         {% if root.folders %}
         <li><div class="side-row{{ ' current' if view == 'main' }}">

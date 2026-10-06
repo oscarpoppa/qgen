@@ -296,7 +296,7 @@ def test_archive_through_the_api(app_db):
     assert ArchivedAttempt.query.count() == 0
 
 
-def archive_view(teacher, folder=None):
+def archive_view(teacher, folder='all'):
     """(the page, the attempts it lists as "student: quiz") for the Archive's ?folder=."""
     import re
     page = teacher.get('/quiz/archive' + ('?folder={}'.format(folder) if folder is not None else '')).data.decode()

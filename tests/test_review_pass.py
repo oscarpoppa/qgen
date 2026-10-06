@@ -422,7 +422,7 @@ def test_results_by_student_in_the_users_folders(app_db):
     # the folders are the Users page's: no making or moving them here
     assert '+ New folder' not in page and 'Folder options' not in page and 'data-drop=' not in page
     assert 'class="state-filter"' in page and 'Waiting for grading' in page
-    every = teach.get('/quiz/listuser').data.decode()
+    every = teach.get('/quiz/listuser?folder=all').data.decode()
     assert 'id="student-{}"'.format(ids('kim')) in every and 'id="student-{}"'.format(ids('sam')) in every
     # a change to the folders reaches an open Results by student page
     before = poll(teach, 'students')
@@ -599,3 +599,102 @@ def test_taking_a_quiz_away_updates_everything(app_db):
     assert 'Your teacher has taken this quiz away.' in r
     # all three are in the Archive, in sam's folder, and can be put back
     assert ArchivedAttempt.query.count() == 3
+
+
+# ---------------------------------------------------------------- pages remember where you were
+
+def test_folder_pages_remember_the_folder_you_were_in(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen.models import QuizFolder
+    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
+    give(a, 'sam'), give(b, 'sam')
+    sam.post('/mypage/folders', data={'name': 'Math'})
+    folder = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
+    sam.post('/mypage/move', data={'quiz': a.id, 'to': folder.id})
+
+    def shown(page):
+        return re.search(r'data-view="(\w+)"', page).group(1)
+    # the first time: the page's own default (quizzes in no folder)
+    assert shown(sam.get('/mypage').data.decode()) == 'main'
+    # open the folder, go Home, come back from the menu: still in the folder
+    sam.get('/mypage?folder={}'.format(folder.id))
+    sam.get('/home')
+    page = sam.get('/mypage').data.decode()
+    assert shown(page) == str(folder.id) and '>A</h2>' in page and '>B</h2>' not in page
+    # the side list's links say which folder, so "Not in a folder" and "All" can be picked again
+    assert 'href="/mypage?folder=main"' in page and 'href="/mypage?folder=all"' in page
+    sam.get('/mypage?folder=all')
+    assert shown(sam.get('/mypage').data.decode()) == 'all'
+    # a folder that's gone: the default again
+    sam.get('/mypage?folder={}'.format(folder.id))
+    sam.post('/mypage/folders/{}/delete'.format(folder.id))
+    assert shown(sam.get('/mypage').data.decode()) == 'main'
+    # each page remembers its own; another person's choice is theirs
+    teach.get('/quiz/listvq?folder=main')
+    assert shown(teach.get('/quiz/listvq').data.decode()) == 'main'
+    assert shown(teach.get('/quiz/archive').data.decode()) == 'all'
+    assert shown(login(app, 'teach').get('/quiz/listvq').data.decode()) == 'all'
+
+
+def test_editors_can_start_over(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    for url, label in (('/quiz/makevprob', 'Start over'), ('/quiz/makevquiz', 'Start over'),
+                       ('/quiz/editvquiz/{}'.format(vq.id), 'Undo changes')):
+        page = teach.get(url).data.decode()
+        assert re.search(r'data-start-over="{}"'.format(re.escape(url)), page), url
+        assert '↺ {}</button>'.format(label) in page, url
+    # the page it reopens keeps where it was opened from (?next=)
+    page = teach.get('/quiz/makevquiz?next=/dashboard').data.decode()
+    assert 'data-start-over="/quiz/makevquiz?next=/dashboard"' in page
+
+
+def test_my_quizzes_lists_the_last_few_handed_in(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen import services as S
+    from app.user.routes import LATEST_FINISHED
+    page = sam.get('/mypage').data.decode()
+    assert 'Just finished' not in page                      # nothing handed in yet
+    quizzes = [make_quiz(app, teach, 'Q{}'.format(i)) for i in range(LATEST_FINISHED + 1)]
+    attempts = [give(q, 'sam') for q in quizzes]
+    for cq in attempts:
+        S.submit(cq, {1: '4'})
+    page = sam.get('/mypage?folder=main').data.decode()
+    top = page.split('id="latest-finished"')[1].split('</section>')[0]
+    shown = re.findall(r'<strong>“(Q\d)”</strong>', top)
+    assert len(shown) == LATEST_FINISHED and 'Q0' not in shown  # newest first, the oldest left out
+    assert '100%' in top and '/quiz/take/{}'.format(attempts[-1].id) in top
+
+
+def test_home_counters_open_my_quizzes_showing_just_those(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen import services as S
+    new, begun, soon, done = (make_quiz(app, teach, t) for t in ('New one', 'Begun', 'Soon', 'Done'))
+    give(new, 'sam')
+    give(begun, 'sam')
+    give(soon, 'sam', closes_at=datetime.now() + timedelta(hours=5))
+    S.submit(give(done, 'sam'), {1: '4'})
+    from app.qgen.models import CQuiz
+    cq = CQuiz.query.filter_by(vquiz_id=begun.id).one()
+    cq.startdate = datetime.now()
+    db.session.commit()
+    home = sam.get('/home').data.decode()
+    for show in ('todo', 'started', 'soon'):
+        assert 'href="/mypage?show={}"'.format(show) in home
+    assert 'href="#waiting"' not in home
+
+    def titles(show):
+        page = sam.get('/mypage?show=' + show).data.decode()
+        assert 'Show all my quizzes' in page and 'data-keep-open' in page and 'Just finished' not in page
+        return re.findall(r'<h2 title="([^"]+)">', page)
+    assert set(titles('todo')) == {'New one', 'Soon'}
+    assert titles('started') == ['Begun']
+    assert titles('soon') == ['Soon']
+    # it doesn't change the folder My quizzes remembers
+    sam.get('/mypage?folder=main')
+    sam.get('/mypage?show=todo')
+    assert 'data-view="main"' in sam.get('/mypage').data.decode()

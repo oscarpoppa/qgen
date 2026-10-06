@@ -45,6 +45,16 @@
     });
   };
 
+  //"Start over" / "Undo changes" on the problem and quiz editors: after asking, the page
+  //opens again as it was (data-start-over: its address)
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-start-over]');
+    if (!btn) return;
+    window.qgenAsk(btn.dataset.ask, btn.dataset.ok, true).then(function (yes) {
+      if (yes) location.replace(btn.dataset.startOver);
+    });
+  });
+
   //runs before other submit handlers (e.g. the side panels' own sending)
   document.addEventListener('submit', function (e) {
     var form = e.target;

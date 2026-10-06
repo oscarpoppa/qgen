@@ -59,11 +59,26 @@ def mypage():
     #only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
     #gone (or isn't theirs) shows the quizzes in no folder
     from app import folder_tree
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
+    #from Home's counters (?show=todo, started or soon): only those quizzes, from every folder
+    showing = request.args.get('show') if request.args.get('show') in SHOW_ONLY else None
+    if showing:
+        view, node = folder_tree.view_of('all', nodes, remember=False)
+    else:
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
     shown = node['groups'] if node else groups if view == 'all' else root['groups']
+    if showing:
+        from app import tuning
+        from app.qgen.models import waiting_quizzes
+        from datetime import datetime
+        now = datetime.now()
+        waiting = waiting_quizzes(current_user, now)
+        wanted = {cq.id for cq in waiting if
+                  (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status == 'started')
+                  or (showing == 'soon' and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
+        shown = [g for g in groups if any(a.id in wanted for a in g['attempts'])]
     fk = folder_tree.kit(
         view, node, root, all_folders, nodes,
-        page=lambda v: url_for('user.mypage', folder=v) if str(v) != 'main' else url_for('user.mypage'),
+        page=lambda v: url_for('user.mypage', folder=v),
         create_url=url_for('user.create_folder'), move_url=url_for('user.move_to_folder'),
         rename_url=lambda fid: url_for('user.rename_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_folder', folder_id=fid),
@@ -71,8 +86,12 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', open_key='qgen-open-subfolders')
+    #the last few handed in (any folder, any time), newest first, above the folders
+    finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
+                      key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
-                           groups=groups, fk=fk, shown=shown, home=home)
+                           groups=groups, fk=fk, shown=shown, home=home, finished=finished,
+                           showing=showing, showing_label=SHOW_ONLY.get(showing))
 
 
 def _folder_done(message, error=False, show=None, moved=None):
@@ -84,7 +103,7 @@ def _folder_done(message, error=False, show=None, moved=None):
     flash(message, 'error' if error else 'success')
     if show is None:
         show = request.form.get('view') or 'main'
-    values = {'folder': show} if str(show).isdigit() or show == 'all' else {}
+    values = {'folder': show}
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.mypage', **values))
@@ -160,6 +179,10 @@ def move_to_folder():
 
 #Home's "Recently completed": how far back, and how many at most
 RECENT_DAYS, RECENT_MAX = 14, 10
+#how many of the latest handed-in quizzes My quizzes lists at the top
+LATEST_FINISHED = 3
+#My quizzes ?show=: Home's counters open it showing only these (the words above the list)
+SHOW_ONLY = {'todo': 'To do: not started yet', 'started': 'Started, not handed in yet', 'soon': 'Due soon'}
 
 # route to a student's Home: what's waiting for them, and the awards they've earned
 @user_bp.route('/home')
@@ -349,7 +372,7 @@ def userdet():
     shown = node['people'] if node else ulst if view == 'all' else root['people']
     fk = folder_tree.kit(
         view, node, root, flat, nodes,
-        page=lambda v: url_for('user.userdet', folder=v) if str(v) != 'main' else url_for('user.userdet'),
+        page=lambda v: url_for('user.userdet', folder=v),
         create_url=url_for('user.create_user_folder'), move_url=url_for('user.move_user_or_folder'),
         rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),

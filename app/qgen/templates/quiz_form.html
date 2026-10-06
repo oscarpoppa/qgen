@@ -19,7 +19,13 @@
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
       <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>
       <a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign</a>
-    {% endif %}</div>
+    {% endif %}
+    {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
+    {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>
+    {% else %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Clear everything on this page and start over?" data-ok="Start over" title="Clear the form back to blank">↺ Start over</button>{% endif %}
+  </div>
 </div>
 
 <div class="editor">

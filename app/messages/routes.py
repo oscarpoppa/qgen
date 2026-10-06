@@ -29,10 +29,8 @@ def inbox():
     #the Users page's folders down the side: all students, those in no folder, or one folder
     #(with the folders inside it); each with how many unread messages are waiting in it
     root, flat, nodes, _ = groups.tree([r['student'] for r in rows])
-    view = request.args.get('folder', 'all')
-    node = nodes.get(int(view)) if view.isdigit() else None
-    if node is None and view != 'main':
-        view = 'all'
+    from app import folder_tree
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     unread = {r['student'].id: r['unread'] for r in rows}
     for n in nodes.values():
         n['unread'] = sum(unread.get(i, 0) for i in n['everyone'])

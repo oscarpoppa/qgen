@@ -87,7 +87,13 @@
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
   <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}">← {{ came[1] }}</a>
-    {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}">View</a>{% endif %}</div>
+    {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}">View</a>{% endif %}
+    {# back to how the page was when it opened: blank for a new problem, the saved version when editing #}
+    {% if vp and vp.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>
+    {% else %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Clear everything on this page and start over?" data-ok="Start over" title="Clear the form back to blank">↺ Start over</button>{% endif %}
+  </div>
 </div>
 
 {{ error_box(errors) }}
