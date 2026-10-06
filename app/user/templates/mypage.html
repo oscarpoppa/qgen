@@ -145,11 +145,14 @@
  * it). A folded box remembers its attempts; if the teacher changes one while it's
  * folded, the box is outlined and labeled until it's opened:
  *   "Score ready" - an attempt waiting for grading has been graded
- *   "Changed" - a score changed afterwards, or an attempt was taken away
+ *   "Changed" - a score changed afterwards, or one of its tries was taken away (all of
+ *               them taken away and the quiz given again is a fresh start: no flag)
  * What the student does themselves (starting, handing in, a quiz graded automatically)
  * flags nothing, and a quiz not started yet has its own "New" badge. */
 (function () {
-  var KEY = 'qgen-folded-quizzes', cards = document.querySelectorAll('details.quiz-card');
+  //remembered for each person (several students may use the same computer)
+  var KEY = 'qgen-folded-quizzes-{{ current_user.id }}', cards = document.querySelectorAll('details.quiz-card');
+  try { localStorage.removeItem('qgen-folded-quizzes'); } catch (e) {}  // the old one, shared by everyone
   if (!cards.length) return;
   //opened from a Home counter (only those quizzes): all shown open, and nothing remembered
   if (document.querySelector('[data-keep-open]')) return;
@@ -172,6 +175,9 @@
   }
   function change(before, now) {
     var graded = false, updated = false;
+    //none of the remembered tries is still there: the quiz was taken away and given again,
+    //a fresh start, not a change
+    if (!Object.keys(before).some(function (id) { return id in now; })) return '';
     Object.keys(before).forEach(function (id) {
       var b = before[id], n = now[id];
       if (!n) { updated = true; return; }
