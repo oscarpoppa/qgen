@@ -167,7 +167,7 @@ def list_vprobs():
 @admin_only
 def list_vprob(vpid):
     vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
-    return render_template('vplist.html', boxes=None, items=[vplst], total=1, qtypes=REGISTRY, title='Problem {}'.format(vpid),
+    return render_template('vplist.html', boxes=None, items=[vplst], total=1, qtypes=REGISTRY, title=vplst.title or 'Untitled problem',
                            kind='problems', single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual problem
@@ -279,7 +279,7 @@ def list_vquizzes():
 @admin_only
 def list_vquiz(vqid):
     vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
-    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title='Quiz {}'.format(vqid), layout=layout, rules=RETAKE_RULES,
+    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title=vqlst.title or 'Untitled quiz', layout=layout, rules=RETAKE_RULES,
                            kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to delete a specific virtual quiz
@@ -598,7 +598,7 @@ def list_cquiz(cqid):
     #a number answer as numbers (an old saved "sqrt(3)" shows as 1.7321), with its exact form
     correct = lambda cp: get_qtype('numeric').show_correct(cp.conc_ansr, cp.conc_opts) \
         if cp.vproblem.qtype == 'numeric' else cp.conc_ansr
-    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title='Assigned quiz {}'.format(cqid))
+    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title="{}'s attempt: {}".format(cqlst.taker.username if cqlst.taker else 'Someone', cqlst.vquiz.title))
 
 #route to delete a specific concrete quiz from a user's record
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['POST'])

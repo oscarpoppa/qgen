@@ -6,7 +6,7 @@
 {% macro quiz_table(items, ticks=true) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Select</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -50,7 +50,8 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
+  <div class="actions">{% if single %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">← All quizzes</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
 </div>
 
 {% if single %}

@@ -862,3 +862,30 @@ def test_both_panels_have_a_divider_to_resize_them(app_db):
         assert 'id="dock-split" role="separator"' in html, name
         assert "localStorage.getItem('qgen-dock-split')" in html, name
     assert 'dock-split' not in app.test_client().get('/login').data.decode()  # no panels when signed out
+
+
+def test_students_can_never_message_another_student(app_db):
+    app, db = app_db
+    from app.messages.models import Message, MessageTo
+    from app.user.models import User
+    from test_api import Api
+    ids = {u.username: u.id for u in User.query}
+    sam = login(app, 'sam')
+    fetch = {'X-Requested-With': 'fetch'}
+    # the student's own box: only teachers can be chosen
+    r = sam.post('/messages/reply', data={'body': 'hi kim', 'to': [str(ids['kim'])], 'to_checked': '1'}, headers=fetch)
+    assert r.status_code == 400 and 'teachers' in r.get_json()['error']
+    # the app API too
+    api = Api(app, 'sam')
+    assert api.post('/my/messages', json={'body': 'hi kim', 'to': ids['kim']}).status_code == 422
+    assert api.post('/my/messages', json={'body': 'hi kim', 'to': [ids['kim']]}).status_code == 422
+    # the teachers' ways of sending are closed to students
+    assert sam.post('/messages/send', data={'to': str(ids['kim']), 'body': 'hi'}).status_code == 302
+    assert sam.post('/messages/teachers/send', data={'to': 'all', 'body': 'hi', 'to_checked': '1'}).status_code == 302
+    assert api.post('/messages', json={'to': ids['kim'], 'body': 'hi'}).status_code == 403
+    # nothing reached kim, and no message names her as a recipient
+    assert Message.query.filter(Message.student_id == ids['kim'], Message.kind != 'notice').count() == 0
+    assert MessageTo.query.filter_by(user_id=ids['kim']).count() == 0
+    # and a student's panel only offers teachers
+    panel = sam.get('/messages/panel').data.decode()
+    assert 'value="{}"'.format(ids['kim']) not in panel

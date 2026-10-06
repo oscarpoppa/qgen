@@ -49,7 +49,7 @@ def upload():
         flash('{} saved'.format(ufile.filename))
         trythumb(path, fname)
         return redirect(url_for('upload.upload'))
-    return render_template('upload.html', title='Upload a File', form=form)
+    return render_template('upload.html', title='Upload files', form=form)
 
 #admin-only list images on server
 @upload_bp.route('/images', methods=['GET'])
@@ -71,7 +71,7 @@ def nonimages():
     imgs = [f[2:] for f in timgs]
     imgs += timgs
     nonims = [f for f in allf if f not in imgs]
-    return render_template('nonimages.html', files=nonims, title='Non-Image Files')
+    return render_template('nonimages.html', files=nonims, title='Other files')
 
 #admin-only delete an image from server
 @upload_bp.route('/delimg/<fname>', methods=['POST'])

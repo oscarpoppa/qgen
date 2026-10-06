@@ -154,7 +154,7 @@ def teachers_page():
     choice = request.args.get('with') or 'teachers'
     view = teachers_view(M.inbox(current_user), staff_picker(current_user),
                          choice if choice == 'teachers' else 't' + choice.lstrip('t'))
-    return render_template('teachers_messages.html', title='Messages: teachers', **view)
+    return render_template('teachers_messages.html', title='Messages between teachers', **view)
 
 #route to pin or unpin a message (and every copy sent with it)
 @messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])
@@ -433,7 +433,7 @@ def online_now():
 
 
 def review_waiting():
-    """For teachers: quizzes waiting for grading (the count next to Review)."""
+    """For teachers: quizzes waiting for grading (the count next to Grading)."""
     if not current_user.is_admin:
         return None
     from app.qgen.models import CQuiz

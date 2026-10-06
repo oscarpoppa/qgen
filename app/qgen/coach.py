@@ -220,7 +220,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
                           .format(', '.join('"{}"'.format(p.title) for p in cplx))))
     essays = [p for p in problems.values() if not get_qtype(p.qtype).auto_graded]
     if essays:
-        hints.append(hint('tip', 'This quiz has {} written answer{}. Students see their score after you grade {} under Review.'.format(
+        hints.append(hint('tip', 'This quiz has {} written answer{}. Students see their score after you grade {} under Grading.'.format(
             len(essays), '' if len(essays) == 1 else 's', 'it' if len(essays) == 1 else 'them')))
     kinds = {p.qtype for p in problems.values()}
     if len(vpids) >= 6 and len(kinds) == 1:

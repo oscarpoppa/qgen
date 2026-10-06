@@ -15,11 +15,11 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="sr-only" for="new-folder-name">Name of the new folder</label>
       <input id="new-folder-name" name="name" maxlength="64" required placeholder="e.g. 2025-26">
-      <button class="btn btn-sm">Make it</button>
+      <button class="btn btn-sm">Make folder</button>
     </form>
   </details>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
   {% if total > 5 %}<input type="search" class="filter" data-filter="#containers" placeholder="Search the archive…" aria-label="Search the archive">{% endif %}
 </div>
 
@@ -55,7 +55,7 @@
         {% if f['items'] %}
         <div class="table-wrap stack">
           <table>
-            <thead><tr><th class="tick-col"><span class="sr-only">Select</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>Taken</th><th>Archived</th><th></th></tr></thead>
+            <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>Taken</th><th>Archived</th><th></th></tr></thead>
             <tbody>
             {% for a in f['items'] %}
               {% set blocker = blockers[a.id] %}

@@ -216,7 +216,7 @@ def login():
         if next_page:
             return redirect(next_page)
         return redirect(home_url())
-    return render_template('login.html', title='Login Now!', form=form)
+    return render_template('login.html', title='Log in', form=form)
 
 # route to user registration action
 @user_bp.route('/register', methods=['POST','GET'])
@@ -237,7 +237,7 @@ def register():
         flash('Account {} registered'.format(form.username.data))
         return redirect(url_for('user.login'))
     else:
-        return render_template('register.html', title='Register Now!', form=form)
+        return render_template('register.html', title='Create an account', form=form)
 
 # route to user password-change action
 @user_bp.route('/chpass', methods=['POST','GET'])
@@ -254,7 +254,7 @@ def chpass():
         user.save()
         flash('Password changed.', 'success')
         return redirect(home_url())
-    return render_template('chpass.html', title='Changing Password for {}'.format(user.username), form=form)
+    return render_template('chpass.html', title='Change password', form=form)
 
 # route to admin-initiated user password-reset action
 @user_bp.route('/resetpass/<uid>', methods=['POST'])
@@ -312,7 +312,7 @@ def eduser(uid):
         taken = email and User.query.filter(User.email == email, User.id != uobj.id).first()
         if taken:
             flash('{} already uses that email address.'.format(taken.username), 'error')
-            return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
+            return render_template('eduser.html', title='Edit user: {}'.format(uobj.username), form=form)
         uobj.username = form.username.data
         uobj.email = email
         if uobj == current_user and uobj.is_admin != form.is_admin.data:
@@ -323,7 +323,7 @@ def eduser(uid):
         flash('Updated user: ({}) {}'.format(uobj.id, uobj.username))
         current_app.logger.info('{} updated user ({}) {}'.format(current_user.username, uobj.id, uobj.username))
         return redirect(url_for('user.userdet'))
-    return render_template('eduser.html', title='Update User: {}'.format(uid), form=form)
+    return render_template('eduser.html', title='Edit user: {}'.format(uobj.username), form=form)
 
 # route to admin-initiated user detail listing
 @user_bp.route('/userdet', methods=['GET'])

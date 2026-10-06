@@ -78,7 +78,7 @@ def test_problems_page_shows_subject_containers(app_db):
     # containers by name; a problem is only in its containers; Unsorted is gone when empty
     assert boxes_on(page) == {'Algebra': ['Area', 'Add'], 'Geometry': ['Angles', 'Area']}
     assert 'id="subject-unsorted"' not in page
-    assert 'aria-label="2 problems"' in page and 'Open all' in page and 'Close all' in page
+    assert 'aria-label="2 problems"' in page and 'Expand all' in page and 'Collapse all' in page
     # remove from a subject: back to Unsorted if it's in no other
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove'})
     assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Algebra': ['Area'], 'Geometry': ['Angles', 'Area'],

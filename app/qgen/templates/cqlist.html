@@ -6,7 +6,7 @@
 <div class="page-head">
   <h1>{{ item.vquiz.title }}</h1>
   <span class="badge">{{ item.taker.username }}</span>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=item.assignee) }}">Back</a></div>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=item.assignee) }}">← {{ item.taker.username if item.taker else 'Student' }}'s page</a></div>
 </div>
 <p class="muted small">This student's own version of the quiz, with the correct answers.</p>
 <div class="table-wrap stack">

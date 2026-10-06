@@ -762,6 +762,18 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .move-form select { width: auto; max-width: 100%; padding: 2px 6px; font-size: .85rem; }
 .quiz-card > summary[data-drag] { touch-action: auto; }
 .folder-dragging, .folder-dragging * { cursor: grabbing !important; user-select: none; }
+/* one student's page: each quiz folds to its name, attempts and the score that counts */
+.quiz-box-bar { justify-content: flex-end; margin-bottom: 8px; }
+.result-box { padding: 10px 14px; margin-bottom: 10px; }
+.result-box > summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; cursor: pointer; }
+.result-box > summary::-webkit-details-marker { display: none; }
+.result-box .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
+  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+.result-box[open] .fold { transform: rotate(90deg); }
+.result-box[open] > summary { margin-bottom: 8px; }
+.result-box-title { min-width: 0; overflow-wrap: anywhere; }
+.result-box-sum { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+@media (prefers-reduced-motion: reduce) { .result-box .fold { transition: none; } }
 /* Users page: the folders someone is in, each with a ✕ to take them out */
 .person-folders { min-width: 160px; }
 .folder-chip { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px 4px 0; padding: 1px 4px 1px 8px; border: 1px solid var(--border);

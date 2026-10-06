@@ -381,7 +381,7 @@
     fetch(pollUrl + (watchKey ? (pollUrl.indexOf('?') < 0 ? '?' : '&') + 'watch=' + encodeURIComponent(watchKey) : ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
-      if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Review
+      if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Grading
       if (typeof res.quizzes === 'number') counts.push(['.nav-quizzes', res.quizzes]);  // new under My quizzes
       if (typeof res.online === 'number') {  // teachers: who's online (always shown, never hidden)
         document.querySelectorAll('.nav-online').forEach(function (b) { b.textContent = res.online; });

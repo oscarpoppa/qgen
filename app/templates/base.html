@@ -60,7 +60,7 @@
         </div>
       {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
-              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Review)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
       <nav class="nav" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
           {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
@@ -87,7 +87,7 @@
               </div>
             </details>
             {# written answers waiting for grading; kept current by messages.js #}
-            <a href="{{ url_for('qgen.review_list') }}">Review
+            <a href="{{ url_for('qgen.review_list') }}">Grading
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             </a>
             <a href="{{ url_for('messages.inbox') }}">Messages</a>

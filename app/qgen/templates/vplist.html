@@ -5,7 +5,7 @@
 {% macro problem_table(items, ticks=true) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Select</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -43,7 +43,8 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
+  <div class="actions">{% if single %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">← All problems</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
 </div>
 
 {% if single %}

@@ -23,21 +23,49 @@
 {% endif %}
 
 {# each student is a box that opens and closes (remembered in this browser) #}
-<div class="card subject-bar">
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+{% if not single %}<div class="card subject-bar">
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
   {% if ulst|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter students…" aria-label="Filter students" style="margin:0 0 0 auto">{% endif %}
-</div>
+</div>{% endif %}
 <div class="subject-boxes" data-store="qgen-open-results-students">
 {% for item in ulst %}
-  {% set n = item.cquizzes|length %}
+  {# how many different quizzes they have (retakes of one quiz count once) #}
+  {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
   <details class="card subject-box student" id="student-{{ item.id }}" data-box="{{ item.id }}" data-name="{{ item.username|lower }}"{% if not n %} data-empty{% endif %}>
     <summary>
       <span class="box-name person">{{ avatar(item, 30) }}{{ item.username }}</span>
       <span class="badge" aria-label="{{ n }} quiz{{ '' if n == 1 else 'zes' }}">{{ n }} quiz{{ '' if n == 1 else 'zes' }}</span>
     </summary>
     <div class="box-body">
-    {% if item.cquizzes %}
+    {% if item.cquizzes and single %}
+      {# one student: each quiz is a box that folds to its name, attempts and score (closed to
+         begin with; the ones opened are remembered in this browser) #}
+      <div class="btn-row small quiz-box-bar">
+        <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="open">Expand all</button>
+        <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="close">Collapse all</button></div>
+      {% for g in attempts_by_quiz(item.cquizzes) %}
+        {% set latest = g.latest %}
+        <details class="card result-box" data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
+          <summary>
+            <span class="fold" aria-hidden="true"></span><strong class="result-box-title">{{ g.vquiz.title }}</strong>
+            <span class="muted small nowrap">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
+            <span class="result-box-sum">
+              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">waiting for grading</span>{% endif %}
+              {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
+              {% elif latest.status == 'started' %}<span class="badge badge-accent">in progress</span>
+              {% elif latest.status == 'new' %}<span class="badge">not started</span>{% endif %}
+            </span>
+          </summary>
+          <div class="table-wrap stack">
+            <table>
+              <thead><tr><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
+              <tbody><tr>{{ result_cells(g, item, rules) }}</tr></tbody>
+            </table>
+          </div>
+        </details>
+      {% endfor %}
+    {% elif item.cquizzes %}
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Quiz</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
@@ -63,6 +91,21 @@
 {% block scripts %}
 <script src="{{ asset('js/subjects.js') }}"></script>
 <script>
+/* one student's quiz boxes: closed to begin with; the open ones are remembered in this browser */
+(function () {
+  var KEY = 'qgen-open-student-quizzes', boxes = document.querySelectorAll('details.result-box'), open = {};
+  if (!boxes.length) return;
+  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (k) { open[k] = true; }); } catch (e) {}
+  boxes.forEach(function (d) { if (open[d.dataset.quizBox]) d.open = true; });
+  function remember() {
+    boxes.forEach(function (d) { if (d.open) open[d.dataset.quizBox] = true; else delete open[d.dataset.quizBox]; });
+    try { localStorage.setItem(KEY, JSON.stringify(Object.keys(open))); } catch (e) {}
+  }
+  boxes.forEach(function (d) { d.addEventListener('toggle', remember); });
+  document.querySelectorAll('[data-quiz-boxes]').forEach(function (b) {
+    b.addEventListener('click', function () { boxes.forEach(function (d) { d.open = b.dataset.quizBoxes === 'open'; }); });
+  });
+})();
 var fc = document.querySelector('.filter-cards');
 if (fc) fc.addEventListener('input', function () {
   var q = this.value.trim().toLowerCase();

@@ -14,8 +14,8 @@
 
 {# each quiz is a box that opens and closes (remembered in this browser) #}
 <div class="card subject-bar">
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Open all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Close all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
   {% if quizzes|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter quizzes…" aria-label="Filter quizzes" style="margin:0 0 0 auto">{% endif %}
 </div>
 <div class="subject-boxes" data-store="qgen-open-results-quizzes">

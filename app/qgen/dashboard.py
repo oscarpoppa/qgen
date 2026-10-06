@@ -88,7 +88,7 @@ def out_now(now, limit=None):
 
 
 def grading_queue(limit=None):
-    """The attempts waiting longest for grading (the same order as Review), and how many wait."""
+    """The attempts waiting longest for grading (the same order as Grading), and how many wait."""
     q = _waiting()
     limit = limit or tuning.get('list_grading')
     return (q.options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz)).order_by(CQuiz.compdate, CQuiz.id).limit(limit).all(),

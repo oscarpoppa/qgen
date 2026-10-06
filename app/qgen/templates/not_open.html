@@ -10,6 +10,6 @@
   <p>It opens <strong>{{ cq.opens_at.strftime('%A %b %d at %I:%M %p') }}</strong>{% if cq.closes_at %}
     and closes <strong>{{ cq.closes_at.strftime('%A %b %d at %I:%M %p') }}</strong>{% endif %}.</p>
   {% if cq.time_limit %}<p class="muted">You'll have {{ cq.time_limit }} minutes once you start.</p>{% endif %}
-  <p><a href="{{ url_for('user.mypage') }}">Back to my quizzes</a></p>
+  <p><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}">← My quizzes</a></p>
 </div>
 {% endblock %}
