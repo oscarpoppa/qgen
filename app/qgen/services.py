@@ -145,7 +145,7 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
 
 def subject_tree(kind, items=None):
     """The folders as a tree (app/folder_tree.py) with their problems (or quizzes), newest
-    first: (root, flat, nodes)."""
+    first: (root, flat, nodes). items can also be attempts_by_quiz() groups (by their quiz)."""
     from app import folder_tree
     group_cls, item_cls, rel, _back = subject_kind(kind)
     table = vproblem_vpgroup if kind == 'problems' else vquiz_vqgroup
@@ -154,7 +154,8 @@ def subject_tree(kind, items=None):
     for item_id, group_id in db.session.query(cols[0], cols[1]):
         homes.setdefault(item_id, []).append(group_id)
     items = item_cls.query.order_by(item_cls.id.desc()).all() if items is None else items
-    return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes)
+    key = (lambda g: g['vquiz'].id) if items and isinstance(items[0], dict) else (lambda item: item.id)
+    return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes, key=key)
 
 
 def subject_paths(kind):

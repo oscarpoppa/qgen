@@ -519,3 +519,31 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     assert '/quiz/results/{}'.format(vq.id) not in box
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
+
+
+def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    a, b, c = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B'), make_quiz(app, teach, 'C')
+    for vq in (a, b, c):
+        give(vq, 'sam')
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Math'})
+    from app.qgen.models import VQGroup
+    math = VQGroup.query.one()
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Fractions', 'parent': math.id})
+    frac = VQGroup.query.filter_by(title='Fractions').one()
+    teach.post('/quiz/subjects/quizzes/add', data={'quiz': a.id, 'to': math.id})
+    teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
+    assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
+    # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
+    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
+    assert '>A</strong>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</strong>' in math_box
+    empty = VQGroup.query.filter_by(title='Empty one').one()
+    assert '>C</strong>' in page[page.index('data-folder-box="none"'):] and 'data-folder-box="{}"'.format(empty.id) not in page
+    # no quiz folders at all: the quizzes are listed as before
+    kim_q = give(c, 'kim')
+    page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
+    assert 'data-folder-box' not in page and '>C</strong>' in page

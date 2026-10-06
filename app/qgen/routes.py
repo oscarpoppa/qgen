@@ -602,10 +602,12 @@ def list_user(uid):
     ulst = User.query.filter_by(id=uid).first() if str(uid).isdigit() else None
     if ulst is None:
         return gone("That person's account has been deleted.", url_for('user.userdet'))
-    from .models import RETAKE_RULES
+    from .models import RETAKE_RULES, attempts_by_quiz
     from . import awards
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.shown_name),
-                           awards=awards.earned(ulst))
+    #their quizzes in the Quizzes page's folders (only the folders with some of theirs in them count)
+    quiz_tree = S.subject_tree('quizzes', items=attempts_by_quiz(ulst.cquizzes))[0] if ulst.cquizzes else None
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s student page".format(ulst.shown_name),
+                           awards=awards.earned(ulst), quiz_tree=quiz_tree)
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
 @qgen_bp.route('/quiz/results', methods=['GET'])

@@ -1184,3 +1184,14 @@ details.more-list > summary { cursor: pointer; color: var(--accent); margin: 4px
 .values-table .settings > label.different-from { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .values-table .settings > label.different-from input { flex: 1 1 auto; min-width: 0; }
 .values-table .settings > .k-list[name$="pick_n"] { flex: 0 0 11rem; }
+
+/* a student page: their quizzes in the Quizzes page's folders */
+details.result-folder { padding: 8px 12px; margin-bottom: 10px; }
+details.result-folder > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+details.result-folder > summary::-webkit-details-marker { display: none; }
+details.result-folder .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
+  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+details.result-folder[open] > summary .fold { transform: rotate(90deg); }
+.result-folder-body { margin-top: 8px; }
+.result-folder-body > details.result-folder { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { details.result-folder .fold { transition: none; } }
