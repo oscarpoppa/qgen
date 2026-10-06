@@ -5,8 +5,11 @@
    aren't sent (the ones under All users are) #}
 {% macro pick_group(key, title, members, children=()) %}
   <details class="pick-group" data-group="{{ key }}"{% if key in open_groups %} open{% endif %}>
-    <summary><input type="checkbox" class="pick-all" aria-label="Check everyone in {{ title }}"><span class="pick-name">{{ title }}</span>
-      <span class="muted small">{{ members|length }}</span></summary>
+    {# no checkbox on the folder itself (it looked checked when one person in it was): a count
+       of who's chosen in it, and a button to check or uncheck everyone in it #}
+    <summary><span class="pick-name">{{ title }}</span>
+      <span class="pick-of muted small"></span>
+      <button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone in {{ title }}">Check all</button></summary>
     {% for c in children %}{{ pick_folder(c) }}{% endfor %}
     {% if members %}<ul class="choice-list pick-list">
       {% for u in members %}
@@ -47,8 +50,9 @@
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
       {% if root.folders %}{{ pick_group('none', '📥 Not in a folder', root.people) }}{% endif %}
       <details class="pick-group" data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
-        <summary><input type="checkbox" class="pick-all" aria-label="Check everyone"><span class="pick-name">👥 All users</span>
-          <span class="muted small">{{ people|length }}</span></summary>
+        <summary><span class="pick-name">👥 All users</span>
+          <span class="pick-of muted small"></span>
+          <button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone">Check all</button></summary>
         <ul class="choice-list pick-list">
           {% for u in people %}
             <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>
@@ -58,7 +62,7 @@
       </details>
     </div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
-    <div class="help">Check a folder to check everyone in it. Each student gets a different random version of the quiz.</div>
+    <div class="help">Only the people checked get the quiz. A folder's “Check all” checks everyone in it. Each student gets a different random version of the quiz.</div>
   </div>
   <fieldset>
     <legend>When (optional)</legend>
@@ -121,14 +125,23 @@
   var count = box.querySelector('.pick-count');
   var hasFolders = !!box.querySelector('details.pick-group:not([data-group="all"])');
   function inGroup(g) { return g.querySelectorAll('input[data-user]'); }
+  var filtering = false;
+  //the people in a folder (and the folders in it), each once; while filtering, just those shown
+  function members(g, shownOnly) {
+    var ids = {};
+    inGroup(g).forEach(function (i) { if (!shownOnly || !i.closest('li').hidden) ids[i.dataset.user] = i.checked; });
+    return ids;
+  }
   function refresh() {
     groups.forEach(function (g) {
-      var all = inGroup(g), on = 0;
-      all.forEach(function (i) { if (i.checked) on++; });
+      var all = members(g, false), n = Object.keys(all).length, on = 0;
+      Object.keys(all).forEach(function (id) { if (all[id]) on++; });
+      var shown = members(g, filtering), every = Object.keys(shown).length > 0 && Object.keys(shown).every(function (id) { return shown[id]; });
+      g.querySelector(':scope > summary .pick-of').textContent = on ? on + ' of ' + n + ' chosen' : n + (n === 1 ? ' person' : ' people');
       var head = g.querySelector(':scope > summary .pick-all');
-      head.checked = all.length > 0 && on === all.length;
-      head.indeterminate = on > 0 && on < all.length;
-      head.disabled = !all.length;
+      head.dataset.on = every ? '0' : '1';
+      head.textContent = (every ? 'Uncheck ' : 'Check ') + (filtering ? 'these' : 'all');
+      head.hidden = !n;
     });
     var picked = box.querySelectorAll('input[name="users"]:checked').length;
     count.textContent = picked + ' chosen';
@@ -139,10 +152,13 @@
   people.forEach(function (i) { i.addEventListener('change', function () { set(i.dataset.user, i.checked); refresh(); }); });
   groups.forEach(function (g) {
     var head = g.querySelector(':scope > summary .pick-all');
-    //checking the box doesn't open or close the folder
-    head.addEventListener('click', function (e) { e.stopPropagation(); });
-    head.addEventListener('change', function () {
-      inGroup(g).forEach(function (i) { if (!i.closest('li').hidden) set(i.dataset.user, head.checked); });
+    //the button checks (or unchecks) everyone in the folder (only those shown while filtering),
+    //without opening or closing it
+    head.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var on = head.dataset.on === '1';
+      inGroup(g).forEach(function (i) { if (!i.closest('li').hidden) set(i.dataset.user, on); });
       refresh();
     });
   });
@@ -153,6 +169,7 @@
   var opened = null;
   box.querySelector('.filter-list').addEventListener('input', function () {
     var q = this.value.trim().toLowerCase();
+    filtering = !!q;
     if (q && opened === null) { opened = []; groups.forEach(function (g) { if (g.open) opened.push(g); }); }
     people.forEach(function (i) { var li = i.closest('li'); li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
     groups.forEach(function (g) {
@@ -164,6 +181,7 @@
       if (q) g.open = match;
     });
     if (!q && opened !== null) { groups.forEach(function (g) { g.open = opened.indexOf(g) !== -1; }); opened = null; }
+    refresh();
   });
   refresh();
 })();

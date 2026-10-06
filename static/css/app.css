@@ -227,7 +227,8 @@ legend { font-weight: 700; padding: 0 6px; }
 .pick-group > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
 .pick-group[open] > summary::before { transform: rotate(90deg); }
 .pick-group > summary:hover { background: var(--accent-soft); }
-.pick-group > summary input { margin: 0; }
+.pick-group > summary .pick-all { margin-left: auto; }
+.pick-of { white-space: nowrap; }
 .pick-name { font-weight: 600; }
 .pick-list { margin: 4px 0 8px 26px; gap: 4px; }
 .pick-list li { padding: 6px 10px; }
