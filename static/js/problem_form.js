@@ -22,7 +22,7 @@
     '': 'Choose a kind to see its settings.',
     whole: 'A whole number between “from” and “to” (both included). “In steps of” 5 with 40 to 80 gives 40, 45, 50 … 80.',
     decimal: 'A number between “from” and “to” with this many decimal places (1 if empty). 1 to 10 with 2 places gives numbers like 4.37.',
-    list: 'Each student gets one item from your comma-separated list. To pick 2 different items, put 2 in “how many”, then use [name1] and [name2].',
+    list: '',  // see listHint
     calc: 'Worked out from other values, e.g. speed * hours. No brackets needed here. You can use + - * / ^ ( ) sqrt abs round min max.',
     imaginary: 'A number like 3i: the part in front of i is a whole number from “from” to “to”, never 0. Turns on complex numbers.',
     complex: 'A number like 2 + 3i: real part from the first range, imaginary part from the second (never 0). Turns on complex numbers.'
@@ -35,8 +35,31 @@
       if (kinds.length) el.hidden = kinds.indexOf('k-' + kind) === -1;
     });
     var hint = row.querySelector('.kind-hint');
-    if (hint) hint.textContent = KIND_HINTS[kind] || '';
+    if (hint) hint.textContent = kind === 'list' ? listHint(row) : KIND_HINTS[kind] || '';
   }
+
+  //a list's line names the value and its picks: "use [other1], [other2] and [other3]"
+  function listHint(row) {
+    var raw = (row.querySelector('[name$="-name"]').value || '').trim();
+    var name = /^[A-Za-z][A-Za-z0-9_]*$/.test(raw) ? raw : 'name';
+    var n = parseInt(row.querySelector('[name$="-pick_n"]').value, 10) || 1;
+    if (n < 2) {
+      return 'Each student gets one item, picked at random from your comma-separated list: use [' + name + ']. ' +
+        'For several different items, put a number in “how many”, e.g. 3, then use [' + name + '1], [' + name + '2] and [' + name + '3].';
+    }
+    var picks = [];
+    for (var i = 1; i <= n; i++) picks.push('[' + name + i + ']');
+    var list = n === 2 ? picks.join(' and ') : n <= 4 ? picks.slice(0, -1).join(', ') + ' and ' + picks[n - 1]
+      : picks[0] + ', ' + picks[1] + ' … ' + picks[n - 1];
+    return 'Each student gets ' + n + ' different items, picked at random: use ' + list + '. ' +
+      'Each one is the same item everywhere you use it; [' + name + '] on its own is the same as [' + name + '1].';
+  }
+  //the list's line follows its name and "how many" as they're typed
+  form.addEventListener('input', function (e) {
+    if (!e.target.matches('[name$="-name"], [name$="-pick_n"]')) return;
+    var row = e.target.closest('.value-row');
+    if (row && row.querySelector('select.kind').value === 'list') showKind(row);
+  });
 
   /* ---------- your value names as click-to-insert chips ---------- */
 
