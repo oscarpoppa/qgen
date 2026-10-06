@@ -112,7 +112,8 @@
 
 {# one student: the awards they've earned (they see these on their Home) #}
 {% if single %}
-<details class="card subject-box student-awards" open>
+{# folded to begin with (the count shows how many); open or not is remembered in this browser #}
+<details class="card subject-box student-awards" id="student-awards">
   <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
   <div class="box-body">{% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
 </details>
@@ -136,6 +137,13 @@
 {% block scripts %}
 {% if single %}<script src="{{ asset('js/subjects.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
 <script>
+/* the awards box: open or not is remembered */
+(function () {
+  var box = document.getElementById('student-awards'), KEY = 'qgen-open-student-awards';
+  if (!box) return;
+  try { box.open = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  box.addEventListener('toggle', function () { try { localStorage.setItem(KEY, box.open ? '1' : '0'); } catch (e) {} });
+})();
 /* one student's quiz boxes: closed to begin with; the open ones are remembered in this browser */
 (function () {
   var KEY = 'qgen-open-student-quizzes', boxes = document.querySelectorAll('details.result-box'), open = {};

@@ -1012,7 +1012,7 @@ def subject_kit(kind, view, node, root, flat, nodes):
         delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
         add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
         unit=unit, units=units, all_label='All ' + units, order=('all', 'main'), all_count=root['all_count'],
-        name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add to folder…', drag_what='a ' + unit,
+        name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add…', drag_what='a ' + unit,
         hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
              'Students never see them.'.format(units, unit),
         fold_key='qgen-folded-{}-folders'.format(kind), open_key='qgen-open-{}-subfolders'.format(kind))

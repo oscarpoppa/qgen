@@ -156,7 +156,7 @@
 {% endmacro %}
 
 {# for things that can be in several folders: a chip per folder (✕ takes it out) and an
-   "+ Add to folder…" list. what: the form field naming it (user, quiz, problem) #}
+   "+ Add…" list. what: the form field naming it (user, quiz, problem) #}
 {% macro in_folders(fk, what, ident, label, mine) %}
   {% for f in mine %}
     <form method="post" action="{{ fk.remove_url }}" class="folder-chip">
@@ -175,7 +175,7 @@
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     <select name="to" class="move-select" aria-label="Put {{ label }} in a folder">
-      <option value="">+ Add to folder…</option>
+      <option value="">+ Add…</option>
       {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}📁 {{ fk.name(f) }}</option>{% endfor %}
     </select>
     <noscript><button class="btn btn-secondary btn-xs">Add</button></noscript>

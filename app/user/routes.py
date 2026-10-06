@@ -355,7 +355,7 @@ def userdet():
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
         add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
         unit='person', units='people', all_label='All users', all_count=len(ulst), name=lambda f: f.name,
-        placeholder='e.g. 7th grade', add_words='+ Add to folder…', drag_what='a person',
+        placeholder='e.g. 7th grade', add_words='+ Add…', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         box_tools=lambda n: Markup('<a href="{}">Assign a quiz to this folder</a> · ').format(url_for('qgen.assign', folder=n['folder'].id))
         if n['count'] else '',

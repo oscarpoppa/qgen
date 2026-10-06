@@ -1195,3 +1195,54 @@ details.result-folder[open] > summary .fold { transform: rotate(90deg); }
 .result-folder-body { margin-top: 8px; }
 .result-folder-body > details.result-folder { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { details.result-folder .fold { transition: none; } }
+
+/* the problem and quiz editors: wider than other pages, so the form and the Helper both have room */
+main.container.container-editor { max-width: 1440px; }
+/* a value's name and kind: wide enough to read ("Pick from list") */
+.values-table td[data-label="Name"] { width: 9rem; }
+.values-table td[data-label="Kind"] { width: 11.5rem; }
+.values-table td[data-label="Name"] input, .values-table td[data-label="Kind"] select { width: 100%; }
+
+/* a list beside a folder list (and the editor's values) becomes cards when its own space is
+   narrow (a smaller screen, or the Notices / Messages panels open), not only on phones */
+.folder-main { container: listarea / inline-size; }
+@container listarea (max-width: 860px) {
+  .table-wrap.stack { border: 0; box-shadow: none; background: none; overflow: visible; }
+  .stack table, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
+  .stack thead { display: none; }
+  .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 6px 0; }
+  .stack td { border: 0; padding: 6px 14px; }
+  .stack td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+  .stack td.actions { text-align: left; white-space: normal; }
+  .stack td.actions .btn { margin: 4px 4px 0 0; }
+  .folder-main td[data-label="Quiz"], .folder-main td[data-label="Title"] { min-width: 0; }
+}
+@container editform (max-width: 760px) {
+  .values-table.stack { border: 0; box-shadow: none; background: none; }
+  .values-table table, .values-table tbody { display: block; width: 100%; }
+  .values-table thead { display: none; }
+  .values-table tr.value-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 0 8px; align-items: end;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 6px; }
+  .values-table tr.value-row > td { display: block; width: auto; padding: 6px; }
+  .values-table tr.value-row > td[data-label="Settings"] { grid-column: 1 / -1; grid-row: 2; }
+  .values-table tr.value-row > td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+}
+/* pick lists in a row of folders keep room for their words */
+.person-folders .move-select { min-width: 7rem; }
+.values-table select.kind { min-width: 9.5rem; }
+form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem; }
+
+/* awards: a long list scrolls up and down inside its box */
+.awards-scroll { max-height: 18rem; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.awards-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* any page's tables become cards when the page itself is narrow (a side panel open) */
+@container page (max-width: 780px) {
+  .table-wrap.stack { border: 0; box-shadow: none; background: none; overflow: visible; }
+  .stack table, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
+  .stack thead { display: none; }
+  .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 6px 0; }
+  .stack td { border: 0; padding: 6px 14px; }
+  .stack td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--muted); text-transform: uppercase; }
+  .stack td.actions { text-align: left; white-space: normal; }
+  .stack td.actions .btn { margin: 4px 4px 0 0; }
+}

@@ -139,7 +139,7 @@ def test_one_at_a_time_and_dragging(app_db):
     for name in ('Fall', 'Spring'):
         teacher.post('/quiz/subjects/quizzes/new', data={'name': name})
     fall, spring = (VQGroup.query.filter_by(title=n).one() for n in ('Fall', 'Spring'))
-    # "+ Add to folder…": stays where it was, lit up after
+    # "+ Add…": stays where it was, lit up after
     r = teacher.post('/quiz/subjects/quizzes/add', data={'quiz': q.id, 'to': fall.id, 'view': 'all'})
     assert r.headers['Location'].endswith('/quiz/listvq?moved=quiz:{}'.format(q.id))
     FETCH = {'X-Requested-With': 'fetch'}
@@ -367,7 +367,7 @@ def test_they_are_called_folders_on_screen(app_db):
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
     assert 'Folder &#34;Algebra&#34; made.' in r.data.decode() or 'Folder "Algebra" made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Put in folder' in page and 'Take out of folder' in page and '+ Add to folder…' in page
+    assert 'Put in folder' in page and 'Take out of folder' in page and '<option value="">+ Add…</option>' in page
     from app.qgen.models import VPGroup
     page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
     assert 'Remove the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page

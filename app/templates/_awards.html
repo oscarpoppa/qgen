@@ -1,5 +1,7 @@
 {# a student's awards (app/qgen/awards.py): on their Home, and on their results page for teachers #}
+{# a long list scrolls inside its own space (it never makes the page grow without end) #}
 {% macro award_list(items, locked=false) %}
+  <div class="awards-scroll" tabindex="0" aria-label="{{ 'Awards still to earn' if locked else 'Awards' }} (scrolls)">
   <ul class="awards{{ ' awards-locked' if locked }}">
   {% for a in items %}
     <li class="award{{ ' award-' ~ a.kind if a.kind }}"><span class="award-icon" aria-hidden="true">{{ a.icon }}</span>
@@ -7,4 +9,5 @@
         {% if a.when %}<span class="small muted">{{ a.when.strftime('%b %d, %Y') }}</span>{% endif %}</span></li>
   {% endfor %}
   </ul>
+  </div>
 {% endmacro %}

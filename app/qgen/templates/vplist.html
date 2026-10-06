@@ -10,7 +10,7 @@
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -18,13 +18,13 @@
           <td data-label="Title"><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
               data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong>
             <div class="small muted">
-              {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
+              <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
+              {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div>
           </td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
-          <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span></td>
           <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
           <td data-label="Answer">
             {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}

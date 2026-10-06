@@ -6,6 +6,9 @@
 {# editing: another tab's changes are offered, never reloaded under the typing #}
 {% block body_attrs %}{% if vq and vq.id %}{{ watch('editquiz:%d' % vq.id, note='This quiz has been changed somewhere else since you opened it.', ask=True) }}{% endif %}{% endblock %}
 
+{# the editors use more of a wide window (the helper sits beside the form) #}
+{% block main_class %} container-editor{% endblock %}
+
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
@@ -60,15 +63,15 @@
               {% call subject_box('problems', subject, items, tools=false, label=problem_paths.get(subject.id) if subject else none) %}
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>
+                  <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th></tr></thead>
                   <tbody>
                   {% for p in items %}
                     {% set box_id = 'pick-' ~ (subject.id if subject else 'u') ~ '-' ~ p.id %}
                     <tr>
                       <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
-                      <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label> {{ subject_labels(p.vpgroups) }}
+                      <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
+                        <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
                         <div class="small muted clamp">{{ p.raw_prob }}</div></td>
-                      <td><span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span></td>
                     </tr>
                   {% endfor %}
                   </tbody>

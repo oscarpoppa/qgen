@@ -271,6 +271,9 @@ RETAKE_RULES = {
 }
 
 
+#the same in a word or two, for pick lists where room is short
+RETAKE_RULES_SHORT = {'best': 'Best', 'latest': 'Latest', 'average': 'Average', 'first': 'First', 'best2': 'Best two'}
+
 #the same, said to the student taking the quiz (My quizzes)
 RETAKE_RULES_FOR_STUDENT = {
     'best': 'Your best try counts',

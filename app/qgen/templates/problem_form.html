@@ -36,7 +36,7 @@
 
 {% macro value_row(row, idx) %}
   <tr class="value-row">
-    <td data-label="Name">{{ row.form.name(placeholder='e.g. speed', title='Letters and digits, starting with a letter. Use it in the question as [name].', **{'aria-label': 'Name'}) }}</td>
+    <td data-label="Name">{{ row.form.name(placeholder='speed', title='Letters and digits, starting with a letter. Use it in the question as [name].', **{'aria-label': 'Name'}) }}</td>
     <td data-label="Kind">{{ row.form.kind(class='kind', title='What sort of value this is', **{'aria-label': 'Kind'}) }}</td>
     <td data-label="Settings">
       <div class="settings">
@@ -44,9 +44,9 @@
         {{ row.form.max(placeholder='to', title='Largest possible value (included)', class='k-whole k-decimal k-imaginary k-complex', **{'aria-label': 'To (real part for complex)'}) }}
         {{ row.form.im_min(placeholder='imaginary from', title='Smallest imaginary part (never 0)', class='k-complex', **{'aria-label': 'Imaginary part from'}) }}
         {{ row.form.im_max(placeholder='imaginary to', title='Largest imaginary part', class='k-complex', **{'aria-label': 'Imaginary part to'}) }}
-        {{ row.form.step(placeholder='in steps of (optional)', title='Count up from “from” in steps of this size. 5 with 40 to 80 gives 40, 45, 50 … 80', class='k-whole', **{'aria-label': 'In steps of'}) }}
+        {{ row.form.step(placeholder='step', title='Optional: count up from “from” in steps of this size. 5 with 40 to 80 gives 40, 45, 50 … 80', class='k-whole', **{'aria-label': 'In steps of'}) }}
         {{ row.form.places(placeholder='decimal places', title='How many digits after the point (1 if left empty)', class='k-decimal', **{'aria-label': 'Decimal places'}) }}
-        {{ row.form.items(placeholder='Maria, Ahmed, Li', title='The choices, separated by commas. Each student gets one at random', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
+        {{ row.form.items(placeholder='e.g. cat, dog, horse, rabbit', title='The choices, separated by commas. Each student gets one at random', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
         {{ row.form.pick_n(placeholder='how many? (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
         {# the AI helper fills the list from a description; the teacher checks it like anything typed #}
         {% if ai_enabled %}<div class="k-list list-ai">
@@ -58,7 +58,7 @@
         {{ row.form.formula(placeholder='e.g. speed * hours', title='Worked out from other values, without brackets. + - * / ^ ( ) sqrt abs round min max', class='k-calc', **{'aria-label': 'Formula'}) }}
         <label class="inline k-whole" title="Never 0: handy when you divide by this value">{{ row.form.nonzero() }} not zero</label>
         <label class="different-from small muted">Never the same as (optional)
-          {{ row.form.different_from(placeholder='other value names, e.g. a, b', title='Names of values this one must never equal, separated by commas, e.g. a, b', **{'aria-label': 'Never the same as'}) }}</label>
+          {{ row.form.different_from(placeholder='e.g. a, b', title='Names of values this one must never equal, separated by commas, e.g. a, b', **{'aria-label': 'Never the same as'}) }}</label>
         <div class="kind-hint" aria-live="polite"></div>
       </div>
     </td>
@@ -77,6 +77,9 @@
     <button type="button" class="btn btn-danger btn-sm remove-image" title="Take this picture out of the problem (the file stays uploaded)">Remove this picture slot</button>
   </div>
 {% endmacro %}
+
+{# the editors use more of a wide window (the helper sits beside the form) #}
+{% block main_class %} container-editor{% endblock %}
 
 {% block content %}
 <div class="page-head">

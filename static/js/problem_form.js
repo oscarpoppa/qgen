@@ -20,7 +20,7 @@
   //a plain-words line under each value row saying what its kind does
   var KIND_HINTS = {
     '': 'Choose a kind to see its settings.',
-    whole: 'A whole number between “from” and “to” (both included). “In steps of” 5 with 40 to 80 gives 40, 45, 50 … 80.',
+    whole: 'A whole number between “from” and “to” (both included). A “step” of 5 with 40 to 80 gives 40, 45, 50 … 80.',
     decimal: 'A number between “from” and “to” with this many decimal places (1 if empty). 1 to 10 with 2 places gives numbers like 4.37.',
     list: '',  // see listHint
     calc: 'Worked out from other values, e.g. speed * hours. No brackets needed here. You can use + - * / ^ ( ) sqrt abs round min max.',
