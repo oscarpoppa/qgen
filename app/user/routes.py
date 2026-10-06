@@ -91,7 +91,7 @@ def mypage():
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
-                           showing=showing, showing_label=SHOW_ONLY.get(showing))
+                           showing=showing)
 
 
 def _folder_done(message, error=False, show=None, moved=None):
@@ -181,8 +181,8 @@ def move_to_folder():
 RECENT_DAYS, RECENT_MAX = 14, 10
 #how many of the latest handed-in quizzes My quizzes lists at the top
 LATEST_FINISHED = 3
-#My quizzes ?show=: Home's counters open it showing only these (the words above the list)
-SHOW_ONLY = {'todo': 'To do: not started yet', 'started': 'Started, not handed in yet', 'soon': 'Due soon'}
+#My quizzes ?show=: Home's counters open it showing only these (the page otherwise looks as usual)
+SHOW_ONLY = ('todo', 'started', 'soon')
 
 # route to a student's Home: what's waiting for them, and the awards they've earned
 @user_bp.route('/home')

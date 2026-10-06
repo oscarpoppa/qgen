@@ -1261,6 +1261,3 @@ details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 /* My quizzes: the last few handed in, above the folders */
 .latest-finished { margin-bottom: 14px; padding-top: 10px; padding-bottom: 6px; }
 .latest-finished h2 { font-size: 1rem; margin: 0 0 4px; }
-/* My quizzes opened from a Home counter: what's shown, and the way back to everything */
-.showing-only { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
-.showing-only .btn { margin-left: auto; }

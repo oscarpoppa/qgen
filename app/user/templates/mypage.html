@@ -96,7 +96,7 @@
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
 
 {# the last few handed in, whatever folder they're in, newest first #}
-{% if finished and not showing %}
+{% if finished %}
 <section class="card latest-finished" aria-labelledby="latest-finished">
   <h2 id="latest-finished">Just finished</h2>
   <ul class="dash-list">
@@ -114,11 +114,6 @@
 {% if groups or fk.root.folders %}
 {% call folders_page(fk) %}
   {% if groups|length > 5 %}<input type="search" class="filter-cards" placeholder="Find a quiz…" aria-label="Find a quiz">{% endif %}
-  {% if showing %}
-    <p class="showing-only" role="status"><strong>{{ showing_label }}</strong>
-      <span class="muted small">{{ shown|length }} quiz{{ '' if shown|length == 1 else 'zes' }}</span>
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">Show all my quizzes</a></p>
-  {% endif %}
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
     {{ quiz_cards(shown, fk.view) }}

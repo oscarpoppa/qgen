@@ -689,7 +689,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
 
     def titles(show):
         page = sam.get('/mypage?show=' + show).data.decode()
-        assert 'Show all my quizzes' in page and 'data-keep-open' in page and 'Just finished' not in page
+        assert 'data-keep-open' in page and 'Just finished' in page and 'Show all my quizzes' not in page
         return re.findall(r'<h2 title="([^"]+)">', page)
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
