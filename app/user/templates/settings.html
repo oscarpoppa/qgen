@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 {% from "_macros.html" import field, image_drop %}
 
 {% block content %}
 <div class="page-head"><h1>Settings</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}">Technical settings →</a></div></div>
+  <div class="actions">{{ back_home() }}<a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}">Technical settings →</a></div></div>
 <form method="post" class="card" style="max-width:640px" novalidate>
   {{ form.hidden_tag() }}
   <h2>Your site</h2>

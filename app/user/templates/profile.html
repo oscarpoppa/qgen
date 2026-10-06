@@ -1,8 +1,10 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 {% from "_macros.html" import avatar with context %}
 
 {% block content %}
-<div class="page-head"><h1>My profile</h1></div>
+<div class="page-head"><h1>My profile</h1>
+  <div class="actions">{{ back_home() }}</div></div>
 <div class="card" style="max-width:640px">
   <div class="card-head"><h2>Nickname</h2></div>
   <p class="muted small">If you like to be called something else, put it here. It shows next to your name everywhere,

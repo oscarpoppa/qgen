@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 
 {% block content %}
 <div class="page-head"><h1>API for apps</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('apiv2.openapi_json') }}">openapi.json</a></div></div>
+  <div class="actions">{{ back_button(url_for('user.profile'), 'My profile') }}<a class="btn btn-secondary" href="{{ url_for('apiv2.openapi_json') }}">openapi.json</a></div></div>
 <div class="card">
   <p>Every address below starts with <code>/api/v2</code>. First sign in with <code>POST /api/v2/tokens</code>
     to get a personal access token, then send it with each request:</p>

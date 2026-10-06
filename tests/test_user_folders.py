@@ -204,7 +204,7 @@ def test_results_pages_lead_back_to_users(app_db):
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
     for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id)):
-        assert '<a class="btn btn-secondary" href="/userdet">← Users</a>' in teach.get(url).data.decode(), url
+        assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in teach.get(url).data.decode(), url
     # one student's page: Assign a quiz to them
     assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
         teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()

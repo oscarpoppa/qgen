@@ -86,7 +86,7 @@
   <h1>{{ title }}</h1>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}">← {{ came[1] }}</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back>← {{ came[1] }}</a>
     {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}">View</a>{% endif %}
     {# back to how the page was when it opened: blank for a new problem, the saved version when editing #}
     {% if vp and vp.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
@@ -101,7 +101,8 @@
 <div class="editor">
 <form method="post" id="problem-form" novalidate>
   {{ form.hidden_tag() }}
-  {% if came[0] != url_for('qgen.list_vprobs') %}<input type="hidden" name="next" value="{{ came[0] }}">{% endif %}
+  {# where Save goes back to (trail.js keeps it the page this was opened from) #}
+  <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vprobs') }}" data-back-next>
 
   {% if ai_enabled %}
   <div class="card ai-box">
@@ -215,7 +216,7 @@
     <div class="btn-row">
       {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}
       <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
-      <a class="btn btn-secondary" href="{{ came[0] }}" title="Leave without saving">Cancel</a>
+      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
     </div>
   </div>
 

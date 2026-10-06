@@ -12,7 +12,7 @@
     {{ field(form.retype_password, attrs={'autocomplete': 'new-password'}) }}
     <div class="btn-row">
       {{ form.submit(class='btn', value='Change password') }}
-      {% if not current_user.pw_man_reset %}<a class="btn btn-secondary" href="{{ home_url() }}">Cancel</a>{% endif %}
+      {% if not current_user.pw_man_reset %}<a class="btn btn-secondary" href="{{ home_url() }}" data-back-href>Cancel</a>{% endif %}
     </div>
   </form>
 </div>

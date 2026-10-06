@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 {% from "_macros.html" import field %}
 
 {% block content %}
 <div class="page-head">
   <h1>Upload files</h1>
   <div class="actions">
+    {{ back_home() }}
     <a class="btn btn-secondary" href="{{ url_for('upload.images') }}">Images</a>
     <a class="btn btn-secondary" href="{{ url_for('upload.nonimages') }}">Other files</a>
   </div>

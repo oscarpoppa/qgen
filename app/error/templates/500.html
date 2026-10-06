@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 
 {% block content %}
 <div class="card card-narrow empty">
   <span class="big">⚠️</span>
   <h1>Something went wrong</h1>
   <p>Sorry, that didn't work. Please try again; if it keeps happening, tell your teacher or administrator.</p>
-  <a class="btn" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a>
+  <div class="btn-row" style="justify-content:center">
+    {% if current_user.is_authenticated %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home') }}{% endif %}
+    <a class="btn" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a></div>
 </div>
 {% endblock %}

@@ -14,7 +14,7 @@
   <h1>{{ title }}</h1>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}">← {{ came[1] }}</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back>← {{ came[1] }}</a>
     {% if vq and vq.id %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
       <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>
@@ -31,7 +31,8 @@
 <div class="editor">
 <form method="post" id="quiz-form" novalidate>
   {{ form.hidden_tag() }}
-  {% if came[0] != url_for('qgen.list_vquizzes') %}<input type="hidden" name="next" value="{{ came[0] }}">{% endif %}
+  {# where Save goes back to (trail.js keeps it the page this was opened from) #}
+  <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vquizzes') }}" data-back-next>
   <div class="card">
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
     {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
@@ -117,7 +118,7 @@
     {{ image_drop(form.image) }}
     <div class="btn-row">
       {{ form.submit(class='btn') }}
-      <a class="btn btn-secondary" href="{{ came[0] }}">Cancel</a>
+      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href>Cancel</a>
     </div>
   </div>
 </form>

@@ -10,7 +10,7 @@ from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
-from app.nav import back_to, safe_next, next_arg, place_name
+from app.nav import back_to, safe_next, next_arg, place_name, back_after_save
 from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
@@ -145,7 +145,7 @@ def edvprob(vpid):
             save_subjects('problems', vpobj)
             flash('Updated problem "{}". Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
-            return redirect(next_arg(url_for('qgen.list_vprobs', show=vpobj.id)))
+            return redirect(back_after_save('qgen.list_vprobs', vpobj.id))
     return problem_page(form, vpobj, errors, 'Edit problem', subject_error)
 
 #"Show me 3 examples": run the problem without saving it
@@ -269,7 +269,7 @@ def edvquiz(vqid):
                 flash('The new retake scoring now applies to every student, including the {} who had their own.'.format(
                     'one' if had_own == 1 else had_own), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
-            return redirect(next_arg(url_for('qgen.list_vquizzes', show=vqobj.id)))
+            return redirect(back_after_save('qgen.list_vquizzes', vqobj.id))
     return quiz_page(form, 'Edit quiz', vqobj, subject_error)
 
 #route to list all virtual quizzes

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button, back_home with context %}
 
 {% macro amount(t, value) -%}
   {%- if t.unit == 'choice' -%}{{ (t.choices|selectattr(0, 'equalto', value)|map(attribute=1)|first) or value }}
@@ -7,7 +8,7 @@
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}">← Settings</a></div></div>
+  <div class="actions">{{ back_button(url_for('user.settings'), 'Settings') }}</div></div>
 <p class="muted">Time spans and limits the site works with. Changes apply right away; how often pages check in and
   how often the Dashboard refreshes apply when a page is next opened. Each one shows its default, and
   <b>Reset</b> puts it back.</p>

@@ -36,6 +36,16 @@ def next_arg(fallback=None):
     return safe_next(request.values.get('next'), fallback)
 
 
+def back_after_save(list_endpoint, item_id):
+    """After saving in an editor: back to the page it was opened from (the form's next), and
+    when that's the list (or there's none), the list with what was saved lit up (?show=)."""
+    from flask import url_for
+    target = next_arg()
+    if target and _match(target)[0] != list_endpoint:
+        return target
+    return url_for(list_endpoint, show=item_id)
+
+
 #pages a Back button can name, by endpoint: a name, or a function of the page's arguments
 #(the hubs people go out from and come back to; anything else uses the page's own Back)
 def _named(endpoint, args):

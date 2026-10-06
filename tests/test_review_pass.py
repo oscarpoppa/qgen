@@ -201,9 +201,9 @@ def test_back_goes_where_you_came_from(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': 'http://localhost/dashboard'}).data.decode()
-    assert '<a class="btn btn-secondary" href="/dashboard">← Dashboard</a>' in page
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in page
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<a class="btn btn-secondary" href="/userdet">← Users</a>' in page
+    assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in page
     # from another site, or from the page itself: its own Back
     for ref in ('https://evil.example/dashboard', 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
         page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': ref}).data.decode()
@@ -219,7 +219,7 @@ def test_editing_a_quiz_returns_where_it_started(app_db):
     vq = make_quiz(app, teach)
     start = 'http://localhost/quiz/results/{}'.format(vq.id)
     page = teach.get('/quiz/editvquiz/{}'.format(vq.id), headers={'Referer': start}).data.decode()
-    assert '<input type="hidden" name="next" value="/quiz/results/{}">'.format(vq.id) in page
+    assert '<input type="hidden" name="next" value="/quiz/results/{}" data-back-next>'.format(vq.id) in page
     r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1b', 'vplist': vq.vpid_lst.strip('[]'), 'shuffle_order': '',
                                                           'retake_rule': 'best', 'next': '/quiz/results/{}'.format(vq.id)})
     assert r.headers['Location'] == '/quiz/results/{}'.format(vq.id)
@@ -698,3 +698,37 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     sam.get('/mypage?folder=main')
     sam.get('/mypage?show=todo')
     assert 'data-view="main"' in sam.get('/mypage').data.decode()
+
+
+# ---------------------------------------------------------------- a Back button on every page
+
+def test_pages_off_the_menu_have_a_back_button(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teach)
+    cq = give(vq, 'sam')
+    for who, url in ((sam, '/profile'), (teach, '/profile'), (teach, '/settings'), (teach, '/upload'),
+                     (teach, '/images'), (teach, '/nonimages'), (teach, '/quiz/assign'),
+                     (teach, '/messages/{}'.format(ids('sam'))), (sam, '/quiz/take/{}'.format(cq.id)),
+                     (sam, '/no/such/page')):
+        page = who.get(url).data.decode()
+        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back>← ', page), url
+    # with nowhere better known, My profile goes back to Home (Dashboard for a teacher)
+    assert 'href="/home" data-back>← Home</a>' in sam.get('/profile').data.decode()
+    # the script that points each Back at the page it was opened from is on every page
+    assert 'js/trail.js' in sam.get('/profile').data.decode()
+    assert 'data-back-href>Cancel</a>' in teach.get('/chpass').data.decode()
+
+
+def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    page = teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
+    assert 'data-back-next' in page and 'data-back-href>Cancel</a>' in page
+    form = {'title': vq.title, 'vplist': vq.vpid_lst}
+    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/viewvquiz/{}'.format(vq.id)))
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/viewvquiz/{}'.format(vq.id))
+    # back to the list: the list with the quiz lit up
+    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/listvq?folder=all'))
+    assert r.headers['Location'].endswith('/quiz/listvq?show={}'.format(vq.id))

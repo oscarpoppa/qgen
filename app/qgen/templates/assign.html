@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_home with context %}
 {% from "_macros.html" import field %}
 
 {# a group of people that opens and closes, with a box that checks them all; these boxes
@@ -24,7 +25,7 @@
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  {% if came_from %}<div class="actions"><a class="btn btn-secondary" href="{{ came_from[0] }}">← {{ came_from[1] }}</a></div>{% endif %}</div>
+  <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back>← {{ came_from[1] }}</a>{% else %}{{ back_home() }}{% endif %}</div></div>
 
 <form method="post" class="card" style="max-width:640px" novalidate>
   {{ form.hidden_tag() }}

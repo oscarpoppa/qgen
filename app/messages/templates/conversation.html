@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, back_button with context %}
 {% block body_attrs %}{{ watch('conversation:%d' % student.id) }}{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1 class="person">{{ avatar(student, 40) }}{{ student.shown_name }}</h1>
   <div class="actions">
+    {{ back_button(url_for('messages.inbox'), 'Messages') }}
     {# switch to another student's conversation #}
     <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-switch" onsubmit="return false">
       <label for="switch-student" class="sr-only">Switch to another student</label>
