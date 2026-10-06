@@ -16,6 +16,8 @@
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ fk.page(f.id) }}" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
         <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <span class="side-name">{{ fk.name(n.folder) }}</span></a>
+      {# something new (not started) in it, or in a folder inside it #}
+      {% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}
       <span class="side-count muted small" title="{{ fk.units|capitalize }} in it, and in the folders inside it">{{ n.count or '' }}</span>
     </div>
     {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(fk, child) }}{% endfor %}</ul>{% endif %}
@@ -66,6 +68,7 @@
           <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page('main') }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
+            {% if fk.root.new_here %}<span class="badge badge-warn side-new-badge" title="{{ fk.root.new_here }} new {{ fk.unit if fk.root.new_here == 1 else fk.units }} in no folder">{{ fk.root.new_here }} new</span>{% endif %}
             <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
           {% endif %}
         {% endfor %}
@@ -75,7 +78,7 @@
           <li><div class="side-row{{ ' current' if fk.view == 'new' }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page('new') }}" class="side-link"{% if fk.view == 'new' %} aria-current="page"{% endif %}><span aria-hidden="true">🆕</span> {{ fk.new_view.label }}</a>
-            {% if nn %}<span class="badge badge-warn side-new-badge" title="{{ nn }} new {{ fk.unit if nn == 1 else fk.units }}">{{ nn }}</span>{% endif %}</div></li>
+            {% if nn %}<span class="badge badge-warn side-new-badge" title="{{ nn }} new {{ fk.unit if nn == 1 else fk.units }}">{{ nn }} new</span>{% endif %}</div></li>
         {% endif %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
@@ -146,7 +149,7 @@
   <details class="sub-box" data-sub="{{ f.id }}">
     <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}><span class="fold" aria-hidden="true"></span>
       <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <h3>{{ fk.name(n.folder) }}</h3>
-      <span class="muted small nowrap">{{ n.count }} {{ fk.unit if n.count == 1 else fk.units }}</span></summary>
+      <span class="muted small nowrap">{{ n.count }} {{ fk.unit if n.count == 1 else fk.units }}</span>{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
         <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a href="{{ fk.page(f.id) }}">Open this folder</a></span></div>

@@ -856,7 +856,9 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
     page = sam.get('/mypage?folder=main').data.decode()
     # in the side list, with a badge counting what's new
-    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1</span>' in page
+    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1 new</span>' in page
+    # the folder it's filed in says so too (it may be out of sight in another folder)
+    assert 'title="1 new quiz in it">1 new</span>' in page
     page = sam.get('/mypage?folder=new').data.decode()
     assert re.findall(r'<h2 title="([^"]+)">', page) == ['Fresh']
     assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too

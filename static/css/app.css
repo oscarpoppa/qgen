@@ -1269,3 +1269,6 @@ details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 .awards-grip:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .awards-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-select: none !important; }
+/* My quizzes: how many new (not started) quizzes a folder holds */
+.side-new-badge { flex: 0 0 auto; font-size: .72rem; padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
+.sub-head .side-new-badge { margin-left: 6px; }

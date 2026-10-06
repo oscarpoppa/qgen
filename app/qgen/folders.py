@@ -132,7 +132,8 @@ def move_folder(user, folder_id, to_id):
 
 def tree(user, groups):
     """My quizzes arranged in folders: the main list as {'folder': None, 'folders': [...],
-    'groups': [...], 'count': quizzes inside, at any depth}; each folder the same shape,
+    'groups': [...], 'count': quizzes inside, at any depth, 'new': how many of those haven't
+    been started ('new_here': not counting the folders inside)}; each folder the same shape,
     with 'depth'. `groups` are attempts_by_quiz()'s, kept in their order. Also returns
     every folder as (folder, depth) in the order of a "Move to" list."""
     folders = folders_of(user)
@@ -150,6 +151,9 @@ def tree(user, groups):
         if node['folder'] is not None:
             flat.append((node['folder'], depth))
         node['count'] = len(node['groups']) + sum(walk(child, depth + 1) for child in node['folders'])
+        #quizzes given and not started yet, here and in the folders inside (a badge in the side list)
+        node['new_here'] = sum(1 for g in node['groups'] if any(a.status == 'new' for a in g['attempts']))
+        node['new'] = node['new_here'] + sum(child['new'] for child in node['folders'])
         return node['count']
     walk(root, 0)
     return root, flat
