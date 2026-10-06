@@ -58,7 +58,7 @@
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.username }}"></td>
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
               data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.username }}"
-              title="Drag onto a folder to move {{ item.username }} there">{{ avatar(item, 32) }}<strong>{{ item.username }}</strong></span></td>
+              title="Drag onto a folder to move {{ item.username }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false">{{ item.username }}</a></strong></span></td>
           <td data-label="Folders" class="person-folders">
             {% for f in mine %}
               <form method="post" action="{{ url_for('user.remove_from_user_folder') }}" class="folder-chip">
@@ -89,7 +89,8 @@
             {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}">Assign</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}">Quizzes</a>
+            {# their page: quizzes and results, awards #}
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.username }}'s quizzes, results and awards">Student page</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
             {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" data-confirm="Remove {{ item.username }}’s picture?" data-confirm-ok="Remove">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary btn-sm">Remove picture</button></form>{% endif %}

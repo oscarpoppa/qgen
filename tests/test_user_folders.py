@@ -208,3 +208,14 @@ def test_results_pages_lead_back_to_users(app_db):
     # one student's page: Assign a quiz to them
     assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
         teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+
+
+def test_users_page_leads_to_each_student_page(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    page = teach.get('/userdet?folder=all').data.decode()
+    sam = ids('sam')
+    assert 'href="/quiz/listuser/{}" title="sam&#39;s quizzes, results and awards">Student page</a>'.format(sam) in page \
+        or 'href="/quiz/listuser/{}" title="sam\'s quizzes, results and awards">Student page</a>'.format(sam) in page
+    assert '<a class="person-link" href="/quiz/listuser/{}" draggable="false">sam</a>'.format(sam) in page  # the name too
+    assert '>Quizzes</a>' not in page

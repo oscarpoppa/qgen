@@ -772,6 +772,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .chip-x:hover { color: var(--bad); }
 .person-folders .move-form { margin-top: 2px; }
 .drag-person { cursor: grab; }
+.person-link { color: inherit; text-decoration: none; }
+.person-link:hover { text-decoration: underline; }
 .people-table + .people-table { margin-top: 12px; }
 .just-moved { box-shadow: 0 0 0 2px var(--ok); transition: box-shadow .6s; }
 @media (prefers-reduced-motion: reduce) { .just-moved { transition: none; } }

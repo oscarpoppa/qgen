@@ -54,7 +54,7 @@
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}">Student</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}">Student page</a></li>
       {% endfor %}
       </ul>
     {% else %}
