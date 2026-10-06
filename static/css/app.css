@@ -1183,3 +1183,4 @@ details.more-list > summary { cursor: pointer; color: var(--accent); margin: 4px
 .list-ai-label { flex-basis: 100%; }
 .values-table .settings > label.different-from { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .values-table .settings > label.different-from input { flex: 1 1 auto; min-width: 0; }
+.values-table .settings > .k-list[name$="pick_n"] { flex: 0 0 11rem; }

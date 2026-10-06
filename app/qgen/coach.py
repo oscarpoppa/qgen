@@ -86,7 +86,18 @@ def problem_hints(qtype_key, question, answer, options):
                 missing |= used - set(known)
     if qt.key == 'numeric' and answer.strip() and '[' not in answer:
         missing |= _formula_names(answer) - set(known)
+    #ns1, ns2, ns3 when ns has no "how many" (or too small a one): one message, no "Add a value" button
+    needs = {}
     for name in sorted(missing):
+        picked = F.numbered_pick(name, known)
+        if picked:
+            needs[picked[0]] = max(needs.get(picked[0], 0), picked[1])
+    for base, n in sorted(needs.items()):
+        hints.append(hint('error', 'You use [{0}1]… [{0}{1}], but {0} has no "how many" (or too small a one). '
+                                   'Put {1} in "how many" for {0}, so each student gets {1} different items from its list.'.format(base, n)))
+    for name in sorted(missing):
+        if F.numbered_pick(name, known):
+            continue
         close = get_close_matches(name, known, n=1)
         text = '"{}" isn\'t in your values table.'.format(name)
         if close:

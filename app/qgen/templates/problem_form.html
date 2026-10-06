@@ -47,7 +47,7 @@
         {{ row.form.step(placeholder='in steps of (optional)', title='Count up from “from” in steps of this size. 5 with 40 to 80 gives 40, 45, 50 … 80', class='k-whole', **{'aria-label': 'In steps of'}) }}
         {{ row.form.places(placeholder='decimal places', title='How many digits after the point (1 if left empty)', class='k-decimal', **{'aria-label': 'Decimal places'}) }}
         {{ row.form.items(placeholder='Maria, Ahmed, Li', title='The choices, separated by commas. Each student gets one at random', class='k-list', **{'aria-label': 'List items, comma separated'}) }}
-        {{ row.form.pick_n(placeholder='how many to pick (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
+        {{ row.form.pick_n(placeholder='how many? (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
         {# the AI helper fills the list from a description; the teacher checks it like anything typed #}
         {% if ai_enabled %}<div class="k-list list-ai">
           <span class="small muted list-ai-label">✨ Or describe the list, and the helper writes it:</span>

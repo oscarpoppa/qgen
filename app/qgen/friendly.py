@@ -559,7 +559,20 @@ def worked_answer(text):
 
 # ---------------------------------------------------------------- checking
 
+def numbered_pick(name, known):
+    """For "ns3" when there's a value "ns": (the value, 3), else None. A Pick from list value
+    with "how many" makes ns1, ns2...; without it they don't exist."""
+    m = re.fullmatch(r'([A-Za-z][A-Za-z0-9_]*?)(\d+)', name or '')
+    if m and m.group(1) in known and int(m.group(2)) >= 1:
+        return m.group(1), int(m.group(2))
+    return None
+
+
 def _suggest(name, known):
+    picked = numbered_pick(name, known)
+    if picked:
+        return (' To use [{0}{1}], put {1} or more in "how many" for {0} (Pick from list): '
+                'then {0}1, {0}2… are different items from its list.'.format(*picked))
     close = get_close_matches(name, known, n=1)
     return ' Did you mean "{}"?'.format(close[0]) if close else ''
 

@@ -174,3 +174,16 @@ def test_a_description_typed_in_never_the_same_as_is_explained():
     errors = F.validate_values([{'name': 'square', 'kind': 'list', 'items': '4, 9', 'different_from': ['All perfect squares']}])
     text = ' '.join(errors)
     assert 'no value with that name' in text and 'use the ✨ box' in text
+
+
+def test_numbered_picks_without_how_many_say_what_to_do():
+    values = [{'name': 'ns', 'kind': 'list', 'items': '2, 3, 5, 6'}]
+    errors = ' '.join(F.check_text('question', '[ns1] [ns3]', F.known_names(values)))
+    assert 'put 3 or more in "how many" for ns' in errors or 'put 1 or more in "how many" for ns' in errors
+    assert 'Did you mean' not in errors
+    from app.qgen import coach
+    hints = coach.problem_hints('choice_one', 'Which?', '', {'values': values, 'choices': '*[ns1]\n[ns2]\n[ns3]'}) \
+        if hasattr(coach, 'problem_hints') else None
+    if hints is not None:
+        text = ' '.join(h['text'] for h in hints)
+        assert 'Put 3 in "how many" for ns' in text and 'Add a value named ns1' not in str(hints)
