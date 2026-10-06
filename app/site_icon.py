@@ -1,5 +1,5 @@
 """The little picture in the browser tab (favicon): the one chosen in Settings, or else the
-logo. It's made square (a wide picture is shrunk to fit, centred on a clear background) and
+logo. It's made square (a wide picture is shrunk to fit, centered on a clear background) and
 sized for tabs (32 px) and phone home screens (180 px)."""
 import io
 import os

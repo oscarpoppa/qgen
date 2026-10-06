@@ -35,14 +35,14 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert 'Folder &#34;Unit 1&#34; made.' in r.data.decode() or 'Folder "Unit 1" made.' in r.data.decode()
     unit = folder_id('Unit 1', 'sam')
     page = sam.get('/mypage').data.decode()
-    assert page.count('aria-label="Move Week 1 to a folder"') == 1 and '📁 Unit 1</option>' in page
+    assert page.count('aria-label="Move “Week 1” to a folder"') == 1 and '📁 Unit 1</option>' in page
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
         {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
     # a quiz is in one place only: the folder shows it, and the main list doesn't any more
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage').data.decode()
-    assert 'aria-current="page"><span aria-hidden="true">📚</span> Main list' in page
+    assert 'aria-current="page"><span aria-hidden="true">📥</span> Not in a folder' in page
     assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
@@ -63,7 +63,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert kim.post('/mypage/move', data={'quiz': w2.id, 'to': folder_id('K', 'kim')}, headers=FETCH).get_json() == \
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
-    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to the main list.'
+    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to Not in a folder.'
     assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -94,7 +94,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert not sam.post('/mypage/move', data={'folder': math, 'to': math}, headers=FETCH).get_json()['ok']
     # moving a folder (dragging it out to the main list)
     assert sam.post('/mypage/move', data={'folder': algebra, 'to': 'top'}, headers=FETCH).get_json()['message'] == \
-        'Moved "Algebra" to the top level.'
+        'Moved "Algebra" to the top.'
     assert db.session.get(QuizFolder, algebra).parent_id is None
     sam.post('/mypage/move', data={'folder': algebra, 'to': math})
     # removing Math: Algebra (with the quiz) moves up to the main list; no quiz is deleted
@@ -166,7 +166,7 @@ def test_after_a_change_the_same_folder_shows(app_db):
     unit = folder_id('Unit 1', 'sam')
     assert r.headers['Location'].endswith('/mypage?folder=all')  # you stay where you were
     r = sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit, 'view': 'main'})
-    assert r.headers['Location'].endswith('/mypage')  # stays where you were
+    assert r.headers['Location'].endswith('/mypage?moved=quiz:{}'.format(w1.id))  # stays where you were, the quiz lit up
     r = sam.post('/mypage/folders/{}/rename'.format(unit), data={'name': 'U1', 'view': str(unit)})
     assert r.headers['Location'].endswith('/mypage?folder={}'.format(unit))
     sam.post('/mypage/folders', data={'name': 'Inner', 'parent': unit})

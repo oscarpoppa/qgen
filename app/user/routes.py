@@ -5,6 +5,7 @@ from flask import flash, render_template, redirect, url_for, request, current_ap
 from app.nav import back_to, safe_next, next_arg
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
+from markupsafe import Markup
 from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
 from secrets import token_urlsafe
@@ -54,26 +55,27 @@ def mypage():
     groups = attempts_by_quiz(current_user.cquizzes)
     root, all_folders = folders.tree(current_user, groups)
     nodes, home = folders.index(root)
-    #which part the sidebar has chosen: the main list (quizzes not in a folder: a quiz is in one
-    #place only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
-    #gone (or isn't theirs) shows the main list
-    view = request.args.get('folder', 'main')
-    node = nodes.get(int(view)) if view.isdigit() else None
-    if node is None and view != 'all':
-        view = 'main'
+    #which part the side list has chosen: the quizzes in no folder (a quiz is in one place
+    #only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
+    #gone (or isn't theirs) shows the quizzes in no folder
+    from app import folder_tree
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
     shown = node['groups'] if node else groups if view == 'all' else root['groups']
-    #the chosen folder's parents, for "Practice › Hard ones"
-    path, up = [], node['folder'] if node else None
-    while up is not None:
-        path.insert(0, up)
-        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
-    return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes', groups=groups,
-                           root=root, all_folders=all_folders, inside=folders.inside, max_depth=folders.MAX_DEPTH,
-                           max_name=folders.MAX_NAME, view=view, node=node, shown=shown, home=home, path=path,
-                           open_ids={f.id for f in path})
+    fk = folder_tree.kit(
+        view, node, root, all_folders, nodes,
+        page=lambda v: url_for('user.mypage', folder=v) if str(v) != 'main' else url_for('user.mypage'),
+        create_url=url_for('user.create_folder'), move_url=url_for('user.move_to_folder'),
+        rename_url=lambda fid: url_for('user.rename_folder', folder_id=fid),
+        delete_url=lambda fid: url_for('user.delete_folder', folder_id=fid),
+        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(groups), main_count=len(root['groups']),
+        name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
+        hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
+        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders')
+    return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
+                           groups=groups, fk=fk, shown=shown, home=home)
 
 
-def _folder_done(message, error=False, show=None):
+def _folder_done(message, error=False, show=None, moved=None):
     """After a folder change: JSON for the page's script (drag and drop), else back to My quizzes
     showing the same folder (or `show`: a folder's id, or 'main')."""
     if request.headers.get('X-Requested-With') == 'fetch':
@@ -82,7 +84,10 @@ def _folder_done(message, error=False, show=None):
     flash(message, 'error' if error else 'success')
     if show is None:
         show = request.form.get('view') or 'main'
-    return redirect(url_for('user.mypage', folder=show) if str(show).isdigit() or show == 'all' else url_for('user.mypage'))
+    values = {'folder': show} if str(show).isdigit() or show == 'all' else {}
+    if moved and not error:
+        values['moved'] = moved  # lit up on the page, like after a drag
+    return redirect(url_for('user.mypage', **values))
 
 
 #routes for one's own folders on My quizzes (students and teachers alike)
@@ -142,14 +147,16 @@ def move_to_folder():
         if request.form.get('folder'):
             target = folders.move_folder(current_user, request.form.get('folder'), to)
             what = db.session.get(QuizFolder, int(request.form.get('folder'))).name
-            where = '"{}"'.format(target.name) if target else 'the top level'
+            where = '"{}"'.format(target.name) if target else 'the top'
+            moved = 'folder:{}'.format(request.form.get('folder'))
         else:
             target = folders.move_quiz(current_user, request.form.get('quiz'), to)
             what = db.session.get(VQuiz, int(request.form.get('quiz'))).title
-            where = '"{}"'.format(target.name) if target else 'the main list'
+            where = '"{}"'.format(target.name) if target else 'Not in a folder'
+            moved = 'quiz:{}'.format(request.form.get('quiz'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Moved "{}" to {}.'.format(what, where))
+    return _folder_done('Moved "{}" to {}.'.format(what, where), moved=moved)
 
 #Home's "Recently completed": how far back, and how many at most
 RECENT_DAYS, RECENT_MAX = 14, 10
@@ -334,24 +341,29 @@ def eduser(uid):
 @admin_only
 def userdet():
     from . import groups
+    from app import folder_tree
     ulst = User.query.order_by(User.username).all()
     root, flat, nodes, folders_of = groups.tree(ulst)
-    #the main list (people in no folder), 'all', or a folder's id (a gone folder: the main list)
-    view = request.args.get('folder', 'main')
-    node = nodes.get(int(view)) if view.isdigit() else None
-    if node is None and view != 'all':
-        view = 'main'
+    #the people in no folder (the default), 'all', or a folder's id (a gone folder: in no folder)
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
     shown = node['people'] if node else ulst if view == 'all' else root['people']
-    path, up = [], node['folder'] if node else None
-    while up is not None:
-        path.insert(0, up)
-        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
-    return render_template('udet.html', ulst=ulst, title='Users', root=root, all_folders=flat, node=node, view=view,
-                           shown=shown, path=path, folders_of=folders_of, inside=groups.inside,
-                           max_depth=groups.MAX_DEPTH, max_name=groups.MAX_NAME)
+    fk = folder_tree.kit(
+        view, node, root, flat, nodes,
+        page=lambda v: url_for('user.userdet', folder=v) if str(v) != 'main' else url_for('user.userdet'),
+        create_url=url_for('user.create_user_folder'), move_url=url_for('user.move_user_or_folder'),
+        rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
+        delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
+        add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
+        unit='person', units='people', all_label='All users', all_count=len(ulst), name=lambda f: f.name,
+        placeholder='e.g. 7th grade', add_words='+ Add to folder…', drag_what='a person',
+        hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
+        box_tools=lambda n: Markup('<a href="{}">Assign a quiz to this folder</a> · ').format(url_for('qgen.assign', folder=n['folder'].id))
+        if n['count'] else '',
+        fold_key='qgen-folded-user-folders', open_key='qgen-open-user-subfolders')
+    return render_template('udet.html', ulst=ulst, title='Users', fk=fk, shown=shown, folders_of=folders_of)
 
 
-def _group_done(message, error=False, show=None):
+def _group_done(message, error=False, show=None, moved=None):
     """After a change to the Users page's folders: JSON for the page's script, else back to
     the Users page showing the same folder (or `show`)."""
     if request.headers.get('X-Requested-With') == 'fetch':
@@ -361,7 +373,10 @@ def _group_done(message, error=False, show=None):
     if show is None:
         show = request.form.get('view') or 'main'
     show = str(show)
-    return redirect(url_for('user.userdet', folder=show) if show.isdigit() or show == 'all' else url_for('user.userdet'))
+    values = {'folder': show} if show.isdigit() or show == 'all' else {}
+    if moved and not error:
+        values['moved'] = moved  # lit up on the page, like after a drag
+    return redirect(url_for('user.userdet', **values))
 
 
 #routes for the Users page's folders (shared by the teachers)
@@ -439,7 +454,8 @@ def move_user_or_folder():
                 'Put {} in "{}".'.format(person.shown_name, f.name)
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done(message)
+    return _group_done(message, moved='folder:{}'.format(request.form.get('folder')) if request.form.get('folder')
+                       else 'user:{}'.format(request.form.get('user')))
 
 
 #a person's "Add to folder" list (they stay in their other folders) and a folder's ✕
@@ -454,7 +470,7 @@ def add_to_user_folder():
         person, f = groups.add(request.form.get('user'), request.form.get('to'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Put {} in "{}".'.format(person.shown_name, f.name))
+    return _group_done('Put {} in "{}".'.format(person.shown_name, f.name), moved='user:{}'.format(person.id))
 
 
 @user_bp.route('/users/folders/remove', methods=['POST'])

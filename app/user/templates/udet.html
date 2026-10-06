@@ -1,47 +1,10 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
+{% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
-
-{# a folder in the list down the side, with the folders inside it (which fold away). Drop a
-   person or a folder on it to move them in; drag it onto another folder to put it inside. #}
-{% macro side_folder(n) %}
-  {% set f = n.folder %}
-  <li class="side-item" data-folder="{{ f.id }}" data-box="folder:{{ f.id }}">
-    <div class="side-row{{ ' current' if view == f.id|string }}" data-drop="{{ f.id }}">
-      {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
-      {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ url_for('user.userdet', folder=f.id) }}" draggable="false" data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ f.name }}" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
-        <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
-      <span class="side-count muted small" title="Everyone in it, and in the folders inside it">{{ n.count or '' }}</span>
-    </div>
-    {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
-  </li>
-{% endmacro %}
-
-{# a form to make a folder: at the top level, or inside `parent` #}
-{% macro new_folder(parent=none) %}
-  <details class="new-folder">
-    <summary class="btn btn-secondary btn-sm">+ New folder{{ ' inside' if parent }}</summary>
-    <form method="post" action="{{ url_for('user.create_user_folder') }}" class="folder-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="view" value="{{ view }}">
-      {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
-      <input type="text" name="name" maxlength="{{ max_name }}" required placeholder="e.g. 7th grade" aria-label="New folder's name">
-      <button class="btn btn-sm">Make folder</button>
-    </form>
-  </details>
-{% endmacro %}
-
-{# Expand all / Collapse all for one level: just the folder boxes directly in it #}
-{% macro level_buttons(label) %}
-  <span class="level-buttons">
-    <button type="button" class="btn btn-secondary btn-xs" data-level="open" aria-label="Expand all in {{ label }}">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-xs" data-level="close" aria-label="Collapse all in {{ label }}">Collapse all</button>
-  </span>
-{% endmacro %}
 
 {# people in a table; `here` is the folder they're listed under (None: the main list or All
    users), which is where a drag takes them out of #}
@@ -59,30 +22,7 @@
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
               data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
               title="Drag onto a folder to move {{ item.shown_name }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false">{{ item.shown_name }}</a></strong></span></td>
-          <td data-label="Folders" class="person-folders">
-            {% for f in mine %}
-              <form method="post" action="{{ url_for('user.remove_from_user_folder') }}" class="folder-chip">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ view }}">
-                <input type="hidden" name="user" value="{{ item.id }}"><input type="hidden" name="folder" value="{{ f.id }}">
-                <a href="{{ url_for('user.userdet', folder=f.id) }}">📁 {{ f.name }}</a>
-                <button class="chip-x" aria-label="Take {{ item.shown_name }} out of {{ f.name }}" title="Take out of this folder">✕</button>
-              </form>
-            {% endfor %}
-            {% set others = all_folders|rejectattr('0.id', 'in', mine|map(attribute='id')|list)|list %}
-            {% if others %}
-            <form method="post" action="{{ url_for('user.add_to_user_folder') }}" class="move-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <input type="hidden" name="user" value="{{ item.id }}">
-              <select name="to" class="move-select" aria-label="Put {{ item.shown_name }} in a folder">
-                <option value="">+ Add to folder…</option>
-                {% for f, depth in others %}<option value="{{ f.id }}">{{ '   ' * (depth - 1) }}📁 {{ f.name }}</option>{% endfor %}
-              </select>
-              <noscript><button class="btn btn-secondary btn-xs">Add</button></noscript>
-            </form>
-            {% elif not mine %}<span class="muted small">none</span>{% endif %}
-          </td>
+          <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
           <td data-label="Last seen">{% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>
             {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
@@ -112,116 +52,25 @@
   {% endif %}
 {% endmacro %}
 
-{# a folder inside the one being looked at: a box that opens to its own folders and people
-   (folded to begin with; remembered). Drop a person on its title to move them in. #}
-{% macro sub_box(n) %}
-  {% set f = n.folder %}
-  <details class="sub-box" data-sub="{{ f.id }}">
-    <summary class="sub-head" data-drop="{{ f.id }}"><span class="fold" aria-hidden="true"></span>
-      <span aria-hidden="true">📁</span> <h3>{{ f.name }}</h3>
-      <span class="muted small nowrap">{{ n.count }} {{ 'person' if n.count == 1 else 'people' }}</span></summary>
-    <div class="sub-body level">
-      <div class="sub-tools">{% if n.folders %}{{ level_buttons(f.name) }}{% else %}<span></span>{% endif %}
-        <span class="small">{% if n.count %}<a href="{{ url_for('qgen.assign', folder=f.id) }}">Assign a quiz to this folder</a> · {% endif %}<a href="{{ url_for('user.userdet', folder=f.id) }}">Open this folder</a></span></div>
-      {% for child in n.folders %}{{ sub_box(child) }}{% endfor %}
-      {{ people_table(n.people, f) }}
-      {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
-    </div>
-  </details>
-{% endmacro %}
-
 {% block content %}
 <div class="page-head"><h1>Users</h1>
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
     <a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
 
-<div class="folders-layout" data-move-url="{{ url_for('user.move_user_or_folder') }}" data-view="{{ view }}"
-     data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="qgen-folded-user-folders" data-open-key="qgen-open-user-subfolders">
-  {# the folders down the side (on a phone: a list that folds away, above the people) #}
-  <details class="folder-side" open>
-    <summary class="folder-side-head"><span class="small muted">Folders</span>
-      <span class="folder-side-now">{{ node.folder.name if node else 'All users' if view == 'all' else 'Main list' }}</span></summary>
-    <nav aria-label="Folders">
-      <ul class="side-list side-top">
-        {# people in no folder; dropping someone here takes them out of the folder they came from #}
-        <li><div class="side-row{{ ' current' if view == 'main' }}" data-drop="top">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.userdet') }}" class="side-link"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> Main list</a>
-          <span class="side-count muted small" title="People in no folder">{{ root.people|length or '' }}</span></div></li>
-        <li><div class="side-row{{ ' current' if view == 'all' }}">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.userdet', folder='all') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> All users</a>
-          <span class="side-count muted small">{{ ulst|length }}</span></div></li>
-        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
-      </ul>
-      {{ new_folder() }}
-      <p class="muted small side-hint">Folders are shared by all teachers; students never see them. Someone can be in several folders.
-        {% if all_folders %}Drag a person by their name onto a folder to move them there.{% endif %}</p>
-    </nav>
-  </details>
-
-  {# the whole section is one level for Expand all / Collapse all (beside its title) #}
-  <section class="folder-main level" aria-labelledby="folder-title">
-    {% if node %}
-      {% set f = node.folder %}
-      <div class="folder-title-row">
-        <h2 id="folder-title" class="folder-title">
-          {% for p in path[:-1] %}<a href="{{ url_for('user.userdet', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}📁 {{ f.name }}</h2>
-        <div class="title-actions">
-        {% if node and node.folders %}{{ level_buttons(node.folder.name) }}{% endif %}
-        {% if node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=f.id) }}">Assign a quiz to this folder</a>{% endif %}
-        <details class="folder-tools">
-          <summary class="btn btn-secondary btn-sm">Folder options</summary>
-          <div class="folder-tools-box">
-            <form method="post" action="{{ url_for('user.rename_user_folder', folder_id=f.id) }}" class="folder-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <input type="text" name="name" value="{{ f.name }}" maxlength="{{ max_name }}" required aria-label="Folder name">
-              <button class="btn btn-secondary btn-xs">Rename</button>
-            </form>
-            {% set skip = inside(node) %}
-            <form method="post" action="{{ url_for('user.move_user_or_folder') }}" class="move-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <input type="hidden" name="folder" value="{{ f.id }}">
-              <label class="small muted">Move to
-                <select name="to" class="move-select" aria-label="Move {{ f.name }} to another folder">
-                  <option value="top"{% if not f.parent_id %} selected{% endif %}>Top level</option>
-                  {% for g, depth in all_folders if g.id not in skip %}
-                    <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ '   ' * (depth - 1) }}📁 {{ g.name }}</option>
-                  {% endfor %}
-                </select></label>
-              <noscript><button class="btn btn-secondary btn-xs">Move</button></noscript>
-            </form>
-            {% if node.depth < max_depth %}{{ new_folder(f) }}{% endif %}
-            <form method="post" action="{{ url_for('user.delete_user_folder', folder_id=f.id) }}" class="folder-form"
-                  data-confirm="Remove the folder &quot;{{ f.name }}&quot;? Nobody is deleted: the people{{ ' and folders' if node.folders }} in it move up a level." data-confirm-ok="Remove folder">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <button class="btn btn-secondary btn-xs">Remove folder</button>
-            </form>
-          </div>
-        </details>
-        </div>
-      </div>
-    {% else %}
-      <div class="folder-title-row"><h2 id="folder-title" class="folder-title">{{ 'All users' if view == 'all' else 'Main list' }}</h2></div>
-    {% endif %}
+{% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}">Assign a quiz to this folder</a>{% endif %}{% endset %}
+{% call folders_page(fk, actions) %}
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>
       <button class="btn btn-sm">Assign a quiz to them →</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear">Clear</button>
     </form>
-    {% if ulst|length > 5 %}<input type="search" class="filter" data-filter=".people-table" placeholder="Filter users…" aria-label="Filter users">{% endif %}
-    <div>
-      {% if node %}{% for child in node.folders %}{{ sub_box(child) }}{% endfor %}{% endif %}
-      {{ people_table(shown, node.folder if node else none) }}
+    {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Filter users…" aria-label="Filter users">{% endif %}
+    <div id="folder-items">
+      {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ people_table(n.people, n.folder) }}{% endcall %}{% endfor %}{% endif %}
+      {{ people_table(shown, fk.node.folder if fk.node else none) }}
     </div>
-    {% if not shown %}
-      <p class="card empty small">{% if node %}Nobody in this folder{{ ' itself' if node.folders }} yet. Drag someone onto it in the folder list, or use "+ Add to folder…" beside their name.{% else %}Everyone is in a folder. Pick a folder on the left, or All users.{% endif %}</p>
-    {% endif %}
-  </section>
-</div>
+    {% if not shown %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+{% endcall %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>

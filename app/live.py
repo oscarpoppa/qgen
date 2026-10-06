@@ -134,7 +134,7 @@ def _review(now):
 def _quiz_folders():
     """Which quiz is in which of the Quizzes page's folders, and the folders' names."""
     from app.qgen.models import VQGroup, vquiz_vqgroup
-    return ([(g.id, g.title) for g in VQGroup.query.order_by(VQGroup.id)],
+    return ([(g.id, g.parent_id, g.title) for g in VQGroup.query.order_by(VQGroup.id)],
             sorted(tuple(r) for r in db.session.query(vquiz_vqgroup.c.vquiz_id, vquiz_vqgroup.c.vqgroup_id)))
 
 
@@ -169,7 +169,7 @@ def _problem_rows():
 def _problems(now):
     """The Problems page: the problems, and which of its folders each is in."""
     from app.qgen.models import VPGroup, vproblem_vpgroup
-    return (_problem_rows(), [(g.id, g.title) for g in VPGroup.query.order_by(VPGroup.id)],
+    return (_problem_rows(), [(g.id, g.parent_id, g.title) for g in VPGroup.query.order_by(VPGroup.id)],
             sorted(tuple(r) for r in db.session.query(vproblem_vpgroup.c.vproblem_id, vproblem_vpgroup.c.vpgroup_id)))
 
 
@@ -204,7 +204,7 @@ def _archive(aid, now):
         a = ArchivedAttempt.query.filter_by(id=aid).with_entities(*cols).first()
         return 'gone' if a is None else row(a)
     return ([row(a) for a in ArchivedAttempt.query.with_entities(*cols).order_by(ArchivedAttempt.id)],
-            [(f.id, f.name, f.student_id) for f in ArchiveFolder.query.filter_by(removed=False).order_by(ArchiveFolder.id)],
+            [(f.id, f.parent_id, f.name, f.student_id) for f in ArchiveFolder.query.filter_by(removed=False).order_by(ArchiveFolder.id)],
             sorted(users.items()))
 
 

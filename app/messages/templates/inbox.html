@@ -48,7 +48,7 @@
       <button type="button" class="btn btn-secondary btn-sm" data-set="0">Clear</button>
     </div>
     {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
-      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}">📁 {{ uf.name }}</button>{% endfor %}</div>{% endif %}
+      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}">📁 {{ uf.path }}</button>{% endfor %}</div>{% endif %}
     <ul class="choice-list" style="max-height:240px;overflow:auto">
       {% for r in rows %}
         <li><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.shown_name }}</label></li>
@@ -81,7 +81,7 @@
 {% endif %}
 
 <div class="folders-layout" data-view="{{ view }}" data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}"
-     data-fold-key="qgen-folded-user-folders" data-open-key="qgen-open-user-subfolders">
+     data-fold-key="qgen-folded-message-folders" data-open-key="qgen-open-message-subfolders">
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{{ node.folder.name if node else 'Not in a folder' if view == 'main' else 'All students' }}</span></summary>

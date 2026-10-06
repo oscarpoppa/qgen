@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar with context %}
+{% from "_folders.html" import folders_page, sub_box, move_menu with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -33,42 +34,7 @@
   {% else %}<span class="badge badge-warn">New</span>{% endif %}
 {% endmacro %}
 
-{# "Move to" a folder: a pick list that moves as soon as one is chosen (a button without scripts).
-   what: 'quiz' or 'folder'; here: the folder it's in now (None: not in a folder);
-   skip: folders it can't go into (a folder itself and the folders inside it) #}
-{% macro move_menu(what, ident, here, label, skip=()) %}
-  {% if all_folders %}
-  <form method="post" action="{{ url_for('user.move_to_folder') }}" class="move-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="{{ what }}" value="{{ ident }}">
-    <input type="hidden" name="view" value="{{ view }}">
-    <label class="small muted">Move to
-      <select name="to" class="move-select" aria-label="Move {{ label }} to a folder">
-        <option value="top"{% if here is none %} selected{% endif %}>{{ 'Main list' if what == 'quiz' else 'Top level' }}</option>
-        {% for f, depth in all_folders if f.id not in skip %}
-          <option value="{{ f.id }}"{% if here is not none and here.id == f.id %} selected{% endif %}>{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}📁 {{ f.name }}</option>
-        {% endfor %}
-      </select></label>
-    <noscript><button class="btn btn-secondary btn-xs">Move</button></noscript>
-  </form>
-  {% endif %}
-{% endmacro %}
-
-{# a form to make a folder: at the top level, or inside `parent` #}
-{% macro new_folder(parent=none) %}
-  <details class="new-folder">
-    <summary class="btn btn-secondary btn-sm">+ New folder{{ ' inside' if parent }}</summary>
-    <form method="post" action="{{ url_for('user.create_folder') }}" class="folder-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="view" value="{{ view }}">
-      {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
-      <input type="text" name="name" maxlength="{{ max_name }}" required placeholder="Folder name" aria-label="New folder's name">
-      <button class="btn btn-sm">Make folder</button>
-    </form>
-  </details>
-{% endmacro %}
-
-{% macro quiz_cards(gs) %}
+{% macro cards(gs) %}
   {% if gs %}
   <div class="grid quiz-grid">
   {% for g in gs %}
@@ -87,7 +53,7 @@
         <span class="badge badge-warn quiz-flag" hidden></span>
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}</span>
       </summary>
-      {% if view == 'all' and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
+      {% if fk.view == 'all' and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
         {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at|when('date') }}{% endif %}</p>
@@ -104,128 +70,42 @@
           {% endfor %}
         </ol>
       {% endif %}
-      {{ move_menu('quiz', g.vquiz.id, here, g.vquiz.title) }}
+      {% if fk.flat %}{{ move_menu(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
     </details>
   {% endfor %}
   </div>
   {% endif %}
 {% endmacro %}
 
-{# one folder in the sidebar, with the folders inside it (which fold away). Drop a quiz or
-   folder on it to move it in; drag it onto another to put it inside that one. #}
-{% macro side_folder(n) %}
-  {% set f = n.folder %}
-  <li class="side-item" data-folder="{{ f.id }}" data-box="folder:{{ f.id }}">
-    <div class="side-row{{ ' current' if view == f.id|string }}" data-drop="{{ f.id }}">
-      {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
-      {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ url_for('user.mypage', folder=f.id) }}" draggable="false" data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ f.name }}" class="side-link"{% if view == f.id|string %} aria-current="page"{% endif %}>
-        <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
-      <span class="side-count muted small">{{ n.groups|length or '' }}</span>
-    </div>
-    {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
-  </li>
-{% endmacro %}
-
-{# Expand all / Collapse all for one level: they open or close what's directly in it
-   (folder boxes and quiz boxes), not what's further down #}
-{% macro level_buttons(label) %}
-  <span class="level-buttons">
-    <button type="button" class="btn btn-secondary btn-xs" data-level="open" aria-label="Expand all in {{ label }}">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-xs" data-level="close" aria-label="Collapse all in {{ label }}">Collapse all</button>
-  </span>
-{% endmacro %}
-
-{# a folder inside the one being looked at: a box that opens to show its own folders and
-   quizzes (folded to begin with; remembered). Drop a quiz on its title to move it in. #}
-{% macro sub_box(n) %}
-  {% set f = n.folder %}
-  <details class="sub-box" data-sub="{{ f.id }}">
-    <summary class="sub-head" data-drop="{{ f.id }}"><span class="fold" aria-hidden="true"></span>
-      <span aria-hidden="true">📁</span> <h3>{{ f.name }}</h3>
-      <span class="muted small nowrap">{{ n.count }} quiz{{ '' if n.count == 1 else 'zes' }}</span></summary>
-    <div class="sub-body level">
-      <div class="sub-tools">{% if n.folders or n.groups %}{{ level_buttons(f.name) }}{% endif %}
-        <a class="small" href="{{ url_for('user.mypage', folder=f.id) }}">Open this folder</a></div>
-      {% for child in n.folders %}{{ sub_box(child) }}{% endfor %}
-      {{ quiz_cards(n.groups) }}
-      {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
-    </div>
-  </details>
+{# the quizzes in a list: the ones to do first, then the finished ones, folded away (open
+   or not is remembered in this browser) #}
+{% macro quiz_cards(gs, key) %}
+  {% set todo = gs|selectattr('latest.status', 'in', ['new', 'started'])|list %}
+  {% set done = gs|rejectattr('latest.status', 'in', ['new', 'started'])|list %}
+  {% if todo %}<h3 class="list-section">To do <span class="badge badge-warn">{{ todo|length }}</span></h3>{{ cards(todo) }}{% endif %}
+  {% if done %}
+    <details class="month-box done-box" data-remember="done-{{ key }}">
+      <summary><span class="fold" aria-hidden="true"></span><strong>Done</strong> <span class="badge">{{ done|length }}</span>
+        <span class="muted small">handed in</span></summary>
+      {{ cards(done) }}
+    </details>
+  {% endif %}
 {% endmacro %}
 
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
 
-{% if groups or root.folders %}
-<div class="folders-layout" data-move-url="{{ url_for('user.move_to_folder') }}" data-view="{{ view }}"
-     data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="qgen-folded-folders" data-open-key="qgen-open-subfolders">
-  {# the folders down the side (on a phone: a list that folds away, above the quizzes) #}
-  <details class="folder-side" open>
-    <summary class="folder-side-head"><span class="small muted">Folders</span>
-      <span class="folder-side-now">{{ node.folder.name if node else 'All quizzes' if view == 'all' else 'Main list' }}</span></summary>
-    <nav aria-label="Folders">
-      <ul class="side-list side-top">
-        {# the main list: quizzes not in any folder (a quiz is in one place only) #}
-        <li><div class="side-row{{ ' current' if view == 'main' }}" data-drop="top">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.mypage') }}" class="side-link"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📚</span> Main list</a>
-          <span class="side-count muted small">{{ root.groups|length or '' }}</span></div></li>
-        {# every quiz, wherever it is (a quiz dropped here stays in its folder) #}
-        <li><div class="side-row{{ ' current' if view == 'all' }}">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('user.mypage', folder='all') }}" class="side-link"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> All quizzes</a>
-          <span class="side-count muted small">{{ groups|length }}</span></div></li>
-        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
-      </ul>
-      {{ new_folder() }}
-      {% if all_folders %}<p class="muted small side-hint">Drag a quiz onto a folder to move it there.</p>{% endif %}
-    </nav>
-  </details>
-
-  {# the whole section is one level for Expand all / Collapse all (beside its title) #}
-  <section class="folder-main level" aria-labelledby="folder-title">
-    {% if node %}
-      {% set f = node.folder %}
-      <div class="folder-title-row">
-        <h2 id="folder-title" class="folder-title">
-          {% for p in path[:-1] %}<a href="{{ url_for('user.mypage', folder=p.id) }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}📁 {{ f.name }}</h2>
-        <div class="title-actions">
-        {% if shown or (node and node.folders) %}{{ level_buttons(node.folder.name if node else 'this list') }}{% endif %}
-        <details class="folder-tools">
-          <summary class="btn btn-secondary btn-sm">Folder options</summary>
-          <div class="folder-tools-box">
-            <form method="post" action="{{ url_for('user.rename_folder', folder_id=f.id) }}" class="folder-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <input type="text" name="name" value="{{ f.name }}" maxlength="{{ max_name }}" required aria-label="Folder name">
-              <button class="btn btn-secondary btn-xs">Rename</button>
-            </form>
-            {{ move_menu('folder', f.id, path[-2] if path|length > 1 else none, f.name, inside(node)) }}
-            {% if node.depth < max_depth %}{{ new_folder(f) }}{% endif %}
-            <form method="post" action="{{ url_for('user.delete_folder', folder_id=f.id) }}" class="folder-form"
-                  data-confirm="Remove the folder &quot;{{ f.name }}&quot;? Nothing in it is deleted: its quizzes{{ ' and folders' if node.folders }} move up a level." data-confirm-ok="Remove folder">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="view" value="{{ view }}">
-              <button class="btn btn-secondary btn-xs">Remove folder</button>
-            </form>
-          </div>
-        </details>
-        </div>
-      </div>
-    {% else %}
-      <div class="folder-title-row"><h2 id="folder-title" class="folder-title">{{ 'All quizzes' if view == 'all' else 'Main list' }}</h2>
-        <div class="title-actions">{% if shown %}{{ level_buttons('this list') }}{% endif %}</div></div>
-    {% endif %}
-    <div>
-    {% if node %}{% for child in node.folders %}{{ sub_box(child) }}{% endfor %}{% endif %}
-    {{ quiz_cards(shown) }}
-    </div>
-    {% if not shown %}
-      <p class="card empty small">{% if node %}No quizzes in this folder{{ ' itself' if node.folders }}. Drag a quiz onto it in the folder list, or use a quiz's "Move to" list.{% else %}Every quiz is in a folder. Pick a folder on the left to see its quizzes.{% endif %}</p>
-    {% endif %}
-  </section>
-</div>
+{% if groups or fk.root.folders %}
+{% call folders_page(fk) %}
+  {% if groups|length > 5 %}<input type="search" class="filter-cards" placeholder="Find a quiz…" aria-label="Find a quiz">{% endif %}
+  <div id="folder-items">
+    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
+    {{ quiz_cards(shown, fk.view) }}
+  </div>
+  {% if not shown %}
+    <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+  {% endif %}
+{% endcall %}
 {% endif %}
 {% if not groups %}
   {% if current_user.is_admin %}
@@ -245,7 +125,7 @@
 <script>
 /* folded quizzes, remembered in this browser (a convenience; nothing is lost without
  * it). A folded box remembers its attempts; if the teacher changes one while it's
- * folded, the box is outlined and labelled until it's opened:
+ * folded, the box is outlined and labeled until it's opened:
  *   "Score ready" - an attempt waiting for grading has been graded
  *   "Changed" - a score changed afterwards, or an attempt was taken away
  * What the student does themselves (starting, handing in, a quiz graded automatically)

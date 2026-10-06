@@ -1,23 +1,29 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
-{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
+{% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
+{# the folder list beside the problems needs the room: the whole width of the window #}
+{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
 
-{% macro problem_table(items, ticks=true) %}
+{# here: the folder these rows are listed under (None: All problems or Not in a folder), which
+   is where a drag takes a problem out of #}
+{% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th><th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th>Type</th><th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
-        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+        <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title or 'Untitled' }}”"></td>{% endif %}
-          <td data-label="Title"><strong>{{ item.title or 'Untitled' }}</strong> {{ subject_labels(item.vpgroups) }}
+          <td data-label="Title"><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
+              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong>
             <div class="small muted">
               {% if item.calculator_ok %}Calculator OK{% else %}No calculator{% endif %}
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div>
           </td>
+          {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
           <td data-label="Type"><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span></td>
           <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
           <td data-label="Answer">
@@ -32,7 +38,12 @@
           <td class="actions">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
-            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem')) }}
+            <details class="menu row-menu">
+              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title or 'Untitled' }}”">More</summary>
+              <div class="menu-list">
+                {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem')) }}
+              </div>
+            </details>
           </td>
         </tr>
       {% endfor %}
@@ -52,20 +63,17 @@
 
 {% if single %}
   {{ problem_table(items, ticks=false) }}
+{% elif not total %}
+  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
 {% else %}
-  {{ subject_toolbar('problems', '#containers', total) }}
-  {% if total %}{{ file_bar('problems', all_subjects) }}{% endif %}
-  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-problems">
-    {% for subject, items in boxes %}
-      {% if subject or items %}
-        {% call subject_box('problems', subject, items) %}{{ problem_table(items) }}{% endcall %}
-      {% endif %}
-    {% endfor %}
-  </div>
-  {% if not total %}
-    <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
-  {% endif %}
+  {% call folders_page(fk) %}
+    {% include "_folder_tools.html" %}
+    <div id="folder-items">
+      {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
+      {% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+    </div>
+  {% endcall %}
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

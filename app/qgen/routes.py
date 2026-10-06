@@ -45,7 +45,7 @@ def subject_form_error(kind, new):
         return error
     chosen = [i for i in request.form.getlist('subjects') if S.get_subject(kind, i)]
     if new and not (chosen or name.strip() or request.form.get('unsorted')):
-        return 'Choose a folder for this {}, or Unsorted to file it later.'.format('problem' if kind == 'problems' else 'quiz')
+        return 'Choose a folder for this {}, or Not in a folder to file it later.'.format('problem' if kind == 'problems' else 'quiz')
     return None
 
 
@@ -60,7 +60,7 @@ def save_subjects(kind, item):
 
 
 def subject_page_data(kind, item=None, rel=None, error=None):
-    return {'subject_kind': kind, 'all_subjects': S.subjects(kind),
+    return {'subject_kind': kind, 'all_subjects': S.subject_tree(kind, items=[])[1],
             'ticked_subjects': ticked_subjects(item, rel) if rel else set(),
             'subject_error': error, 'new_item': item is None or item.id is None,
             'unsorted_ticked': bool(request.form.get('unsorted')) if request.method == 'POST' else False,
@@ -156,10 +156,8 @@ def preview_vprob():
 @pw_check
 @admin_only
 def list_vprobs():
-    return render_template('vplist.html', boxes=S.subject_boxes('problems'), total=VProblem.query.count(),
-                           qtypes=REGISTRY, title='Problems', kind='problems', all_subjects=S.subjects('problems'),
-                           show=request.args.get('show', ''), archived=S.archived_counts()[1],
-                           archive_warning=S.archive_warning)
+    return subject_page('problems', 'vplist.html', qtypes=REGISTRY, title='Problems', all_subjects=S.subject_tree('problems')[1],
+                        archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
 #route to list a specific virtual problem
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
@@ -193,7 +191,7 @@ def del_vprob(vpid):
 # ---------------------------------------------------------------- quizzes
 
 def quiz_page(form, title, vq=None, subject_error=None):
-    return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'),
+    return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'), problem_paths=S.subject_paths('problems'),
                            has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
                            retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],
@@ -270,10 +268,8 @@ def edvquiz(vqid):
 @pw_check
 @admin_only
 def list_vquizzes():
-    return render_template('vqlist.html', boxes=S.subject_boxes('quizzes'), total=VQuiz.query.count(),
-                           title='Quizzes', layout=layout, kind='quizzes', all_subjects=S.subjects('quizzes'), rules=RETAKE_RULES,
-                           show=request.args.get('show', ''), archived=S.archived_counts()[0],
-                           archive_warning=S.archive_warning)
+    return subject_page('quizzes', 'vqlist.html', title='Quizzes', layout=layout, rules=RETAKE_RULES,
+                        all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 #route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -357,7 +353,9 @@ def assign():
         #back where they came from (a student page, a quiz's results...), else ready for the next one
         return redirect(next_arg(url_for('qgen.assign')))
     #for the Subject menu, which narrows the Quiz menu in the page
-    quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
+    #a quiz in "Algebra › Linear equations" is also under "Algebra"
+    above = S.subject_ancestors('quizzes')
+    quiz_subjects = {q.id: sorted({a for g in q.vqgroups for a in above.get(g.id, [g.id])}) for q in quizzes}
     #a quiz really chosen (from a link, or sent back after a form error) is kept on show
     quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
     #the people to choose from, in the Users page's folders; from the Users page, some come
@@ -796,6 +794,9 @@ def check_vquiz():
 
 # ---------------------------------------------------------------- subjects
 
+#the Problems and Quizzes pages' folders ("subjects" in the code), drawn like every other
+#folder list on the site (app/templates/_folders.html); a problem or quiz can be in several
+
 def subject_list(kind, **values):
     if kind not in LIST_PAGES:
         abort(404)
@@ -806,7 +807,27 @@ def subject_or_404(kind, sid):
         abort(404)
     return S.get_subject(kind, sid) or abort(404)
 
-#route to make a new problem (or quiz) subject
+def _subject_done(kind, message, error=False, show=None, moved=None):
+    """After a change to a page's folders: JSON for the page's script (a drag), else back to
+    the page showing the same folder (or `show`), with what moved lit up."""
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
+    flash(message, 'error' if error else 'success')
+    show = str(request.form.get('view') or 'all') if show is None else str(show)
+    values = {'folder': show} if show.isdigit() or show == 'main' else {}
+    if moved and not error:
+        values['moved'] = moved
+    return subject_list(kind, **values)
+
+def _item_word(kind, n=1):
+    return ('problem' if kind == 'problems' else 'quiz') if n == 1 else kind
+
+def _item_title(kind, item_id):
+    _g, item_cls, _r, _b = S.subject_kind(kind)
+    item = db.session.get(item_cls, int(item_id)) if str(item_id).isdigit() else None
+    return item.title if item else None
+
+#route to make a new folder (at the top, or inside another: parent)
 @qgen_bp.route('/quiz/subjects/<kind>/new', methods=['POST'])
 @login_required
 @pw_check
@@ -815,16 +836,15 @@ def subject_or_404(kind, sid):
 def new_subject(kind):
     if kind not in LIST_PAGES:
         abort(404)
+    parent = S.get_subject(kind, request.form.get('parent')) if request.form.get('parent') else None
     try:
-        subject = S.create_subject(kind, request.form.get('name'))
+        subject = S.create_subject(kind, request.form.get('name'), parent=parent)
     except S.ServiceError as exc:
-        flash(str(exc), 'error')
-        return subject_list(kind)
-    flash('Made the folder "{}". Check {} and choose "Add to folder" to put them in it.'.format(subject.title, kind), 'success')
+        return _subject_done(kind, str(exc), error=True)
     current_app.logger.info('{} made {} folder ({}) "{}"'.format(current_user.username, kind, subject.id, subject.title))
-    return subject_list(kind, _anchor='subject-{}'.format(subject.id))
+    return _subject_done(kind, 'Folder "{}" made.'.format(subject.title))  # stay where you were
 
-#route to rename a subject
+#route to rename a folder
 @qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/rename', methods=['POST'])
 @login_required
 @pw_check
@@ -834,12 +854,11 @@ def rename_subject(kind, sid):
     subject = subject_or_404(kind, sid)
     try:
         S.rename_subject(kind, subject, request.form.get('name'))
-        flash('Renamed the folder to "{}".'.format(subject.title), 'success')
     except S.ServiceError as exc:
-        flash(str(exc), 'error')
-    return subject_list(kind, _anchor='subject-{}'.format(sid))
+        return _subject_done(kind, str(exc), error=True)
+    return _subject_done(kind, 'Folder renamed to "{}".'.format(subject.title))
 
-#route to delete a subject (the problems or quizzes in it are kept)
+#route to remove a folder (nothing in it is deleted: it moves up a level)
 @qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/delete', methods=['POST'])
 @login_required
 @pw_check
@@ -847,13 +866,76 @@ def rename_subject(kind, sid):
 @post_form_only
 def delete_subject(kind, sid):
     subject = subject_or_404(kind, sid)
-    name = subject.title
-    S.delete_subject(subject)
-    flash('Deleted the folder "{}". Its {} are kept: in Unsorted, or in their other folders.'.format(name, kind), 'success')
+    name, parent = subject.title, subject.parent_id
+    S.delete_subject(subject, kind)
     current_app.logger.info('{} deleted {} folder ({}) "{}"'.format(current_user.username, kind, sid, name))
-    return subject_list(kind)
+    return _subject_done(kind, 'Folder "{}" removed; the {} in it moved up a level.'.format(name, kind),
+                         show=(parent or 'all') if request.form.get('view') == str(sid) else None)
 
-#route to put the checked problems (or quizzes) in a subject, or take them out of it
+#dragging (and the folder's "Move to" list): a problem or quiz onto a folder (from a folder:
+#moved out of that one; from All or Not in a folder: put in it), onto Not in a folder (out
+#of the folder it came from), or a folder onto a folder ("top": the top level)
+@qgen_bp.route('/quiz/subjects/<kind>/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def move_subject(kind):
+    if kind not in LIST_PAGES:
+        abort(404)
+    to, came_from = request.form.get('to'), request.form.get('from') or ''
+    here = S.get_subject(kind, came_from) if came_from.isdigit() else None
+    what = 'problem' if kind == 'problems' else 'quiz'
+    try:
+        if request.form.get('folder'):
+            subject = subject_or_404(kind, request.form.get('folder'))
+            target = S.get_subject(kind, to) if str(to).isdigit() else None
+            S.move_subject(kind, subject, target)
+            return _subject_done(kind, 'Moved "{}" to {}.'.format(subject.title, '"{}"'.format(target.title) if target else 'the top'),
+                                 moved='folder:{}'.format(subject.id))
+        item_id = request.form.get(what)
+        if to in (None, '', 'top', 'main'):
+            if here is None:
+                return _subject_done(kind, 'Drag it out of a folder to take it out.', error=True)
+            item = S.file_one(kind, item_id, here, add=False)
+            return _subject_done(kind, 'Took "{}" out of "{}".'.format(item.title, here.title), moved='{}:{}'.format(what, item.id))
+        target = subject_or_404(kind, to)
+        item = S.file_one(kind, item_id, target, moving_from=here)
+        return _subject_done(kind, ('Moved "{}" to "{}".' if here else 'Put "{}" in "{}".').format(item.title, target.title),
+                             moved='{}:{}'.format(what, item.id))
+    except S.ServiceError as exc:
+        return _subject_done(kind, str(exc), error=True)
+
+#one problem's (or quiz's) "+ Add to folder…" list (it stays in its others) and a folder chip's ✕
+@qgen_bp.route('/quiz/subjects/<kind>/add', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def add_to_subject(kind):
+    what = 'problem' if kind == 'problems' else 'quiz'
+    target = subject_or_404(kind, request.form.get('to'))
+    try:
+        item = S.file_one(kind, request.form.get(what), target)
+    except S.ServiceError as exc:
+        return _subject_done(kind, str(exc), error=True)
+    return _subject_done(kind, 'Put "{}" in "{}".'.format(item.title, target.title), moved='{}:{}'.format(what, item.id))
+
+@qgen_bp.route('/quiz/subjects/<kind>/remove', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def remove_from_subject(kind):
+    what = 'problem' if kind == 'problems' else 'quiz'
+    folder = subject_or_404(kind, request.form.get('folder'))
+    try:
+        item = S.file_one(kind, request.form.get(what), folder, add=False)
+    except S.ServiceError as exc:
+        return _subject_done(kind, str(exc), error=True)
+    return _subject_done(kind, 'Took "{}" out of "{}".'.format(item.title, folder.title))
+
+#route to put the checked problems (or quizzes) in a folder, or take them out of it
 @qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
 @login_required
 @pw_check
@@ -862,19 +944,50 @@ def delete_subject(kind, sid):
 def file_subject(kind):
     if kind not in LIST_PAGES:
         abort(404)
-    #"Add to" or "Remove from" the subject chosen in the menu
+    #"Add to" or "Remove from" the folder chosen in the menu
     add = request.form.get('action') != 'remove'
     subject = S.get_subject(kind, request.form.get('subject'))
     items = request.form.getlist('items')
     if subject is None:
-        flash('Choose a folder first.', 'error')
-    elif not items:
-        flash('Check at least one first.', 'error')
-    else:
-        count = S.file_items(kind, items, subject, add=add)
-        what = kind if count != 1 else kind[:-1] if kind == 'problems' else 'quiz'
-        flash('{} {} {} "{}".'.format(count, what, 'added to' if add else 'taken out of', subject.title), 'success')
-    return subject_list(kind)
+        return _subject_done(kind, 'Choose a folder first.', error=True)
+    if not items:
+        return _subject_done(kind, 'Check at least one first.', error=True)
+    count = S.file_items(kind, items, subject, add=add)
+    return _subject_done(kind, '{} {} {} "{}".'.format(count, _item_word(kind, count), 'put in' if add else 'taken out of', subject.title))
+
+
+def subject_kit(kind, view, node, root, flat, nodes):
+    """The Problems or Quizzes page's folders, for _folders.html."""
+    from app import folder_tree
+    page = LIST_PAGES[kind]
+    unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
+    return folder_tree.kit(
+        view, node, root, flat, nodes,
+        page=lambda v: url_for(page, folder=v) if str(v) != 'all' else url_for(page),
+        create_url=url_for('qgen.new_subject', kind=kind), move_url=url_for('qgen.move_subject', kind=kind),
+        rename_url=lambda fid: url_for('qgen.rename_subject', kind=kind, sid=fid),
+        delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
+        add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
+        unit=unit, units=units, all_label='All ' + units, order=('all', 'main'), all_count=root['all_count'],
+        name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add to folder…', drag_what='a ' + unit,
+        hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
+             'Students never see them.'.format(units, unit),
+        fold_key='qgen-folded-{}-folders'.format(kind), open_key='qgen-open-{}-subfolders'.format(kind))
+
+
+def subject_page(kind, template, **extra):
+    """The Problems or Quizzes page: ?folder= all (the default), main (not in a folder) or a
+    folder's id."""
+    from app import folder_tree
+    root, flat, nodes = S.subject_tree(kind)
+    _g, item_cls, rel, _b = S.subject_kind(kind)
+    everything = item_cls.query.order_by(item_cls.id.desc()).all()
+    root['all_count'] = len(everything)
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
+    shown = node['items'] if node else everything if view == 'all' else root['items']
+    fk = subject_kit(kind, view, node, root, flat, nodes)
+    return render_template(template, fk=fk, items=shown, total=len(everything), kind=kind,
+                           moved=request.args.get('moved', ''), show=request.args.get('show', ''), **extra)
 
 
 # ---------------------------------------------------------------- the archive
@@ -905,38 +1018,76 @@ def attempt_gone(cidx):
     flash('Your teacher has taken this quiz away.', 'info')
     return redirect(url_for('user.mypage'))
 
-#route to the archive of deleted attempts
+def archive_kit(view, node, root, flat, nodes, total):
+    """The Archive's folders, for _folders.html."""
+    from app import folder_tree
+    return folder_tree.kit(
+        view, node, root, flat, nodes,
+        page=lambda v: url_for('qgen.archive', folder=v) if str(v) != 'all' else url_for('qgen.archive'),
+        create_url=url_for('qgen.new_archive_folder'), move_url=url_for('qgen.move_archive_item'),
+        rename_url=lambda fid: url_for('qgen.rename_archive_folder', fid=fid),
+        delete_url=lambda fid: url_for('qgen.delete_archive_folder', fid=fid),
+        unit='attempt', units='attempts', all_label='All archived', order=('all', 'main'), all_count=total,
+        name=lambda f: f.name, folder_icon=lambda f: '👤' if f.student_id else '📁',
+        placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
+        hint='Each student has a folder (👤) for their archived attempts; you can add your own and put folders inside folders.',
+        fold_key='qgen-folded-archive-folders', open_key='qgen-open-archive-subfolders')
+
+def _archive_done(message, error=False, show=None, moved=None):
+    """After a change to the Archive's folders: JSON for the page's script (a drag), else back
+    to the Archive showing the same folder (or `show`)."""
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
+    flash(message, 'error' if error else 'success')
+    show = str(request.form.get('view') or 'all') if show is None else str(show)
+    values = {'folder': show} if show.isdigit() or show == 'main' else {}
+    if moved and not error:
+        values['moved'] = moved
+    return redirect(url_for('qgen.archive', **values))
+
+#route to the archive of deleted attempts: ?folder= all (the default), main (not in a folder)
+#or a folder's id
 @qgen_bp.route('/quiz/archive', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def archive():
-    folders = S.archive_folders()
-    blockers = {a.id: S.restore_blocker(a) for f in folders for a in f['items']}
-    return render_template('archive.html', folders=folders, blockers=blockers, total=len(blockers), title='Archive',
-                           move_to=[f['folder'] for f in folders if f['folder'] is not None])
+    from app import folder_tree
+    root, flat, nodes, attempts = S.archive_tree()
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
+    shown = node['items'] if node else attempts if view == 'all' else root['items']
+    #whether each attempt shown (here or in the folder boxes) can be put back
+    showing = list(shown)
+    if node:
+        todo = list(node['folders'])
+        while todo:
+            n = todo.pop()
+            showing += n['items']
+            todo += n['folders']
+    blockers = {a.id: S.restore_blocker(a) for a in showing}
+    fk = archive_kit(view, node, root, flat, nodes, len(attempts))
+    return render_template('archive.html', fk=fk, items=shown, blockers=blockers, total=len(attempts), title='Archive',
+                           moved=request.args.get('moved', ''))
 
 def archive_folder_or_404(fid):
-    from .models import ArchiveFolder
-    folder = db.session.get(ArchiveFolder, fid)
-    if folder is None or folder.removed:
+    folder = S.get_archive_folder(fid)
+    if folder is None:
         abort(404)
     return folder
 
-#route to make an Archive folder of the teacher's own
+#route to make an Archive folder of the teacher's own (at the top, or inside another)
 @qgen_bp.route('/quiz/archive/folders/new', methods=['POST'])
 @login_required
 @pw_check
 @admin_only
 @post_form_only
 def new_archive_folder():
+    parent = S.get_archive_folder(request.form.get('parent')) if request.form.get('parent') else None
     try:
-        folder = S.create_archive_folder(request.form.get('name'))
+        folder = S.create_archive_folder(request.form.get('name'), parent=parent)
     except S.ServiceError as exc:
-        flash(str(exc), 'error')
-        return redirect(url_for('qgen.archive'))
-    flash('Made the folder "{}". Check archived attempts and choose "Move to folder" to put them in it.'.format(folder.name), 'success')
-    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(folder.id)))
+        return _archive_done(str(exc), error=True)
+    return _archive_done('Folder "{}" made.'.format(folder.name))  # stay where you were
 
 #route to rename an Archive folder
 @qgen_bp.route('/quiz/archive/folders/<int:fid>/rename', methods=['POST'])
@@ -948,12 +1099,11 @@ def rename_archive_folder(fid):
     folder = archive_folder_or_404(fid)
     try:
         S.rename_archive_folder(folder, request.form.get('name'))
-        flash('Renamed the folder to "{}".'.format(folder.name), 'success')
     except S.ServiceError as exc:
-        flash(str(exc), 'error')
-    return redirect(url_for('qgen.archive', _anchor='folder-folder-{}'.format(fid)))
+        return _archive_done(str(exc), error=True)
+    return _archive_done('Folder renamed to "{}".'.format(folder.name))
 
-#route to delete an Archive folder (what's in it moves to Unsorted)
+#route to remove an Archive folder (what's in it moves up a level)
 @qgen_bp.route('/quiz/archive/folders/<int:fid>/delete', methods=['POST'])
 @login_required
 @pw_check
@@ -961,13 +1111,40 @@ def rename_archive_folder(fid):
 @post_form_only
 def delete_archive_folder(fid):
     folder = archive_folder_or_404(fid)
-    name = folder.name
-    moved = S.delete_archive_folder(folder)
-    flash('Deleted the folder "{}".{}'.format(name, ' Its {} attempt{} moved to Unsorted.'.format(moved, '' if moved == 1 else 's') if moved else ''), 'success')
+    name, parent = folder.name, folder.parent_id
+    S.delete_archive_folder(folder)
     current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
-    return redirect(url_for('qgen.archive'))
+    return _archive_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
+                         show=(parent or 'all') if request.form.get('view') == str(fid) else None)
 
-#route to move the checked archived attempts to a folder (or to Unsorted)
+#dragging, and the "Move to…" lists: an archived attempt onto a folder (or Not in a folder),
+#or a folder onto a folder ("top": the top level)
+@qgen_bp.route('/quiz/archive/folders/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def move_archive_item():
+    to = request.form.get('to')
+    target = None if to in (None, '', 'top', 'main') else S.get_archive_folder(to)
+    if to not in (None, '', 'top', 'main') and target is None:
+        return _archive_done('That folder doesn\'t exist any more.', error=True)
+    where = '"{}"'.format(target.name) if target else S.UNSORTED
+    try:
+        if request.form.get('folder'):
+            folder = archive_folder_or_404(request.form.get('folder'))
+            S.move_archive_folder(folder, target)
+            return _archive_done('Moved "{}" to {}.'.format(folder.name, '"{}"'.format(target.name) if target else 'the top'),
+                                 moved='folder:{}'.format(folder.id))
+        a = db.session.get(ArchivedAttempt, int(request.form.get('attempt'))) if str(request.form.get('attempt', '')).isdigit() else None
+        if a is None:
+            return _archive_done('That archived attempt isn\'t there any more.', error=True)
+        S.move_archived([a.id], target)
+        return _archive_done('Moved {}\'s "{}" to {}.'.format(a.student_name, a.quiz_title, where), moved='attempt:{}'.format(a.id))
+    except S.ServiceError as exc:
+        return _archive_done(str(exc), error=True)
+
+#route to move the checked archived attempts to a folder (or to Not in a folder)
 @qgen_bp.route('/quiz/archive/move', methods=['POST'])
 @login_required
 @pw_check
@@ -975,16 +1152,14 @@ def delete_archive_folder(fid):
 @post_form_only
 def move_archived():
     target = request.form.get('folder', '')
-    folder = None if target == 'unsorted' else (archive_folder_or_404(int(target)) if target.isdigit() else None)
-    if target != 'unsorted' and folder is None:
-        flash('Choose a folder first.', 'error')
-        return redirect(url_for('qgen.archive'))
+    folder = None if target in ('unsorted', 'top') else S.get_archive_folder(target)
+    if target not in ('unsorted', 'top') and folder is None:
+        return _archive_done('Choose a folder first.', error=True)
     moved = S.move_archived(request.form.getlist('items'), folder)
     if not moved:
-        flash('Check at least one first.', 'error')
-    else:
-        flash('Moved {} attempt{} to "{}".'.format(moved, '' if moved == 1 else 's', folder.name if folder else S.UNSORTED), 'success')
-    return redirect(url_for('qgen.archive'))
+        return _archive_done('Check at least one first.', error=True)
+    return _archive_done('Moved {} attempt{} to {}.'.format(moved, '' if moved == 1 else 's',
+                                                             '"{}"'.format(folder.name) if folder else S.UNSORTED))
 
 #route to look at one archived attempt
 @qgen_bp.route('/quiz/archive/<int:aid>', methods=['GET'])

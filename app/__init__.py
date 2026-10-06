@@ -64,6 +64,19 @@ def when_filter(d, style='day'):
         return '{:%b} {}, {}'.format(d, d.day, clock)
     return '{:%a %b} {}, {}'.format(d, d.day, clock)
 
+@app.template_filter('groupby_month')
+def groupby_month(attempts, attr='archived_at'):
+    """Archived attempts by the month they were archived, in the order given (newest first):
+    [{'label': 'October 2026', 'items': [...]}]."""
+    out = []
+    for a in attempts:
+        d = getattr(a, attr)
+        label = '{:%B %Y}'.format(d) if d else 'Undated'
+        if not out or out[-1]['label'] != label:
+            out.append({'label': label, 'items': []})
+        out[-1]['items'].append(a)
+    return out
+
 @app.context_processor
 def page_helpers():
     def review_count():

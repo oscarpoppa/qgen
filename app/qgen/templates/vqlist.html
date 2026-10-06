@@ -1,27 +1,36 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
-{% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
+{% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
+{# the folder list beside the quizzes needs the room: the whole width of the window #}
+{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
 
-{% macro quiz_table(items, ticks=true) %}
+{# here: the folder these rows are listed under (None: All quizzes or Not in a folder), which
+   is where a drag takes a quiz out of #}
+{% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th><th>Problems</th><th>Assigned</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th>{% if fk %}<th>Folders</th>{% endif %}<th>Problems</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
-        <tr data-item="{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+        <tr data-item="{{ item.id }}" data-box="quiz:{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title }}”"></td>{% endif %}
-          <td data-label="Quiz"><strong>{{ item.title }}</strong> {{ subject_labels(item.vqgroups) }}
+          <td data-label="Quiz"><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
+              data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title }}</strong>
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
               · {% if item.calculator_allowed %}calculator OK{% else %}no calculator{% endif %}
               {% if item.shuffle_order %}· order shuffled{% endif %}
               {% set own = item.cquizzes|selectattr('own_retake_rule')|map(attribute='assignee')|unique|list|length %}
+              · assigned {{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}
               · retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
               <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</div></td>
+          {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
           <td data-label="Problems">
+            {# the problems fold away (a long quiz would make a tall row) #}
+            <details class="problem-list"><summary class="small">{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
             <ol class="small" style="margin:0;padding-left:1.2em">
               {% for e in entries %}
                 {% if layout.is_group(e) %}
@@ -31,15 +40,20 @@
                   <li>{{ byid[e].title if e in byid else 'missing problem ' ~ e }}</li>
                 {% endif %}
               {% endfor %}
-            </ol>
+            </ol></details>
           </td>
-          <td data-label="Assigned">{{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</td>
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% endif %}
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
-            {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
+            {# the rest in a small menu (keeps a row short), as on the Users page #}
+            <details class="menu row-menu">
+              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title }}”">More</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
+                {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
+              </div>
+            </details>
           </td>
         </tr>
       {% endfor %}
@@ -57,20 +71,17 @@
 
 {% if single %}
   {{ quiz_table(items, ticks=false) }}
+{% elif not total %}
+  <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
 {% else %}
-  {{ subject_toolbar('quizzes', '#containers', total) }}
-  {% if total %}{{ file_bar('quizzes', all_subjects) }}{% endif %}
-  <div id="containers" class="subject-boxes" data-store="qgen-open-subjects-quizzes">
-    {% for subject, items in boxes %}
-      {% if subject or items %}
-        {% call subject_box('quizzes', subject, items) %}{{ quiz_table(items) }}{% endcall %}
-      {% endif %}
-    {% endfor %}
-  </div>
-  {% if not total %}
-    <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}">Build one from your problems</a>.</div>
-  {% endif %}
+  {% call folders_page(fk) %}
+    {% include "_folder_tools.html" %}
+    <div id="folder-items">
+      {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
+      {% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+    </div>
+  {% endcall %}
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/subjects.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

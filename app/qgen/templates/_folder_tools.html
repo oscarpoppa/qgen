@@ -1,0 +1,21 @@
+{# Above the Problems and Quizzes pages' lists: a search, and a bar for the checked rows
+   (put them in a folder, or take them out). It stays at the top while scrolling. #}
+{% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
+<div class="folder-tools-bar">
+  {% if total > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Search {{ noun }}…" aria-label="Search {{ noun }}">{% endif %}
+  <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="view" value="{{ fk.view }}">
+    <span class="muted small file-count" aria-live="polite">0 checked</span>
+    {% if all_subjects %}
+      <label class="sr-only" for="file-subject">Folder</label>
+      <select id="file-subject" name="subject">
+        {% for g, depth in all_subjects %}<option value="{{ g.id }}"{% if fk.node and fk.node.folder.id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}📁 {{ g.title }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-sm" name="action" value="add">Put in folder</button>
+      <button class="btn btn-secondary btn-sm" name="action" value="remove">Take out of folder</button>
+    {% else %}
+      <span class="muted small">Make a folder first (+ New folder), then check {{ noun }} to put in it.</span>
+    {% endif %}
+  </form>
+</div>

@@ -365,3 +365,44 @@ def test_student_wording(app_db):
     assert '1 try</span>' in mine
     # the teacher's pages keep their own words
     assert 'Hand it in' not in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+
+
+# ---------------------------------------------------------------- one folder style
+
+def test_every_folder_page_is_drawn_the_same_way(app_db):
+    import os
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    make_quiz(app, teach)
+    give(__import__('app').qgen.models.VQuiz.query.one(), 'sam')
+    pages = {'/mypage': sam, '/userdet': teach, '/quiz/listvp': teach, '/quiz/listvq': teach, '/quiz/archive': teach}
+    for url, who in pages.items():
+        page = who.get(url).data.decode()
+        assert '<div class="folders-layout"' in page and 'class="folder-side"' in page, url
+        assert '📥</span> Not in a folder' in page and '🗂️</span> All' in page and '+ New folder' in page, url
+        assert 'data-fold-key="' in page and 'Expand all' in page, url
+    # one name for "in no folder" everywhere on screen
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app')
+    for folder, _dirs, files in os.walk(root):
+        for name in files:
+            if name.endswith('.html'):
+                text = open(os.path.join(folder, name)).read()
+                for old in ('Unsorted', 'Main list', 'Top level', 'No folder'):
+                    assert old not in text, (name, old)
+    # each page remembers its own folders (Messages no longer shares the Users page's)
+    keys = [who.get(url).data.decode().split('data-fold-key="')[1].split('"')[0] for url, who in pages.items()]
+    keys.append(teach.get('/messages').data.decode().split('data-fold-key="')[1].split('"')[0])
+    assert len(set(keys)) == len(keys)
+
+
+def test_my_quizzes_to_do_then_done(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
+    done, todo = give(a, 'sam'), give(b, 'sam')
+    from app.qgen import services as S
+    S.submit(done, {1: '4'})
+    page = sam.get('/mypage').data.decode()
+    assert page.index('>To do <span') < page.index('“B”' if '“B”' in page else '>B</h2>')
+    rest = page[page.index('<details class="month-box done-box"'):]
+    assert '>A</h2>' in rest and '>B</h2>' not in rest and 'data-remember="done-main"' in rest

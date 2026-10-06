@@ -179,7 +179,8 @@ def test_deleting_a_student_keeps_their_results(app_db):
     page = teacher.get('/quiz/archive').data.decode()
     # both attempts stay in sam's folder (it keeps its name), each marked as a deleted account
     assert page.count('account deleted') == 2 and '100%' in page and 'Not started' in page
-    assert page.count('📁 sam</span>') == 1 and 'aria-label="2 archived"' in page
+    from test_subjects import side_counts
+    assert side_counts(page).get('sam') == 2
     view = teacher.get('/quiz/archive/{}'.format(rows[0].id)).data.decode()
     assert '100%' in view and "account was deleted" in view
     # can't be restored, even to a new account with the same name
@@ -295,36 +296,46 @@ def test_archive_through_the_api(app_db):
     assert ArchivedAttempt.query.count() == 0
 
 
+def archive_view(teacher, folder=None):
+    """(the page, the attempts it lists as "student: quiz") for the Archive's ?folder=."""
+    import re
+    page = teacher.get('/quiz/archive' + ('?folder={}'.format(folder) if folder is not None else '')).data.decode()
+    return page, re.findall(r'aria-label="Check ([^’]+)’s “([^”]+)”"', page)
+
+
 def test_the_archive_has_a_folder_for_each_student(app_db):
     app, db = app_db
+    from test_subjects import side_counts
     from app.user.models import User
     from app.qgen.models import CQuiz, ArchiveFolder
     teacher = login(app, 'teach')
     vq, probs = setup_quiz(app, teacher, 'numeric')
-    # every student has a folder, even with nothing in it yet; teachers don't
-    page = teacher.get('/quiz/archive').data.decode()
-    assert '📁 kim</span>' in page and '📁 sam</span>' in page and '📁 teach</span>' not in page
-    assert page.index('📁 kim') < page.index('📁 sam') and 'Nothing archived for sam yet.' in page
+    # every student has a folder (👤), even with nothing in it yet; teachers don't
+    page, _ = archive_view(teacher)
+    counts = side_counts(page)
+    assert 'kim' in counts and 'sam' in counts and 'teach' not in counts
+    assert page.index('<span class="side-name">kim') < page.index('<span class="side-name">sam') and '👤' in page
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
-    assert 'id="folder-folder-{0}" data-box="folder-{0}" data-empty'.format(sam_folder.id) in page
+    assert 'Nothing archived for sam yet.' in archive_view(teacher, sam_folder.id)[0]
     # a new student gets one automatically
     u = User(username='ava', is_admin=False)
     u.set_password('pw-for-tests')
     db.session.add(u)
     db.session.commit()
-    assert '📁 ava</span>' in teacher.get('/quiz/archive').data.decode()
-    # a deleted attempt goes in its student's folder
+    assert 'ava' in side_counts(archive_view(teacher)[0])
+    # an archived attempt goes in its student's folder
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam'), ids('kim')]})
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.filter_by(assignee=ids('sam')).one().id))
-    page = teacher.get('/quiz/archive').data.decode()
-    sam = page.split('📁 sam</span>')[1].split('</details>')[0]
-    kim = page.split('📁 kim</span>')[1].split('</details>')[0]
-    assert 'Week 1' in sam and 'aria-label="1 archived"' in sam
-    assert 'Week 1' not in kim and 'Nothing archived for kim yet.' in kim
+    kim_folder = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
+    assert archive_view(teacher, sam_folder.id)[1] == [('sam', 'Week 1')]
+    assert archive_view(teacher, kim_folder.id)[1] == [] and side_counts(archive_view(teacher)[0])['sam'] == 1
+    # grouped by the month it was archived
+    assert '<strong>{:%B %Y}</strong>'.format(__import__('datetime').datetime.now()) in archive_view(teacher)[0]
 
 
-def test_archive_folders_can_be_made_renamed_moved_and_deleted(app_db):
+def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
     app, db = app_db
+    from test_subjects import side_counts
     from app.qgen.models import CQuiz, ArchiveFolder, ArchivedAttempt
     teacher = login(app, 'teach')
     vq, probs = setup_quiz(app, teacher, 'numeric')
@@ -334,54 +345,66 @@ def test_archive_folders_can_be_made_renamed_moved_and_deleted(app_db):
         teacher.post('/quiz/delcq/{}'.format(cq.id))
     sam_f = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     kim_f = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
-    page = teacher.get('/quiz/archive').data.decode()
-    assert 'aria-label="Rename the folder “sam”"' in page and 'aria-label="Delete the folder “sam”"' in page
-    assert 'Its 2 attempts move to Unsorted.' in page and 'id="folder-unsorted"' not in page  # no Unsorted while empty
+    page, _ = archive_view(teacher, sam_f.id)
+    assert 'Folder options' in page and 'Remove the folder “sam”? Nothing in it is deleted' in page
 
     # your own folder, and moving attempts into it
     teacher.post('/quiz/archive/folders/new', data={'name': '2025-26'})
     year = ArchiveFolder.query.filter_by(name='2025-26').one()
     assert year.student_id is None
-    for bad in ('2025-26', ' unsorted ', '', 'x' * 65):          # taken, kept for Unsorted, empty, too long
+    for bad in ('2025-26', ' not in a folder ', '', 'x' * 65):   # taken, kept for Not in a folder, empty, too long
         teacher.post('/quiz/archive/folders/new', data={'name': bad})
     assert ArchiveFolder.query.count() == 3
     sams = [a.id for a in ArchivedAttempt.query.filter_by(folder_id=sam_f.id)]
     teacher.post('/quiz/archive/move', data={'folder': str(year.id), 'items': sams[:1]})
     assert ArchivedAttempt.query.filter_by(folder_id=year.id).count() == 1
+    # one at a time ("Move to…", or a drag)
+    r = teacher.post('/quiz/archive/folders/move', data={'attempt': sams[1], 'to': year.id, 'view': sam_f.id})
+    assert r.headers['Location'].endswith('/quiz/archive?folder={}&moved=attempt:{}'.format(sam_f.id, sams[1]))
+    assert ArchivedAttempt.query.filter_by(folder_id=year.id).count() == 2
+    teacher.post('/quiz/archive/folders/move', data={'attempt': sams[1], 'to': sam_f.id})
 
-    # delete a folder: what's in it moves to Unsorted, which now shows; it can't be renamed or deleted
+    # folders inside folders: a student's folder can go in yours
+    teacher.post('/quiz/archive/folders/move', data={'folder': kim_f.id, 'to': year.id})
+    db.session.expire_all()
+    assert db.session.get(ArchiveFolder, kim_f.id).parent_id == year.id
+    assert side_counts(archive_view(teacher)[0])['2025-26'] == 2  # its own, and kim's inside it
+    FETCH = {'X-Requested-With': 'fetch'}
+    res = teacher.post('/quiz/archive/folders/move', data={'folder': year.id, 'to': kim_f.id}, headers=FETCH)
+    assert res.status_code == 400 and 'inside itself' in res.get_json()['error']
+
+    # removing a folder: what's in it moves up a level (here, to the top: not in a folder)
     r = teacher.post('/quiz/archive/folders/{}/delete'.format(year.id), follow_redirects=True)
-    assert b'moved to Unsorted' in r.data
-    page = r.data.decode()
-    assert 'id="folder-unsorted"' in page and 'Rename the folder “Unsorted”' not in page
-    assert db.session.get(ArchiveFolder, year.id) is None
+    assert b'moved up a level' in r.data
+    db.session.expire_all()
+    assert db.session.get(ArchiveFolder, year.id) is None and db.session.get(ArchiveFolder, kim_f.id).parent_id is None
     assert ArchivedAttempt.query.filter_by(folder_id=None).count() == 1
-    teacher.post('/quiz/archive/move', data={'folder': 'unsorted', 'items': sams[1:]})
+    assert len(archive_view(teacher, 'main')[1]) == 1
+    teacher.post('/quiz/archive/move', data={'folder': 'top', 'items': sams[1:]})
     assert ArchivedAttempt.query.filter_by(folder_id=None).count() == 2
 
-    # deleting a student's folder: it's gone (not made again on its own) until their next deleted attempt
+    # removing a student's folder: gone (not made again on its own) until their next archived attempt
     teacher.post('/quiz/archive/folders/{}/delete'.format(sam_f.id))
-    assert '📁 sam</span>' not in teacher.get('/quiz/archive').data.decode()
+    assert 'sam' not in side_counts(archive_view(teacher)[0])
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
-    page = teacher.get('/quiz/archive').data.decode()
-    assert 'aria-label="1 archived"' in page.split('📁 sam</span>')[1].split('</details>')[0]   # only the new one
-    assert ArchivedAttempt.query.filter_by(folder_id=None).count() == 2                  # older ones stay in Unsorted
+    assert side_counts(archive_view(teacher)[0])['sam'] == 1                                # only the new one
+    assert ArchivedAttempt.query.filter_by(folder_id=None).count() == 2                  # older ones stay put
 
-    # renaming a student's folder makes it an ordinary folder; the student gets a new one
+    # renaming a student's folder keeps it theirs: their next archived attempts go there too
     teacher.post('/quiz/archive/folders/{}/rename'.format(kim_f.id), data={'name': 'Kim - Period 2'})
     db.session.expire_all()
     renamed = db.session.get(ArchiveFolder, kim_f.id)
-    assert renamed.name == 'Kim - Period 2' and renamed.student_id is None
-    page = teacher.get('/quiz/archive').data.decode()
-    assert '📁 Kim - Period 2</span>' in page and '📁 kim</span>' in page
+    assert renamed.name == 'Kim - Period 2' and renamed.student_id == ids('kim') and renamed.own_name
+    counts = side_counts(archive_view(teacher)[0])
+    assert 'Kim - Period 2' in counts and 'kim' not in counts
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('kim')]})
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
-    new_kim = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
-    assert ArchivedAttempt.query.filter_by(folder_id=new_kim.id).count() == 1
-    assert ArchivedAttempt.query.filter_by(folder_id=kim_f.id).count() == 1
+    assert ArchivedAttempt.query.filter_by(folder_id=kim_f.id).count() == 2
+    assert ArchiveFolder.query.filter_by(student_id=ids('kim')).count() == 1
     # names must stay different, and a forged form does nothing
-    teacher.post('/quiz/archive/folders/{}/rename'.format(kim_f.id), data={'name': 'kim'})
+    teacher.post('/quiz/archive/folders/new', data={'name': 'Spare'})
+    teacher.post('/quiz/archive/folders/{}/rename'.format(kim_f.id), data={'name': 'spare'})
     db.session.expire_all()
     assert db.session.get(ArchiveFolder, kim_f.id).name == 'Kim - Period 2'
     assert login(app, 'sam').post('/quiz/archive/folders/new', data={'name': 'Mine'}).status_code in (302, 403)
@@ -430,8 +453,9 @@ def test_student_folders_follow_the_student(app_db):
     u = db.session.get(User, ids('sam'))
     u.username = 'samuel'
     db.session.commit()
-    page = teacher.get('/quiz/archive').data.decode()
-    assert '📁 samuel</span>' in page and '📁 sam</span>' not in page
+    from test_subjects import side_counts
+    counts = side_counts(teacher.get('/quiz/archive').data.decode())
+    assert 'samuel' in counts and 'sam' not in counts
     # the API says which folder an attempt is in
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('samuel')]})
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))

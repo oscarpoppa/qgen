@@ -45,6 +45,8 @@ class VPGroup(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
+    #the folder it's in (None: at the top); removing a folder moves what's in it up a level
+    parent_id = db.Column(db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE'), nullable=True, index=True)
 
     vproblems = db.relationship('VProblem', back_populates='vpgroups', secondary=vproblem_vpgroup, lazy=True)
 
@@ -58,6 +60,8 @@ class VQGroup(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
+    #the folder it's in (None: at the top); removing a folder moves what's in it up a level
+    parent_id = db.Column(db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE'), nullable=True, index=True)
 
     vquizzes = db.relationship('VQuiz', back_populates='vqgroups', secondary=vquiz_vqgroup, lazy=True)
 
@@ -384,17 +388,21 @@ LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
 
 
 #a folder on the Archive page. Each student gets one automatically (student_id), named
-#after them; the teacher can also make their own. Renaming a student's folder makes it
-#an ordinary folder (the student gets a new one in their name). Deleting a folder moves
-#what's in it to Unsorted (attempts with no folder); a deleted student folder's row is
-#kept (removed=True) so it isn't made again on its own, and the student's next archived
-#attempt brings it back under their name. If the account is deleted, the folder stays.
+#after them; the teacher can also make their own, and put folders in folders. Renaming a
+#student's folder keeps it theirs (own_name: it keeps the new name). Removing a folder moves
+#what's in it up a level; a removed student folder's row is kept (removed=True) so it isn't
+#made again on its own, and the student's next archived attempt brings it back under their
+#name. If the account is deleted, the folder stays.
 class ArchiveFolder(db.Model):
     __tablename__ = 'archive_folder'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), unique=True)
     removed = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
+    #the folder it's in (None: at the top)
+    parent_id = db.Column(db.Integer, db.ForeignKey('archive_folder.id', ondelete='CASCADE'), nullable=True, index=True)
+    #the teacher renamed a student's folder: it keeps that name (else it follows their username)
+    own_name = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     def __repr__(self):
         return '<Archive folder {}>'.format(self.name)

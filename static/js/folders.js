@@ -49,6 +49,7 @@
   subs.forEach(function (d) { if (opened[d.dataset.sub]) d.open = true; });
   subs.forEach(function (d) {
     d.addEventListener('toggle', function () {
+      if (searching) return;  // opened by a search: not remembered
       if (d.open) opened[d.dataset.sub] = true; else delete opened[d.dataset.sub];
       save(OPEN, opened);
     });
@@ -57,7 +58,7 @@
   document.querySelectorAll('[data-level]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var level = btn.closest('.level'), want = btn.dataset.level === 'open';
-      level.querySelectorAll('details.sub-box, details.quiz-card').forEach(function (d) {
+      level.querySelectorAll('details.sub-box, details.quiz-card, details.month-box').forEach(function (d) {
         if (d.parentElement.closest('.level') === level) d.open = want;
       });
     });
@@ -94,6 +95,96 @@
       setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
     }
   })();
+
+  //after a "Move to" list, "+ Add to folder…" or a bar's button (the page came back with
+  //?moved=quiz:12): the same glow as after a drag; the address is tidied
+  (function () {
+    var params = new URLSearchParams(location.search), moved = params.get('moved');
+    if (!moved) return;
+    params.delete('moved');
+    try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch (e) {}
+    var box = document.querySelector('[data-box="' + moved.replace(/"/g, '') + '"]');
+    if (!box) return;
+    var shut = box.closest('details.sub-box');
+    if (shut) shut.open = true;
+    box.classList.add('just-moved');
+    box.scrollIntoView({ block: 'center' });
+    setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
+  })();
+
+  //checked rows (the bar above the list puts them in a folder): something listed twice
+  //(in a folder and a folder inside it) is checked in both; the bar says how many
+  var ticks = Array.prototype.slice.call(document.querySelectorAll('.folder-main input[name="items"]'));
+  var fileForm = document.getElementById('file-form'), fileCount = document.querySelector('.file-count');
+  function counted() {
+    var ids = {};
+    ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
+    return Object.keys(ids).length;
+  }
+  ticks.forEach(function (t) {
+    t.addEventListener('change', function () {
+      ticks.forEach(function (o) { if (o.value === t.value) o.checked = t.checked; });
+      if (fileCount) { fileCount.textContent = counted() + ' checked'; fileCount.classList.remove('error'); }
+    });
+  });
+  if (fileForm) fileForm.addEventListener('submit', function (e) {
+    if (!counted()) {
+      e.preventDefault();
+      if (fileCount) { fileCount.textContent = 'Check at least one first'; fileCount.classList.add('error'); }
+    }
+  });
+
+  //sections that fold (My quizzes' "Done"): open or not is remembered in this browser
+  var REMEMBER = 'qgen-open-sections', remembered = load(REMEMBER);
+  document.querySelectorAll('details[data-remember]').forEach(function (d) {
+    if (remembered[d.dataset.remember]) d.open = true;
+    d.addEventListener('toggle', function () {
+      if (searching) return;
+      if (d.open) remembered[d.dataset.remember] = true; else delete remembered[d.dataset.remember];
+      save(REMEMBER, remembered);
+    });
+  });
+
+  //"Find a quiz" on My quizzes: hides the quiz boxes whose title doesn't match (then the
+  //same as a search below)
+  var findCards = document.querySelector('input.filter-cards');
+  if (findCards) findCards.addEventListener('input', function () {
+    var q = findCards.value.trim().toLowerCase();
+    document.querySelectorAll('.folder-main details.quiz-card').forEach(function (c) {
+      var title = (c.querySelector('h2') || c).textContent.toLowerCase();
+      c.hidden = !!q && title.indexOf(q) === -1;
+    });
+    findCards.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true }));
+  });
+
+  //searching (filter.js hides the rows that don't match): folder boxes with a match open,
+  //the others hide; clearing the search puts them back as they were
+  var searching = null;
+  //what a search opens and hides: folder boxes, months, Done
+  function boxes() { return Array.prototype.slice.call(document.querySelectorAll('.folder-main details.sub-box, .folder-main details.month-box')); }
+  document.addEventListener('qgen-filtered', function (e) {
+    var q = (e.target.value || '').trim();
+    if (q) {
+      if (!searching) searching = boxes().map(function (d) { return d.open; });
+      boxes().forEach(function (d) {
+        var hit = Array.prototype.some.call(d.querySelectorAll('tbody tr, details.quiz-card'), function (r) { return !r.hidden; });
+        d.hidden = !hit;
+        if (hit) d.open = true;
+      });
+    } else if (searching) {
+      boxes().forEach(function (d, i) { d.hidden = false; d.open = searching[i]; });
+      searching = null;
+    }
+  });
+
+  //just saved (?show=): the folder box it's in opens, and it's shown
+  var saved = document.querySelector('.folder-main tr[data-show]');
+  if (saved) {
+    var up = saved.closest('details.sub-box');
+    while (up) { up.open = true; up = up.parentElement.closest('details.sub-box'); }
+    saved.classList.add('just-saved');
+    saved.scrollIntoView({ block: 'center' });
+  }
 
   var token = document.querySelector('meta[name="csrf-token"]');
   function move(d, to) {

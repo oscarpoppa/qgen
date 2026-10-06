@@ -741,7 +741,7 @@ def test_the_browser_tab_icon(app_db):
         assert im.size == (size, size)
         return im.convert('RGBA')
 
-    # the logo, until a separate icon is chosen: a wide logo is centred, with clear space above and below
+    # the logo, until a separate icon is chosen: a wide logo is centered, with clear space above and below
     teacher.post('/settings', data={'site_name': 'School', 'logo': 'wide-logo.png', 'code': ''})
     url = icon_url(anon)
     assert url.startswith('/site-icon/32.png?v=') and icon_url(teacher, '/dashboard') == url  # every page, signed in or not

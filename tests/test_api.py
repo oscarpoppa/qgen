@@ -290,7 +290,7 @@ def test_problem_checks_and_protection(app_db):
                                   'options': {'values': [A]}})
     assert r.status_code == 422 and any('hrs' in e for e in r.get_json()['error']['details'])
     assert t.post('/problems', json={'type': 'nope', 'title': 'x', 'question': 'q'}).status_code == 400
-    assert t.post('/problems', json={'title': 'x', 'question': 'q', 'options': {'colour': 'red'}}).status_code == 400
+    assert t.post('/problems', json={'title': 'x', 'question': 'q', 'options': {'color': 'red'}}).status_code == 400
     assert t.post('/problems', json={'title': 'x', 'question': 'q', 'options': {'show_n': 'three'}}).status_code == 400
     r = t.post('/problems/preview', json={'type': 'numeric', 'question': '[a] + 1', 'answer': 'a + 1', 'options': {'values': [A]}})
     assert len(r.get_json()['samples']) == 3

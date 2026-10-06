@@ -49,7 +49,7 @@ def test_my_quizzes_fold():
     import os
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     page = open(os.path.join(root, 'app', 'user', 'templates', 'mypage.html')).read()
-    assert '<details class="card quiz-card"' in page and 'data-level="close"' in page and 'qgen-folded-quizzes' in page
+    assert '<details class="card quiz-card"' in page and 'folders_page' in page and 'qgen-folded-quizzes' in page
 
 
 def test_tests_always_use_a_throwaway_database():

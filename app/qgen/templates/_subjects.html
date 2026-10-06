@@ -2,7 +2,7 @@
    Use: {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels, subject_checks with context %} #}
 {% from "_macros.html" import tip %}
 
-{% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”. Each problem or quiz can be in several folders; one that isn't in any waits in <b>Unsorted</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
+{% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Not in a folder</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
 
 {# above the containers: new folder, open/close them all, and a search across all of them #}
 {% macro subject_toolbar(kind, filter_target, count) %}
@@ -66,18 +66,18 @@
 {% endmacro %}
 
 {# one collapsible container; the caller draws its rows #}
-{% macro subject_box(kind, subject, items, tools=true) %}
+{% macro subject_box(kind, subject, items, tools=true, label=none) %}
 {% set key = subject.id if subject else 'unsorted' %}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
 <details class="card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}">
   <summary>
-    <span class="box-name">{{ '📁 ' ~ subject.title if subject else '📥 Unsorted' }}</span>
+    <span class="box-name">{{ '📁 ' ~ (label or subject.title) if subject else '📥 Not in a folder' }}</span>
     <span class="badge" aria-label="{{ items|length }} {{ noun }}">{{ items|length }}</span>
     <span class="badge badge-accent box-ticked" hidden></span>
     {% if subject and tools %}
       {% set n = items|length %}
       {% set what = noun if n != 1 else ('problem' if kind == 'problems' else 'quiz') %}
-      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' move' if n != 1 else ' moves') ~ ' to Unsorted (unless also in another folder).') if n else 'It is empty.' %}
+      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' move' if n != 1 else ' moves') ~ ' up a level (unless also in another folder).') if n else 'It is empty.' %}
       {{ box_actions(key, subject.title, url_for('qgen.rename_subject', kind=kind, sid=subject.id),
                      url_for('qgen.delete_subject', kind=kind, sid=subject.id), 'Delete the folder “' ~ subject.title ~ '”? ' ~ kept) }}
     {% endif %}
@@ -87,7 +87,7 @@
     {% if items %}
       {{ caller() }}
     {% else %}
-      <p class="muted small box-empty">{{ ('Empty. Check ' ~ noun ~ ' in other containers and choose “Add to folder”.' if tools else 'No ' ~ noun ~ ' in this folder yet.') if subject else 'Nothing unsorted: every one is in a folder.' }}</p>
+      <p class="muted small box-empty">{{ ('Empty. Check ' ~ noun ~ ' in other containers and choose “Add to folder”.' if tools else 'No ' ~ noun ~ ' in this folder yet.') if subject else 'Every one is in a folder.' }}</p>
     {% endif %}
   </div>
 </details>
@@ -105,18 +105,18 @@
   <legend>Folder{% if new_item %} <span class="muted small">(required: where should this {{ noun }} go?)</span>{% endif %} {{ tip('subjects', subjects_help) }}</legend>
   <input type="hidden" name="subjects_shown" value="1">
   <div class="subject-check-list">
-    {% for g in all_subjects %}
-      <label class="subject-check"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> 📁 {{ g.title }}</label>
+    {% for g, depth in all_subjects %}
+      <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.4 }}em"{% endif %}><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> 📁 {{ g.title }}</label>
     {% endfor %}
     {% if new_item %}
-      <label class="subject-check"><input type="checkbox" name="unsorted" value="1"{% if unsorted_ticked %} checked{% endif %}> 📥 Unsorted <span class="muted small">(file it later)</span></label>
+      <label class="subject-check"><input type="checkbox" name="unsorted" value="1"{% if unsorted_ticked %} checked{% endif %}> 📥 Not in a folder <span class="muted small">(file it later)</span></label>
     {% endif %}
   </div>
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
-  <div class="help">You can check more than one.{% if not new_item %} With none checked, it goes to Unsorted.{% endif %}</div>
+  <div class="help">You can check more than one.{% if not new_item %} With none checked, it's in no folder.{% endif %}</div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

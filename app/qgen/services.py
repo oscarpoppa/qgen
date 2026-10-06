@@ -19,7 +19,8 @@ from app.messages.models import notify, notify_teachers
 from . import layout
 from .formfact import record_answers, finalize, TRANSCRIPT_V2
 from .friendly import FriendlyError
-from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, ArchiveFolder, RETAKE_RULES
+from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, ArchiveFolder, RETAKE_RULES, \
+    vproblem_vpgroup, vquiz_vqgroup
 from .qtypes import get_qtype
 
 #answers are still accepted a little after the deadline (slow connections, the
@@ -64,12 +65,29 @@ def _subject_name(kind, name, subject=None):
     return name
 
 
-def create_subject(kind, name):
+def create_subject(kind, name, parent=None):
+    """A new folder, at the top or inside `parent` (a folder of the same kind)."""
+    from app import folder_tree
     group_cls = subject_kind(kind)[0]
-    subject = group_cls(title=_subject_name(kind, name))
+    try:
+        folder_tree.check_new(group_cls, parent)
+    except folder_tree.FolderError as exc:
+        raise ServiceError(str(exc))
+    subject = group_cls(title=_subject_name(kind, name), parent_id=parent.id if parent else None)
     db.session.add(subject)
     _commit_subject()
     return subject
+
+
+def move_subject(kind, subject, target):
+    """Put a folder inside another (None: at the top); never inside itself."""
+    from app import folder_tree
+    try:
+        folder_tree.check_move(subject_kind(kind)[0], subject, target)
+    except folder_tree.FolderError as exc:
+        raise ServiceError(str(exc))
+    subject.parent_id = target.id if target else None
+    db.session.commit()
 
 
 def rename_subject(kind, subject, name):
@@ -86,10 +104,87 @@ def _commit_subject():
         raise ServiceError('There\'s already a folder with that name.')
 
 
-def delete_subject(subject):
-    """Delete a subject; the problems or quizzes in it are kept."""
+def delete_subject(subject, kind=None):
+    """Remove a folder; nothing in it is deleted: its problems (or quizzes) and folders move
+    up a level (from the top level, things in no other folder are then in no folder)."""
+    group_cls, _item_cls, rel, back = subject_kind(kind or ('problems' if isinstance(subject, VPGroup) else 'quizzes'))
+    up = db.session.get(group_cls, subject.parent_id) if subject.parent_id else None
+    group_cls.query.filter_by(parent_id=subject.id).update({'parent_id': up.id if up else None}, synchronize_session=False)
+    if up is not None:
+        for item in list(getattr(subject, back)):
+            if up not in getattr(item, rel):
+                getattr(item, rel).append(up)
     db.session.delete(subject)
     db.session.commit()
+
+
+def file_one(kind, item_id, subject, add=True, moving_from=None):
+    """Put one problem (or quiz) in a folder (it stays in its others), or take it out; with
+    moving_from, out of that folder at the same time (a drag from one folder to another).
+    Returns the item."""
+    _group_cls, item_cls, rel, _back = subject_kind(kind)
+    try:
+        item = db.session.get(item_cls, int(item_id))
+    except (TypeError, ValueError):
+        item = None
+    if item is None:
+        raise ServiceError('That {} doesn\'t exist any more.'.format('problem' if kind == 'problems' else 'quiz'))
+    current = getattr(item, rel)
+    if add and subject not in current:
+        current.append(subject)
+    elif not add and subject in current:
+        current.remove(subject)
+    if moving_from is not None and moving_from is not subject and moving_from in current:
+        current.remove(moving_from)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+    return item
+
+
+def subject_tree(kind, items=None):
+    """The folders as a tree (app/folder_tree.py) with their problems (or quizzes), newest
+    first: (root, flat, nodes)."""
+    from app import folder_tree
+    group_cls, item_cls, rel, _back = subject_kind(kind)
+    table = vproblem_vpgroup if kind == 'problems' else vquiz_vqgroup
+    cols = list(table.c)
+    homes = {}
+    for item_id, group_id in db.session.query(cols[0], cols[1]):
+        homes.setdefault(item_id, []).append(group_id)
+    items = item_cls.query.order_by(item_cls.id.desc()).all() if items is None else items
+    return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes)
+
+
+def subject_paths(kind):
+    """{folder id: its name with the folders it's in, "Algebra › Linear equations"}."""
+    group_cls = subject_kind(kind)[0]
+    folders = {g.id: g for g in group_cls.query.all()}
+    out = {}
+    for gid, g in folders.items():
+        names, up, seen = [], g, set()
+        while up is not None and up.id not in seen:
+            seen.add(up.id)
+            names.insert(0, up.title)
+            up = folders.get(up.parent_id)
+        out[gid] = ' › '.join(names)
+    return out
+
+
+def subject_ancestors(kind):
+    """{folder id: the ids of it and the folders it's in}: something in a folder is also
+    under the folders above it (the Assign page's Folder menu)."""
+    group_cls = subject_kind(kind)[0]
+    parent = {g.id: g.parent_id for g in group_cls.query.all()}
+    out = {}
+    for gid in parent:
+        chain, up = [], gid
+        while up is not None and up not in chain:
+            chain.append(up)
+            up = parent.get(up)
+        out[gid] = chain
+    return out
 
 
 def get_subject(kind, subject_id):
@@ -140,12 +235,14 @@ def file_items(kind, item_ids, subject, add=True):
 
 
 def subject_choices(kind):
-    """The subject menu: [(value, label, count)] for All, No subject and each subject."""
+    """The folder menu: [(value, label, count)] for All, Not in a folder and each folder
+    (indented under the one it's in; counted with the folders inside it)."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
+    _root, flat, counted = subject_tree(kind)
     out = [('all', 'All', item_cls.query.count()),
-           ('none', 'No folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
-    for g in subjects(kind):
-        out.append((str(g.id), g.title, len(getattr(g, back))))
+           ('none', 'Not in a folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
+    for g, d in flat:
+        out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
     return out
 
 
@@ -153,10 +250,9 @@ def subject_boxes(kind):
     """The containers on the Problems (Quizzes) page: [(subject, items)] by subject name,
     then (None, the items in no subject) for Unsorted. An item in several subjects is in
     each of their containers. Newest items first."""
-    group_cls, item_cls, rel, back = subject_kind(kind)
-    newest = lambda items: sorted(items, key=lambda i: i.id, reverse=True)
-    boxes = [(g, newest(getattr(g, back))) for g in subjects(kind)]
-    boxes.append((None, item_cls.query.filter(~getattr(item_cls, rel).any()).order_by(item_cls.id.desc()).all()))
+    root, flat, nodes = subject_tree(kind)
+    boxes = [(g, nodes[g.id]['items']) for g, _d in flat]
+    boxes.append((None, root['items']))
     return boxes
 
 
@@ -682,11 +778,11 @@ def archived_attempts(subject='all'):
 
 
 FOLDER_NAME_MAX = 64
-UNSORTED = 'Unsorted'
+UNSORTED = 'Not in a folder'
 
 
 def student_folder(user):
-    """A student's Archive folder, made (or brought back, if the teacher deleted it) as
+    """A student's Archive folder, made (or brought back, if the teacher removed it) as
     needed; not committed."""
     folder = ArchiveFolder.query.filter_by(student_id=user.id).first()
     if folder is None:
@@ -694,21 +790,25 @@ def student_folder(user):
         db.session.add(folder)
         db.session.flush()
     elif folder.removed:
-        folder.removed, folder.name = False, user.username
+        folder.removed, folder.name, folder.own_name, folder.parent_id = False, user.username, False, None
     return folder
 
 
 def ensure_archive_folders():
     """Every student has a folder (a new student gets one the first time the Archive is
-    shown); one the teacher deleted isn't made again here."""
+    shown); one the teacher removed isn't made again here. A student's folder follows their
+    username, unless the teacher gave it a name of its own."""
     from app.user.models import User
-    have = {f.student_id for f in ArchiveFolder.query.filter(ArchiveFolder.student_id.isnot(None))}
-    made = False
+    folders = {f.student_id: f for f in ArchiveFolder.query.filter(ArchiveFolder.student_id.isnot(None))}
+    changed = False
     for u in User.query.filter_by(is_admin=False):
-        if u.id not in have:
+        f = folders.get(u.id)
+        if f is None:
             db.session.add(ArchiveFolder(name=u.username, student_id=u.id))
-            made = True
-    if made:
+            changed = True
+        elif not f.own_name and not f.removed and f.name != u.username:
+            f.name, changed = u.username, True
+    if changed:
         try:
             db.session.commit()
         except IntegrityError:
@@ -716,37 +816,24 @@ def ensure_archive_folders():
             db.session.rollback()
 
 
-def archive_folders():
-    """The Archive page: its folders by name, each with its archived attempts (newest
-    first), then Unsorted (attempts in no folder) when there are any.
-    Returns [{'folder' (None for Unsorted), 'key', 'name', 'student', 'items'}]."""
-    from app.user.models import User
+def archive_tree():
+    """The Archive's folders as a tree (app/folder_tree.py), each with its archived attempts
+    newest first: (root, flat, nodes, every attempt)."""
+    from app import folder_tree
     ensure_archive_folders()
-    users = {u.id: u for u in User.query.all()}
-    out = {}
-    renamed = False
-    for f in ArchiveFolder.query.filter_by(removed=False):
-        #a student's own folder (never renamed by the teacher) follows their username
-        student = users.get(f.student_id) if f.student_id else None
-        if student is not None and f.name != student.username:
-            f.name, renamed = student.username, True
-        out[f.id] = {'folder': f, 'key': 'folder-{}'.format(f.id), 'name': f.name,
-                     'student': users.get(f.student_id) if f.student_id else None, 'items': []}
-    if renamed:
-        db.session.commit()
-    unsorted = {'folder': None, 'key': 'unsorted', 'name': UNSORTED, 'student': None, 'items': []}
-    for a in ArchivedAttempt.query.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()):
-        (out[a.folder_id] if a.folder_id in out else unsorted)['items'].append(a)
-    folders = sorted(out.values(), key=lambda f: f['name'].lower())
-    return folders + ([unsorted] if unsorted['items'] else [])
+    folders = sorted(ArchiveFolder.query.filter_by(removed=False).all(), key=lambda f: f.name.lower())
+    attempts = ArchivedAttempt.query.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()).all()
+    homes = {a.id: [a.folder_id] for a in attempts if a.folder_id}
+    root, flat, nodes = folder_tree.tree(folders, lambda f: f.name, attempts, homes)
+    return root, flat, nodes, attempts
 
 
 def _folder_name(name, folder=None):
-    name = ' '.join((name or '').split())
-    if not name:
-        raise ServiceError('Please give the folder a name.')
-    if len(name) > FOLDER_NAME_MAX:
-        raise ServiceError('Folder names can be at most {} characters.'.format(FOLDER_NAME_MAX))
+    from app import folder_tree
+    try:
+        name = folder_tree.clean_name(name)
+    except folder_tree.FolderError as exc:
+        raise ServiceError(str(exc))
     if name.lower() == UNSORTED.lower():
         raise ServiceError('"{}" is kept for attempts that aren\'t in a folder.'.format(UNSORTED))
     for other in ArchiveFolder.query.filter_by(removed=False):
@@ -755,27 +842,52 @@ def _folder_name(name, folder=None):
     return name
 
 
-def create_archive_folder(name):
-    """A folder of the teacher's own (not tied to a student)."""
-    folder = ArchiveFolder(name=_folder_name(name))
+def get_archive_folder(folder_id):
+    """A folder that's there (not removed), or None."""
+    try:
+        f = db.session.get(ArchiveFolder, int(folder_id))
+    except (TypeError, ValueError):
+        return None
+    return f if f is not None and not f.removed else None
+
+
+def create_archive_folder(name, parent=None):
+    """A folder of the teacher's own (not tied to a student), at the top or inside `parent`."""
+    from app import folder_tree
+    try:
+        folder_tree.check_new(ArchiveFolder, parent)
+    except folder_tree.FolderError as exc:
+        raise ServiceError(str(exc))
+    folder = ArchiveFolder(name=_folder_name(name), parent_id=parent.id if parent else None)
     db.session.add(folder)
     db.session.commit()
     return folder
 
 
 def rename_archive_folder(folder, name):
-    """Rename a folder. A student's folder becomes an ordinary folder with the new name;
-    the student gets a new folder in their name for their next archived attempts."""
+    """Rename a folder. A student's folder stays theirs and keeps the new name."""
     new = _folder_name(name, folder)
     if new == folder.name:
         return
     folder.name = new
-    folder.student_id = None
+    if folder.student_id:
+        folder.own_name = True
+    db.session.commit()
+
+
+def move_archive_folder(folder, target):
+    """Put a folder inside another (None: at the top); never inside itself."""
+    from app import folder_tree
+    try:
+        folder_tree.check_move(ArchiveFolder, folder, target, scope={'removed': False})
+    except folder_tree.FolderError as exc:
+        raise ServiceError(str(exc))
+    folder.parent_id = target.id if target else None
     db.session.commit()
 
 
 def move_archived(ids, folder):
-    """Move archived attempts to a folder (None: Unsorted). Returns how many moved."""
+    """Move archived attempts to a folder (None: not in a folder). Returns how many moved."""
     wanted = _ids(ids)
     if not wanted:
         return 0
@@ -786,11 +898,14 @@ def move_archived(ids, folder):
 
 
 def delete_archive_folder(folder):
-    """Delete a folder: what's in it moves to Unsorted. Returns how many moved."""
-    moved = ArchivedAttempt.query.filter_by(folder_id=folder.id).update({'folder_id': None}, synchronize_session=False)
+    """Remove a folder: what's in it (attempts and folders) moves up a level. Returns how
+    many attempts moved."""
+    up = folder.parent_id
+    moved = ArchivedAttempt.query.filter_by(folder_id=folder.id).update({'folder_id': up}, synchronize_session=False)
+    ArchiveFolder.query.filter_by(parent_id=folder.id).update({'parent_id': up}, synchronize_session=False)
     if folder.student_id:
         #kept, so it isn't made again on its own (see ArchiveFolder)
-        folder.removed = True
+        folder.removed, folder.parent_id = True, None
     else:
         db.session.delete(folder)
     db.session.commit()

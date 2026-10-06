@@ -57,7 +57,7 @@
         <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
           {% for subject, items in problem_boxes %}
             {% if subject or items %}
-              {% call subject_box('problems', subject, items, tools=false) %}
+              {% call subject_box('problems', subject, items, tools=false, label=problem_paths.get(subject.id) if subject else none) %}
               <div class="table-wrap">
                 <table>
                   <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th><th>Type</th></tr></thead>

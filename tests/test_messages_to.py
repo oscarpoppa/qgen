@@ -28,7 +28,7 @@ def test_a_message_to_one_teacher_is_only_theirs(app_db):
     private = Message.query.filter_by(body='Only for teach').one()
     assert not private.to_all and [t.username for t in private.recipients] == ['teach']
 
-    # teach: counted, popped up, listed everywhere, labelled
+    # teach: counted, popped up, listed everywhere, labeled
     poll = teach.get('/messages/poll').get_json()
     assert poll['unread'] == 2 and poll['message_preview']['text'] == 'For everyone'
     for url in ('/messages/panel', '/messages/panel?student={}'.format(ids('sam')), '/messages/{}'.format(ids('sam'))):

@@ -115,7 +115,7 @@ def archived_json(a):
             'started': iso(a.startdate), 'submitted': iso(a.compdate), 'assigned': iso(a.assigned),
             'archived': iso(a.archived_at), 'archived_by': a.archiver.username if a.archiver else None,
             'reason': a.reason, 'restore_blocked': S.restore_blocker(a),
-            'folder': a.folder.name if a.folder and not a.folder.removed else 'Unsorted'}
+            'folder': a.folder.name if a.folder and not a.folder.removed else 'Not in a folder'}
 
 
 def problem_json(vp, full=False):

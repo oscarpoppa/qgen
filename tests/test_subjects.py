@@ -48,53 +48,74 @@ def test_making_renaming_and_deleting_subjects(app_db):
     assert teacher.post('/quiz/subjects/problems/999/delete').status_code == 404
 
 
-def boxes_on(page):
-    """{container name: [titles of the rows in it]} from a Problems or Quizzes page."""
+def shown(teacher, kind, folder=None):
+    """The titles listed on the Problems (or Quizzes) page for ?folder=, outside folder boxes."""
     import re
-    out = {}
-    for m in re.finditer(r'<details class="card subject-box[^"]*" id="subject-[^"]+"[^>]*>(.*?)</details>\s*(?=<details class="card subject-box|</div>)', page, re.S):
-        body = m.group(1)
-        name = re.search(r'<span class="box-name">(?:📁 |📥 )([^<]+)</span>', body).group(1)
-        out[name] = re.findall(r'aria-label="Check “([^”]+)”"', body)
-    return out
+    url = '/quiz/listvp' if kind == 'problems' else '/quiz/listvq'
+    page = teacher.get(url + ('?folder={}'.format(folder) if folder is not None else '')).data.decode()
+    items = page[page.index('id="folder-items"'):] if 'id="folder-items"' in page else ''
+    #folder boxes (details.sub-box) are skipped: what's in them is listed in their own view
+    while '<details class="sub-box"' in items:
+        start = items.index('<details class="sub-box"')
+        depth, i = 0, start
+        while True:
+            o, c = items.find('<details', i), items.find('</details>', i)
+            if o != -1 and o < c:
+                depth, i = depth + 1, o + 8
+            else:
+                depth, i = depth - 1, c + 10
+                if depth == 0:
+                    break
+        items = items[:start] + items[i:]
+    return re.findall(r'aria-label="Check “([^”]+)”"', items)
 
 
-def test_problems_page_shows_subject_containers(app_db):
+def side_counts(page):
+    """{name in the folder list: its count} from a page with folders down the side."""
+    import re
+    return {name.strip(): int(n) if n.strip() else 0 for name, n in
+            re.findall(r'class="side-link"[^>]*>\s*(?:<span[^>]*>[^<]*</span>\s*)?(?:<span class="side-name">)?([^<]+)(?:</span>)?</a>\s*'
+                       r'<span class="side-count[^"]*"[^>]*>([^<]*)</span>', page)}
+
+
+def test_problems_page_lists_by_folder(app_db):
     app, db = app_db
     from app.qgen.models import VPGroup
     teacher = login(app, 'teach')
     probs = make_problems(teacher, 'Add', 'Area', 'Angles')
-    # no subjects yet: everything is in Unsorted
-    assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Unsorted': ['Angles', 'Area', 'Add']}
+    # no folders yet: All problems, and the same Not in a folder
+    assert shown(teacher, 'problems') == ['Angles', 'Area', 'Add']
+    assert shown(teacher, 'problems', 'main') == ['Angles', 'Area', 'Add']
     for name in ('Geometry', 'Algebra'):
         teacher.post('/quiz/subjects/problems/new', data={'name': name})
     alg, geo = (VPGroup.query.filter_by(title=n).one() for n in ('Algebra', 'Geometry'))
 
-    # bulk: add, add again (harmless), and a problem in two subjects
+    # checked rows: put in, again (harmless), and a problem in two folders
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id, probs['Area'].id]})
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'add'})
     teacher.post('/quiz/subjects/problems/file', data={'subject': geo.id, 'items': [probs['Area'].id, probs['Angles'].id]})
+    assert shown(teacher, 'problems', alg.id) == ['Area', 'Add'] and shown(teacher, 'problems', geo.id) == ['Angles', 'Area']
+    assert shown(teacher, 'problems', 'main') == []
     page = teacher.get('/quiz/listvp').data.decode()
-    # containers by name; a problem is only in its containers; Unsorted is gone when empty
-    assert boxes_on(page) == {'Algebra': ['Area', 'Add'], 'Geometry': ['Angles', 'Area']}
-    assert 'id="subject-unsorted"' not in page
-    assert 'aria-label="2 problems"' in page and 'Expand all' in page and 'Collapse all' in page
-    # remove from a subject: back to Unsorted if it's in no other
+    assert side_counts(page) == {'All problems': 3, 'Not in a folder': 0, 'Algebra': 2, 'Geometry': 2}
+    assert 'Expand all' in page and 'Collapse all' in page and 'Put in folder' in page
+    # taken out of a folder: in no folder if it's in no other
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove'})
-    assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Algebra': ['Area'], 'Geometry': ['Angles', 'Area'],
-                                                                     'Unsorted': ['Add']}
-    # an empty subject still has its container
+    assert shown(teacher, 'problems', alg.id) == ['Area'] and shown(teacher, 'problems', 'main') == ['Add']
+    # an empty folder says so
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Calculus'})
-    page = teacher.get('/quiz/listvp').data.decode()
-    assert boxes_on(page)['Calculus'] == [] and 'Empty. Check problems' in page
-    # nothing checked, or no subject chosen: nothing happens
+    calc = VPGroup.query.filter_by(title='Calculus').one()
+    assert 'Nothing in this folder yet.' in teacher.get('/quiz/listvp?folder={}'.format(calc.id)).data.decode()
+    # nothing checked, or no folder chosen: nothing happens
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id})
     teacher.post('/quiz/subjects/problems/file', data={'items': [probs['Angles'].id]})
     db.session.expire_all()
     assert [p.title for p in alg.vproblems] == ['Area']
+    # a folder that's gone shows All problems
+    assert shown(teacher, 'problems', 999) == ['Angles', 'Area', 'Add']
 
 
-def test_quizzes_page_shows_subject_containers(app_db):
+def test_quizzes_page_lists_by_folder(app_db):
     app, db = app_db
     from app.qgen.models import VQGroup, VQuiz
     teacher = login(app, 'teach')
@@ -104,22 +125,102 @@ def test_quizzes_page_shows_subject_containers(app_db):
     teacher.post('/quiz/subjects/quizzes/new', data={'name': 'Period 2'})
     p2 = VQGroup.query.one()
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [VQuiz.query.filter_by(title='Q2').one().id]})
-    assert boxes_on(teacher.get('/quiz/listvq').data.decode()) == {'Period 2': ['Q2'], 'Unsorted': ['Q1']}
+    assert shown(teacher, 'quizzes', p2.id) == ['Q2'] and shown(teacher, 'quizzes', 'main') == ['Q1']
+    assert shown(teacher, 'quizzes') == ['Q2', 'Q1']
 
 
-def test_deleting_a_subject_keeps_its_items_in_unsorted(app_db):
+def test_one_at_a_time_and_dragging(app_db):
+    app, db = app_db
+    from app.qgen.models import VQGroup, VQuiz
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add')
+    teacher.post('/quiz/makevquiz', data={'title': 'Q1', 'vplist': str(probs['Add'].id)})
+    q = VQuiz.query.one()
+    for name in ('Fall', 'Spring'):
+        teacher.post('/quiz/subjects/quizzes/new', data={'name': name})
+    fall, spring = (VQGroup.query.filter_by(title=n).one() for n in ('Fall', 'Spring'))
+    # "+ Add to folder…": stays where it was, lit up after
+    r = teacher.post('/quiz/subjects/quizzes/add', data={'quiz': q.id, 'to': fall.id, 'view': 'all'})
+    assert r.headers['Location'].endswith('/quiz/listvq?moved=quiz:{}'.format(q.id))
+    FETCH = {'X-Requested-With': 'fetch'}
+    # dragged from Fall to Spring: moved
+    res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': spring.id, 'from': fall.id}, headers=FETCH).get_json()
+    assert res == {'ok': True, 'message': 'Moved "Q1" to "Spring".'}
+    db.session.expire_all()
+    assert [g.title for g in q.vqgroups] == ['Spring']
+    # dragged from All onto Fall: put in it too
+    teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': fall.id, 'from': 'all'}, headers=FETCH)
+    db.session.expire_all()
+    assert sorted(g.title for g in q.vqgroups) == ['Fall', 'Spring']
+    # dragged out of Fall onto Not in a folder: out of Fall only
+    teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': 'top', 'from': fall.id}, headers=FETCH)
+    db.session.expire_all()
+    assert [g.title for g in q.vqgroups] == ['Spring']
+    # a chip's ✕
+    teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': spring.id})
+    db.session.expire_all()
+    assert q.vqgroups == []
+    # a quiz that's gone
+    res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': 999, 'to': fall.id}, headers=FETCH)
+    assert res.status_code == 400 and 'doesn\'t exist' in res.get_json()['error']
+
+
+def test_folders_inside_folders(app_db):
     app, db = app_db
     from app.qgen.models import VPGroup
     teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add', 'Area')
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.one()
+    r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra', 'parent': math.id, 'view': math.id})
+    assert r.headers['Location'].endswith('/quiz/listvp?folder={}'.format(math.id))  # stays where it was
+    alg = VPGroup.query.filter_by(title='Algebra').one()
+    assert alg.parent_id == math.id
+    teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
+    teacher.post('/quiz/subjects/problems/file', data={'subject': math.id, 'items': [probs['Area'].id]})
+    page = teacher.get('/quiz/listvp?folder={}'.format(math.id)).data.decode()
+    # Math counts what's in Algebra too; Algebra is a box inside it; the path shows in Algebra
+    assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
+    assert '<details class="sub-box" data-sub="{}">'.format(alg.id) in page and shown(teacher, 'problems', math.id) == ['Area']
+    assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
+    # never inside itself
+    FETCH = {'X-Requested-With': 'fetch'}
+    res = teacher.post('/quiz/subjects/problems/move', data={'folder': math.id, 'to': alg.id}, headers=FETCH)
+    assert res.status_code == 400 and 'inside itself' in res.get_json()['error']
+    # the Assign page's and the forms' lists show it under Math
+    teacher.post('/quiz/subjects/problems/move', data={'folder': alg.id, 'to': 'top'}, headers=FETCH)
+    db.session.expire_all()
+    assert db.session.get(VPGroup, alg.id).parent_id is None
+    teacher.post('/quiz/subjects/problems/move', data={'folder': alg.id, 'to': math.id}, headers=FETCH)
+    # removing Math: Algebra and Area move up to the top; nothing is deleted
+    teacher.post('/quiz/subjects/problems/{}/delete'.format(math.id), data={'view': math.id})
+    db.session.expire_all()
+    assert db.session.get(VPGroup, math.id) is None and db.session.get(VPGroup, alg.id).parent_id is None
+    assert shown(teacher, 'problems', 'main') == ['Area'] and shown(teacher, 'problems', alg.id) == ['Add']
+    # removing a folder inside another: what's in it moves into that one
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.filter_by(title='Math').one()
+    teacher.post('/quiz/subjects/problems/move', data={'folder': alg.id, 'to': math.id}, headers=FETCH)
+    teacher.post('/quiz/subjects/problems/{}/delete'.format(alg.id))
+    assert shown(teacher, 'problems', math.id) == ['Add']
+
+
+def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
+    app, db = app_db
+    from app.qgen.models import VQGroup, VQuiz
+    teacher = login(app, 'teach')
     probs = make_problems(teacher, 'Add')
-    teacher.post('/quiz/subjects/problems/new', data={'name': 'Temp'})
-    t = VPGroup.query.one()
-    teacher.post('/quiz/subjects/problems/file', data={'subject': t.id, 'items': [probs['Add'].id]})
-    page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Its 1 problem moves to Unsorted (unless also in another folder).' in page
-    assert 'aria-label="Rename the folder “Temp”"' in page and 'aria-label="Delete the folder “Temp”"' in page
-    teacher.post('/quiz/subjects/problems/{}/delete'.format(t.id))
-    assert boxes_on(teacher.get('/quiz/listvp').data.decode()) == {'Unsorted': ['Add']}
+    teacher.post('/quiz/makevquiz', data={'title': 'Q1', 'vplist': str(probs['Add'].id)})
+    teacher.post('/quiz/subjects/quizzes/new', data={'name': 'Math'})
+    math = VQGroup.query.one()
+    teacher.post('/quiz/subjects/quizzes/new', data={'name': 'Algebra', 'parent': math.id})
+    alg = VQGroup.query.filter_by(title='Algebra').one()
+    teacher.post('/quiz/subjects/quizzes/file', data={'subject': alg.id, 'items': [VQuiz.query.one().id]})
+    page = teacher.get('/quiz/assign').data.decode()
+    import json, re
+    mapping = json.loads(re.search(r'id="quiz-subjects">([^<]*)</script>', page).group(1))
+    assert sorted(mapping[str(VQuiz.query.one().id)]) == sorted([math.id, alg.id])
+    assert '\u00a0\u00a0\u00a0Algebra (1)' in page and 'Not in a folder (0)' in page
 
 
 def test_new_items_must_be_given_a_subject(app_db):
@@ -135,13 +236,13 @@ def test_new_items_must_be_given_a_subject(app_db):
     # no answer: not saved, and asked again
     r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1'))
     assert VProblem.query.count() == 0
-    assert 'Choose a folder for this problem, or Unsorted to file it later.' in r.data.decode()
+    assert 'Choose a folder for this problem, or Not in a folder to file it later.' in r.data.decode()
     # a subject: saved in it, and the list opens where it is
     r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1', subjects=[str(alg.id)]))
     vp = VProblem.query.one()
     assert [g.title for g in vp.vpgroups] == ['Algebra']
     assert r.headers['Location'].endswith('/quiz/listvp?show={}'.format(vp.id))
-    assert 'data-item="{}" data-show'.format(vp.id) in teacher.get(r.headers['Location']).data.decode()
+    assert 'data-item="{}" data-box="problem:{}" data-show'.format(vp.id, vp.id) in teacher.get(r.headers['Location']).data.decode()
     # Unsorted
     teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1', unsorted='1'))
     assert VProblem.query.filter_by(title='Later').one().vpgroups == []
@@ -264,9 +365,12 @@ def test_they_are_called_folders_on_screen(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert '+ New folder' in page and 'Make a folder first' in page
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
-    assert 'Made the folder' in r.data.decode()
+    assert 'Folder &#34;Algebra&#34; made.' in r.data.decode() or 'Folder "Algebra" made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Add to folder' in page and 'Remove from folder' in page and 'Delete the folder “Algebra”' in page
+    assert 'Put in folder' in page and 'Take out of folder' in page and '+ Add to folder…' in page
+    from app.qgen.models import VPGroup
+    page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
+    assert 'Remove the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'algebra'}, follow_redirects=True)
     assert 'There&#39;s already a folder called' in r.data.decode()
     form = teacher.get('/quiz/makevprob').data.decode()

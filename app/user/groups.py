@@ -211,9 +211,16 @@ def everyone_in(folder_id):
 
 def picker():
     """For the Assign and Messages pages: every folder (indented by depth) with the ids of
-    everyone in it, folders inside it included: [{'id', 'name', 'depth', 'ids'}]."""
+    everyone in it, folders inside it included: [{'id', 'name', 'depth', 'path' ("7th grade ›
+    Period 2"), 'ids'}]."""
     root, flat, nodes, _ = tree([])
-    return [{'id': f.id, 'name': f.name, 'depth': depth, 'ids': sorted(nodes[f.id]['everyone'])} for f, depth in flat]
+    def path(f):
+        names = [f.name]
+        while f.parent_id in nodes:
+            f = nodes[f.parent_id]['folder']
+            names.insert(0, f.name)
+        return ' › '.join(names)
+    return [{'id': f.id, 'name': f.name, 'depth': depth, 'path': path(f), 'ids': sorted(nodes[f.id]['everyone'])} for f, depth in flat]
 
 
 def state():

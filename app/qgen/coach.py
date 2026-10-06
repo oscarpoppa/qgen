@@ -197,7 +197,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
         hints.append(hint('warn', 'Question order isn\'t shuffled, so every student has the same question 1, 2, 3… '
                           'and "number 3 is B" is easier to pass along.'))
     if not (title or '').strip():
-        hints.append(hint('error', 'Give the quiz a title so students can recognise it.'))
+        hints.append(hint('error', 'Give the quiz a title so students can recognize it.'))
     elif title.strip().lower() in existing_titles:
         hints.append(hint('warn', 'Another quiz is already called "{}". A different title avoids mix-ups.'.format(title.strip())))
     if not vpids:
