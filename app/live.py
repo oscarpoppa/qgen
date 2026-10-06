@@ -155,7 +155,7 @@ def _quizzes(vqid, now):
                .filter(CQuiz.retake_rule.isnot(None), CQuiz.retake_rule != VQuiz.retake_rule)
                .group_by(CQuiz.vquiz_id).all())
     quizzes = quizzes.with_entities(VQuiz.id, VQuiz.title, VQuiz.retake_rule, VQuiz.vpid_lst, VQuiz.calculator_ok,
-                                    VQuiz.shuffle_order, VQuiz.image).all()
+                                    VQuiz.shuffle_order, VQuiz.image, VQuiz.removed_at).all()
     if vqid is not None and not quizzes:
         return 'gone'
     return ([tuple(vq) + (counts.get(vq.id, 0), own.get(vq.id, 0)) for vq in quizzes],
@@ -185,7 +185,7 @@ def _byquiz(vqid, now):
     attempts = CQuiz.query
     if vqid is not None:
         quizzes, attempts = quizzes.filter(VQuiz.id == vqid), attempts.filter(CQuiz.vquiz_id == vqid)
-    rows = quizzes.with_entities(VQuiz.id, VQuiz.title, VQuiz.retake_rule).all()
+    rows = quizzes.with_entities(VQuiz.id, VQuiz.title, VQuiz.retake_rule, VQuiz.removed_at).all()
     if vqid is not None and not rows:
         return 'gone'
     return ([tuple(r) for r in rows], [tuple(u) for u in User.query.with_entities(User.id, User.username, User.nickname, User.avatar).order_by(User.id)],
@@ -260,7 +260,7 @@ def _assign(now):
     from app.qgen.models import VQuiz
     from app.user import groups
     from app.user.models import User
-    return ([tuple(q) for q in VQuiz.query.with_entities(VQuiz.id, VQuiz.title).order_by(VQuiz.id)], _quiz_folders(),
+    return ([tuple(q) for q in VQuiz.query.filter(VQuiz.removed_at.is_(None)).with_entities(VQuiz.id, VQuiz.title).order_by(VQuiz.id)], _quiz_folders(),
             [tuple(u) for u in User.query.with_entities(User.id, User.username, User.nickname, User.is_admin).order_by(User.id)], groups.state())
 
 

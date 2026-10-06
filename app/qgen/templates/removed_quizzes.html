@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import back_button, post_button with context %}
+{% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1>
+  <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}</div></div>
+<p class="muted">Quizzes taken off the Quizzes page and Assign. Students keep their copies and scores, and the results stay.
+  Bring one back to use it again, or delete it for good (students’ tries then go to the Archive, still readable).</p>
+
+{% if quizzes %}
+<div class="table-wrap stack">
+  <table>
+    <thead><tr><th>Quiz</th><th>Removed</th><th>Copies</th><th></th></tr></thead>
+    <tbody>
+    {% for vq in quizzes %}
+      <tr>
+        <td data-label="Quiz"><strong>{{ vq.title }}</strong></td>
+        <td data-label="Removed" class="small">{{ vq.removed_at|when('date') }}</td>
+        <td data-label="Copies" class="small">{{ vq.cquizzes|length }} {{ 'try' if vq.cquizzes|length == 1 else 'tries' }}</td>
+        <td class="actions">
+          <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=vq.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Bring back</button></form>
+          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>{% endif %}
+          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
+          {# for good: students' tries go to the Archive first (still readable there) #}
+          {% set n = vq.cquizzes|length %}
+          {{ post_button(url_for('qgen.delete_removed_vquiz', vqid=vq.id), 'Delete for good', 'btn btn-danger btn-sm',
+               'Delete the quiz “' ~ (vq.title)|string ~ '” for good? This can’t be undone.'
+               ~ (' Its ' ~ n ~ (' try leaves its student’s My quizzes and goes' if n == 1 else ' tries leave students’ My quizzes and go') ~ ' to the Archive, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '. Its scores leave Results and awards.' if n else '')) }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="card empty"><span class="big">🗂️</span>No removed quizzes.</div>
+{% endif %}
+{% endblock %}

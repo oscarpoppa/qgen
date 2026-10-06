@@ -18,7 +18,7 @@
     {% if vq and vq.id %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
       <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign</a>
+      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign</a>{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"

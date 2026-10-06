@@ -119,7 +119,7 @@
     {{ quiz_cards(shown, fk.view) }}
   </div>
   {% if not shown and showing %}
-    <p class="card empty small">Nothing here right now. 🎉</p>
+    <p class="card empty small">{{ nothing }}</p>
   {% elif not shown %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}

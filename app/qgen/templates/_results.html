@@ -33,5 +33,7 @@
               </td>
               <td class="actions">
                 {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% endif %}
+                {# several tries: all of them to the Archive at once (one try has its own Archive button) #}
+                {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Take away all ' ~ g.attempts|length ~ ' tries', 'btn btn-secondary btn-sm', 'Take “' ~ (g.vquiz.title)|string ~ '” away from ' ~ (student.shown_name)|string ~ '? All ' ~ g.attempts|length ~ ' tries move to the Archive, where you can view or restore them.') }}{% endif %}
               </td>
 {% endmacro %}

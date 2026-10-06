@@ -127,7 +127,7 @@ def site_glance(now):
     return {'students': _students().count(),
             'teachers': User.query.filter(User.is_admin.is_(True)).count(),
             'problems': VProblem.query.count(),
-            'quizzes': VQuiz.query.count(),
+            'quizzes': VQuiz.query.filter(VQuiz.removed_at.is_(None)).count(),
             'archived': ArchivedAttempt.query.count(),
             'signup_open': bool(Setting.get('class_code')),
             'ai_on': bool(current_app.config.get('ANTHROPIC_API_KEY')),

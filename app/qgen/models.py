@@ -115,6 +115,9 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     shuffle_order = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
     #how several attempts combine into one score: see RETAKE_RULES
     retake_rule = db.Column(db.String(16), default='best', nullable=False, server_default='best')
+    #taken off the Quizzes page and Assign (students keep their copies and scores); None: in use
+    removed_at = db.Column(db.DateTime, nullable=True)
+
     @property
     def calculator_problems(self):
         """The problems in it (any group's too) that allow a calculator."""

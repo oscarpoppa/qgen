@@ -308,8 +308,11 @@ def test_problem_checks_and_protection(app_db):
     assert r.status_code == 422
     assert t.post('/quizzes', json={'title': 'G3', 'problems': [424242]}).status_code == 422
     t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['sam']]})
-    assert t.delete('/quizzes/{}'.format(qid)).status_code == 409
     assert t.post('/quizzes/{}/assign'.format(qid), json={'students': [123456]}).status_code == 400
+    # assigned: removed (sam keeps the copy), not deleted; it can't be assigned again until it's back
+    assert t.delete('/quizzes/{}'.format(qid)).status_code == 204
+    assert qid not in [q['id'] for q in t.get('/quizzes').get_json()['quizzes']]
+    assert t.post('/quizzes/{}/assign'.format(qid), json={'students': [student_ids(db)['sam']]}).status_code == 409
 
 
 def test_messages_through_the_api(app_db):

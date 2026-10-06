@@ -170,7 +170,7 @@ def quiz_settings(data):
 @api_bp.route('/quizzes', methods=['GET'])
 @teacher
 def list_vquizzes():
-    return jsonify(quizzes=[vquiz_json(q) for q in VQuiz.query.order_by(VQuiz.id.desc()).all()])
+    return jsonify(quizzes=[vquiz_json(q) for q in VQuiz.query.filter(VQuiz.removed_at.is_(None)).order_by(VQuiz.id.desc()).all()])
 
 
 @api_bp.route('/quizzes', methods=['POST'])
@@ -228,6 +228,8 @@ def parse_when(data, key):
 def assign_vquiz(qid):
     """{"students": [ids], "opens_at"?, "closes_at"?, "time_limit_minutes"?} -> each student's own copy."""
     vq = get_or_404(VQuiz, qid, 'That quiz')
+    if vq.removed_at:
+        raise conflict('That quiz was removed from Quizzes. Bring it back first.')
     data = body(required=('students',))
     ids = data['students']
     if not isinstance(ids, list) or not ids:

@@ -155,6 +155,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False, 'item_key': None,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
+        'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
     }
     out['main_count'] = root['count']
     out.update(words)

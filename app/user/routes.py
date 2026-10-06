@@ -76,6 +76,15 @@ def mypage():
                   (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status == 'started')
                   or (showing == 'soon' and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
         shown = [g for g in groups if any(a.id in wanted for a in g['attempts'])]
+        days = tuning.get('due_soon_days')
+        within = '{} day{}'.format(days, '' if days == 1 else 's')
+        heading, nothing = {
+            'todo': ('📝 To do: quizzes you haven’t started', 'You have no quizzes waiting to be started. 🎉'),
+            'started': ('✏️ Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in. 🎉'),
+            'soon': ('⏰ Due within {}'.format(within), 'Nothing is due within {}. 🎉'.format(within)),
+        }[showing]
+    else:
+        heading = nothing = None
     fk = folder_tree.kit(
         view, node, root, all_folders, nodes,
         page=lambda v: url_for('user.mypage', folder=v),
@@ -85,13 +94,13 @@ def mypage():
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(groups), main_count=len(root['groups']),
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
-        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders')
+        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading)
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
-                           showing=showing)
+                           showing=showing, nothing=nothing)
 
 
 def _folder_done(message, error=False, show=None, moved=None):

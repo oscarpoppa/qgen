@@ -133,7 +133,8 @@ def vquiz_json(vq, full=False):
     out = {'id': vq.id, 'title': vq.title, 'questions_per_student': layout.question_count(lay),
            'calculator_ok': bool(vq.calculator_ok), 'calculator_allowed': vq.calculator_allowed, 'shuffle_order': bool(vq.shuffle_order),
            'retake_rule': vq.retake_rule, 'image_url': static_url(vq.image),
-           'times_assigned': len(vq.cquizzes), 'labels': labels_json(vq.vqgroups)}
+           'times_assigned': len(vq.cquizzes), 'labels': labels_json(vq.vqgroups),
+           'removed': vq.removed_at is not None}
     if full:
         out['problems'] = lay
         out['image'] = vq.image

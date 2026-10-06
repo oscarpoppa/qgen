@@ -279,7 +279,8 @@ def edvquiz(vqid):
 @admin_only
 def list_vquizzes():
     return subject_page('quizzes', 'vqlist.html', title='Quizzes', layout=layout, rules=RETAKE_RULES,
-                        all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning)
+                        all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning,
+                        removed_count=len(S.removed_quizzes()))
 
 #route to list a specific virtual quiz
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -303,13 +304,67 @@ def del_vquiz(vqid):
     vq = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     title = vq.title
     try:
-        S.delete_vquiz(vq)
+        done = S.delete_vquiz(vq)
+    except S.ServiceError as exc:
+        flash('Not removed. {}'.format(exc), 'error')
+        return redirect(back_to(url_for('qgen.list_vquizzes')))
+    if done == 'removed':
+        flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
+                     '<a href="{}">Removed quizzes</a> can bring it back.').format(title, url_for('qgen.removed_vquizzes')), 'success')
+    else:
+        flash('Deleted quiz “{}”.'.format(title), 'success')
+        return redirect(back_to(url_for('qgen.list_vquizzes')))
+    current_app.logger.info("{} {} VQuiz: ({}) '{}'".format(current_user.username, done, vqid, title))
+    return redirect(url_for('qgen.list_vquizzes'))
+
+
+#route to the quizzes taken off the Quizzes page: bring one back, or delete it for good once
+#nobody has a copy
+@qgen_bp.route('/quiz/removed', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def removed_vquizzes():
+    return render_template('removed_quizzes.html', title='Removed quizzes', quizzes=S.removed_quizzes())
+
+
+@qgen_bp.route('/quiz/removed/<int:vqid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_removed_vquiz(vqid):
+    vq = db.session.get(VQuiz, vqid)
+    if vq is None:
+        return gone('That quiz has been deleted.', url_for('qgen.removed_vquizzes'))
+    title = vq.title
+    try:
+        count = S.delete_removed_vquiz(vq, by=current_user)
     except S.ServiceError as exc:
         flash('Not deleted. {}'.format(exc), 'error')
-        return redirect(url_for('qgen.list_vquizzes'))
-    flash('Deleted quiz "{}".'.format(title), 'success')
-    current_app.logger.info("{} deleted VQuiz: ({}) '{}'".format(current_user.username, vqid, title))
-    return redirect(url_for('qgen.list_vquizzes'))
+        return redirect(url_for('qgen.removed_vquizzes'))
+    if count:
+        flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Archive</a>, where you can still read {}.').format(
+            title, count, 'try is' if count == 1 else 'tries are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
+    else:
+        flash('Deleted “{}” for good.'.format(title), 'success')
+    current_app.logger.info("{} deleted removed VQuiz: ({}) '{}', {} tries archived".format(current_user.username, vqid, title, count))
+    return redirect(url_for('qgen.removed_vquizzes'))
+
+
+@qgen_bp.route('/quiz/removed/<int:vqid>/back', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def bring_back_vquiz(vqid):
+    vq = db.session.get(VQuiz, vqid)
+    if vq is None:
+        return gone('That quiz has been deleted.', url_for('qgen.removed_vquizzes'))
+    S.bring_back_vquiz(vq)
+    flash('“{}” is back on the Quizzes page.'.format(vq.title), 'success')
+    current_app.logger.info("{} brought back VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
+    return redirect(url_for('qgen.list_vquizzes', show=vq.id))
 
 
 #route to set how one student's attempts at one quiz combine ('' = use the quiz's rule)
@@ -339,7 +394,7 @@ def set_retake_rule(cqid):
 @admin_only
 def assign():
     form = AssignForm()
-    quizzes = VQuiz.query.order_by(VQuiz.title).all()
+    quizzes = S.in_use('quizzes').order_by(VQuiz.title).all()
     form.vquiz.choices = [(q.id, q.title) for q in quizzes]
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
     #a link for one quiz opens on All, so that quiz is in the list
@@ -694,6 +749,25 @@ def del_cquiz(cqid):
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(back_to(url_for('qgen.list_users')))
 
+#route to take a quiz away from a student: all their tries at it to the Archive at once
+@qgen_bp.route('/quiz/takeaway/<int:vqid>/<int:uid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def take_away(vqid, uid):
+    vq, student = db.session.get(VQuiz, vqid), db.session.get(User, uid)
+    if vq is None or student is None:
+        return gone('That quiz or student is gone.', back_to(url_for('qgen.list_users')))
+    count = S.take_away(student, vq, by=current_user)
+    if count:
+        flash(Markup('Took “{}” away from {}: {} {} moved to the <a href="{}">Archive</a>, where you can view or restore {}.').format(
+            vq.title, student.shown_name, count, 'try' if count == 1 else 'tries', url_for('qgen.archive'),
+            'it' if count == 1 else 'them'), 'success')
+        current_app.logger.info("{} took VQuiz ({}) '{}' away from {}: {} archived".format(
+            current_user.username, vqid, vq.title, student.username, count))
+    return redirect(back_to(url_for('qgen.list_users')))
+
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
 @qgen_bp.route('/quiz/retcq/<cqid>', methods=['POST'])
 @login_required
@@ -1024,7 +1098,7 @@ def subject_page(kind, template, **extra):
     from app import folder_tree
     root, flat, nodes = S.subject_tree(kind)
     _g, item_cls, rel, _b = S.subject_kind(kind)
-    everything = item_cls.query.order_by(item_cls.id.desc()).all()
+    everything = S.in_use(kind).order_by(item_cls.id.desc()).all()
     root['all_count'] = len(everything)
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['items'] if node else everything if view == 'all' else root['items']

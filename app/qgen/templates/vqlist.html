@@ -43,7 +43,7 @@
             </ol></details>
           </td>
           <td class="actions">
-            <a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>
+            {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>{% endif %}
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
             {# the rest in a small menu (keeps a row short), as on the Users page #}
@@ -51,7 +51,10 @@
               <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title }}”">More</summary>
               <div class="menu-list">
                 <a href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}">View</a>
-                {{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
+                {# assigned: removed (students keep it, it can come back); never assigned: deleted #}
+                {% if item.removed_at %}
+                {% elif item.cquizzes %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Remove', 'menu-btn menu-danger', 'Remove “' ~ (item.title)|string ~ '” from Quizzes? Students keep their copies and scores, and its results stay. You can bring it back from Removed quizzes.') }}
+                {% else %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}{% endif %}
               </div>
             </details>
           </td>
@@ -66,8 +69,15 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
+    {% if removed_count %}<a class="btn btn-secondary" href="{{ url_for('qgen.removed_vquizzes') }}">Removed quizzes ({{ removed_count }})</a>{% endif %}
     <a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
 </div>
+{% if single and items[0].removed_at %}
+  <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=items[0].id) }}" class="alert alert-warning">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    This quiz was removed from Quizzes {{ items[0].removed_at|when('date') }}. Students keep their copies and scores.
+    <button class="btn btn-sm">Bring it back</button></form>
+{% endif %}
 
 {% if single %}
   {{ quiz_table(items, ticks=false) }}

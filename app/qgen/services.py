@@ -143,6 +143,17 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
     return item
 
 
+def in_use(kind):
+    """The problems, or the quizzes not removed (the ones the Quizzes page and Assign offer)."""
+    item_cls = subject_kind(kind)[1]
+    return item_cls.query.filter(VQuiz.removed_at.is_(None)) if kind == 'quizzes' else item_cls.query
+
+
+def removed_quizzes():
+    """Quizzes taken off the Quizzes page, the latest removed first."""
+    return VQuiz.query.filter(VQuiz.removed_at.isnot(None)).order_by(VQuiz.removed_at.desc()).all()
+
+
 def subject_tree(kind, items=None):
     """The folders as a tree (app/folder_tree.py) with their problems (or quizzes), newest
     first: (root, flat, nodes). items can also be attempts_by_quiz() groups (by their quiz)."""
@@ -153,7 +164,7 @@ def subject_tree(kind, items=None):
     homes = {}
     for item_id, group_id in db.session.query(cols[0], cols[1]):
         homes.setdefault(item_id, []).append(group_id)
-    items = item_cls.query.order_by(item_cls.id.desc()).all() if items is None else items
+    items = in_use(kind).order_by(item_cls.id.desc()).all() if items is None else items
     key = (lambda g: g['vquiz'].id) if items and isinstance(items[0], dict) else (lambda item: item.id)
     return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes, key=key)
 
@@ -459,20 +470,61 @@ def save_vquiz(vq, title, problems, author_id=None, **settings):
     return []
 
 
+def being_taken(vq, now=None):
+    """Its tries someone is in the middle of: started, not handed in, and still open (its due
+    date or time limit hasn't run out)."""
+    now = now or datetime.now()
+    return [cq for cq in vq.cquizzes if cq.startdate and not cq.completed and not cq.needs_review
+            and not (cq.deadline() and cq.deadline() <= now)]
+
+
 def vquiz_delete_blocker(vq):
-    if vq.cquizzes:
-        return 'Quiz "{}" has been assigned {} time{}. Delete those assignments first.'.format(
-            vq.title, len(vq.cquizzes), '' if len(vq.cquizzes) == 1 else 's')
+    """Why the quiz can't be taken off the Quizzes page right now, or None."""
+    busy = being_taken(vq)
+    if busy:
+        names = sorted({cq.taker.shown_name for cq in busy if cq.taker})
+        return '{} {} taking “{}” right now. Try again once it’s handed in (or its time runs out).'.format(
+            ' and '.join(names) or 'Someone', 'is' if len(names) <= 1 else 'are', vq.title)
     return None
 
 
 def delete_vquiz(vq):
-    """Delete a quiz that hasn't been assigned (students' attempts are deleted one by one)."""
+    """Take a quiz off the Quizzes page. Never assigned: deleted for good. Assigned: removed
+    (students keep their copies and scores, the results stay, and it can be brought back).
+    Returns 'deleted' or 'removed'. Refused while someone is taking it."""
     blocker = vquiz_delete_blocker(vq)
     if blocker:
         raise ServiceError(blocker)
+    if vq.cquizzes:
+        vq.removed_at = datetime.now()
+        db.session.commit()
+        return 'removed'
     _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
     db.session.delete(vq)
+    db.session.commit()
+    return 'deleted'
+
+
+def delete_removed_vquiz(vq, by=None):
+    """Delete a removed quiz for good: every student's try at it goes to the Archive first
+    (readable there, not restorable), then the quiz is deleted. Refused while someone is
+    taking it. Returns how many tries were archived."""
+    blocker = vquiz_delete_blocker(vq)
+    if blocker:
+        raise ServiceError(blocker)
+    tries = list(vq.cquizzes)
+    for cq in tries:
+        archive_attempt(cq, by)
+    db.session.flush()
+    _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
+    db.session.delete(vq)
+    db.session.commit()
+    return len(tries)
+
+
+def bring_back_vquiz(vq):
+    """A removed quiz back on the Quizzes page and Assign."""
+    vq.removed_at = None
     db.session.commit()
 
 
@@ -660,6 +712,16 @@ def delete_attempt(cq, by=None, reason='deleted'):
     archived = archive_attempt(cq, by, reason)
     db.session.commit()
     return archived
+
+
+def take_away(student, vq, by=None):
+    """Take a quiz away from a student: every try at it goes to the Archive (as one by one),
+    together or not at all. Returns how many."""
+    tries = [cq for cq in vq.cquizzes if cq.assignee == student.id]
+    for cq in tries:
+        archive_attempt(cq, by)
+    db.session.commit()
+    return len(tries)
 
 
 # ---------------------------------------------------------------- the archive

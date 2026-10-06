@@ -121,8 +121,8 @@
           </details>{% endif %}
         </div>
       {% else %}
-        <h2 id="folder-title" class="folder-title">{{ fk.all_label if fk.view == 'all' else fk.main_label }}</h2>
-        <div class="title-actions">{{ level_buttons(fk.all_label if fk.view == 'all' else fk.main_label) }}{{ actions }}</div>
+        <h2 id="folder-title" class="folder-title">{{ fk.title or (fk.all_label if fk.view == 'all' else fk.main_label) }}</h2>
+        <div class="title-actions">{{ level_buttons(fk.title or (fk.all_label if fk.view == 'all' else fk.main_label)) }}{{ actions }}</div>
       {% endif %}
     </div>
     {{ caller() }}

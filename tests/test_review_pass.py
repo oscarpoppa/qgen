@@ -732,3 +732,107 @@ def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
     # back to the list: the list with the quiz lit up
     r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/listvq?folder=all'))
     assert r.headers['Location'].endswith('/quiz/listvq?show={}'.format(vq.id))
+
+
+def test_home_counter_views_say_what_they_show(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    give(make_quiz(app, teach, 'New one'), 'sam')
+    page = sam.get('/mypage?show=todo').data.decode()
+    assert '<h2 id="folder-title" class="folder-title">📝 To do: quizzes you haven’t started</h2>' in page
+    page = sam.get('/mypage?show=started').data.decode()
+    assert '✏️ Started: quizzes you haven’t handed in</h2>' in page
+    assert 'You have no quizzes started and not handed in. 🎉' in page
+    page = sam.get('/mypage?show=soon').data.decode()
+    with app.app_context():
+        from app import tuning
+        days = tuning.get('due_soon_days')
+    within = '{} day{}'.format(days, '' if days == 1 else 's')
+    assert '⏰ Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. 🎉'.format(within) in page
+    # the ordinary page keeps its own heading
+    assert 'class="folder-title">All quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
+
+
+# ---------------------------------------------------------------- removing a quiz, taking one away
+
+def test_removing_an_assigned_quiz_keeps_everything_for_students(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen import services as S
+    from app.qgen.models import VQuiz
+    vq = make_quiz(app, teach, 'Old quiz')
+    cq = give(vq, 'sam')
+    S.submit(cq, {1: '4'})
+    r = teach.post('/quiz/delvq/{}'.format(vq.id), follow_redirects=True).data.decode()
+    assert 'Removed “Old quiz” from Quizzes' in r
+    assert db.session.get(VQuiz, vq.id).removed_at is not None
+    # off the Quizzes page and Assign; still on My quizzes, Results and the Removed list
+    assert 'data-item="{}"'.format(vq.id) not in teach.get('/quiz/listvq?folder=all').data.decode()
+    assert 'Removed quizzes (1)' in teach.get('/quiz/listvq').data.decode()
+    assert '>Old quiz<' not in teach.get('/quiz/assign').data.decode()
+    assert '>Old quiz</h2>' in sam.get('/mypage?folder=all').data.decode()
+    assert 'Removed</span>' in teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert 'Old quiz' in teach.get('/quiz/removed').data.decode()
+    # brought back
+    teach.post('/quiz/removed/{}/back'.format(vq.id))
+    assert db.session.get(VQuiz, vq.id).removed_at is None
+    assert 'Removed quizzes (' not in teach.get('/quiz/listvq').data.decode()
+    # never assigned: deleted for good, as before
+    other = make_quiz(app, teach, 'Unused')
+    teach.post('/quiz/delvq/{}'.format(other.id))
+    assert db.session.get(VQuiz, other.id) is None
+
+
+def test_a_quiz_cant_be_removed_while_someone_is_taking_it(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen.models import VQuiz
+    vq = make_quiz(app, teach, 'Busy')
+    cq = give(vq, 'sam')
+    cq.startdate = datetime.now()
+    db.session.commit()
+    r = teach.post('/quiz/delvq/{}'.format(vq.id), follow_redirects=True).data.decode()
+    assert 'Not removed.' in r and 'is taking “Busy” right now' in r
+    assert db.session.get(VQuiz, vq.id).removed_at is None
+    # its due date has passed: abandoned, not "taking it"
+    cq.closes_at = datetime.now() - timedelta(minutes=1)
+    db.session.commit()
+    teach.post('/quiz/delvq/{}'.format(vq.id))
+    assert db.session.get(VQuiz, vq.id).removed_at is not None
+
+
+def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    from app.qgen.models import CQuiz, ArchivedAttempt
+    vq = make_quiz(app, teach, 'Twice')
+    first = give(vq, 'sam')
+    S.submit(first, {1: '4'})
+    with app.test_request_context():
+        S.retake(first)
+    give(vq, 'kim')
+    page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert 'Take away all 2 tries' in page
+    r = teach.post('/quiz/takeaway/{}/{}'.format(vq.id, ids('sam')), follow_redirects=True).data.decode()
+    assert 'Took “Twice” away from sam: 2 tries moved to the' in r
+    assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 0
+    assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 2
+    assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('kim')).count() == 1
+
+
+def test_a_removed_quiz_can_be_deleted_for_good(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    from app.qgen.models import VQuiz, CQuiz, ArchivedAttempt
+    vq = make_quiz(app, teach, 'Gone soon')
+    S.submit(give(vq, 'sam'), {1: '4'})
+    give(vq, 'kim')
+    teach.post('/quiz/delvq/{}'.format(vq.id))
+    page = teach.get('/quiz/removed').data.decode()
+    assert '/quiz/removed/{}/delete'.format(vq.id) in page and '2 tries leave students’ My quizzes' in page
+    r = teach.post('/quiz/removed/{}/delete'.format(vq.id), follow_redirects=True).data.decode()
+    assert 'Deleted “Gone soon” for good. Its 2 tries are in the' in r
+    assert db.session.get(VQuiz, vq.id) is None and CQuiz.query.count() == 0
+    assert {a.quiz_title for a in ArchivedAttempt.query} == {'Gone soon'} and ArchivedAttempt.query.count() == 2
