@@ -1246,3 +1246,8 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
   .stack td.actions { text-align: left; white-space: normal; }
   .stack td.actions .btn { margin: 4px 4px 0 0; }
 }
+
+/* the student page's awards: stretch the list taller or shorter by its corner */
+.student-awards .awards-scroll { resize: vertical; max-height: none; min-height: 4.5rem; overflow: auto; }
+.awards-grip-note { margin: 4px 0 0; text-align: right; }
+@media print { .student-awards .awards-scroll { height: auto !important; overflow: visible; resize: none; } .awards-grip-note { display: none; } }

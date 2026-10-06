@@ -115,7 +115,8 @@
 {# folded to begin with (the count shows how many); open or not is remembered in this browser #}
 <details class="card subject-box student-awards" id="student-awards">
   <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
-  <div class="box-body">{% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
+  <div class="box-body">{% if awards %}{{ award_list(awards) }}
+    <p class="muted small awards-grip-note">Drag the corner at the bottom right to make the list taller or shorter.</p>{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
 </details>
 {% endif %}
 
@@ -142,7 +143,23 @@
   var box = document.getElementById('student-awards'), KEY = 'qgen-open-student-awards';
   if (!box) return;
   try { box.open = localStorage.getItem(KEY) === '1'; } catch (e) {}
-  box.addEventListener('toggle', function () { try { localStorage.setItem(KEY, box.open ? '1' : '0'); } catch (e) {} });
+  box.addEventListener('toggle', function () { try { localStorage.setItem(KEY, box.open ? '1' : '0'); fit(); } catch (e) {} });
+  //the list can be stretched taller or shorter (its corner); the height is remembered
+  var list = box.querySelector('.awards-scroll'), HKEY = 'qgen-student-awards-height';
+  if (!list) return;
+  function fit() {
+    if (!box.open || list.dataset.sized) return;
+    var saved = 0;
+    try { saved = parseInt(localStorage.getItem(HKEY), 10) || 0; } catch (e) {}
+    //first time: as tall as the awards, at most about four rows
+    list.style.height = (saved || Math.min(list.scrollHeight, 288)) + 'px';
+    list.dataset.sized = '1';
+  }
+  fit();
+  if (window.ResizeObserver) new ResizeObserver(function () {
+    if (!list.dataset.sized || !box.open) return;
+    try { localStorage.setItem(HKEY, String(Math.round(list.getBoundingClientRect().height))); } catch (e) {}
+  }).observe(list);
 })();
 /* one student's quiz boxes: closed to begin with; the open ones are remembered in this browser */
 (function () {
