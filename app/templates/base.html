@@ -171,9 +171,66 @@
     /* close open menus when clicking elsewhere */
     document.addEventListener('click', function (e) {
       document.querySelectorAll('details.menu[open]').forEach(function (d) {
-        if (!d.contains(e.target)) d.removeAttribute('open');
+        if (!d.contains(e.target) && !(d._floatList && d._floatList.contains(e.target))) d.removeAttribute('open');
       });
     });
+    /* pop-up menus inside lists and boxes (a row's "More", a message's delete choices) are lifted
+       out to the page while open, by their button, so no box's edge can cut them off; upward
+       when there isn't room below. They go back when closed. */
+    var FLOAT = 'details.row-menu, details.float-menu';
+    function floatOpen(d) {
+      var list = d._floatList || d.querySelector(':scope > .menu-list, :scope > .msg-del-choices'), btn = d.querySelector('summary');
+      if (!list || !btn) return;
+      if (!d._floatList) {
+        d._floatList = list;
+        d._floatHome = document.createComment('menu');
+        list.parentNode.insertBefore(d._floatHome, list);
+        list._floatOwner = d;
+      }
+      document.body.appendChild(list);
+      list.classList.add('floating-menu');
+      list.style.top = '0px'; list.style.left = '0px';
+      var r = btn.getBoundingClientRect(), w = list.offsetWidth, h = list.offsetHeight;
+      var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+      var top = r.bottom + 4 + h > window.innerHeight - 8 && r.top - 4 - h > 8 ? r.top - 4 - h : r.bottom + 4;
+      list.style.left = left + 'px'; list.style.top = top + 'px';
+    }
+    function floatClose(d) {
+      var list = d._floatList;
+      if (!list || !d._floatHome || list.parentNode === d) return;
+      list.classList.remove('floating-menu');
+      list.style.top = list.style.left = '';
+      d._floatHome.parentNode.insertBefore(list, d._floatHome);
+    }
+    document.addEventListener('toggle', function (e) {
+      var d = e.target;
+      if (!d.matches || !d.matches(FLOAT)) return;
+      if (d.open) floatOpen(d); else floatClose(d);
+    }, true);
+    //a click outside closes it (the menu itself is now outside its details)
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll(FLOAT).forEach(function (d) {
+        if (d.open && !d.contains(e.target) && !(d._floatList && d._floatList.contains(e.target))) d.open = false;
+      });
+    });
+    //something scrolls: an open menu follows its button, and closes once the button is out of sight
+    window.addEventListener('scroll', function (e) {
+      if (e.target.closest && e.target.closest('.floating-menu')) return;
+      document.querySelectorAll(FLOAT).forEach(function (d) {
+        if (!d.open) return;
+        var r = d.querySelector('summary').getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight || !r.width) d.open = false; else floatOpen(d);
+      });
+    }, true);
+    window.addEventListener('resize', function () {
+      document.querySelectorAll(FLOAT).forEach(function (d) { if (d.open) floatOpen(d); });
+    });
+    //a panel redrawn while its menu was open (the Messages panel reloads itself): drop the orphan
+    setInterval(function () {
+      document.querySelectorAll('body > .floating-menu').forEach(function (l) {
+        if (!l._floatOwner || !l._floatOwner.isConnected) l.remove();
+      });
+    }, 1000);
     /* Esc closes an open drop-down, then the phone menu */
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;

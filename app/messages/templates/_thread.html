@@ -17,7 +17,7 @@
           </form>
         {% elif me_teacher and m.batch and m.kind == 'announcement' %}
           {# an announcement sent to several students: ask which to remove #}
-          <details class="msg-x-wrap msg-del">
+          <details class="msg-x-wrap msg-del float-menu">
             <summary class="msg-x" aria-label="Delete this message" title="Delete this message">✕</summary>
             <div class="msg-del-choices">
               <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
