@@ -49,6 +49,16 @@ def subject_form_error(kind, new):
     return None
 
 
+def with_folder_hint(kind, hints, new):
+    """The Helper's hints, plus the Folder question when it still needs an answer (a new
+    problem or quiz must go somewhere); then it never says "Looks good"."""
+    from .coach import hint
+    error = subject_form_error(kind, new)
+    if not error:
+        return hints
+    return [h for h in hints if h['level'] != 'ok'] + [hint('error', error + ' (See “Folder” on this form.)')]
+
+
 def save_subjects(kind, item):
     """File the item as checked on its form (only forms that show the Subjects row)."""
     if request.form.get('subjects_shown'):
@@ -798,7 +808,8 @@ def check_vprob():
     from .coach import problem_hints
     form = ProblemForm()
     form.validate()
-    return jsonify(hints=problem_hints(form.qtype.data, form.question.data, form.answer.data, form.options()))
+    hints = problem_hints(form.qtype.data, form.question.data, form.answer.data, form.options())
+    return jsonify(hints=with_folder_hint('problems', hints, new=not request.args.get('vp', type=int)))
 
 #quiz page: hints about the checked problems
 @qgen_bp.route('/quiz/checkvquiz', methods=['POST'])
@@ -817,8 +828,9 @@ def check_vquiz():
     vpids = [p for p in vpids if p in problems]
     this_id = request.args.get('vq', type=int)
     others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
-    return jsonify(hints=quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
-                                    lay=lay, shuffle_order=form.shuffle_order.data))
+    hints = quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
+                       lay=lay, shuffle_order=form.shuffle_order.data)
+    return jsonify(hints=with_folder_hint('quizzes', hints, new=not this_id))
 
 
 # ---------------------------------------------------------------- subjects

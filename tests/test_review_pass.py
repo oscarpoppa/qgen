@@ -483,3 +483,25 @@ def test_dashboard_folds_long_lists_of_people(app_db):
     teach = login(app, 'teach')
     page = teach.get('/dashboard').data.decode()
     assert '<details class="more-list" data-more="online"><summary class="small">+3 more</summary>' in page
+
+
+def test_helper_wants_a_folder_before_saying_looks_good(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from test_flow import problem_form
+    form = dict(problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []), subjects_shown='1')
+    hints = teach.post('/quiz/checkvprob', data=form).get_json()['hints']
+    assert not any(h['level'] == 'ok' for h in hints)
+    assert any('Choose a folder for this problem' in h['text'] for h in hints)
+    hints = teach.post('/quiz/checkvprob', data=dict(form, unsorted='1')).get_json()['hints']
+    assert not any('Choose a folder' in h['text'] for h in hints)
+    # editing one that's saved: no folder needed (none means not in a folder)
+    teach.post('/quiz/makevprob', data=dict(form, unsorted='1'))
+    from app.qgen.models import VProblem
+    vp = VProblem.query.one()
+    hints = teach.post('/quiz/checkvprob?vp={}'.format(vp.id), data=form).get_json()['hints']
+    assert not any('Choose a folder' in h['text'] for h in hints)
+    # a quiz the same way
+    data = {'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1'}
+    hints = teach.post('/quiz/checkvquiz', data=data).get_json()['hints']
+    assert any('Choose a folder for this quiz' in h['text'] for h in hints) and not any(h['level'] == 'ok' for h in hints)

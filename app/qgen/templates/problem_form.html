@@ -212,7 +212,7 @@
 
   <div id="preview" class="examples" aria-live="polite"></div>
 </form>
-{% with form_id='problem-form', check_url=url_for('qgen.check_vprob') %}{% include "_helper.html" %}{% endwith %}
+{% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
 </div>
 
 <details class="card help-box">
