@@ -547,3 +547,55 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
     assert 'data-folder-box' not in page and '>C</strong>' in page
+
+
+def test_taking_a_quiz_away_updates_everything(app_db):
+    """Archive (the teacher's way to take a quiz away from a student), finished or not: every
+    page that showed it, and every score and count built from it, follows."""
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen import services as S
+    from app.qgen.models import CQuiz, ArchivedAttempt, QuizFolder
+    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
+    first, retake = give(a, 'sam'), None
+    S.submit(first, {1: '4'})                       # 100%
+    with app.test_request_context():
+        retake = S.retake(first)
+    S.submit(retake, {1: '5'})                      # 0%: with "best" the score that counts is 100%
+    todo = give(b, 'sam')                           # not started
+    # sam files A in a folder of their own
+    sam.post('/mypage/folders', data={'name': 'Done'})
+    folder = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
+    sam.post('/mypage/move', data={'quiz': a.id, 'to': folder.id})
+    keys = {k: poll(who, k) for who, k in ((sam, 'home'), (sam, 'mine'), (teach, 'students'),
+                                            (teach, 'student:{}'.format(ids('sam'))), (teach, 'byquiz'),
+                                            (teach, 'quizresults:{}'.format(a.id)))}
+    assert '>A</h2>' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
+    assert 'Perfect score' in sam.get('/home').data.decode()
+
+    # take away the 100% attempt (finished): A's score that counts is now 0%, the perfect-score
+    # award goes, and every page that shows them notices
+    teach.post('/quiz/delcq/{}'.format(first.id))
+    assert ArchivedAttempt.query.filter_by(original_id=first.id).count() == 1
+    for (who, k), before in zip(((sam, 'home'), (sam, 'mine'), (teach, 'students'), (teach, 'student:{}'.format(ids('sam'))),
+                                 (teach, 'byquiz'), (teach, 'quizresults:{}'.format(a.id))), keys.values()):
+        assert poll(who, k) != before, k
+    home = sam.get('/home').data.decode()
+    assert 'Perfect score' not in home.split('Still to earn')[0]
+    results = teach.get('/quiz/results/{}'.format(a.id)).data.decode()
+    assert 'average 0%' in results
+    # take away the unfinished one: off Home's "Waiting for you" and the Dashboard's list
+    assert '“B”' in home
+    teach.post('/quiz/delcq/{}'.format(todo.id))
+    assert '“B”' not in sam.get('/home').data.decode()
+    dash = teach.get('/dashboard').data.decode()
+    assert '/quiz/take/{}'.format(todo.id) not in dash
+    # the last attempt at A gone: A leaves sam's folder and My quizzes; the folder stays, empty
+    teach.post('/quiz/delcq/{}'.format(retake.id))
+    page = sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
+    assert '>A</h2>' not in page and CQuiz.query.filter_by(assignee=ids('sam')).count() == 0
+    # its notices are gone too (they'd lead nowhere), and sam opening the old address is told
+    r = sam.get('/quiz/take/{}'.format(first.id), follow_redirects=True).data.decode()
+    assert 'Your teacher has taken this quiz away.' in r
+    # all three are in the Archive, in sam's folder, and can be put back
+    assert ArchivedAttempt.query.count() == 3
