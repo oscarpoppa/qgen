@@ -485,26 +485,27 @@ def test_dashboard_folds_long_lists_of_people(app_db):
     assert '<details class="more-list" data-more="online"><summary class="small">+3 more</summary>' in page
 
 
-def test_helper_wants_a_folder_before_saying_looks_good(app_db):
+def test_a_folder_is_optional_when_making_a_problem_or_quiz(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     from test_flow import problem_form
+    from app.qgen.models import VProblem, VQuiz
     form = dict(problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []), subjects_shown='1')
+    # no folder chosen: the Helper doesn't ask for one, and it saves into Not in a folder
     hints = teach.post('/quiz/checkvprob', data=form).get_json()['hints']
-    assert not any(h['level'] == 'ok' for h in hints)
-    assert any('Choose a folder for this problem' in h['text'] for h in hints)
-    hints = teach.post('/quiz/checkvprob', data=dict(form, unsorted='1')).get_json()['hints']
-    assert not any('Choose a folder' in h['text'] for h in hints)
-    # editing one that's saved: no folder needed (none means not in a folder)
-    teach.post('/quiz/makevprob', data=dict(form, unsorted='1'))
-    from app.qgen.models import VProblem
+    assert not any('folder' in h['text'].lower() for h in hints)
+    teach.post('/quiz/makevprob', data=form)
     vp = VProblem.query.one()
-    hints = teach.post('/quiz/checkvprob?vp={}'.format(vp.id), data=form).get_json()['hints']
-    assert not any('Choose a folder' in h['text'] for h in hints)
-    # a quiz the same way
+    assert vp.vpgroups == []
     data = {'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1'}
-    hints = teach.post('/quiz/checkvquiz', data=data).get_json()['hints']
-    assert any('Choose a folder for this quiz' in h['text'] for h in hints) and not any(h['level'] == 'ok' for h in hints)
+    assert not any('folder' in h['text'].lower() for h in teach.post('/quiz/checkvquiz', data=data).get_json()['hints'])
+    teach.post('/quiz/makevquiz', data=data)
+    assert VQuiz.query.one().vqgroups == []
+    page = teach.get('/quiz/makevquiz').data.decode()
+    assert 'Folder <span class="muted small">(optional)</span>' in page and 'name="unsorted"' not in page
+    # a bad new folder name is still caught before saving
+    hints = teach.post('/quiz/checkvprob', data=dict(form, new_subject='x' * 65)).get_json()['hints']
+    assert any('64 characters' in h['text'] for h in hints)
 
 
 def test_dashboard_assigned_box_opens_the_students_copy(app_db):
@@ -875,3 +876,22 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert 'side-new-badge' not in sam.get('/mypage').data.decode()
     assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
     assert 'nothing new</span>' in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+
+
+def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    vq = make_quiz(app, teach, 'Mine')
+    cq = give(vq, 'teach')
+    home = teach.get('/home').data.decode()
+    assert '“Mine”' in home and 'href="/mypage?show=todo"' in home
+    page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'href="/home" data-back>← Home</a>' in page
+    S.submit(cq, {1: '4'})
+    page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'href="/home" data-back>← Home</a>' in page and 'Answer key' not in page
+    # taken away: told as a student is, not sent to the Archive
+    teach.post('/quiz/delcq/{}'.format(cq.id))
+    r = teach.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()
+    assert 'Your teacher has taken this quiz away.' in r

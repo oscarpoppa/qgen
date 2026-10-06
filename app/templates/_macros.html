@@ -74,7 +74,7 @@
 
 {# after a quiz: back to Home (or wherever they came from), and the next quiz to do, if any #}
 {% macro after_quiz(cq, up_next) %}
-  {{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home') }}
+  {{ back_button(url_for('user.home'), 'Home') }}
   {% if up_next %}<a class="btn" href="{{ url_for('qgen.qtake', cidx=up_next.id) }}">Next: “{{ up_next.vquiz.title }}” →</a>{% endif %}
 {%- endmacro %}
 

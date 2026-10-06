@@ -223,7 +223,7 @@ def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
     assert '\u00a0\u00a0\u00a0Algebra (1)' in page and 'Not in a folder (0)' in page
 
 
-def test_new_items_must_be_given_a_subject(app_db):
+def test_new_items_can_be_given_a_subject(app_db):
     app, db = app_db
     from app.qgen.models import VPGroup, VQGroup, VProblem, VQuiz
     teacher = login(app, 'teach')
@@ -231,20 +231,16 @@ def test_new_items_must_be_given_a_subject(app_db):
     alg = VPGroup.query.one()
     form = problem_form('numeric', 'Filed', 'What is 2 + 2?', '4', [])
     page = teacher.get('/quiz/makevprob').data.decode()
-    assert 'required: where should this problem go?' in page and 'name="unsorted"' in page and 'name="new_subject"' in page
+    assert '(optional)' in page and 'name="new_subject"' in page
 
-    # no answer: not saved, and asked again
-    r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1'))
-    assert VProblem.query.count() == 0
-    assert 'Choose a folder for this problem, or Not in a folder to file it later.' in r.data.decode()
     # a subject: saved in it, and the list opens where it is
     r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1', subjects=[str(alg.id)]))
     vp = VProblem.query.one()
     assert [g.title for g in vp.vpgroups] == ['Algebra']
     assert r.headers['Location'].endswith('/quiz/listvp?show={}'.format(vp.id))
     assert 'data-item="{}" data-box="problem:{}" data-show'.format(vp.id, vp.id) in teacher.get(r.headers['Location']).data.decode()
-    # Unsorted
-    teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1', unsorted='1'))
+    # none chosen: in no folder (Not in a folder)
+    teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1'))
     assert VProblem.query.filter_by(title='Later').one().vpgroups == []
     # a new subject typed on the form (an existing name in another case is reused)
     teacher.post('/quiz/makevprob', data=dict(form, title='Shapes', subjects_shown='1', new_subject=' Geometry '))
@@ -272,8 +268,6 @@ def test_new_items_must_be_given_a_subject(app_db):
     # quizzes the same way
     teacher.post('/quiz/subjects/quizzes/new', data={'name': 'Period 2'})
     p2 = VQGroup.query.one()
-    r = teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1'})
-    assert VQuiz.query.count() == 0 and 'Choose a folder for this quiz' in r.data.decode()
     teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1', 'subjects': [str(p2.id)]})
     vq = VQuiz.query.one()
     assert [g.title for g in vq.vqgroups] == ['Period 2']

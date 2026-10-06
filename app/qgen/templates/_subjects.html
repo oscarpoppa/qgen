@@ -102,21 +102,18 @@
 {% macro subject_checks(kind, all_subjects, ticked, new_item, unsorted_ticked, new_subject_name, error) %}
 {% set noun = 'problem' if kind == 'problems' else 'quiz' %}
 <fieldset class="subject-checks{{ ' has-error' if error }}" id="subject-question">
-  <legend>Folder{% if new_item %} <span class="muted small">(required: where should this {{ noun }} go?)</span>{% endif %} {{ tip('subjects', subjects_help) }}</legend>
+  <legend>Folder <span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}</legend>
   <input type="hidden" name="subjects_shown" value="1">
   <div class="subject-check-list">
     {% for g, depth in all_subjects %}
       <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.4 }}em"{% endif %}><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> 📁 {{ g.title }}</label>
     {% endfor %}
-    {% if new_item %}
-      <label class="subject-check"><input type="checkbox" name="unsorted" value="1"{% if unsorted_ticked %} checked{% endif %}> 📥 Not in a folder <span class="muted small">(file it later)</span></label>
-    {% endif %}
   </div>
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
-  <div class="help">You can check more than one.{% if not new_item %} With none checked, it's in no folder.{% endif %}</div>
+  <div class="help">You can check more than one. With none checked, it goes in 📥 Not in a folder, to file later if you like.</div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

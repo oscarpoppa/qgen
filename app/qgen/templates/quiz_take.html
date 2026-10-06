@@ -8,7 +8,7 @@
   <h1>{{ cq.vquiz.title }}</h1>
   <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_allowed else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span>
   {# leaving is safe: answers are saved as they're typed #}
-  <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "'s student page") }}{% else %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home') }}{% endif %}
+  <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "'s student page") }}{% else %}{{ back_button(url_for('user.home'), 'Home') }}{% endif %}
     {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false"><span aria-hidden="true">🧮</span> Calculator</button>{% endif %}</div>
 </div>
 

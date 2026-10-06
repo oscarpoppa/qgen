@@ -11,6 +11,6 @@
   <p>It opens <strong>{{ cq.opens_at|when('long') }}</strong>{% if cq.closes_at %}
     and closes <strong>{{ cq.closes_at|when('long') }}</strong>{% endif %}.</p>
   {% if cq.time_limit %}<p class="muted">You'll have {{ cq.time_limit }} minutes once you start.</p>{% endif %}
-  <p>{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home') }}</p>
+  <p>{{ back_button(url_for('user.home'), 'Home') }}</p>
 </div>
 {% endblock %}

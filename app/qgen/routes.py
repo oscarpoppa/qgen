@@ -35,23 +35,20 @@ def ticked_subjects(item, rel):
 
 
 def subject_form_error(kind, new):
-    """The Subjects question on the edit forms: a new problem (quiz) must go in a subject,
-    in a new one typed there, or in Unsorted. None when it's answered."""
+    """The Folder question on the edit forms: a problem in error only when the new folder's
+    name is (choosing a folder is optional: with none, it's in Not in a folder). None when fine."""
     if not request.form.get('subjects_shown'):
         return None
     name = request.form.get('new_subject', '')
     error = S.new_subject_name_error(kind, name)
     if error:
         return error
-    chosen = [i for i in request.form.getlist('subjects') if S.get_subject(kind, i)]
-    if new and not (chosen or name.strip() or request.form.get('unsorted')):
-        return 'Choose a folder for this {}, or Not in a folder to file it later.'.format('problem' if kind == 'problems' else 'quiz')
     return None
 
 
 def with_folder_hint(kind, hints, new):
-    """The Helper's hints, plus the Folder question when it still needs an answer (a new
-    problem or quiz must go somewhere); then it never says "Looks good"."""
+    """The Helper's hints, plus a problem with the Folder question (a bad new folder name);
+    then it never says "Looks good"."""
     from .coach import hint
     error = subject_form_error(kind, new)
     if not error:
@@ -1130,12 +1127,13 @@ def attempt_gone(cidx):
     a = archived_for(cidx)
     if a is None:
         abort(404)
+    #their own (a teacher who took it too): told as a student is
+    if a.student_id == current_user.id:
+        flash('Your teacher has taken this quiz away.', 'info')
+        return redirect(url_for('user.mypage'))
     if current_user.is_admin:
         return redirect(url_for('qgen.archived', aid=a.id))
-    if a.student_id != current_user.id:
-        abort(404)
-    flash('Your teacher has taken this quiz away.', 'info')
-    return redirect(url_for('user.mypage'))
+    abort(404)
 
 def archive_kit(view, node, root, flat, nodes, total):
     """The Archive's folders, for _folders.html."""

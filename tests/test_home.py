@@ -41,7 +41,9 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in page  # in the menu for students
     # the boxes fold away (remembered in the browser)
     assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page and 'qgen-home-closed' in page
-    assert '<a href="/home">Home</a>' not in teach.get('/dashboard').data.decode()
+    # teachers have Home too (they take quizzes as students do); they still land on the Dashboard
+    assert '<a href="/home">Home</a>' in teach.get('/dashboard').data.decode()
+    assert teach.get('/home').status_code == 200
 
 
 def test_awards(app_db):
