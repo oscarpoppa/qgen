@@ -698,6 +698,28 @@ def ai_values():
     return ai_fill('values')
 
 
+#a "Pick from list" value: fill its items from a description ("all the perfect squares from 4 to 100")
+@qgen_bp.route('/quiz/ai/list', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def ai_list():
+    from .ai_helper import ask_list, describe_context
+    data = request.get_json(silent=True) or {}
+    name = str(data.get('name') or '')
+    columns = len([p for p in name.split('=')]) if '=' in name else 1
+    #the question and the other random values, so the description can refer to them
+    context = describe_context(data.get('question'), data.get('values') if isinstance(data.get('values'), list) else [], name)
+    result, failed = ai_call('list', data.get('text'), lambda key, t: ask_list(key, t, columns, context=context))
+    if failed:
+        return failed
+    if result['off_topic']:
+        return jsonify(ok=False, error='The AI helper only fills in lists for school quiz problems.'), 422
+    if not result['items']:
+        return jsonify(ok=False, error=result['cannot_do'] or 'The AI helper couldn\'t make that list. Please describe it another way.'), 422
+    return jsonify(ok=True, items=', '.join(result['items']), count=len(result['items']), note=result['cannot_do'])
+
+
 # ---------------------------------------------------------------- live helper
 
 #problem page: rule-based hints as the teacher types (same form data as the preview)

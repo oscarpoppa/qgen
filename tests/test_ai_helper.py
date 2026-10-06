@@ -156,3 +156,86 @@ def test_school_quiz_problems_only(app_db, monkeypatch):
             assert r.status_code == 302 and '/mypage' in r.headers['Location']
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
+
+
+# ---------------------------------------------------------------- "✨ Fill list"
+
+SQUARES = {'items': ['4', '9', '16', '25', '36', '49', '64', '81', '100'], 'cannot_do': None, 'off_topic': False}
+
+
+def test_fill_list_request_and_cleanup():
+    fake = FakeClient(SQUARES)
+    out, usage = ai_helper.ask_list('key', 'all the perfect squares from 4 to 100', client=fake)
+    call = fake.calls[0]
+    assert 'all the perfect squares from 4 to 100' in call['messages'][0]['content'] and 'one column' in call['messages'][0]['content']
+    assert 'Always use American (US customary) units' in call['system'][0]['text']  # the standing rule
+    assert call['output_config']['format']['schema'] == ai_helper.LIST_SCHEMA
+    assert out == {'items': SQUARES['items'], 'cannot_do': None, 'off_topic': False} and usage['output_tokens'] == 20
+    # commas inside an item would split it: they go; repeats go; at most MAX_LIST
+    messy = {'items': ['1,000', '1,000', ' 2  500 ', ''] + [str(n) for n in range(300)], 'cannot_do': None, 'off_topic': False}
+    out, _ = ai_helper.ask_list('key', 'x', client=FakeClient(messy))
+    assert out['items'][:2] == ['1 000', '2 500'] and len(out['items']) == ai_helper.MAX_LIST
+    # matched columns: each item needs every part; ones that don't fit are left out
+    pairs = {'items': ['France = Paris', 'Japan=Tokyo', 'Kenya', 'Peru = Lima = x'], 'cannot_do': None, 'off_topic': False}
+    fake = FakeClient(pairs)
+    out, _ = ai_helper.ask_list('key', 'countries and capitals', columns=2, client=fake)
+    assert out['items'] == ['France = Paris', 'Japan = Tokyo'] and '2 matched columns' in fake.calls[0]['messages'][0]['content']
+    # not school content: nothing
+    out, _ = ai_helper.ask_list('key', 'x', client=FakeClient({'items': ['a'], 'cannot_do': None, 'off_topic': True}))
+    assert out['off_topic'] and out['items'] == []
+
+
+def test_fill_list_route(app_db, monkeypatch):
+    app, db = app_db
+    from app.qgen.models import AICall
+    teacher = login(app, 'teach')
+    app.config['ANTHROPIC_API_KEY'] = 'test-key'
+    try:
+        page = teacher.get('/quiz/makevprob').data.decode()
+        assert '✨ Fill list' in page and 'data-url="/quiz/ai/list"' in page
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(SQUARES))
+        r = teacher.post('/quiz/ai/list', json={'text': 'all the perfect squares from 4 to 100', 'name': 'n'})
+        assert r.get_json() == {'ok': True, 'items': '4, 9, 16, 25, 36, 49, 64, 81, 100', 'count': 9, 'note': None}
+        assert AICall.query.one().kind == 'list' and AICall.query.one().ok  # counted and logged like the other AI buttons
+        # the items work as a list value
+        from app.qgen.friendly import validate_values
+        assert validate_values([{'name': 'n', 'kind': 'list', 'items': r.get_json()['items']}]) == []
+        assert teacher.post('/quiz/ai/list', json={'text': '', 'name': 'n'}).status_code == 400
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient({'items': [], 'cannot_do': 'Too vague.', 'off_topic': False}))
+        r = teacher.post('/quiz/ai/list', json={'text': 'stuff', 'name': 'n'})
+        assert r.status_code == 422 and r.get_json()['error'] == 'Too vague.'
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient({'items': ['x'], 'cannot_do': None, 'off_topic': True}))
+        assert teacher.post('/quiz/ai/list', json={'text': 'x', 'name': 'n'}).status_code == 422
+        assert login(app, 'sam').post('/quiz/ai/list', json={'text': 'x'}).status_code == 302  # teachers only
+    finally:
+        app.config['ANTHROPIC_API_KEY'] = None
+    assert '✨ Fill list' not in teacher.get('/quiz/makevprob').data.decode()  # no key: not shown
+
+
+def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):
+    ctx = ai_helper.describe_context('Is [n] bigger than [a]?', [
+        {'name': 'a', 'kind': 'whole', 'min': '2', 'max': '12', 'step': '', 'items': ''},
+        {'name': 'n', 'kind': 'list', 'items': ''},             # the list being filled: left out
+        {'name': 'who', 'kind': 'list', 'items': 'Maria, Li'},
+        {'name': 'x', 'kind': 'bogus'}, 'not a row'], name='n')
+    assert ctx == ('The question: Is [n] bigger than [a]?\n\nThe other random values:\n'
+                   '- a (Whole number), min: 2, max: 12\n- who (Pick from list), items: Maria, Li')
+    fake = FakeClient(SQUARES)
+    ai_helper.ask_list('key', "every whole number between a's from and to", client=fake, context=ctx)
+    sent = fake.calls[0]['messages'][0]['content']
+    assert sent.startswith('The question: Is [n] bigger than [a]?') and "The list: every whole number between a's from and to" in sent
+    assert "can't depend on what another value turns out to be" in fake.calls[0]['system'][0]['text']
+    # the page sends them along
+    app, db = app_db
+    teacher = login(app, 'teach')
+    app.config['ANTHROPIC_API_KEY'] = 'test-key'
+    try:
+        fake = FakeClient(SQUARES)
+        monkeypatch.setattr(ai_helper, '_client', lambda key: fake)
+        r = teacher.post('/quiz/ai/list', json={'text': 'squares up to a', 'name': 'n', 'question': 'What is [n] + [a]?',
+                                                 'values': [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '100'}]})
+        assert r.get_json()['ok']
+        assert '- a (Whole number), min: 1, max: 100' in fake.calls[0]['messages'][0]['content']
+        assert teacher.post('/quiz/ai/list', json={'text': 'x', 'name': 'n', 'values': 'junk'}).get_json()['ok']  # bad context: ignored
+    finally:
+        app.config['ANTHROPIC_API_KEY'] = None

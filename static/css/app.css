@@ -802,6 +802,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .answers-off .q-only { display: inline; }
 
 /* problem editor: math buttons above the question, and how its math will look */
+/* problem editor: "✨ Fill list" under a Pick from list value */
+.list-ai { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-basis: 100%; }
+.list-ai .list-ai-text { flex: 1 1 240px; min-width: 0; }
+.list-ai-status { flex-basis: 100%; }
 .math-toolbar { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 0 0 6px; }
 .math-btn {
   min-width: 34px; min-height: 30px; padding: 2px 8px; font: 500 .95rem/1 "Cambria Math", "STIX Two Math", Georgia, serif;

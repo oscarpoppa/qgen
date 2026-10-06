@@ -132,16 +132,23 @@ def ask(api_key, kind, text, client=None):
     schema = PROBLEM_SCHEMA if kind == 'problem' else VALUES_ONLY_SCHEMA
     ask_for = ('Fill in the whole problem form for this description:' if kind == 'problem'
                else 'Fill in only the random values for this description:')
+    fill, usage = _json_call(api_key, SYSTEM_PROMPT, '{}\n\n{}'.format(ask_for, text), schema, client)
+    return clean(fill, kind), usage
+
+
+def _json_call(api_key, system, prompt, schema, client=None, max_tokens=16000):
+    """One request whose answer is JSON in `schema`. Returns (parsed dict, usage dict);
+    problems come back as AIError in plain words."""
     client = client or _client(api_key)
     try:
         resp = client.beta.messages.create(
             model=tuning.get('ai_model'),
-            max_tokens=16000,
+            max_tokens=max_tokens,
             thinking={'type': 'adaptive'},
             betas=['server-side-fallback-2026-07-01'],
             fallbacks='default',
-            system=[{'type': 'text', 'text': SYSTEM_PROMPT, 'cache_control': {'type': 'ephemeral'}}],
-            messages=[{'role': 'user', 'content': '{}\n\n{}'.format(ask_for, text)}],
+            system=[{'type': 'text', 'text': system, 'cache_control': {'type': 'ephemeral'}}],
+            messages=[{'role': 'user', 'content': prompt}],
             output_config={'format': {'type': 'json_schema', 'schema': schema}},
         )
     except anthropic.AuthenticationError:
@@ -162,10 +169,9 @@ def ask(api_key, kind, text, client=None):
         raise AIError('That description was too long for the AI helper. Please shorten it.')
     text_out = next((b.text for b in resp.content if b.type == 'text'), None)
     try:
-        fill = json.loads(text_out or '')
+        return json.loads(text_out or ''), usage
     except ValueError:
         raise AIError('The AI helper gave an answer I couldn\'t read. Please try again.')
-    return clean(fill, kind), usage
 
 
 def clean(fill, kind):
@@ -210,3 +216,84 @@ def problems_with(fill, kind):
     return get_qtype(fill['qtype']).validate(fill['question'], fill['answer'], options)
 
 
+
+
+# ---------------------------------------------------------------- "Fill list"
+
+MAX_LIST = 200  # items in one list
+
+LIST_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'items': {'type': 'array', 'items': {'type': 'string'}},
+        'cannot_do': _NULLABLE_STR,
+        'off_topic': {'type': 'boolean'},
+    },
+    'required': ['items', 'cannot_do', 'off_topic'],
+    'additionalProperties': False,
+}
+
+LIST_PROMPT = """You fill in the items of a "pick from list" value for a school quiz app. Each student is given one item (or a few) at random from the list, to use in a quiz question. The teacher describes the list in plain English; you return every item.
+
+Rules for the items:
+- Each item is short plain text or a number, exactly as it should appear in the question. Never put a comma inside an item (the app separates items with commas); write 1000 not 1,000.
+- Numbers are plain: 25, 3.5, -4. No units unless the teacher asks for them.
+- When asked for a range or a set ("all the perfect squares from 4 to 100", "the even numbers below 20", "the 50 US states"), include every item, in a sensible order, and nothing outside it. Be exact with mathematics: work it out carefully.
+- When the value has matched columns (named like "country = capital"), each item gives one entry per column in the same order, separated by " = ", for example "France = Paris". Never use "=" inside an entry.
+- At most """ + str(MAX_LIST) + """ items. If the description needs more, or is impossible or unclear, return the items you can and explain briefly in cannot_do (else null).
+- Always use American (US customary) units when units come up: miles, miles per hour (mph), feet, inches, pounds, ounces, gallons, cups, degrees Fahrenheit.
+- You may be shown the problem's question (where [name] marks a random value) and its other random values with their settings. Use them to understand the list: "every whole number between a's from and to" means the numbers from that value's "from" to its "to"; "names for the person in the question" should fit the question.
+- The list is fixed: the same for every student, chosen before any value is drawn. It can't depend on what another value turns out to be for a particular student (like "multiples of whatever a is"). If the description needs that, return no items and say in cannot_do that a list can't follow another value's draw, and that a calculated value (a formula such as a * k) can do it instead.
+- This is only for school quiz content. If the request isn't something a teacher would put in a quiz (or asks for anything harmful), set off_topic to true and return no items."""
+
+
+#the settings of another value worth showing the model, by kind
+_CONTEXT_KEYS = ('min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'im_min', 'im_max')
+
+
+def describe_context(question='', values=(), name=''):
+    """The problem around the list, in plain lines for the prompt: the question and the
+    other random values with their settings (not the list being filled). Kept short."""
+    lines = []
+    question = str(question or '').strip()
+    if question:
+        lines.append('The question: ' + question[:2000])
+    others = []
+    for v in values or []:
+        if not isinstance(v, dict):
+            continue
+        vname = str(v.get('name') or '').strip()
+        kind = str(v.get('kind') or '').strip()
+        if not vname or vname == name.strip() or kind not in KINDS:
+            continue
+        bits = ['{}: {}'.format(k, str(v[k])[:300]) for k in _CONTEXT_KEYS if str(v.get(k) or '').strip()]
+        others.append('- {} ({}){}'.format(vname[:40], KINDS[kind], ', ' + ', '.join(bits) if bits else ''))
+    if others:
+        lines.append('The other random values:\n' + '\n'.join(others[:30]))
+    return '\n\n'.join(lines)
+
+
+def ask_list(api_key, text, columns=1, client=None, context=''):
+    """Turn a description into list items. columns: how many matched parts each item has
+    (a value named "country = capital" has 2); context: describe_context() of the problem.
+    Returns ({'items': [...], 'cannot_do'}, usage); items have no commas, and each has
+    `columns` parts."""
+    shape = ('This value has {} matched columns, so each item needs {} parts separated by " = ".'.format(columns, columns)
+             if columns > 1 else 'This value has one column: plain items.')
+    prompt = '{}\n\nThe list: {}'.format(shape, text)
+    if context:
+        prompt = '{}\n\n{}'.format(context, prompt)
+    data, usage = _json_call(api_key, LIST_PROMPT, prompt, LIST_SCHEMA, client, max_tokens=8000)
+    if data.get('off_topic') is True:
+        return {'items': [], 'cannot_do': None, 'off_topic': True}, usage
+    items = []
+    for item in data.get('items') or []:
+        item = ' '.join(str(item).replace(',', ' ').split())
+        if columns > 1:
+            parts = [p.strip() for p in item.split('=')]
+            if len(parts) != columns or not all(parts):
+                continue  # not the right shape: left out rather than breaking the list
+            item = ' = '.join(parts)
+        if item and item not in items:
+            items.append(item)
+    return {'items': items[:MAX_LIST], 'cannot_do': data.get('cannot_do') or None, 'off_topic': False}, usage

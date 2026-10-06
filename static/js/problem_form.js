@@ -369,6 +369,52 @@
         .then(function () { form.querySelectorAll('.ai-go').forEach(function (b) { b.disabled = false; }); });
   }
 
+  /* ---------- "✨ Fill list": the AI helper fills a Pick from list value ---------- */
+  //the other value rows, as the AI sees them (it fills this one)
+  function otherValues(skip) {
+    var keys = ['name', 'kind', 'min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'im_min', 'im_max'];
+    return Array.prototype.filter.call(form.querySelectorAll('.value-row'), function (r) { return r !== skip; }).map(function (r) {
+      var v = {};
+      keys.forEach(function (k) { var el = r.querySelector('[name$="-' + k + '"]'); if (el) v[k] = el.value; });
+      return v;
+    });
+  }
+  function fillList(btn) {
+    var row = btn.closest('.value-row'), box = row.querySelector('.list-ai');
+    var text = box.querySelector('.list-ai-text').value.trim(), status = box.querySelector('.list-ai-status');
+    var items = row.querySelector('[name$="-items"]');
+    if (!text) { status.textContent = 'Describe the list first, e.g. all the perfect squares from 4 to 100.'; return; }
+    function go() {
+      btn.disabled = true;
+      status.innerHTML = '<span class="spinner"></span> Making the list…';
+      fetch(btn.dataset.url, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ text: text, name: row.querySelector('[name$="-name"]').value,
+                               question: (form.querySelector('[name=question]') || {}).value || '', values: otherValues(row) })
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res.ok) { status.textContent = res.error || 'Something went wrong.'; return; }
+        items.value = res.items;
+        items.dispatchEvent(new Event('input', { bubbles: true }));
+        status.textContent = 'Filled in ' + res.count + ' item' + (res.count === 1 ? '' : 's') + '. Please check them.' + (res.note ? ' Note: ' + res.note : '');
+      }, function () { status.textContent = 'Couldn\'t reach the server. Please try again.'; })
+        .then(function () { btn.disabled = false; });
+    }
+    if (items.value.trim()) ask('Replace the items already in this list?', 'Replace').then(function (yes) { if (yes) go(); });
+    else go();
+  }
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest('.list-ai-go');
+    if (btn) fillList(btn);
+  });
+  //Enter in the description fills the list (instead of sending the whole form)
+  form.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('list-ai-text')) {
+      e.preventDefault();
+      fillList(e.target.closest('.list-ai').querySelector('.list-ai-go'));
+    }
+  });
+
   /* ---------- one-click fixes from the helper panel ---------- */
   form.addEventListener('helper-action', function (e) {
     var a = e.detail;
