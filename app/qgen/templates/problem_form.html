@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import field, check, errors as error_box, image_drop, tip %}
 {% from "_subjects.html" import subject_checks with context %}
 
@@ -78,7 +79,10 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}">Back to problems</a></div>
+  {# back where they came from (a quiz's results, its View page...), also after saving #}
+  {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}">← {{ came[1] }}</a>
+    {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}">View</a>{% endif %}</div>
 </div>
 
 {{ error_box(errors) }}
@@ -86,6 +90,7 @@
 <div class="editor">
 <form method="post" id="problem-form" novalidate>
   {{ form.hidden_tag() }}
+  {% if came[0] != url_for('qgen.list_vprobs') %}<input type="hidden" name="next" value="{{ came[0] }}">{% endif %}
 
   {% if ai_enabled %}
   <div class="card ai-box">
@@ -199,7 +204,7 @@
     <div class="btn-row">
       {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}
       <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vprobs') }}" title="Leave without saving">Cancel</a>
+      <a class="btn btn-secondary" href="{{ came[0] }}" title="Leave without saving">Cancel</a>
     </div>
   </div>
 

@@ -1,12 +1,17 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_macros.html" import field %}
 
+{# another teacher's draft, or the attempt archived: offered, never reloaded under the grader #}
+{% block body_attrs %}{{ watch('grading:%d' % cq.id, note='Someone else has changed this attempt or its grades.', ask=True) }}{% endblock %}
+
 {% block content %}
 <div class="page-head">
-  <h1>{{ cq.vquiz.title }}</h1>
-  <span class="person">{{ avatar(cq.taker, 32) }}{{ cq.taker.username }}</span>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.review_list') }}">← Waiting for grading</a></div>
+  <h1><a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's results">{{ cq.vquiz.title }}</a></h1>
+  <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}'s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>
+  {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
+  <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
 <p class="muted">Select words in an answer, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> to highlight them. Click a highlight to remove it.</p>
 
@@ -51,7 +56,8 @@
     </section>
   {% endfor %}
   <div class="card btn-row">
-    {{ form.finalize(class='btn') }}
+    {% if others %}{{ form.finalize_next(class='btn') }}
+    {{ form.finalize(class='btn btn-secondary') }}{% else %}{{ form.finalize(class='btn') }}{% endif %}
     {{ form.save(class='btn btn-secondary') }}
     <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
   </div>

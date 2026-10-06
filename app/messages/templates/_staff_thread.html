@@ -15,20 +15,20 @@
         </form>
       {% endif %}
       <div class="msg-meta small">
-        <strong>{{ m.sender.username if m.sender else 'A former teacher' }}</strong>
+        <strong>{{ m.sender.shown_name if m.sender else 'A former teacher' }}</strong>
         {% if m.to_all %}<span class="muted">to all teachers</span>
         {% else %}
-          {%- set others = m.recipients|rejectattr('id', 'equalto', current_user.id)|map(attribute='username')|list %}
-          <span class="badge" title="Only {{ m.recipients|map(attribute='username')|join(', ') }} can see this">
+          {%- set others = m.recipients|rejectattr('id', 'equalto', current_user.id)|map(attribute='shown_name')|list %}
+          <span class="badge" title="Only {{ m.recipients|map(attribute='shown_name')|join(', ') }} can see this">
             {%- if not mine and others|length < m.recipients|length %}to you{{ ' and ' ~ others|join(', ') if others }} only
-            {%- else %}to {{ m.recipients|map(attribute='username')|join(', ') or 'a teacher' }} only{% endif %}</span>
+            {%- else %}to {{ m.recipients|map(attribute='shown_name')|join(', ') or 'a teacher' }} only{% endif %}</span>
         {% endif %}
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}</div>
       {% if show_with is defined and show_with and not mine and m.sender %}
-        <button type="button" class="btn-link small show-student" data-student="t{{ m.sender.id }}">Reply to {{ m.sender.username }}</button>
+        <button type="button" class="btn-link small show-student" data-student="t{{ m.sender.id }}">Reply to {{ m.sender.shown_name }}</button>
       {% endif %}
     </div>
     </li>

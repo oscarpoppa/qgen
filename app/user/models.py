@@ -23,6 +23,15 @@ class User(UserMixin, db.Model):
     avatar = db.Column(db.String(128))
     #when this user last used the site (at most a minute out of date); see app/__init__.py
     last_seen = db.Column(db.DateTime, nullable=True, index=True)
+    #what they like to be called (optional, set by them alone on My profile): shown with their
+    #name everywhere, "sam (Sammy)"
+    nickname = db.Column(db.String(32), nullable=True)
+    NICKNAME_MAX = 32
+
+    @property
+    def shown_name(self):
+        """Their name as the site shows it: "sam (Sammy)", or just "sam"."""
+        return '{} ({})'.format(self.username, self.nickname) if self.nickname else self.username
 
     @property
     def online(self):

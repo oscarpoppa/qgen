@@ -1,4 +1,5 @@
 from flask import render_template, redirect, url_for, request, flash, jsonify, abort, current_app
+from app.nav import back_to
 from flask_login import current_user, login_required
 
 from app import db, live
@@ -53,11 +54,14 @@ def inbox():
 @pw_check
 @admin_only
 def conversation(student_id):
-    student = db.get_or_404(User, student_id)
+    student = db.session.get(User, student_id)
+    if student is None:
+        flash("That student's account has been deleted.", 'info')
+        return redirect(url_for('messages.inbox'))
     items = M.conversation(student.id, teacher=current_user)
     M.mark_seen_by_teachers(current_user, student.id)
     return render_template('conversation.html', student=student, items=items, rows=M.inbox(current_user),
-                           title='Messages: {}'.format(student.username))
+                           title='Messages: {}'.format(student.shown_name))
 
 #route for a teacher to send to one student, chosen students, or everyone
 @messages_bp.route('/messages/send', methods=['POST'])
@@ -66,7 +70,7 @@ def conversation(student_id):
 @admin_only
 @post_form_only
 def send():
-    back = request.referrer or url_for('messages.inbox')
+    back = back_to(url_for('messages.inbox'))
     to = request.form.get('to', '')
     if wants_json():
         #from the side panel: stays on the page it's on
@@ -100,11 +104,11 @@ def send():
     if not request.form.get('pin'):
         pinned = ''
     elif len(students) == 1:
-        pinned = ' and pinned to the top of {}\'s home page'.format(students[0].username)
+        pinned = ' and pinned to the top of {}\'s home page'.format(students[0].shown_name)
     else:
         pinned = ' and pinned to the top of their home pages'
     if len(students) == 1 and to != 'all':
-        flash('Message sent to {}{}.'.format(students[0].username, pinned), 'success')
+        flash('Message sent to {}{}.'.format(students[0].shown_name, pinned), 'success')
         return redirect(url_for('messages.conversation', student_id=students[0].id))
     flash('Announcement sent to {} student{}{}.'.format(len(students), '' if len(students) == 1 else 's', pinned), 'success')
     current_app.logger.info('{} sent an announcement to {} students'.format(current_user.username, len(students)))
@@ -125,12 +129,12 @@ def send_staff():
         if wants_json():
             return jsonify(ok=False, error=str(exc)), 400
         flash(str(exc), 'error')
-        return redirect(request.referrer or url_for('messages.teachers_page'))
+        return redirect(back_to(url_for('messages.teachers_page')))
     if wants_json():
         return jsonify(ok=True)
-    flash('Message sent to {}.'.format(', '.join(t.username for t in msg.recipients) if msg.recipients
+    flash('Message sent to {}.'.format(', '.join(t.shown_name for t in msg.recipients) if msg.recipients
                                        else 'all the teachers'), 'success')
-    return redirect(request.referrer or url_for('messages.teachers_page'))
+    return redirect(back_to(url_for('messages.teachers_page')))
 
 #route for a teacher to delete a message they wrote to teachers
 @messages_bp.route('/messages/teachers/delete/<int:message_id>', methods=['POST'])
@@ -143,7 +147,7 @@ def delete_staff(message_id):
     if wants_json():
         return (jsonify(ok=True), 200) if done else (jsonify(ok=False, error='You can only delete your own messages.'), 404)
     flash('Message deleted.' if done else 'You can only delete your own messages.', 'success' if done else 'error')
-    return redirect(request.referrer or url_for('messages.teachers_page'))
+    return redirect(back_to(url_for('messages.teachers_page')))
 
 #route to the messages between teachers as a page (all of them, or with one teacher)
 @messages_bp.route('/messages/teachers', methods=['GET'])
@@ -169,7 +173,7 @@ def pin(message_id):
     if wants_json():
         return jsonify(ok=True)
     flash('{} for {} student{}.'.format('Pinned' if pinned else 'Unpinned', count, '' if count == 1 else 's'), 'success')
-    return redirect(request.referrer or url_for('messages.inbox'))
+    return redirect(back_to(url_for('messages.inbox')))
 
 
 #route to delete a message for good (teachers: any message; students: their own).
@@ -187,12 +191,12 @@ def delete(message_id):
         if wants_json():
             return jsonify(ok=False, error=str(exc)), 403
         flash(str(exc), 'error')
-        return redirect(request.referrer or home_url())
+        return redirect(back_to(home_url()))
     current_app.logger.info('{} deleted {} message{}'.format(current_user.username, count, '' if count == 1 else 's'))
     if wants_json():
         return jsonify(ok=True, deleted=count)
     flash('Message deleted{}.'.format(' for all {} students who got it'.format(count) if count > 1 else ''), 'success')
-    return redirect(request.referrer or home_url())
+    return redirect(back_to(home_url()))
 
 #route to mark one notice seen (it was clicked in the Notices panel)
 @messages_bp.route('/messages/notices/seen/<int:notice_id>', methods=['POST'])
@@ -220,10 +224,10 @@ def clear_notices(notice_id=None):
         if wants_json():
             return jsonify(ok=False, error=str(exc)), 404
         flash(str(exc), 'error')
-        return redirect(request.referrer or home_url())
+        return redirect(back_to(home_url()))
     if wants_json():
         return jsonify(ok=True, cleared=count)
-    return redirect(request.referrer or home_url())
+    return redirect(back_to(home_url()))
 
 
 # ---------------------------------------------------------------- students
@@ -247,10 +251,10 @@ def reply():
         return jsonify(ok=True)
     try:
         msg = M.reply(current_user, request.form.get('body'), to)
-        flash('Message sent to {}.'.format(', '.join(t.username for t in msg.recipients) if msg.recipients else 'your teachers'), 'success')
+        flash('Message sent to {}.'.format(', '.join(t.shown_name for t in msg.recipients) if msg.recipients else 'your teachers'), 'success')
     except M.MessageError as exc:
         flash(str(exc), 'error')
-    return redirect(request.referrer or url_for('user.mypage'))
+    return redirect(back_to(url_for('user.mypage')))
 
 def wants_json():
     """Sent by the side panel's script (which reloads the panel itself), not a plain form."""
@@ -450,9 +454,11 @@ def messages_state():
     else:
         q = q.filter(Message.student_id == current_user.id,
                      db.or_(Message.hidden_for_student.is_(False), Message.pinned.is_(True)))
-    rows = q.with_entities(Message.id, Message.pinned, Message.hidden_for_student).all()
-    state = '{}:{}:{}:{}'.format(len(rows), max((r[0] for r in rows), default=0),
-                                 sum(r[0] for r in rows if r[1]), sum(r[0] for r in rows if r[2]))
+    #worked out by the database: a poll doesn't read every message
+    state = ':'.join(str(v or 0) for v in q.with_entities(
+        db.func.count(Message.id), db.func.max(Message.id),
+        db.func.sum(db.case((Message.pinned.is_(True), Message.id), else_=0)),
+        db.func.sum(db.case((Message.hidden_for_student.is_(True), Message.id), else_=0))).one())
     if not current_user.is_admin:
         #a student's panel lists the teachers, online ones marked
         state += ':' + ','.join(str(t.id) for t in M.teachers_for_student() if t.online)
@@ -467,14 +473,14 @@ def notices_state():
     q = Message.query.filter(IS_NOTICE)
     q = q.filter(db.or_(db.and_(Message.from_teacher.is_(False), ~cleared_by(current_user.id)), own_notices(current_user.id))) \
         if current_user.is_admin else q.filter(Message.from_teacher.is_(True), Message.student_id == current_user.id)
-    ids = [r[0] for r in q.with_entities(Message.id).all()]
-    return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))
+    return ':'.join(str(v or 0) for v in q.with_entities(
+        db.func.count(Message.id), db.func.max(Message.id), db.func.sum(Message.id)).one())
 
 
 def staff_preview(m):
     """The pop-up for a message from another teacher: "Open messages" shows it (view)."""
     body = m.body if len(m.body) <= 90 else m.body[:87].rstrip() + '…'
-    return {'id': 's{}'.format(m.id), 'from': m.sender.username if m.sender else 'a teacher', 'text': body,
+    return {'id': 's{}'.format(m.id), 'from': m.sender.shown_name if m.sender else 'a teacher', 'text': body,
             'view': 't{}'.format(m.sender_id) if m.sender_id else 'teachers'}
 
 
@@ -482,6 +488,6 @@ def preview(m):
     """Who and the first words, for the pop-up (the page shows it as plain text)."""
     if not m:
         return None
-    who = (m.sender.username if m.sender else 'Teacher') if m.from_teacher else m.student.username
+    who = (m.sender.shown_name if m.sender else 'Teacher') if m.from_teacher else m.student.shown_name
     body = m.body if len(m.body) <= 90 else m.body[:87].rstrip() + '…'
     return {'id': m.id, 'from': None if m.kind == 'notice' else who, 'text': body}

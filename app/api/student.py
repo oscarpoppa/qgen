@@ -141,7 +141,7 @@ def my_messages():
                    messages=[message_json(m) for m in M.thread(g.api_user.id)],
                    unread_before=len(panel['unread_ids']),
                    #who "to" can name when writing (online ones first)
-                   teachers=[{'id': t['teacher'].id, 'username': t['teacher'].username, 'online': t['online']}
+                   teachers=[{'id': t['teacher'].id, 'username': t['teacher'].username, 'nickname': t['teacher'].nickname, 'online': t['online']}
                              for t in panel['teachers']])
 
 

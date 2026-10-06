@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_results.html" import result_cells with context %}
@@ -8,10 +9,13 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  {# back to the Users page, however far you've gone between the results pages #}
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.userdet') }}">← Users</a>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>
-    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}">Assign a quiz{{ ' to ' ~ ulst[0].username if single }}</a></div>
+  {# back where they came from (Dashboard, Grading, a quiz's results...), else the Users page #}
+  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+    {% if single %}
+      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}">Message {{ ulst[0].shown_name }}</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}">Edit user</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
 </div>
 
 {# one student: the awards they've earned (they see these on their Home) #}
@@ -32,12 +36,15 @@
 {% for item in ulst %}
   {# how many different quizzes they have (retakes of one quiz count once) #}
   {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
-  <details class="card subject-box student" id="student-{{ item.id }}" data-box="{{ item.id }}" data-name="{{ item.username|lower }}"{% if not n %} data-empty{% endif %}>
+  <details class="card subject-box student" id="student-{{ item.id }}" data-box="{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}>
     <summary>
-      <span class="box-name person">{{ avatar(item, 30) }}{{ item.username }}</span>
+      <span class="box-name person">{{ avatar(item, 30) }}{{ item.shown_name }}</span>
       <span class="badge" aria-label="{{ n }} quiz{{ '' if n == 1 else 'zes' }}">{{ n }} quiz{{ '' if n == 1 else 'zes' }}</span>
     </summary>
     <div class="box-body">
+    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.list_user', uid=item.id) }}">{{ item.shown_name }}'s student page</a>
+      {% if not item.is_admin %}· <a href="{{ url_for('messages.conversation', student_id=item.id) }}">Message</a>{% endif %}
+      · <a href="{{ url_for('qgen.assign', users=item.id) }}">Assign a quiz</a></p>{% endif %}
     {% if item.cquizzes and single %}
       {# one student: each quiz is a box that folds to its name, attempts and score (closed to
          begin with; the ones opened are remembered in this browser) #}
@@ -49,6 +56,7 @@
         <details class="card result-box" data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
             <span class="fold" aria-hidden="true"></span><strong class="result-box-title">{{ g.vquiz.title }}</strong>
+            <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz">Quiz results</a>
             <span class="muted small nowrap">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">waiting for grading</span>{% endif %}
@@ -72,7 +80,7 @@
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr>
-              <td data-label="Quiz"><strong>{{ g.vquiz.title }}</strong></td>
+              <td data-label="Quiz"><a href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz"><strong>{{ g.vquiz.title }}</strong></a></td>
               {{ result_cells(g, item, rules) }}
             </tr>
           {% endfor %}

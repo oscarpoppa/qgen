@@ -20,7 +20,8 @@ def static_url(name):
 
 
 def user_json(u, full=False):
-    out = {'id': u.id, 'username': u.username, 'is_teacher': bool(u.is_admin),
+    #nickname: what they like to be called (or null); apps show it with the username, "sam (Sammy)"
+    out = {'id': u.id, 'username': u.username, 'nickname': u.nickname, 'is_teacher': bool(u.is_admin),
            'avatar_url': static_url(getattr(u, 'avatar', None))}
     if full:
         out['email'] = u.email

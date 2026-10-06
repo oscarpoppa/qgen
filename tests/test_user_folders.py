@@ -145,7 +145,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     page = teach.get('/messages').data.decode()
     assert '<span class="side-name">7th grade</span>' in page
     assert '<option value="folder:{}">📁 7th grade (1 student)</option>'.format(g7) in page
-    rows = lambda v: re.findall(r'<td data-label="Student"><span class="person">.*?<strong>([^<]+)</strong>',
+    rows = lambda v: re.findall(r'<td data-label="Student"><a class="person person-link"[^>]*>.*?<strong>([^<]+)</strong>',
                                 teach.get('/messages?folder={}'.format(v)).data.decode(), re.S)
     assert rows(g7) == ['sam'] and rows('main') == ['kim'] and sorted(rows('all')) == ['kim', 'sam']
     # writing to a folder reaches its students (folders inside included)

@@ -505,7 +505,7 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
 def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
     """One notice for the teachers per assignment (not one per student), e.g.
     'dan assigned "Quiz 3" to 3 students: sam, kim, lee. Due Oct 03 at 05:00 PM.'"""
-    names = [cq.taker.username for cq in created if cq.taker]
+    names = [cq.taker.shown_name for cq in created if cq.taker]
     shown = ', '.join(names[:6]) + (' and {} more'.format(len(names) - 6) if len(names) > 6 else '')
     details = []
     if opens_at:
@@ -535,7 +535,7 @@ def retake(cq, by=None):
     """A fresh copy, with new values, of a quiz the student has taken. `by` is the
     teacher giving it: the student and the teachers each get a notice."""
     if not (cq.completed or cq.needs_review):
-        raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.username, cq.vquiz.title))
+        raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.shown_name, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
     #a quiz to take again comes out of the student's folders, back where they'll see it
@@ -543,7 +543,7 @@ def retake(cq, by=None):
     QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)
     notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
     #for the teachers; "Open" goes to that student's results
-    notify_teachers(cq.assignee, '{} gave {} a retake of "{}".'.format(by.username if by else 'A teacher', cq.taker.username, cq.vquiz.title),
+    notify_teachers(cq.assignee, '{} gave {} a retake of "{}".'.format(by.shown_name if by else 'A teacher', cq.taker.shown_name, cq.vquiz.title),
                     _link('qgen.list_user', uid=cq.assignee))
     db.session.commit()
     return new
@@ -1025,7 +1025,7 @@ def submit(cq, answers=None, timed_out=False):
         raise ServiceError('This quiz isn\'t open yet.')
     if answers is not None:
         answers = _answers_by_ordinal(cq, answers)
-    who = cq.taker.username if cq.taker else 'A student'
+    who = cq.taker.shown_name if cq.taker else 'A student'
     #what the teachers' notice says happened
     said = '{} handed in "{}"'.format(who, cq.vquiz.title)
     if timed_out:

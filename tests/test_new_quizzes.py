@@ -12,7 +12,7 @@ FETCH = {'X-Requested-With': 'fetch'}
 
 def badge(page):
     """The count next to "My quizzes" in the menu, or None when it's hidden."""
-    m = re.search(r'href="/mypage">My quizzes\s*<span class="count nav-quizzes" aria-label="(\d+) new" (hidden)?', page)
+    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="count nav-quizzes" aria-label="(\d+) new" (hidden)?', page)
     assert m, 'no My quizzes badge'
     return None if m.group(2) else int(m.group(1))
 

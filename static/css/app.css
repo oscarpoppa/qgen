@@ -103,6 +103,15 @@ code, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospac
   display: inline-flex; align-items: center; gap: 6px;
 }
 .nav a:hover, .menu > summary:hover, .nav a.active { background: var(--surface-2); }
+/* the page you're on, and the drop-down it's under */
+.nav a.active, .menu > summary.active { font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.menu-list a.active { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* "Skip to content": the first thing the Tab key reaches, shown only then */
+.skip-link { position: absolute; left: 8px; top: -60px; z-index: 100; padding: 8px 14px; border-radius: 8px;
+  background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+.skip-link:focus { top: 8px; }
+main:focus { outline: none; }
 
 .menu { position: relative; }
 .menu > summary { list-style: none; }
@@ -130,10 +139,22 @@ main.container.container-wide { max-width: none; }
 @media (max-width: 1000px) {
   .btn.nav-toggle { display: inline-flex; margin-left: auto; }
   .nav { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; padding-bottom: 8px; }
-  .nav.open { display: flex; }
+  .nav.open { display: flex; flex-wrap: nowrap; max-height: calc(100vh - var(--topbar-h, 56px)); overflow-y: auto; }
   .nav-right { margin-left: 0; flex-direction: column; align-items: stretch; }
   .menu-list { position: static; box-shadow: none; border: 0; padding: 0 0 0 12px; }
   h1 { font-size: 1.35rem; }
+  /* a student's short menu (Home, My quizzes, their name) stays in the bar while it fits */
+  .nav.nav-few { display: flex; flex-basis: auto; flex-direction: row; align-items: center; padding-bottom: 0; }
+  .nav.nav-few .nav-right { margin-left: auto; flex-direction: row; }
+  .nav.nav-few .menu-list { position: absolute; box-shadow: var(--shadow); border: 1px solid var(--border); padding: 6px; }
+  .btn.nav-toggle.nav-few-toggle { display: none; }
+}
+@media (max-width: 600px) {
+  .nav.nav-few { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; padding-bottom: 8px; }
+  .nav.nav-few.open { display: flex; flex-wrap: nowrap; }
+  .nav.nav-few .nav-right { margin-left: 0; flex-direction: column; align-items: stretch; }
+  .nav.nav-few .menu-list { position: static; box-shadow: none; border: 0; padding: 0 0 0 12px; }
+  .btn.nav-toggle.nav-few-toggle { display: inline-flex; }
 }
 
 /* ---------- cards ---------- */
@@ -1105,3 +1126,17 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
   .card.question, .result-head { break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* a row's "More" menu (Users): the less used actions, as a short list */
+.row-menu { display: inline-block; }
+.row-menu > summary.btn::after { content: " ▾"; font-size: .75em; }
+.row-menu .menu-list { left: auto; right: 0; text-align: left; }
+.row-menu .menu-list form { display: block; margin: 0; }
+.menu-btn { display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; color: var(--text);
+  padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.menu-btn:hover { background: var(--surface-2); }
+.menu-btn.menu-danger { color: var(--bad); }
+
+/* a page title that's also a link (the grading page's quiz): looks like a title until pointed at */
+.page-head h1 a, .page-head a.person { color: inherit; text-decoration: none; }
+.page-head h1 a:hover, .page-head a.person:hover { text-decoration: underline; }

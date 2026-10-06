@@ -14,7 +14,7 @@
     <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
   {% elif cq.not_open_yet() %}
     {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
-    {% set opens = cq.opens_at.strftime('%a %b %d, %I:%M %p') %}
+    {% set opens = cq.opens_at|when %}
     <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">🔒 Start</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
@@ -27,8 +27,8 @@
 {# counted: this attempt's score is the one that counts (by the retake rule) #}
 {% macro status(cq, counted=false) %}
   {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if counted else '' }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-  {% elif cq.status == 'review' %}<span class="badge badge-warn" title="Your teacher is grading the written answers">Being graded</span>
-  {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
+  {% elif cq.status == 'review' %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>
+  {% elif cq.status == 'started' %}<span class="badge badge-accent">Started</span>
   {# assigned and not opened yet: new to the student #}
   {% else %}<span class="badge badge-warn">New</span>{% endif %}
 {% endmacro %}
@@ -80,7 +80,7 @@
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
         {# how many attempts are in this box #}
-        <span class="quiz-count muted small">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
+        <span class="quiz-count muted small">{{ g.attempts|length }} {{ 'try' if g.attempts|length == 1 else 'tries' }}</span>
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
@@ -90,13 +90,13 @@
       {% if view == 'all' and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       <p class="muted small">{{ latest.cproblems|length }} question{{ '' if latest.cproblems|length == 1 else 's' }}
         {% if latest.time_limit %} · {{ latest.time_limit }} minutes{% endif %}
-        {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at.strftime('%b %d, %I:%M %p') }}{% endif %}</p>
+        {% if latest.closes_at and not latest.completed %} · due {{ latest.closes_at|when('date') }}{% endif %}</p>
       {% if g.attempts|length == 1 %}
         {# one attempt: dated like the rows of a box with several #}
         <div class="attempt-row"><span class="nowrap">{{ latest.when_label }}</span> {{ status(latest, latest in g.counted) }} {{ action(latest, compact=true) }}</div>
       {% else %}
         {% if g.combined is not none %}
-          <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ g.rule|lower }})</span></p>
+          <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ student_rules.get(g.rule_key, g.rule)|lower if student_rules is defined else g.rule|lower }})</span></p>
         {% endif %}
         <ol class="small" style="padding-left:1.2em;margin:0 0 8px">
           {% for cq in g.attempts %}
@@ -246,8 +246,8 @@
 /* folded quizzes, remembered in this browser (a convenience; nothing is lost without
  * it). A folded box remembers its attempts; if the teacher changes one while it's
  * folded, the box is outlined and labelled until it's opened:
- *   "Graded"  - an attempt waiting for grading has been graded
- *   "Updated" - a score changed afterwards, or an attempt was taken away
+ *   "Score ready" - an attempt waiting for grading has been graded
+ *   "Changed" - a score changed afterwards, or an attempt was taken away
  * What the student does themselves (starting, handing in, a quiz graded automatically)
  * flags nothing, and a quiz not started yet has its own "New" badge. */
 (function () {
@@ -278,7 +278,7 @@
       if (b.status === 'review' && n.status === 'completed') graded = true;
       else if (b.status === 'completed' && n.status === 'completed' && b.score !== n.score) updated = true;
     });
-    return graded ? 'Graded' : updated ? 'Updated' : '';
+    return graded ? 'Score ready' : updated ? 'Changed' : '';
   }
   function flag(d, text) {
     var f = d.querySelector('.quiz-flag');

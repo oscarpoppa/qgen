@@ -1,6 +1,7 @@
 """CSRF check for the JSON endpoints called by page scripts.
 The page puts the token in <meta name="csrf-token">; scripts send it as X-CSRFToken."""
 from flask import current_app, request
+from app.nav import back_to
 from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 
@@ -38,6 +39,6 @@ def post_form_only(view):
     def inner(*args, **kwargs):
         if request.method != 'POST' or not form_csrf_ok():
             flash('That didn\'t go through (the page was out of date). Please try again.', 'error')
-            return redirect(request.referrer or home_url())
+            return redirect(back_to(home_url()))
         return view(*args, **kwargs)
     return inner

@@ -1,5 +1,5 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, person_link, quiz_link with context %}
 <details class="card dash-card" id="dash-right-now" data-box="now" open>
   <summary class="dash-head"><h2>Right now</h2>
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
@@ -10,8 +10,8 @@
     {% if taking %}
       <ul class="dash-list">
       {% for t in taking %}
-        <li><span class="person">{{ avatar(t.cq.taker, 24) }}<strong>{{ t.cq.taker.username }}</strong></span>
-          <span>“{{ t.cq.vquiz.title }}”</span>
+        <li>{{ person_link(t.cq.taker) }}
+          <span>{{ quiz_link(t.cq.vquiz) }}</span>
           <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
       {% endfor %}
       </ul>

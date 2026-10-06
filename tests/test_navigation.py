@@ -15,12 +15,12 @@ def test_clear_page_names_and_back_buttons(app_db):
     title = lambda page: re.search(r'<title>([^<]*)</title>', page).group(1)
     # names, not numbers
     page = teach.get('/quiz/listvq/{}'.format(vq.id)).data.decode()
-    assert '<h1>Week 1</h1>' in page and '← All quizzes</a>' in page
+    assert '<h1>Week 1</h1>' in page and '← Quizzes</a>' in page
     assert title(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()).startswith("sam&#39;s attempt: Week 1")
     assert title(teach.get('/edituser/{}'.format(ids('sam'))).data.decode()).startswith('Edit user: sam')
     assert title(app.test_client().get('/login').data.decode()).startswith('Log in')
     # Back says where it goes
-    assert "← sam's page</a>" in teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()
+    assert "← sam&#39;s student page</a>" in teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()
     # one name per action: Grading in the menu
     assert '">Grading' in teach.get('/dashboard').data.decode()
     # the student page: each quiz a box that folds

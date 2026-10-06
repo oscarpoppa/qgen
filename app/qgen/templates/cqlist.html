@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+{% from "_macros.html" import attempt_links with context %}
 {% block body_attrs %}{{ watch('attempt:%d' % cqlst[0].id) }}{% endblock %}
 
 {% block content %}
 {% for item in cqlst %}
 <div class="page-head">
   <h1>{{ item.vquiz.title }}</h1>
-  <span class="badge">{{ item.taker.username }}</span>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=item.assignee) }}">← {{ item.taker.username if item.taker else 'Student' }}'s page</a></div>
+  <span class="badge">{{ item.taker.shown_name }}</span>
+  <div class="actions">{{ attempt_links(item) }}
+    <a class="btn btn-secondary" href="{{ url_for('qgen.qtake', cidx=item.id) }}">Results</a></div>
 </div>
 <p class="muted small">This student's own version of the quiz, with the correct answers.</p>
 <div class="table-wrap stack">

@@ -35,6 +35,7 @@
   {% block head %}{% endblock %}
 </head>
 <body{% block body_attrs %}{% endblock %}>
+<a class="skip-link" href="#main">Skip to content</a>
   <header class="topbar">
     <div class="topbar-inner">
       {% set s = site() %}
@@ -59,56 +60,64 @@
             <span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span></button>
         </div>
       {% endif %}
-      <button type="button" class="btn btn-secondary btn-sm nav-toggle" aria-controls="nav" aria-expanded="false"
+      <button type="button" class="btn btn-secondary btn-sm nav-toggle{{ ' nav-few-toggle' if current_user.is_authenticated and not current_user.is_admin }}" aria-controls="nav" aria-expanded="false"
               onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
-      <nav class="nav" id="nav" aria-label="Main">
+      {# the menu marks the page you're on (and the drop-down it's under) #}
+      {% set here = request.endpoint or '' %}
+      {% macro item(endpoint, label, also=()) -%}
+        {%- set on = here == endpoint or here in also -%}
+        <a href="{{ url_for(endpoint) }}"{% if on %} class="active" aria-current="page"{% endif %}>{{ label }}{{ caller() if caller }}</a>
+      {%- endmacro %}
+      {% macro under(endpoints) %}{{ ' class="active"'|safe if here in endpoints }}{% endmacro %}
+      <nav class="nav{{ ' nav-few' if current_user.is_authenticated and not current_user.is_admin }}" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
-          {% if current_user.is_admin %}<a href="{{ url_for('qgen.dashboard') }}">Dashboard</a>{% endif %}
+          {% if current_user.is_admin %}{{ item('qgen.dashboard', 'Dashboard') }}{% endif %}
           {# quizzes given since My quizzes was last opened (anyone: teachers take quizzes too); kept current by messages.js #}
-          {% if not current_user.is_admin %}<a href="{{ url_for('user.home') }}">Home</a>{% endif %}
-          <a href="{{ url_for('user.mypage') }}">My quizzes
-            <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span></a>
+          {% if not current_user.is_admin %}{{ item('user.home', 'Home') }}{% endif %}
+          {% call item('user.mypage', 'My quizzes') %}
+            <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
           {% if current_user.is_admin %}
             <details class="menu">
-              <summary>Problems</summary>
+              <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }}>Problems</summary>
               <div class="menu-list">
-                <a href="{{ url_for('qgen.list_vprobs') }}">All problems</a>
-                <a href="{{ url_for('qgen.mkvprob') }}">New problem</a>
+                {{ item('qgen.list_vprobs', 'All problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob')) }}
+                {{ item('qgen.mkvprob', 'New problem') }}
               </div>
             </details>
             <details class="menu">
-              <summary>Quizzes</summary>
+              <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign',
+                                'qgen.list_users', 'qgen.list_user', 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }}>Quizzes</summary>
               <div class="menu-list">
-                <a href="{{ url_for('qgen.list_vquizzes') }}">All quizzes</a>
-                <a href="{{ url_for('qgen.mkvquiz') }}">New quiz</a>
-                <a href="{{ url_for('qgen.assign') }}">Assign a quiz</a>
-                <a href="{{ url_for('qgen.list_users') }}">Results by student</a>
-                <a href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>
+                {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz')) }}
+                {{ item('qgen.mkvquiz', 'New quiz') }}
+                {{ item('qgen.assign', 'Assign a quiz') }}
+                {{ item('qgen.list_users', 'Results by student', ('qgen.list_user',)) }}
+                {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',)) }}
               </div>
             </details>
             {# written answers waiting for grading; kept current by messages.js #}
-            <a href="{{ url_for('qgen.review_list') }}">Grading
+            {% call item('qgen.review_list', 'Grading', ('qgen.review',)) %}
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
-            </a>
-            <a href="{{ url_for('messages.inbox') }}">Messages</a>
-            <a href="{{ url_for('user.userdet') }}">Users</a>
-            <a href="{{ url_for('qgen.archive') }}">Archive</a>
+            {% endcall %}
+            {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page')) }}
+            {{ item('user.userdet', 'Users', ('user.eduser',)) }}
+            {{ item('qgen.archive', 'Archive', ('qgen.archived',)) }}
             <details class="menu">
-              <summary>Files</summary>
+              <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }}>Files</summary>
               <div class="menu-list">
-                <a href="{{ url_for('upload.upload') }}">Upload</a>
-                <a href="{{ url_for('upload.images') }}">Images</a>
-                <a href="{{ url_for('upload.nonimages') }}">Other files</a>
+                {{ item('upload.upload', 'Upload') }}
+                {{ item('upload.images', 'Images') }}
+                {{ item('upload.nonimages', 'Other files') }}
               </div>
             </details>
-            <a href="{{ url_for('user.settings') }}">Settings</a>
+            {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings')) }}
           {% endif %}
           <div class="nav-right">
             <details class="menu">
-              <summary class="person">{{ avatar(current_user, 24) }}{{ current_user.username }}</summary>
+              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}</summary>
               <div class="menu-list">
-                <a href="{{ url_for('user.profile') }}">My profile</a>
-                <a href="{{ url_for('user.chpass') }}">Change password</a>
+                {{ item('user.profile', 'My profile') }}
+                {{ item('user.chpass', 'Change password') }}
                 <a href="{{ url_for('user.logout') }}">Log out</a>
               </div>
             </details>
@@ -124,7 +133,7 @@
   </header>
 
   {# a page can use the whole window's width by setting main_class to " container-wide" #}
-  <main class="container{% block main_class %}{% endblock %}">
+  <main id="main" tabindex="-1" class="container{% block main_class %}{% endblock %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="alerts" role="status">
@@ -164,6 +173,17 @@
       document.querySelectorAll('details.menu[open]').forEach(function (d) {
         if (!d.contains(e.target)) d.removeAttribute('open');
       });
+    });
+    /* Esc closes an open drop-down, then the phone menu */
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+      var menu = document.querySelector('details.menu[open]'), nav = document.getElementById('nav');
+      if (menu) { menu.removeAttribute('open'); menu.querySelector('summary').focus(); return; }
+      if (nav && nav.classList.contains('open')) {
+        nav.classList.remove('open');
+        var t = document.querySelector('.nav-toggle');
+        if (t) { t.setAttribute('aria-expanded', 'false'); t.focus(); }
+      }
     });
   </script>
   {% if current_user.is_authenticated and current_user.is_admin %}

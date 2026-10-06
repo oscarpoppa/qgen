@@ -69,7 +69,7 @@
                   {% elif a.startdate %}<span class="badge">Not handed in</span>
                   {% else %}<span class="badge">Not started</span>{% endif %}</td>
                 <td data-label="Taken">{{ (a.compdate or a.startdate).strftime('%b %d %Y') if (a.compdate or a.startdate) else '–' }}</td>
-                <td data-label="Archived">{{ a.archived_at.strftime('%b %d %Y') }}{% if a.archiver %}<div class="small muted">by {{ a.archiver.username }}</div>{% endif %}</td>
+                <td data-label="Archived">{{ a.archived_at.strftime('%b %d %Y') }}{% if a.archiver %}<div class="small muted">by {{ a.archiver.shown_name }}</div>{% endif %}</td>
                 <td class="actions">
                   <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}">View</a>
                   {% if blocker %}

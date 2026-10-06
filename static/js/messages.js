@@ -331,7 +331,9 @@
     //a pop-up that just arrived (often what changed the page) is shown again after the reload
     var keep = recentToasts.filter(function (t) { return Date.now() - t.at < 15000; });
     try { if (keep.length) sessionStorage.setItem(TOASTS, JSON.stringify(keep)); } catch (e) {}
-    window.location.reload();
+    //a page drawn after sending a form is fetched afresh (reloading would send the form again)
+    if (document.body.hasAttribute('data-watch-post')) window.location.replace(window.location.href);
+    else window.location.reload();
   }
   function offerRefresh() {
     if (document.getElementById('live-bar')) return;

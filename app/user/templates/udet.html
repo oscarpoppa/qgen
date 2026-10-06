@@ -55,10 +55,10 @@
         {% set mine = folders_of.get(item.id, []) %}
         <tr data-box="user:{{ item.id }}">
           {# checked people can be given a quiz together (the bar above the list) #}
-          <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.username }}"></td>
+          <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
-              data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.username }}"
-              title="Drag onto a folder to move {{ item.username }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false">{{ item.username }}</a></strong></span></td>
+              data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
+              title="Drag onto a folder to move {{ item.shown_name }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false">{{ item.shown_name }}</a></strong></span></td>
           <td data-label="Folders" class="person-folders">
             {% for f in mine %}
               <form method="post" action="{{ url_for('user.remove_from_user_folder') }}" class="folder-chip">
@@ -66,7 +66,7 @@
                 <input type="hidden" name="view" value="{{ view }}">
                 <input type="hidden" name="user" value="{{ item.id }}"><input type="hidden" name="folder" value="{{ f.id }}">
                 <a href="{{ url_for('user.userdet', folder=f.id) }}">📁 {{ f.name }}</a>
-                <button class="chip-x" aria-label="Take {{ item.username }} out of {{ f.name }}" title="Take out of this folder">✕</button>
+                <button class="chip-x" aria-label="Take {{ item.shown_name }} out of {{ f.name }}" title="Take out of this folder">✕</button>
               </form>
             {% endfor %}
             {% set others = all_folders|rejectattr('0.id', 'in', mine|map(attribute='id')|list)|list %}
@@ -75,7 +75,7 @@
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="view" value="{{ view }}">
               <input type="hidden" name="user" value="{{ item.id }}">
-              <select name="to" class="move-select" aria-label="Put {{ item.username }} in a folder">
+              <select name="to" class="move-select" aria-label="Put {{ item.shown_name }} in a folder">
                 <option value="">+ Add to folder…</option>
                 {% for f, depth in others %}<option value="{{ f.id }}">{{ '   ' * (depth - 1) }}📁 {{ f.name }}</option>{% endfor %}
               </select>
@@ -90,12 +90,19 @@
           <td class="actions">
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}">Assign</a>
             {# their page: quizzes and results, awards #}
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.username }}'s quizzes, results and awards">Student page</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
-            {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" style="display:inline" data-confirm="Remove {{ item.username }}’s picture?" data-confirm-ok="Remove">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary btn-sm">Remove picture</button></form>{% endif %}
-            {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.username)|string ~ '’s password? You’ll be shown a temporary one to pass on.') }}
-            {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.username)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string) }}{% endif %}
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.shown_name }}'s quizzes, results and awards">Student page</a>
+            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% endif %}
+            {# the rest, less often needed, in a small menu (keeps a row short on a phone) #}
+            <details class="menu row-menu">
+              <summary class="btn btn-secondary btn-sm" aria-label="More for {{ item.shown_name }}">More</summary>
+              <div class="menu-list">
+                <a href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
+                {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" data-confirm="Remove {{ item.shown_name }}’s picture?" data-confirm-ok="Remove">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="menu-btn">Remove picture</button></form>{% endif %}
+                {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'menu-btn', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.') }}
+                {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string) }}{% endif %}
+              </div>
+            </details>
           </td>
         </tr>
       {% endfor %}

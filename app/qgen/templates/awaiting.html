@@ -1,14 +1,23 @@
 {% extends "base.html" %}
+{% from "_macros.html" import after_quiz, attempt_links with context %}
 {# grading finishes elsewhere: the page shows the result as soon as it's graded (app/live.py) #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
 <div class="card card-narrow empty">
-  <span class="big">⏳</span>
-  <h1>Submitted</h1>
-  <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. An instructor is grading the written answers; your score will appear here when grading is done.</p>
-  {% if current_user.is_admin %}<p><a class="btn" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade it now</a></p>{% endif %}
-  {% if current_user == cq.taker %}<p><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}">← My quizzes</a></p>
-  {% else %}<p><a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}">← {{ cq.taker.username }}'s page</a></p>{% endif %}
+  {% if current_user == cq.taker %}
+    <span class="big">🎉</span>
+    <h1>Handed in!</h1>
+    <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. Your teacher is checking your written answers.
+      Your score will show up here when they're done.</p>
+    <p class="btn-row" style="justify-content:center">{{ after_quiz(cq, up_next) }}</p>
+  {% else %}
+    <span class="big">⏳</span>
+    <h1>Waiting for grading</h1>
+    <p>{{ cq.taker.shown_name }}'s answers to <strong>{{ cq.vquiz.title }}</strong> are in. The written answers need grading;
+      the score will appear here when grading is done.</p>
+    <p><a class="btn" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade it now</a></p>
+    <p class="btn-row" style="justify-content:center">{{ attempt_links(cq) }}</p>
+  {% endif %}
 </div>
 {% endblock %}

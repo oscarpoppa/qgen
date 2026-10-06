@@ -182,7 +182,7 @@ def test_a_students_own_pages(app_db):
     teacher.post('/quiz/delcq/{}'.format(cq.id))
     assert watch(sam, key) not in (before, None)
     page = sam.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()
-    assert 'removed' in page
+    assert 'taken this quiz away' in page
 
 
 def test_who_may_follow_what(app_db):

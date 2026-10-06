@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {# the student taking it is never reloaded mid-answer: offered instead (a teacher's view just updates) #}
-{% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='Your teacher has changed this quiz attempt.', button='Reload', ask=True) if not preview else watch('attempt:%d' % cq.id) }}{% endblock %}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz has changed. Reload to see it.', button='Reload', ask=True) if not preview else watch('attempt:%d' % cq.id) }}{% endblock %}
 
 {% block content %}
 <div class="page-head">
@@ -10,7 +10,8 @@
 </div>
 
 {% if preview %}
-  <div class="alert alert-warning">You're viewing {{ cq.taker.username }}'s quiz. Only {{ cq.taker.username }} can submit it.</div>
+  <div class="alert alert-warning">You're viewing {{ cq.taker.shown_name }}'s quiz. Only {{ cq.taker.shown_name }} can submit it.
+    <a href="{{ url_for('qgen.list_user', uid=cq.assignee) }}">{{ cq.taker.shown_name }}'s student page</a></div>
 {% endif %}
 
 {% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
@@ -61,7 +62,7 @@
   {% if not preview %}
     <div class="card btn-row">
       {{ form.submit(class='btn') }}
-      <span class="muted small">You can't change your answers after submitting.</span>
+      <span class="muted small">Once you hand it in, you can't change your answers.</span>
     </div>
   {% endif %}
 </form>
@@ -143,8 +144,8 @@
     if (blank && form.dataset.blankOk !== '1') {
       //asked inside the page (the browser's own pop-ups can be switched off)
       e.preventDefault();
-      var question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Submit anyway?';
-      var ask = window.qgenAsk ? window.qgenAsk(question, 'Submit anyway') : Promise.resolve(window.confirm(question));
+      var question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Hand it in anyway?';
+      var ask = window.qgenAsk ? window.qgenAsk(question, 'Hand it in anyway') : Promise.resolve(window.confirm(question));
       var submitter = e.submitter;
       ask.then(function (yes) {
         if (!yes) return;

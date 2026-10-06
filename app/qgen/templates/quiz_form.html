@@ -1,16 +1,28 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import field, check, image_drop %}
 {% from "_subjects.html" import subject_checks, subject_labels, subject_box with context %}
+
+{# editing: another tab's changes are offered, never reloaded under the typing #}
+{% block body_attrs %}{% if vq and vq.id %}{{ watch('editquiz:%d' % vq.id, note='This quiz has been changed somewhere else since you opened it.', ask=True) }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">Back to quizzes</a></div>
+  {# back where they came from (a quiz's results, its View page...), also after saving #}
+  {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}">← {{ came[1] }}</a>
+    {% if vq and vq.id %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign</a>
+    {% endif %}</div>
 </div>
 
 <div class="editor">
 <form method="post" id="quiz-form" novalidate>
   {{ form.hidden_tag() }}
+  {% if came[0] != url_for('qgen.list_vquizzes') %}<input type="hidden" name="next" value="{{ came[0] }}">{% endif %}
   <div class="card">
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
     {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
@@ -24,7 +36,7 @@
         Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
         <ul>
         {% for student, rule in retake_overrides %}
-          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ student.username }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
         {% endfor %}
         </ul>
       </div>
@@ -96,7 +108,7 @@
     {{ image_drop(form.image) }}
     <div class="btn-row">
       {{ form.submit(class='btn') }}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">Cancel</a>
+      <a class="btn btn-secondary" href="{{ came[0] }}">Cancel</a>
     </div>
   </div>
 </form>

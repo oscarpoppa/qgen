@@ -10,6 +10,7 @@ from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
+from app.nav import back_to, safe_next, next_arg, place_name
 from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
@@ -134,7 +135,7 @@ def edvprob(vpid):
             save_subjects('problems', vpobj)
             flash('Updated problem "{}". Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
-            return redirect(url_for('qgen.list_vprobs', show=vpobj.id))
+            return redirect(next_arg(url_for('qgen.list_vprobs', show=vpobj.id)))
     return problem_page(form, vpobj, errors, 'Edit problem', subject_error)
 
 #"Show me 3 examples": run the problem without saving it
@@ -243,7 +244,9 @@ def view_vquiz(vqid):
 @pw_check
 @admin_only
 def edvquiz(vqid):
-    vqobj = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
+    vqobj = VQuiz.query.filter_by(id=vqid).first() if str(vqid).isdigit() else None
+    if vqobj is None:
+        return gone('That quiz has been deleted.', url_for('qgen.list_vquizzes'))
     form = QuizForm(obj=vqobj)
     if request.method == 'GET':
         form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
@@ -258,7 +261,7 @@ def edvquiz(vqid):
                 flash('The new retake scoring now applies to every student, including the {} who had their own.'.format(
                     'one' if had_own == 1 else had_own), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
-            return redirect(url_for('qgen.list_vquizzes', show=vqobj.id))
+            return redirect(next_arg(url_for('qgen.list_vquizzes', show=vqobj.id)))
     return quiz_page(form, 'Edit quiz', vqobj, subject_error)
 
 #route to list all virtual quizzes
@@ -278,7 +281,9 @@ def list_vquizzes():
 @pw_check
 @admin_only
 def list_vquiz(vqid):
-    vqlst = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
+    vqlst = VQuiz.query.filter_by(id=vqid).first() if str(vqid).isdigit() else None
+    if vqlst is None:
+        return gone('That quiz has been deleted.', url_for('qgen.list_vquizzes'))
     return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title=vqlst.title or 'Untitled quiz', layout=layout, rules=RETAKE_RULES,
                            kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
@@ -314,9 +319,9 @@ def set_retake_rule(cqid):
         S.set_retake_rule(cq, rule)
     except S.ServiceError:
         abort(400)
-    flash('{}\'s score for "{}" is now: {}.'.format(cq.taker.username, cq.vquiz.title,
+    flash('{}\'s score for "{}" is now: {}.'.format(cq.taker.shown_name, cq.vquiz.title,
           RETAKE_RULES[rule].lower() if rule else 'the quiz\'s own rule'), 'success')
-    return redirect(request.referrer or url_for('qgen.list_user', uid=cq.assignee))
+    return redirect(back_to(url_for('qgen.list_user', uid=cq.assignee)))
 
 
 # ---------------------------------------------------------------- assigning
@@ -347,8 +352,10 @@ def assign():
         for cq in created:
             current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, cq.taker.username))
         if created:
-            flash('Assigned "{}" to {}.'.format(vquiz.title, ', '.join(cq.taker.username for cq in created)), 'success')
-        return redirect(url_for('qgen.assign'))
+            flash(Markup('Assigned “{}” to {}. <a href="{}">See the results →</a>').format(
+                vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
+        #back where they came from (a student page, a quiz's results...), else ready for the next one
+        return redirect(next_arg(url_for('qgen.assign')))
     #for the Subject menu, which narrows the Quiz menu in the page
     quiz_subjects = {q.id: [g.id for g in q.vqgroups] for q in quizzes}
     #a quiz really chosen (from a link, or sent back after a form error) is kept on show
@@ -376,7 +383,12 @@ def assign():
                     show(f)
                 if uid not in folders_of:
                     open_groups.add('none' if root['folders'] else 'all')
-    return render_template('assign.html', title='Assign a quiz', form=form, choices=S.subject_choices('quizzes'),
+    #the page they came from, when it's one to go back to (the Assign page itself isn't)
+    from app.nav import back
+    target = request.form.get('next') if request.method == 'POST' else None
+    came_from = back(None, None) if not target else (safe_next(target), place_name(safe_next(target)))
+    came_from = came_from if came_from and came_from[0] and came_from[1] else None
+    return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from, choices=S.subject_choices('quizzes'),
                            choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen,
                            people=people, root=root, chosen=chosen, open_groups=open_groups)
 
@@ -412,17 +424,24 @@ def qtake(cidx):
         return redirect(url_for('user.mypage'))
     title = cq.vquiz.title
     is_taker = current_user == cq.taker
+    #opened from Home or a notice: no longer new (the count beside "My quizzes" goes down)
+    if is_taker and not cq.seen_by_taker:
+        cq.seen_by_taker = True
+        db.session.commit()
     state = S.attempt_state(cq)
+    #handed in: the taker is offered what's next
+    from .models import next_quiz
+    up_next = next_quiz(current_user, cq) if is_taker else None
     if state == 'completed':
-        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title))
+        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title), up_next=up_next)
     if state == 'review':
-        return render_template('awaiting.html', cq=cq, title=title)
+        return render_template('awaiting.html', cq=cq, title=title, up_next=up_next)
     if state == 'not_open' and is_taker:
         return render_template('not_open.html', cq=cq, title=title)
     #out of time: close it with whatever was autosaved
     if state == 'time_up' and is_taker:
         S.submit(cq)
-        flash('Time ran out, so your saved answers were submitted.', 'info')
+        flash('Time ran out, so your answers were handed in.', 'info')
         current_app.logger.info('{} ran out of time on "{}" ({})'.format(current_user.username, title, cidx))
         return redirect(url_for('qgen.qtake', cidx=cidx))
     form = quiz_form_class(cq)()
@@ -435,7 +454,7 @@ def qtake(cidx):
             S.start(cq)
             current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, title, cidx))
     elif request.method == 'POST':
-        flash("Only {} can submit this quiz.".format(cq.taker.username), 'error')
+        flash("Only {} can submit this quiz.".format(cq.taker.shown_name), 'error')
     if request.method == 'GET':
         prefill(cq, form)
     return render_template('quiz_take.html', cq=cq, form=form, items=quiz_items(cq, form), title=title,
@@ -449,7 +468,7 @@ def qsave(cidx):
     cq = CQuiz.query.filter_by(id=cidx).first()
     if cq is None:
         if archived_for(cidx):
-            return jsonify(ok=False, error='Your teacher has removed this quiz attempt.'), 410
+            return jsonify(ok=False, error='Your teacher has taken this quiz away.'), 410
         abort(404)
     if current_user != cq.taker:
         return jsonify(ok=False, error='Not your quiz.'), 403
@@ -468,14 +487,18 @@ def qsave(cidx):
 
 # ---------------------------------------------------------------- review
 
+def waiting_for_grading():
+    """Attempts waiting for grading, oldest hand-in first (the Grading list's order)."""
+    return CQuiz.query.filter_by(needs_review=True, completed=False).order_by(CQuiz.compdate, CQuiz.id).all()
+
 #route to list quizzes waiting for an instructor
 @qgen_bp.route('/quiz/review', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def review_list():
-    waiting = CQuiz.query.filter_by(needs_review=True, completed=False).order_by(CQuiz.compdate).all()
-    return render_template('review_list.html', waiting=waiting, title='Waiting for grading')
+    waiting = waiting_for_grading()
+    return render_template('review_list.html', waiting=waiting, title='Grading')
 
 #route to grade the essay answers of one quiz
 @qgen_bp.route('/quiz/review/<cqid>', methods=['GET', 'POST'])
@@ -483,7 +506,9 @@ def review_list():
 @pw_check
 @admin_only
 def review(cqid):
-    cq = db.get_or_404(CQuiz, cqid)
+    cq = CQuiz.query.filter_by(id=cqid).first() if str(cqid).isdigit() else None
+    if cq is None:
+        return attempt_gone(cqid)
     if cq.completed:
         flash('That quiz has already been graded.', 'info')
         return redirect(url_for('qgen.qtake', cidx=cq.id))
@@ -504,16 +529,22 @@ def review(cqid):
                 spans = []
             grades[int(item['cpid'] or 0)] = {'credit': item['credit'], 'feedback': item['feedback'], 'highlights': spans}
         try:
-            ungraded = S.grade_essays(cq, grades, finish=bool(form.finalize.data), grader_id=current_user.id)
+            finish = bool(form.finalize.data or form.finalize_next.data)
+            ungraded = S.grade_essays(cq, grades, finish=finish, grader_id=current_user.id)
         except S.ServiceError as exc:
             flash(str(exc), 'error')
             return redirect(url_for('qgen.review', cqid=cq.id))
         if ungraded:
             flash('Give a credit for question{} {} before finishing.'.format('s' if len(ungraded) > 1 else '', ', '.join(map(str, ungraded))), 'error')
             return redirect(url_for('qgen.review', cqid=cq.id))
-        if form.finalize.data:
-            flash('Finished grading {}\'s "{}": {:.0f}%.'.format(cq.taker.username, cq.vquiz.title, cq.score), 'success')
+        if finish:
+            flash('Finished grading {}\'s "{}": {:.0f}%.'.format(cq.taker.shown_name, cq.vquiz.title, cq.score), 'success')
             current_app.logger.info('{} graded CQuiz ({}) for {}'.format(current_user.username, cq.id, cq.taker.username))
+            after = waiting_for_grading()
+            if form.finalize_next.data and after:
+                return redirect(url_for('qgen.review', cqid=after[0].id))
+            if form.finalize_next.data:
+                flash('That was the last one: nothing else is waiting for grading.', 'success')
             return redirect(url_for('qgen.review_list'))
         flash('Draft saved.', 'success')
         return redirect(url_for('qgen.review', cqid=cq.id))
@@ -521,7 +552,10 @@ def review(cqid):
     items = [dict(item=transcript_item(cp), cp=cp, form=entries.get(cp.id),
                   notes=cp.vproblem.options.get('grading_notes'), raw=cp.submitted or '')
              for cp in cq.cproblems]
-    return render_template('review.html', cq=cq, form=form, items=items, title='Grade: {} – {}'.format(cq.taker.username, cq.vquiz.title))
+    queue = waiting_for_grading()
+    place = next((i for i, w in enumerate(queue) if w.id == cq.id), None)
+    return render_template('review.html', cq=cq, form=form, items=items, queue=queue, place=place,
+                           others=len([w for w in queue if w.id != cq.id]), title='Grade: {} – {}'.format(cq.taker.username, cq.vquiz.title))
 
 
 # ---------------------------------------------------------------- students
@@ -542,10 +576,12 @@ def list_users():
 @pw_check
 @admin_only
 def list_user(uid):
-    ulst = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
+    ulst = User.query.filter_by(id=uid).first() if str(uid).isdigit() else None
+    if ulst is None:
+        return gone("That person's account has been deleted.", url_for('user.userdet'))
     from .models import RETAKE_RULES
     from . import awards
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.username),
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s quizzes".format(ulst.shown_name),
                            awards=awards.earned(ulst))
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
@@ -565,7 +601,9 @@ def results_by_quiz():
 @admin_only
 def quiz_results_page(vqid):
     from .models import RETAKE_RULES
-    vq = db.get_or_404(VQuiz, vqid)
+    vq = db.session.get(VQuiz, vqid)
+    if vq is None:
+        return gone('That quiz has been deleted.', url_for('qgen.results_by_quiz'))
     return render_template('results_by_quiz.html', quizzes=quiz_results([vq]), rules=RETAKE_RULES, single=True,
                            title='Results: {}'.format(vq.title))
 
@@ -593,12 +631,14 @@ def quiz_results(quizzes):
 @pw_check
 @admin_only
 def list_cquiz(cqid):
-    cqlst = CQuiz.query.filter_by(id=cqid).first_or_404('No cquiz with id {}'.format(cqid))
+    cqlst = CQuiz.query.filter_by(id=cqid).first()
+    if cqlst is None:
+        return attempt_gone(cqid)
     shown = lambda cp: get_qtype(cp.vproblem.qtype).show_submitted(cp.submitted, cp.conc_opts)
     #a number answer as numbers (an old saved "sqrt(3)" shows as 1.7321), with its exact form
     correct = lambda cp: get_qtype('numeric').show_correct(cp.conc_ansr, cp.conc_opts) \
         if cp.vproblem.qtype == 'numeric' else cp.conc_ansr
-    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title="{}'s attempt: {}".format(cqlst.taker.username if cqlst.taker else 'Someone', cqlst.vquiz.title))
+    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title="{}'s attempt: {}".format(cqlst.taker.shown_name if cqlst.taker else 'Someone', cqlst.vquiz.title))
 
 #route to delete a specific concrete quiz from a user's record
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['POST'])
@@ -608,12 +648,12 @@ def list_cquiz(cqid):
 @post_form_only
 def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
-    title, owner = cq.vquiz.title, cq.taker.username
+    title, owner = cq.vquiz.title, cq.taker.shown_name
     archived = S.delete_attempt(cq, by=current_user)
     flash(Markup('Moved {}\'s attempt at "{}" to the archive. <a href="{}">View it</a>').format(
         owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
-    return redirect(request.referrer or url_for('qgen.list_users'))
+    return redirect(back_to(url_for('qgen.list_users')))
 
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
 @qgen_bp.route('/quiz/retcq/<cqid>', methods=['POST'])
@@ -628,10 +668,10 @@ def ret_cquiz(cqid):
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         current_app.logger.error(str(exc))
-        return redirect(request.referrer or url_for('qgen.list_users'))
-    flash('Assigned a retake of "{}" to {}.'.format(cq.vquiz.title, cq.taker.username), 'success')
+        return redirect(back_to(url_for('qgen.list_users')))
+    flash('Assigned a retake of "{}" to {}.'.format(cq.vquiz.title, cq.taker.shown_name), 'success')
     current_app.logger.info('{} assigned retake (of {}) quiz: "{}" ({}) to {}'.format(current_user.username, cqid, cq.vquiz.title, cq.id, cq.taker.username))
-    return redirect(request.referrer or url_for('qgen.list_users'))
+    return redirect(back_to(url_for('qgen.list_users')))
 
 
 # ---------------------------------------------------------------- AI helper
@@ -846,6 +886,12 @@ def archived_for(cidx):
     except (TypeError, ValueError):
         return None
 
+def gone(message, where):
+    """A page whose subject was deleted (often reached by the page reloading itself when it
+    happened): say so and go somewhere useful, not to "Not found"."""
+    flash(message, 'info')
+    return redirect(where)
+
 def attempt_gone(cidx):
     """An attempt that isn't there: archived (tell the student plainly; teachers see the
     archived copy), or never existed."""
@@ -856,7 +902,7 @@ def attempt_gone(cidx):
         return redirect(url_for('qgen.archived', aid=a.id))
     if a.student_id != current_user.id:
         abort(404)
-    flash('Your teacher has removed this quiz attempt.', 'info')
+    flash('Your teacher has taken this quiz away.', 'info')
     return redirect(url_for('user.mypage'))
 
 #route to the archive of deleted attempts
@@ -946,7 +992,9 @@ def move_archived():
 @pw_check
 @admin_only
 def archived(aid):
-    a = db.get_or_404(ArchivedAttempt, aid)
+    a = db.session.get(ArchivedAttempt, aid)
+    if a is None:
+        return gone("That attempt isn't in the Archive any more: it was put back or deleted for good.", url_for('qgen.archive'))
     return render_template('archived.html', a=a, blocker=S.restore_blocker(a),
                            student=S.archived_student(a), results=S.archived_results(a),
                            title='Archived: {}'.format(a.quiz_title))

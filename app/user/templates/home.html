@@ -3,10 +3,10 @@
 {% from "_awards.html" import award_list %}
 {# a student's Home: what's waiting for them, and the awards they've earned. It follows
    their quizzes as they're assigned, graded and so on (app/live.py, "mine"). #}
-{% block body_attrs %}{{ watch('mine') }}{% endblock %}
+{% block body_attrs %}{{ watch('home') }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.username }}!</h1>
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.shown_name }}!</h1>
   <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">My quizzes</a>
     <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
 
@@ -15,7 +15,7 @@
   <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='all') }}">
     <span class="dash-num">{{ todo }}</span><span>to do</span></a>
   <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='all') }}">
-    <span class="dash-num">{{ started }}</span><span>in progress</span></a>
+    <span class="dash-num">{{ started }}</span><span>started</span></a>
   <a class="dash-count{{ ' has' if soon }}" href="#waiting"
      title="Not handed in yet, and closing in the next {{ days }} day{{ '' if days == 1 else 's' }}">
     <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
@@ -29,8 +29,8 @@
       <ul class="dash-list">
       {% for cq in waiting %}
         <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
-          {% if cq.status == 'started' %}<span class="badge badge-accent">In progress</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at.strftime('%a %b %d, %I:%M %p') }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
-          {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at.strftime('%a %b %d, %I:%M %p') }}</span>{% endif %}
+          {% if cq.status == 'started' %}<span class="badge badge-accent">Started</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
+          {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">🔒 Start</button>
           {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>
       {% endfor %}
@@ -49,8 +49,8 @@
       {% for cq in recent %}
         <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
           {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
-          {% else %}<span class="badge badge-warn" title="Your teacher is grading the written answers">Being graded</span>{% endif %}
-          <span class="small muted">{{ cq.compdate.strftime('%a %b %d, %I:%M %p') }}</span>
+          {% else %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>{% endif %}
+          <span class="small muted">{{ cq.compdate|when }}</span>
           <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
       {% endfor %}
       </ul>

@@ -2,6 +2,7 @@ from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
 from flask import flash, render_template, redirect, url_for, request, current_app, session, abort
+from app.nav import back_to, safe_next, next_arg
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from wtforms_sqlalchemy.orm import model_form
@@ -47,7 +48,7 @@ def pw_check(func):
 @pw_check
 def mypage():
     #messages and notices are in the side panels every page has (see base.html)
-    from app.qgen.models import mark_quizzes_seen, attempts_by_quiz
+    from app.qgen.models import mark_quizzes_seen, attempts_by_quiz, RETAKE_RULES_FOR_STUDENT
     from app.qgen import folders
     mark_quizzes_seen(current_user.id)
     groups = attempts_by_quiz(current_user.cquizzes)
@@ -66,7 +67,7 @@ def mypage():
     while up is not None:
         path.insert(0, up)
         up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
-    return render_template('mypage.html', current_user=current_user, title='My quizzes', groups=groups,
+    return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes', groups=groups,
                            root=root, all_folders=all_folders, inside=folders.inside, max_depth=folders.MAX_DEPTH,
                            max_name=folders.MAX_NAME, view=view, node=node, shown=shown, home=home, path=path,
                            open_ids={f.id for f in path})
@@ -162,10 +163,10 @@ def home():
     from app import tuning
     from app.qgen import awards
     now = datetime.now()
-    waiting = [cq for cq in current_user.cquizzes if cq.status in ('new', 'started')]
-    soon = [cq for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()]
+    from app.qgen.models import waiting_quizzes
     #what to do next: the ones closing soonest first, then the rest, oldest first
-    waiting.sort(key=lambda cq: (cq.closes_at is None, cq.closes_at or now, cq.id))
+    waiting = waiting_quizzes(current_user, now)
+    soon = [cq for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()]
     have = awards.earned(current_user)
     #handed in during the last two weeks, newest first (at most 10); being graded included
     since = now - timedelta(days=RECENT_DAYS)
@@ -181,7 +182,7 @@ def home():
 @login_required
 @pw_check
 def logout():
-    flash('{} has been logged out'.format(current_user.username))
+    flash('{} has been logged out'.format(current_user.shown_name))
     current_app.logger.info('{} has logged out'.format(current_user.username))
     current_user.logged_in = False
     current_user.save()
@@ -212,10 +213,8 @@ def login():
         current_app.logger.info('{} has logged in'.format(u.username))
         #the first page after signing in says what's waiting (messages.js)
         session['qgen_welcome'] = True
-        next_page = request.args.get('next')
-        if next_page:
-            return redirect(next_page)
-        return redirect(home_url())
+        #only a page on this site (a link could otherwise send them elsewhere after signing in)
+        return redirect(safe_next(request.args.get('next'), home_url()))
     return render_template('login.html', title='Log in', form=form)
 
 # route to user registration action
@@ -231,7 +230,7 @@ def register():
         u.set_password(form.password.data)
         u.save()
         from app.messages.models import notify_teachers
-        notify_teachers(u.id, 'New student signed up: {}.'.format(u.username), url_for('qgen.list_user', uid=u.id))
+        notify_teachers(u.id, 'New student signed up: {}.'.format(u.shown_name), url_for('qgen.list_user', uid=u.id))
         db.session.commit()
         current_app.logger.info('User {} has been created'.format(u.username))
         flash('Account {} registered'.format(form.username.data))
@@ -270,9 +269,9 @@ def resetpass(uid):
     usr.set_password(pword)
     usr.pw_man_reset = True
     usr.save()
-    flash('Password reset for {}. Temporary password: {} (it must be changed at the next login)'.format(usr.username, pword))
+    flash('Password reset for {}. Temporary password: {} (it must be changed at the next login)'.format(usr.shown_name, pword))
     current_app.logger.info('{} issued a manual PW reset for {}'.format(current_user.username, usr.username))
-    return redirect(url_for('user.userdet'))
+    return redirect(back_to(url_for('user.userdet')))
 
 # route to admin-initiated user deletion action
 @user_bp.route('/deluser/<uid>', methods=['POST'])
@@ -285,7 +284,7 @@ def deluser(uid):
     usr = usrquery.first_or_404('No user with id {}'.format(uid))
     usrname = usr.username
     if current_user == usr:
-        flash("I can't let you do that, {}".format(current_user.username))
+        flash("I can't let you do that, {}".format(current_user.shown_name))
         return redirect(url_for('user.userdet'))
     from . import avatars
     from app.qgen import services as S
@@ -296,7 +295,10 @@ def deluser(uid):
     db.session.commit()
     flash('User {} has been deleted'.format(usrname))
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
-    return redirect(url_for('user.userdet'))
+    #back to the Users page they were on (its folder), not to the deleted person's pages
+    users = url_for('user.userdet')
+    back = back_to(users)
+    return redirect(back if back.split('?')[0] == users else users)
 
 # route to admin-initiated user editing action
 @user_bp.route('/edituser/<uid>', methods=['POST', 'GET'])
@@ -311,19 +313,19 @@ def eduser(uid):
         email = clean_email(form.email.data)
         taken = email and User.query.filter(User.email == email, User.id != uobj.id).first()
         if taken:
-            flash('{} already uses that email address.'.format(taken.username), 'error')
-            return render_template('eduser.html', title='Edit user: {}'.format(uobj.username), form=form)
+            flash('{} already uses that email address.'.format(taken.shown_name), 'error')
+            return render_template('eduser.html', title='Edit user: {}'.format(uobj.shown_name), form=form)
         uobj.username = form.username.data
         uobj.email = email
         if uobj == current_user and uobj.is_admin != form.is_admin.data:
-            flash("I can't let you change is_admin, {}".format(current_user.username))
+            flash("I can't let you change is_admin, {}".format(current_user.shown_name))
         else:
             uobj.is_admin = form.is_admin.data
         uobj.save()
-        flash('Updated user: ({}) {}'.format(uobj.id, uobj.username))
+        flash('Updated user: ({}) {}'.format(uobj.id, uobj.shown_name))
         current_app.logger.info('{} updated user ({}) {}'.format(current_user.username, uobj.id, uobj.username))
-        return redirect(url_for('user.userdet'))
-    return render_template('eduser.html', title='Edit user: {}'.format(uobj.username), form=form)
+        return redirect(next_arg(url_for('user.userdet')))
+    return render_template('eduser.html', title='Edit user: {}'.format(uobj.shown_name), form=form)
 
 # route to admin-initiated user detail listing
 @user_bp.route('/userdet', methods=['GET'])
@@ -429,12 +431,12 @@ def move_user_or_folder():
             message = 'Moved "{}" to {}.'.format(name, '"{}"'.format(target.name) if target else 'the top level')
         elif to in (None, '', 'top', 'main'):
             person, f = groups.take_out(request.form.get('user'), here)
-            message = ('Took {} out of "{}".'.format(person.username, f.name) if f
-                       else 'Took {} out of every folder.'.format(person.username))
+            message = ('Took {} out of "{}".'.format(person.shown_name, f.name) if f
+                       else 'Took {} out of every folder.'.format(person.shown_name))
         else:
             person, f = groups.add(request.form.get('user'), to, moving_from=here)
-            message = 'Moved {} to "{}".'.format(person.username, f.name) if here else \
-                'Put {} in "{}".'.format(person.username, f.name)
+            message = 'Moved {} to "{}".'.format(person.shown_name, f.name) if here else \
+                'Put {} in "{}".'.format(person.shown_name, f.name)
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
     return _group_done(message)
@@ -452,7 +454,7 @@ def add_to_user_folder():
         person, f = groups.add(request.form.get('user'), request.form.get('to'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Put {} in "{}".'.format(person.username, f.name))
+    return _group_done('Put {} in "{}".'.format(person.shown_name, f.name))
 
 
 @user_bp.route('/users/folders/remove', methods=['POST'])
@@ -466,8 +468,8 @@ def remove_from_user_folder():
         person, f = groups.take_out(request.form.get('user'), request.form.get('folder'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Took {} out of "{}".'.format(person.username, f.name) if f else
-                       'Took {} out of every folder.'.format(person.username))
+    return _group_done('Took {} out of "{}".'.format(person.shown_name, f.name) if f else
+                       'Took {} out of every folder.'.format(person.shown_name))
 
 # route to site-wide settings: name, logo, and the class code students need to sign up
 @user_bp.route('/settings', methods=['GET', 'POST'])
@@ -575,6 +577,40 @@ def profile():
     tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all() if current_user.is_admin else []
     return render_template('profile.html', tokens=tokens, title='My profile')
 
+def clean_nickname(text):
+    """A nickname as it's kept: spaces tidied, None for none. Raises ValueError (the reason,
+    to show) if it's too long, or is someone else's username (it could pass for them)."""
+    nick = ' '.join(str(text or '').split())
+    if not nick:
+        return None
+    if len(nick) > User.NICKNAME_MAX:
+        raise ValueError('A nickname can be at most {} characters.'.format(User.NICKNAME_MAX))
+    if any(ord(c) < 32 for c in nick):
+        raise ValueError('Please use ordinary letters, numbers and spaces.')
+    taken = User.query.filter(db.func.lower(User.username) == nick.lower(), User.id != current_user.id).first()
+    if taken:
+        raise ValueError('That is someone else\'s name here. Please choose another nickname.')
+    return nick
+
+# route to set (or clear) one's own nickname; nobody else can set it
+@user_bp.route('/profile/nickname', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def set_nickname():
+    try:
+        nick = None if request.form.get('clear') else clean_nickname(request.form.get('nickname'))
+    except ValueError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('user.profile'))
+    if nick == current_user.nickname:
+        return redirect(url_for('user.profile'))
+    current_user.nickname = nick
+    db.session.commit()
+    flash('Your nickname is now "{}".'.format(nick) if nick else 'Your nickname is gone; your name shows on its own.', 'success')
+    current_app.logger.info('{} {} their nickname'.format(current_user.username, 'set' if nick else 'cleared'))
+    return redirect(url_for('user.profile'))
+
 # route to upload one's own picture (drag and drop on the profile page)
 @user_bp.route('/profile/avatar', methods=['POST'])
 @login_required
@@ -602,7 +638,7 @@ def remove_avatar(uid):
     from . import avatars
     if not form_csrf_ok():
         flash('Your session expired. Please try again.', 'error')
-        return redirect(request.referrer or home_url())
+        return redirect(back_to(home_url()))
     if uid != current_user.id and not current_user.is_admin:
         flash('You can only remove your own picture.', 'error')
         return redirect(url_for('user.mypage'))
@@ -610,7 +646,7 @@ def remove_avatar(uid):
     avatars.remove(usr)
     flash('Picture removed{}.'.format('' if usr == current_user else ' for {}'.format(usr.username)), 'success')
     current_app.logger.info('{} removed the picture of {}'.format(current_user.username, usr.username))
-    return redirect(request.referrer or url_for('user.profile'))
+    return redirect(back_to(url_for('user.profile')))
 
 # route to create an app token from the profile page (shown once); teachers only
 @user_bp.route('/profile/tokens', methods=['POST'])

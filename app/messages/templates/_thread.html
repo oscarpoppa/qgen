@@ -21,9 +21,9 @@
             <summary class="msg-x" aria-label="Delete this message" title="Delete this message">✕</summary>
             <div class="msg-del-choices">
               <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
-                    data-confirm="Delete this announcement from {{ m.student.username }}'s messages? This can’t be undone." data-confirm-ok="Delete">
+                    data-confirm="Delete this announcement from {{ m.student.shown_name }}'s messages? This can’t be undone." data-confirm-ok="Delete">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="btn btn-secondary btn-sm">Only from {{ m.student.username }}</button>
+                <button class="btn btn-secondary btn-sm">Only from {{ m.student.shown_name }}</button>
               </form>
               <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
                     data-confirm="Delete this announcement for every student who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
@@ -44,27 +44,27 @@
       <div class="msg-meta small">
         {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
-        <strong>{% if m.from_teacher %}{{ (m.sender.username if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.username }}{% endif %}</strong>
+        <strong>{% if m.from_teacher %}{{ (m.sender.shown_name if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.shown_name }}{% endif %}</strong>
         {% if not m.from_teacher and not m.to_all %}
           {# a student's message to chosen teachers: the teacher reads "to you only" #}
-          <span class="badge" title="Only {{ m.recipients|map(attribute='username')|join(', ') }} can see this">
-            {%- set others = m.recipients|rejectattr('id', 'equalto', current_user.id)|map(attribute='username')|list %}
+          <span class="badge" title="Only {{ m.recipients|map(attribute='shown_name')|join(', ') }} can see this">
+            {%- set others = m.recipients|rejectattr('id', 'equalto', current_user.id)|map(attribute='shown_name')|list %}
             {%- if me_teacher and others|length < m.recipients|length %}to you{{ ' and ' ~ others|join(', ') if others }} only
-            {%- else %}to {{ m.recipients|map(attribute='username')|join(', ') or 'a teacher' }} only{% endif %}</span>
+            {%- else %}to {{ m.recipients|map(attribute='shown_name')|join(', ') or 'a teacher' }} only{% endif %}</span>
         {% elif not m.from_teacher and m.kind != 'notice' and not me_teacher %}<span class="muted">to all teachers</span>{% endif %}
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
-        {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.username }}</span>{% endif %}
+        {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
         {% if m.pinned %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
-      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">Open</a>{% endif %}</div>
+      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>
       {% if everyone is defined and everyone and not grouped %}
         {# opens the conversation with that student: a reply to what they wrote, or more to what a teacher wrote #}
-        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.username }}</button>
+        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.shown_name }}</button>
       {% endif %}
       {% set can_pin = me_teacher and m.from_teacher %}
-      {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.username }} removed this from their messages</div>{% endif %}
+      {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.shown_name }} removed this from their messages</div>{% endif %}
       {% if can_pin %}
       <div class="msg-actions">
         <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="inline-form dock-form">

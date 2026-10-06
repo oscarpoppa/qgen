@@ -267,6 +267,16 @@ RETAKE_RULES = {
 }
 
 
+#the same, said to the student taking the quiz (My quizzes)
+RETAKE_RULES_FOR_STUDENT = {
+    'best': 'Your best try counts',
+    'latest': 'Your latest try counts',
+    'average': 'All your tries are averaged',
+    'first': 'Your first try counts',
+    'best2': 'Your best two tries are averaged',
+}
+
+
 def combined_score(rule, scores):
     """scores: finished attempts' scores, oldest first."""
     if not scores:
@@ -319,6 +329,24 @@ class Setting(db.Model):
 def new_quizzes(user_id):
     """Quizzes given to this person (student or teacher) since they last opened My quizzes."""
     return CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)).count()
+
+
+def waiting_quizzes(user, now=None):
+    """What someone still has to do (new or started), in the order to do them: the ones
+    closing soonest first, then the rest, oldest first (their Home's "Waiting for you")."""
+    now = now or datetime.now()
+    waiting = [cq for cq in user.cquizzes if cq.status in ('new', 'started')]
+    waiting.sort(key=lambda cq: (cq.closes_at is None, cq.closes_at or now, cq.id))
+    return waiting
+
+
+def next_quiz(user, after=None, now=None):
+    """The next quiz they can start or continue now (not one that hasn't opened yet), other
+    than `after`; None if there isn't one."""
+    now = now or datetime.now()
+    return next((cq for cq in waiting_quizzes(user, now)
+                 if cq.id != getattr(after, 'id', after) and not cq.not_open_yet(now)
+                 and not (cq.closes_at and cq.closes_at < now)), None)
 
 
 def mark_quizzes_seen(user_id):

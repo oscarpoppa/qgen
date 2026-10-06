@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
 {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels with context %}
 {% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
@@ -50,7 +51,7 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions">{% if single %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}">← All quizzes</a>{% endif %}
+  <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
     <a class="btn" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a></div>
 </div>
 

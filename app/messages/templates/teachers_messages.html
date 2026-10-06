@@ -13,23 +13,23 @@
     {# who: every teacher, or just between you and one of them #}
     <nav class="card btn-row small" aria-label="Which teachers">
       <a class="btn btn-sm {{ 'btn-secondary' if other }}" href="{{ url_for('messages.teachers_page') }}"{% if not other %} aria-current="page"{% endif %}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</a>
-      {% for t in staff.teachers %}<a class="btn btn-sm {{ 'btn-secondary' if not other or other.id != t.teacher.id }}" href="{{ url_for('messages.teachers_page', with=t.teacher.id) }}"{% if other and other.id == t.teacher.id %} aria-current="page"{% endif %}>{{ '● ' if t.online }}{{ t.teacher.username }}{% if t.unread %} ({{ t.unread }} new){% endif %}</a>{% endfor %}
+      {% for t in staff.teachers %}<a class="btn btn-sm {{ 'btn-secondary' if not other or other.id != t.teacher.id }}" href="{{ url_for('messages.teachers_page', with=t.teacher.id) }}"{% if other and other.id == t.teacher.id %} aria-current="page"{% endif %}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{% if t.unread %} ({{ t.unread }} new){% endif %}</a>{% endfor %}
     </nav>
     <div class="card">{% set show_with = false %}{% include "_staff_thread.html" %}</div>
     <form method="post" action="{{ url_for('messages.send_staff') }}" class="card" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <h2>Write {{ 'to ' ~ other.username if other else 'to teachers' }}</h2>
+      <h2>Write {{ 'to ' ~ other.shown_name if other else 'to teachers' }}</h2>
       {% if staff.teachers|length > 1 %}
         <fieldset class="field send-to">
           <legend class="small muted">Send to</legend>
           <input type="hidden" name="to_checked" value="1">
           {% for t in staff.teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not other or other.id == t.teacher.id }}>
-            {{ '● ' if t.online }}{{ t.teacher.username }}</label>{% endfor %}
+            {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
         </fieldset>
       {% else %}<input type="hidden" name="to" value="all">{% endif %}
       <div class="field">
         <label for="staff-body" class="sr-only">Message</label>
-        <textarea id="staff-body" name="body" rows="3" maxlength="{{ max_len }}" required placeholder="Write to {{ other.username if other else 'all the teachers' }}…"></textarea>
+        <textarea id="staff-body" name="body" rows="3" maxlength="{{ max_len }}" required placeholder="Write to {{ other.shown_name if other else 'all the teachers' }}…"></textarea>
       </div>
       <button class="btn">Send</button>
       <p class="muted small" style="margin:6px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>

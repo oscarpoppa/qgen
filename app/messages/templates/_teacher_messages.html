@@ -9,12 +9,12 @@
       <select id="msg-student" name="student" data-current="{{ current }}">
         <optgroup label="Students">
         <option value="all"{{ ' selected' if everyone }}>All messages (every student)</option>
-        {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+        {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.shown_name }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
         </optgroup>
         {% if staff.teachers %}
         <optgroup label="Teachers">
         <option value="teachers"{{ ' selected' if teachers_view and not other }}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</option>
-        {% for t in staff.teachers %}<option value="t{{ t.teacher.id }}"{{ ' selected' if other and other.id == t.teacher.id }}>{{ '● ' if t.online }}{{ t.teacher.username }}{{ ' (online)' if t.online }}{% if t.unread %} ({{ t.unread }} new){% endif %}</option>{% endfor %}
+        {% for t in staff.teachers %}<option value="t{{ t.teacher.id }}"{{ ' selected' if other and other.id == t.teacher.id }}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{{ ' (online)' if t.online }}{% if t.unread %} ({{ t.unread }} new){% endif %}</option>{% endfor %}
         </optgroup>
         {% endif %}
       </select>
@@ -25,7 +25,7 @@
     <div class="thread-scroll">{% set show_with = not other %}{% include "_staff_thread.html" %}</div>
     <form method="post" action="{{ url_for('messages.send_staff') }}" class="reply-box" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% set to_whom = other.username if other else 'all the teachers' %}
+      {% set to_whom = other.shown_name if other else 'all the teachers' %}
       <label for="reply" class="sr-only">Message to {{ to_whom }}</label>
       <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ to_whom }}…"></textarea>
       {% if staff.teachers|length > 1 %}
@@ -33,7 +33,7 @@
           <legend class="small muted">Send to</legend>
           <input type="hidden" name="to_checked" value="1">
           {% for t in staff.teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not other or other.id == t.teacher.id }}>
-            {{ '● ' if t.online }}{{ t.teacher.username }}</label>{% endfor %}
+            {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
         </fieldset>
       {% else %}<input type="hidden" name="to" value="all">{% endif %}
       <button class="btn">Send</button>
@@ -61,7 +61,7 @@
           {# one student: go to that conversation; several: to all messages, where the new ones are marked #}
           {% if waiting|length == 1 %}
             <button type="button" class="badge badge-warn badge-btn show-student" data-student="{{ waiting[0].student.id }}"
-                    title="Open {{ waiting[0].student.username }}'s conversation">{{ others_unread }} new from {{ waiting[0].student.username }} →</button>
+                    title="Open {{ waiting[0].student.shown_name }}'s conversation">{{ others_unread }} new from {{ waiting[0].student.shown_name }} →</button>
           {% else %}
             <button type="button" class="badge badge-warn badge-btn show-student" data-student="all"
                     title="See all messages; the new ones are marked">{{ others_unread }} new from {{ waiting|length }} students →</button>
@@ -72,8 +72,8 @@
       <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="to" value="{{ student.id }}">
-        <label for="reply" class="sr-only">Message to {{ student.username }}</label>
-        <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.username }}…"></textarea>
+        <label for="reply" class="sr-only">Message to {{ student.shown_name }}</label>
+        <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ student.shown_name }}…"></textarea>
         <button class="btn">Send</button>
       </form>
     {% endif %}

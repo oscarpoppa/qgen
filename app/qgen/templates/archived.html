@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% block body_attrs %}{{ watch('archived:%d' % a.id) }}{% endblock %}
 
 {% block content %}
@@ -6,11 +7,11 @@
   <h1>Archived attempt</h1>
   <div class="actions">
     <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.archive') }}">Back to the archive</a>
+    {{ back_button(url_for('qgen.archive'), 'Archive') }}
   </div>
 </div>
 <div class="alert alert-info archived-banner">
-  <div>Archived {{ a.archived_at.strftime('%b %d %Y, %I:%M %p') }}{% if a.archiver %} by {{ a.archiver.username }}{% endif %}
+  <div>Archived {{ a.archived_at.strftime('%b %d %Y, %I:%M %p') }}{% if a.archiver %} by {{ a.archiver.shown_name }}{% endif %}
     ({{ 'the student’s account was deleted' if a.reason == 'student deleted' else 'attempt deleted' }}).
     {{ a.student_name }} doesn't see it. This is the results page as it was then, with every answer.</div>
   <div class="btn-row" style="margin-top:8px">

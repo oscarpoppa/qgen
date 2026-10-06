@@ -13,18 +13,23 @@
     {% for c in children %}{{ pick_folder(c) }}{% endfor %}
     {% if members %}<ul class="choice-list pick-list">
       {% for u in members %}
-        <li><label><input type="checkbox" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}> {{ u.username }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
+        <li><label><input type="checkbox" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}> {{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
       {% endfor %}
     </ul>{% elif not children %}<p class="muted small">Nobody in it.</p>{% endif %}
   </details>
 {% endmacro %}
 {% macro pick_folder(n) %}{{ pick_group(n.folder.id, '📁 ' ~ n.folder.name, n.people, n.folders) }}{% endmacro %}
 
+{% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
+
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1></div>
+<div class="page-head"><h1>{{ title }}</h1>
+  {% if came_from %}<div class="actions"><a class="btn btn-secondary" href="{{ came_from[0] }}">← {{ came_from[1] }}</a></div>{% endif %}</div>
 
 <form method="post" class="card" style="max-width:640px" novalidate>
   {{ form.hidden_tag() }}
+  {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
+  {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}
   {# narrows the Quiz menu (needs the page's script, so it starts hidden) #}
   <div class="field" id="assign-subject-field" hidden{% if quiz_chosen %} data-keep-quiz{% endif %}>
     <label class="label" for="assign-subject">Folder</label>
@@ -56,7 +61,7 @@
         <ul class="choice-list pick-list">
           {% for u in people %}
             <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>
-              <label for="users-{{ u.id }}">{{ u.username }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
+              <label for="users-{{ u.id }}">{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
           {% endfor %}
         </ul>
       </details>

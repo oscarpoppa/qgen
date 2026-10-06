@@ -3,6 +3,20 @@
 
 {% block content %}
 <div class="page-head"><h1>My profile</h1></div>
+<div class="card" style="max-width:640px">
+  <div class="card-head"><h2>Nickname</h2></div>
+  <p class="muted small">If you like to be called something else, put it here. It shows next to your name everywhere,
+    {% if current_user.nickname %}like this: <strong>{{ current_user.shown_name }}</strong>{% else %}for example <strong>{{ current_user.username }} (Sunny)</strong> if you chose “Sunny”{% endif %}.
+    You don't have to have one: with none, just your name shows.</p>
+  <form method="post" action="{{ url_for('user.set_nickname') }}" class="btn-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="nickname" class="sr-only">Nickname</label>
+    <input type="text" id="nickname" name="nickname" maxlength="{{ current_user.NICKNAME_MAX }}" value="{{ current_user.nickname or '' }}"
+           placeholder="Nickname (optional)" autocomplete="nickname" style="flex:1;min-width:180px">
+    <button class="btn">Save</button>
+    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1">Remove nickname</button>{% endif %}
+  </form>
+</div>
 
 <div class="card" style="max-width:640px">
   <div class="card-head"><h2>Picture</h2></div>

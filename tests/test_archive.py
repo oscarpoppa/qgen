@@ -63,7 +63,7 @@ def test_deleting_an_attempt_archives_it_and_restore_brings_it_back(app_db):
     assert [att['id'] for q in listed for att in q['attempts']] == [second.id]
     # the student opening the old link is told plainly
     r = sam.get('/quiz/take/{}'.format(cqid), follow_redirects=True)
-    assert b'Your teacher has removed this quiz attempt.' in r.data
+    assert b'Your teacher has taken this quiz away.' in r.data
     assert sam.post('/quiz/take/{}/save'.format(cqid), data={}).status_code == 410
     # a teacher opening it goes to the archived copy
     assert teacher.get('/quiz/take/{}'.format(cqid)).headers['Location'].endswith('/quiz/archive/{}'.format(a.id))
@@ -153,7 +153,9 @@ def test_delete_for_good(app_db):
     assert 'Delete for good' in teacher.get('/quiz/archive').data.decode()
     teacher.post('/quiz/archive/{}/delete'.format(a.id))
     assert ArchivedAttempt.query.count() == 0
-    assert teacher.get('/quiz/archive/{}'.format(a.id)).status_code == 404
+    #gone: back to the Archive with a word about it, not "Not found"
+    r = teacher.get('/quiz/archive/{}'.format(a.id))
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/archive')
 
 
 def test_deleting_a_student_keeps_their_results(app_db):

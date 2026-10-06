@@ -4,14 +4,17 @@
 {% block content %}
 <div class="card card-narrow">
   <h1>Edit user</h1>
+  {# back to where they came from (the Users page's folder, a student page...), also after saving #}
+  {% set came = back(url_for('user.userdet'), 'Users') %}
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
+    <input type="hidden" name="next" value="{{ came[0] }}">
     {{ field(form.username) }}
     {{ field(form.email, 'Optional. Leave blank for no email address.', attrs={'type': 'email'}) }}
     {{ check(form.is_admin, 'Administrators can create problems and quizzes, and see everyone’s results.') }}
     <div class="btn-row">
       <button type="submit" class="btn">Save</button>
-      <a class="btn btn-secondary" href="{{ url_for('user.userdet') }}">Cancel</a>
+      <a class="btn btn-secondary" href="{{ came[0] }}">Cancel</a>
     </div>
   </form>
 </div>

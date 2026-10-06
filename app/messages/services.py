@@ -537,5 +537,5 @@ def delete_staff_message(me, message_id):
 def staff_state(me):
     """Changes whenever what this teacher can see of the teachers' messages changes."""
     from .models import StaffMessage, staff_for
-    ids = [r[0] for r in StaffMessage.query.filter(staff_for(me.id)).with_entities(StaffMessage.id).all()]
-    return '{}:{}:{}'.format(len(ids), max(ids, default=0), sum(ids))
+    return ':'.join(str(v or 0) for v in StaffMessage.query.filter(staff_for(me.id)).with_entities(
+        db.func.count(StaffMessage.id), db.func.max(StaffMessage.id), db.func.sum(StaffMessage.id)).one())

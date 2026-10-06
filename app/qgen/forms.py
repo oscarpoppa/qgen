@@ -164,3 +164,5 @@ class ReviewForm(FlaskForm):
     items = FieldList(FormField(ReviewItem), min_entries=0)
     save = SubmitField('Save draft')
     finalize = SubmitField('Finish grading')
+    #the same, then straight on to the next attempt waiting
+    finalize_next = SubmitField('Finish and grade next')

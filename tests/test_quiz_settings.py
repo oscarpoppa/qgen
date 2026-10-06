@@ -438,7 +438,7 @@ def test_a_newly_assigned_quiz_says_new(app_db):
     # opened: no longer new
     sam.get('/quiz/take/{}'.format(CQuiz.query.one().id))
     home = sam.get('/mypage').data.decode()
-    assert '<span class="badge badge-warn">New</span>' not in home and 'In progress' in home
+    assert '<span class="badge badge-warn">New</span>' not in home and 'Started' in home
 
 
 def test_view_problems_and_quizzes_without_editing(app_db):
@@ -538,12 +538,12 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
-    assert '<span class="quiz-count muted small">1 attempt</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="quiz-count muted small">1 try</span>' in sam.get('/mypage').data.decode()
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
-    assert '<span class="quiz-count muted small">2 attempts</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="quiz-count muted small">2 tries</span>' in sam.get('/mypage').data.decode()
 
 
 def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
@@ -654,7 +654,7 @@ def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
     assert 'differs' not in teacher.get('/quiz/listvq').data.decode()
     # sam's own My quizzes and the teacher's Results by student count it the new way
     sam = login(app, 'sam')
-    assert '(the latest attempt)' in sam.get('/mypage').data.decode()
+    assert '(your latest try counts)' in sam.get('/mypage').data.decode()
     results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
     assert 'Just for sam' not in results and "The quiz's own rule" not in results
 
@@ -845,11 +845,11 @@ def test_results_by_quiz(app_db):
     assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
     box = page.split('id="quiz-{}"'.format(vq.id))[1]
     assert box.index('kim</a>') < box.index('sam</a>')  # students by name
-    assert 'not started' in box and '%</span>' in box and 'Details' in box and 'Delete' in box
+    assert 'not started' in box and '%</span>' in box and 'Details' in box and 'Archive' in box
     assert 'average 0%' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Results: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="students"' in one
-    assert teacher.get('/quiz/results/99999').status_code == 404
+    assert 'Results: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
+    assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Results by quiz
     # where it's linked from
     assert '/quiz/results' in teacher.get('/dashboard').data.decode()
     assert '/quiz/results/{}'.format(vq.id) in teacher.get('/quiz/listvq').data.decode()

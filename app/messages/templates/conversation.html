@@ -4,13 +4,13 @@
 
 {% block content %}
 <div class="page-head">
-  <h1 class="person">{{ avatar(student, 40) }}{{ student.username }}</h1>
+  <h1 class="person">{{ avatar(student, 40) }}{{ student.shown_name }}</h1>
   <div class="actions">
     {# switch to another student's conversation #}
     <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-switch" onsubmit="return false">
       <label for="switch-student" class="sr-only">Switch to another student</label>
       <select id="switch-student" onchange="if (this.value) window.location = this.value">
-        {% for r in rows %}<option value="{{ url_for('messages.conversation', student_id=r.student.id) }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.username }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
+        {% for r in rows %}<option value="{{ url_for('messages.conversation', student_id=r.student.id) }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.shown_name }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
       </select>
     </form>
     <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}">Student page</a>
@@ -22,8 +22,8 @@
   <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="to" value="{{ student.id }}">
-    <label for="body" class="sr-only">Message to {{ student.username }}</label>
-    <textarea id="body" name="body" rows="2" maxlength="{{ tuning.get('max_message') }}" required placeholder="Write to {{ student.username }}…"></textarea>
+    <label for="body" class="sr-only">Message to {{ student.shown_name }}</label>
+    <textarea id="body" name="body" rows="2" maxlength="{{ tuning.get('max_message') }}" required placeholder="Write to {{ student.shown_name }}…"></textarea>
     <button class="btn">Send</button>
   </form>
 </div>

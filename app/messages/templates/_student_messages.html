@@ -8,7 +8,7 @@
       {# the panel's script reloads it for the teacher chosen (the same as the teachers' picker) #}
       <select id="msg-student" name="student" data-current="{{ teacher.id if teacher else 'all' }}">
         <option value="all"{{ ' selected' if not teacher }}>All my teachers</option>
-        {% for t in teachers %}<option value="{{ t.teacher.id }}"{{ ' selected' if teacher and t.teacher.id == teacher.id }}>{{ '● ' if t.online }}{{ t.teacher.username }}{{ ' (online)' if t.online }}{% if t.unread %} ({{ t.unread }} new){% endif %}</option>{% endfor %}
+        {% for t in teachers %}<option value="{{ t.teacher.id }}"{{ ' selected' if teacher and t.teacher.id == teacher.id }}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{{ ' (online)' if t.online }}{% if t.unread %} ({{ t.unread }} new){% endif %}</option>{% endfor %}
       </select>
     </form>
   {% endif %}
@@ -19,7 +19,7 @@
       <div class="pinned-label"><span aria-hidden="true">📌</span> Pinned by your teacher</div>
       <ul class="pinned-list" aria-label="Pinned by your teacher">
         {% for m in pinned %}<li class="msg msg-announcement msg-pinned"><div class="msg-meta small">
-          <strong>{{ m.sender.username if m.sender else 'Teacher' }}</strong> <span class="muted">{{ m.created.strftime('%b %d') }}</span></div>
+          <strong>{{ m.sender.shown_name if m.sender else 'Teacher' }}</strong> <span class="muted">{{ m.created.strftime('%b %d') }}</span></div>
           <div class="msg-body">{{ m.body }}</div></li>{% endfor %}
       </ul>
     </div>
@@ -27,7 +27,7 @@
   <div class="thread-scroll">{% set me_teacher = false %}{% include "_thread.html" %}</div>
   <form method="post" action="{{ url_for('messages.reply') }}" class="reply-box" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% set to_whom = teacher.username if teacher else 'your teachers' %}
+    {% set to_whom = teacher.shown_name if teacher else 'your teachers' %}
     <label for="reply" class="sr-only">Message to {{ to_whom }}</label>
     <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to {{ to_whom }}…"></textarea>
     {% if teachers|length > 1 %}
@@ -36,7 +36,7 @@
         <legend class="small muted">Send to</legend>
         <input type="hidden" name="to_checked" value="1">
         {% for t in teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not teacher or teacher.id == t.teacher.id }}>
-          {{ '● ' if t.online }}{{ t.teacher.username }}</label>{% endfor %}
+          {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
       </fieldset>
     {% else %}<input type="hidden" name="to" value="all">{% endif %}
     <button class="btn">Send</button>

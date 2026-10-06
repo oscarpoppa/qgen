@@ -46,12 +46,25 @@
   });
 
   if (!box) return;
+  //not while a question is being asked ("Unpin this message?"): its form is in the part
+  //that refreshes, and a form that's been replaced can't be sent. It refreshes as soon as
+  //the question is answered.
+  function busy() { return !!document.querySelector('dialog[open]'); }
+  var waiting = false;
   function refresh() {
     if (document.hidden) return;
+    if (busy()) { waiting = true; return; }
+    waiting = false;
     fetch(box.dataset.url, { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
-      .then(function (html) { if (html) { box.innerHTML = html; apply(); } }, function () {});
+      .then(function (html) {
+        if (!html) return;
+        if (busy()) { waiting = true; return; }  // a question was asked while it loaded
+        box.innerHTML = html;
+        apply();
+      }, function () {});
   }
   setInterval(refresh, Math.max(10000, +box.dataset.every || 30000));
+  document.addEventListener('close', function () { if (waiting) setTimeout(refresh, 0); }, true);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();

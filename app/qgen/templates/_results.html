@@ -12,7 +12,7 @@
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
                     {% else %}<span class="badge">not started</span>{% endif %}
                     <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Delete', 'btn btn-danger btn-sm', 'Move ' ~ (student.username)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the archive? You can view or restore it later.') }}</span>
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the archive? You can view or restore it later.') }}</span>
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</div>{% endif %}
                 {% endfor %}
@@ -22,16 +22,16 @@
                 {% if g.attempts|length > 1 or g.overridden %}
                 <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="small" style="margin-top:4px">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="rule" aria-label="How {{ student.username }}'s attempts count" onchange="this.form.submit()" style="min-height:32px;padding:2px 6px">
+                  <select name="rule" aria-label="How {{ student.shown_name }}'s attempts count" onchange="this.form.submit()" style="min-height:32px;padding:2px 6px">
                     <option value="" {{ 'selected' if not g.overridden }}>Quiz setting ({{ rules[g.vquiz.retake_rule]|lower }})</option>
                     {% for key, label in rules.items() %}<option value="{{ key }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ label }}</option>{% endfor %}
                   </select>
                 </form>
-                {% if g.overridden %}<div class="small"><span class="badge badge-warn">Just for {{ student.username }}</span>
+                {% if g.overridden %}<div class="small"><span class="badge badge-warn">Just for {{ student.shown_name }}</span>
                   <span class="muted">The quiz's own rule is {{ rules[g.vquiz.retake_rule]|lower }}.</span></div>{% endif %}
                 {% endif %}
               </td>
               <td class="actions">
-                {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.username)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% endif %}
+                {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% endif %}
               </td>
 {% endmacro %}

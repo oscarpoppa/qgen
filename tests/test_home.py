@@ -33,12 +33,12 @@ def test_students_land_on_home_with_their_counts(app_db):
     finish(give(q4, 'sam'), 80, now)                     # done: not counted
     page = sam.get('/home').data.decode()
     counts = dict((label, int(n)) for n, label in re.findall(r'<span class="dash-num">(\d+)</span><span>([^<]+)</span>', page))
-    assert counts == {'to do': 2, 'in progress': 1, 'due within 2 days': 1}
+    assert counts == {'to do': 2, 'started': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
     waiting = page.split('<h2>Waiting for you</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
-    assert '<a href="/home">Home</a>' in page  # in the menu for students
+    assert '<a href="/home" class="active" aria-current="page">Home</a>' in page  # in the menu for students
     # the boxes fold away (remembered in the browser)
     assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page and 'qgen-home-closed' in page
     assert '<a href="/home">Home</a>' not in teach.get('/dashboard').data.decode()
@@ -128,7 +128,7 @@ def test_recently_completed(app_db):
     page = sam.get('/home').data.decode()
     part = page.split('<h2>Recently completed</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
-    assert 'Being graded' in part and '>85%</span>' in part and '>View</a>' in part and '>Results</a>' in part
+    assert 'Teacher is checking' in part and '>85%</span>' in part and '>View</a>' in part and '>Results</a>' in part
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))
@@ -143,6 +143,6 @@ def test_home_follows_hand_ins(app_db):
     cq = give(make_quiz(app, teach, 'Live'), 'sam')
     page = sam.get('/home').data.decode()
     key, drawn = re.search(r'data-watch="([^"]+)" data-watch-state="([^"]+)"', page).groups()
-    assert key == 'mine' and sam.get('/messages/poll?watch=mine').get_json()['watch'] == drawn
+    assert key == 'home' and sam.get('/messages/poll?watch=home').get_json()['watch'] == drawn
     finish(cq, 90, datetime.now())
-    assert sam.get('/messages/poll?watch=mine').get_json()['watch'] != drawn
+    assert sam.get('/messages/poll?watch=home').get_json()['watch'] != drawn

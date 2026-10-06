@@ -160,7 +160,7 @@ def test_whole_school_week(app_db):
     db.session.expire_all()
     sam_q = db.session.get(CQuiz, sam_q.id)
     assert sam_q.needs_review and not sam_q.completed
-    assert b'Submitted' in sam.get('/quiz/take/{}'.format(sam_q.id)).data
+    assert b'Handed in!' in sam.get('/quiz/take/{}'.format(sam_q.id)).data
     assert b'Mentions inertia' not in sam.get('/quiz/take/{}'.format(sam_q.id)).data
 
     # --- kim submits everything blank except the essay, also blank -> no review needed

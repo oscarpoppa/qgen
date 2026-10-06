@@ -1,14 +1,18 @@
 {% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_results.html" import result_cells with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
-{% block body_attrs %}{{ watch('students') }}{% endblock %}
+{% block body_attrs %}{{ watch('quizresults:%d' % quizzes[0].vquiz.id if single else 'byquiz') }}{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.userdet') }}">← Users</a>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
+  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+    {% if single %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}">View quiz</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}">Edit quiz</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>{% endif %}
     <a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a></div>
 </div>
 
@@ -29,6 +33,8 @@
       {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
     </summary>
     <div class="box-body">
+    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Just this quiz</a>
+      · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}">Edit quiz</a></p>{% endif %}
     {% if q.rows %}
       <div class="table-wrap stack">
         <table>
@@ -36,7 +42,7 @@
           <tbody>
           {% for student, g in q.rows %}
             <tr>
-              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.username }}</a></td>
+              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>
           {% endfor %}

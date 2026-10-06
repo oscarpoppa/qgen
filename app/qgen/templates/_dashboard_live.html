@@ -1,6 +1,6 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
    so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, person_link, quiz_link with context %}
 {% macro score(value) -%}
   <span class="badge {{ 'badge-ok' if value >= 70 else 'badge-warn' if value >= 50 else 'badge-bad' }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
@@ -12,7 +12,7 @@
   <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices">
     <span class="dash-num">{{ counts.notices }}</span><span>unread notice{{ '' if counts.notices == 1 else 's' }}</span></button>
   {% set soon = tuning.get('due_soon_days') %}
-  <a class="dash-count{{ ' has' if counts.closing }}" href="{{ url_for('qgen.list_vquizzes') }}"
+  <a class="dash-count{{ ' has' if counts.closing }}" href="#dash-out"
      title="Assigned quizzes with a closing time in the next {{ soon }} day{{ "" if soon == 1 else "s" }} that the student hasn't handed in yet (one per student)">
     <span class="dash-num">{{ counts.closing }}</span><span>not handed in, due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span></a>
 </div>
@@ -40,7 +40,7 @@
     </p>
     </div>
   </details>
-  <details class="card dash-card dash-wide" data-box="out" open>
+  <details class="card dash-card dash-wide" id="dash-out" data-box="out" open>
     <summary class="dash-head"><h2>Assigned, not handed in yet</h2><span class="badge">{{ out_total }}</span></summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
@@ -48,8 +48,8 @@
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
-        <li><span class="person">{{ avatar(o.cq.taker, 24) }}<strong>{{ o.cq.taker.username }}</strong></span>
-          <span>“{{ o.cq.vquiz.title }}”</span>
+        <li>{{ person_link(o.cq.taker) }}
+          <span>{{ quiz_link(o.cq.vquiz) }}</span>
           {% if o.state == 'started' %}<span class="badge badge-accent">In progress</span>
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
@@ -65,12 +65,12 @@
   <details class="card dash-card" data-box="queue" open>
     <summary class="dash-head"><h2>Waiting for grading</h2><span class="badge{{ ' badge-warn' if waiting }}">{{ waiting }}</span></summary>
     <div class="dash-body">
-    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}">All {{ waiting }} on Review →</a></p>{% endif %}
+    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}">All {{ waiting }} in Grading →</a></p>{% endif %}
     {% if queue %}
       <ul class="dash-list">
       {% for cq in queue %}
-        <li><span class="person">{{ avatar(cq.taker, 24) }}<strong>{{ cq.taker.username }}</strong></span>
-          <span>“{{ cq.vquiz.title }}”</span>
+        <li>{{ person_link(cq.taker) }}
+          <span>{{ quiz_link(cq.vquiz) }}</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span>
           <a class="btn btn-sm dash-go" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade</a></li>
       {% endfor %}
@@ -95,8 +95,8 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
             <button class="btn btn-secondary btn-sm">Unpin</button>
           </form>
-          <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].username }}{% else %}<span title="{{ p.to|map(attribute='username')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
-            · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.username }}{% endif %}</span></li>
+          <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].shown_name }}{% else %}<span title="{{ p.to|map(attribute='shown_name')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
+            · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.shown_name }}{% endif %}</span></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -111,8 +111,8 @@
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
-        <li><span class="person">{{ avatar(cq.taker, 24) }}<strong>{{ cq.taker.username }}</strong></span>
-          <span>“{{ cq.vquiz.title }}”</span>
+        <li>{{ person_link(cq.taker) }}
+          <span>{{ quiz_link(cq.vquiz) }}</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">being graded</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
           <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Results</a></li>
