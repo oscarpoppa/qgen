@@ -8,13 +8,15 @@
   <div class="dash-body">
     <h3 class="dash-sub">Taking a quiz</h3>
     {% if taking %}
-      <ul class="dash-list">
-      {% for t in taking %}
+      {% macro taking_row(t) %}
         <li>{{ person_link(t.cq.taker) }}
           <span>{{ quiz_link(t.cq.vquiz) }}</span>
           <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
-      {% endfor %}
-      </ul>
+      {% endmacro %}
+      <ul class="dash-list">{% for t in taking[:8] %}{{ taking_row(t) }}{% endfor %}</ul>
+      {# a whole class at once: the first 8, and the rest folded away #}
+      {% if taking|length > 8 %}<details class="more-list" data-more="taking"><summary class="small">+{{ taking|length - 8 }} more</summary>
+        <ul class="dash-list">{% for t in taking[8:] %}{{ taking_row(t) }}{% endfor %}</ul></details>{% endif %}
     {% else %}
       <p class="muted small">Nobody is taking a quiz right now.</p>
     {% endif %}

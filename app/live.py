@@ -113,7 +113,10 @@ def _students(uid, now):
         users, attempts = users.filter(User.id == uid), attempts.filter(CQuiz.assignee == uid)
         if users.first() is None:
             return 'gone'
-    return [(u.id, u.username, u.nickname, u.is_admin, u.avatar) for u in users], _attempts(attempts, now, opening=False)
+    #Results by student is drawn in the Users page's folders
+    from app.user import groups
+    return ([(u.id, u.username, u.nickname, u.is_admin, u.avatar) for u in users], _attempts(attempts, now, opening=False),
+            groups.state() if uid is None else None)
 
 
 def _review(now):

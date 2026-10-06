@@ -60,7 +60,11 @@
       .then(function (html) {
         if (!html) return;
         if (busy()) { waiting = true; return; }  // a question was asked while it loaded
+        //"+N more" lists opened stay open across the refresh
+        var more = {};
+        box.querySelectorAll('details[data-more]').forEach(function (d) { if (d.open) more[d.dataset.more] = true; });
         box.innerHTML = html;
+        box.querySelectorAll('details[data-more]').forEach(function (d) { if (more[d.dataset.more]) d.open = true; });
         apply();
       }, function () {});
   }

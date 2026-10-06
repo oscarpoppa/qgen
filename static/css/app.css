@@ -1167,3 +1167,11 @@ details.done-box { margin-top: 12px; }
 /* a list's name column keeps room for the name and its details */
 .folder-main td[data-label="Quiz"], .folder-main td[data-label="Title"] { min-width: 13rem; }
 @media (max-width: 760px) { .folder-tools-bar { position: static; } }
+
+/* the Grading list: a box per quiz */
+details.grading-group > summary { cursor: pointer; list-style: none; }
+details.grading-group > summary::-webkit-details-marker { display: none; }
+details.grading-group h2 { font-size: 1.05rem; margin: 0; }
+
+/* "+N more" under a long list of people */
+details.more-list > summary { cursor: pointer; color: var(--accent); margin: 4px 0; }

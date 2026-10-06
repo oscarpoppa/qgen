@@ -564,9 +564,24 @@ def review(cqid):
 @pw_check
 @admin_only
 def list_users():
-    ulst = User.query.order_by(User.username).all()
+    """Results by student, in the Users page's folders: ?folder= all (the default), main (in
+    no folder) or a folder's id."""
+    from app import folder_tree
+    from app.user import groups
     from .models import RETAKE_RULES
-    return render_template('ulist.html', ulst=ulst, rules=RETAKE_RULES, title='Results by student')
+    ulst = User.query.order_by(User.username).all()
+    root, flat, nodes, _folders_of = groups.tree(ulst)
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
+    shown = node['people'] if node else ulst if view == 'all' else root['people']
+    fk = folder_tree.kit(
+        view, node, root, flat, nodes, readonly=True,
+        page=lambda v: url_for('qgen.list_users', folder=v) if str(v) != 'all' else url_for('qgen.list_users'),
+        unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
+        hint=Markup('The <a href="{}">Users page</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
+        fold_key='qgen-folded-results-student-folders', open_key='qgen-open-results-student-subfolders',
+        item_key='qgen-open-results-students')
+    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='Results by student',
+                           find_label='Find a student or quiz…')
 
 #route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
@@ -588,9 +603,23 @@ def list_user(uid):
 @pw_check
 @admin_only
 def results_by_quiz():
+    from app import folder_tree
     from .models import RETAKE_RULES
-    return render_template('results_by_quiz.html', quizzes=quiz_results(VQuiz.query.order_by(VQuiz.title).all()),
-                           rules=RETAKE_RULES, title='Results by quiz')
+    quizzes = VQuiz.query.order_by(VQuiz.title).all()
+    root, flat, nodes = S.subject_tree('quizzes', items=quizzes)
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
+    shown = node['items'] if node else quizzes if view == 'all' else root['items']
+    #each quiz's results, worked out once even if it's in several folders
+    results = {q['vquiz'].id: q for q in quiz_results(quizzes)}
+    fk = folder_tree.kit(
+        view, node, root, flat, nodes, readonly=True,
+        page=lambda v: url_for('qgen.results_by_quiz', folder=v) if str(v) != 'all' else url_for('qgen.results_by_quiz'),
+        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
+        hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
+        fold_key='qgen-folded-results-quiz-folders', open_key='qgen-open-results-quiz-subfolders',
+        item_key='qgen-open-results-quizzes')
+    return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk,
+                           rules=RETAKE_RULES, title='Results by quiz', find_label='Find a quiz or student…')
 
 #one quiz's results
 @qgen_bp.route('/quiz/results/<int:vqid>', methods=['GET'])

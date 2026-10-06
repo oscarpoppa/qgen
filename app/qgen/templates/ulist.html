@@ -4,39 +4,15 @@
 {% from "_macros.html" import avatar with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_awards.html" import award_list %}
+{% from "_folders.html" import folders_page, sub_box, empty_note with context %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
+{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
 
-{% block content %}
-<div class="page-head">
-  <h1>{{ title }}</h1>
-  {# back where they came from (Dashboard, Grading, a quiz's results...), else the Users page #}
-  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
-    {% if single %}
-      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}">Message {{ ulst[0].shown_name }}</a>{% endif %}
-      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}">Edit user</a>
-    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
-</div>
-
-{# one student: the awards they've earned (they see these on their Home) #}
-{% if single %}
-<details class="card subject-box student-awards" open>
-  <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
-  <div class="box-body">{% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
-</details>
-{% endif %}
-
-{# each student is a box that opens and closes (remembered in this browser) #}
-{% if not single %}<div class="card subject-bar">
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
-  {% if ulst|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter students…" aria-label="Filter students" style="margin:0 0 0 auto">{% endif %}
-</div>{% endif %}
-<div class="subject-boxes" data-store="qgen-open-results-students">
-{% for item in ulst %}
+{# one student's box: their quizzes, attempts and scores #}
+{% macro student_box(item) %}
   {# how many different quizzes they have (retakes of one quiz count once) #}
   {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
-  <details class="card subject-box student" id="student-{{ item.id }}" data-box="{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}>
+  <details class="card subject-box student item-box" id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
       <span class="box-name person">{{ avatar(item, 30) }}{{ item.shown_name }}</span>
       <span class="badge" aria-label="{{ n }} quiz{{ '' if n == 1 else 'zes' }}">{{ n }} quiz{{ '' if n == 1 else 'zes' }}</span>
@@ -79,7 +55,7 @@
           <thead><tr><th>Quiz</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
-            <tr>
+            <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.latest.status in ('new', 'started') else 'done' }}">
               <td data-label="Quiz"><a href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz"><strong>{{ g.vquiz.title }}</strong></a></td>
               {{ result_cells(g, item, rules) }}
             </tr>
@@ -92,12 +68,44 @@
     {% endif %}
     </div>
   </details>
-{% endfor %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  {# back where they came from (Dashboard, Grading, a quiz's results...), else the Users page #}
+  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+    {% if single %}
+      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}">Message {{ ulst[0].shown_name }}</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}">Edit user</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
 </div>
+
+{# one student: the awards they've earned (they see these on their Home) #}
+{% if single %}
+<details class="card subject-box student-awards" open>
+  <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
+  <div class="box-body">{% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
+</details>
+{% endif %}
+
+{% if single %}
+<div class="subject-boxes" data-store="qgen-open-results-students">{{ student_box(ulst[0]) }}</div>
+{% else %}
+{% call folders_page(fk) %}
+  {% include "_results_filter.html" %}
+  <div id="folder-items">
+    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
+    {% for item in shown %}{{ student_box(item) }}{% endfor %}
+  </div>
+  {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}
+{% endcall %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ asset('js/subjects.js') }}"></script>
+{% if single %}<script src="{{ asset('js/subjects.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
 <script>
 /* one student's quiz boxes: closed to begin with; the open ones are remembered in this browser */
 (function () {
@@ -114,10 +122,5 @@
     b.addEventListener('click', function () { boxes.forEach(function (d) { d.open = b.dataset.quizBoxes === 'open'; }); });
   });
 })();
-var fc = document.querySelector('.filter-cards');
-if (fc) fc.addEventListener('input', function () {
-  var q = this.value.trim().toLowerCase();
-  document.querySelectorAll('.student').forEach(function (c) { c.hidden = q && c.dataset.name.indexOf(q) === -1; });
-});
 </script>
 {% endblock %}

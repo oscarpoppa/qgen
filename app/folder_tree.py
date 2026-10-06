@@ -139,7 +139,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
         'main_label': 'Not in a folder', 'order': ('main', 'all'),
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
-        'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None,
+        'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False, 'item_key': None,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
     }
     out['main_count'] = root['count']

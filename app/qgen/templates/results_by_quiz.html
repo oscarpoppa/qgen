@@ -2,30 +2,15 @@
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_results.html" import result_cells with context %}
+{% from "_folders.html" import folders_page, sub_box, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
 {% block body_attrs %}{{ watch('quizresults:%d' % quizzes[0].vquiz.id if single else 'byquiz') }}{% endblock %}
+{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
 
-{% block content %}
-<div class="page-head">
-  <h1>{{ title }}</h1>
-  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
-    {% if single %}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}">View quiz</a>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}">Edit quiz</a>
-    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a></div>
-</div>
-
-{# each quiz is a box that opens and closes (remembered in this browser) #}
-<div class="card subject-bar">
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
-  {% if quizzes|length > 3 %}<input type="search" class="filter-cards filter" placeholder="Filter quizzes…" aria-label="Filter quizzes" style="margin:0 0 0 auto">{% endif %}
-</div>
-<div class="subject-boxes" data-store="qgen-open-results-quizzes">
-{% for q in quizzes %}
+{# one quiz's box: each student's attempts and the score that counts #}
+{% macro quiz_box(q) %}
   {% set vq = q.vquiz %}
-  <details class="card subject-box quiz-result" id="quiz-{{ vq.id }}" data-box="{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
+  <details class="card subject-box quiz-result item-box" id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
       <span class="box-name">{{ vq.title }}</span>
       <span class="badge">{{ q.students }} student{{ '' if q.students == 1 else 's' }}</span>
@@ -36,12 +21,14 @@
     {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Just this quiz</a>
       · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}">Edit quiz</a></p>{% endif %}
     {% if q.rows %}
+      {# a long class: find a student in this quiz #}
+      {% if q.students > 8 %}<input type="search" class="filter" data-filter="#quiz-{{ vq.id }}" placeholder="Find a student…" aria-label="Find a student in {{ vq.title }}">{% endif %}
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
           <tbody>
           {% for student, g in q.rows %}
-            <tr>
+            <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.latest.status in ('new', 'started') else 'done' }}">
               <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>
@@ -54,17 +41,34 @@
     {% endif %}
     </div>
   </details>
-{% endfor %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+    {% if single %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}">View quiz</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}">Edit quiz</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a></div>
 </div>
+
+{% if single %}
+<div class="subject-boxes" data-store="qgen-open-results-quizzes">{{ quiz_box(quizzes[0]) }}</div>
+{% else %}
+{% call folders_page(fk) %}
+  {% include "_results_filter.html" %}
+  <div id="folder-items">
+    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
+    {% for q in quizzes %}{{ quiz_box(q) }}{% endfor %}
+  </div>
+  {% if not quizzes and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}
+{% endcall %}
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ asset('js/subjects.js') }}"></script>
-<script>
-var fc = document.querySelector('.filter-cards');
-if (fc) fc.addEventListener('input', function () {
-  var q = this.value.trim().toLowerCase();
-  document.querySelectorAll('.quiz-result').forEach(function (c) { c.hidden = q && c.dataset.name.indexOf(q) === -1; });
-});
-</script>
+<script src="{{ asset('js/filter.js') }}"></script>
+{% if single %}<script src="{{ asset('js/subjects.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
 {% endblock %}

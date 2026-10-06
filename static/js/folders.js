@@ -58,7 +58,7 @@
   document.querySelectorAll('[data-level]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var level = btn.closest('.level'), want = btn.dataset.level === 'open';
-      level.querySelectorAll('details.sub-box, details.quiz-card, details.month-box').forEach(function (d) {
+      level.querySelectorAll('details.sub-box, details.quiz-card, details.month-box, details.item-box').forEach(function (d) {
         if (d.parentElement.closest('.level') === level) d.open = want;
       });
     });
@@ -157,22 +157,60 @@
     findCards.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true }));
   });
 
+  //the results pages: a box per student (or quiz), closed to begin with; the open ones are
+  //remembered (data-item-key). "Find…" matches a box's name or a row; "Show" keeps only the
+  //rows waiting for grading, or not handed in yet (tr[data-state])
+  var searching = null;
+  var ITEMS = layout.dataset.itemKey, itemOpen = ITEMS ? load(ITEMS) : {};
+  var itemBoxes = Array.prototype.slice.call(document.querySelectorAll('.folder-main details.item-box'));
+  if (ITEMS) itemBoxes.forEach(function (d) {
+    d.open = !!itemOpen[d.dataset.box];
+    d.addEventListener('toggle', function () {
+      if (searching) return;
+      if (d.open) itemOpen[d.dataset.box] = true; else delete itemOpen[d.dataset.box];
+      save(ITEMS, itemOpen);
+    });
+  });
+  var findItems = document.querySelector('input.filter-items'), stateFilter = document.querySelector('select.state-filter');
+  function filterItems() {
+    var q = findItems ? findItems.value.trim().toLowerCase() : '', st = stateFilter ? stateFilter.value : 'all';
+    itemBoxes.forEach(function (d) {
+      var named = !q || (d.dataset.name || '').indexOf(q) !== -1, rows = d.querySelectorAll('tr[data-state]'), shown = 0;
+      rows.forEach(function (r) {
+        var ok = (st === 'all' || r.dataset.state === st) && (named || r.textContent.toLowerCase().indexOf(q) !== -1);
+        r.hidden = !ok;
+        if (ok) shown++;
+      });
+      d.hidden = rows.length ? !shown : !(named && st === 'all');
+      if ((q || st !== 'all') && !d.hidden) d.open = true;
+    });
+    document.dispatchEvent(new CustomEvent('qgen-filtered', { detail: { active: !!q || st !== 'all' } }));
+    var none = document.querySelector('.filter-none');
+    if (none) none.hidden = itemBoxes.some(function (d) { return !d.hidden; });
+  }
+  if (findItems) findItems.addEventListener('input', filterItems);
+  if (stateFilter) stateFilter.addEventListener('change', filterItems);
+
   //searching (filter.js hides the rows that don't match): folder boxes with a match open,
   //the others hide; clearing the search puts them back as they were
-  var searching = null;
+  if (typeof searching === 'undefined') searching = null;
   //what a search opens and hides: folder boxes, months, Done
   function boxes() { return Array.prototype.slice.call(document.querySelectorAll('.folder-main details.sub-box, .folder-main details.month-box')); }
   document.addEventListener('qgen-filtered', function (e) {
-    var q = (e.target.value || '').trim();
+    var q = e.detail && 'active' in e.detail ? e.detail.active : (e.target.value || '').trim();
     if (q) {
       if (!searching) searching = boxes().map(function (d) { return d.open; });
-      boxes().forEach(function (d) {
-        var hit = Array.prototype.some.call(d.querySelectorAll('tbody tr, details.quiz-card'), function (r) { return !r.hidden; });
+      boxes().forEach(function (d) { d.hidden = false; });
+      boxes().reverse().forEach(function (d) {
+        var hit = Array.prototype.some.call(d.querySelectorAll('tbody tr, details.quiz-card, details.item-box'), function (r) {
+          return !r.hidden && !r.closest('[hidden]');
+        });
         d.hidden = !hit;
         if (hit) d.open = true;
       });
     } else if (searching) {
       boxes().forEach(function (d, i) { d.hidden = false; d.open = searching[i]; });
+      itemBoxes.forEach(function (d) { d.open = !!itemOpen[d.dataset.box]; });
       searching = null;
     }
   });

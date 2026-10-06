@@ -49,6 +49,10 @@ def inbox():
                            path=path, user_folders=groups.picker(), students={r['student'].id for r in rows})
 
 #route to one student's conversation, as a teacher
+#how many of a conversation's messages its page shows at first (and adds with "Show older")
+PAGE = 40
+
+
 @messages_bp.route('/messages/<int:student_id>', methods=['GET'])
 @login_required
 @pw_check
@@ -58,9 +62,14 @@ def conversation(student_id):
     if student is None:
         flash("That student's account has been deleted.", 'info')
         return redirect(url_for('messages.inbox'))
-    items = M.conversation(student.id, teacher=current_user)
+    #the newest messages (a long conversation shows "Show older" for the rest), 40 at a time
+    shown = max(request.args.get('show', type=int) or 0, PAGE)
+    items = M.conversation(student.id, teacher=current_user, limit=shown + 1)
+    older = len(items) > shown
+    items = items[1:] if older else items
     M.mark_seen_by_teachers(current_user, student.id)
     return render_template('conversation.html', student=student, items=items, rows=M.inbox(current_user),
+                           older=older, show_more=shown + PAGE,
                            title='Messages: {}'.format(student.shown_name))
 
 #route for a teacher to send to one student, chosen students, or everyone

@@ -1,0 +1,12 @@
+{# Above the results pages' lists: find a name (a student, or a quiz), and show only what's
+   waiting for grading or not handed in yet (static/js/folders.js) #}
+<div class="folder-tools-bar results-filter">
+  <input type="search" class="filter-items" placeholder="{{ find_label|default('Find…') }}" aria-label="{{ find_label|default('Find') }}">
+  <label class="small muted">Show
+    <select class="state-filter" aria-label="Show which results">
+      <option value="all">Everything</option>
+      <option value="review">Waiting for grading</option>
+      <option value="out">Not handed in yet</option>
+    </select></label>
+</div>
+<p class="card empty small filter-none" hidden>Nothing here matches. Try “Everything”, or another folder.</p>

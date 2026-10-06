@@ -11,10 +11,10 @@
 {% macro side_folder(fk, n) %}
   {% set f = n.folder %}
   <li class="side-item" data-folder="{{ f.id }}" data-box="folder:{{ f.id }}">
-    <div class="side-row{{ ' current' if fk.view == f.id|string }}" data-drop="{{ f.id }}">
+    <div class="side-row{{ ' current' if fk.view == f.id|string }}"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ fk.name(n.folder) }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ fk.page(f.id) }}" draggable="false" data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}" class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
+      <a href="{{ fk.page(f.id) }}" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
         <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <span class="side-name">{{ fk.name(n.folder) }}</span></a>
       <span class="side-count muted small" title="{{ fk.units|capitalize }} in it, and in the folders inside it">{{ n.count or '' }}</span>
     </div>
@@ -49,7 +49,7 @@
    / Collapse all, Folder options) and `actions` (the page's own buttons beside the title) #}
 {% macro folders_page(fk, actions='') %}
 <div class="folders-layout" data-move-url="{{ fk.move_url }}" data-view="{{ fk.view }}"
-     data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}" data-open-key="{{ fk.open_key }}">
+     data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}" data-open-key="{{ fk.open_key }}"{% if fk.item_key %} data-item-key="{{ fk.item_key }}"{% endif %}>
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{{ fk.name(fk.node.folder) if fk.node else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
@@ -63,7 +63,7 @@
             <span class="side-count muted small">{{ fk.all_count or '' }}</span></div></li>
           {% else %}
           {# what's in no folder; dropping something here takes it out of the folder it came from #}
-          <li><div class="side-row{{ ' current' if fk.view == 'main' }}" data-drop="top">
+          <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page('main') }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
             <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
@@ -71,9 +71,9 @@
         {% endfor %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
-      {{ new_folder(fk) }}
+      {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
       <p class="muted small side-hint">{{ fk.hint }}
-        {% if fk.flat %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>
+        {% if fk.flat and not fk.readonly %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>
     </nav>
   </details>
 
@@ -87,7 +87,7 @@
         <div class="title-actions">
           {{ level_buttons(fk.name(fk.node.folder)) }}
           {{ actions }}
-          <details class="folder-tools">
+          {% if not fk.readonly %}<details class="folder-tools">
             <summary class="btn btn-secondary btn-sm">Folder options</summary>
             <div class="folder-tools-box">
               <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
@@ -118,7 +118,7 @@
                 <button class="btn btn-secondary btn-xs">Remove folder</button>
               </form>
             </div>
-          </details>
+          </details>{% endif %}
         </div>
       {% else %}
         <h2 id="folder-title" class="folder-title">{{ fk.all_label if fk.view == 'all' else fk.main_label }}</h2>
@@ -136,7 +136,7 @@
 {% macro sub_box(fk, n) %}
   {% set f = n.folder %}
   <details class="sub-box" data-sub="{{ f.id }}">
-    <summary class="sub-head" data-drop="{{ f.id }}"><span class="fold" aria-hidden="true"></span>
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}><span class="fold" aria-hidden="true"></span>
       <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <h3>{{ fk.name(n.folder) }}</h3>
       <span class="muted small nowrap">{{ n.count }} {{ fk.unit if n.count == 1 else fk.units }}</span></summary>
     <div class="sub-body level">

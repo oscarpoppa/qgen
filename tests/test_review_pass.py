@@ -406,3 +406,80 @@ def test_my_quizzes_to_do_then_done(app_db):
     assert page.index('>To do <span') < page.index('“B”' if '“B”' in page else '>B</h2>')
     rest = page[page.index('<details class="month-box done-box"'):]
     assert '>A</h2>' in rest and '>B</h2>' not in rest and 'data-remember="done-main"' in rest
+
+
+# ---------------------------------------------------------------- long lists
+
+def test_results_by_student_in_the_users_folders(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    teach.post('/users/folders', data={'name': '7th grade'})
+    from app.user.models import UserFolder
+    g7 = UserFolder.query.one()
+    teach.post('/users/folders/add', data={'user': ids('sam'), 'to': g7.id})
+    page = teach.get('/quiz/listuser?folder={}'.format(g7.id)).data.decode()
+    assert 'id="student-{}"'.format(ids('sam')) in page and 'id="student-{}"'.format(ids('kim')) not in page
+    # the folders are the Users page's: no making or moving them here
+    assert '+ New folder' not in page and 'Folder options' not in page and 'data-drop=' not in page
+    assert 'class="state-filter"' in page and 'Waiting for grading' in page
+    every = teach.get('/quiz/listuser').data.decode()
+    assert 'id="student-{}"'.format(ids('kim')) in every and 'id="student-{}"'.format(ids('sam')) in every
+    # a change to the folders reaches an open Results by student page
+    before = poll(teach, 'students')
+    teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7.id})
+    assert poll(teach, 'students') != before
+
+
+def test_results_by_quiz_in_the_quiz_folders(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
+    give(a, 'sam')
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Fall'})
+    from app.qgen.models import VQGroup
+    fall = VQGroup.query.one()
+    teach.post('/quiz/subjects/quizzes/add', data={'quiz': a.id, 'to': fall.id})
+    page = teach.get('/quiz/results?folder={}'.format(fall.id)).data.decode()
+    assert 'id="quiz-{}"'.format(a.id) in page and 'id="quiz-{}"'.format(b.id) not in page
+    assert 'data-state="out"' in page  # sam hasn't handed it in: "Not handed in yet" finds it
+    main = teach.get('/quiz/results?folder=main').data.decode()
+    assert 'id="quiz-{}"'.format(b.id) in main and 'id="quiz-{}"'.format(a.id) not in main
+
+
+def test_a_long_conversation_shows_the_newest(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.messages.models import Message
+    for i in range(45):
+        db.session.add(Message(student_id=ids('sam'), from_teacher=True, body='note {:02d}'.format(i), kind='message', to_all=False))
+    db.session.commit()
+    page = teach.get('/messages/{}'.format(ids('sam'))).data.decode()
+    assert 'note 44' in page and 'note 05' in page and 'note 04' not in page and 'Show older messages' in page
+    page = teach.get('/messages/{}?show=80'.format(ids('sam'))).data.decode()
+    assert 'note 00' in page and 'Show older messages' not in page
+
+
+def test_grading_list_by_quiz(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    a, b = make_quiz(app, teach, 'A', essay=True), make_quiz(app, teach, 'B', essay=True)
+    from app.qgen import services as S
+    for vq, who in ((a, 'sam'), (b, 'kim'), (a, 'kim')):
+        S.submit(give(vq, who), {1: 'Light makes sugar.'})
+    page = teach.get('/quiz/review').data.decode()
+    assert page.count('<details class="card grading-group" open>') == 2 and '3 waiting, oldest first' in page
+    assert page.index('“A”') < page.index('“B”')
+
+
+def test_dashboard_folds_long_lists_of_people(app_db):
+    app, db = app_db
+    from app.user.models import User
+    now = datetime.now()
+    for i in range(10):
+        u = User(username='s{}'.format(i), is_admin=False, logged_in=True, last_seen=now)
+        u.set_password('pw-for-tests')
+        db.session.add(u)
+    db.session.commit()
+    teach = login(app, 'teach')
+    page = teach.get('/dashboard').data.decode()
+    assert '<details class="more-list" data-more="online"><summary class="small">+3 more</summary>' in page
