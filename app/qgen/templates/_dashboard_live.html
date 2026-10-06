@@ -49,7 +49,8 @@
       <ul class="dash-list">
       {% for o in out %}
         <li>{{ person_link(o.cq.taker) }}
-          <span>{{ quiz_link(o.cq.vquiz) }}</span>
+          {# this student's own copy of the quiz (their questions and answers so far), not everyone's results #}
+          <span><a href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="{{ o.cq.taker.shown_name if o.cq.taker else 'The student' }}'s copy of this quiz">“{{ o.cq.vquiz.title }}”</a></span>
           {% if o.state == 'started' %}<span class="badge badge-accent">In progress</span>
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}

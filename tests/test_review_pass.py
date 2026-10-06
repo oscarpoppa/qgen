@@ -505,3 +505,17 @@ def test_helper_wants_a_folder_before_saying_looks_good(app_db):
     data = {'title': 'Q', 'vplist': str(vp.id), 'subjects_shown': '1'}
     hints = teach.post('/quiz/checkvquiz', data=data).get_json()['hints']
     assert any('Choose a folder for this quiz' in h['text'] for h in hints) and not any(h['level'] == 'ok' for h in hints)
+
+
+def test_dashboard_assigned_box_opens_the_students_copy(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    cq = give(vq, 'sam')
+    page = teach.get('/dashboard').data.decode()
+    box = page[page.index('id="dash-out"'):]
+    box = box[:box.index('</details>')]
+    assert '<a href="/quiz/take/{}" title="sam'.format(cq.id) in box and 's copy of this quiz">“Week 1”</a>' in box
+    assert '/quiz/results/{}'.format(vq.id) not in box
+    # and it opens: the teacher sees sam's questions (only sam can hand it in)
+    assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
