@@ -116,7 +116,9 @@
 <details class="card subject-box student-awards" id="student-awards">
   <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
   <div class="box-body">{% if awards %}{{ award_list(awards) }}
-    <p class="muted small awards-grip-note">Drag the corner at the bottom right to make the list taller or shorter.</p>{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
+    {# a wide bar under the list to drag (or arrow keys): taller or shorter #}
+    <div class="awards-grip" role="separator" aria-orientation="horizontal" tabindex="0"
+         aria-label="Make the awards list taller or shorter (drag, or use the up and down arrow keys)" title="Drag to make the list taller or shorter"><span aria-hidden="true"></span></div>{% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>
 </details>
 {% endif %}
 
@@ -156,6 +158,38 @@
     list.dataset.sized = '1';
   }
   fit();
+  //the bar under the list: drag it (mouse, finger or pen), or arrow keys
+  var grip = box.querySelector('.awards-grip');
+  function setHeight(h) {
+    //no shorter than about one row, no taller than all the awards
+    h = Math.max(72, Math.min(h, list.scrollHeight + 2));
+    list.style.height = Math.round(h) + 'px';
+  }
+  if (grip) {
+    grip.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      var startY = e.clientY, startH = list.getBoundingClientRect().height;
+      grip.setPointerCapture(e.pointerId);
+      document.documentElement.classList.add('grip-resizing');
+      function move(ev) { setHeight(startH + ev.clientY - startY); }
+      function up() {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        grip.removeEventListener('pointercancel', up);
+        document.documentElement.classList.remove('grip-resizing');
+      }
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+      grip.addEventListener('pointercancel', up);
+    });
+    grip.addEventListener('keydown', function (e) {
+      var step = e.key === 'ArrowDown' ? 36 : e.key === 'ArrowUp' ? -36 : 0;
+      if (!step) return;
+      e.preventDefault();
+      setHeight(list.getBoundingClientRect().height + step);
+    });
+  }
   if (window.ResizeObserver) new ResizeObserver(function () {
     if (!list.dataset.sized || !box.open) return;
     try { localStorage.setItem(HKEY, String(Math.round(list.getBoundingClientRect().height))); } catch (e) {}

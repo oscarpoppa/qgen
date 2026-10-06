@@ -1249,8 +1249,7 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
 
 /* the student page's awards: stretch the list taller or shorter by its corner */
 .student-awards .awards-scroll { resize: vertical; max-height: none; min-height: 4.5rem; overflow: auto; }
-.awards-grip-note { margin: 4px 0 0; text-align: right; }
-@media print { .student-awards .awards-scroll { height: auto !important; overflow: visible; resize: none; } .awards-grip-note { display: none; } }
+@media print { .student-awards .awards-scroll { height: auto !important; overflow: visible; resize: none; } .awards-grip { display: none; } }
 /* the floating "More" menu stays above everything near it */
 details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 /* a pop-up menu lifted out to the page (base.html): drawn like a drop-down, over everything */
@@ -1261,3 +1260,12 @@ details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 /* My quizzes: the last few handed in, above the folders */
 .latest-finished { margin-bottom: 14px; padding-top: 10px; padding-bottom: 6px; }
 .latest-finished h2 { font-size: 1rem; margin: 0 0 4px; }
+
+/* the student page's awards: a wide bar under the list to drag it taller or shorter */
+.awards-grip { display: flex; align-items: center; justify-content: center; height: 18px; margin: 6px 0 0;
+  border-radius: 6px; cursor: row-resize; touch-action: none; user-select: none; }
+.awards-grip span { display: block; width: 56px; height: 5px; border-radius: 3px; background: var(--border); transition: background .15s, width .15s; }
+.awards-grip:hover span, .awards-grip:focus-visible span, html.grip-resizing .awards-grip span { background: var(--accent); width: 80px; }
+.awards-grip:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.awards-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-select: none !important; }
