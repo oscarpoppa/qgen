@@ -1175,3 +1175,11 @@ details.grading-group h2 { font-size: 1.05rem; margin: 0; }
 
 /* "+N more" under a long list of people */
 details.more-list > summary { cursor: pointer; color: var(--accent); margin: 4px 0; }
+
+/* a value's settings: the list and its "how many" share a line; the helper's describe box and
+   "Never the same as" each get a whole line, labeled, so they can't be mistaken for each other */
+.values-table .settings > .k-list[name$="items"] { flex: 3 1 220px; }
+.values-table .settings > .list-ai { flex: 1 1 100%; }
+.list-ai-label { flex-basis: 100%; }
+.values-table .settings > label.different-from { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.values-table .settings > label.different-from input { flex: 1 1 auto; min-width: 0; }

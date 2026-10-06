@@ -50,13 +50,15 @@
         {{ row.form.pick_n(placeholder='how many to pick (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
         {# the AI helper fills the list from a description; the teacher checks it like anything typed #}
         {% if ai_enabled %}<div class="k-list list-ai">
+          <span class="small muted list-ai-label">✨ Or describe the list, and the helper writes it:</span>
           <input type="text" class="list-ai-text" maxlength="500" placeholder="Describe the list, e.g. all the perfect squares from 4 to 100" aria-label="Describe the list for the AI helper">
           <button type="button" class="btn btn-secondary btn-sm list-ai-go" data-url="{{ url_for('qgen.ai_list') }}">✨ Fill list</button>
           <span class="list-ai-status small" aria-live="polite"></span>
         </div>{% endif %}
         {{ row.form.formula(placeholder='e.g. speed * hours', title='Worked out from other values, without brackets. + - * / ^ ( ) sqrt abs round min max', class='k-calc', **{'aria-label': 'Formula'}) }}
         <label class="inline k-whole" title="Never 0: handy when you divide by this value">{{ row.form.nonzero() }} not zero</label>
-        {{ row.form.different_from(placeholder='different from… (optional)', title='Names of values this one must never equal, separated by commas, e.g. a, b', **{'aria-label': 'Different from'}) }}
+        <label class="different-from small muted">Never the same as (optional)
+          {{ row.form.different_from(placeholder='other value names, e.g. a, b', title='Names of values this one must never equal, separated by commas, e.g. a, b', **{'aria-label': 'Never the same as'}) }}</label>
         <div class="kind-hint" aria-live="polite"></div>
       </div>
     </td>

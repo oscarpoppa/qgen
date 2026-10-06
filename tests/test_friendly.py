@@ -83,7 +83,7 @@ def test_plain_language_errors():
     assert 'Did you mean "speed"?' in text
     assert "can't be a name" in text
     assert 'picks 3 from a list of only 2' in text
-    assert 'different from "zz"' in text
+    assert '"Never the same as" says "zz"' in text
 
 
 def test_calculation_loop_reported():
@@ -168,3 +168,9 @@ def test_large_ranges_still_sampled():
     from app.qgen.qtypes import get_qtype
     o = {'markup': 'friendly', 'values': [{'name': 'x', 'kind': 'decimal', 'min': '1', 'max': '9', 'places': '2'}]}
     assert get_qtype('numeric').validate('[x] / 2', 'x / 2', o) == []
+
+
+def test_a_description_typed_in_never_the_same_as_is_explained():
+    errors = F.validate_values([{'name': 'square', 'kind': 'list', 'items': '4, 9', 'different_from': ['All perfect squares']}])
+    text = ' '.join(errors)
+    assert 'no value with that name' in text and 'use the ✨ box' in text
