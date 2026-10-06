@@ -546,7 +546,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     # no quiz folders at all: the quizzes are listed as before
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
-    assert 'data-folder-box' not in page and '>C</strong>' in page
+    assert not re.search(r'data-folder-box="(?!new")', page) and '>C</strong>' in page  # only the automatic New box
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):
