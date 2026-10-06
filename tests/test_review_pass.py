@@ -836,3 +836,40 @@ def test_a_removed_quiz_can_be_deleted_for_good(app_db):
     assert 'Deleted “Gone soon” for good. Its 2 tries are in the' in r
     assert db.session.get(VQuiz, vq.id) is None and CQuiz.query.count() == 0
     assert {a.quiz_title for a in ArchivedAttempt.query} == {'Gone soon'} and ArchivedAttempt.query.count() == 2
+
+
+# ---------------------------------------------------------------- the automatic "New" folder
+
+def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen import services as S
+    from app.qgen.models import QuizFolder
+    fresh, begun, done = (make_quiz(app, teach, t) for t in ('Fresh', 'Begun', 'Done'))
+    give(fresh, 'sam')
+    cq = give(begun, 'sam')
+    cq.startdate = datetime.now()
+    db.session.commit()
+    S.submit(give(done, 'sam'), {1: '4'})
+    sam.post('/mypage/folders', data={'name': 'Math'})
+    folder = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
+    sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
+    page = sam.get('/mypage?folder=main').data.decode()
+    # in the side list, with a badge counting what's new
+    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1</span>' in page
+    page = sam.get('/mypage?folder=new').data.decode()
+    assert re.findall(r'<h2 title="([^"]+)">', page) == ['Fresh']
+    assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too
+    # still in its own folder
+    assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
+    # the teacher's student page: a New box with the same quiz and a badge
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    box = page.split('data-folder-box="new"')[1].split('        </div>\n      </details>')[0]
+    assert '1 new</span>' in box and 'Fresh' in box and 'Begun' not in box and 'Done' not in box
+    # started: no longer new, no badge
+    for c in fresh.cquizzes:
+        c.startdate = datetime.now()
+    db.session.commit()
+    assert 'side-new-badge' not in sam.get('/mypage').data.decode()
+    assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
+    assert 'nothing new</span>' in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()

@@ -52,7 +52,7 @@
      data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}" data-open-key="{{ fk.open_key }}"{% if fk.item_key %} data-item-key="{{ fk.item_key }}"{% endif %}>
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
-      <span class="folder-side-now">{{ fk.name(fk.node.folder) if fk.node else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
+      <span class="folder-side-now">{{ fk.name(fk.node.folder) if fk.node else fk.new_view.label if fk.view == 'new' and fk.new_view else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
     <nav aria-label="Folders">
       <ul class="side-list side-top">
         {% for which in fk.order %}
@@ -69,6 +69,14 @@
             <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
           {% endif %}
         {% endfor %}
+        {% if fk.new_view %}
+          {# automatic: what's new (each also in its own folder); a badge while there's something in it #}
+          {% set nn = fk.new_view.count %}
+          <li><div class="side-row{{ ' current' if fk.view == 'new' }}">
+            <span class="side-fold-space" aria-hidden="true"></span>
+            <a href="{{ fk.page('new') }}" class="side-link"{% if fk.view == 'new' %} aria-current="page"{% endif %}><span aria-hidden="true">🆕</span> {{ fk.new_view.label }}</a>
+            {% if nn %}<span class="badge badge-warn side-new-badge" title="{{ nn }} new {{ fk.unit if nn == 1 else fk.units }}">{{ nn }}</span>{% endif %}</div></li>
+        {% endif %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}

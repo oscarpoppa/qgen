@@ -113,7 +113,7 @@ def path(nodes, node):
     return out
 
 
-def view_of(choice, nodes, default='main', remember=True):
+def view_of(choice, nodes, default='main', remember=True, extra=()):
     """What a page shows for ?folder=: 'main' (in no folder), 'all', or a folder's id (as
     text), with that folder's node (None for main and all). A folder that's gone: default.
 
@@ -127,7 +127,7 @@ def view_of(choice, nodes, default='main', remember=True):
     if choice.isdigit() and int(choice) in nodes:
         view, node = choice, nodes[int(choice)]
     else:
-        view, node = (choice if choice in ('main', 'all') else default), None
+        view, node = (choice if choice in ('main', 'all') + tuple(extra) else default), None
     if key:
         views = dict(session.get('folder_views') or {})
         if views.get(key) != view:
@@ -156,6 +156,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False, 'item_key': None,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
+        'new_view': None,  # {'label', 'count'}: an automatic "New" entry in the side list (My quizzes)
     }
     out['main_count'] = root['count']
     out.update(words)

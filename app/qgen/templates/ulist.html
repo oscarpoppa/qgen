@@ -64,6 +64,15 @@
       <div class="btn-row small quiz-box-bar">
         <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="open">Expand all</button>
         <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="close">Collapse all</button></div>
+      {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
+      <details class="card result-folder new-folder-box" data-folder-box="new"{% if fresh %} open{% endif %}>
+        <summary><span class="fold" aria-hidden="true"></span><span aria-hidden="true">🆕</span> <strong>New</strong>
+          {% if fresh %}<span class="badge badge-warn" title="Assigned and not started yet">{{ fresh|length }} new</span>
+          {% else %}<span class="muted small">nothing new</span>{% endif %}</summary>
+        <div class="result-folder-body">
+          {% for g in fresh %}{{ result_box(g, item) }}{% else %}<p class="muted small box-empty">Every quiz {{ item.shown_name }} has been given is started.</p>{% endfor %}
+        </div>
+      </details>
       {% if quiz_tree and quiz_tree.folders|selectattr('count')|list %}
         {# in the Quizzes page's folders (a quiz in several folders is in each) #}
         {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}

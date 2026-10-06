@@ -64,8 +64,10 @@ def mypage():
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
-    shown = node['groups'] if node else groups if view == 'all' else root['groups']
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new',))
+    #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
+    fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
+    shown = node['groups'] if node else groups if view == 'all' else fresh if view == 'new' else root['groups']
     if showing:
         from app import tuning
         from app.qgen.models import waiting_quizzes
@@ -83,6 +85,8 @@ def mypage():
             'started': ('✏️ Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in. 🎉'),
             'soon': ('⏰ Due within {}'.format(within), 'Nothing is due within {}. 🎉'.format(within)),
         }[showing]
+    elif view == 'new':
+        heading, nothing = '🆕 New: quizzes you haven’t started', 'No new quizzes right now. 🎉'
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -94,7 +98,8 @@ def mypage():
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(groups), main_count=len(root['groups']),
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
-        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading)
+        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading,
+        new_view={'label': 'New', 'count': len(fresh)})
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
