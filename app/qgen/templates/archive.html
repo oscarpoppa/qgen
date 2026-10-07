@@ -68,13 +68,15 @@
     <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="{{ fk.view }}">
-      <span class="muted small file-count" aria-live="polite">0 checked</span>
-      <label class="sr-only" for="move-folder">Folder to move the checked attempts to</label>
+      {# several at once: grayed out until some are checked (each row also has its own "Move to") #}
+      <span class="muted small file-count" aria-live="polite" data-hint="Check attempts below to move several at once.">Check attempts below to move several at once.</span>
+      <label class="small" for="move-folder">Move them to</label>
       <select id="move-folder" name="folder">
-        {% for f, depth in fk.flat %}<option value="{{ f.id }}"{% if fk.node and fk.node.folder.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.folder_icon(f) }} {{ f.name }}</option>{% endfor %}
+        <option value="" selected>Choose a folder…</option>
+        {% for f, depth in fk.flat %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.folder_icon(f) }} {{ f.name }}</option>{% endfor %}
         <option value="top">📥 {{ fk.main_label }}</option>
       </select>
-      <button class="btn btn-sm">Move checked</button>
+      <button class="btn btn-sm">Move</button>
     </form>
     {% endif %}
   </div>

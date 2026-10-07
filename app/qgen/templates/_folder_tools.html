@@ -6,8 +6,9 @@
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
-    <span class="muted small file-count" aria-live="polite">0 checked</span>
     {% if all_subjects %}
+      {# grayed out until some are checked #}
+      <span class="muted small file-count" aria-live="polite" data-hint="Check {{ noun }} below to put them in a folder or take them out.">Check {{ noun }} below to put them in a folder or take them out.</span>
       <label class="sr-only" for="file-subject">Folder</label>
       <select id="file-subject" name="subject">
         {% for g, depth in all_subjects %}<option value="{{ g.id }}"{% if fk.node and fk.node.folder.id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}📁 {{ g.title }}</option>{% endfor %}

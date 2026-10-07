@@ -142,12 +142,24 @@
     ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
     return Object.keys(ids).length;
   }
+  //nothing checked: the bar says what to do, and its list and buttons are grayed out
+  function syncBar() {
+    if (!fileForm) return;
+    var n = counted(), sel = fileForm.querySelector('select');
+    if (fileCount) {
+      fileCount.textContent = n ? n + ' checked:' : (fileCount.dataset.hint || '0 checked');
+      fileCount.classList.remove('error');
+    }
+    if (sel) sel.disabled = !n;
+    fileForm.querySelectorAll('button').forEach(function (b) { b.disabled = !n || (sel && sel.value === ''); });
+  }
   ticks.forEach(function (t) {
     t.addEventListener('change', function () {
       ticks.forEach(function (o) { if (o.value === t.value) o.checked = t.checked; });
-      if (fileCount) { fileCount.textContent = counted() + ' checked'; fileCount.classList.remove('error'); }
+      syncBar();
     });
   });
+  if (fileForm) { fileForm.addEventListener('change', syncBar); syncBar(); }
   if (fileForm) fileForm.addEventListener('submit', function (e) {
     if (!counted()) {
       e.preventDefault();
