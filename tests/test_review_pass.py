@@ -958,3 +958,15 @@ def test_a_teacher_deletes_a_problem_or_quiz_folder_and_its_contents(app_db):
     r = teach.post('/quiz/subjects/quizzes/{}/purge'.format(term.id), follow_redirects=True).data.decode()
     assert '1 quiz deleted. 1 quiz removed (students keep their copies).' in r
     assert db.session.get(VQuiz, spare.id) is None and db.session.get(VQuiz, used.id).removed_at is not None
+
+
+def test_dashboard_recent_hand_ins_name_the_quiz_without_a_link(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    vq = make_quiz(app, teach, 'Handed')
+    cq = give(vq, 'sam')
+    S.submit(cq, {1: '4'})
+    page = teach.get('/dashboard').data.decode()
+    row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
+    assert '<span>“Handed”</span>' in row and "This quiz's results" not in row

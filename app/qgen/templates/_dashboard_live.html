@@ -113,7 +113,8 @@
       <ul class="dash-list">
       {% for cq in handins %}
         <li>{{ person_link(cq.taker) }}
-          <span>{{ quiz_link(cq.vquiz) }}</span>
+          {# just the quiz's name: the Results button opens this hand-in itself #}
+          <span>“{{ cq.vquiz.title }}”</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">being graded</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
           <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Results</a></li>
