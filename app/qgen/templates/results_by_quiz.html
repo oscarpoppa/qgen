@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
@@ -10,10 +10,9 @@
 {# one quiz's box: each student's attempts and the score that counts #}
 {% macro quiz_box(q) %}
   {% set vq = q.vquiz %}
-  <details class="card subject-box quiz-result item-box" id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
+  <details class="box card subject-box quiz-result item-box" id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
-      <span class="box-name">{{ vq.title }}</span>{% if vq.removed_at %} <span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
-      <span class="badge">{{ q.students }} student{{ '' if q.students == 1 else 's' }}</span>
+      {{ box_label('📝', vq.title, count_of(q.students, 'student', 'students')) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
       {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">average {{ '%.0f' % q.average }}%</span>{% endif %}
       {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
     </summary>

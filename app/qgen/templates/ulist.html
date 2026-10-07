@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_awards.html" import award_list %}
 {% from "_folders.html" import folders_page, sub_box, empty_note with context %}
@@ -11,11 +11,10 @@
 {# one quiz on a student page: its attempts and the score that counts #}
 {% macro result_box(g, item) %}
         {% set latest = g.latest %}
-        <details class="card result-box" data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
+        <details class="box card result-box" data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
-            <span class="fold" aria-hidden="true"></span><strong class="result-box-title">{{ g.vquiz.title }}</strong>
+            {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz">Quiz results</a>
-            <span class="muted small nowrap">{{ g.attempts|length }} attempt{{ '' if g.attempts|length == 1 else 's' }}</span>
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
@@ -35,9 +34,8 @@
 {# a Quizzes page folder on a student page, with this student's quizzes in it (and its own
    folders); open to begin with, the ones closed are remembered in this browser #}
 {% macro quiz_folder(n, item) %}
-  <details class="card result-folder" data-folder-box="{{ n.folder.id }}" open>
-    <summary><span class="fold" aria-hidden="true"></span><span aria-hidden="true">📁</span> <strong>{{ n.name }}</strong>
-      <span class="muted small">{{ n.count }} quiz{{ '' if n.count == 1 else 'zes' }}</span></summary>
+  <details class="box card result-folder" data-folder-box="{{ n.folder.id }}" open>
+    <summary>{{ box_label('📁', n.name, count_of(n.count, 'quiz', 'quizzes')) }}</summary>
     <div class="result-folder-body">
       {% for child in n.folders if child.count %}{{ quiz_folder(child, item) }}{% endfor %}
       {% for g in n['items'] %}{{ result_box(g, item) }}{% endfor %}
@@ -49,10 +47,9 @@
 {% macro student_box(item) %}
   {# how many different quizzes they have (retakes of one quiz count once) #}
   {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
-  <details class="card subject-box student item-box" id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}{% if single %} open{% endif %}>
+  <details class="box card subject-box student item-box" id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
-      <span class="box-name person">{{ avatar(item, 30) }}{{ item.shown_name }}</span>
-      <span class="badge" aria-label="{{ n }} quiz{{ '' if n == 1 else 'zes' }}">{{ n }} quiz{{ '' if n == 1 else 'zes' }}</span>
+      {{ box_label(avatar(item, 30), item.shown_name, count_of(n, 'quiz', 'quizzes')) }}
     </summary>
     <div class="box-body">
     {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.list_user', uid=item.id) }}">{{ item.shown_name }}'s student page</a>
@@ -65,8 +62,8 @@
         <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="open">Expand all</button>
         <button type="button" class="btn btn-secondary btn-xs" data-quiz-boxes="close">Collapse all</button></div>
       {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
-      <details class="card result-folder new-folder-box" data-folder-box="new"{% if fresh %} open{% endif %}>
-        <summary><span class="fold" aria-hidden="true"></span><span aria-hidden="true">🆕</span> <strong>New</strong>
+      <details class="box card result-folder new-folder-box" data-folder-box="new"{% if fresh %} open{% endif %}>
+        <summary>{{ box_label('🆕', 'New') }}
           {% if fresh %}<span class="badge badge-warn" title="Assigned and not started yet">{{ fresh|length }} new</span>
           {% else %}<span class="muted small">nothing new</span>{% endif %}</summary>
         <div class="result-folder-body">
@@ -122,8 +119,8 @@
 {# one student: the awards they've earned (they see these on their Home) #}
 {% if single %}
 {# folded to begin with (the count shows how many); open or not is remembered in this browser #}
-<details class="card subject-box student-awards" id="student-awards">
-  <summary><span class="box-name">Awards</span><span class="badge{{ ' badge-ok' if awards }}">{{ awards|length }}</span></summary>
+<details class="box card subject-box student-awards" id="student-awards">
+  <summary>{{ box_label('🏆', 'Awards', count_of(awards|length, 'award', 'awards')) }}</summary>
   <div class="box-body">{% if awards %}{{ award_list(awards) }}
     {# a wide bar under the list to drag (or arrow keys): taller or shorter #}
     <div class="awards-grip" role="separator" aria-orientation="horizontal" tabindex="0"

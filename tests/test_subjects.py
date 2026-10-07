@@ -55,8 +55,8 @@ def shown(teacher, kind, folder='all'):
     page = teacher.get(url + ('?folder={}'.format(folder) if folder is not None else '')).data.decode()
     items = page[page.index('id="folder-items"'):] if 'id="folder-items"' in page else ''
     #folder boxes (details.sub-box) are skipped: what's in them is listed in their own view
-    while '<details class="sub-box"' in items:
-        start = items.index('<details class="sub-box"')
+    while '<details class="box sub-box"' in items:
+        start = items.index('<details class="box sub-box"')
         depth, i = 0, start
         while True:
             o, c = items.find('<details', i), items.find('</details>', i)
@@ -181,7 +181,7 @@ def test_folders_inside_folders(app_db):
     page = teacher.get('/quiz/listvp?folder={}'.format(math.id)).data.decode()
     # Math counts what's in Algebra too; Algebra is a box inside it; the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert '<details class="sub-box" data-sub="{}">'.format(alg.id) in page and shown(teacher, 'problems', math.id) == ['Area']
+    assert '<details class="box sub-box" data-sub="{}">'.format(alg.id) in page and shown(teacher, 'problems', math.id) == ['Area']
     assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     # never inside itself
     FETCH = {'X-Requested-With': 'fetch'}
@@ -348,7 +348,7 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     # the Users page links to Results by student, whose students are boxes that open and close
     assert 'href="/quiz/listuser">Results by student</a>' in teacher.get('/userdet').data.decode()
     results = teacher.get('/quiz/listuser').data.decode()
-    assert 'data-item-key="qgen-open-results-students"' in results and '<details class="card subject-box student item-box"' in results
+    assert 'data-item-key="qgen-open-results-students"' in results and '<details class="box card subject-box student item-box"' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results
 
 

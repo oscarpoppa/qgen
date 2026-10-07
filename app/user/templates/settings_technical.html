@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, back_home with context %}
+{% from "_macros.html" import back_button, back_home, box_label with context %}
 
 {% macro amount(t, value) -%}
   {%- if t.unit == 'choice' -%}{{ (t.choices|selectattr(0, 'equalto', value)|map(attribute=1)|first) or value }}
@@ -16,9 +16,9 @@
 <form method="post" action="{{ url_for('user.save_technical_settings') }}" id="tech-form" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   {% for gkey, glabel, items in groups %}
-  <details class="card dash-card tech-group" open>
+  <details class="box card dash-card tech-group" open>
     {% set changed = items|selectattr('key', 'in', current_changed)|list|length %}
-    <summary class="dash-head"><h2>{{ glabel }}</h2>{% if changed %}<span class="badge badge-accent">{{ changed }} changed</span>{% endif %}</summary>
+    <summary class="dash-head">{{ box_label('⚙️', glabel, none, 'h2') }}{% if changed %}<span class="badge badge-accent">{{ changed }} changed</span>{% endif %}</summary>
     <div class="dash-body">
     {% for t in items %}
       {% set is_changed = current[t.key] != t.default %}

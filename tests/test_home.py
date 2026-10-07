@@ -35,7 +35,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     counts = dict((label, int(n)) for n, label in re.findall(r'<span class="dash-num">(\d+)</span><span>([^<]+)</span>', page))
     assert counts == {'new': 2, 'in progress': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
-    waiting = page.split('<h2>Waiting for you</h2>')[1].split('</details>')[0]
+    waiting = page.split('class="box-title">Waiting for you</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in page  # in the menu for students
@@ -80,7 +80,7 @@ def test_awards(app_db):
     assert '6 quizzes' not in sam.get('/home').data.decode()
     # teachers see them on the student's page; other students never do
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<span class="box-name">Awards</span><span class="badge badge-ok">5</span>' in page
+    assert 'class="box-title">Awards</span><span class="badge box-count">5 awards</span>' in page
     kim = login(app, 'kim')
     assert titles(kim.get('/home').data.decode()) == []
     assert kim.get('/quiz/listuser/{}'.format(ids('sam'))).status_code == 302
@@ -120,7 +120,7 @@ def test_recently_completed(app_db):
     now = datetime.now()
     quizzes = [make_quiz(app, teach, 'R{}'.format(i)) for i in range(13)]
     page = sam.get('/home').data.decode()
-    assert '<h2>Recently completed</h2><span class="badge">0</span>' in page and 'Nothing handed in during the last 14 days.' in page
+    assert 'class="box-title">Recently completed</h2><span class="badge box-count">0 quizzes</span>' in page and 'Nothing handed in during the last 14 days.' in page
     finish(give(quizzes[0], 'sam'), 40, now - timedelta(days=20))       # too long ago
     finish(give(quizzes[1], 'sam'), 85, now - timedelta(days=3))
     being = give(quizzes[2], 'sam')                                       # being graded
@@ -128,13 +128,13 @@ def test_recently_completed(app_db):
     db.session.commit()
     give(quizzes[3], 'sam')                                               # not handed in
     page = sam.get('/home').data.decode()
-    part = page.split('<h2>Recently completed</h2>')[1].split('</details>')[0]
+    part = page.split('class="box-title">Recently completed</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
     assert 'Teacher is checking' in part and '>85%</span>' in part and '>View</a>' in part and '>Results</a>' in part
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))
-    part = sam.get('/home').data.decode().split('<h2>Recently completed</h2>')[1].split('</details>')[0]
+    part = sam.get('/home').data.decode().split('class="box-title">Recently completed</h2>')[1].split('</details>')[0]
     assert len(re.findall(r'<strong>“', part)) == 10
 
 

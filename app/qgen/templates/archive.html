@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, move_menu with context %}
+{% from "_macros.html" import box_label, count_of %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -9,9 +10,8 @@
    folder), which is where a drag takes one out of #}
 {% macro archive_table(items, here=none) %}
   {% for month in items|groupby_month %}
-    <details class="month-box"{% if loop.first %} open{% endif %}>
-      <summary><span class="fold" aria-hidden="true"></span><strong>{{ month.label }}</strong>
-        <span class="muted small">{{ month['items']|length }} attempt{{ '' if month['items']|length == 1 else 's' }}</span></summary>
+    <details class="box month-box"{% if loop.first %} open{% endif %}>
+      <summary>{{ box_label('📅', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table">
           <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>When</th><th>Folder</th><th></th></tr></thead>

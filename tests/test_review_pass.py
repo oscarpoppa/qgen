@@ -404,7 +404,7 @@ def test_my_quizzes_to_do_then_done(app_db):
     S.submit(done, {1: '4'})
     page = sam.get('/mypage').data.decode()
     assert page.index('>To do <span') < page.index('“B”' if '“B”' in page else '>B</h2>')
-    rest = page[page.index('<details class="month-box done-box"'):]
+    rest = page[page.index('<details class="box month-box done-box"'):]
     assert '>A</h2>' in rest and '>B</h2>' not in rest and 'data-remember="done-main"' in rest
 
 
@@ -467,7 +467,7 @@ def test_grading_list_by_quiz(app_db):
     for vq, who in ((a, 'sam'), (b, 'kim'), (a, 'kim')):
         S.submit(give(vq, who), {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
-    assert page.count('<details class="card grading-group" open>') == 2 and '3 waiting, oldest first' in page
+    assert page.count('<details class="box card grading-group" open>') == 2 and '3 waiting, oldest first' in page
     assert page.index('“A”') < page.index('“B”')
 
 
@@ -482,7 +482,7 @@ def test_dashboard_folds_long_lists_of_people(app_db):
     db.session.commit()
     teach = login(app, 'teach')
     page = teach.get('/dashboard').data.decode()
-    assert '<details class="more-list" data-more="online"><summary class="small">+3 more</summary>' in page
+    assert '<details class="box box-mini more-list" data-more="online"><summary class="small"><span class="fold" aria-hidden="true"></span>+3 more</summary>' in page
 
 
 def test_a_folder_is_optional_when_making_a_problem_or_quiz(app_db):
@@ -541,13 +541,13 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
     # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
     math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
-    assert '>A</strong>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</strong>' in math_box
+    assert '>A</span>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</span>' in math_box
     empty = VQGroup.query.filter_by(title='Empty one').one()
-    assert '>C</strong>' in page[page.index('data-folder-box="none"'):] and 'data-folder-box="{}"'.format(empty.id) not in page
+    assert '>C</span>' in page[page.index('data-folder-box="none"'):] and 'data-folder-box="{}"'.format(empty.id) not in page
     # no quiz folders at all: the quizzes are listed as before
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
-    assert not re.search(r'data-folder-box="(?!new")', page) and '>C</strong>' in page  # only the automatic New box
+    assert not re.search(r'data-folder-box="(?!new")', page) and '>C</span>' in page  # only the automatic New box
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):
@@ -695,7 +695,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     def titles(show):
         page = sam.get('/mypage?show=' + show).data.decode()
         assert 'data-keep-open' in page and 'Just finished' in page and 'Show all my quizzes' not in page
-        return re.findall(r'<h2 title="([^"]+)">', page)
+        return re.findall(r'<h2 title="([^"]+)" class="box-title">', page)
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
     assert titles('soon') == ['Soon']
@@ -865,7 +865,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     # the folder it's filed in says so too (it may be out of sight in another folder)
     assert 'title="1 new quiz in it">1 new</span>' in page
     page = sam.get('/mypage?folder=new').data.decode()
-    assert re.findall(r'<h2 title="([^"]+)">', page) == ['Fresh']
+    assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Fresh']
     assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()

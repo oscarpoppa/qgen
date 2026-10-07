@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_link, quiz_link with context %}
+{% from "_macros.html" import person_link, quiz_link, box_label, count_of with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
@@ -11,8 +11,8 @@
   {% for cq in waiting %}{% if cq.vquiz_id not in seen %}{% set _ = seen.append(cq.vquiz_id) %}{% endif %}{% endfor %}
   {% for vquiz_id in seen %}
     {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
-    <details class="card grading-group" open>
-      <summary class="dash-head"><h2>{{ quiz_link(rows[0].vquiz) }}</h2><span class="badge badge-warn">{{ rows|length }}</span></summary>
+    <details class="box card grading-group" open>
+      <summary class="dash-head">{{ box_label('📝', quiz_link(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}</summary>
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>

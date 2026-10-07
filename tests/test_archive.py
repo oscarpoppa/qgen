@@ -330,7 +330,7 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     assert archive_view(teacher, sam_folder.id)[1] == [('sam', 'Week 1')]
     assert archive_view(teacher, kim_folder.id)[1] == [] and side_counts(archive_view(teacher)[0])['sam'] == 1
     # grouped by the month it was archived
-    assert '<strong>{:%B %Y}</strong>'.format(__import__('datetime').datetime.now()) in archive_view(teacher)[0]
+    assert 'class="box-title">{:%B %Y}</span>'.format(__import__('datetime').datetime.now()) in archive_view(teacher)[0]
 
 
 def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):

@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_home with context %}
+{% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field %}
 
 {# a group of people that opens and closes, with a box that checks them all; these boxes
    aren't sent (the ones under All users are) #}
-{% macro pick_group(key, title, members, children=()) %}
-  <details class="pick-group" data-group="{{ key }}"{% if key in open_groups %} open{% endif %}>
+{% macro pick_group(key, icon, title, members, children=()) %}
+  <details class="box pick-group" data-group="{{ key }}"{% if key in open_groups %} open{% endif %}>
     {# no checkbox on the folder itself (it looked checked when one person in it was): a count
        of who's chosen in it, and a button to check or uncheck everyone in it #}
-    <summary><span class="pick-name">{{ title }}</span>
-      <span class="pick-of muted small"></span>
-      <button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone in {{ title }}">Check all</button></summary>
+    <summary>{{ box_label(icon, title) }}<span class="badge box-count pick-of"></span>
+      <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone in {{ title }}">Check all</button></span></summary>
     {% for c in children %}{{ pick_folder(c) }}{% endfor %}
     {% if members %}<ul class="choice-list pick-list">
       {% for u in members %}
@@ -19,7 +18,7 @@
     </ul>{% elif not children %}<p class="muted small">Nobody in it.</p>{% endif %}
   </details>
 {% endmacro %}
-{% macro pick_folder(n) %}{{ pick_group(n.folder.id, '📁 ' ~ n.folder.name, n.people, n.folders) }}{% endmacro %}
+{% macro pick_folder(n) %}{{ pick_group(n.folder.id, '📁', n.folder.name, n.people, n.folders) }}{% endmacro %}
 
 {% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 
@@ -54,11 +53,10 @@
     </div>
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
-      {% if root.folders %}{{ pick_group('none', '📥 Not in a folder', root.people) }}{% endif %}
-      <details class="pick-group" data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
-        <summary><span class="pick-name">👥 All users</span>
-          <span class="pick-of muted small"></span>
-          <button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone">Check all</button></summary>
+      {% if root.folders %}{{ pick_group('none', '📥', 'Not in a folder', root.people) }}{% endif %}
+      <details class="box pick-group" data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
+        <summary>{{ box_label('👥', 'All users') }}<span class="badge box-count pick-of"></span>
+          <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone">Check all</button></span></summary>
         <ul class="choice-list pick-list">
           {% for u in people %}
             <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>

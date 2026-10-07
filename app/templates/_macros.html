@@ -105,3 +105,14 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}">{{ label }}</button>
   </form>
 {% endmacro %}
+
+{# The one heading for every box that opens and folds (folders, a page's sections, a quiz,
+   a student, a month...): the arrow, its icon, the title and how many are in it. Goes first
+   in the box's <summary>; status badges come after it, buttons last in <span class="box-end">.
+   The box itself is <details class="box ...">. icon: an emoji (or an avatar); tag: h2 for a
+   page's own sections; count: the words, from count_of(). #}
+{% macro box_label(icon, title, count=none, tag='span', full=none) -%}
+<span class="fold" aria-hidden="true"></span>{% if icon %}<span class="box-icon" aria-hidden="true">{{ icon }}</span>{% endif %}<{{ tag }}{% if full %} title="{{ full }}"{% endif %} class="box-title">{{ title }}</{{ tag }}>{% if count is not none %}<span class="badge box-count">{{ count }}</span>{% endif %}
+{%- endmacro %}
+{# "1 quiz", "3 quizzes" #}
+{% macro count_of(n, one, many) %}{{ n }} {{ one if n == 1 else many }}{% endmacro %}

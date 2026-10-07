@@ -1,7 +1,7 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
-{% from "_macros.html" import avatar, person_link, quiz_link with context %}
-<details class="card dash-card" id="dash-right-now" data-box="now" open>
-  <summary class="dash-head"><h2>Right now</h2>
+{% from "_macros.html" import avatar, person_link, quiz_link, box_label, count_of with context %}
+<details class="box card dash-card" id="dash-right-now" data-box="now" open>
+  <summary class="dash-head">{{ box_label('🟢', 'Right now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
     {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}
     <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></summary>
@@ -16,7 +16,7 @@
       {% endmacro %}
       <ul class="dash-list">{% for t in taking[:8] %}{{ taking_row(t) }}{% endfor %}</ul>
       {# a whole class at once: the first 8, and the rest folded away #}
-      {% if taking|length > 8 %}<details class="more-list" data-more="taking"><summary class="small">+{{ taking|length - 8 }} more</summary>
+      {% if taking|length > 8 %}<details class="box box-mini more-list" data-more="taking"><summary class="small"><span class="fold" aria-hidden="true"></span>+{{ taking|length - 8 }} more</summary>
         <ul class="dash-list">{% for t in taking[8:] %}{{ taking_row(t) }}{% endfor %}</ul></details>{% endif %}
     {% else %}
       <p class="muted small">Nobody is taking a quiz right now.</p>

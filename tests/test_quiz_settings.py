@@ -395,7 +395,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
         second = S.retake(first)
     state = lambda: sam.get('/messages/poll?watch=mine').get_json()['watch']
     home = sam.get('/mypage').data.decode()
-    assert home.count('class="card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
+    assert home.count('class="box card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
     s0 = state()
 
     # the teacher deletes one attempt: the box stays with the other, and the page is told
@@ -410,7 +410,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     teacher.post('/quiz/delcq/{}'.format(first.id))
     assert state() != s1
     home = sam.get('/mypage').data.decode()
-    assert 'class="card quiz-card"' not in home and 'Boxed' not in home
+    assert 'class="box card quiz-card"' not in home and 'Boxed' not in home
     assert not Message.query.filter(Message.link == '/quiz/take/{}'.format(first.id)).count()
     # the quiz itself still exists for the teacher, and deleting an assigned quiz is still refused
     assert VQuiz.query.get(vq.id) is not None
@@ -538,12 +538,12 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
-    assert '<span class="quiz-count muted small">1 try</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count">1 try</span>' in sam.get('/mypage').data.decode()
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
-    assert '<span class="quiz-count muted small">2 tries</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count">2 tries</span>' in sam.get('/mypage').data.decode()
 
 
 def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
@@ -982,7 +982,7 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     older, newer = CQuiz.query.filter_by(assignee=sam_u.id).order_by(CQuiz.id).all()
     S.submit(newer, {1: '4'})
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
-    todo, done = page.index('>To do <'), page.find('<strong>Done</strong>')
+    todo, done = page.index('>To do <'), page.find('class="box-title">Done</span>')
     assert 'Settings quiz' in page[todo:] and done == -1
     results = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'data-state="out"' in results
@@ -990,5 +990,5 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     assert 'Give sam another attempt' not in student_page
     S.submit(older, {1: '4'})  # all handed in: Done, and a retake can be given again
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
-    assert '<strong>Done</strong>' in page and '>To do <' not in page
+    assert 'class="box-title">Done</span>' in page and '>To do <' not in page
     assert 'Give sam another attempt' in teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()

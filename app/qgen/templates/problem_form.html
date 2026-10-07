@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import field, check, errors as error_box, image_drop, tip %}
+{% from "_macros.html" import field, check, errors as error_box, image_drop, tip, box_label %}
 {% from "_subjects.html" import subject_checks with context %}
 
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
@@ -225,8 +225,8 @@
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
 </div>
 
-<details class="card help-box">
-  <summary>Examples of each question type</summary>
+<details class="box card help-box">
+  <summary>{{ box_label('💡', 'Examples of each question type', none, 'h2') }}</summary>
   <h3>Numeric</h3>
   <pre>Question: A train goes [speed] mph for [hours] hours. How far does it travel?
 Values:   speed  Whole number  40 to 80, in steps of 5

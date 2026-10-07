@@ -30,7 +30,7 @@
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
           <td data-label="Problems">
             {# the problems fold away (a long quiz would make a tall row) #}
-            <details class="problem-list"><summary class="small">{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
+            <details class="box box-mini problem-list"><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
             <ol class="small" style="margin:0;padding-left:1.2em">
               {% for e in entries %}
                 {% if layout.is_group(e) %}

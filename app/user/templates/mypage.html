@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_folders.html" import folders_page, sub_box, move_menu with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
@@ -42,11 +42,10 @@
     {# each quiz folds down to its title and score; the page remembers which are folded #}
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    <details class="card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
+    <details class="box card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
-        <span class="fold" aria-hidden="true"></span><h2 title="{{ g.vquiz.title }}">{{ g.vquiz.title }}</h2>
-        {# how many attempts are in this box #}
-        <span class="quiz-count muted small">{{ g.attempts|length }} {{ 'try' if g.attempts|length == 1 else 'tries' }}</span>
+        {# how many tries are in this box #}
+        {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'try', 'tries'), 'h2', g.vquiz.title) }}
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
@@ -86,9 +85,8 @@
   {% set done = gs|rejectattr('open')|list %}
   {% if todo %}<h3 class="list-section">To do <span class="badge badge-warn">{{ todo|length }}</span></h3>{{ cards(todo) }}{% endif %}
   {% if done %}
-    <details class="month-box done-box" data-remember="done-{{ key }}">
-      <summary><span class="fold" aria-hidden="true"></span><strong>Done</strong> <span class="badge">{{ done|length }}</span>
-        <span class="muted small">handed in</span></summary>
+    <details class="box month-box done-box" data-remember="done-{{ key }}">
+      <summary>{{ box_label('✅', 'Done', count_of(done|length, 'quiz', 'quizzes')) }}<span class="muted small">handed in</span></summary>
       {{ cards(done) }}
     </details>
   {% endif %}

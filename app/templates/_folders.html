@@ -6,6 +6,7 @@
      {% call folders_page(fk, actions) %} ...what's in the folder being looked at... {% endcall %}
 
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
+{% from "_macros.html" import box_label, count_of %}
 
 {# the folder list down the side (on a phone: a list that folds away, above the contents) #}
 {% macro side_folder(fk, n) %}
@@ -161,10 +162,8 @@
    title to move it in. The caller draws a node's things: {% call(n) sub_box(fk, child) %} #}
 {% macro sub_box(fk, n) %}
   {% set f = n.folder %}
-  <details class="sub-box" data-sub="{{ f.id }}">
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}><span class="fold" aria-hidden="true"></span>
-      <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <h3>{{ fk.name(n.folder) }}</h3>
-      <span class="muted small nowrap">{{ n.count }} {{ fk.unit if n.count == 1 else fk.units }}</span>{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
+  <details class="box sub-box" data-sub="{{ f.id }}">
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
         <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a href="{{ fk.page(f.id) }}">Open this folder</a></span></div>

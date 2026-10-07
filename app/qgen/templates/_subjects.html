@@ -1,6 +1,6 @@
 {# Folders (called subjects in the code): the teacher's own containers for sorting problems and quizzes.
    Use: {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels, subject_checks with context %} #}
-{% from "_macros.html" import tip %}
+{% from "_macros.html" import tip, box_label, count_of %}
 
 {% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Not in a folder</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
 
@@ -69,10 +69,10 @@
 {% macro subject_box(kind, subject, items, tools=true, label=none) %}
 {% set key = subject.id if subject else 'unsorted' %}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
-<details class="card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}">
+<details class="box card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}">
   <summary>
-    <span class="box-name">{{ '📁 ' ~ (label or subject.title) if subject else '📥 Not in a folder' }}</span>
-    <span class="badge" aria-label="{{ items|length }} {{ noun }}">{{ items|length }}</span>
+    {{ box_label('📁' if subject else '📥', (label or subject.title) if subject else 'Not in a folder',
+                 count_of(items|length, 'problem' if kind == 'problems' else 'quiz', noun)) }}
     <span class="badge badge-accent box-ticked" hidden></span>
     {% if subject and tools %}
       {% set n = items|length %}

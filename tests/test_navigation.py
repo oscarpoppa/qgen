@@ -25,7 +25,7 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert '">Grading' in teach.get('/dashboard').data.decode()
     # the student page: each quiz a box that folds
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<details class="card result-box" data-quiz-box="{}-{}">'.format(ids('sam'), vq.id) in page
+    assert '<details class="box card result-box" data-quiz-box="{}-{}">'.format(ids('sam'), vq.id) in page
     assert 'data-quiz-boxes="open">Expand all' in page and '<span class="badge">not started</span>' in page
     # Results by student (everyone) keeps its table
     assert 'class="card result-box"' not in teach.get('/quiz/listuser').data.decode()
@@ -40,4 +40,4 @@ def test_the_count_beside_a_name_is_quizzes_not_attempts(app_db):
     give(w2, 'sam')
     for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam'))):
         page = teach.get(url).data.decode()
-        assert '<span class="badge" aria-label="2 quizzes">2 quizzes</span>' in page, url
+        assert '<span class="badge box-count">2 quizzes</span>' in page, url
