@@ -1272,3 +1272,26 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 /* My quizzes: how many new (not started) quizzes a folder holds */
 .side-new-badge { flex: 0 0 auto; font-size: .72rem; padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
 .sub-head .side-new-badge { margin-left: 6px; }
+
+/* rows of buttons line up: a missing button keeps its place (an empty slot its size) */
+.slot-empty { visibility: hidden; pointer-events: none; }
+/* where rows become cards (the same widths as those rules) an empty slot just goes */
+@media (max-width: 640px) { .stack td.actions .slot-empty { display: none; } }
+@container listarea (max-width: 860px) { .stack td.actions .slot-empty { display: none; } }
+@container page (max-width: 780px) { .stack td.actions .slot-empty { display: none; } }
+/* a row's buttons sit level with the first line of its words */
+td.actions { padding-top: 5px; padding-bottom: 5px; }
+/* "+ Add…" lists all the same width; the problem count stays on one line */
+.person-folders .move-select { width: 9.5rem; min-width: 0; }
+details.problem-list > summary { white-space: nowrap; }
+/* a student's tries in a results cell: Details and Archive line up at the right, whatever the date's length */
+.result-attempt { display: flex; align-items: center; }
+.result-attempt-buttons { margin-left: auto; padding-left: 8px; }
+/* the gaps between a row's buttons are exact (the spaces between them in the page don't count;
+   a button alone in a form, or an empty slot, sits the same as a plain one) */
+td.actions { font-size: 0; }
+td.actions > :not(.btn):not(form) { font-size: 1rem; }
+td.actions > form { display: inline-block; }
+td.actions > * { vertical-align: middle; }
+td.actions .btn, td.actions .inline-form .btn, td.actions details.row-menu { margin-left: 6px; }
+td.actions > :first-child, td.actions > :first-child .btn { margin-left: 0; }

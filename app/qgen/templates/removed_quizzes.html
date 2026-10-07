@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, post_button with context %}
+{% from "_macros.html" import back_button, post_button, slot with context %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
         <td class="actions">
           <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=vq.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Bring back</button></form>
-          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>{% endif %}
+          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>{% else %}{{ slot('Results') }}{% endif %}
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
           {# for good: students' tries go to the Archive first (still readable there) #}
           {% set n = vq.cquizzes|length %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import post_button with context %}
+{% from "_macros.html" import post_button, slot with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -43,8 +43,8 @@
             </ol></details>
           </td>
           <td class="actions">
-            {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>{% endif %}
-            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% endif %}
+            {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}">Assign</a>{% else %}{{ slot('Assign') }}{% endif %}
+            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}">Results</a>{% else %}{{ slot('Results') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}">Edit</a>
             {# the rest in a small menu (keeps a row short), as on the Users page #}
             <details class="menu row-menu">

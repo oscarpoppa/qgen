@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import post_button with context %}
+{% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
@@ -31,7 +31,7 @@
             <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}">Assign</a>
             {# their page: quizzes and results, awards #}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.shown_name }}'s quizzes, results and awards">Student page</a>
-            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% endif %}
+            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% else %}{{ slot('Message') }}{% endif %}
             {# the rest, less often needed, in a small menu (keeps a row short on a phone) #}
             <details class="menu row-menu">
               <summary class="btn btn-secondary btn-sm" aria-label="More for {{ item.shown_name }}">More</summary>

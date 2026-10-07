@@ -69,6 +69,10 @@
   <a class="{{ cls }}" href="{{ target[0] }}" data-back>← {{ target[1] }}</a>
 {%- endmacro %}
 
+{# an empty place in a row's buttons, the size of the missing button, so the buttons of every
+   row line up (hidden, and gone where rows become cards on a phone) #}
+{% macro slot(label) %}<span class="btn btn-secondary btn-sm slot-empty" aria-hidden="true">{{ label }}</span>{% endmacro %}
+
 {# Back on a page reached from the menu: to the page it was opened from, else Home (Dashboard) #}
 {% macro back_home(cls='btn btn-secondary') %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home', cls) }}{% endmacro %}
 
