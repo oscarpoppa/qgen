@@ -54,15 +54,36 @@
       save(OPEN, opened);
     });
   });
-  //Expand all / Collapse all: only the boxes directly in that level (folders and quizzes alike)
+  //Expand all / Collapse all: only what's directly in that level (folders and quizzes alike):
+  //its boxes, a quiz's "N items in the order" and a problem's shortened question. The pair
+  //shows only where there are at least two of those to open or close
+  var FOLDS = 'details.sub-box, details.quiz-card, details.month-box, details.item-box, details.problem-list, .clamp';
+  function folds(level) {
+    return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
+      if (d.parentElement.closest('.level') !== level || d.closest('[hidden]')) return false;
+      //a question short enough to show whole has nothing to open
+      return !d.classList.contains('clamp') || d.classList.contains('open') || d.scrollHeight > d.clientHeight + 1;
+    });
+  }
+  function setFold(d, want) {
+    if (d.classList.contains('clamp')) d.classList.toggle('open', want);
+    else d.open = want;
+  }
   document.querySelectorAll('[data-level]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var level = btn.closest('.level'), want = btn.dataset.level === 'open';
-      level.querySelectorAll('details.sub-box, details.quiz-card, details.month-box, details.item-box').forEach(function (d) {
-        if (d.parentElement.closest('.level') === level) d.open = want;
-      });
+      var want = btn.dataset.level === 'open';
+      folds(btn.closest('.level')).forEach(function (d) { setFold(d, want); });
     });
   });
+  function showLevelButtons() {
+    document.querySelectorAll('.level-buttons').forEach(function (pair) {
+      var level = pair.closest('.level');
+      pair.hidden = !level || folds(level).length < 2;
+    });
+  }
+  showLevelButtons();
+  document.addEventListener('qgen-filtered', function () { setTimeout(showLevelButtons, 0); });
+  window.addEventListener('resize', function () { clearTimeout(showLevelButtons._t); showLevelButtons._t = setTimeout(showLevelButtons, 150); });
 
   //"Move to" / "Add to" lists act as soon as a folder is picked
   document.querySelectorAll('.move-select').forEach(function (sel) {

@@ -764,6 +764,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* each level's Expand all / Collapse all (just what's directly in it) */
 .level-row { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
 .level-buttons { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.level-buttons[hidden] { display: none; }
 /* a folder inside the one being looked at: a box that opens to its own folders and quizzes */
 .sub-box { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
   background: color-mix(in srgb, var(--accent) 4%, transparent); }
