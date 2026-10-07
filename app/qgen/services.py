@@ -1058,6 +1058,39 @@ def delete_archive_folder(folder):
     return moved
 
 
+def archive_subtree(folder):
+    """An Archive folder and every folder inside it, the deepest first."""
+    out, todo = [], [folder]
+    while todo:
+        f = todo.pop()
+        out.append(f)
+        todo.extend(ArchiveFolder.query.filter_by(parent_id=f.id, removed=False).all())
+    return list(reversed(out))
+
+
+def archive_folder_count(folder):
+    """How many archived attempts a folder holds, with the folders inside it."""
+    ids = [f.id for f in archive_subtree(folder)]
+    return ArchivedAttempt.query.filter(ArchivedAttempt.folder_id.in_(ids)).count()
+
+
+def delete_archive_folder_and_contents(folder):
+    """Delete a folder, the folders inside it and every archived attempt in them, for good.
+    A student's folder is kept out of sight (made again when they next have an attempt
+    archived). Returns how many attempts were deleted."""
+    tree = archive_subtree(folder)
+    gone = ArchivedAttempt.query.filter(ArchivedAttempt.folder_id.in_([f.id for f in tree])) \
+        .delete(synchronize_session=False)
+    for f in tree:
+        if f.student_id:
+            f.removed, f.parent_id = True, None
+        else:
+            db.session.delete(f)
+        db.session.flush()
+    db.session.commit()
+    return gone
+
+
 def archived_student(a):
     """The student's account, if it still exists."""
     from app.user.models import User

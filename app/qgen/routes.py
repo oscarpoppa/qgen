@@ -1182,7 +1182,18 @@ def archive_kit(view, node, root, flat, nodes, total):
         name=lambda f: f.name, folder_icon=lambda f: '👤' if f.student_id else '📁',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
         hint='Each student has a folder (👤) for their archived attempts; you can add your own and put folders inside folders.',
-        fold_key='qgen-folded-archive-folders', open_key='qgen-open-archive-subfolders')
+        fold_key='qgen-folded-archive-folders', open_key='qgen-open-archive-subfolders',
+        purge_url=lambda fid: url_for('qgen.purge_archive_folder', fid=fid),
+        purge_question=lambda n: archive_purge_question(n['folder']))
+
+
+def archive_purge_question(folder):
+    count, inner = S.archive_folder_count(folder), len(S.archive_subtree(folder)) - 1
+    return 'Delete the folder “{}”{} and the {} archived attempt{} in it for good? This can’t be undone: {} can’t be ' \
+           'viewed or restored afterwards.'.format(
+               folder.name, ' and the {} folder{} inside it'.format(inner, '' if inner == 1 else 's') if inner else '',
+               count, '' if count == 1 else 's', 'it' if count == 1 else 'they') if count else \
+        'Delete the folder “{}”{}? It’s empty.'.format(folder.name, ' and the folders inside it' if inner else '')
 
 def _archive_done(message, error=False, show=None, moved=None):
     """After a change to the Archive's folders: JSON for the page's script (a drag), else back
@@ -1266,6 +1277,20 @@ def delete_archive_folder(fid):
     S.delete_archive_folder(folder)
     current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
     return _archive_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
+                         show=(parent or 'all') if request.form.get('view') == str(fid) else None)
+
+#route to delete an Archive folder with the folders and archived attempts in it, for good
+@qgen_bp.route('/quiz/archive/folders/<int:fid>/purge', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def purge_archive_folder(fid):
+    folder = archive_folder_or_404(fid)
+    name, parent = folder.name, folder.parent_id
+    gone = S.delete_archive_folder_and_contents(folder)
+    current_app.logger.info('{} deleted archive folder ({}) "{}" and {} archived attempts'.format(current_user.username, fid, name, gone))
+    return _archive_done('Deleted the folder “{}”{}.'.format(name, ' and its {} archived attempt{}'.format(gone, '' if gone == 1 else 's') if gone else ''),
                          show=(parent or 'all') if request.form.get('view') == str(fid) else None)
 
 #dragging, and the "Move to…" lists: an archived attempt onto a folder (or Not in a folder),

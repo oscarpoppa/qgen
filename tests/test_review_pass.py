@@ -983,3 +983,26 @@ def test_dashboard_waiting_for_grading_names_the_quiz_without_a_link(app_db):
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
     assert '<span>“Essay week”</span>' in row and "This quiz's results" not in row
+
+
+def test_an_archive_folder_can_be_deleted_for_good(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    from app.qgen.models import ArchivedAttempt, ArchiveFolder
+    vq = make_quiz(app, teach, 'Old one')
+    for name in ('sam', 'kim'):
+        teach.post('/quiz/delcq/{}'.format(give(vq, name).id))
+    sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
+    page = teach.get('/quiz/archive?folder={}'.format(sam_folder.id)).data.decode()
+    assert 'Delete folder and everything in it' in page
+    assert 'Delete the folder “sam” and the 1 archived attempt in it for good?' in page
+    r = teach.post('/quiz/archive/folders/{}/purge'.format(sam_folder.id), follow_redirects=True).data.decode()
+    assert 'Deleted the folder “sam” and its 1 archived attempt.' in r
+    assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 0
+    assert ArchivedAttempt.query.filter_by(student_id=ids('kim')).count() == 1
+    db.session.expire_all()
+    assert db.session.get(ArchiveFolder, sam_folder.id).removed   # out of sight, made again when needed
+    teach.post('/quiz/delcq/{}'.format(give(vq, 'sam').id))
+    db.session.expire_all()
+    assert not db.session.get(ArchiveFolder, sam_folder.id).removed
