@@ -939,3 +939,30 @@ def test_the_start_card_says_when_it_closes(app_db):
     sam.post('/quiz/take/{}/start'.format(cq.id))
     db.session.expire_all()
     assert cq.startdate is None
+
+
+def test_my_quizzes_has_an_in_progress_folder(app_db):
+    """An automatic "In progress" entry after New: every quiz started and not handed in
+    (each also stays in its own folder), with how many beside it."""
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    sam_u = student(db, 'sam')
+    assign(teacher, vq, [sam_u])
+    sam = login(app, 'sam')
+    cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
+    page = sam.get('/mypage?folder=started').data.decode()
+    assert '✏️</span> In progress</a>' in page and 'Nothing in progress right now.' in page
+    assert page.index('🆕</span> New</a>') < page.index('✏️</span> In progress</a>')
+    take_page(sam, cq.id)
+    page = sam.get('/mypage?folder=started').data.decode()
+    assert 'In progress: quizzes you’ve started and not handed in' in page and 'Settings quiz' in page
+    assert 'Nothing in progress' not in page
+    row = page[page.index('✏️</span> In progress</a>'):]
+    assert row[:row.index('</li>')].count('>1</span>') == 1  # its count
+    # remembered like any folder: back to My quizzes shows it again
+    assert 'In progress: quizzes' in sam.get('/mypage').data.decode()
+    S.submit(cq, {1: '4'})
+    assert 'Nothing in progress right now.' in sam.get('/mypage?folder=started').data.decode()

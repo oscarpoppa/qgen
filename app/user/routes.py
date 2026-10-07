@@ -64,10 +64,13 @@ def mypage():
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new',))
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new', 'started'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
-    shown = node['groups'] if node else groups if view == 'all' else fresh if view == 'new' else root['groups']
+    #and "In progress": started and not handed in yet (also each in its own folder)
+    working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
+    shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
+             else working if view == 'started' else root['groups'])
     if showing:
         from app import tuning
         from app.qgen.models import waiting_quizzes
@@ -87,6 +90,8 @@ def mypage():
         }[showing]
     elif view == 'new':
         heading, nothing = '🆕 New: quizzes you haven’t started', 'No new quizzes right now. 🎉'
+    elif view == 'started':
+        heading, nothing = '✏️ In progress: quizzes you’ve started and not handed in', 'Nothing in progress right now. 🎉'
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -99,7 +104,8 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading,
-        new_view={'label': 'New', 'count': len(fresh)},
+        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(len(fresh))},
+                    {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working), 'badge': None}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
