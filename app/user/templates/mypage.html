@@ -111,11 +111,15 @@
   {% endfor %}
   </ul>
 </section>
+{# a line between Just finished and the folders #}
+<hr class="section-rule">
 {% endif %}
 
 {% if groups or fk.root.folders %}
 {% call folders_page(fk) %}
   {% if groups|length > 5 %}<input type="search" class="filter-cards" placeholder="Find a quiz…" aria-label="Find a quiz">{% endif %}
+  {# and between the heading (and Find a quiz) and the quizzes #}
+  <hr class="section-rule list-rule">
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
     {{ quiz_cards(shown, fk.view) }}

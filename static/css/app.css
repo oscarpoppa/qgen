@@ -1389,3 +1389,9 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 .my-quizzes .folder-main > #folder-items,
 .my-quizzes #folder-items > details.sub-box > .sub-body,
 .my-quizzes details.done-box > .quiz-grid { max-height: none; overflow-y: visible; padding-right: 0; }
+
+/* a quiet line between a page's sections (My quizzes: Just finished | the folders, and
+   Find a quiz | the quizzes) */
+hr.section-rule { border: 0; border-top: 1px solid var(--border); margin: 6px 0 18px; }
+hr.section-rule.list-rule { margin: 4px 0 14px; }
+.folder-main input.filter-cards + hr.list-rule { margin-top: 0; }
