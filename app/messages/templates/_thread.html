@@ -41,6 +41,16 @@
           </form>
         {% endif %}
       {% endif %}
+      {# a teacher's message: a small 📌 beside the ✕ pins it to the top of the student's messages
+         (lit up while pinned; pressing it again unpins) #}
+      {% set can_pin = me_teacher and m.from_teacher %}
+      {% if can_pin %}
+        {% set pin_words = ('Unpin (now at the top of ' ~ m.student.shown_name ~ '’s messages)') if m.pinned else ('Pin to the top of ' ~ m.student.shown_name ~ '’s messages') %}
+        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="msg-pin-wrap dock-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
+          <button class="msg-pin{{ ' is-pinned' if m.pinned }}" aria-pressed="{{ 'true' if m.pinned else 'false' }}" aria-label="{{ pin_words }}" title="{{ pin_words }}">📌</button>
+        </form>
+      {% endif %}
       <div class="msg-meta small">
         {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
@@ -55,7 +65,7 @@
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
         <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
-        {% if m.pinned %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
+        {% if m.pinned and not can_pin %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>
@@ -63,16 +73,7 @@
         {# opens the conversation with that student: a reply to what they wrote, or more to what a teacher wrote #}
         <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.shown_name }}</button>
       {% endif %}
-      {% set can_pin = me_teacher and m.from_teacher %}
       {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.shown_name }} removed this from their messages</div>{% endif %}
-      {% if can_pin %}
-      <div class="msg-actions">
-        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="inline-form dock-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
-          <button class="msg-act">📌 {{ 'Unpin' if m.pinned else 'Pin to top' }}</button>
-        </form>
-      </div>
-      {% endif %}
     </div>
     </li>
   {% else %}

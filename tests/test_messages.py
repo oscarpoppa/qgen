@@ -889,3 +889,22 @@ def test_students_can_never_message_another_student(app_db):
     # and a student's panel only offers teachers
     panel = sam.get('/messages/panel').data.decode()
     assert 'value="{}"'.format(ids['kim']) not in panel
+
+
+def test_pinning_is_a_small_pin_beside_the_x(app_db):
+    """A teacher's message has a 📌 in its corner (lit up while pinned) instead of a "Pin to top" link."""
+    app, db = app_db
+    from app.user.models import User
+    from app.messages.models import Message
+    teacher = login(app, 'teach')
+    sam_id = User.query.filter_by(username='sam').one().id
+    teacher.post('/messages/send', data={'to': 'chosen', 'students': [str(sam_id)], 'body': 'Bring a ruler.'})
+    m = Message.query.one()
+    page = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    assert 'Pin to top' not in page and 'class="msg-pin" aria-pressed="false"' in page
+    assert 'title="Pin to the top of sam’s messages"' in page
+    teacher.post('/messages/pin/{}'.format(m.id), data={'pinned': '1'})
+    page = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    assert 'class="msg-pin is-pinned" aria-pressed="true"' in page
+    # students see no pin button, only the pinned mark
+    assert 'class="msg-pin' not in login(app, 'sam').get('/messages/panel').data.decode()

@@ -678,6 +678,18 @@ button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 }
 .msg-x::-webkit-details-marker { display: none; }
 .msg-x:hover, details[open] > .msg-x { color: var(--bad); background: var(--bad-soft); filter: none; }
+/* the 📌 that pins a teacher's message, beside the ✕ (faded until pinned) */
+.msg:has(.msg-pin-wrap) .msg-meta { padding-right: 22px; }
+.msg:has(.msg-pin-wrap):has(.msg-x-wrap) .msg-meta { padding-right: 48px; }
+.msg-pin-wrap { position: absolute; top: 4px; right: 4px; margin: 0; }
+.msg:has(.msg-x-wrap) .msg-pin-wrap { right: 28px; }
+.msg-pin {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 5px;
+  background: none; font: 400 .75rem/1 inherit; cursor: pointer; filter: grayscale(1); opacity: .45;
+}
+.msg-pin:hover { opacity: 1; filter: none; background: var(--accent-soft, rgba(127,127,127,.15)); }
+.msg-pin.is-pinned { opacity: 1; filter: none; background: var(--accent-soft, rgba(127,127,127,.15)); }
 /* an announcement's choice opens under its ✕ */
 details.msg-x-wrap[open] { z-index: 5; }
 details.msg-x-wrap .msg-del-choices {
