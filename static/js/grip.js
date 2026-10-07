@@ -1,7 +1,7 @@
 /* Areas that scroll inside themselves (a folder page's list, the boxes that open in it, the
  * Dashboard's lists...) get a wide bar underneath to drag them taller or shorter (or the up
  * and down arrow keys on it). The height is remembered in this browser, for that area on that
- * page. The bar shows only when there's more to see, or once the height has been changed. */
+ * page. Every such area has its bar (on a phone the page scrolls instead, and there's none). */
 (function () {
   var AREAS = [
     '.folder-main > #folder-items', '.folder-main > .list-scroll',
@@ -42,11 +42,10 @@
       if (keep) store(key, String(h));
       show();
     }
-    //the bar: where there's more to see, or the height was changed
+    //the bar: on every area that scrolls inside itself (and is on show)
     function show() {
       if (!scrolls(el)) el.style.maxHeight = '';  // a phone: no height of its own
-      var active = scrolls(el) && el.offsetParent !== null;
-      bar.hidden = !(active && (el.scrollHeight > el.clientHeight + 2 || el.style.maxHeight));
+      bar.hidden = !(scrolls(el) && el.offsetParent !== null);
     }
     var saved = parseInt(stored(key), 10);
     if (saved && scrolls(el)) el.style.maxHeight = Math.max(MIN, saved) + 'px';
