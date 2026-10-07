@@ -101,6 +101,7 @@ def mypage():
         fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading,
         new_view={'label': 'New', 'count': len(fresh)},
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
+        purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
                                  'give {} back. Your answers and scores go with {}.'.format(
             n['folder'].name, ' and the folders inside it' if n['folders'] else '', n['count'], '' if n['count'] == 1 else 'zes',

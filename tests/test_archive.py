@@ -46,7 +46,7 @@ def test_deleting_an_attempt_archives_it_and_restore_brings_it_back(app_db):
 
     # archive the first attempt
     r = teacher.post('/quiz/delcq/{}'.format(cqid), follow_redirects=True)
-    assert b'to the archive' in r.data
+    assert b'to the Archive' in r.data
     db.session.expire_all()
     assert db.session.get(CQuiz, cqid) is None
     a = ArchivedAttempt.query.one()

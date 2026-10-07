@@ -4,8 +4,8 @@
  * and buttons seem to do nothing.
  *
  * Any form with data-confirm="question" asks first (data-confirm-ok names the
- * button, e.g. "Delete"). Scripts can call qgenAsk(question, okLabel), which
- * resolves to true or false. */
+ * button, e.g. "Delete"). Scripts can call qgenAsk(question, okLabel, danger, cancelLabel),
+ * which resolves to true or false. */
 (function () {
   var box = null;
 
@@ -19,10 +19,11 @@
     document.body.appendChild(box);
   }
 
-  window.qgenAsk = function (question, okLabel, danger) {
+  window.qgenAsk = function (question, okLabel, danger, cancelLabel) {
     if (!window.HTMLDialogElement) return Promise.resolve(window.confirm(question));
     if (!box) build();
     box.querySelector('#ask-text').textContent = question;
+    box.querySelector('.ask-cancel').textContent = cancelLabel || 'Cancel';
     var ok = box.querySelector('.ask-ok');
     ok.textContent = okLabel || 'OK';
     ok.classList.toggle('btn-danger', !!danger);

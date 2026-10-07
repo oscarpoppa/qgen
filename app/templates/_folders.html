@@ -128,7 +128,12 @@
                 <input type="hidden" name="view" value="{{ fk.view }}">
                 <button class="btn btn-secondary btn-xs">Remove folder</button>
               </form>
-              {% if fk.purge_url %}
+              {% set blocked = fk.purge_blocked(fk.node) if fk.purge_url and fk.purge_blocked else none %}
+              {% if blocked %}
+              {# not yet (My quizzes: a quiz in it still to do): the button says why it can't #}
+              <button type="button" class="btn btn-danger btn-xs" disabled title="{{ blocked }}">Delete folder and everything in it</button>
+              <p class="small muted purge-note">{{ blocked }}</p>
+              {% elif fk.purge_url %}
               {# the folder and what's in it go (the warning says exactly what happens) #}
               <form method="post" action="{{ fk.purge_url(f.id) }}" class="folder-form"
                     data-confirm="{{ fk.purge_question(fk.node) }}" data-confirm-ok="Delete everything">

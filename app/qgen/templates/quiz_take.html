@@ -141,24 +141,38 @@
   form.addEventListener('input', update);
   form.addEventListener('change', update);
   var submitting = false;
+  //always asked first (inside the page: the browser's own pop-ups can be switched off), so
+  //a slip of the finger never hands it in; the time running out hands it in without asking
   form.addEventListener('submit', function (e) {
     if (submitting) return;
-    var blank = update();
-    if (blank && form.dataset.blankOk !== '1') {
-      //asked inside the page (the browser's own pop-ups can be switched off)
-      e.preventDefault();
-      var question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Hand it in anyway?';
-      var ask = window.qgenAsk ? window.qgenAsk(question, 'Hand it in anyway') : Promise.resolve(window.confirm(question));
-      var submitter = e.submitter;
-      ask.then(function (yes) {
-        if (!yes) return;
-        form.dataset.blankOk = '1';
-        if (form.requestSubmit) form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
-        else form.submit();
-      });
-      return;
+    if (form.dataset.askedOk === '1') { submitting = true; return; }
+    e.preventDefault();
+    var blank = update(), question, ok, back;
+    if (blank) {
+      question = 'You left ' + blank + ' question' + (blank === 1 ? '' : 's') + ' blank. Hand it in anyway?';
+      ok = 'Hand it in anyway'; back = 'Go back and answer';
+    } else {
+      question = 'Hand in your quiz? You can\'t change your answers after.';
+      ok = 'Hand it in'; back = 'Keep working';
     }
-    submitting = true;
+    var ask = window.qgenAsk ? window.qgenAsk(question, ok, false, back) : Promise.resolve(window.confirm(question));
+    var submitter = e.submitter;
+    ask.then(function (yes) {
+      if (!yes) return;
+      form.dataset.askedOk = '1';
+      if (form.requestSubmit) form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+      else form.submit();
+    });
+  });
+  //Enter in an answer box doesn't hand the quiz in: it goes on to the next answer box
+  form.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (e.key !== 'Enter' || t.tagName !== 'INPUT' || /^(submit|button|checkbox|radio)$/.test(t.type)) return;
+    e.preventDefault();
+    var boxes = Array.prototype.filter.call(form.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea'),
+                                            function (b) { return !b.disabled && b.offsetParent !== null; });
+    var next = boxes[boxes.indexOf(t) + 1];
+    if (next) next.focus();
   });
 
   /* autosave: send the answers a moment after each change */

@@ -767,7 +767,7 @@ def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.shown_name
     archived = S.delete_attempt(cq, by=current_user)
-    flash(Markup('Moved {}\'s attempt at "{}" to the archive. <a href="{}">View it</a>').format(
+    flash(Markup('Moved {}\'s attempt at "{}" to the Archive. <a href="{}">View it</a>').format(
         owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(back_to(url_for('qgen.list_users')))
@@ -784,8 +784,8 @@ def take_away(vqid, uid):
         return gone('That quiz or student is gone.', back_to(url_for('qgen.list_users')))
     count = S.take_away(student, vq, by=current_user)
     if count:
-        flash(Markup('Took “{}” away from {}: {} {} moved to the <a href="{}">Archive</a>, where you can view or restore {}.').format(
-            vq.title, student.shown_name, count, 'try' if count == 1 else 'tries', url_for('qgen.archive'),
+        flash(Markup('Archived {}’s {} {} at “{}”. They’re in the <a href="{}">Archive</a>, where you can view or restore {}.').format(
+            student.shown_name, count, 'try' if count == 1 else 'tries', vq.title, url_for('qgen.archive'),
             'it' if count == 1 else 'them'), 'success')
         current_app.logger.info("{} took VQuiz ({}) '{}' away from {}: {} archived".format(
             current_user.username, vqid, vq.title, student.username, count))

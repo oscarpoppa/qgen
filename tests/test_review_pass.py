@@ -814,9 +814,9 @@ def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
         S.retake(first)
     give(vq, 'kim')
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Take away all 2 tries' in page
+    assert 'Archive all 2 tries' in page and 'Take away' not in page
     r = teach.post('/quiz/takeaway/{}/{}'.format(vq.id, ids('sam')), follow_redirects=True).data.decode()
-    assert 'Took “Twice” away from sam: 2 tries moved to the' in r
+    assert 'Archived sam’s 2 tries at “Twice”. They’re in the' in r
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 0
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 2
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('kim')).count() == 1
@@ -904,15 +904,23 @@ def test_a_student_deletes_a_folder_and_its_quizzes(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     from app.qgen.models import QuizFolder, CQuiz, ArchivedAttempt
     from app.messages.models import Message
+    from app.qgen import services as S
     a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
-    give(a, 'sam'), give(b, 'sam')
+    a_try, _ = give(a, 'sam'), give(b, 'sam')
     sam.post('/mypage/folders', data={'name': 'Old'})
     old = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
     sam.post('/mypage/folders', data={'name': 'Inner', 'parent': old.id})
     inner = QuizFolder.query.filter_by(name='Inner').one()
     sam.post('/mypage/move', data={'quiz': a.id, 'to': inner.id})
+    # a quiz in it still to do: not yet, and the page says why
     page = sam.get('/mypage?folder={}'.format(old.id)).data.decode()
-    assert 'Delete folder and everything in it' in page
+    assert 'disabled title="First hand in every quiz in this folder. Still to do: “A”."' in page
+    sam.post('/mypage/folders/{}/purge'.format(old.id), data={'view': str(old.id)})
+    assert QuizFolder.query.filter_by(owner_id=ids('sam')).count() == 2
+    assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=a.id).count() == 1
+    S.submit(a_try, {1: '4'})
+    page = sam.get('/mypage?folder={}'.format(old.id)).data.decode()
+    assert 'Delete folder and everything in it' in page and 'disabled title="First hand in' not in page
     assert 'Delete the folder “Old” and the folders inside it and the 1 quiz in it? It goes to your teacher' in page
     r = sam.post('/mypage/folders/{}/purge'.format(old.id), data={'view': str(old.id)}, follow_redirects=True).data.decode()
     assert 'Deleted the folder &#34;Old&#34; and its 1 quiz' in r or 'Deleted the folder "Old" and its 1 quiz' in r

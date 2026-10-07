@@ -156,9 +156,10 @@ def kit(view, node, root, flat, nodes, page, **words):
         'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False, 'item_key': None,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
-        'new_view': None,
+        'new_view': None,  # {'label', 'count'}: an automatic "New" entry in the side list (My quizzes)
         'purge_url': None,  # (folder id) -> where "Delete folder and everything in it" goes
-        'purge_question': None,  # (node) -> its warning  # {'label', 'count'}: an automatic "New" entry in the side list (My quizzes)
+        'purge_question': None,  # (node) -> its warning
+        'purge_blocked': None,  # (node) -> why it can't be done yet (None: it can)
     }
     out['main_count'] = root['count']
     out.update(words)

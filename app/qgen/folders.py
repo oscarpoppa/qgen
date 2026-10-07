@@ -101,9 +101,33 @@ def _subtree(user, f):
     return list(reversed(out))
 
 
+def _quiz_ids_in(user, folder_ids):
+    return {p.vquiz_id for p in QuizPlacement.query.filter(QuizPlacement.owner_id == user.id,
+                                                          QuizPlacement.folder_id.in_(folder_ids))}
+
+
+def not_handed_in(user, folder_id):
+    """The quizzes in a folder (or the folders inside it) with a try not handed in yet
+    (new or started), by title: such a folder can't be deleted with everything in it."""
+    f = _folder(user, folder_id)
+    if f is None:
+        return []
+    quiz_ids = _quiz_ids_in(user, {g.id for g in _subtree(user, f)})
+    tries = CQuiz.query.filter(CQuiz.assignee == user.id, CQuiz.vquiz_id.in_(quiz_ids or [0]),
+                               CQuiz.completed.is_(False), CQuiz.needs_review.is_(False)).all()
+    return sorted({cq.vquiz.title for cq in tries})
+
+
+def not_handed_in_note(titles):
+    """Why a folder can't be deleted with everything in it yet (None: it can)."""
+    if not titles:
+        return None
+    return 'First hand in every quiz in this folder. Still to do: {}.'.format(', '.join('“{}”'.format(t) for t in titles))
+
+
 def delete_folder_and_quizzes(user, folder_id):
-    """Delete a folder, the folders inside it and every quiz in them: each try at those
-    quizzes goes to the Archive (as if a teacher took it away; it can be put back) and the
+    """Delete a folder, the folders inside it and every quiz in them, once every one has been
+    handed in (FolderError otherwise): each try at those quizzes goes to the Archive (as if a teacher took it away; it can be put back) and the
     teachers get a notice. Returns (folder name, how many quizzes)."""
     from flask import url_for
     from app.messages.models import notify_teachers
@@ -111,10 +135,13 @@ def delete_folder_and_quizzes(user, folder_id):
     f = _folder(user, folder_id)
     if f is None:
         raise FolderError('That folder isn\'t one of yours.')
+    #never a quiz still to do (new or started): only what's been handed in
+    note = not_handed_in_note(not_handed_in(user, folder_id))
+    if note:
+        raise FolderError(note)
     tree = _subtree(user, f)
     ids = {g.id for g in tree}
-    quiz_ids = {p.vquiz_id for p in QuizPlacement.query.filter(QuizPlacement.owner_id == user.id,
-                                                              QuizPlacement.folder_id.in_(ids))}
+    quiz_ids = _quiz_ids_in(user, ids)
     tries = CQuiz.query.filter(CQuiz.assignee == user.id, CQuiz.vquiz_id.in_(quiz_ids or [0])).all()
     titles = sorted({cq.vquiz.title for cq in tries})
     for cq in tries:
