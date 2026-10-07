@@ -150,7 +150,6 @@
   function show(yes) {
     panel.hidden = !yes;
     open.setAttribute('aria-expanded', yes ? 'true' : 'false');
-    store('qgen-calc-open', yes ? '1' : '');
     if (yes) { keepOnScreen(); input.focus(); }
   }
   open.addEventListener('click', function () { show(panel.hidden); });
@@ -280,5 +279,6 @@
     place(+at[0], +at[1]);
     panel.hidden = true;
   }
-  if (stored('qgen-calc-open') === '1') { panel.hidden = false; open.setAttribute('aria-expanded', 'true'); keepOnScreen(); }
+  //it opens only when its button is clicked (never by itself on the next page or quiz)
+  try { sessionStorage.removeItem('qgen-calc-open'); } catch (e) {}
 })();
