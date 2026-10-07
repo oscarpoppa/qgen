@@ -44,12 +44,13 @@
       show();
     }
     //the bar: on every area that scrolls inside itself, is on show and has more in it than
-    //fits (a short list has nothing to drag open, so no bar floating under it), or that was
-    //given a height of its own (so it can be dragged back)
+    //fits (a short list has nothing to drag open, so no bar dangling under it); kept while
+    //it's being dragged
+    var dragging = false;
     function show() {
       if (!scrolls(el)) el.style.maxHeight = '';  // a phone: no height of its own
-      var more = el.scrollHeight > el.clientHeight + 2 || !!el.style.maxHeight;
-      bar.hidden = !(scrolls(el) && el.offsetParent !== null && more);
+      if (dragging) return;
+      bar.hidden = !(scrolls(el) && el.offsetParent !== null && el.scrollHeight > el.clientHeight + 2);
     }
     var saved = parseInt(stored(key), 10);
     if (saved && scrolls(el)) el.style.maxHeight = Math.max(MIN, saved) + 'px';
@@ -58,6 +59,7 @@
       if (e.button !== 0) return;
       e.preventDefault();
       var startY = e.clientY, startH = el.getBoundingClientRect().height;
+      dragging = true;
       bar.setPointerCapture(e.pointerId);
       document.documentElement.classList.add('grip-resizing');
       function move(ev) { set(startH + ev.clientY - startY, false); }
@@ -66,6 +68,7 @@
         bar.removeEventListener('pointerup', up);
         bar.removeEventListener('pointercancel', up);
         document.documentElement.classList.remove('grip-resizing');
+        dragging = false;
         set(el.getBoundingClientRect().height, true);
       }
       bar.addEventListener('pointermove', move);
