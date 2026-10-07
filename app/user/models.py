@@ -27,6 +27,10 @@ class User(UserMixin, db.Model):
     #name everywhere, "sam (Sammy)"
     nickname = db.Column(db.String(32), nullable=True)
     NICKNAME_MAX = 32
+    #the attempt whose quiz page they have open and on screen (its check-ins, every few
+    #seconds while it shows), and when it last checked in: the Dashboard's "Taking a quiz"
+    on_quiz = db.Column(db.Integer, nullable=True)
+    on_quiz_at = db.Column(db.DateTime, nullable=True)
 
     @property
     def shown_name(self):
@@ -105,6 +109,26 @@ def note_seen(user, now=None):
     except Exception:
         db.session.rollback()
 
+
+
+def note_page(user, watch, now=None):
+    """A page's check-in: which of their own attempts' quiz page is on screen (None: some
+    other page). Written when it changes, and at most once every half a minute otherwise
+    (commits; never raises)."""
+    from datetime import datetime
+    now = now or datetime.now()
+    quiz = None
+    if watch and watch.startswith('attempt:') and watch[8:].isdigit():
+        from app.qgen.models import CQuiz
+        cq = db.session.get(CQuiz, int(watch[8:]))
+        quiz = cq.id if cq is not None and cq.assignee == user.id else None  # not a teacher looking at someone's
+    if quiz == user.on_quiz and (quiz is None or (user.on_quiz_at and timedelta(0) <= now - user.on_quiz_at < timedelta(seconds=30))):
+        return
+    try:
+        user.on_quiz, user.on_quiz_at = quiz, now if quiz else None
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 #folders on the Users page (e.g. "7th grade"), shared by all the teachers; students never

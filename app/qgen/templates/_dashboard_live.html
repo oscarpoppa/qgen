@@ -71,7 +71,8 @@
       <ul class="dash-list">
       {% for cq in queue %}
         <li>{{ person_link(cq.taker) }}
-          <span>{{ quiz_link(cq.vquiz) }}</span>
+          {# just the quiz's name: Grade opens this hand-in #}
+          <span>“{{ cq.vquiz.title }}”</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span>
           <a class="btn btn-sm dash-go" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade</a></li>
       {% endfor %}

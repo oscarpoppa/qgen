@@ -484,6 +484,10 @@ def qtake(cidx):
         return redirect(url_for('user.mypage'))
     title = cq.vquiz.title
     is_taker = current_user == cq.taker
+    #their quiz page is on screen (the Dashboard's "Taking a quiz"; its check-ins keep it so)
+    if is_taker:
+        from app.user.models import note_page
+        note_page(current_user, 'attempt:{}'.format(cq.id))
     #opened from Home or a notice: no longer new (the count beside "My quizzes" goes down)
     if is_taker and not cq.seen_by_taker:
         cq.seen_by_taker = True

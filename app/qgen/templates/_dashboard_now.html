@@ -10,7 +10,8 @@
     {% if taking %}
       {% macro taking_row(t) %}
         <li>{{ person_link(t.cq.taker) }}
-          <span>{{ quiz_link(t.cq.vquiz) }}</span>
+          {# their quiz as it stands (what they've answered so far) #}
+          <span><a href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="{{ t.cq.taker.shown_name if t.cq.taker }}’s quiz, as it is now">“{{ t.cq.vquiz.title }}”</a></span>
           <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
       {% endmacro %}
       <ul class="dash-list">{% for t in taking[:8] %}{{ taking_row(t) }}{% endfor %}</ul>

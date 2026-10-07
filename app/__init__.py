@@ -163,8 +163,13 @@ def _note_seen():
     from flask_login import current_user
     if request.endpoint == 'static' or not current_user.is_authenticated:
         return
-    from app.user.models import note_seen
+    from app.user.models import note_seen, note_page
     note_seen(current_user._get_current_object())
+    #opening any other page (the browser going there, not a page's own fetches): they've
+    #left their quiz page, so it's off the Dashboard's "Taking a quiz" straight away
+    if request.headers.get('Sec-Fetch-Mode') == 'navigate' and request.endpoint != 'qgen.qtake' \
+            and current_user.on_quiz is not None:
+        note_page(current_user._get_current_object(), None)
 
 @app.cli.command('close-expired')
 def close_expired_command():

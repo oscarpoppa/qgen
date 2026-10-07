@@ -93,32 +93,49 @@ def test_taking_a_quiz_right_now(app_db):
     from app.qgen import services as S
     from app.user.models import User
     teacher = login(app, 'teach')
+    sam = login(app, 'sam')
     vq = make_quiz(app, teacher)
     now = datetime.now()
     started = give(vq, 'sam', closes_at=now + timedelta(minutes=30))
+    other = give(make_quiz(app, teacher, 'Other'), 'sam')
     S.start(started)
+    S.start(other)
     for name in ('sam', 'kim'):
         u = db.session.get(User, ids(name))
         u.last_seen, u.logged_in = now, True
     db.session.commit()
     give(vq, 'kim')  # not started
-    rows = D.taking_now(now)
+    # started and online, but not on the quiz page: not listed
+    assert D.taking_now(datetime.now()) == []
+    # the quiz page open (its check-ins name it): only that quiz is listed
+    sam.get('/messages/poll?watch=attempt:{}'.format(started.id))
+    rows = D.taking_now(datetime.now())
     assert [(r['cq'].taker.username, r['cq'].vquiz.title) for r in rows] == [('sam', 'Week 1')]
     assert timedelta(minutes=29) < rows[0]['left'] <= timedelta(minutes=30)
-    # not online: not listed
-    assert D.taking_now(now + timedelta(minutes=5)) == []
+    # on another page now: off the list straight away (opening it, before its first check-in)
+    sam.get('/home', headers={'Sec-Fetch-Mode': 'navigate'})
+    assert D.taking_now(datetime.now()) == []
+    sam.get('/messages/poll?watch=attempt:{}'.format(started.id))
+    sam.get('/messages/poll?watch=home')
+    assert D.taking_now(datetime.now()) == []
+    # opening the quiz page counts; its check-ins stop (tab closed or hidden): off after the online window
+    sam.get('/quiz/take/{}'.format(started.id))
+    assert len(D.taking_now(datetime.now())) == 1
+    assert D.taking_now(datetime.now() + timedelta(minutes=5)) == []
+    # a teacher looking at sam's quiz isn't sam taking it, nor the teacher
+    sam.get('/messages/poll?watch=home')
+    teacher.get('/messages/poll?watch=attempt:{}'.format(started.id))
+    assert D.taking_now(datetime.now()) == []
     # handed in: not listed
+    sam.get('/messages/poll?watch=attempt:{}'.format(started.id))
     with app.test_request_context():
         S.submit(started, {1: '4'})
-    assert D.taking_now(now) == []
-    # it shows on the page, and the live part refreshes on its own
-    sam_u = db.session.get(User, ids('sam'))
-    sam_u.last_seen, sam_u.logged_in = datetime.now(), True
-    later = give(vq, 'sam')
-    S.start(later)
-    db.session.commit()
+    assert D.taking_now(datetime.now()) == []
+    # it shows on the page (the quiz's name opens sam's quiz as it is), and refreshes on its own
+    sam.get('/messages/poll?watch=attempt:{}'.format(other.id))
     part = teacher.get('/dashboard/now').data.decode()
-    assert 'Taking a quiz' in part and '<strong>sam</strong>' in part and '“Week 1”' in part
+    assert 'Taking a quiz' in part and '<strong>sam</strong>' in part
+    assert 'href="/quiz/take/{}"'.format(other.id) in part and '“Other”</a>' in part
     assert 'data-url="/dashboard/now"' in teacher.get('/dashboard').data.decode()
 
 

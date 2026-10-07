@@ -970,3 +970,16 @@ def test_dashboard_recent_hand_ins_name_the_quiz_without_a_link(app_db):
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
     assert '<span>“Handed”</span>' in row and "This quiz's results" not in row
+
+
+def test_dashboard_waiting_for_grading_names_the_quiz_without_a_link(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from app.qgen.models import CQuiz
+    vq = make_quiz(app, teach, 'Essay week')
+    cq = give(vq, 'sam')
+    cq.needs_review, cq.compdate = True, datetime.now()
+    db.session.commit()
+    page = teach.get('/dashboard').data.decode()
+    row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
+    assert '<span>“Essay week”</span>' in row and "This quiz's results" not in row

@@ -57,12 +57,13 @@ def recently_active(now):
 
 
 def taking_now(now):
-    """Students online with a started attempt they can still answer:
-    [{'cq', 'started', 'left' (timedelta, or None without a limit or close time)}]."""
-    here = [u.id for u in online(now) if not u.is_admin]
+    """People working on a quiz at this moment: its quiz page open and on screen (it checked
+    in within the online window), started and still open to answers. Teachers taking one
+    count too. [{'cq', 'started', 'left' (timedelta, or None without a limit or close time)}]."""
+    here = {u.on_quiz for u in online(now) if u.on_quiz and u.on_quiz_at and u.on_quiz_at >= now - tuning.online_window()}
     if not here:
         return []
-    rows = (_unfinished().filter(CQuiz.assignee.in_(here), CQuiz.startdate.isnot(None))
+    rows = (_unfinished().filter(CQuiz.id.in_(here), CQuiz.startdate.isnot(None))
             .options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz)).order_by(CQuiz.startdate).all())
     out = []
     for cq in rows:

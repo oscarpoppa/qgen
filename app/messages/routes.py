@@ -391,6 +391,9 @@ def teachers_view(rows, staff, choice, mark_seen=True):
 @messages_bp.route('/messages/poll', methods=['GET'])
 @login_required
 def poll():
+    #which quiz page they have on screen, if any (the Dashboard's "Taking a quiz")
+    from app.user.models import note_page
+    note_page(current_user, request.args.get('watch'))
     #a quiz of theirs that has just opened (teachers take quizzes too): its notice comes with this check-in
     from app.qgen.services import announce_opened
     try:
