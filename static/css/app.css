@@ -1383,3 +1383,9 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 .quiz-start .start-facts li { display: flex; gap: 10px; align-items: baseline; }
 .quiz-start .start-btn { width: 100%; padding: 12px; font-size: 1.1rem; }
 .quiz-start .start-back { margin: 14px 0 0; text-align: center; }
+
+/* My quizzes: the page scrolls, not the list (quiz boxes in a grid, scrolled inside a scrolled
+   page, were clumsy and got cut off at the list's edge); only a quiz box's tries keep their own */
+.my-quizzes .folder-main > #folder-items,
+.my-quizzes #folder-items > details.sub-box > .sub-body,
+.my-quizzes details.done-box > .quiz-grid { max-height: none; overflow-y: visible; padding-right: 0; }
