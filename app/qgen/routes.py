@@ -988,6 +988,34 @@ def delete_subject(kind, sid):
     return _subject_done(kind, 'Folder "{}" removed; the {} in it moved up a level.'.format(name, kind),
                          show=(parent or 'all') if request.form.get('view') == str(sid) else None)
 
+#route to delete a folder, the folders inside it and what's in them (S.purge_plan: what's
+#still needed elsewhere is kept and moves up a level)
+@qgen_bp.route('/quiz/subjects/<kind>/<int:sid>/purge', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def purge_subject(kind, sid):
+    subject = subject_or_404(kind, sid)
+    name, parent = subject.title, subject.parent_id
+    try:
+        plan = S.delete_subject_and_contents(kind, subject)
+    except S.ServiceError as exc:
+        return _subject_done(kind, 'Not deleted. {}'.format(exc), error=True)
+    unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
+    def n(count):
+        return '{} {}'.format(count, unit if count == 1 else units)
+    said = ['Deleted the folder “{}”.'.format(name)]
+    if plan['delete']:
+        said.append('{} deleted.'.format(n(len(plan['delete']))))
+    if plan['remove']:
+        said.append('{} removed (students keep their copies).'.format(n(len(plan['remove']))))
+    if plan['keep']:
+        said.append('{} kept, moved up a level.'.format(n(len(plan['keep']))))
+    current_app.logger.info('{} deleted {} folder ({}) "{}" with its contents: {} deleted, {} removed, {} kept'.format(
+        current_user.username, kind, sid, name, len(plan['delete']), len(plan['remove']), len(plan['keep'])))
+    return _subject_done(kind, ' '.join(said), show=(parent or 'all') if request.form.get('view') == str(sid) else None)
+
 #dragging (and the folder's "Move to" list): a problem or quiz onto a folder (from a folder:
 #moved out of that one; from All or Not in a folder: put in it), onto Not in a folder (out
 #of the folder it came from), or a folder onto a folder ("top": the top level)
@@ -1088,7 +1116,9 @@ def subject_kit(kind, view, node, root, flat, nodes):
         name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add…', drag_what='a ' + unit,
         hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
              'Students never see them.'.format(units, unit),
-        fold_key='qgen-folded-{}-folders'.format(kind), open_key='qgen-open-{}-subfolders'.format(kind))
+        fold_key='qgen-folded-{}-folders'.format(kind), open_key='qgen-open-{}-subfolders'.format(kind),
+        purge_url=lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid),
+        purge_question=lambda n: S.purge_question(kind, n['folder']))
 
 
 def subject_page(kind, template, **extra):

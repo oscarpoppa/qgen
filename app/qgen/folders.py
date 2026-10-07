@@ -1,7 +1,8 @@
 """Folders on someone's own My quizzes page. Everyone (students and teachers) arranges
 their own; nobody else sees them. A folder holds quizzes (each quiz with all its
-attempts) and other folders. Deleting a folder never deletes a quiz: what it held moves
-up to where the folder was."""
+attempts) and other folders. Removing a folder never deletes a quiz: what it held moves
+up to where the folder was. Deleting a folder with everything in it sends its quizzes to
+the Archive (a teacher can bring them back)."""
 from app import db
 from .models import QuizFolder, QuizPlacement, CQuiz
 
@@ -88,6 +89,49 @@ def delete_folder(user, folder_id):
     db.session.delete(f)
     db.session.commit()
     return name
+
+
+def _subtree(user, f):
+    """A folder and every folder inside it, the deepest first."""
+    out, todo = [], [f]
+    while todo:
+        g = todo.pop()
+        out.append(g)
+        todo.extend(QuizFolder.query.filter_by(owner_id=user.id, parent_id=g.id).all())
+    return list(reversed(out))
+
+
+def delete_folder_and_quizzes(user, folder_id):
+    """Delete a folder, the folders inside it and every quiz in them: each try at those
+    quizzes goes to the Archive (as if a teacher took it away; it can be put back) and the
+    teachers get a notice. Returns (folder name, how many quizzes)."""
+    from flask import url_for
+    from app.messages.models import notify_teachers
+    from .services import archive_attempt
+    f = _folder(user, folder_id)
+    if f is None:
+        raise FolderError('That folder isn\'t one of yours.')
+    tree = _subtree(user, f)
+    ids = {g.id for g in tree}
+    quiz_ids = {p.vquiz_id for p in QuizPlacement.query.filter(QuizPlacement.owner_id == user.id,
+                                                              QuizPlacement.folder_id.in_(ids))}
+    tries = CQuiz.query.filter(CQuiz.assignee == user.id, CQuiz.vquiz_id.in_(quiz_ids or [0])).all()
+    titles = sorted({cq.vquiz.title for cq in tries})
+    for cq in tries:
+        archive_attempt(cq, by=user, reason='student folder')  # (16 characters at most)
+    QuizPlacement.query.filter(QuizPlacement.owner_id == user.id, QuizPlacement.folder_id.in_(ids)) \
+        .delete(synchronize_session=False)
+    name = f.name
+    for g in tree:
+        db.session.delete(g)
+    if titles:
+        notify_teachers(user.id, '{} deleted their folder "{}" with {} quiz{} in it: {}. {} in the Archive, where you can '
+                        'put {} back.'.format(user.username, name, len(titles), '' if len(titles) == 1 else 'zes',
+                                              ', '.join('"{}"'.format(t) for t in titles),
+                                              'It\'s' if len(titles) == 1 else 'They\'re', 'it' if len(titles) == 1 else 'them'),
+                        link=url_for('qgen.archive'))
+    db.session.commit()
+    return name, len(titles)
 
 
 def move_quiz(user, vquiz_id, folder_id):

@@ -118,6 +118,89 @@ def delete_subject(subject, kind=None):
     db.session.commit()
 
 
+def subject_subtree(kind, subject):
+    """A folder and every folder inside it, the deepest first."""
+    group_cls = subject_kind(kind)[0]
+    out, todo = [], [subject]
+    while todo:
+        g = todo.pop()
+        out.append(g)
+        todo.extend(group_cls.query.filter_by(parent_id=g.id).all())
+    return list(reversed(out))
+
+
+def purge_plan(kind, subject):
+    """What deleting a folder with everything in it would do: {'delete': [items deleted for
+    good], 'remove': [quizzes removed, students keep their copies], 'keep': [(item, why)]
+    (these stay and move up a level), 'folders': how many folders go}."""
+    _g, _cls, rel, back = subject_kind(kind)
+    tree = subject_subtree(kind, subject)
+    inside_ids = {g.id for g in tree}
+    items, seen = [], set()
+    for g in tree:
+        for item in getattr(g, back):
+            if item.id not in seen:
+                seen.add(item.id)
+                items.append(item)
+    plan = {'delete': [], 'remove': [], 'keep': [], 'folders': len(tree)}
+    for item in sorted(items, key=lambda i: (i.title or '').lower()):
+        other = [g.title for g in getattr(item, rel) if g.id not in inside_ids]
+        if other:
+            plan['keep'].append((item, 'also in “{}”'.format(other[0])))
+        elif kind == 'problems':
+            if item.vquizzes:
+                plan['keep'].append((item, 'used by “{}”'.format(item.vquizzes[0].title)))
+            elif item.cproblems:
+                plan['keep'].append((item, 'students’ answers on record'))
+            else:
+                plan['delete'].append(item)
+        elif being_taken(item):
+            plan['keep'].append((item, 'someone is taking it'))
+        elif item.removed_at:
+            continue  # already off the Quizzes page
+        else:
+            plan['remove' if item.cquizzes else 'delete'].append(item)
+    return plan
+
+
+def purge_question(kind, subject):
+    """The warning before deleting a folder with everything in it."""
+    plan = purge_plan(kind, subject)
+    unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
+    def n(count, one=unit, many=units):
+        return '{} {}'.format(count, one if count == 1 else many)
+    inner = plan['folders'] - 1
+    parts = ['Delete the folder “{}”{} and what’s in it? This can’t be undone.'.format(
+        subject.title, ' and the {} inside it'.format(n(inner, 'folder', 'folders')) if inner else '')]
+    if plan['delete']:
+        parts.append('{} deleted for good.'.format(n(len(plan['delete'])) + (' is' if len(plan['delete']) == 1 else ' are')))
+    if plan['remove']:
+        parts.append('{} taken off the Quizzes page; students keep their copies and scores (bring {} back from '
+                     'Removed quizzes).'.format(n(len(plan['remove'])) + (' is' if len(plan['remove']) == 1 else ' are'),
+                                                'it' if len(plan['remove']) == 1 else 'them'))
+    if plan['keep']:
+        parts.append('Kept, moving up a level: {}.'.format('; '.join('“{}” ({})'.format(i.title, why) for i, why in plan['keep'])))
+    if not (plan['delete'] or plan['remove'] or plan['keep']):
+        parts.append('It’s empty.')
+    return ' '.join(parts)
+
+
+def delete_subject_and_contents(kind, subject):
+    """Delete a folder, the folders inside it and what's in them (as purge_plan says);
+    returns the plan that was carried out."""
+    plan = purge_plan(kind, subject)
+    for item in plan['delete']:
+        if kind == 'problems':
+            delete_problem(item)
+        else:
+            delete_vquiz(item)
+    for item in plan['remove']:
+        delete_vquiz(item)
+    for g in subject_subtree(kind, subject):
+        delete_subject(g, kind)  # what's kept moves up a level
+    return plan
+
+
 def file_one(kind, item_id, subject, add=True, moving_from=None):
     """Put one problem (or quiz) in a folder (it stays in its others), or take it out; with
     moving_from, out of that folder at the same time (a drag from one folder to another).

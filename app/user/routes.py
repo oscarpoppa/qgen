@@ -99,7 +99,14 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading,
-        new_view={'label': 'New', 'count': len(fresh)})
+        new_view={'label': 'New', 'count': len(fresh)},
+        purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
+        purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
+                                 'give {} back. Your answers and scores go with {}.'.format(
+            n['folder'].name, ' and the folders inside it' if n['folders'] else '', n['count'], '' if n['count'] == 1 else 'zes',
+            'It' if n['count'] == 1 else 'They', 'es' if n['count'] == 1 else '', 'it' if n['count'] == 1 else 'them',
+            'it' if n['count'] == 1 else 'them') if n['count'] else
+            'Delete the folder “{}”{}? It’s empty.'.format(n['folder'].name, ' and the folders inside it' if n['folders'] else ''))
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
@@ -165,6 +172,25 @@ def delete_folder(folder_id):
         return _folder_done(str(exc), error=True)
     return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
                         show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
+
+
+#delete a folder with the folders and quizzes in it (the quizzes go to the Archive)
+@user_bp.route('/mypage/folders/<int:folder_id>/purge', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def purge_folder(folder_id):
+    from app.qgen import folders
+    from app.qgen.models import QuizFolder
+    f = db.session.get(QuizFolder, folder_id)
+    parent = f.parent_id if f is not None and f.owner_id == current_user.id else None
+    try:
+        name, count = folders.delete_folder_and_quizzes(current_user, folder_id)
+    except folders.FolderError as exc:
+        return _folder_done(str(exc), error=True)
+    return _folder_done('Deleted the folder "{}"{}.'.format(
+        name, ' and its {} quiz{} (your teacher can give {} back)'.format(count, '' if count == 1 else 'zes', 'it' if count == 1 else 'them') if count else ''),
+        show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
 
 
 #move a quiz (quiz=<quiz id>) or a folder (folder=<id>) into a folder (to=<id>, or "top": the main list)

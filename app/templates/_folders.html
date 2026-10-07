@@ -128,6 +128,15 @@
                 <input type="hidden" name="view" value="{{ fk.view }}">
                 <button class="btn btn-secondary btn-xs">Remove folder</button>
               </form>
+              {% if fk.purge_url %}
+              {# the folder and what's in it go (the warning says exactly what happens) #}
+              <form method="post" action="{{ fk.purge_url(f.id) }}" class="folder-form"
+                    data-confirm="{{ fk.purge_question(fk.node) }}" data-confirm-ok="Delete everything">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="{{ fk.view }}">
+                <button class="btn btn-danger btn-xs">Delete folder and everything in it</button>
+              </form>
+              {% endif %}
             </div>
           </details>{% endif %}
         </div>

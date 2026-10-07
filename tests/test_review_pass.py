@@ -895,3 +895,66 @@ def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
     teach.post('/quiz/delcq/{}'.format(cq.id))
     r = teach.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()
     assert 'Your teacher has taken this quiz away.' in r
+
+
+# ---------------------------------------------------------------- deleting a folder with what's in it
+
+def test_a_student_deletes_a_folder_and_its_quizzes(app_db):
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen.models import QuizFolder, CQuiz, ArchivedAttempt
+    from app.messages.models import Message
+    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
+    give(a, 'sam'), give(b, 'sam')
+    sam.post('/mypage/folders', data={'name': 'Old'})
+    old = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
+    sam.post('/mypage/folders', data={'name': 'Inner', 'parent': old.id})
+    inner = QuizFolder.query.filter_by(name='Inner').one()
+    sam.post('/mypage/move', data={'quiz': a.id, 'to': inner.id})
+    page = sam.get('/mypage?folder={}'.format(old.id)).data.decode()
+    assert 'Delete folder and everything in it' in page
+    assert 'Delete the folder “Old” and the folders inside it and the 1 quiz in it? It goes to your teacher' in page
+    r = sam.post('/mypage/folders/{}/purge'.format(old.id), data={'view': str(old.id)}, follow_redirects=True).data.decode()
+    assert 'Deleted the folder &#34;Old&#34; and its 1 quiz' in r or 'Deleted the folder "Old" and its 1 quiz' in r
+    assert QuizFolder.query.filter_by(owner_id=ids('sam')).count() == 0
+    assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=a.id).count() == 0
+    assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=b.id).count() == 1     # not in the folder: kept
+    assert ArchivedAttempt.query.filter_by(student_id=ids('sam'), reason='student folder').count() == 1
+    assert Message.query.filter(Message.body.like('sam deleted their folder "Old"%')).count() == 1
+    # someone else's folder: refused
+    teach.post('/mypage/folders', data={'name': 'T'})
+    t = QuizFolder.query.filter_by(owner_id=ids('teach')).one()
+    sam.post('/mypage/folders/{}/purge'.format(t.id))
+    assert db.session.get(QuizFolder, t.id) is not None
+
+
+def test_a_teacher_deletes_a_problem_or_quiz_folder_and_its_contents(app_db):
+    app, db = app_db
+    teach = login(app, 'teach')
+    from test_subjects import make_problems
+    from app.qgen.models import VPGroup, VQGroup, VProblem, VQuiz
+    probs = make_problems(teach, 'Free', 'Used', 'Shared')
+    teach.post('/quiz/makevquiz', data={'title': 'UsesIt', 'vplist': str(probs['Used'].id)})
+    teach.post('/quiz/subjects/problems/new', data={'name': 'Unit'})
+    teach.post('/quiz/subjects/problems/new', data={'name': 'Elsewhere'})
+    unit, elsewhere = VPGroup.query.filter_by(title='Unit').one(), VPGroup.query.filter_by(title='Elsewhere').one()
+    teach.post('/quiz/subjects/problems/file', data={'subject': unit.id, 'items': [p.id for p in probs.values()], 'action': 'add'})
+    teach.post('/quiz/subjects/problems/file', data={'subject': elsewhere.id, 'items': [probs['Shared'].id], 'action': 'add'})
+    page = teach.get('/quiz/listvp?folder={}'.format(unit.id)).data.decode()
+    assert '1 problem is deleted for good.' in page and '“Used” (used by “UsesIt”)' in page and '“Shared” (also in “Elsewhere”)' in page
+    r = teach.post('/quiz/subjects/problems/{}/purge'.format(unit.id), follow_redirects=True).data.decode()
+    assert 'Deleted the folder “Unit”. 1 problem deleted. 2 problems kept, moved up a level.' in r
+    assert db.session.get(VPGroup, unit.id) is None
+    assert sorted(p.title for p in VProblem.query) == ['Shared', 'Used']
+    # a quiz folder: an assigned quiz is removed (students keep it), an unassigned one deleted
+    teach.post('/quiz/makevquiz', data={'title': 'Spare', 'vplist': str(probs['Used'].id)})
+    used, spare = VQuiz.query.filter_by(title='UsesIt').one(), VQuiz.query.filter_by(title='Spare').one()
+    give(used, 'sam')
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Term 1'})
+    term = VQGroup.query.one()
+    teach.post('/quiz/subjects/quizzes/file', data={'subject': term.id, 'items': [used.id, spare.id], 'action': 'add'})
+    page = teach.get('/quiz/listvq?folder={}'.format(term.id)).data.decode()
+    assert '1 quiz is deleted for good.' in page and '1 quiz is taken off the Quizzes page; students keep their copies' in page
+    r = teach.post('/quiz/subjects/quizzes/{}/purge'.format(term.id), follow_redirects=True).data.decode()
+    assert '1 quiz deleted. 1 quiz removed (students keep their copies).' in r
+    assert db.session.get(VQuiz, spare.id) is None and db.session.get(VQuiz, used.id).removed_at is not None
