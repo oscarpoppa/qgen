@@ -684,8 +684,12 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     cq.startdate = datetime.now()
     db.session.commit()
     home = sam.get('/home').data.decode()
-    for show in ('todo', 'started', 'soon'):
-        assert 'href="/mypage?show={}"'.format(show) in home
+    # new and in progress open My quizzes' own folders; due soon its own view
+    assert 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
+    assert 'href="/mypage?show=soon"' in home
+    new = sam.get('/mypage?folder=new').data.decode()
+    assert '“New one”' in new or 'New one' in new
+    assert 'Begun' in sam.get('/mypage?folder=started').data.decode()
     assert 'href="#waiting"' not in home
 
     def titles(show):
@@ -885,7 +889,7 @@ def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
     vq = make_quiz(app, teach, 'Mine')
     cq = give(vq, 'teach')
     home = teach.get('/home').data.decode()
-    assert '“Mine”' in home and 'href="/mypage?show=todo"' in home
+    assert '“Mine”' in home and 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert 'href="/home" data-back>← Home</a>' in page
     S.submit(cq, {1: '4'})

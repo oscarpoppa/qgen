@@ -33,7 +33,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     finish(give(q4, 'sam'), 80, now)                     # done: not counted
     page = sam.get('/home').data.decode()
     counts = dict((label, int(n)) for n, label in re.findall(r'<span class="dash-num">(\d+)</span><span>([^<]+)</span>', page))
-    assert counts == {'to do': 2, 'started': 1, 'due within 2 days': 1}
+    assert counts == {'new': 2, 'in progress': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
     waiting = page.split('<h2>Waiting for you</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
