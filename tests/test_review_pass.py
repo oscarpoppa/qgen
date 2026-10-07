@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import event
 
-from test_flow import app_db, login  # noqa: F401  (fixture)
+from test_flow import app_db, login, take_page  # noqa: F401  (fixture)
 from test_dashboard import make_quiz, give
 from test_archive import ids
 
@@ -359,7 +359,7 @@ def test_student_wording(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     vq = make_quiz(app, teach)
     cq = give(vq, 'sam')
-    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    page = take_page(sam, cq.id).data.decode()
     assert 'value="Hand it in"' in page and "Once you hand it in, you can't change your answers." in page
     mine = sam.get('/mypage').data.decode()
     assert '1 try</span>' in mine

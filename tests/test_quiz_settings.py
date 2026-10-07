@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, take_page  # noqa: F401  (fixture)
 
 
 def make_quiz(app, db, teacher, **quiz):
@@ -39,7 +39,7 @@ def test_autosave_prefill_and_time_limit(app_db):
     assign(teacher, vq, [sam_u], time_limit='30')
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
     sam = login(app, 'sam')
-    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    page = take_page(sam, cq.id).data.decode()
     assert 'data-remaining="' in page and 'id="timer"' in page
     num = [cp for cp in cq.cproblems if cp.vproblem.qtype == 'numeric'][0]
     many = [cp for cp in cq.cproblems if cp.vproblem.qtype == 'choice_many'][0]
@@ -436,7 +436,7 @@ def test_a_newly_assigned_quiz_says_new(app_db):
     home = sam.get('/mypage').data.decode()
     assert '<span class="badge badge-warn">New</span>' in home and 'Not started' not in home
     # opened: no longer new
-    sam.get('/quiz/take/{}'.format(CQuiz.query.one().id))
+    take_page(sam, CQuiz.query.one().id)
     home = sam.get('/mypage').data.decode()
     assert '<span class="badge badge-warn">New</span>' not in home and 'Started' in home
 
@@ -520,7 +520,7 @@ def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
     for _ in range(2):
         home = sam.get('/mypage').data.decode()
         assert home.count(new_badge) == 1 and home.count('>New</span>') == 2  # the box's, and the attempt's status
-    sam.get('/quiz/take/{}'.format(cq.id))  # started
+    take_page(sam, cq.id)  # started
     assert new_badge not in sam.get('/mypage').data.decode()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
@@ -781,7 +781,7 @@ def test_the_calculator_comes_up_only_where_its_allowed(app_db):
     sam_u = student(db, 'sam')
     assign(teacher, vq, [sam_u])
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
-    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    page = take_page(login(app, 'sam'), cq.id).data.decode()
     assert 'id="calc-open"' in page and 'id="calc"' in page and 'js/calculator.js' in page
     assert page.index('</form>') < page.index('id="calc"')  # not part of the answers
     vq.calculator_ok = False
@@ -878,3 +878,64 @@ def test_unshuffled_order_warns_only_when_a_problem_is_the_same_for_everyone(app
                                            'student has the same answer there and "number 3 is B" is easier to pass along.']
     assert warned([add, evens], True) == []
     assert warned([add], False) == []  # every value is drawn for each student
+
+
+def test_a_quiz_starts_only_from_its_start_card(app_db):
+    """Opening a quiz shows what's ahead; nothing starts (nor its time limit) until "Start the quiz"."""
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher, calculator_ok='y')
+    sam_u = student(db, 'sam')
+    assign(teacher, vq, [sam_u], time_limit='20')
+    cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
+    sam = login(app, 'sam')
+    card = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'Start the quiz' in card and '2 questions' in card and '20 minutes</strong> once you start' in card
+    assert 'Calculator allowed' in card and 'saved as you go' in card and 'Hand it in' not in card
+    db.session.expire_all()
+    assert cq.startdate is None  # a look starts nothing
+
+    # a teacher can't start it for them, and their view is the questions as before
+    teacher.post('/quiz/take/{}/start'.format(cq.id))
+    db.session.expire_all()
+    assert cq.startdate is None
+    assert 'Start the quiz' not in teacher.get('/quiz/take/{}'.format(cq.id)).data.decode()
+
+    r = sam.post('/quiz/take/{}/start'.format(cq.id))
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/take/{}'.format(cq.id))
+    db.session.expire_all()
+    started = cq.startdate
+    assert started is not None
+    page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'value="Hand it in"' in page and 'id="timer"' in page
+    sam.post('/quiz/take/{}/start'.format(cq.id))  # again: the time it started stays
+    db.session.expire_all()
+    assert cq.startdate == started
+
+
+def test_the_start_card_says_when_it_closes(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    sam_u = student(db, 'sam')
+    assign(teacher, vq, [sam_u])
+    cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
+    sam = login(app, 'sam')
+    assert 'No time limit.' in sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    # closing sooner than the time limit: that's how long they have
+    cq.time_limit, cq.closes_at = 60, datetime.now() + timedelta(minutes=10)
+    db.session.commit()
+    card = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'so you\'ll have until then once you start' in card and '60 minutes' not in card
+    cq.closes_at = datetime.now() + timedelta(days=2)
+    db.session.commit()
+    card = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert '60 minutes</strong> once you start' in card and 'Hand it in by' in card
+    # not open yet: no starting it early
+    cq.opens_at = datetime.now() + timedelta(hours=1)
+    db.session.commit()
+    sam.post('/quiz/take/{}/start'.format(cq.id))
+    db.session.expire_all()
+    assert cq.startdate is None

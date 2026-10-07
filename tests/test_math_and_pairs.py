@@ -2,7 +2,7 @@
 from app.qgen import friendly as F
 from app.qgen.friendly import tidy
 from app.qgen.qtypes import get_qtype, numbers_match, complex_match
-from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, take_page  # noqa: F401  (fixture)
 
 XY = [{'name': 'x', 'kind': 'whole', 'min': '1', 'max': '9'},
       {'name': 'y', 'kind': 'whole', 'min': '10', 'max': '19'}]
@@ -214,7 +214,7 @@ def test_exact_form_of_a_numeric_answer(app_db):
     n = int(cp.conc_prob.split('{')[1].split('}')[0])
     assert cp.conc_opts['display'] == r'\( \sqrt{%d} \)' % n
     # the student types math with the keypad's symbols; it's worked out and graded
-    page = login(app, 'sam').get('/quiz/take/{}'.format(cq.id)).data.decode()
+    page = take_page(login(app, 'sam'), cq.id).data.decode()
     assert 'class="keypad"' in page and 'data-ins="√"' in page
     with app.test_request_context():
         S.submit(cq, {1: '√{}'.format(n)})

@@ -1363,3 +1363,10 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 @media (min-width: 761px) { .folder-main > #folder-items, .folder-main > .list-scroll { padding-right: 12px; } }
 .student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
 .student-single details.subject-box > .box-body { padding-right: 0; }
+
+/* the start card before a quiz: what's ahead, and one big "Start the quiz" */
+.quiz-start h1 { margin: 0 0 12px; }
+.quiz-start .start-facts { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; }
+.quiz-start .start-facts li { display: flex; gap: 10px; align-items: baseline; }
+.quiz-start .start-btn { width: 100%; padding: 12px; font-size: 1.1rem; }
+.quiz-start .start-back { margin: 14px 0 0; text-align: center; }

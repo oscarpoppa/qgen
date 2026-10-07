@@ -508,6 +508,12 @@ def qtake(cidx):
         flash('Time ran out, so your answers were handed in.', 'info')
         current_app.logger.info('{} ran out of time on "{}" ({})'.format(current_user.username, title, cidx))
         return redirect(url_for('qgen.qtake', cidx=cidx))
+    #not started yet: a card saying what's ahead; nothing starts (nor its timer) until "Start the quiz"
+    if is_taker and not cq.startdate and request.method == 'GET':
+        now = datetime.now()
+        #a close time sooner than the time limit cuts the time short
+        cut_short = bool(cq.time_limit and cq.closes_at and cq.closes_at < now + timedelta(minutes=cq.time_limit))
+        return render_template('quiz_start.html', cq=cq, title=title, count=len(cq.cproblems), cut_short=cut_short)
     form = quiz_form_class(cq)()
     if is_taker:
         if form.validate_on_submit():
@@ -523,6 +529,20 @@ def qtake(cidx):
         prefill(cq, form)
     return render_template('quiz_take.html', cq=cq, form=form, items=quiz_items(cq, form), title=title,
                            preview=not is_taker, deadline=cq.deadline())
+
+#"Start the quiz" on the start card: the quiz (and its time limit) starts now
+@qgen_bp.route('/quiz/take/<int:cidx>/start', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def start_quiz(cidx):
+    cq = db.session.get(CQuiz, cidx)
+    if cq is None:
+        return attempt_gone(cidx)
+    if current_user == cq.taker and S.attempt_state(cq) == 'open' and not cq.startdate:
+        S.start(cq)
+        current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, cq.vquiz.title, cidx))
+    return redirect(url_for('qgen.qtake', cidx=cidx))
 
 #autosave: the quiz page sends the answers so far every few seconds
 @qgen_bp.route('/quiz/take/<cidx>/save', methods=['POST'])

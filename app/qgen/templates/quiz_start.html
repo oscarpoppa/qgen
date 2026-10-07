@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import back_button with context %}
+{# before a quiz starts: what's ahead, and nothing (nor its timer) starts until "Start the quiz" #}
+{% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz has changed. Reload to see it.', button='Reload', ask=True) }}{% endblock %}
+
+{% block content %}
+<div class="card card-narrow quiz-start">
+  <h1>{{ cq.vquiz.title }}</h1>
+  <ul class="start-facts">
+    <li><span aria-hidden="true">📝</span> <span>{{ count }} question{{ '' if count == 1 else 's' }}</span></li>
+    {% if cq.time_limit and cut_short %}
+      <li><span aria-hidden="true">⏱️</span> <span>It closes <strong>{{ cq.closes_at|when('long') }}</strong>, so you'll have until then once you start.</span></li>
+    {% elif cq.time_limit %}
+      <li><span aria-hidden="true">⏱️</span> <span>You'll have <strong>{{ cq.time_limit }} minute{{ '' if cq.time_limit == 1 else 's' }}</strong> once you start.</span></li>
+      {% if cq.closes_at %}<li><span aria-hidden="true">📅</span> <span>Hand it in by {{ cq.closes_at|when('long') }}.</span></li>{% endif %}
+    {% elif cq.closes_at %}
+      <li><span aria-hidden="true">📅</span> <span>Hand it in by <strong>{{ cq.closes_at|when('long') }}</strong>.</span></li>
+    {% else %}
+      <li><span aria-hidden="true">⏱️</span> <span>No time limit.</span></li>
+    {% endif %}
+    <li><span aria-hidden="true">🧮</span> <span>{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span></li>
+    <li><span aria-hidden="true">💾</span> <span>Your answers are saved as you go.</span></li>
+  </ul>
+  <form method="post" action="{{ url_for('qgen.start_quiz', cidx=cq.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-lg start-btn">Start the quiz</button>
+  </form>
+  <p class="start-back">{{ back_button(url_for('user.home'), 'Home') }}</p>
+</div>
+{% endblock %}

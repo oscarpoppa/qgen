@@ -33,6 +33,12 @@ def login(app, name):
     return c
 
 
+def take_page(client, cqid):
+    """A quiz's page after pressing "Start the quiz" on its start card (as opening it did before)."""
+    client.post('/quiz/take/{}/start'.format(cqid))
+    return client.get('/quiz/take/{}'.format(cqid))
+
+
 def png_bytes(color):
     from PIL import Image
     buf = io.BytesIO()
@@ -148,7 +154,7 @@ def test_whole_school_week(app_db):
     assert sam.get('/quiz/makevprob').status_code == 302
 
     # --- sam takes the quiz, perfectly
-    page = sam.get('/quiz/take/{}'.format(sam_q.id)).data.decode()
+    page = take_page(sam, sam_q.id).data.decode()
     assert page.count('class="qnum"') == 6
     for cp in sam_q.cproblems:
         assert cp.conc_prob.split(' ')[0].replace('<', '&lt;') in page  # question text shown as text

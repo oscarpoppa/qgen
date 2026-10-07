@@ -3,7 +3,7 @@ returns a fingerprint of that, and the page reloads (or offers to) when it chang
 import re
 from datetime import datetime, timedelta
 
-from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, take_page  # noqa: F401  (fixture)
 from test_archive import ids
 from test_dashboard import make_quiz, give
 
@@ -76,7 +76,7 @@ def test_results_by_student_follow_what_happens(app_db):
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
     assert changed(everyone, just_sam)  # assigned (the example from Nehad's page)
     cq = CQuiz.query.one()
-    sam.get('/quiz/take/{}'.format(cq.id))
+    take_page(sam, cq.id)
     assert changed(everyone, just_sam)  # started
     sam.post('/quiz/take/{}'.format(cq.id), data={'Number1': '4'})
     db.session.expire_all()
