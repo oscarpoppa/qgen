@@ -198,15 +198,24 @@ def problem_hints(qtype_key, question, answer, options):
     return hints
 
 
+def _same_for_all(p):
+    """A problem every student gets identically: no random values or pictures to differ (written answers aside)."""
+    return (not p.options.get('values') and get_qtype(p.qtype).key != 'essay'
+            and len(p.options.get('images') or []) < 2)
+
+
 def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None, shuffle_order=True):
     """problems: {id: VProblem} for the checked ids; lay: the quiz layout with groups."""
     from . import layout
     hints = []
     for err in layout.check(lay or []):
         hints.append(hint('error', err))
-    if vpids and not shuffle_order:
-        hints.append(hint('warn', 'Question order isn\'t shuffled, so every student has the same question 1, 2, 3… '
-                          'and "number 3 is B" is easier to pass along.'))
+    #in a fixed order, "number 3 is B" only passes along for a problem every student gets the same
+    same = [p for p in problems.values() if _same_for_all(p)]
+    if vpids and not shuffle_order and same:
+        hints.append(hint('warn', 'Question order isn\'t shuffled, and {} {} no random values, so every student has the same '
+                          'answer there and "number 3 is B" is easier to pass along.'.format(
+                              ', '.join('"{}"'.format(p.title) for p in same), 'has' if len(same) == 1 else 'have')))
     if not (title or '').strip():
         hints.append(hint('error', 'Give the quiz a title so students can recognize it.'))
     elif title.strip().lower() in existing_titles:
@@ -237,8 +246,7 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     if len(vpids) >= 6 and len(kinds) == 1:
         only = get_qtype(next(iter(kinds))).label
         hints.append(hint('tip', 'All {} problems are {}. Mixing in another type can check understanding in a different way.'.format(len(vpids), only)))
-    fixed = [p for p in problems.values() if not p.options.get('values')
-             and get_qtype(p.qtype).key != 'essay' and len(p.options.get('images') or []) < 2]
+    fixed = [p for p in problems.values() if _same_for_all(p)]
     if fixed and len(fixed) == len(problems):
         hints.append(hint('tip', 'None of these problems has random values, so every student gets identical questions.'))
     if len(vpids) > 30:

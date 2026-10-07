@@ -859,3 +859,22 @@ def test_results_by_quiz(app_db):
     # Results by student still draws the same rows
     by_student = teacher.get('/quiz/listuser/{}'.format(student(db, 'sam').id)).data.decode()
     assert 'Settings quiz' in by_student and 'Details' in by_student and 'Retake' in by_student
+
+
+def test_unshuffled_order_warns_only_when_a_problem_is_the_same_for_everyone(app_db):
+    """In a fixed order, "number 3 is B" only helps the student next door on a problem
+    with no random values; when every problem's values are drawn per student, no warning."""
+    app, db = app_db
+    from app.qgen.coach import quiz_hints
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, db, teacher)
+    probs = {p.title: p for p in vq.vproblems}
+    add, evens = probs['Add'], probs['Evens']  # Add has a random value, Evens none
+
+    def warned(chosen, shuffle):
+        got = quiz_hints('Q', [p.id for p in chosen], False, set(), {p.id: p for p in chosen}, shuffle_order=shuffle)
+        return [h['text'] for h in got if 'isn\'t shuffled' in h['text']]
+    assert warned([add, evens], False) == ['Question order isn\'t shuffled, and "Evens" has no random values, so every '
+                                           'student has the same answer there and "number 3 is B" is easier to pass along.']
+    assert warned([add, evens], True) == []
+    assert warned([add], False) == []  # every value is drawn for each student
