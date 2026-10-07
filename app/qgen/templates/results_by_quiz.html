@@ -28,7 +28,7 @@
           <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
           <tbody>
           {% for student, g in q.rows %}
-            <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.latest.status in ('new', 'started') else 'done' }}">
+            <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
               <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>

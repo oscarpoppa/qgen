@@ -32,7 +32,7 @@
                 {% endif %}
               </td>
               <td class="actions">
-                {% if g.latest.completed %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% else %}{{ slot('Retake') }}{% endif %}
+                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% else %}{{ slot('Retake') }}{% endif %}
                 {# several tries: all of them to the Archive at once (one try has its own Archive button) #}
                 {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all ' ~ g.attempts|length ~ ' tries', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s tries at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.') }}{% else %}{{ slot('Archive all 2 tries') }}{% endif %}
               </td>

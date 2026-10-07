@@ -368,8 +368,8 @@ def mark_quizzes_seen(user_id):
 
 def attempts_by_quiz(cquizzes):
     """A student's assigned quizzes grouped by quiz, for showing retakes:
-    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'combined',
-      'counted' (the attempt to mark as the one that counts, if one does)}]"""
+    [{'vquiz', 'attempts' (oldest first), 'best' (a CQuiz or None), 'latest', 'open' (a try not
+      handed in yet, or None), 'combined', 'counted' (the attempt to mark as the one that counts, if one does)}]"""
     groups = {}
     for cq in sorted(cquizzes, key=lambda c: c.id):
         groups.setdefault(cq.vquiz_id, []).append(cq)
@@ -380,7 +380,10 @@ def attempts_by_quiz(cquizzes):
         best = max(done, key=lambda c: c.score) if done else None
         override = next((c.own_retake_rule for c in reversed(attempts) if c.own_retake_rule), None)
         rule = override or vq.retake_rule
+        #a try still to do (started before new), whichever is latest: the quiz is "to do" while there's one
+        waiting = [c for c in attempts if c.status in ('new', 'started')]
         out.append({'vquiz': vq, 'attempts': attempts, 'best': best, 'latest': attempts[-1],
+                    'open': next((c for c in waiting if c.status == 'started'), waiting[0] if waiting else None),
                     'combined': combined_score(rule, [c.score for c in done]),
                     'counted': counted_attempts(rule, done),
                     'rule': RETAKE_RULES.get(rule, RETAKE_RULES['best']), 'rule_key': rule,
