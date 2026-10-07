@@ -64,7 +64,7 @@
         {% if g.combined is not none %}
           <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ student_rules.get(g.rule_key, g.rule)|lower if student_rules is defined else g.rule|lower }})</span></p>
         {% endif %}
-        <ol class="small" style="padding-left:1.2em;margin:0 0 8px">
+        <ol class="small attempt-list" style="padding-left:1.2em;margin:0 0 8px">
           {% for cq in g.attempts %}
             <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} {{ action(cq, compact=true) }}</li>
           {% endfor %}

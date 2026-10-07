@@ -1262,12 +1262,13 @@ details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 .latest-finished h2 { font-size: 1rem; margin: 0 0 4px; }
 
 /* the student page's awards: a wide bar under the list to drag it taller or shorter */
-.awards-grip { display: flex; align-items: center; justify-content: center; height: 18px; margin: 6px 0 0;
+.awards-grip, .grip-bar { display: flex; align-items: center; justify-content: center; height: 18px; margin: 6px 0 0;
   border-radius: 6px; cursor: row-resize; touch-action: none; user-select: none; }
-.awards-grip span { display: block; width: 56px; height: 5px; border-radius: 3px; background: var(--border); transition: background .15s, width .15s; }
-.awards-grip:hover span, .awards-grip:focus-visible span, html.grip-resizing .awards-grip span { background: var(--accent); width: 80px; }
-.awards-grip:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.awards-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.awards-grip span, .grip-bar span { display: block; width: 56px; height: 5px; border-radius: 3px; background: var(--border); transition: background .15s, width .15s; }
+.awards-grip:hover span, .awards-grip:focus-visible span, html.grip-resizing .awards-grip span,
+.grip-bar:hover span, .grip-bar:focus-visible span { background: var(--accent); width: 80px; }
+.awards-grip:hover, .grip-bar:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.awards-grip:focus-visible, .grip-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-select: none !important; }
 /* My quizzes: how many new (not started) quizzes a folder holds */
 .side-new-badge { flex: 0 0 auto; font-size: .72rem; padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
@@ -1295,3 +1296,54 @@ td.actions > form { display: inline-block; }
 td.actions > * { vertical-align: middle; }
 td.actions .btn, td.actions .inline-form .btn, td.actions details.row-menu { margin-left: 6px; }
 td.actions > :first-child, td.actions > :first-child .btn { margin-left: 0; }
+
+/* boxes that open inside a list (a folder's box, a student's or quiz's results, a month in the
+   Archive, Done on My quizzes): a long one scrolls inside itself instead of stretching the page.
+   Boxes inside such a box don't scroll again (one scroll at a time). */
+#folder-items > details.sub-box > .sub-body,
+details.item-box > .box-body,
+details.result-folder > .result-folder-body,
+details.month-box > .table-wrap,
+details.done-box > .quiz-grid {
+  max-height: min(65vh, 720px); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-gutter: stable; padding-right: 4px;
+}
+details.result-folder details.result-folder > .result-folder-body,
+details.sub-box details.month-box > .table-wrap,
+details.item-box details.month-box > .table-wrap,
+.student-single details.item-box > .box-body { max-height: none; overflow-y: visible; padding-right: 0; }
+@media print {
+  #folder-items > details.sub-box > .sub-body, details.item-box > .box-body, details.result-folder > .result-folder-body,
+  details.month-box > .table-wrap, details.done-box > .quiz-grid { max-height: none; overflow: visible; }
+}
+/* more lists that can keep growing scroll inside themselves: Dashboard and Home boxes, the
+   Grading groups, Assign's people, the quiz builder's problem boxes and question order, and a
+   quiz box's tries on My quizzes */
+.dash-card .dash-list { max-height: 24rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+details.grading-group > .table-wrap { max-height: min(60vh, 640px); overflow-y: auto; overscroll-behavior: contain; }
+.pick-list { max-height: 20rem; overflow-y: auto; overscroll-behavior: contain; }
+details.subject-box > .box-body { max-height: min(55vh, 560px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.order-list { max-height: min(60vh, 640px); overflow-y: auto; overscroll-behavior: contain; }
+ol.attempt-list { max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; }
+@media print {
+  .dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
+  .order-list, ol.attempt-list { max-height: none; overflow: visible; }
+}
+/* ...but not where the box is the page's own content (one student's page, one quiz's results),
+   nor the awards box (its list has its own scroll and drag bar) */
+.student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
+.student-single details.subject-box > .box-body { max-height: none; overflow-y: visible; }
+/* a folder page's list (All quizzes, a folder, Not in a folder...) scrolls inside itself, about a
+   window high, so the page doesn't keep growing; the folder list and the bar above stay put.
+   The folder boxes inside it then scroll a little less high. Phones: the page scrolls as usual. */
+@media (min-width: 761px) {
+  .folder-main > #folder-items, .folder-main > .list-scroll {
+    max-height: max(360px, calc(100vh - 325px)); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-gutter: stable; padding-right: 4px;
+  }
+  .folder-main > #folder-items > details.sub-box > .sub-body { max-height: min(45vh, 480px); }
+}
+@media print { .folder-main > #folder-items, .folder-main > .list-scroll { max-height: none; overflow: visible; } }
+
+.grip-bar[hidden] { display: none; }
+@media print { .grip-bar { display: none; } }
