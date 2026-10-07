@@ -1279,6 +1279,15 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 /* where rows become cards (the same widths as those rules) an empty slot just goes */
 @media (max-width: 640px) { .stack td.actions .slot-empty { display: none; } }
 @container listarea (max-width: 860px) { .stack td.actions .slot-empty { display: none; } }
+/* the Archive: its Quiz column is just a title; where the row of buttons wouldn't fit beside
+   the rest (yet the list isn't cards), they make a column instead, all one width */
+.folder-main table.archive-table td[data-label="Quiz"] { min-width: 7rem; }
+@container listarea (min-width: 861px) and (max-width: 1040px) {
+  .archive-table td.actions { width: 1%; }
+  .archive-table td.actions > * { display: block; margin: 0 0 6px; }
+  .archive-table td.actions > :last-child { margin-bottom: 0; }
+  .archive-table td.actions .btn { width: 100%; text-align: center; }
+}
 @container page (max-width: 780px) { .stack td.actions .slot-empty { display: none; } }
 /* a row's buttons sit level with the first line of its words */
 td.actions { padding-top: 5px; padding-bottom: 5px; }

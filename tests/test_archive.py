@@ -460,3 +460,24 @@ def test_student_folders_follow_the_student(app_db):
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('samuel')]})
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
     assert archived_json(ArchivedAttempt.query.one())['folder'] == 'samuel'
+
+
+def test_the_archives_when_column_keeps_each_date_on_one_line(app_db):
+    """"Taken <date>" and "Archived <date>" are never broken in two; who archived it goes below."""
+    import re
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    login(app, 'sam')
+    vq, probs = setup_quiz(app, teacher, 'numeric')
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
+    cq = CQuiz.query.one()
+    with app.test_request_context():
+        S.submit(cq, {1: '4'})
+    teacher.post('/quiz/delcq/{}'.format(cq.id))
+    page = archive_view(teacher)[0]
+    when = re.search(r'<td data-label="When"[^>]*>(.*?)</td>', page, re.S).group(1)
+    assert re.search(r'<span class="nowrap">Taken [^<]+</span><br>', when)
+    assert re.search(r'<span class="nowrap">Archived [^<]+</span><br>by teach', when)
+    assert 'class="archive-table"' in page

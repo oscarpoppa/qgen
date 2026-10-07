@@ -13,7 +13,7 @@
       <summary><span class="fold" aria-hidden="true"></span><strong>{{ month.label }}</strong>
         <span class="muted small">{{ month['items']|length }} attempt{{ '' if month['items']|length == 1 else 's' }}</span></summary>
       <div class="table-wrap stack">
-        <table>
+        <table class="archive-table">
           <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>When</th><th>Folder</th><th></th></tr></thead>
           <tbody>
           {% for a in month['items'] %}
@@ -30,8 +30,9 @@
                 {% elif a.needs_review %}<span class="badge badge-warn">Being graded</span>
                 {% elif a.startdate %}<span class="badge">Not handed in</span>
                 {% else %}<span class="badge">Not started</span>{% endif %}</td>
-              <td data-label="When" class="small">{% if a.compdate or a.startdate %}taken {{ (a.compdate or a.startdate)|when('date') }}<br>{% endif %}
-                <span class="muted">archived {{ a.archived_at|when('date') }}{% if a.archiver %} by {{ a.archiver.shown_name }}{% endif %}</span></td>
+              {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
+              <td data-label="When" class="small when-col">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
+                <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               <td data-label="Folder">{{ move_menu(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
               <td class="actions">
                 <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}">View</a>
