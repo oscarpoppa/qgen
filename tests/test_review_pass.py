@@ -1014,3 +1014,39 @@ def test_an_archive_folder_can_be_deleted_for_good(app_db):
     teach.post('/quiz/delcq/{}'.format(give(vq, 'sam').id))
     db.session.expire_all()
     assert not db.session.get(ArchiveFolder, sam_folder.id).removed
+
+
+def test_someone_told_to_change_their_password_can_still_log_out(app_db):
+    """On a shared classroom computer a student whose password was reset must be able to leave."""
+    app, db = app_db
+    from app.user.models import User
+    sam = login(app, 'sam')
+    u = User.query.filter_by(username='sam').one()
+    u.pw_man_reset = True
+    db.session.commit()
+    assert '/chpass' in sam.get('/home').headers['Location']  # everything else still asks first
+    r = sam.get('/logout')
+    assert r.status_code == 302 and '/chpass' not in r.headers['Location']
+    assert '/login' in sam.get('/home').headers['Location']  # really logged out
+
+
+def test_uploading_never_replaces_a_file_already_there(app_db):
+    import io
+    import os
+    app, db = app_db
+    teach = login(app, 'teach')
+    sdir = app.config['STATIC_DIR']
+
+    def up(name, body):
+        return teach.post('/upload', data={'thefile': (io.BytesIO(body), name)}, content_type='multipart/form-data',
+                          follow_redirects=True).data.decode()
+    assert 'Uploaded “notes.txt”.' in up('notes.txt', b'first')
+    page = up('notes.txt', b'second')
+    assert 'Uploaded “notes.txt” as “notes-2.txt”, since a file called “notes.txt” is already there.' in page
+    assert open(os.path.join(sdir, 'notes.txt'), 'rb').read() == b'first'
+    assert open(os.path.join(sdir, 'notes-2.txt'), 'rb').read() == b'second'
+    # nor a site folder (css, js), nor with a name that can't be used
+    os.makedirs(os.path.join(sdir, 'js'), exist_ok=True)
+    assert 'as “js-2”' in up('js', b'x')
+    assert os.path.isdir(os.path.join(sdir, 'js'))
+    assert 'That file name can' in up('..', b'x')

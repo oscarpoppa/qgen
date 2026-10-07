@@ -249,9 +249,9 @@ def home():
                            awards=have, to_earn=awards.still_to_earn(current_user, have))
 
 # route to user logout action
+#(no password check: someone told to change their password can still log out, e.g. on a shared computer)
 @user_bp.route('/logout')
 @login_required
-@pw_check
 def logout():
     flash('{} has been logged out'.format(current_user.shown_name))
     current_app.logger.info('{} has logged out'.format(current_user.username))

@@ -41,13 +41,20 @@ def upload():
     form = UploadForm()
     if form.validate_on_submit():
         ufile = request.files['thefile']
-        #need to generalize this
         path = static_dir()
         fname = secure_filename(ufile.filename)
-        fpath = path + fname
-        ufile.save(fpath)
-        flash('{} saved'.format(ufile.filename))
-        trythumb(path, fname)
+        if not fname:
+            flash('That file name can\'t be used. Rename the file and try again.', 'error')
+            return redirect(url_for('upload.upload'))
+        #never over a file already there (a picture problems use, its thumbnail, or a site folder)
+        saved = unique_name(fname)
+        ufile.save(path + saved)
+        trythumb(path, saved, quiet=True)
+        if saved == fname:
+            flash('Uploaded “{}”.'.format(saved), 'success')
+        else:
+            flash('Uploaded “{}” as “{}”, since a file called “{}” is already there.'.format(fname, saved, fname), 'success')
+        current_app.logger.info('{} uploaded {}'.format(current_user.username, saved))
         return redirect(url_for('upload.upload'))
     return render_template('upload.html', title='Upload files', form=form)
 
