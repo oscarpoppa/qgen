@@ -1347,3 +1347,10 @@ ol.attempt-list { max-height: 12rem; overflow-y: auto; overscroll-behavior: cont
 
 .grip-bar[hidden] { display: none; }
 @media print { .grip-bar { display: none; } }
+/* room between a scroll area's scroll bar and the buttons at the right end of its rows */
+.dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
+.order-list, ol.attempt-list, #folder-items > details.sub-box > .sub-body, details.item-box > .box-body,
+details.result-folder > .result-folder-body, details.month-box > .table-wrap, details.done-box > .quiz-grid { padding-right: 12px; }
+@media (min-width: 761px) { .folder-main > #folder-items, .folder-main > .list-scroll { padding-right: 12px; } }
+.student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
+.student-single details.subject-box > .box-body { padding-right: 0; }
