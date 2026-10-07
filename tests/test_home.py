@@ -148,3 +148,15 @@ def test_home_follows_hand_ins(app_db):
     assert key == 'home' and sam.get('/messages/poll?watch=home').get_json()['watch'] == drawn
     finish(cq, 90, datetime.now())
     assert sam.get('/messages/poll?watch=home').get_json()['watch'] != drawn
+
+
+def test_box_grids_are_packed_on_every_page(app_db):
+    """Every page loads the script that lets grid boxes take only the height they need (so a
+    short box doesn't leave a hole under it), and it covers Home's and the Dashboard's grids."""
+    import os
+    app, db = app_db
+    from test_flow import login
+    home = login(app, 'sam').get('/home').data.decode()
+    assert 'js/masonry.js' in home and 'class="dash-grid"' in home
+    js = open(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'masonry.js')).read()
+    assert "'.dash-grid, .grid'" in js
