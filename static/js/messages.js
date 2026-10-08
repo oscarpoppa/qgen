@@ -382,7 +382,55 @@
     if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
   });
 
-  var baseTitle = document.title;
+  //what's waiting, on the tab's icon: a red number for new notices, a blue one for unread
+  //messages (a tab's title can only be plain text, so it carries no count)
+  var iconLink = document.querySelector('link[rel="icon"]');
+  var baseIcon = iconLink && iconLink.href, baseType = iconLink && iconLink.type;
+  var iconImg = null, shownBadge = '0/0';
+  function tabBadge(notices, messages) {
+    var key = notices + '/' + messages;
+    if (key === shownBadge) return;
+    shownBadge = key;
+    if (!notices && !messages) {
+      if (baseIcon) { iconLink.type = baseType; iconLink.href = baseIcon; }
+      else if (iconLink) { iconLink.remove(); iconLink = null; }  // no site icon: back to the browser's own
+      return;
+    }
+    if (!iconLink) {
+      iconLink = document.createElement('link');
+      iconLink.rel = 'icon';
+      document.head.appendChild(iconLink);
+    }
+    function dot(ctx, x, y, n, color) {
+      var r = 8;
+      ctx.beginPath(); ctx.arc(x, y, r + 1, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill();
+      var text = n > 9 ? '9+' : String(n);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold ' + (text.length > 1 ? 9 : 12) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y + 1);
+    }
+    function draw() {
+      if (shownBadge !== key) return;
+      var c = document.createElement('canvas');
+      c.width = c.height = 32;
+      var ctx = c.getContext('2d');
+      try { if (iconImg && iconImg.naturalWidth) ctx.drawImage(iconImg, 0, 0, 32, 32); } catch (e) {}
+      if (notices && messages) { dot(ctx, 23, 9, messages, '#1a73e8'); dot(ctx, 23, 23, notices, '#d93025'); }
+      else if (notices) dot(ctx, 23, 23, notices, '#d93025');
+      else dot(ctx, 23, 23, messages, '#1a73e8');
+      try { iconLink.type = 'image/png'; iconLink.href = c.toDataURL('image/png'); } catch (e) {}
+    }
+    if (!baseIcon) draw();  // the badge on its own
+    else if (!iconImg) {
+      iconImg = new Image();
+      iconImg.onload = iconImg.onerror = draw;
+      iconImg.src = baseIcon;
+    } else if (iconImg.complete) draw();
+    else iconImg.addEventListener('load', draw);
+  }
+
   function check() {
     if (document.hidden) return;
     fetch(pollUrl + (watchKey ? (pollUrl.indexOf('?') < 0 ? '?' : '&') + 'watch=' + encodeURIComponent(watchKey) : ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
@@ -401,12 +449,11 @@
           if (pair[0] === '.nav-quizzes') b.setAttribute('aria-label', pair[1] + ' new');
         });
       });
-      var waiting = (isOpen('messages') ? 0 : res.unread) + (isOpen('notices') ? 0 : res.notices);
       if (welcome) {
         welcome = false;
         welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
       }
-      document.title = (waiting ? '(' + waiting + ') ' : '') + baseTitle;
+      tabBadge(isOpen('notices') ? 0 : res.notices, isOpen('messages') ? 0 : res.unread);
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
        ['notices', res.latest_notice, res.notice_preview, res.notices, res.notices_state]].forEach(function (x) {
