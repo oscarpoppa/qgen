@@ -460,7 +460,7 @@ def _group_done(message, error=False, show=None, moved=None):
     if show is None:
         show = request.form.get('view') or 'main'
     show = str(show)
-    values = {'folder': show} if show.isdigit() or show == 'all' else {}
+    values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.userdet', **values))

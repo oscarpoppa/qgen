@@ -73,6 +73,9 @@
     list.appendChild(item);
     var main = document.querySelector('main');
     main.insertBefore(list, main.firstChild);
+    //over the page, not in it: the page stays where it was (place.js, which runs after this)
+    function float() { if (window.qgenFloat) window.qgenFloat(list); }
+    if (window.qgenFloat) float(); else document.addEventListener('DOMContentLoaded', float);
     var box = document.querySelector('[data-box="' + done.box + '"]');
     if (box) {
       box.classList.add('just-moved');
@@ -89,11 +92,14 @@
     try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch (e) {}
     var box = document.querySelector('[data-box="' + moved.replace(/"/g, '') + '"]');
     if (!box) return;
-    var shut = box.closest('details.sub-box');
-    if (shut) shut.open = true;
+    //lit up where it is; the page keeps its place (static/js/place.js), and its folder box
+    //opens only if that grows below what's in view, never pushing the page down
     box.classList.add('just-moved');
-    box.scrollIntoView({ block: 'center' });
     setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
+    var shut = box.closest('details.sub-box:not([open])');
+    if (shut) window.addEventListener('load', function () {
+      setTimeout(function () { if (shut.getBoundingClientRect().top >= 0) shut.open = true; }, 50);
+    });
   })();
 
   //checked rows (the bar above the list puts them in a folder): something listed twice
@@ -213,6 +219,7 @@
       .then(function (res) {
         if (res.ok) {
           try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, box: d.kind + ':' + d.id })); } catch (e) {}
+          if (window.qgenNotePlace) window.qgenNotePlace();  // back to the same place after the reload
           location.reload();
           return;
         }

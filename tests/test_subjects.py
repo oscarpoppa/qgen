@@ -141,7 +141,7 @@ def test_one_at_a_time_and_dragging(app_db):
     fall, spring = (VQGroup.query.filter_by(title=n).one() for n in ('Fall', 'Spring'))
     # "+ Add…": stays where it was, lit up after
     r = teacher.post('/quiz/subjects/quizzes/add', data={'quiz': q.id, 'to': fall.id, 'view': 'all'})
-    assert r.headers['Location'].endswith('/quiz/listvq?moved=quiz:{}'.format(q.id))
+    assert r.headers['Location'].endswith('/quiz/listvq?folder=all&moved=quiz:{}'.format(q.id))
     FETCH = {'X-Requested-With': 'fetch'}
     # dragged from Fall to Spring: moved
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': spring.id, 'from': fall.id}, headers=FETCH).get_json()

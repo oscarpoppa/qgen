@@ -986,7 +986,8 @@ def _subject_done(kind, message, error=False, show=None, moved=None):
         return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
     flash(message, 'error' if error else 'success')
     show = str(request.form.get('view') or 'all') if show is None else str(show)
-    values = {'folder': show} if show.isdigit() or show == 'main' else {}
+    #the same view it was sent from, All included (not the page's remembered one)
+    values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     if moved and not error:
         values['moved'] = moved
     return subject_list(kind, **values)
@@ -1254,7 +1255,7 @@ def _archive_done(message, error=False, show=None, moved=None):
         return (jsonify(ok=False, error=message), 400) if error else jsonify(ok=True, message=message)
     flash(message, 'error' if error else 'success')
     show = str(request.form.get('view') or 'all') if show is None else str(show)
-    values = {'folder': show} if show.isdigit() or show == 'main' else {}
+    values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     if moved and not error:
         values['moved'] = moved
     return redirect(url_for('qgen.archive', **values))

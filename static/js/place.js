@@ -11,6 +11,21 @@
   function note() {
     try { sessionStorage.setItem(KEY, JSON.stringify({ path: location.pathname, y: window.scrollY, at: Date.now() })); } catch (err) {}
   }
+  window.qgenNotePlace = note;  // for a page script that reloads by itself (a folder drop)
+  //a message shown over the page for a few seconds, then gone: never dropped back into the
+  //page, which would push everything down under the reader
+  window.qgenFloat = function (alerts) {
+    alerts.classList.add('alerts-float');
+    var gone = false;
+    function hide() {
+      if (gone) return;
+      gone = true;
+      alerts.classList.add('alerts-leaving');
+      setTimeout(function () { alerts.remove(); }, 300);
+    }
+    setTimeout(hide, 6000);
+    alerts.addEventListener('click', hide);
+  };
   document.addEventListener('submit', function (e) {
     var f = e.target;
     if ((f.method || '').toLowerCase() !== 'post' || f.hasAttribute('data-fresh-page')) return;
@@ -37,9 +52,5 @@
   window.addEventListener('load', function () { setTimeout(go, 0); });
   //what happened, where it can be seen
   var alerts = document.querySelector('main .alerts');
-  if (alerts && y > 60) {
-    alerts.classList.add('alerts-float');
-    setTimeout(function () { alerts.classList.remove('alerts-float'); }, 6000);
-    alerts.addEventListener('click', function () { alerts.classList.remove('alerts-float'); });
-  }
+  if (alerts && y > 60) window.qgenFloat(alerts);
 })();

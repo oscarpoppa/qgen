@@ -33,7 +33,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     r = teach.post('/users/folders', data={'name': ' 7th  grade '})
     g7 = folder('7th grade')
-    assert r.headers['Location'].endswith('/userdet')  # you stay where you were
+    assert r.headers['Location'].endswith('/userdet?folder=main')  # you stay where you were
     r = teach.post('/users/folders', data={'name': 'Inside', 'parent': g7, 'view': str(g7)})
     assert r.headers['Location'].endswith('/userdet?folder={}'.format(g7))
     teach.post('/users/folders/{}/delete'.format(folder('Inside')), data={})

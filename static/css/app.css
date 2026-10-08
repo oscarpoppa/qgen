@@ -1592,3 +1592,5 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .stretch-edge:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 html.stretching, html.stretching * { cursor: ew-resize !important; user-select: none; }
 @media print { .stretch-edge { display: none; } [data-stretch] { width: auto !important; margin-left: 0 !important; } }
+.alerts.alerts-float { transition: opacity .3s; }
+.alerts.alerts-float.alerts-leaving { opacity: 0; }
