@@ -395,17 +395,18 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
     assert len(set(keys)) == len(keys)
 
 
-def test_my_quizzes_to_do_then_done(app_db):
+def test_my_quizzes_shows_every_quiz_with_the_ones_to_do_first(app_db):
+    """A folder shows all its quizzes in one list (no To do / Done split): the ones still to
+    do first, even when older, then the rest."""
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
-    done, todo = give(a, 'sam'), give(b, 'sam')
+    todo, done = give(a, 'sam'), give(b, 'sam')  # B is newer, and handed in
     from app.qgen import services as S
     S.submit(done, {1: '4'})
     page = sam.get('/mypage').data.decode()
-    assert page.index('>To do <span') < page.index('“B”' if '“B”' in page else '>B</h2>')
-    rest = page[page.index('<details class="box month-box done-box"'):]
-    assert '>A</h2>' in rest and '>B</h2>' not in rest and 'data-remember="done-main"' in rest
+    assert page.index('>A</h2>') < page.index('>B</h2>')
+    assert 'done-box' not in page and '>To do <' not in page and 'class="box-title">Done<' not in page
 
 
 # ---------------------------------------------------------------- long lists
@@ -1057,3 +1058,23 @@ def test_uploading_never_replaces_a_file_already_there(app_db):
     assert 'as “js-2”' in up('js', b'x')
     assert os.path.isdir(os.path.join(sdir, 'js'))
     assert 'That file name can' in up('..', b'x')
+
+
+def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automatic_folders(app_db):
+    """Every quiz on My quizzes has "📁 ▾" in its heading (new, started or done), whose list
+    moves it at once; moved, it's still in New / In progress."""
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen.models import QuizFolder
+    fresh = make_quiz(app, teach, 'Fresh')
+    give(fresh, 'sam')
+    sam.post('/mypage/folders', data={'name': 'Week 1'})
+    wk = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
+    page = sam.get('/mypage?folder=new').data.decode()
+    head = page[page.index('data-quiz="{}"'.format(fresh.id)):]
+    head = head[:head.index('</summary>')]
+    assert 'class="move-form move-mini"' in head and 'Not in a folder (here now)' in head
+    r = sam.post('/mypage/move', data={'quiz': fresh.id, 'to': wk.id, 'view': 'new', 'from': 'top'}, follow_redirects=True)
+    page = r.data.decode()
+    assert 'Fresh' in page and '📁 Week 1 (here now)' in page  # still in New, now in Week 1
+    assert 'Fresh' in sam.get('/mypage?folder={}'.format(wk.id)).data.decode()

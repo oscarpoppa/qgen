@@ -69,8 +69,11 @@
   document.addEventListener('click', function (e) {
     var sum = e.target.closest && e.target.closest('summary');
     var d = sum && sum.parentElement;
-    if (!d || !d.matches(BOX) || d.hasAttribute('data-fixed') || d.closest('[data-keep-open]')) return;
-    if (e.target.closest('a, button, input, select, label') && e.target.closest('a, button, input, select, label') !== sum) return;
+    if (!d || !d.matches(BOX)) return;
+    //a list in a heading (My quizzes' "📁 ▾") is used, not the box opened or folded
+    if (e.target.closest('select')) { e.preventDefault(); return; }
+    if (d.hasAttribute('data-fixed') || d.closest('[data-keep-open]')) return;
+    if (e.target.closest('a, button, input, label') && e.target.closest('a, button, input, label') !== sum) return;
     d._byHand = Date.now();  // its toggle event comes a moment later
   }, true);
   document.addEventListener('toggle', function (e) {

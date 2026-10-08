@@ -8,7 +8,7 @@
     '.folder-main > #folder-items', '.folder-main > .list-scroll',
     '#folder-items > details.sub-box > .sub-body', 'details.item-box > .box-body',
     'details.month-box > .table-wrap',
-    'details.done-box > .quiz-grid', '.dash-card .dash-list', 'details.grading-group > .table-wrap',
+    '.dash-card .dash-list', 'details.grading-group > .table-wrap',
     '.pick-list', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list', '.awards-scroll', '#all-problems'
   ];
   var MIN = 96, STEP = 48;

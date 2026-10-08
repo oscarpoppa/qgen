@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
-{% from "_folders.html" import folders_page, sub_box, move_menu with context %}
+{% from "_folders.html" import folders_page, sub_box, move_mini with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -53,6 +53,8 @@
         {# folded: its score or state, and Start / Continue when a try is waiting (one click from the quiz) #}
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}
           {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open, compact=true) }}{% endif %}</span>
+        {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
+        {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
       </summary>
       {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
@@ -72,26 +74,18 @@
           {% endfor %}
         </ol>
       {% endif %}
-      {% if fk.flat %}{{ move_menu(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
+
     </details>
   {% endfor %}
   </div>
   {% endif %}
 {% endmacro %}
 
-{# the quizzes in a list: the ones to do first, then the finished ones, folded away (open
-   or not is remembered in this browser) #}
+{# the quizzes in a list, all of them: the ones that still need the student (a try new or
+   started, not only the latest: a retake given before the last hand-in) first, then the rest,
+   each in the usual order (newest first) #}
 {% macro quiz_cards(gs, key) %}
-  {# to do: any try not handed in yet (not only the latest: a retake given before the last hand-in) #}
-  {% set todo = gs|selectattr('open')|list %}
-  {% set done = gs|rejectattr('open')|list %}
-  {% if todo %}<h3 class="list-section">To do <span class="badge badge-warn">{{ todo|length }}</span></h3>{{ cards(todo) }}{% endif %}
-  {% if done %}
-    <details class="box month-box done-box" data-remember="done-{{ key }}" data-closed>
-      <summary>{{ box_label('✅', 'Done', count_of(done|length, 'quiz', 'quizzes')) }}<span class="muted small">handed in</span></summary>
-      {{ cards(done) }}
-    </details>
-  {% endif %}
+  {{ cards((gs|selectattr('open')|list) + (gs|rejectattr('open')|list)) }}
 {% endmacro %}
 
 {% block content %}

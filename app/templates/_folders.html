@@ -226,3 +226,22 @@
     <noscript><button class="btn btn-secondary btn-xs">Move</button></noscript>
   </form>
 {% endmacro %}
+
+{# the same, small enough for a box's heading (My quizzes): "📁 ▾", whose list moves the
+   thing at once; the folder it's in now is marked and can't be picked #}
+{% macro move_mini(fk, what, ident, label, here) %}
+  <form method="post" action="{{ fk.move_url }}" class="move-form move-mini">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="{{ what }}" value="{{ ident }}">
+    <input type="hidden" name="view" value="{{ fk.view }}">
+    <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
+    <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Move to a folder">
+      <option value="" selected>📁</option>
+      <option value="top"{% if not here %} disabled{% endif %}>📥 {{ fk.main_label }}{{ ' (here now)' if not here }}</option>
+      {% for f, depth in fk.flat %}
+        <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}📁 {{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn btn-secondary btn-xs">Move</button></noscript>
+  </form>
+{% endmacro %}

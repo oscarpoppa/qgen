@@ -1181,9 +1181,7 @@ details.month-box > summary::-webkit-details-marker { display: none; }
 @media (prefers-reduced-motion: reduce) { .month-box .fold { transition: none; } }
 
 /* My quizzes: "To do" over the quizzes still to do; "Find a quiz" */
-.list-section { font-size: 1rem; margin: 4px 0 8px; display: flex; align-items: center; gap: 8px; }
 .folder-main input.filter-cards { max-width: 18rem; margin: 0 0 10px; }
-details.done-box { margin-top: 12px; }
 /* a list's name column keeps room for the name and its details */
 .folder-main td[data-label="Quiz"], .folder-main td[data-label="Title"] { min-width: 13rem; }
 @media (max-width: 760px) { .folder-tools-bar { position: static; } }
@@ -1475,3 +1473,8 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .dock-edge { position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; z-index: 2; }
 @media (max-width: 480px) { .dock-edge { display: none; } }
 @media print { .vsplit { display: none; } }
+
+/* "📁 ▾" in a quiz's heading on My quizzes: its list moves the quiz to a folder */
+.move-mini { display: inline-flex; margin: 0; flex: 0 0 auto; }
+.move-mini select { width: 3.4em; min-height: 0; padding: 2px 4px; font-size: .85rem; cursor: pointer; }
+.quiz-card[open] .move-mini { margin-left: auto; }

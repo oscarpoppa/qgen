@@ -970,7 +970,7 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
 
 def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_db):
     """Given twice and the newer copy handed in first: the older one still waits, so the quiz
-    is under To do on My quizzes, "not handed in" for teachers, and no other retake is offered."""
+    is first on My quizzes with Start in its heading, "not handed in" for teachers, and no other retake is offered."""
     app, db = app_db
     from app.qgen.models import CQuiz
     from app.qgen import services as S
@@ -982,13 +982,15 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     older, newer = CQuiz.query.filter_by(assignee=sam_u.id).order_by(CQuiz.id).all()
     S.submit(newer, {1: '4'})
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
-    todo, done = page.index('>To do <'), page.find('class="box-title">Done</span>')
-    assert 'Settings quiz' in page[todo:] and done == -1
+    card = page[page.index('data-quiz="{}"'.format(vq.id)):]
+    card = card[:card.index('</summary>')]
+    assert '>Start</a>' in card  # its heading offers the try still waiting
     results = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'data-state="out"' in results
     student_page = teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()
     assert 'Give sam another attempt' not in student_page
-    S.submit(older, {1: '4'})  # all handed in: Done, and a retake can be given again
+    S.submit(older, {1: '4'})  # all handed in: nothing to start, and a retake can be given again
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
-    assert 'class="box-title">Done</span>' in page and '>To do <' not in page
+    card = page[page.index('data-quiz="{}"'.format(vq.id)):]
+    assert '>Start</a>' not in card[:card.index('</summary>')]
     assert 'Give sam another attempt' in teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()
