@@ -44,3 +44,16 @@ def test_the_pages_use_it(app_db):
         teacher.post('/upload/json', data={'file': (png_bytes('red'), 'p{}.png'.format(i))}, content_type='multipart/form-data')
     page = teacher.get('/images').data.decode()
     assert 'data-many="pictures"' in page and 'id="image-list"' in page and 'data-name="p0.png"' in page
+
+
+def test_folder_list_has_expand_and_collapse_all(app_db):
+    from test_flow import login
+    app, db = app_db
+    teacher = login(app, 'teach')
+    from test_flow import problem_form
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'One', '1 + 1 = ?', '2'))
+    page = teacher.get('/quiz/listvp').data.decode()
+    start = page.index('<nav aria-label="Folders">')
+    side = page[start:page.index('</nav>', start)]
+    assert 'data-side-level="open"' in side and 'data-side-level="close"' in side
+    assert '<div class="btn-row small side-levels" hidden>' in side  # shown by its script when there's something to fold

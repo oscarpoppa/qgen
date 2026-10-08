@@ -76,6 +76,11 @@
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{% set auto_now = fk.auto_views|selectattr('key', 'equalto', fk.view)|first %}{{ fk.name(fk.node.folder) if fk.node else auto_now.label if auto_now else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
     <nav aria-label="Folders">
+      {# shown (static/js/folders.js) when some folder has folders inside it #}
+      <div class="btn-row small side-levels" hidden>
+        <button type="button" class="btn btn-secondary btn-xs" data-side-level="open" title="Show the folders inside every folder in this list">Expand all</button>
+        <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder (the one you're in stays in view)">Collapse all</button>
+      </div>
       <ul class="side-list side-top">
         {% for which in fk.order %}
           {% if which == 'all' %}

@@ -25,7 +25,7 @@
   }
 
   //folders in the list whose inner folders are hidden (the one being looked at always shows)
-  var FOLD = layout.dataset.foldKey, folded = load(FOLD);
+  var FOLD = layout.dataset.foldKey, folded = load(FOLD), shows = [];
   path.forEach(function (id) { delete folded[id]; });
   document.querySelectorAll('.side-item').forEach(function (li) {
     var btn = li.querySelector(':scope > .side-row > .side-fold');
@@ -35,10 +35,23 @@
       li.classList.toggle('side-folded', !open);
       if (open) delete folded[li.dataset.folder]; else folded[li.dataset.folder] = true;
     }
+    shows.push({ id: li.dataset.folder, show: show });
     show(!folded[li.dataset.folder]);
     btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); save(FOLD, folded); });
   });
   save(FOLD, folded);
+  //Expand all / Collapse all above the list (the folders above the one you're in stay open)
+  var levels = document.querySelector('.side-levels');
+  if (levels && shows.length) {
+    levels.hidden = false;
+    levels.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-side-level]');
+      if (!b) return;
+      var open = b.dataset.sideLevel === 'open';
+      shows.forEach(function (s) { s.show(open || path.map(String).indexOf(String(s.id)) !== -1); });
+      save(FOLD, folded);
+    });
+  }
 
   //on a phone the folder list starts folded (its heading says which folder is shown)
   var side = document.querySelector('details.folder-side');

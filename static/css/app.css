@@ -755,6 +755,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .folder-side-head::-webkit-details-marker { display: none; }
 .side-list { list-style: none; margin: 0; padding: 0; }
 .side-list .side-list { padding-left: 14px; }
+.side-levels { margin: 0 0 6px 4px; }
 .side-item.side-folded > .side-list { display: none; }
 .side-row { display: flex; align-items: center; gap: 2px; border-radius: 8px; min-width: 0; }
 .side-row.current { background: var(--accent-soft); }
