@@ -382,59 +382,12 @@
     if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
   });
 
-  //what's waiting, on the tab's icon: a red number for new notices, a blue one for unread
-  //messages, the same as on the Notices and Messages buttons (a tab's title can only be
-  //plain text, so it carries no count)
-  var iconLink = document.querySelector('link[rel="icon"]');
-  var baseIcon = iconLink && iconLink.href, baseType = iconLink && iconLink.type;
-  //a new <link> each time: Firefox only notices a tab icon that's added, not one whose address changes
-  function putIcon(href, type) {
-    var fresh = document.createElement('link');
-    fresh.rel = 'icon';
-    if (type) fresh.type = type;
-    fresh.href = href;
-    if (iconLink && iconLink.parentNode) iconLink.parentNode.replaceChild(fresh, iconLink);
-    else document.head.appendChild(fresh);
-    iconLink = fresh;
-  }
-  var iconImg = null, shownBadge = '0/0';
-  function tabBadge(notices, messages) {
-    var key = notices + '/' + messages;
-    if (key === shownBadge) return;
-    shownBadge = key;
-    if (!notices && !messages) {
-      if (baseIcon) putIcon(baseIcon, baseType);
-      else if (iconLink) { iconLink.remove(); iconLink = null; }  // no site icon: back to the browser's own
-      return;
-    }
-    function dot(ctx, x, y, n, color) {
-      var r = 8;
-      ctx.beginPath(); ctx.arc(x, y, r + 1, 0, 2 * Math.PI); ctx.fillStyle = '#fff'; ctx.fill();
-      ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill();
-      var text = n > 9 ? '9+' : String(n);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold ' + (text.length > 1 ? 9 : 12) + 'px sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, y + 1);
-    }
-    function draw() {
-      if (shownBadge !== key) return;
-      var c = document.createElement('canvas');
-      c.width = c.height = 32;
-      var ctx = c.getContext('2d');
-      try { if (iconImg && iconImg.naturalWidth) ctx.drawImage(iconImg, 0, 0, 32, 32); } catch (e) {}
-      if (notices && messages) { dot(ctx, 23, 9, messages, '#1a73e8'); dot(ctx, 23, 23, notices, '#d93025'); }
-      else if (notices) dot(ctx, 23, 23, notices, '#d93025');
-      else dot(ctx, 23, 23, messages, '#1a73e8');
-      try { putIcon(c.toDataURL('image/png'), 'image/png'); } catch (e) {}
-    }
-    if (!baseIcon) draw();  // the badge on its own
-    else if (!iconImg) {
-      iconImg = new Image();
-      iconImg.onload = iconImg.onerror = draw;
-      iconImg.src = baseIcon;
-    } else if (iconImg.complete) draw();
-    else iconImg.addEventListener('load', draw);
+  //the tab: 🟡 new quizzes and 🔵 unfinished ones in front of the page's title, the same as the
+  //gold and blue boxes on My quizzes (a tab's title is plain text; the site's icon stays as it is)
+  var DOTS = /^(?:[\u{1F7E1}\u{1F535}]\d+ )+/u;
+  var baseTitle = document.title.replace(DOTS, '');
+  function tabDots(fresh, started) {
+    document.title = (fresh ? '\u{1F7E1}' + fresh + ' ' : '') + (started ? '\u{1F535}' + started + ' ' : '') + baseTitle;
   }
 
   function check() {
@@ -459,7 +412,7 @@
         welcome = false;
         welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
       }
-      tabBadge(res.notices, res.unread);  // the same numbers as the Notices and Messages buttons
+      if (res.tab) tabDots(res.tab[0], res.tab[1]);
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
        ['notices', res.latest_notice, res.notice_preview, res.notices, res.notices_state]].forEach(function (x) {
@@ -563,12 +516,6 @@
   setupSplit();
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
-  //the tab's icon right away, from the counts the page came with (the next check keeps it up to date)
-  function shownCount(sel) {
-    var b = document.querySelector(sel);
-    return b && !b.hidden ? parseInt(b.textContent, 10) || 0 : 0;
-  }
-  tabBadge(shownCount('.nav-notices'), shownCount('.nav-unread'));
   if (!PANES.some(isOpen)) check();
   setInterval(check, every);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });

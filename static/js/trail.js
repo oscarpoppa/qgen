@@ -23,7 +23,7 @@
   if (!me || !me.hasAttribute('data-signed-in')) { write(KEY, null); return; }
 
   //the page's name: its title without the site's name after it
-  var name = document.title.replace(/ · [^·]*$/, '').trim() || 'Back';
+  var name = document.title.replace(/^(?:[\u{1F7E1}\u{1F535}]\d+ )+/u, '').replace(/ · [^·]*$/, '').trim() || 'Back';
   var here = { k: location.pathname, p: location.pathname + location.search, t: name };
   var trail = read(KEY, []), going = read(GOING, null);
   write(GOING, null);

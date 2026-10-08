@@ -12,7 +12,7 @@ from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_student, unread_for_teachers,
                      unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by,
                      unread_messages_for_teacher, own_notices, teacher_notices, unread_teacher_notices)
-from app.qgen.models import new_quizzes
+from app.qgen.models import new_quizzes, quiz_counts
 
 
 # ---------------------------------------------------------------- teachers
@@ -435,7 +435,7 @@ def poll():
                    message_preview=msg_preview, notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
                    watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now(),
-                   quizzes=new_quizzes(current_user.id))
+                   quizzes=new_quizzes(current_user.id), tab=quiz_counts(current_user.id))
 
 
 def online_now():

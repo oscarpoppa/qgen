@@ -113,10 +113,18 @@ def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     s = login(app, 'sam')
     assert 'quiz-card quiz-is-new' in s.get('/mypage').data.decode()
+    # the browser tab: 🟡 new quizzes in front of the title (and the check-in keeps it up to date)
+    assert '<title>🟡1 ' in s.get('/home').data.decode()
+    assert s.get('/messages/poll').get_json()['tab'] == [1, 0]
     assert 'class="quiz-is-new"' in s.get('/home').data.decode()
     assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
     take_page(s, CQuiz.query.one().id)
     assert 'quiz-card quiz-is-started' in s.get('/mypage').data.decode()
+    assert '<title>🔵1 ' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
+    # counted by quiz, like the boxes: a second try at the same quiz doesn't add a dot
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
+    assert s.get('/messages/poll').get_json()['tab'] == [0, 1]
+    assert '<title>Quizzes' in teacher.get('/dashboard').data.decode() or '🟡' not in teacher.get('/dashboard').data.decode().split('</title>')[0]
     assert 'class="quiz-is-started"' in s.get('/home').data.decode()
     assert 'result-box quiz-is-started' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
 

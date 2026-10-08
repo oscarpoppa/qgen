@@ -341,6 +341,17 @@ def new_quizzes(user_id):
     return CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)).count()
 
 
+def quiz_counts(user_id):
+    """(new, unfinished) for the browser tab's dots: quizzes given to this person and not
+    started yet, and started but not handed in (the gold and blue boxes on My quizzes)."""
+    #counted by quiz, like the boxes: one with a try started is unfinished (blue), else new (gold)
+    rows = db.session.query(CQuiz.vquiz_id, CQuiz.startdate).filter(
+        CQuiz.assignee == user_id, CQuiz.completed.is_(False), CQuiz.needs_review.is_(False)).all()
+    started = {q for q, began in rows if began is not None}
+    fresh = {q for q, began in rows if began is None} - started
+    return len(fresh), len(started)
+
+
 def waiting_quizzes(user, now=None):
     """What someone still has to do (new or started), in the order to do them: the ones
     closing soonest first, then the rest, oldest first (their Home's "Waiting for you")."""
