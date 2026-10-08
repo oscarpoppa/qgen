@@ -77,6 +77,10 @@ def _named(endpoint, args):
         return 'Results: {}'.format(title) if title else None
     if endpoint in ('qgen.list_vquiz', 'qgen.view_vquiz'):
         return quiz('vqid')
+    if endpoint == 'qgen.problem_results':
+        from app.qgen.models import VProblem
+        vp = db.session.get(VProblem, int(args['vpid'])) if str(args.get('vpid', '')).isdigit() else None
+        return 'History: {}'.format(vp.title or 'Untitled') if vp else None
     return None
 
 

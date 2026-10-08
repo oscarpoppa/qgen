@@ -1599,3 +1599,7 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
 @media print { .stretch-edge { display: none; } [data-stretch] { width: auto !important; margin-left: 0 !important; } }
 .alerts.alerts-float { transition: opacity .3s; }
 .alerts.alerts-float.alerts-leaving { opacity: 0; }
+
+/* one problem's results: the summary, and its most common wrong answers */
+.problem-summary .common-wrong { margin-top: 10px; }
+.problem-summary .common-wrong ul { margin: 4px 0 0; padding-left: 1.2rem; }

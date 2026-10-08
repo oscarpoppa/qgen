@@ -110,6 +110,39 @@ def mkvprob():
         form.values.append_entry()
     return problem_page(form, None, errors, 'New problem', subject_error)
 
+#one problem's History: every handed-in answer to it, in whatever quiz, by quiz
+@qgen_bp.route('/quiz/problem-results/<int:vpid>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def problem_results(vpid):
+    from collections import Counter
+    from .models import CProblem
+    vp = db.session.get(VProblem, vpid)
+    if vp is None:
+        return gone('That problem has been deleted.', url_for('qgen.list_vprobs'))
+    cps = (CProblem.query.filter(CProblem.vproblem_id == vp.id).join(CQuiz, CProblem.cquiz_id == CQuiz.id)
+           .filter(db.or_(CQuiz.completed.is_(True), CQuiz.needs_review.is_(True))).all())
+    rows = [{'cp': cp, 'cq': cp.cquiz, 'student': cp.cquiz.taker, 'item': transcript_item(cp)} for cp in cps]
+    rows.sort(key=lambda r: ((r['student'].username.lower() if r['student'] else ''), r['cq'].compdate or datetime.min))
+    by_quiz = {}
+    for r in rows:
+        by_quiz.setdefault(r['cq'].vquiz, []).append(r)
+    quizzes = sorted(by_quiz.items(), key=lambda kv: (kv[0].title or '').lower())
+    graded = [r['cp'].credit for r in rows if r['cp'].credit is not None]
+    summary = {'tries': len(rows), 'students': len({r['student'].id for r in rows if r['student']}),
+               'average': 100.0 * sum(graded) / len(graded) if graded else None,
+               'right': sum(1 for c in graded if c == 1), 'waiting': len(rows) - len(graded)}
+    #when everyone gets the same numbers, the same wrong answers are worth seeing together
+    common = []
+    qt = get_qtype(vp.qtype)
+    if qt.auto_graded and not vp.options.get('values'):
+        wrong = Counter(' '.join((r['item'].submitted or '').split()) for r in rows
+                        if r['cp'].credit is not None and r['cp'].credit < 1 and (r['item'].submitted or '').strip())
+        common = [(answer, n) for answer, n in wrong.most_common(5) if n > 1]
+    return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, summary=summary, common=common,
+                           title='History: {}'.format(vp.title or 'Untitled'))
+
 #route to view a problem as students get it (three sample versions), without editing
 @qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
 @login_required

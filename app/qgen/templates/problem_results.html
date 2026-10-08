@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import back_button, box_label, count_of, avatar, filter_bar with context %}
+{# One problem's History: every handed-in answer to it, in whatever quiz it was in, by quiz
+   (like a quiz's Results, for a problem). #}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="actions">
+    <a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of {{ vp.title or 'Untitled' }}">View problem</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit</a>
+    {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
+  </div>
+</div>
+
+{% if not summary.tries %}
+  <div class="card empty">Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
+{% else %}
+  <div class="card problem-summary">
+    <div class="btn-row">
+      <span class="badge">{{ count_of(summary.tries, 'answer', 'answers') }} from {{ count_of(summary.students, 'student', 'students') }}</span>
+      {% if summary.average is not none %}<span class="badge {{ 'badge-ok' if summary.average >= 70 else 'badge-warn' if summary.average >= 50 else 'badge-bad' }}" title="The average score on this problem, of the answers graded">average {{ '%.0f' % summary.average }}%</span>{% endif %}
+      <span class="badge badge-ok" title="Answers that got full credit">{{ summary.right }} fully right</span>
+      {% if summary.waiting %}<a class="badge badge-warn" href="{{ url_for('qgen.review_list') }}" title="Answers you still need to grade (on Grading)">{{ summary.waiting }} waiting for grading</a>{% endif %}
+      <span class="muted small">{{ qt.label }}</span>
+    </div>
+    {% if common %}
+      <div class="common-wrong">
+        <div class="label small">Most common wrong answers</div>
+        <ul class="small">{% for answer, n in common %}<li><strong>{{ answer }}</strong> <span class="muted">({{ n }} times)</span></li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if summary.tries > 8 %}{{ filter_bar('#problem-results', 'answer', 'answers', boxes='details.result-quiz') }}{% endif %}
+  <div id="problem-results">
+  {% for vq, rows in quizzes %}
+    <details class="box card subject-box result-quiz" open data-box="problem-quiz:{{ vq.id }}">
+      <summary>{{ box_label('📝', vq.title, count_of(rows|length, 'answer', 'answers')) }}
+        <span class="box-end"><a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Everyone's results for “{{ vq.title }}”">Quiz results</a></span></summary>
+      <div class="table-wrap stack">
+        <table>
+          <thead><tr><th>Student</th><th>Handed in</th><th>Their question</th><th>Their answer</th><th>Correct answer</th><th>Score</th></tr></thead>
+          <tbody>
+          {% for r in rows %}
+            {% set it = r.item %}
+            <tr data-name="{{ (r.student.username if r.student else '')|lower }} {{ ((r.student.nickname or '') if r.student else '')|lower }}">
+              <td data-label="Student">{% if r.student %}<a class="person nowrap" href="{{ url_for('qgen.list_user', uid=r.student.id) }}" title="See all of {{ r.student.shown_name }}'s quizzes, tries and scores">{{ avatar(r.student, 24) }}{{ r.student.shown_name }}</a>{% else %}<span class="muted">(deleted)</span>{% endif %}</td>
+              <td data-label="Handed in" class="nowrap"><a href="{{ url_for('qgen.list_cquiz', cqid=r.cq.id) }}" title="This try's results, question by question">{{ r.cq.compdate|when if r.cq.compdate else '' }}</a></td>
+              <td data-label="Their question"><div class="clamp" onclick="this.classList.toggle('open')" title="Click to show all">{{ it.text }}</div></td>
+              <td data-label="Their answer">{% if it.paper %}<span class="muted">Done on paper</span>{% else %}<div class="clamp" onclick="this.classList.toggle('open')">{{ it.submitted or '(no answer)' }}</div>{% endif %}</td>
+              <td data-label="Correct answer">{% if it.essay and not it.paper %}<span class="muted">Teacher-graded</span>{% else %}<div class="clamp" onclick="this.classList.toggle('open')">{{ it.correct }}</div>{% endif %}</td>
+              <td data-label="Score">{% if it.credit is none %}{% if r.cq.needs_review %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=r.cq.id) }}" title="Grade this try">waiting for grading</a>{% else %}<span class="badge">not graded</span>{% endif %}
+                {% else %}<span class="badge {{ 'badge-ok' if it.credit == 1 else 'badge-bad' if not it.credit else 'badge-warn' }}">{{ '%.0f' % (it.credit * 100) }}%</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

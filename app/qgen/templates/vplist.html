@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import post_button with context %}
+{% from "_macros.html" import post_button, slot with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
 {% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
@@ -38,6 +38,7 @@
           <td class="actions">
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="See three students' versions of {{ item.title or 'Untitled' }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Change this problem's question, values and answer">Edit</a>
+            {% if item.cproblems %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">History</a>{% else %}{{ slot('History') }}{% endif %}
             <details class="menu row-menu">
               <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title or 'Untitled' }}”" title="More for “{{ item.title or 'Untitled' }}”: delete">More</summary>
               <div class="menu-list">

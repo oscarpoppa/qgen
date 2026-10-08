@@ -168,3 +168,36 @@ def test_every_question_type_end_to_end(app_db):
         r = teacher.get(url)
         assert r.status_code == 200, url
         sensible(r.data.decode(), url)
+
+
+def test_problem_history(app_db):
+    """A problem's History: every handed-in answer to it, by quiz, like a quiz's Results."""
+    app, db = app_db
+    from app.qgen.models import VProblem, CQuiz
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('text', 'Capital', 'What is the capital of France?', 'Paris'))
+    vp = VProblem.query.one()
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'href="/quiz/problem-results/{}"'.format(vp.id) not in page  # nobody has had it yet
+    for title in ('Geo 1', 'Geo 2'):
+        teacher.post('/quiz/makevquiz', data={'title': title, 'vplist': str(vp.id)})
+    from app.qgen.models import VQuiz
+    for vq in VQuiz.query.all():
+        teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [u.id for u in User.query.filter_by(is_admin=False)]})
+    answers = {'sam': 'Lyon', 'kim': 'Lyon'}
+    for name in ('sam', 'kim'):
+        s = login(app, name)
+        for cq in CQuiz.query.filter_by(assignee=User.query.filter_by(username=name).one().id):
+            take_page(s, cq.id)
+            s.post('/quiz/take/{}'.format(cq.id), data={'Number1': answers[name] if cq.vquiz.title == 'Geo 1' else 'Paris'})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'href="/quiz/problem-results/{}"'.format(vp.id) in page
+    page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
+    sensible(page, 'problem history')
+    assert '<h1>History: Capital</h1>' in page and '>History</a>' in teacher.get('/quiz/listvp').data.decode()
+    assert '4 answers from 2 students' in page and 'average 50%' in page and '2 fully right' in page
+    assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="') == 4
+    assert 'Most common wrong answers' in page and '<strong>Lyon</strong> <span class="muted">(2 times)</span>' in page
+    assert teacher.get('/quiz/problem-results/999').status_code == 302  # gone: back to Problems
+    assert login(app, 'sam').get('/quiz/problem-results/{}'.format(vp.id)).status_code == 302  # teachers only
