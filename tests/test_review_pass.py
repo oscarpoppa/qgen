@@ -881,7 +881,8 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
     db.session.commit()
-    assert 'side-new-badge' not in sam.get('/mypage').data.decode()
+    mine = sam.get('/mypage').data.decode()
+    assert ' new</span>' not in mine.split('class="side-list')[1].split('</nav>')[0] and '2 started</span>' in mine
     assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
     assert 'nothing new</span>' in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
 

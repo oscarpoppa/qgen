@@ -718,8 +718,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
    line): with less room there are fewer, wider columns instead of squeezed boxes */
 .grid.quiz-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); }
 /* the title row stays on one line: a long quiz name ends in "…" (full name on hover) */
-.quiz-card > summary { flex-wrap: nowrap; }
-.quiz-card > summary h2 { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the heading wraps rather than squeeze the name: the whole name always shows, and the state,
+   Start / Continue and "📁 ▾" go on to the next line when there's no room beside it */
+.quiz-card > summary { flex-wrap: wrap; row-gap: 6px; }
+.quiz-card > summary h2 { min-width: 0; flex: 0 1 auto; overflow-wrap: anywhere; }
 .quiz-card > summary > :not(h2) { flex-shrink: 0; }
 .quiz-card > summary { list-style: none; cursor: pointer; margin-bottom: 0; align-items: center; }
 .quiz-card > summary::-webkit-details-marker { display: none; }

@@ -74,12 +74,12 @@
           {% endif %}
         {% endfor %}
         {% for av in fk.auto_views %}
-          {# automatic (each quiz also stays in its own folder): New gets a badge while there's
-             something in it, In progress a count like a folder's #}
+          {# automatic (each quiz also stays in its own folder): a badge while there's something
+             in it ("1 new", "3 started", "1 due") #}
           <li><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page(av.key) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}><span aria-hidden="true">{{ av.icon }}</span> {{ av.label }}</a>
-            {% if av.badge and av.count %}<span class="badge badge-warn side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
+            {% if av.badge and av.count %}<span class="badge {{ av.badge_class or 'badge-warn' }} side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
             {% else %}<span class="side-count muted small">{{ av.count or '' }}</span>{% endif %}</div></li>
         {% endfor %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
