@@ -1,10 +1,9 @@
 {% extends "base.html" %}
+{% from "_macros.html" import expand_collapse with context %}
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <span class="level-buttons">
-    <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#dash-live" aria-label="Expand all boxes" title="Open every box on the Dashboard">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#dash-live" aria-label="Collapse all boxes" title="Fold every box on the Dashboard down to its heading">Collapse all</button></span>
+  {{ expand_collapse('#dash-live', 'boxes') }}
   <div class="actions dash-actions" aria-label="Quick actions">
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>

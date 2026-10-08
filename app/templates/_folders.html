@@ -197,6 +197,25 @@
   </details>
 {% endmacro %}
 
+{# the All view: every top folder as a box (its folders inside it as boxes too), then what's
+   in no folder as a box of its own, so Expand all / Collapse all opens and folds them all.
+   loose: how many are in no folder. The caller draws a node's things, like sub_box's:
+   {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Not in a folder, n is fk.root) #}
+{% macro all_boxes(fk, loose) %}
+  {% set draw = caller %}
+  {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
+  {% if loose %}
+  <details class="box sub-box" data-sub="none" data-list>
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('📥', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
+    <div class="sub-body level">
+      <div class="sub-tools">{{ level_buttons(fk.main_label) }}
+        <span class="small"><a href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></div>
+      {{ draw(fk.root) }}
+    </div>
+  </details>
+  {% endif %}
+{% endmacro %}
+
 {# what's shown when the folder (or Not in a folder) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
   <p class="card empty small">{% if fk.node %}Nothing in this folder{{ ' itself' if has_folders }} yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.

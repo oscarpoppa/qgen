@@ -70,6 +70,14 @@ def shown(teacher, kind, folder='all'):
     return re.findall(r'aria-label="Check “([^”]+)”"', items)
 
 
+def everything(teacher, kind):
+    """All titles in ?folder=all, boxes and all, in page order (a thing in two folders twice)."""
+    import re
+    url = '/quiz/listvp' if kind == 'problems' else '/quiz/listvq'
+    page = teacher.get(url + '?folder=all').data.decode()
+    return re.findall(r'aria-label="Check “([^”]+)”"', page[page.index('id="folder-items"'):])
+
+
 def side_counts(page):
     """{name in the folder list: its count} from a page with folders down the side."""
     import re
@@ -112,7 +120,7 @@ def test_problems_page_lists_by_folder(app_db):
     db.session.expire_all()
     assert [p.title for p in alg.vproblems] == ['Area']
     # a folder that's gone shows All problems
-    assert shown(teacher, 'problems', 999) == ['Angles', 'Area', 'Add']
+    assert shown(teacher, 'problems', 999) == [] and sorted(set(everything(teacher, 'problems'))) == ['Add', 'Angles', 'Area']
 
 
 def test_quizzes_page_lists_by_folder(app_db):
@@ -126,7 +134,10 @@ def test_quizzes_page_lists_by_folder(app_db):
     p2 = VQGroup.query.one()
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [VQuiz.query.filter_by(title='Q2').one().id]})
     assert shown(teacher, 'quizzes', p2.id) == ['Q2'] and shown(teacher, 'quizzes', 'main') == ['Q1']
-    assert shown(teacher, 'quizzes') == ['Q2', 'Q1']
+    # All quizzes: each folder a box, then Not in a folder as a box, for Expand all / Collapse all
+    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q2', 'Q1']
+    page = teacher.get('/quiz/listvq?folder=all').data.decode()
+    assert 'data-sub="{}"'.format(p2.id) in page and 'data-sub="none"' in page and 'data-drop="top"' in page
 
 
 def test_one_at_a_time_and_dragging(app_db):

@@ -5,7 +5,7 @@
 {% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_awards.html" import award_list %}
-{% from "_folders.html" import folders_page, sub_box, empty_note with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note with context %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 {% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
 
@@ -134,8 +134,9 @@
 {% call folders_page(fk) %}
   {% set filter_one, filter_many = 'student', 'students' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
-    {% for item in shown %}{{ student_box(item) }}{% endfor %}
+    {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
+    {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
+    {% for item in shown %}{{ student_box(item) }}{% endfor %}{% endif %}
   </div>
   {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}
 {% endcall %}

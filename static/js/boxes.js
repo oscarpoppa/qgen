@@ -11,10 +11,12 @@
  * a "just saved" opens isn't. Boxes drawn later (the Dashboard's refresh) get theirs too.
  * Inside [data-keep-open] (My quizzes from a Home counter) everything shows open.
  *
- * Expand all / Collapse all: buttons [data-level="open"|"close"] act on what's directly in
- * their level (the nearest .level, or data-level-of="<selector>"): its boxes, a quiz's "N
- * items in the order" and a problem's shortened question. Their .level-buttons pair shows
- * only where there are two or more of those.
+ * Expand all / Collapse all: buttons [data-level="open"|"close"] open or fold every box that
+ * holds several things (folders, a quiz's or a student's tries, the Dashboard's and Home's
+ * boxes...), everywhere inside their level (the nearest .level, or data-level-of=
+ * "<selector>"), folders inside folders too. Small boxes (.box-mini: a quiz's problem list)
+ * and long questions are left as they are. Their .level-buttons pair shows only where there
+ * are two or more boxes.
  *
  * Page scripts can use window.qgenBoxes.restore(box) (back to remembered/starting state,
  * e.g. after a search) and listen for "qgen-boxes-ready". Loaded right after <main>, so it
@@ -85,20 +87,15 @@
   }, true);
 
   //Expand all / Collapse all
-  var FOLDS = BOX + ', details.problem-list, .clamp';
+  var FOLDS = BOX;
   function levelOf(btn) {
     var sel = btn.dataset.levelOf;
     return sel ? document.querySelector(sel) : btn.closest('.level');
   }
   function folds(level) {
     if (!level) return [];
-    var inner = level.matches('.level') ? level : null;
     return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
-      if (d.closest('[hidden]') || d.hasAttribute('data-fixed')) return false;
-      var lv = d.parentElement.closest('.level');
-      if (inner ? lv !== inner : lv && level.contains(lv) && lv !== level) return false;
-      //a question short enough to show whole has nothing to open
-      return !d.classList.contains('clamp') || d.classList.contains('open') || d.scrollHeight > d.clientHeight + 1;
+      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]');  // hidden by a filter: left alone
     });
   }
   document.addEventListener('click', function (e) {
@@ -106,9 +103,8 @@
     if (!btn) return;
     var want = btn.dataset.level === 'open', keep = !btn.closest('[data-keep-open]');
     folds(levelOf(btn)).forEach(function (d) {
-      if (d.classList.contains('clamp')) { d.classList.toggle('open', want); return; }
       d.open = want;
-      if (keep && d.matches(BOX)) memory[idOf(d)] = want ? 1 : 0;
+      if (keep) memory[idOf(d)] = want ? 1 : 0;
     });
     if (keep) save();
   });

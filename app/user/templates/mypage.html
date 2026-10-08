@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
-{% from "_folders.html" import folders_page, sub_box, move_mini with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, move_mini with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -122,8 +122,9 @@
   {# and between the heading (and Find a quiz) and the quizzes #}
   <hr class="section-rule list-rule">
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
-    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
-    {{ quiz_cards(shown, fk.view) }}
+    {% if fk.view == 'all' and shown and not showing and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.groups|length) %}{{ quiz_cards(n.groups, n.folder.id if n.folder else 'main') }}{% endcall %}
+    {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
+    {{ quiz_cards(shown, fk.view) }}{% endif %}
   </div>
   {% if not shown and (showing or fk.view in ('new', 'started', 'soon')) %}
     <p class="card empty small">{{ nothing }}</p>

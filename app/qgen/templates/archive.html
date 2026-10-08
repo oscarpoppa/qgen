@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_folders.html" import folders_page, sub_box, empty_note, move_menu with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, move_menu with context %}
 {% from "_macros.html" import box_label, count_of %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
@@ -82,11 +82,12 @@
     {% endif %}
   </div>
   <div id="folder-items">
-    {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
+    {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length) %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
+    {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
     {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
     {% elif not total %}<div class="card empty"><span class="big">🗄️</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
-    {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+    {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
   </div>
 {% endcall %}
 {% endblock %}

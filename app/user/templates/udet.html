@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
-{% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -67,8 +67,9 @@
     </form>
     {% if ulst|length > 5 %}{{ filter_bar('#folder-items', 'person', 'people', boxes='details.sub-box') }}{% endif %}
     <div id="folder-items">
-      {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ people_table(n.people, n.folder) }}{% endcall %}{% endfor %}{% endif %}
-      {{ people_table(shown, fk.node.folder if fk.node else none) }}
+      {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length) %}{{ people_table(n.people, n.folder) }}{% endcall %}
+      {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ people_table(n.people, n.folder) }}{% endcall %}{% endfor %}{% endif %}
+      {{ people_table(shown, fk.node.folder if fk.node else none) }}{% endif %}
     </div>
     {% if not shown %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
 {% endcall %}

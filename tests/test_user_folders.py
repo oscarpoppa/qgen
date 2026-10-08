@@ -48,9 +48,10 @@ def test_make_folders_and_put_people_in_them(app_db):
         'Put sam in "Math club".'
     assert in_folders('sam') == ['7th grade', 'Math club']
     assert sorted(people(teach)) == ['kim', 'teach'] and people(teach, g7) == ['sam'] and people(teach, club) == ['sam']
-    assert sorted(people(teach, 'all')) == ['kim', 'sam', 'teach']
+    # All: each folder a box (sam is in both), then Not in a folder as a box
+    assert sorted(people(teach, 'all')) == ['kim', 'sam', 'sam', 'teach']
     page = teach.get('/userdet?folder=all').data.decode()
-    assert page.count('📁 7th grade</a>') == 1 and 'aria-label="Take sam out of Math club"' in page
+    assert page.count('📁 7th grade</a>') == 2 and 'aria-label="Take sam out of Math club"' in page
     # dragging from one folder to another moves them (their other folders stay)
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
         'Moved sam to "8th grade".'
