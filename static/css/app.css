@@ -1496,3 +1496,53 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
   .paper-sheet:last-child { break-after: auto; }
   .paper-sheet-img { max-height: 88vh; object-fit: contain; }
 }
+
+/* Scan workbook pages: the draft (scan_review.html): the page with its crop boxes on the
+   left, its quiz and drafted problems on the right; stacked on a phone */
+.scan-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .scan-split { grid-template-columns: minmax(0, 1fr); } }
+.scan-left { position: sticky; top: calc(var(--topbar-h, 56px) + 8px); }
+@media (max-width: 860px) { .scan-left { position: static; } }
+.scan-canvas { position: relative; line-height: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; touch-action: none; user-select: none; }
+.scan-canvas img { display: block; width: 100%; height: auto; max-height: none; }
+.crop { position: absolute; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); cursor: move; line-height: 1.2; }
+.crop.crop-paper { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.crop.is-current { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
+.crop.is-dragging { opacity: .8; }
+.crop-label { position: absolute; left: 0; top: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .75rem; padding: 1px 5px; background: var(--surface); color: var(--text); border-bottom-right-radius: 6px; pointer-events: none; }
+.crop-handle { position: absolute; width: 16px; height: 16px; background: var(--surface); border: 2px solid currentColor; border-radius: 50%; color: var(--accent); }
+.crop-paper .crop-handle { color: var(--warn); }
+.crop-nw { left: -8px; top: -8px; cursor: nwse-resize; } .crop-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.crop-ne { right: -8px; top: -8px; cursor: nesw-resize; } .crop-sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.scan-add-pic { margin-top: 8px; }
+.scan-quiz { margin-bottom: 12px; }
+.scan-pics { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.scan-pic { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.scan-pic select { max-width: 100%; }
+.scan-pic.is-off { opacity: .5; }
+.scan-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; min-width: 0; }
+.scan-item.has-error { border-color: var(--bad); }
+.scan-item.is-off .scan-item-body { display: none; }
+.scan-item.is-off { opacity: .65; }
+.scan-item-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.scan-item-head .scan-title { flex: 1 1 12rem; min-width: 0; }
+.scan-item-body { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.scan-item-body textarea, .scan-item-body input[type=text] { width: 100%; }
+.scan-values { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.scan-value { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: .9rem; padding-bottom: 6px; border-bottom: 1px dashed var(--border); }
+.scan-value label { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; white-space: nowrap; }
+.scan-value input[type=text] { padding: 4px 6px; min-width: 0; }
+.scan-value .v-name { width: 7ch !important; }
+.scan-value .v-num { width: 6ch !important; }
+.scan-value .v-wide { flex: 1 1 14rem; }
+.scan-value .v-wide input { width: 100% !important; }
+.scan-item select, .scan-pic select { width: auto; max-width: 100%; }
+.scan-value select { padding: 4px 6px; }
+.scan-pic input[type=text] { width: auto; flex: 1 1 8rem; }
+.scan-value-new input[type=text]:first-child { font-style: italic; }
+.scan-check:empty { display: none; }
+.scan-samples ul { margin: 4px 0 0; padding-left: 1.2rem; }
+.scan-try { align-self: flex-start; margin-top: 4px; }
+.scan-actions { position: sticky; bottom: 0; z-index: 5; }
+.scan-progress-list { margin: 8px 0 0; padding-left: 1.4rem; }

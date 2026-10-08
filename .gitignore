@@ -13,3 +13,6 @@ __pycache__/
 static/*
 !static/css/
 !static/js/
+
+# workbook pages being scanned (private)
+instance/

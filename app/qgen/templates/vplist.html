@@ -58,7 +58,7 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}{% endif %}
-    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a></div>
+    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY and not single %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">📷 Scan workbook pages</a>{% endif %}</div>
 </div>
 
 {% if single %}

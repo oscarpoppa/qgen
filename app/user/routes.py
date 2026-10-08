@@ -382,6 +382,8 @@ def deluser(uid):
     #their quiz attempts are kept in the archive
     S.archive_student(usr, by=current_user)
     avatars.remove(usr, commit=False)
+    from app.qgen.scan import remove_user_jobs
+    remove_user_jobs(usr)  # their unfinished workbook scans
     usrquery.delete()
     db.session.commit()
     flash('User {} has been deleted'.format(usrname))

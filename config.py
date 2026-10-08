@@ -20,5 +20,7 @@ class Config(object):
     SECRET_KEY = required('SECRET_KEY')
     #uploaded images/files and site css/js (nginx serves /static from here too)
     STATIC_DIR = os.environ.get('STATIC_DIR') or os.path.join(basedir, 'static')
+    #workbook pages being scanned (private: not under static), until saved or discarded
+    SCAN_DIR = os.environ.get('SCAN_DIR') or os.path.join(basedir, 'instance', 'scans')
     #optional: enables the "Fill in for me" helper on the problem page
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')

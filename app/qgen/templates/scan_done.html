@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Scanned: {{ done.name }}</h1>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('qgen.scan_start') }}" title="Scan more workbook pages">Scan more pages</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" title="Go to the Quizzes page">Quizzes</a>
+  </div>
+</div>
+<div class="card">
+  <p>Made {{ quizzes|length }} quiz{{ '' if quizzes|length == 1 else 'zes' }} and {{ done.problems }} problem{{ '' if done.problems == 1 else 's' }}{% if done.pictures %}, and saved {{ done.pictures|length }} picture{{ '' if done.pictures|length == 1 else 's' }}{% endif %}{% if done.folder %}, in the folder “{{ done.folder }}”{% endif %}.</p>
+  {% if quizzes %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Quiz</th><th>Questions</th><th></th></tr></thead>
+      <tbody>
+      {% for q in quizzes %}
+        <tr>
+          <td data-label="Quiz">{{ q.title }}</td>
+          <td data-label="Questions">{{ q.vproblems|length }}</td>
+          <td class="btn-row">
+            <a class="btn btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="See “{{ q.title }}” as a student would">View</a>
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=q.id) }}" title="Change “{{ q.title }}”: its problems and settings">Edit</a>
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('qgen.assign', vq=q.id) }}" title="Give “{{ q.title }}” to students">Assign</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if done.pictures %}<p class="small"><a href="{{ url_for('upload.images') }}" title="See the pictures, including the ones from these pages">See the pictures →</a></p>{% endif %}
+</div>
+{% endblock %}

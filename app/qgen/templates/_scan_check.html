@@ -1,0 +1,13 @@
+{# one draft item's check: what's wrong, what to watch, and three versions students could get #}
+{% for e in check.errors %}<div class="error">{{ e }}</div>{% endfor %}
+{% for w in check.warnings %}<div class="hint hint-warn small">⚠️ {{ w }}</div>{% endfor %}
+{% if check.samples %}
+  <div class="scan-samples small">
+    <span class="muted">{{ 'Students get versions like:' if check.samples|length > 1 else 'Students get:' }}</span>
+    <ul>
+      {% for q, a, ch in check.samples %}
+        <li>{{ q }}{% if ch %} <span class="muted">({{ ch|join(' / ') }})</span>{% endif %}{% if a %} → <strong>{{ a }}</strong>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}

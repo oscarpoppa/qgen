@@ -473,3 +473,24 @@ class ArchivedAttempt(db.Model):
 
     def __repr__(self):
         return '<Archived attempt {}: {} : {}>'.format(self.original_id, self.student_name, self.quiz_title)
+
+
+#workbook pages being turned into problems and quizzes (app/qgen/scan.py): the page
+#pictures sit in a private folder, the AI's reading and the teacher's edits in `data`
+#(JSON) until Save makes the real problems and quizzes, or Discard drops it
+class ScanJob(db.Model):
+    __tablename__ = 'scan_job'
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    name = db.Column(db.String(128), nullable=False, default='')
+    pages = db.Column(db.Integer, nullable=False, default=0)
+    #'new' (pictures in, not read yet), 'reading', 'ready' (every page read or failed)
+    status = db.Column(db.String(16), nullable=False, default='new')
+    data = db.Column(LongText)
+
+    author = db.relationship('User', lazy=True)
+
+    def __repr__(self):
+        return '<Scan {}: {} ({} pages)>'.format(self.id, self.name, self.pages)

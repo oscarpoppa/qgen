@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import back_button, post_button with context %}
+{% block content %}
+<div class="page-head">
+  <h1>Scan workbook pages</h1>
+  <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}</div>
+</div>
+<p class="muted">Photograph or scan pages of a workbook. The AI reads each page and drafts its problems, with random numbers so every student gets their own. You check everything beside the page before anything is saved.</p>
+
+<div class="card">
+  <h2>New scan</h2>
+  <form method="post" action="{{ url_for('qgen.scan_upload') }}" enctype="multipart/form-data" id="scan-upload" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label class="label" for="scan-name">Workbook name</label>
+      <input type="text" id="scan-name" name="name" maxlength="128" placeholder="e.g. Math Grade 2, pages 10–15" required>
+      <div class="help">Also the folder the problems and quizzes go in (you can change it later).</div>
+    </div>
+    <div class="field">
+      <label class="label" for="scan-pages">Pages</label>
+      <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple required>
+      <div class="help">Photos (JPG, PNG) or a PDF; up to {{ max_pages }} pages at a time. Take each photo straight on, in good light, with the whole page showing.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
+      <span class="muted small" id="scan-wait" hidden>Uploading…</span>
+    </div>
+  </form>
+</div>
+
+{% if jobs %}
+<div class="card">
+  <h2>Unfinished scans</h2>
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Workbook</th><th>Pages</th><th>Last changed</th><th></th></tr></thead>
+      <tbody>
+      {% for j in jobs %}
+        <tr>
+          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a></td>
+          <td data-label="Pages">{{ j.pages }}</td>
+          <td data-label="Last changed" class="nowrap">{{ j.updated_at.strftime('%b %d, %I:%M %p') }}</td>
+          <td class="btn-row">
+            <a class="btn btn-sm" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">Continue</a>
+            {{ post_button(url_for('qgen.scan_discard', job_id=j.id), 'Discard', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('scan-upload').addEventListener('submit', function (e) {
+  var form = e.target;
+  if (!form.name.value.trim() || !form.pages.files.length) {
+    e.preventDefault();
+    (form.name.value.trim() ? form.pages : form.name).focus();
+    return;
+  }
+  document.getElementById('scan-go').disabled = true;
+  document.getElementById('scan-wait').hidden = false;
+});
+</script>
+{% endblock %}

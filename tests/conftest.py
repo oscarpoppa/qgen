@@ -9,6 +9,7 @@ os.environ['SECRET_KEY'] = 'test-only-secret'
 #uploads during tests go to a throwaway folder
 import tempfile
 os.environ['STATIC_DIR'] = tempfile.mkdtemp(prefix='qgen-test-static-')
+os.environ['SCAN_DIR'] = tempfile.mkdtemp(prefix='qgen-test-scans-')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 

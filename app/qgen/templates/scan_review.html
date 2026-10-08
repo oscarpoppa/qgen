@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% from "_macros.html" import back_button, post_button, box_label, count_of with context %}
+{# The draft of a scan (app/qgen/scan.py): each page beside its picture, with its quiz
+   settings, crop boxes and drafted problems. Nothing is saved until Save. #}
+
+{% macro errs(key) %}{% for e in problems.get(key, []) %}<div class="error">{{ e }}</div>{% endfor %}{% endmacro %}
+
+{% macro use_select(name, current, label_text) %}
+  <select name="{{ name }}" class="scan-use" aria-label="{{ label_text }}" title="Where this picture goes">
+    {% for v, l in uses %}<option value="{{ v }}"{% if v == current %} selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+{% endmacro %}
+
+{% macro value_rows(ip, values) %}
+  <div class="scan-values" role="group" aria-label="Random values">
+    {% for v in values + [{}] %}
+      {% set vp = ip ~ 'v' ~ loop.index0 ~ '-' %}
+      <div class="scan-value{% if not v %} scan-value-new{% endif %}" data-kind="{{ v.kind or 'whole' }}">
+        <input type="text" class="v-name" name="{{ vp }}name" value="{{ v.name or '' }}" placeholder="{{ 'new' if not v else 'name' }}" aria-label="Name" title="Its name, used in the question as [name]">
+        <select name="{{ vp }}kind" class="scan-kind" aria-label="Kind" title="What sort of value it is">
+          {% for k in kinds %}<option value="{{ k }}"{% if (v.kind or 'whole') == k %} selected{% endif %}>{{ {'whole': 'whole number', 'decimal': 'decimal', 'list': 'from a list', 'calc': 'worked out'}[k] }}</option>{% endfor %}
+        </select>
+        <label class="k-whole k-decimal">from <input type="text" class="v-num" name="{{ vp }}min" value="{{ v.min or '' }}" title="The smallest it can be"></label>
+        <label class="k-whole k-decimal">to <input type="text" class="v-num" name="{{ vp }}max" value="{{ v.max or '' }}" title="The biggest it can be"></label>
+        <label class="k-whole">step <input type="text" class="v-num" name="{{ vp }}step" value="{{ v.step or '' }}" title="In steps of (optional), e.g. 5 gives 40, 45, 50…"></label>
+        <label class="k-decimal">places <input type="text" class="v-num" name="{{ vp }}places" value="{{ v.places or '' }}" title="Decimal places"></label>
+        <label class="k-list v-wide">items <input type="text" name="{{ vp }}items" value="{{ v.get('items') or '' }}" placeholder="2, 3, 5 or 3 = three, 4 = four" title="The items, separated by commas; matched pairs like 3 = three"></label>
+        <label class="k-calc v-wide">= <input type="text" name="{{ vp }}formula" value="{{ v.formula or '' }}" placeholder="a + b" title="Worked out from other values, e.g. a + b"></label>
+        <label>not same as <input type="text" class="v-name" name="{{ vp }}different_from" value="{{ (v.different_from or [])|join(', ') }}" title="Other values it must differ from (optional), e.g. a"></label>
+        <label class="check" title="Never zero"><input type="checkbox" name="{{ vp }}nonzero"{% if v.nonzero %} checked{% endif %}> not 0</label>
+      </div>
+    {% endfor %}
+    <div class="muted small">Clear a name to remove that value. The question and answer use them as [name], and formulas like [a + b].</div>
+  </div>
+{% endmacro %}
+
+{% macro item_box(page, item, i) %}
+  {% set n = page.n %}
+  {% set ip = 'p' ~ n ~ 'i' ~ i ~ '-' %}
+  {% set key = 'page:' ~ n ~ ':item:' ~ i %}
+  <fieldset class="scan-item{% if not item.include %} is-off{% endif %}{% if key in problems %} has-error{% endif %}" data-page="{{ n }}" data-item="{{ i }}" data-kind="{{ item.kind }}">
+    <legend class="sr-only">Page {{ n }}, item {{ i + 1 }}</legend>
+    <div class="scan-item-head">
+      <label class="check" title="Include this one when saving"><input type="checkbox" name="{{ ip }}include" class="scan-include"{% if item.include %} checked{% endif %}> <span class="qnum">{{ i + 1 }}</span></label>
+      <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem's title (only you see it)" class="scan-title">
+      {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">✏️ Paper only</span>{% endif %}
+    </div>
+    {{ errs(key) }}
+    <div class="scan-item-body">
+    {% if item.kind == 'paper' %}
+      <input type="hidden" name="{{ ip }}box" id="{{ ip }}box" value="{{ item.box.left }},{{ item.box.top }},{{ item.box.right }},{{ item.box.bottom }}">
+      <label class="label small" for="{{ ip }}question">Instructions</label>
+      <textarea id="{{ ip }}question" name="{{ ip }}question" rows="2">{{ item.question }}</textarea>
+      <label class="label small" for="{{ ip }}answer">Answer key (optional, only you see it)</label>
+      <input type="text" id="{{ ip }}answer" name="{{ ip }}answer" value="{{ item.answer }}">
+      <p class="muted small">The orange box on the page is what gets printed. Drag its edges to fit.</p>
+    {% else %}
+      <div class="btn-row small">
+        <label for="{{ ip }}qtype" class="muted">Kind</label>
+        <select id="{{ ip }}qtype" name="{{ ip }}qtype" class="scan-qtype" title="How students answer">
+          {% for k, label in qtypes.items() %}<option value="{{ k }}"{% if item.qtype == k %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <label class="check" title="Every student gets the numbers printed on the page instead of random ones"><input type="checkbox" name="{{ ip }}use_page" class="scan-use-page"{% if item.use_page %} checked{% endif %}> Use the page’s numbers</label>
+      </div>
+      {% if item.fixed_reason %}<p class="muted small">Kept as on the page: {{ item.fixed_reason }}</p>{% endif %}
+      <div class="scan-random"{% if item.use_page %} hidden{% endif %}>
+        <label class="label small" for="{{ ip }}question">Question</label>
+        <textarea id="{{ ip }}question" name="{{ ip }}question" rows="2">{{ item.question }}</textarea>
+        <label class="label small" for="{{ ip }}answer">Answer</label>
+        <input type="text" id="{{ ip }}answer" name="{{ ip }}answer" value="{{ item.answer }}">
+        <div class="t-choice"><label class="label small" for="{{ ip }}choices">Choices (one per line, * before the right one)</label>
+        <textarea id="{{ ip }}choices" name="{{ ip }}choices" rows="3">{{ item.choices }}</textarea></div>
+        {{ value_rows(ip, item['values']) }}
+      </div>
+      <div class="scan-fixed"{% if not item.use_page %} hidden{% endif %}>
+        <label class="label small" for="{{ ip }}page_question">Question (as on the page)</label>
+        <textarea id="{{ ip }}page_question" name="{{ ip }}page_question" rows="2">{{ item.page_question }}</textarea>
+        <label class="label small" for="{{ ip }}page_answer">Answer</label>
+        <input type="text" id="{{ ip }}page_answer" name="{{ ip }}page_answer" value="{{ item.page_answer }}">
+        <div class="t-choice"><label class="label small" for="{{ ip }}page_choices">Choices (one per line, * before the right one)</label>
+        <textarea id="{{ ip }}page_choices" name="{{ ip }}page_choices" rows="3">{{ item.page_choices }}</textarea></div>
+      </div>
+    {% endif %}
+      <div class="scan-check" aria-live="polite">{% with check = checks.get((n, i)) %}{% if check %}{% include "_scan_check.html" %}{% endif %}{% endwith %}</div>
+      <button type="button" class="btn btn-secondary btn-sm scan-try" title="Check this problem and show three versions students could get (nothing is saved)">Check and show examples</button>
+    </div>
+  </fieldset>
+{% endmacro %}
+
+{% macro picture_row(pre, pic, n) %}
+  {% set key = pre ~ pic.id ~ '-' %}
+  <div class="scan-pic" data-box="{{ key }}box">
+    <input type="hidden" name="{{ key }}box" id="{{ key }}box" value="{{ pic.box.left }},{{ pic.box.top }},{{ pic.box.right }},{{ pic.box.bottom }}">
+    <input type="text" name="{{ key }}label" value="{{ pic.label }}" maxlength="64" placeholder="label" aria-label="Picture label" title="A short name for the picture (used in its file name)" size="12">
+    {{ use_select(key ~ 'use', pic.use, 'Where the picture ' ~ (pic.label or '') ~ ' goes') }}
+    <label class="check small" title="Save it in Pictures even when it isn't used"><input type="checkbox" name="{{ key }}keep"{% if pic.keep %} checked{% endif %}> save</label>
+    <label class="check small" title="Leave this picture out"><input type="checkbox" name="{{ key }}removed" class="scan-pic-remove"> remove</label>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Scan: {{ job.name }}</h1>
+  <div class="actions">
+    {{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}
+    {{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}
+  </div>
+</div>
+
+{% if reading %}
+  <div class="card" id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}">
+    <p><strong id="scan-progress-line">Reading the pages…</strong></p>
+    <p class="muted small">About half a minute per page. You can leave this page and come back from “Scan workbook pages”; the reading goes on.</p>
+    <ol class="scan-progress-list">
+      {% for p in data.pages %}<li data-n="{{ p.n }}">Page {{ p.n }}: <span class="muted">{{ {'waiting': 'waiting', 'reading': 'reading…', 'done': 'done ✓', 'error': 'couldn’t be read'}[p.state] }}</span></li>{% endfor %}
+    </ol>
+  </div>
+{% else %}
+  {% if unread %}
+    <div class="card alert alert-warning">
+      <p>{{ count_of(unread|length, 'page wasn’t', 'pages weren’t') }} read yet:</p>
+      <ul>{% for p in data.pages if p.state != 'done' %}<li>Page {{ p.n }}{% if p.error %}: {{ p.error }}{% endif %}</li>{% endfor %}</ul>
+      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Read the rest', cls='btn btn-sm', tip='Have the AI read the pages that are missing (each counts as one AI use)') }}
+    </div>
+  {% endif %}
+  {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
+
+  <form method="post" id="scan-form" data-fresh-page novalidate data-check="{{ url_for('qgen.scan_check', job_id=job.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card scan-batch">
+      <div class="field">
+        <label class="label" for="scan-name">Workbook name</label>
+        <input type="text" id="scan-name" name="name" value="{{ data.name or job.name }}" maxlength="128">
+      </div>
+      <div class="field">
+        <label class="label" for="scan-folder">Folder</label>
+        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="64" placeholder="(none: Not in a folder)">
+        <div class="help">The problems go in this folder on Problems, and the quizzes in this folder on Quizzes. A folder with this name is used if there is one.</div>
+        {{ errs('folder') }}
+      </div>
+    </div>
+
+    {% set ns = namespace(problems_before=false) %}
+    {% for page in data.pages if page.state == 'done' %}
+      {% set n = page.n %}
+      {% set pre = 'p' ~ n ~ '-' %}
+      <details class="box card scan-page" open data-page="{{ n }}" data-box="scan-page:{{ n }}">
+        <summary>
+          {{ box_label('📄', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
+          {% if page.kind == 'picture' %}<span class="badge">picture only</span>{% elif page.kind == 'other' %}<span class="badge">nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">joined to page {{ leads[n] }}</span>{% endif %}
+        </summary>
+        <input type="hidden" name="{{ pre }}shown" value="1">
+        <div class="scan-split">
+          <div class="scan-left">
+            <div class="scan-canvas" data-page="{{ n }}">
+              <img src="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" alt="Page {{ n }} as scanned" draggable="false">
+              {% for pic in page.pictures %}
+                <div class="crop" data-for="{{ pre }}{{ pic.id }}-box" title="{{ pic.label or 'Picture' }}: drag to move, drag the corners to resize"><span class="crop-label">🖼 {{ pic.label or 'picture' }}</span></div>
+              {% endfor %}
+              {% for item in page['items'] %}{% if item.kind == 'paper' %}
+                <div class="crop crop-paper" data-for="p{{ n }}i{{ loop.index0 }}-box" title="What gets printed for “{{ item.title }}”: drag to move, drag the corners to resize"><span class="crop-label">✏️ {{ item.title }}</span></div>
+              {% endif %}{% endfor %}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
+          </div>
+          <div class="scan-right">
+            {% if page.notes %}<p class="hint small">📝 {{ page.notes }}</p>{% endif %}
+            {% if page.kind == 'problems' %}
+              <div class="scan-quiz">
+                <label class="label" for="{{ pre }}title">Quiz title</label>
+                <input type="text" id="{{ pre }}title" name="{{ pre }}title" value="{{ page.title }}" maxlength="64">
+                {{ errs('page:' ~ n ~ ':title') }}
+                {% if page.directions %}<p class="muted small">Directions on the page: {{ page.directions }}</p>{% endif %}
+                <div class="btn-row small">
+                  {% if ns.problems_before %}<label class="check" title="Put this page's problems in the same quiz as the page before"><input type="checkbox" name="{{ pre }}join_prev"{% if page.join_prev %} checked{% endif %}> Join with the page before</label>{% endif %}
+                  <label class="check" title="Each student gets the questions in their own order (off keeps the workbook's order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
+                  <label class="check" title="Students can use the on-screen calculator"><input type="checkbox" name="{{ pre }}calculator"{% if page.calculator %} checked{% endif %}> Calculator</label>
+                </div>
+              </div>
+              {% set ns.problems_before = true %}
+            {% elif page.kind == 'picture' %}
+              <p>This page has no questions. Its picture is saved in Pictures, and can go at the top of a quiz or with a problem:</p>
+            {% else %}
+              <p class="muted">Nothing on this page to make into problems (a cover, contents or answer page). Check “save” to keep it as a picture anyway.</p>
+            {% endif %}
+            <div class="scan-pics" data-page="{{ n }}">
+              {% if page.pictures %}<div class="label small">Pictures</div>{% endif %}
+              {% for pic in page.pictures %}{{ picture_row(pre, pic, n) }}{% endfor %}
+            </div>
+            {% for item in page['items'] %}{{ item_box(page, item, loop.index0) }}{% endfor %}
+          </div>
+        </div>
+      </details>
+    {% endfor %}
+
+    <div class="card btn-row scan-actions">
+      <button class="btn" name="action" value="save" title="Make the problems and quizzes from the checked items, and save the pictures">Save</button>
+      <button class="btn btn-secondary" name="action" value="keep" title="Keep your changes and come back to finish later">Keep draft</button>
+      <span class="muted small">Nothing is saved until you press Save.</span>
+    </div>
+  </form>
+
+  {# a new picture's row, copied by scan_review.js for "+ Add a picture" #}
+  <template id="scan-new-pic">
+    <div class="scan-pic" data-box="__P__-__ID__-box">
+      <input type="hidden" name="__P__-__ID__-box" id="__P__-__ID__-box" value="0.3,0.3,0.7,0.6">
+      <input type="text" name="__P__-__ID__-label" value="" maxlength="64" placeholder="label" aria-label="Picture label" title="A short name for the picture (used in its file name)" size="12">
+      {{ use_select('__P__-__ID__-use', '', 'Where the new picture goes') }}
+      <label class="check small" title="Leave this picture out"><input type="checkbox" name="__P__-__ID__-removed" class="scan-pic-remove"> remove</label>
+    </div>
+  </template>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/scan_review.js') }}"></script>
+{% endblock %}
