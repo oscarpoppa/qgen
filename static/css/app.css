@@ -735,7 +735,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card[open] .quiz-flag { display: none; }
 
 /* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
-.folders-layout { display: grid; grid-template-columns: minmax(170px, 230px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.folders-layout { display: grid; grid-template-columns: minmax(170px, 260px) minmax(0, 1fr); gap: 20px; align-items: start; }
 .folder-side { position: sticky; top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px;
   background: var(--surface); max-height: calc(100vh - 24px); overflow: auto; }
 .folder-side-head { display: none; list-style: none; cursor: pointer; }
