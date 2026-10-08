@@ -26,6 +26,12 @@ def qtype_of(cprob):
     return get_qtype(cprob.vproblem.qtype)
 
 
+def teacher_grades(cprob):
+    """The teacher gives this answer its credit: written answers and paper pages always,
+    and a Short text answer that came close (to_check)."""
+    return not qtype_of(cprob).auto_graded or bool(cprob.conc_opts.get('to_check'))
+
+
 def problem_image(cprob):
     """This student's picture for a problem (picked at random when there are several)."""
     return cprob.conc_opts.get('image') or cprob.vproblem.image
@@ -73,6 +79,14 @@ def record_answers(cquiz, answers=None):
             cprob.submitted = qt.to_stored(None)
         if qt.auto_graded:
             cprob.credit = qt.grade(cprob.submitted, cprob.conc_ansr or '', cprob.conc_opts, cprob.vproblem.options)
+            #None: close but not on the list (Short text: "a brown horse" for "horse"), so the
+            #teacher checks it in Grading
+            opts = cprob.conc_opts
+            if cprob.credit is None:
+                cprob.conc_opts = dict(opts, to_check=True)
+                needs_review = True
+            elif opts.get('to_check'):
+                cprob.conc_opts = {k: v for k, v in opts.items() if k != 'to_check'}
         else:
             #a blank essay needs no reading: it's simply 0
             cprob.credit = 0.0 if qt.is_blank(cprob.submitted) else None
@@ -142,6 +156,7 @@ class TranscriptItem:
     #as {'text', 'picked', 'right'}; None for other types
     choices: Optional[list] = None
     paper: bool = False  # done on paper: no typed answer to show
+    check: bool = False  # an automatic type's answer the teacher checks (Short text that came close)
 
     @property
     def mark(self):
@@ -174,6 +189,7 @@ def transcript_item(cp):
         feedback=cp.feedback,
         choices=transcript_choices(qt, cp),
         paper=qt.paper,
+        check=qt.auto_graded and bool((cp.conc_opts or {}).get('to_check')),
     )
 
 

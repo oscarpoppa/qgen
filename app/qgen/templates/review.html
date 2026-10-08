@@ -22,14 +22,15 @@
     <section class="card question">
       <div class="card-head">
         <span class="qnum">{{ it.num }}</span>
-        {% if not it.essay %}
+        {% if not (it.essay or it.check) %}
           <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
           <span class="muted small">graded automatically</span>
+        {% elif it.check %}<span class="badge badge-warn" title="Not on your list of answers, but one of them is in it">check this answer</span>
         {% else %}<span class="badge badge-warn">needs your grade</span>{% endif %}
       </div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
       <div class="qtext">{{ it.text }}</div>
-      {% if it.essay and row.form %}
+      {% if (it.essay or it.check) and row.form %}
         <div class="split">
           <div>
             {% if it.paper %}
@@ -48,7 +49,7 @@
             {{ field(row.form.credit, '0 = no credit, 100 = full credit.', attrs={'type': 'number', 'min': 0, 'max': 100, 'step': 5}) }}
             {{ field(row.form.feedback, attrs={'rows': 4}) }}
             {% if row.notes %}<div class="feedback"><strong>Your grading notes:</strong> {{ row.notes }}</div>{% endif %}
-            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
+            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Accepted answers' if it.check else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
           </div>
         </div>
       {% else %}

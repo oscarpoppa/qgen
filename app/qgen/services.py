@@ -1326,7 +1326,9 @@ def _link(endpoint, **values):
 # ---------------------------------------------------------------- grading
 
 def essays(cq):
-    return [cp for cp in cq.cproblems if not get_qtype(cp.vproblem.qtype).auto_graded]
+    """The answers the teacher grades: written answers, paper pages, and close Short text answers."""
+    from .formfact import teacher_grades
+    return [cp for cp in cq.cproblems if teacher_grades(cp)]
 
 
 def grade_essays(cq, grades, finish=False, grader_id=None):

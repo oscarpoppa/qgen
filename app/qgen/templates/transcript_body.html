@@ -61,6 +61,7 @@
         {# once answers are shown: under every question, right or wrong #}
         <dt>Correct answer</dt><dd>{{ it.correct }}</dd>
       </dl>
+      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
     {% endif %}
   </section>
 {% endfor %}

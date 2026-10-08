@@ -464,7 +464,15 @@ class Text(QType):
     def grade(self, stored, conc_ansr, conc_opts, options):
         cs = bool(options.get('case_sensitive'))
         got = normalize_text(stored, cs)
-        return 1.0 if got and any(got == normalize_text(a, cs) for a in conc_ansr.splitlines()) else 0.0
+        if not got:
+            return 0.0
+        answers = [normalize_text(a, cs) for a in conc_ansr.splitlines() if a.strip()]
+        if got in answers:
+            return 1.0
+        #a right answer inside a longer one ("a brown horse" for "horse"): the teacher decides
+        if any(re.search(r'(?<!\w)' + re.escape(a) + r'(?!\w)', got) for a in answers if a):
+            return None
+        return 0.0
 
     def show_correct(self, conc_ansr, conc_opts):
         return ' or '.join(a for a in conc_ansr.splitlines() if a)

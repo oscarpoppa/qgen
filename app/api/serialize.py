@@ -4,7 +4,7 @@ A student's view never includes correct answers before the attempt is finished.
 """
 from flask import url_for
 
-from app.qgen.formfact import problem_image, transcript_item
+from app.qgen.formfact import problem_image, transcript_item, teacher_grades
 from app.qgen.models import attempts_by_quiz
 from app.qgen.qtypes import get_qtype
 from app.qgen import layout
@@ -153,7 +153,7 @@ def teacher_attempt_json(cq):
                'text': cp.conc_prob, 'image_url': static_url(it.image), 'your_answer': it.submitted,
                'raw_answer': cp.submitted, 'correct_answer': it.correct, 'credit': cp.credit,
                'feedback': cp.feedback, 'highlights': [{'start': s[0], 'end': s[1], 'kind': s[2]} for s in cp.highlights],
-               'graded_by_teacher': not get_qtype(cp.vproblem.qtype).auto_graded}
+               'graded_by_teacher': teacher_grades(cp)}
         if 'choices' in cp.conc_opts:
             row['choices'] = cp.conc_opts['choices']
         if row['graded_by_teacher']:
