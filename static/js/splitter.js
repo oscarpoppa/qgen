@@ -1,10 +1,12 @@
 /* Sideways dividers: drag one (or use the left and right arrow keys on it) to make what's
  * beside it wider or narrower; double-click puts it back. The width is remembered in this
- * browser. Two of them:
+ * browser. Where they are:
  *  - folder pages: between the folder list and the list (one width for every folder page)
- *  - the Notices / Messages panel: its left edge */
+ *  - the Notices / Messages panel: its left edge
+ *  - the scan draft: between each page's picture and its problems (one width for them all)
+ *  - Grading: between a written answer and its grade (one width for them all) */
 (function () {
-  var STEP = 16;
+  var STEP = 16, root = document.documentElement;
   function stored(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
   function store(k, v) { try { if (v) localStorage.setItem(k, String(v)); else localStorage.removeItem(k); } catch (e) {} }
 
@@ -64,8 +66,28 @@
       1, 'Make the folder list wider or narrower');
   }
 
+  //2. two columns side by side, the same width in every pair on the page: the scan draft
+  //(the page picture | its problems) and Grading (the answer | its grade). Not when the
+  //window is narrow and they're stacked (the bar is hidden then)
+  [['.scan-split', '--scan-w', 'qgen-scan-width', 'Make the page picture wider or narrower'],
+   ['#review-form .split', '--answer-w', 'qgen-answer-width', 'Make the answer wider or narrower']].forEach(function (pair) {
+    var boxes = document.querySelectorAll(pair[0]);
+    Array.prototype.forEach.call(boxes, function (box) {
+      var first = box.firstElementChild;
+      if (!first) return;
+      box.classList.add('has-vsplit');
+      var bar = document.createElement('div');
+      bar.className = 'vsplit pair-split';
+      first.insertAdjacentElement('afterend', bar);
+      divider(bar, pair[2], function () { return first.getBoundingClientRect().width; },
+        function (px) { if (px) root.style.setProperty(pair[1], px + 'px'); else root.style.removeProperty(pair[1]); },
+        function () { return 200; }, function () { return Math.max(200, box.getBoundingClientRect().width - 260); },
+        1, pair[3]);
+    });
+  });
+
   //4. the Notices / Messages panel
-  var dock = document.getElementById('dock'), root = document.documentElement;
+  var dock = document.getElementById('dock');
   if (dock) {
     var edge = document.createElement('div');
     edge.className = 'vsplit dock-edge';
