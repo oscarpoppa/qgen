@@ -174,7 +174,7 @@ def test_gone_pages_say_so(app_db):
     assert '/quiz/archive/' in teach.get('/quiz/review/{}'.format(cq.id)).headers['Location']
 
 
-def test_new_badge_clears_when_the_quiz_is_opened(app_db):
+def test_my_quizzes_badge_stays_until_the_quiz_is_handed_in(app_db):
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     vq = make_quiz(app, teach)
@@ -182,7 +182,9 @@ def test_new_badge_clears_when_the_quiz_is_opened(app_db):
     assert sam.get('/messages/poll').get_json()['quizzes'] == 1
     from app.qgen.models import CQuiz
     cq = CQuiz.query.filter_by(assignee=ids('sam')).one()
-    sam.get('/quiz/take/{}'.format(cq.id))  # from Home or a notice, not My quizzes
+    sam.get('/quiz/take/{}'.format(cq.id))  # opened from Home or a notice: still to do
+    assert sam.get('/messages/poll').get_json()['quizzes'] == 1
+    sam.post('/quiz/take/{}'.format(cq.id), data={})  # handed in
     assert sam.get('/messages/poll').get_json()['quizzes'] == 0
 
 

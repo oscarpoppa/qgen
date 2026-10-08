@@ -396,7 +396,7 @@
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
       if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Grading
-      if (typeof res.quizzes === 'number') counts.push(['.nav-quizzes', res.quizzes]);  // new under My quizzes
+      if (typeof res.quizzes === 'number') counts.push(['.nav-quizzes', res.quizzes]);  // not done yet, under My quizzes
       if (typeof res.online === 'number') {  // teachers: who's online (always shown, never hidden)
         document.querySelectorAll('.nav-online').forEach(function (b) { b.textContent = res.online; });
       }
@@ -405,7 +405,7 @@
           b.textContent = pair[1];
           b.hidden = !pair[1];
           if (pair[0] === '.nav-review') b.setAttribute('aria-label', pair[1] + ' waiting for grading');
-          if (pair[0] === '.nav-quizzes') b.setAttribute('aria-label', pair[1] + ' new');
+          if (pair[0] === '.nav-quizzes') b.setAttribute('aria-label', pair[1] + ' to do');
         });
       });
       if (welcome) {

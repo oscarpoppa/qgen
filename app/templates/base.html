@@ -63,7 +63,7 @@
         </div>
       {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle{{ ' nav-few-toggle' if current_user.is_authenticated and not current_user.is_admin }}" aria-controls="nav" aria-expanded="false" title="Show or hide the menu"
-              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="Quizzes for you to do (under My quizzes)" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
       {# the menu marks the page you're on (and the drop-down it's under) #}
       {% set here = request.endpoint or '' %}
       {% macro item(endpoint, label, also=(), tip=none) -%}
@@ -78,7 +78,7 @@
           {# Home for everyone: teachers take quizzes too, and see them as students do #}
           {{ item('user.home', 'Home', tip='Your start page: quizzes to do and your awards') }}
           {% call item('user.mypage', 'My quizzes', tip='All the quizzes your teacher gave you, in folders') %}
-            <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
+            <span class="count nav-quizzes" title="Quizzes for you to do" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
           {% if current_user.is_admin %}
             <details class="menu">
               <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }} title="Find, write and edit problems">Problems</summary>

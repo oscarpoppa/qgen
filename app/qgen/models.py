@@ -337,8 +337,11 @@ class Setting(db.Model):
 
 
 def new_quizzes(user_id):
-    """Quizzes given to this person (student or teacher) since they last opened My quizzes."""
-    return CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)).count()
+    """The number next to "My quizzes": quizzes given to this person (student or teacher) that
+    aren't done yet, new or started (by quiz, like the gold and blue boxes). It stays until
+    each is handed in, not just until they've looked."""
+    fresh, started = quiz_counts(user_id)
+    return fresh + started
 
 
 def quiz_counts(user_id):

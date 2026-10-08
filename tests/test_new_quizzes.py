@@ -1,5 +1,6 @@
 """A quiz given to someone (student or teacher) is counted next to "My quizzes" in the
-menu until they open that page, and a teacher gets the notices about quizzes they take."""
+menu until it's handed in (not just until they look), and a teacher gets the notices about
+quizzes they take."""
 import re
 
 from test_flow import app_db, login  # noqa: F401  (fixture)
@@ -12,7 +13,7 @@ FETCH = {'X-Requested-With': 'fetch'}
 
 def badge(page):
     """The count next to "My quizzes" in the menu, or None when it's hidden."""
-    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="count nav-quizzes" aria-label="(\d+) new" (hidden)?', page)
+    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="count nav-quizzes"[^>]*? aria-label="(\d+) to do" (hidden)?', page)
     assert m, 'no My quizzes badge'
     return None if m.group(2) else int(m.group(1))
 
@@ -22,7 +23,7 @@ def assign(teacher, vq, *names):
     assert r.status_code in (200, 302)
 
 
-def test_students_badge_until_they_open_my_quizzes(app_db):
+def test_students_badge_until_the_quiz_is_done(app_db):
     app, db = app_db
     teach, sam, kim = login(app, 'teach'), login(app, 'sam'), login(app, 'kim')
     vq = make_quiz(app, teach)
@@ -32,15 +33,17 @@ def test_students_badge_until_they_open_my_quizzes(app_db):
     assert sam.get('/messages/poll').get_json()['quizzes'] == 1  # the open page's badge follows this
     assert kim.get('/messages/poll').get_json()['quizzes'] == 0
     page = sam.get('/profile').data.decode()
-    assert badge(page) == 1 and 'New quizzes for you' in page  # on the Menu button too
-    # opening My quizzes clears it, even before starting the quiz
-    assert badge(sam.get('/mypage').data.decode()) is None
-    assert sam.get('/messages/poll').get_json()['quizzes'] == 0
-    # a retake is a new quiz too
+    assert badge(page) == 1 and 'Quizzes for you to do' in page  # on the Menu button too
+    # opening My quizzes, or starting the quiz, doesn't clear it: only handing it in does
+    assert badge(sam.get('/mypage').data.decode()) == 1
     from app.qgen.models import CQuiz
     from app.qgen import services as S
     cq = CQuiz.query.filter_by(assignee=ids('sam')).one()
+    sam.post('/quiz/take/{}/start'.format(cq.id))
+    assert sam.get('/messages/poll').get_json()['quizzes'] == 1
     S.submit(cq, {})
+    assert sam.get('/messages/poll').get_json()['quizzes'] == 0
+    # a retake is one to do again
     with app.test_request_context():
         S.retake(cq)
     assert sam.get('/messages/poll').get_json()['quizzes'] == 1
@@ -78,13 +81,14 @@ def test_teachers_get_the_badge_and_the_notice(app_db):
     assign(teach, vq, 'lee')
     assert lee.post('/messages/notices/clear', data={}, headers=FETCH).get_json()['cleared'] >= 2
     assert 'New quiz:' not in lee.get('/messages/notices').data.decode()
-    # the badge is the same as a student's
-    assert badge(lee.get('/dashboard').data.decode()) == 2
+    # the badge is the same as a student's: counted by quiz (two tries at one quiz are one),
+    # and still there after looking at My quizzes
+    assert badge(lee.get('/dashboard').data.decode()) == 1
     lee.get('/mypage')
-    assert badge(lee.get('/dashboard').data.decode()) is None
+    assert badge(lee.get('/dashboard').data.decode()) == 1
 
 
-def test_restored_quizzes_are_not_new_and_the_app_counts_as_looking(app_db):
+def test_archived_quizzes_drop_out_and_restored_ones_come_back(app_db):
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     vq = make_quiz(app, teach)
@@ -97,12 +101,12 @@ def test_restored_quizzes_are_not_new_and_the_app_counts_as_looking(app_db):
     assert new_quizzes(ids('sam')) == 0
     S.restore_attempt(a)
     db.session.commit()
-    assert new_quizzes(ids('sam')) == 0
+    assert new_quizzes(ids('sam')) == 1  # back, and still not done
     assign(teach, vq, 'sam')
-    assert new_quizzes(ids('sam')) == 1
+    assert new_quizzes(ids('sam')) == 1  # another try at the same quiz: still one quiz
     from test_api import Api
     assert Api(app, 'sam').get('/my/quizzes').status_code == 200
-    assert new_quizzes(ids('sam')) == 0
+    assert new_quizzes(ids('sam')) == 1  # looking (in the app too) doesn't clear it
 
 
 def test_the_assigned_notice_opens_what_was_assigned(app_db):
