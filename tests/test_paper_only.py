@@ -138,3 +138,13 @@ def test_quiz_without_paper_redirects_as_before(app_db):
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert r.status_code == 302 and '/quiz/print' not in r.headers['Location']
     assert '🖨 Print paper pages' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+
+
+def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    page = teacher.get('/quiz/assign').data.decode()
+    quiz = page[page.index('for="vquiz"'):page.index('id="vquiz"')]
+    # under the Quiz label, before its menu: the same bar as Students (filter, count, Clear)
+    assert 'id="quiz-filter-bar"' in quiz and 'class="btn-row small pick-bar"' in quiz
+    assert 'placeholder="Filter by name…"' in quiz and 'id="quiz-filter-clear"' in quiz

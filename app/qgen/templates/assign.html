@@ -40,7 +40,13 @@
     </select>
   </div>
   <script type="application/json" id="quiz-subjects">{{ quiz_subjects|tojson }}</script>
-  {{ field(form.vquiz) }}
+  {# a box under the Quiz label narrows the menu by name (within the folder chosen above) #}
+  {% set quiz_filter %}<div class="btn-row small pick-bar" id="quiz-filter-bar" hidden>
+    <input type="search" class="filter-list" id="quiz-filter" placeholder="Filter by name…" aria-label="Filter quizzes by name" title="Type part of a quiz's name to narrow the Quiz menu">
+    <span class="pick-count muted" id="quiz-filter-count" aria-live="polite"></span>
+    <button type="button" class="btn btn-secondary btn-sm" id="quiz-filter-clear" title="Show every quiz in the folder again">Clear</button>
+  </div>{% endset %}
+  {{ field(form.vquiz, above=quiz_filter) }}
   {# the people, in the Users page's folders (which open and close), then those in no folder,
      then everyone. Only the boxes under "All users" are sent; the ones in folders follow
      them, so someone in two folders is checked in both and gets one copy. #}
@@ -87,9 +93,10 @@
 
 {% block scripts %}
 <script>
-/* The Folder menu rebuilds the Quiz menu with that folder's quizzes (hiding options
- * doesn't work in Safari). A quiz already chosen that isn't in the folder (e.g. after
- * a form error) switches the menu to All rather than quietly changing the quiz. */
+/* The Folder menu and the filter box under "Quiz" rebuild the Quiz menu with that folder's
+ * quizzes whose names match (hiding options doesn't work in Safari). A quiz already chosen
+ * that isn't in the folder (e.g. after a form error) switches the menu to All rather than
+ * quietly changing the quiz. */
 (function () {
   var subject = document.getElementById('assign-subject');
   var quiz = document.getElementById('vquiz');
@@ -100,22 +107,34 @@
     var subs = (bySubject[id] || []).map(String);
     return v === 'all' || (v === 'none' ? subs.length === 0 : subs.indexOf(v) !== -1);
   }
+  var filter = document.getElementById('quiz-filter');
   function rebuild() {
-    var v = subject.value, keep = quiz.value;
+    var v = subject.value, keep = quiz.value, words = filter ? filter.value.trim().toLowerCase() : '';
     quiz.innerHTML = '';
     all.forEach(function (o) {
-      if (fits(o.value, v)) quiz.add(new Option(o.text, o.value, false, o.value === keep));
+      if (fits(o.value, v) && (!words || o.text.toLowerCase().indexOf(words) !== -1))
+        quiz.add(new Option(o.text, o.value, false, o.value === keep));
     });
     if (!quiz.options.length) {
-      var none = new Option('No quizzes in this folder', '');
+      var none = new Option(words ? 'No quizzes here match “' + filter.value.trim() + '”' : 'No quizzes in this folder', '');
       none.disabled = true;
       quiz.add(none);
       none.selected = true;
     }
+    var shown = Array.prototype.filter.call(quiz.options, function (o) { return o.value; }).length;
+    var count = document.getElementById('quiz-filter-count');
+    if (count) count.textContent = shown + (shown === 1 ? ' quiz' : ' quizzes');
   }
   var field = document.getElementById('assign-subject-field');
   if ('keepQuiz' in field.dataset && quiz.value && !fits(quiz.value, subject.value)) subject.value = 'all';
   subject.addEventListener('change', rebuild);
+  if (filter) {
+    document.getElementById('quiz-filter-bar').hidden = false;
+    filter.addEventListener('input', rebuild);
+    document.getElementById('quiz-filter-clear').addEventListener('click', function () { filter.value = ''; rebuild(); filter.focus(); });
+    //Enter in the box doesn't send the form
+    filter.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+  }
   field.hidden = false;
   rebuild();
 })();
