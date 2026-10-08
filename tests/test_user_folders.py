@@ -100,6 +100,10 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert people(teach, g7) == ['sam', 'kim'] and '<details class="box sub-box" data-sub="{}" data-list>'.format(p2) in page
     assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
+    # each person a box that folds to their name (like My quizzes' quizzes), so Expand all /
+    # Collapse all works inside a folder too
+    assert page.count('<details class="box card person-card" data-list data-box="user:') == 2  # kim, and sam in Period 2's box
+    assert '<details class="box card person-card" data-list data-box="user:{}"'.format(ids('kim')) in page
     # not inside itself
     assert teach.post('/users/folders/move', data={'folder': g7, 'to': p2}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'

@@ -226,7 +226,7 @@ def test_who_is_logged_in(app_db):
     part = teacher.get('/dashboard/online').data.decode()
     assert 'teach' in part and '(you)' in part and 'sam' in part and 'kim' not in part
     users = teacher.get('/userdet').data.decode()
-    assert '<th>Last seen</th>' in users and 'online now' in users and '12 min ago' in users
+    assert '<dt>Last seen</dt>' in users and 'online now' in users and '12 min ago' in users
     assert '<span class="nav-online">1</span>' in page  # the top bar: just this teacher so far
     assert teacher.get('/messages/poll').get_json()['online'] == 1
 
