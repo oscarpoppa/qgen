@@ -8,8 +8,8 @@
     {{ form.hidden_tag() }}
     {{ field(form.username, attrs={'autocomplete': 'username', 'autofocus': true}) }}
     {{ field(form.password, attrs={'autocomplete': 'current-password'}) }}
-    {{ form.submit(class='btn', value='Log in', style='width:100%') }}
+    {{ form.submit(class='btn', value='Log in', style='width:100%', title='Go in with the name and password above') }}
   </form>
-  <p class="muted small" style="margin-top:14px">New here? <a href="{{ url_for('user.register') }}">Create an account</a></p>
+  <p class="muted small" style="margin-top:14px">New here? <a href="{{ url_for('user.register') }}" title="Make a new account with the class code from your teacher">Create an account</a></p>
 </div>
 {% endblock %}

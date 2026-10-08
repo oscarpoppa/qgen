@@ -35,11 +35,11 @@
   {% block head %}{% endblock %}
 </head>
 <body{% block body_attrs %}{% endblock %}>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main" title="Jump past the menu to this page's main part">Skip to content</a>
   <header class="topbar">
     <div class="topbar-inner">
       {% set s = site() %}
-      <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">
+      <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}" title="{{ 'Go to your start page' if current_user.is_authenticated else 'Go to the log-in page' }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
       {% if current_user.is_authenticated %}
         {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}{% set nav_new_quizzes = new_quiz_count() %}
@@ -47,86 +47,86 @@
           {% if current_user.is_admin %}{% set nav_online = online_count() %}
           {# who's on the site (teachers only); the list loads when opened #}
           <details class="menu online-menu" data-url="{{ url_for('qgen.dashboard_online') }}" data-dashboard="{{ url_for('qgen.dashboard') }}">
-            <summary class="online-btn" title="Who's online"><span class="online-dot" aria-hidden="true"></span>
+            <summary class="online-btn" title="See who's on the site right now"><span class="online-dot" aria-hidden="true"></span>
               <span class="nav-online">{{ nav_online }}</span><span class="dock-btn-label">online</span></summary>
             <div class="online-pop" role="region" aria-label="Who's online"><p class="muted small">Loading…</p></div>
           </details>
           {% endif %}
-          <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide notices">
+          <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide the notices panel (news about {{ 'your classes' if current_user.is_admin else 'your quizzes' }})">
             <span aria-hidden="true">🔔</span><span class="dock-btn-label">Notices</span>
             <span class="count nav-notices" {% if not nav_notices %}hidden{% endif %}>{{ nav_notices }}</span></button>
-          <button type="button" class="dock-btn" data-pane="messages" aria-controls="dock-messages" aria-expanded="false" title="Show or hide messages">
+          <button type="button" class="dock-btn" data-pane="messages" aria-controls="dock-messages" aria-expanded="false" title="Show or hide the messages panel{{ '' if current_user.is_admin else ' to talk with your teacher' }}">
             <span aria-hidden="true">💬</span><span class="dock-btn-label">Messages</span>
             <span class="count nav-unread" {% if not nav_unread %}hidden{% endif %}>{{ nav_unread }}</span></button>
         </div>
       {% endif %}
-      <button type="button" class="btn btn-secondary btn-sm nav-toggle{{ ' nav-few-toggle' if current_user.is_authenticated and not current_user.is_admin }}" aria-controls="nav" aria-expanded="false"
+      <button type="button" class="btn btn-secondary btn-sm nav-toggle{{ ' nav-few-toggle' if current_user.is_authenticated and not current_user.is_admin }}" aria-controls="nav" aria-expanded="false" title="Show or hide the menu"
               onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="New quizzes for you (under My quizzes)" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
       {# the menu marks the page you're on (and the drop-down it's under) #}
       {% set here = request.endpoint or '' %}
-      {% macro item(endpoint, label, also=()) -%}
+      {% macro item(endpoint, label, also=(), tip=none) -%}
         {%- set on = here == endpoint or here in also -%}
-        <a href="{{ url_for(endpoint) }}"{% if on %} class="active" aria-current="page"{% endif %}>{{ label }}{{ caller() if caller }}</a>
+        <a href="{{ url_for(endpoint) }}"{% if tip %} title="{{ tip }}"{% endif %}{% if on %} class="active" aria-current="page"{% endif %}>{{ label }}{{ caller() if caller }}</a>
       {%- endmacro %}
       {% macro under(endpoints) %}{{ ' class="active"'|safe if here in endpoints }}{% endmacro %}
       <nav class="nav{{ ' nav-few' if current_user.is_authenticated and not current_user.is_admin }}" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
-          {% if current_user.is_admin %}{{ item('qgen.dashboard', 'Dashboard') }}{% endif %}
+          {% if current_user.is_admin %}{{ item('qgen.dashboard', 'Dashboard', tip='Overview: who is working now, what needs grading, recent results') }}{% endif %}
           {# quizzes given since My quizzes was last opened (anyone: teachers take quizzes too); kept current by messages.js #}
           {# Home for everyone: teachers take quizzes too, and see them as students do #}
-          {{ item('user.home', 'Home') }}
-          {% call item('user.mypage', 'My quizzes') %}
+          {{ item('user.home', 'Home', tip='Your start page: quizzes to do and your awards') }}
+          {% call item('user.mypage', 'My quizzes', tip='All the quizzes your teacher gave you, in folders') %}
             <span class="count nav-quizzes" aria-label="{{ nav_new_quizzes }} new" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
           {% if current_user.is_admin %}
             <details class="menu">
-              <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }}>Problems</summary>
+              <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }} title="Find, write and edit problems">Problems</summary>
               <div class="menu-list">
-                {{ item('qgen.list_vprobs', 'All problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob')) }}
-                {{ item('qgen.mkvprob', 'New problem') }}
+                {{ item('qgen.list_vprobs', 'All problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob'), tip='Browse, edit and organize every problem') }}
+                {{ item('qgen.mkvprob', 'New problem', tip='Write a new problem to use in quizzes') }}
               </div>
             </details>
             <details class="menu">
               <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign',
-                                'qgen.list_users', 'qgen.list_user', 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }}>Quizzes</summary>
+                                'qgen.list_users', 'qgen.list_user', 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }} title="Make, assign and see results of quizzes">Quizzes</summary>
               <div class="menu-list">
-                {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz')) }}
-                {{ item('qgen.mkvquiz', 'New quiz') }}
-                {{ item('qgen.assign', 'Assign a quiz') }}
-                {{ item('qgen.list_users', 'Results by student', ('qgen.list_user',)) }}
-                {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',)) }}
+                {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz'), tip='Browse, edit and organize every quiz') }}
+                {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
+                {{ item('qgen.assign', 'Assign a quiz', tip='Give a quiz to students or groups, with a due date') }}
+                {{ item('qgen.list_users', 'Results by student', ('qgen.list_user',), tip='Pick a student to see all their quizzes and scores') }}
+                {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student\'s score on it') }}
               </div>
             </details>
             {# written answers waiting for grading; kept current by messages.js #}
-            {% call item('qgen.review_list', 'Grading', ('qgen.review',)) %}
+            {% call item('qgen.review_list', 'Grading', ('qgen.review',), tip='Written answers waiting for you to grade') %}
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             {% endcall %}
-            {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page')) }}
-            {{ item('user.userdet', 'Users', ('user.eduser',)) }}
-            {{ item('qgen.archive', 'Archive', ('qgen.archived',)) }}
+            {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page'), tip='All your conversations with students and teachers') }}
+            {{ item('user.userdet', 'Users', ('user.eduser',), tip='Add, edit and organize student and teacher accounts') }}
+            {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
             <details class="menu">
-              <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }}>Files</summary>
+              <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }} title="Upload and manage pictures and files">Files</summary>
               <div class="menu-list">
-                {{ item('upload.upload', 'Upload') }}
-                {{ item('upload.images', 'Images') }}
-                {{ item('upload.nonimages', 'Other files') }}
+                {{ item('upload.upload', 'Upload', tip='Upload pictures and other files for your problems') }}
+                {{ item('upload.images', 'Images', tip='See and manage the pictures you uploaded') }}
+                {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
               </div>
             </details>
-            {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings')) }}
+            {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
           {% endif %}
           <div class="nav-right">
             <details class="menu">
-              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}</summary>
+              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') }}" title="Your profile, password and logging out">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}</summary>
               <div class="menu-list">
-                {{ item('user.profile', 'My profile') }}
-                {{ item('user.chpass', 'Change password') }}
-                <a href="{{ url_for('user.logout') }}">Log out</a>
+                {{ item('user.profile', 'My profile', tip='Change your nickname and picture') }}
+                {{ item('user.chpass', 'Change password', tip='Pick a new password for logging in') }}
+                <a href="{{ url_for('user.logout') }}" title="Sign out of the site on this device">Log out</a>
               </div>
             </details>
           </div>
         {% else %}
           <div class="nav-right">
-            <a href="{{ url_for('user.login') }}">Log in</a>
-            <a href="{{ url_for('user.register') }}">Create an account</a>
+            <a href="{{ url_for('user.login') }}" title="Sign in with your username and password">Log in</a>
+            <a href="{{ url_for('user.register') }}" title="Make a new account to start taking quizzes">Create an account</a>
           </div>
         {% endif %}
       </nav>

@@ -52,7 +52,7 @@
         {% if ai_enabled %}<div class="k-list list-ai">
           <span class="small muted list-ai-label">✨ Or describe the list, and the helper writes it:</span>
           <input type="text" class="list-ai-text" maxlength="500" placeholder="Describe the list, e.g. all the perfect squares from 4 to 100" aria-label="Describe the list for the AI helper">
-          <button type="button" class="btn btn-secondary btn-sm list-ai-go" data-url="{{ url_for('qgen.ai_list') }}">✨ Fill list</button>
+          <button type="button" class="btn btn-secondary btn-sm list-ai-go" data-url="{{ url_for('qgen.ai_list') }}" title="The AI helper writes the list from your description; check it after">✨ Fill list</button>
           <span class="list-ai-status small" aria-live="polite"></span>
         </div>{% endif %}
         {{ row.form.formula(placeholder='e.g. speed * hours', title='Worked out from other values, without brackets. + - * / ^ ( ) sqrt abs round min max', class='k-calc', **{'aria-label': 'Formula'}) }}
@@ -86,8 +86,8 @@
   <h1>{{ title }}</h1>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back>← {{ came[1] }}</a>
-    {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}">View</a>{% endif %}
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
+    {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of the saved problem">View</a>{% endif %}
     {# back to how the page was when it opened: blank for a new problem, the saved version when editing #}
     {% if vp and vp.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>

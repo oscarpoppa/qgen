@@ -8,7 +8,7 @@
   <h1>{{ item.vquiz.title }}</h1>
   <span class="badge">{{ item.taker.shown_name }}</span>
   <div class="actions">{{ attempt_links(item) }}
-    <a class="btn btn-secondary" href="{{ url_for('qgen.qtake', cidx=item.id) }}">Results</a></div>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.qtake', cidx=item.id) }}" title="See {{ item.taker.shown_name if item.taker else 'the student' }}'s results page for this try, with the score">Results</a></div>
 </div>
 <p class="muted small">This student's own version of the quiz, with the correct answers.</p>
 <div class="table-wrap stack">

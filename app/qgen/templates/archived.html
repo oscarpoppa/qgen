@@ -6,7 +6,7 @@
 <div class="page-head no-print">
   <h1>Archived attempt</h1>
   <div class="actions">
-    <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print this archived attempt, or save it as a PDF">Print</button>
     {{ back_button(url_for('qgen.archive'), 'Archive') }}
   </div>
 </div>
@@ -20,11 +20,11 @@
     {% else %}
       <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
             data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Restore</button></form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put this attempt back; {{ a.student_name }} will see it on My quizzes again">Restore</button></form>
     {% endif %}
     <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
           data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm">Delete for good</button></form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" title="Delete this attempt permanently; it can't be undone">Delete for good</button></form>
   </div>
 </div>
 {{ results }}

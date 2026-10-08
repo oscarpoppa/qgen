@@ -7,15 +7,15 @@
 
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.shown_name }}!</h1>
-  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}">My quizzes</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}">My profile</a></div></div>
+  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a></div></div>
 
 {% set days = tuning.get('due_soon_days') %}
 <div class="dash-counters home-counters" aria-label="Your quizzes">
   {# these open My quizzes' own New, In progress and Due within … folders #}
-  <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='new') }}">
+  <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='new') }}" title="See the quizzes you haven't started yet">
     <span class="dash-num">{{ todo }}</span><span>new</span></a>
-  <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='started') }}">
+  <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='started') }}" title="See the quizzes you started but haven't handed in">
     <span class="dash-num">{{ started }}</span><span>in progress</span></a>
   <a class="dash-count{{ ' has' if soon }}" href="{{ url_for('user.mypage', folder='soon') }}"
      title="Not handed in yet, and closing in the next {{ days }} day{{ '' if days == 1 else 's' }}">
@@ -33,7 +33,7 @@
           {% if cq.status == 'started' %}<span class="badge badge-accent">Started</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">🔒 Start</button>
-          {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>
+          {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Keep working on' if cq.status == 'started' else 'Start' }} “{{ cq.vquiz.title }}”">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>
       {% endfor %}
       </ul>
     {% else %}
@@ -44,7 +44,7 @@
   <details class="box card dash-card" data-box="recent" open>
     <summary class="dash-head">{{ box_label('✅', 'Recently completed', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
-      <a href="{{ url_for('user.mypage', folder='all') }}">All my quizzes →</a></p>
+      <a href="{{ url_for('user.mypage', folder='all') }}" title="See every quiz you've had, old and new">All my quizzes →</a></p>
     {% if recent %}
       <ul class="dash-list">
       {% for cq in recent %}
@@ -52,7 +52,7 @@
           {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
           {% else %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>{% endif %}
           <span class="small muted">{{ cq.compdate|when }}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'See how you did on' if cq.status == 'completed' else 'See what you handed in for' }} “{{ cq.vquiz.title }}”">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
       {% endfor %}
       </ul>
     {% else %}

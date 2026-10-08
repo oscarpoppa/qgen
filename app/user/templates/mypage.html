@@ -10,18 +10,18 @@
 {% macro action(cq, compact=false) %}
   {% set size = 'btn-xs' if compact else 'btn-sm' %}
   {% if cq.status == 'completed' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if compact else 'View results' }}</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this try">{{ 'Results' if compact else 'View results' }}</a>
   {% elif cq.status == 'review' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">View</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See what you handed in. Your teacher is still checking it">View</a>
   {% elif cq.not_open_yet() %}
     {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
     {% set opens = cq.opens_at|when %}
     <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">🔒 Start</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
-    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Continue</a>
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Keep working on this quiz">Continue</a>
   {% else %}
-    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Start</a>
+    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start this quiz">Start</a>
   {% endif %}
 {% endmacro %}
 
@@ -61,7 +61,7 @@
         {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
       </summary>
-      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
+      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">📁 {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
       <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
         {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
@@ -106,7 +106,7 @@
       {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
       {% else %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>{% endif %}
       <span class="small muted">{{ cq.compdate|when }}</span>
-      <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
+      <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'See how you did on' if cq.status == 'completed' else 'See what you handed in for' }} “{{ cq.vquiz.title }}”">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
   {% endfor %}
   </ul>
 </section>
@@ -134,9 +134,9 @@
   {% if current_user.is_admin %}
   <div class="card empty"><span class="big">📚</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
     <div class="btn-row" style="justify-content:center;margin-top:12px">
-      <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}">Problems</a>
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}">Messages</a></div></div>
+      <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}" title="See all problems, and make quizzes from them">Problems</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}" title="Read and write messages to students">Messages</a></div></div>
   {% else %}
   <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}

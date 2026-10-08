@@ -2,7 +2,7 @@
 theirs alone."""
 from datetime import datetime, timedelta
 
-from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, no_titles  # noqa: F401  (fixture)
 from test_archive import ids
 
 
@@ -30,8 +30,8 @@ def test_teachers_land_on_the_dashboard_and_students_dont(app_db):
     r = c.post('/login', data={'username': 'teach', 'password': 'pw-for-tests'})
     assert r.headers['Location'].endswith('/dashboard')
     page = c.get('/dashboard').data.decode()
-    assert '<h1>Dashboard</h1>' in page and 'href="/dashboard" class="active" aria-current="page">Dashboard</a>' in page
-    assert 'class="brand" href="/dashboard"' in page and 'href="/mypage">My quizzes' in page
+    assert '<h1>Dashboard</h1>' in no_titles(page) and 'href="/dashboard" class="active" aria-current="page">Dashboard</a>' in no_titles(page)
+    assert 'class="brand" href="/dashboard"' in no_titles(page) and 'href="/mypage">My quizzes' in no_titles(page)
     # ?next= still wins; going to the login page when signed in goes home
     c2 = app.test_client()
     r = c2.post('/login?next=/quiz/listvq', data={'username': 'teach', 'password': 'pw-for-tests'})

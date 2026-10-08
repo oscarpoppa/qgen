@@ -7,10 +7,10 @@
 <div class="page-head no-print">
   <h1>Results</h1>
   <div class="actions">
-    <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print these results on paper, or save them as a PDF">Print</button>
     {% if current_user == cq.taker %}{{ after_quiz(cq, up_next) }}
     {% else %}{{ attempt_links(cq) }}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Answer key</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s questions next to the correct answers">Answer key</a>{% endif %}
   </div>
 </div>
 {{ transcript }}

@@ -39,7 +39,7 @@
           {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
       </fieldset>
     {% else %}<input type="hidden" name="to" value="all">{% endif %}
-    <button class="btn">Send</button>
+    <button class="btn" title="{{ 'Send this to the teachers you checked' if teachers|length > 1 else 'Send this to ' ~ to_whom }}">Send</button>
     {% if teachers|length > 1 %}<p class="muted small" style="margin:4px 0 0">Only the teachers you check will see it.</p>{% endif %}
   </form>
 </section>

@@ -6,13 +6,13 @@
               <td data-label="Attempts" class="attempts">
                 {% for cq in g.attempts %}
                   <div class="btn-row result-attempt">
-                    <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap">{{ cq.when_label }}</a>
+                    <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap" title="See {{ student.shown_name }}'s answers and score for this try">{{ cq.when_label }}</a>
                     {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}">waiting for grading</a>
+                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this try">waiting for grading</a>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
                     {% else %}<span class="badge">not started</span>{% endif %}
-                    <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}">Details</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.') }}</span>
+                    <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Details</a>
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)') }}</span>
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</div>{% endif %}
                 {% endfor %}
@@ -32,8 +32,8 @@
                 {% endif %}
               </td>
               <td class="actions">
-                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?') }}{% else %}{{ slot('Retake') }}{% endif %}
+                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new try at this quiz, with new values') }}{% else %}{{ slot('Retake') }}{% endif %}
                 {# several tries: all of them to the Archive at once (one try has its own Archive button) #}
-                {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all ' ~ g.attempts|length ~ ' tries', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s tries at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.') }}{% else %}{{ slot('Archive all 2 tries') }}{% endif %}
+                {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all ' ~ g.attempts|length ~ ' tries', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s tries at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s tries at this quiz to the Archive') }}{% else %}{{ slot('Archive all 2 tries') }}{% endif %}
               </td>
 {% endmacro %}

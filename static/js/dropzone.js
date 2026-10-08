@@ -104,6 +104,7 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.className = 'thumb btn-secondary';
+            b.title = 'Use ' + it.name + ' as the picture';
             var img = document.createElement('img');
             img.src = it.thumb; img.alt = '';
             var cap = document.createElement('div');

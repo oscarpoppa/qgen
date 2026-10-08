@@ -7,15 +7,16 @@
   <h1>Upload files</h1>
   <div class="actions">
     {{ back_home() }}
-    <a class="btn btn-secondary" href="{{ url_for('upload.images') }}">Images</a>
-    <a class="btn btn-secondary" href="{{ url_for('upload.nonimages') }}">Other files</a>
+    <a class="btn btn-secondary" href="{{ url_for('upload.images') }}" title="See or delete the pictures already uploaded">Images</a>
+    <a class="btn btn-secondary" href="{{ url_for('upload.nonimages') }}" title="See or delete the other files already uploaded">Other files</a>
   </div>
 </div>
 
 <div class="card">
   <h2>Pictures</h2>
   <div class="dropzone big" data-multiple data-upload="{{ url_for('upload.upload_json') }}" tabindex="0" role="button"
-       aria-label="Upload pictures: drop files here or press Enter to choose them">
+       aria-label="Upload pictures: drop files here or press Enter to choose them"
+       title="Upload pictures: drop files here or click to choose them">
     <div class="dz-text">
       <strong style="font-size:1.1rem">Drop pictures here</strong>
       <span class="dz-hint">or click to choose. You can add several at once.</span>
@@ -29,7 +30,7 @@
   <form method="post" enctype="multipart/form-data" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.thefile) }}
-    {{ form.submit(class='btn', value='Upload') }}
+    {{ form.submit(class='btn', value='Upload', title='Upload the file chosen above') }}
   </form>
 </div>
 {% endblock %}

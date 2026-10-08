@@ -52,14 +52,14 @@
       {{ box_label(avatar(item, 30), item.shown_name, count_of(n, 'quiz', 'quizzes')) }}
     </summary>
     <div class="box-body">
-    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.list_user', uid=item.id) }}">{{ item.shown_name }}'s student page</a>
-      {% if not item.is_admin %}· <a href="{{ url_for('messages.conversation', student_id=item.id) }}">Message</a>{% endif %}
-      · <a href="{{ url_for('qgen.assign', users=item.id) }}">Assign a quiz</a></p>{% endif %}
+    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Open a page with just {{ item.shown_name }}'s quizzes and awards">{{ item.shown_name }}'s student page</a>
+      {% if not item.is_admin %}· <a href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% endif %}
+      · <a href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></p>{% endif %}
     {% if item.cquizzes and single %}
       {# one student: each quiz is a box that folds to its name, attempts and score #}
       <div class="btn-row small quiz-box-bar"><span class="level-buttons">
-        <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
-        <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></div>
+        <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes" title="Open all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
+        <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Fold all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></div>
       {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
       <details class="box sub-box new-folder-box" data-folder-box="new" data-list>
         <summary class="sub-head">{{ box_label('🆕', 'New', none, 'h3') }}
@@ -108,10 +108,10 @@
   {# back where they came from (Dashboard, Grading, a quiz's results...), else the Users page #}
   <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
     {% if single %}
-      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}">Message {{ ulst[0].shown_name }}</a>{% endif %}
-      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}">Edit user</a>
-    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}">Results by quiz</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
+      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}" title="See the same results arranged quiz by quiz">Results by quiz</a>{% endif %}
+    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}" title="{{ 'Choose a quiz to give ' ~ ulst[0].shown_name if single else 'Choose a quiz and give it to students' }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
 </div>
 
 {# one student: the awards they've earned (they see these on their Home) #}

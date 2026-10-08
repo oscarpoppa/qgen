@@ -13,8 +13,8 @@
       <select id="file-subject" name="subject">
         {% for g, depth in all_subjects %}<option value="{{ g.id }}"{% if fk.node and fk.node.folder.id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}📁 {{ g.title }}</option>{% endfor %}
       </select>
-      <button class="btn btn-sm" name="action" value="add">Put in folder</button>
-      <button class="btn btn-secondary btn-sm" name="action" value="remove">Take out of folder</button>
+      <button class="btn btn-sm" name="action" value="add" title="Put the checked {{ noun }} in the chosen folder">Put in folder</button>
+      <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked {{ noun }} out of the chosen folder">Take out of folder</button>
     {% else %}
       <span class="muted small">Make a folder first (+ New folder), then check {{ noun }} to put in it.</span>
     {% endif %}

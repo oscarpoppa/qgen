@@ -8,6 +8,6 @@
   <p>That page doesn't exist, or it was deleted.</p>
   <div class="btn-row" style="justify-content:center">
     {% if current_user.is_authenticated %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home') }}{% endif %}
-    <a class="btn" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}">Go to the start page</a></div>
+    <a class="btn" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}" title="{{ 'Go to your Home page' if current_user.is_authenticated else 'Go to the log-in page' }}">Go to the start page</a></div>
 </div>
 {% endblock %}

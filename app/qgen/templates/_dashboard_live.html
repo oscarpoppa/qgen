@@ -5,11 +5,11 @@
   <span class="badge {{ 'badge-ok' if value >= 70 else 'badge-warn' if value >= 50 else 'badge-bad' }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
 <div class="dash-counters" aria-label="To do">
-  <a class="dash-count{{ ' has' if counts.grading }}" href="{{ url_for('qgen.review_list') }}">
+  <a class="dash-count{{ ' has' if counts.grading }}" href="{{ url_for('qgen.review_list') }}" title="Open Grading: written answers handed in that need your grade">
     <span class="dash-num">{{ counts.grading }}</span><span>waiting for grading</span></a>
-  <a class="dash-count{{ ' has' if counts.messages }}" href="{{ url_for('messages.inbox') }}">
+  <a class="dash-count{{ ' has' if counts.messages }}" href="{{ url_for('messages.inbox') }}" title="Open Messages to read what students sent you">
     <span class="dash-num">{{ counts.messages }}</span><span>unread message{{ '' if counts.messages == 1 else 's' }}</span></a>
-  <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices">
+  <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices" title="Open the notices panel to read site notices">
     <span class="dash-num">{{ counts.notices }}</span><span>unread notice{{ '' if counts.notices == 1 else 's' }}</span></button>
   {% set soon = tuning.get('due_soon_days') %}
   <a class="dash-count{{ ' has' if counts.closing }}" href="#dash-out"
@@ -23,14 +23,14 @@
     <summary class="dash-head">{{ box_label('📊', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
     <div class="dash-glance">
-      <a href="{{ url_for('user.userdet') }}"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
-      <a href="{{ url_for('user.userdet') }}"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
-      <a href="{{ url_for('qgen.list_vprobs') }}"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</a>
-      <a href="{{ url_for('qgen.list_vquizzes') }}"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</a>
-      <a href="{{ url_for('qgen.archive') }}"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</a>
+      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every student's account"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
+      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every teacher's account"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
+      <a href="{{ url_for('qgen.list_vprobs') }}" title="Open the Problems page"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</a>
+      <a href="{{ url_for('qgen.list_vquizzes') }}" title="Open the Quizzes page"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</a>
+      <a href="{{ url_for('qgen.archive') }}" title="Open the Archive to view, restore or delete archived attempts"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</a>
     </div>
     <p class="small">
-      <a href="{{ url_for('user.settings') }}">Sign-up</a>:
+      <a href="{{ url_for('user.settings') }}" title="Open Settings to set or clear the class code students sign up with">Sign-up</a>:
       {% if glance.signup_open %}<span class="badge badge-ok">open</span> <span class="muted">(a class code is set)</span>
       {% else %}<span class="badge">closed</span> <span class="muted">(no class code)</span>{% endif %}
       · AI helper:
@@ -44,7 +44,7 @@
     <summary class="dash-head">{{ box_label('📤', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
-      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></span></p>
+      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, tries and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
@@ -55,7 +55,7 @@
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}">Student page</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="See all of {{ o.cq.taker.shown_name if o.cq.taker else 'this student' }}'s quizzes, tries and scores">Student page</a></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -66,7 +66,7 @@
   <details class="box card dash-card" data-box="queue" open>
     <summary class="dash-head">{{ box_label('✏️', 'Waiting for grading', count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
-    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}">All {{ waiting }} in Grading →</a></p>{% endif %}
+    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}" title="Open Grading to see every attempt waiting, oldest first">All {{ waiting }} in Grading →</a></p>{% endif %}
     {% if queue %}
       <ul class="dash-list">
       {% for cq in queue %}
@@ -74,7 +74,7 @@
           {# just the quiz's name: Grade opens this hand-in #}
           <span>“{{ cq.vquiz.title }}”</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span>
-          <a class="btn btn-sm dash-go" href="{{ url_for('qgen.review', cqid=cq.id) }}">Grade</a></li>
+          <a class="btn btn-sm dash-go" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">Grade</a></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -86,7 +86,7 @@
   <details class="box card dash-card" data-box="pinned" open>
     <summary class="dash-head">{{ box_label('📌', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}">Messages →</a></p>
+    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}" title="Open Messages to send, pin or unpin messages">Messages →</a></p>
     {% if pinned %}
       <ul class="dash-list dash-pinned">
       {% for p in pinned %}
@@ -95,21 +95,21 @@
           <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
                 data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in their messages, just not at the top." data-confirm-ok="Unpin">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
-            <button class="btn btn-secondary btn-sm">Unpin</button>
+            <button class="btn btn-secondary btn-sm" title="Take this message off the top of students' messages (it isn't deleted)">Unpin</button>
           </form>
           <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].shown_name }}{% else %}<span title="{{ p.to|map(attribute='shown_name')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
             · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.shown_name }}{% endif %}</span></li>
       {% endfor %}
       </ul>
     {% else %}
-      <p class="muted small">Nothing is pinned. Pin a message from <a href="{{ url_for('messages.inbox') }}">Messages</a> to keep it at the top of students' messages.</p>
+      <p class="muted small">Nothing is pinned. Pin a message from <a href="{{ url_for('messages.inbox') }}" title="Open Messages to pin one of your messages">Messages</a> to keep it at the top of students' messages.</p>
     {% endif %}
     </div>
   </details>
   <details class="box card dash-card" data-box="handins" open>
     <summary class="dash-head">{{ box_label('📥', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}">by quiz →</a></span></p>
+    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, tries and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
@@ -118,7 +118,7 @@
           <span>“{{ cq.vquiz.title }}”</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">being graded</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}">Results</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this try">Results</a></li>
       {% endfor %}
       </ul>
     {% else %}

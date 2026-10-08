@@ -9,12 +9,12 @@
   <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_allowed else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span>
   {# leaving is safe: answers are saved as they're typed #}
   <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "'s student page") }}{% else %}{{ back_button(url_for('user.home'), 'Home') }}{% endif %}
-    {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false"><span aria-hidden="true">🧮</span> Calculator</button>{% endif %}</div>
+    {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false" title="Open a calculator to help you work things out"><span aria-hidden="true">🧮</span> Calculator</button>{% endif %}</div>
 </div>
 
 {% if preview %}
   <div class="alert alert-warning">You're viewing {{ cq.taker.shown_name }}'s quiz. Only {{ cq.taker.shown_name }} can submit it.
-    <a href="{{ url_for('qgen.list_user', uid=cq.assignee) }}">{{ cq.taker.shown_name }}'s student page</a></div>
+    <a href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Go to {{ cq.taker.shown_name }}'s quizzes and scores">{{ cq.taker.shown_name }}'s student page</a></div>
 {% endif %}
 
 {% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
@@ -51,8 +51,8 @@
         {% elif it.qtype == 'numeric' and not preview %}
           {# math keys for a number answer: worked out when graded (2√3, π/2, 3^2) #}
           <div class="keypad" role="group" aria-label="Math keys for question {{ it.num }}">
-            {% for key, title in [('√', 'Square root'), ('π', 'Pi'), ('^', 'Power'), ('(', 'Open bracket'), (')', 'Close bracket'), ('/', 'Divided by (fraction)'), (',', 'Comma (several answers)')] %}
-              <button type="button" class="key" data-ins="{{ key }}" title="{{ title }}" aria-label="{{ title }}">{{ key }}</button>
+            {% for key, title, tip in [('√', 'Square root', 'Type a square root'), ('π', 'Pi', 'Type pi (about 3.14)'), ('^', 'Power', 'Type a power, like 3^2 for 3 squared'), ('(', 'Open bracket', 'Type a left parenthesis'), (')', 'Close bracket', 'Type a right parenthesis'), ('/', 'Divided by (fraction)', 'Type a divide sign, or a fraction like 1/2'), (',', 'Comma (several answers)', 'Type a comma between answers')] %}
+              <button type="button" class="key" data-ins="{{ key }}" title="{{ tip }}" aria-label="{{ title }}">{{ key }}</button>
             {% endfor %}
             <span class="small muted">You can type math like 2√3, π/2 or 3^2.</span>
           </div>
@@ -64,7 +64,7 @@
 
   {% if not preview %}
     <div class="card btn-row">
-      {{ form.submit(class='btn') }}
+      {{ form.submit(class='btn', title='Hand in your quiz (you can\'t change answers after)') }}
       <span class="muted small">Once you hand it in, you can't change your answers.</span>
     </div>
   {% endif %}
@@ -75,11 +75,13 @@
 <section class="calc card" id="calc" role="dialog" aria-labelledby="calc-title" hidden>
   <div class="calc-head" title="Drag to move">
     <h2 id="calc-title"><span aria-hidden="true">🧮</span> Calculator</h2>
-    <button type="button" class="dock-close calc-close" aria-label="Close the calculator" title="Close">✕</button>
+    <button type="button" class="dock-close calc-close" aria-label="Close the calculator" title="Close the calculator">✕</button>
   </div>
   <input type="text" class="calc-input" aria-label="Calculation" autocomplete="off" spellcheck="false" placeholder="e.g. 45 × 2.5">
   <div class="calc-result" aria-live="polite"></div>
   <div class="calc-keys">
+    {# hover words for a few keys; the rest show their aria-label #}
+    {% set calc_tips = {'clear': 'Clear it all and start again', 'back': 'Erase the last thing you typed', 'Ans': 'Use your last answer again', '=': 'Work out the answer'} %}
     {% for key, label, title in [
         ('sin(', 'sin', 'Sine (degrees)'), ('cos(', 'cos', 'Cosine (degrees)'), ('tan(', 'tan', 'Tangent (degrees)'), ('π', 'π', 'Pi'), ('clear', 'C', 'Clear'),
         ('²', 'x²', 'Squared'), ('^', 'xʸ', 'To the power of'), ('√', '√', 'Square root'), ('(', '(', 'Open bracket'), (')', ')', 'Close bracket'),
@@ -87,13 +89,13 @@
         ('4', '4', ''), ('5', '5', ''), ('6', '6', ''), ('×', '×', 'Times'), ('Ans', 'Ans', 'The last answer'),
         ('1', '1', ''), ('2', '2', ''), ('3', '3', ''), ('−', '−', 'Minus'), ('%', '%', 'Percent'),
         ('0', '0', ''), ('.', '.', 'Decimal point'), ('=', '=', 'Equals'), ('+', '+', 'Plus')] %}
-      <button type="button" data-key="{{ key }}"{% if title %} title="{{ title }}" aria-label="{{ title }}"{% endif %}
+      <button type="button" data-key="{{ key }}"{% if title %} title="{{ calc_tips.get(key, title) }}" aria-label="{{ title }}"{% endif %}
               class="{{ 'calc-eq' if key == '=' else 'calc-num' if key in '0123456789.' else 'calc-fn' }}">{{ label }}</button>
     {% endfor %}
   </div>
   <div class="btn-row calc-actions">
-    <button type="button" class="btn btn-sm calc-use">Use in answer</button>
-    <button type="button" class="btn btn-secondary btn-sm calc-copy">Copy</button>
+    <button type="button" class="btn btn-sm calc-use" title="Put the calculator's answer in your answer box">Use in answer</button>
+    <button type="button" class="btn btn-secondary btn-sm calc-copy" title="Copy the calculator's answer so you can paste it">Copy</button>
   </div>
   <div class="small muted calc-note" aria-live="polite"></div>
 </section>

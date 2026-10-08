@@ -17,8 +17,8 @@
       {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
     </summary>
     <div class="box-body">
-    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Just this quiz</a>
-      · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}">Edit quiz</a></p>{% endif %}
+    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Open a page with only the results for “{{ vq.title }}”">Just this quiz</a>
+      · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems without changing it">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change “{{ vq.title }}”: its problems and settings">Edit quiz</a></p>{% endif %}
     {% if q.rows %}
       {# a long class: find a student in this quiz #}
       {% if q.students > 8 %}<input type="search" class="filter" data-filter="#quiz-{{ vq.id }}" placeholder="Find a student…" aria-label="Find a student in {{ vq.title }}">{% endif %}
@@ -28,7 +28,7 @@
           <tbody>
           {% for student, g in q.rows %}
             <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
+              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="See all of {{ student.shown_name }}'s quizzes, tries and scores">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>
           {% endfor %}
@@ -36,7 +36,7 @@
         </table>
       </div>
     {% else %}
-      <p class="muted small box-empty">Not assigned to anyone yet.{% if not vq.removed_at %} <a href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign it</a>{% endif %}</p>
+      <p class="muted small box-empty">Not assigned to anyone yet.{% if not vq.removed_at %} <a href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give “{{ vq.title }}” to students">Assign it</a>{% endif %}</p>
     {% endif %}
     </div>
   </details>
@@ -47,10 +47,10 @@
   <h1>{{ title }}</h1>
   <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
     {% if single %}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}">View quiz</a>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}">Edit quiz</a>
-    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>{% endif %}
-    {% if not (single and quizzes[0].vquiz.removed_at) %}<a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}">Assign {{ 'it' if single else 'a quiz' }}</a>{% endif %}</div>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="Look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">View quiz</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Change “{{ quizzes[0].vquiz.title }}”: its problems and settings">Edit quiz</a>
+    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}" title="See the same results arranged student by student">Results by student</a>{% endif %}
+    {% if not (single and quizzes[0].vquiz.removed_at) %}<a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) if single else url_for('qgen.assign') }}" title="{{ 'Give “' ~ quizzes[0].vquiz.title ~ '” to students' if single else 'Choose a quiz and give it to students' }}">Assign {{ 'it' if single else 'a quiz' }}</a>{% endif %}</div>
 </div>
 
 {% if single %}

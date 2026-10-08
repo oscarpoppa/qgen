@@ -35,17 +35,17 @@
                 <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               <td data-label="Folder">{{ move_menu(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
               <td class="actions">
-                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}">View</a>
+                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}" title="See {{ a.student_name }}'s answers and score as they were when archived">View</a>
                 {% if blocker %}
                   <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ blocker }}">Restore</button>
                 {% else %}
                   <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
                         data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Restore</button></form>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put this attempt back; {{ a.student_name }} will see it on My quizzes again">Restore</button></form>
                 {% endif %}
                 <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
                       data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm">Delete for good</button></form>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" title="Delete this attempt permanently; it can't be undone">Delete for good</button></form>
               </td>
             </tr>
           {% endfor %}
@@ -76,7 +76,7 @@
         {% for f, depth in fk.flat %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.folder_icon(f) }} {{ f.name }}</option>{% endfor %}
         <option value="top">📥 {{ fk.main_label }}</option>
       </select>
-      <button class="btn btn-sm">Move</button>
+      <button class="btn btn-sm" title="Move the checked attempts to the folder chosen at left">Move</button>
     </form>
     {% endif %}
   </div>

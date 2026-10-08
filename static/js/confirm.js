@@ -15,7 +15,7 @@
     box.setAttribute('aria-labelledby', 'ask-text');
     box.innerHTML = '<p id="ask-text"></p><div class="btn-row">'
       + '<button type="button" class="btn ask-ok"></button>'
-      + '<button type="button" class="btn btn-secondary ask-cancel">Cancel</button></div>';
+      + '<button type="button" class="btn btn-secondary ask-cancel" title="Don\'t do it; nothing changes">Cancel</button></div>';
     document.body.appendChild(box);
   }
 
@@ -26,6 +26,7 @@
     box.querySelector('.ask-cancel').textContent = cancelLabel || 'Cancel';
     var ok = box.querySelector('.ask-ok');
     ok.textContent = okLabel || 'OK';
+    ok.title = danger ? 'Yes, go ahead; this can\'t be undone' : 'Yes, go ahead';
     ok.classList.toggle('btn-danger', !!danger);
     return new Promise(function (resolve) {
       function done(answer) {

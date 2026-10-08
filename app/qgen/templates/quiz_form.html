@@ -35,11 +35,11 @@
   <h1>{{ title }}</h1>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back>← {{ came[1] }}</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
     {% if vq and vq.id %}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}">View</a>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}">Results</a>
-      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}">Assign</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="See one student's version of the saved quiz">View</a>
+      <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See how students did on {{ vq.title }}">Results</a>
+      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give {{ vq.title }} to students">Assign</a>{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
@@ -67,7 +67,7 @@
         Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
         <ul>
         {% for student, rule in retake_overrides %}
-          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}'s student page">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
         {% endfor %}
         </ul>
       </div>
@@ -81,8 +81,8 @@
       {% if has_problems %}
         <div class="builder-filters">
           <span class="level-buttons">
-          <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#all-problems" aria-label="Expand all problem folders">Expand all</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#all-problems" aria-label="Collapse all problem folders">Collapse all</button></span>
+          <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#all-problems" aria-label="Expand all problem folders" title="Open every problem folder">Expand all</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#all-problems" aria-label="Collapse all problem folders" title="Close every problem folder">Collapse all</button></span>
           <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
         </div>
         <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
@@ -96,7 +96,7 @@
           {% endif %}
         </div>
       {% else %}
-        <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create one first</a>.</div>
+        <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Leave this page and write a new problem">Create one first</a>.</div>
       {% endif %}
     </div>
 
@@ -124,8 +124,8 @@
   <div class="card">
     {{ image_drop(form.image) }}
     <div class="btn-row">
-      {{ form.submit(class='btn') }}
-      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href>Cancel</a>
+      {{ form.submit(class='btn', title='Save the quiz and go back') }}
+      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
     </div>
   </div>
 </form>

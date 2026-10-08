@@ -23,7 +23,7 @@
   </ul>
   <form method="post" action="{{ url_for('qgen.start_quiz', cidx=cq.id) }}" data-fresh-page>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-lg start-btn">Start the quiz</button>
+    <button class="btn btn-lg start-btn" title="{{ 'Show the questions (your time starts now)' if cq.time_limit else 'Show the questions and begin' }}">Start the quiz</button>
   </form>
   <p class="start-back">{{ back_button(url_for('user.home'), 'Home') }}</p>
 </div>

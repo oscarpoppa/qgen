@@ -34,9 +34,9 @@
           <div>
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
             <div class="btn-row" style="margin-top:8px">
-              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right">Mark right</button>
-              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong">Mark wrong</button>
-              <button type="button" class="btn btn-sm btn-secondary hl-clear">Clear highlights</button>
+              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right" title="Highlight the selected words in this answer as right">Mark right</button>
+              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong" title="Highlight the selected words in this answer as wrong">Mark wrong</button>
+              <button type="button" class="btn btn-sm btn-secondary hl-clear" title="Remove every right and wrong highlight from this answer">Clear highlights</button>
             </div>
           </div>
           <div>
@@ -56,9 +56,9 @@
     </section>
   {% endfor %}
   <div class="card btn-row">
-    {% if others %}{{ form.finalize_next(class='btn') }}
-    {{ form.finalize(class='btn btn-secondary') }}{% else %}{{ form.finalize(class='btn') }}{% endif %}
-    {{ form.save(class='btn btn-secondary') }}
+    {% if others %}{{ form.finalize_next(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and open the next one waiting') }}
+    {{ form.finalize(class='btn btn-secondary', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to Grading') }}{% else %}{{ form.finalize(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to Grading') }}{% endif %}
+    {{ form.save(class='btn btn-secondary', title='Keep your grades so far without finishing; ' ~ cq.taker.shown_name ~ ' sees nothing yet') }}
     <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
   </div>
 </form>

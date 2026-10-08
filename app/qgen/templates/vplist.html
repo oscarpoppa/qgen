@@ -36,12 +36,12 @@
             {% endif %}
           </td>
           <td class="actions">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}">View</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}">Edit</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="See three students' versions of {{ item.title or 'Untitled' }}">View</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Change this problem's question, values and answer">Edit</a>
             <details class="menu row-menu">
-              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title or 'Untitled' }}”">More</summary>
+              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title or 'Untitled' }}”" title="More for “{{ item.title or 'Untitled' }}”: delete">More</summary>
               <div class="menu-list">
-                {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem')) }}
+                {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem'), tip='Delete this problem for good') }}
               </div>
             </details>
           </td>
@@ -58,13 +58,13 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}{% endif %}
-    <a class="btn" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a></div>
+    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a></div>
 </div>
 
 {% if single %}
   {{ problem_table(items, ticks=false) }}
 {% elif not total %}
-  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create your first one</a>.</div>
+  <div class="card empty"><span class="big">📝</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
   {% call folders_page(fk) %}
     {% include "_folder_tools.html" %}

@@ -23,12 +23,12 @@
               <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
                     data-confirm="Delete this announcement from {{ m.student.shown_name }}'s messages? This can’t be undone." data-confirm-ok="Delete">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="btn btn-secondary btn-sm">Only from {{ m.student.shown_name }}</button>
+                <button class="btn btn-secondary btn-sm" title="Delete it from {{ m.student.shown_name }}’s messages; the others keep it (asks first)">Only from {{ m.student.shown_name }}</button>
               </form>
               <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form"
                     data-confirm="Delete this announcement for every student who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
-                <button class="btn btn-danger btn-sm">From every student who got it</button>
+                <button class="btn btn-danger btn-sm" title="Delete every copy of this announcement (asks first)">From every student who got it</button>
               </form>
             </div>
           </details>
@@ -68,10 +68,10 @@
         {% if m.pinned and not can_pin %}<span title="Pinned" aria-label="pinned">📌</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
-      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>
+      <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}" title="Go to the page this message is about">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>
       {% if everyone is defined and everyone and not grouped %}
         {# opens the conversation with that student: a reply to what they wrote, or more to what a teacher wrote #}
-        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.shown_name }}</button>
+        <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}" title="Show just your messages with {{ m.student.shown_name }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.shown_name }}</button>
       {% endif %}
       {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.shown_name }} removed this from their messages</div>{% endif %}
     </div>

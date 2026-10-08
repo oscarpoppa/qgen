@@ -9,7 +9,7 @@
     {# no checkbox on the folder itself (it looked checked when one person in it was): a count
        of who's chosen in it, and a button to check or uncheck everyone in it #}
     <summary>{{ box_label(icon, title) }}<span class="badge box-count pick-of"></span>
-      <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone in {{ title }}">Check all</button></span></summary>
+      <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone in {{ title }}" title="Check or uncheck everyone in {{ title }}">Check all</button></span></summary>
     {% for c in children %}{{ pick_folder(c) }}{% endfor %}
     {% if members %}<ul class="choice-list pick-list">
       {% for u in members %}
@@ -24,7 +24,7 @@
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back>← {{ came_from[1] }}</a>{% else %}{{ back_home() }}{% endif %}</div></div>
+  <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back title="Go back to {{ came_from[1] }} without assigning">← {{ came_from[1] }}</a>{% else %}{{ back_home() }}{% endif %}</div></div>
 
 <form method="post" class="card" style="max-width:640px" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
@@ -49,14 +49,14 @@
     <div class="btn-row small pick-bar">
       <input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
       <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear">Clear</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button>
     </div>
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
       {% if root.folders %}{{ pick_group('none', '📥', 'Not in a folder', root.people) }}{% endif %}
       <details class="box pick-group" data-fixed data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
         <summary>{{ box_label('👥', 'All users') }}<span class="badge box-count pick-of"></span>
-          <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone">Check all</button></span></summary>
+          <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone" title="Check or uncheck everyone">Check all</button></span></summary>
         <ul class="choice-list pick-list">
           {% for u in people %}
             <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>
@@ -81,7 +81,7 @@
     </div>
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
   </fieldset>
-  {{ form.submit(class='btn') }}
+  {{ form.submit(class='btn', title='Give the quiz to the checked students') }}
 </form>
 {% endblock %}
 

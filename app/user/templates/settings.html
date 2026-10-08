@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-head"><h1>Settings</h1>
-  <div class="actions">{{ back_home() }}<a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}">Technical settings →</a></div></div>
+  <div class="actions">{{ back_home() }}<a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}" title="Time spans and limits the site works with">Technical settings →</a></div></div>
 <form method="post" class="card" style="max-width:640px" novalidate>
   {{ form.hidden_tag() }}
   <h2>Your site</h2>
@@ -13,6 +13,6 @@
   {{ image_drop(form.favicon, 'The little picture in the browser tab. Leave it empty to use the logo. A square picture works best: a wide one is shrunk to fit, which makes it tiny.') }}
   <h2>Sign-up</h2>
   {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
-  {{ form.submit(class='btn') }}
+  {{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}
 </form>
 {% endblock %}

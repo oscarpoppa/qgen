@@ -6,7 +6,7 @@
   <h1>{{ vq.title }}</h1>
   <div class="actions">
     <a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Draw another student's version">Another version</a>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}">Edit</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change this quiz's questions and settings">Edit</a>
     {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
   </div>
 </div>

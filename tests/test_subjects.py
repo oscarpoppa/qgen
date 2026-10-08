@@ -1,5 +1,5 @@
 """Subjects: the teacher's own lists for sorting problems and quizzes."""
-from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, no_titles  # noqa: F401  (fixture)
 
 
 
@@ -346,7 +346,7 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     assert page.count('<span class="badge">Teacher-graded</span>') == 2
     assert 'Model answer: Light scatters.' in page
     # the Users page links to Results by student, whose students are boxes that open and close
-    assert 'href="/quiz/listuser">Results by student</a>' in teacher.get('/userdet').data.decode()
+    assert 'href="/quiz/listuser">Results by student</a>' in no_titles(teacher.get('/userdet').data.decode())
     results = teacher.get('/quiz/listuser').data.decode()
     assert '<details class="box card subject-box student item-box"' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results

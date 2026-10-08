@@ -5,19 +5,19 @@
 {% block content %}
 <div class="page-head">
   <h1>Images</h1>
-  <div class="actions">{{ back_home() }}<a class="btn" href="{{ url_for('upload.upload') }}">Upload pictures</a></div>
+  <div class="actions">{{ back_home() }}<a class="btn" href="{{ url_for('upload.upload') }}" title="Add new pictures to use in problems">Upload pictures</a></div>
 </div>
 {% if imgs %}
   <div class="thumbs">
   {% for pair in imgs %}
     <div class="thumb">
-      <a href="{{ url_for('static', filename=pair[1]) }}" target="_blank" rel="noopener"><img src="{{ url_for('static', filename=pair[0]) }}" alt="{{ pair[1] }}"></a>
+      <a href="{{ url_for('static', filename=pair[1]) }}" target="_blank" rel="noopener" title="Open {{ pair[1] }} full size in a new tab"><img src="{{ url_for('static', filename=pair[0]) }}" alt="{{ pair[1] }}"></a>
       <div class="name">{{ pair[1] }}</div>
-      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.') }}
+      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.', tip='Delete “' ~ (pair[1])|string ~ '” for good (asks first)') }}
     </div>
   {% endfor %}
   </div>
 {% else %}
-  <div class="card empty"><span class="big">🖼️</span>No pictures yet. <a href="{{ url_for('upload.upload') }}">Upload some</a>.</div>
+  <div class="card empty"><span class="big">🖼️</span>No pictures yet. <a href="{{ url_for('upload.upload') }}" title="Add pictures to use in problems">Upload some</a>.</div>
 {% endif %}
 {% endblock %}

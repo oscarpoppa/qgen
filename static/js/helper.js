@@ -25,6 +25,7 @@
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'btn btn-secondary btn-sm';
         b.textContent = h.action.label;
+        b.title = h.action.tip || 'Let the helper make this change in the form for you';
         b.addEventListener('click', function () {
           form.dispatchEvent(new CustomEvent('helper-action', { detail: h.action }));
           check();

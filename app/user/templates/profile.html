@@ -15,8 +15,8 @@
     <label for="nickname" class="sr-only">Nickname</label>
     <input type="text" id="nickname" name="nickname" maxlength="{{ current_user.NICKNAME_MAX }}" value="{{ current_user.nickname or '' }}"
            placeholder="Nickname (optional)" autocomplete="nickname" style="flex:1;min-width:180px">
-    <button class="btn">Save</button>
-    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1">Remove nickname</button>{% endif %}
+    <button class="btn" title="Use the nickname typed here">Save</button>
+    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1" title="Stop using a nickname. Just your name will show">Remove nickname</button>{% endif %}
   </form>
 </div>
 
@@ -26,14 +26,15 @@
     <span id="my-avatar">{{ avatar(current_user, 96) }}</span>
     <div style="flex:1;min-width:220px">
       <div class="dropzone" data-upload="{{ url_for('user.upload_avatar') }}" tabindex="0" role="button"
-           aria-label="Upload your picture: drop a file here or press Enter to choose one">
+           aria-label="Upload your picture: drop a file here or press Enter to choose one"
+           title="Upload your picture: drop a file here or click to choose one">
         <div class="dz-text"><strong>Drop a picture here</strong><span class="dz-hint">or click to choose one. It's cropped to a square.</span></div>
         <input type="file" accept="image/*" hidden>
       </div>
       {% if current_user.avatar %}
       <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-danger btn-sm">Remove my picture</button>
+        <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove my picture</button>
       </form>
       {% endif %}
     </div>
@@ -46,7 +47,7 @@
   <div class="card-head"><h2>Apps</h2></div>
   <p class="muted small">Apps sign in with a personal access token. Each lasts 90 days; revoke one to sign that app out.
     Apps can also get a token themselves by signing in with your username and password.
-    <a href="{{ url_for('apiv2.docs_page') }}">How apps use it</a></p>
+    <a href="{{ url_for('apiv2.docs_page') }}" title="The API for apps: addresses, sign-in and examples">How apps use it</a></p>
   {% if new_token %}
     <div class="alert alert-success">
       <strong>Your new token</strong> (copy it now; it won't be shown again):
@@ -56,7 +57,7 @@
   <form method="post" action="{{ url_for('user.create_token') }}" class="btn-row" style="margin-bottom:12px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="text" name="name" maxlength="64" placeholder="Name, e.g. My phone" aria-label="Token name" style="flex:1;min-width:180px">
-    <button class="btn btn-secondary">Create token</button>
+    <button class="btn btn-secondary" title="Make a new token with the name typed here; it's shown once">Create token</button>
   </form>
   {% if tokens %}
   <div class="table-wrap stack">
@@ -72,7 +73,7 @@
           <td class="actions">{% if t.active %}
             <form method="post" action="{{ url_for('user.revoke_token', token_id=t.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-danger btn-sm">Revoke</button>
+              <button class="btn btn-danger btn-sm" title="Stop the token “{{ t.name }}” working, signing that app out">Revoke</button>
             </form>{% endif %}</td>
         </tr>
       {% endfor %}

@@ -261,10 +261,11 @@
     var row = document.createElement('div');
     row.className = 'btn-row';
     row.innerHTML = '<button type="button" class="btn btn-sm toast-open"></button>'
-                  + '<button type="button" class="btn btn-secondary btn-sm toast-close">Dismiss</button>';
+                  + '<button type="button" class="btn btn-secondary btn-sm toast-close" title="Hide this pop-up">Dismiss</button>';
     row.querySelector('.toast-open').dataset.pane = p;
     if (info.view) row.querySelector('.toast-open').dataset.view = info.view;
     row.querySelector('.toast-open').textContent = p === 'messages' ? 'Open messages' : 'Open notices';
+    row.querySelector('.toast-open').title = p === 'messages' ? 'Show the messages panel to read it' : 'Show the notices panel to read it';
     t.appendChild(title); t.appendChild(text); t.appendChild(row);
     box.appendChild(t);
     while (box.children.length > 3) box.removeChild(box.firstChild);
@@ -294,12 +295,14 @@
       b.className = 'btn btn-sm toast-open';
       b.dataset.pane = x[0];
       b.textContent = x[2];
+      b.title = x[0] === 'messages' ? 'Show the messages panel to read your new messages' : 'Show the notices panel to read your new notices';
       row.appendChild(b);
     });
     var close = document.createElement('button');
     close.type = 'button';
     close.className = 'btn btn-secondary btn-sm toast-close';
     close.textContent = 'Dismiss';
+    close.title = 'Hide this pop-up';
     row.appendChild(close);
     t.appendChild(title); t.appendChild(text); t.appendChild(row);
     box.appendChild(t);
@@ -351,11 +354,13 @@
     go.type = 'button';
     go.className = 'btn btn-sm';
     go.textContent = document.body.dataset.watchButton || 'Refresh';
+    go.title = 'Load the page again to see what changed';
     go.addEventListener('click', reloadHere);
     var later = document.createElement('button');
     later.type = 'button';
     later.className = 'btn btn-secondary btn-sm';
     later.textContent = 'Not now';
+    later.title = 'Keep this page as it is; hide this pop-up';
     later.addEventListener('click', function () { t.remove(); });
     row.appendChild(go); row.appendChild(later);
     t.appendChild(text); t.appendChild(row);

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import event
 
-from test_flow import app_db, login, take_page  # noqa: F401  (fixture)
+from test_flow import app_db, login, take_page, no_titles  # noqa: F401  (fixture)
 from test_dashboard import make_quiz, give
 from test_archive import ids
 
@@ -192,18 +192,18 @@ def test_menu_marks_where_you_are(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/results').data.decode()
-    assert 'href="/quiz/results" class="active" aria-current="page">Results by quiz</a>' in page
-    assert re.search(r'<summary class="active">Quizzes</summary>', page)
-    assert '<a class="skip-link" href="#main">' in page and '<main id="main"' in page
+    assert 'href="/quiz/results" class="active" aria-current="page">Results by quiz</a>' in no_titles(page)
+    assert re.search(r'<summary class="active">Quizzes</summary>', no_titles(page))
+    assert '<a class="skip-link" href="#main">' in no_titles(page) and '<main id="main"' in no_titles(page)
 
 
 def test_back_goes_where_you_came_from(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': 'http://localhost/dashboard'}).data.decode()
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in page
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(page)
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in page
+    assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in no_titles(page)
     # from another site, or from the page itself: its own Back
     for ref in ('https://evil.example/dashboard', 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
         page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': ref}).data.decode()
@@ -270,7 +270,7 @@ def test_after_handing_in_the_student_is_offered_the_next_quiz(app_db):
     S.submit(done, {1: 'Light makes sugar.'})
     page = sam.get('/quiz/take/{}'.format(done.id)).data.decode()
     assert 'Handed in!' in page and 'Your teacher is checking' in page
-    assert '<a class="btn" href="/quiz/take/{}">Next: “A” →</a>'.format(nxt.id) in page
+    assert '<a class="btn" href="/quiz/take/{}">Next: “A” →</a>'.format(nxt.id) in no_titles(page)
     assert '← Home</a>' in page
     assert 'instructor' not in page.lower()
 
@@ -721,12 +721,12 @@ def test_pages_off_the_menu_have_a_back_button(app_db):
                      (teach, '/messages/{}'.format(ids('sam'))), (sam, '/quiz/take/{}'.format(cq.id)),
                      (sam, '/no/such/page')):
         page = who.get(url).data.decode()
-        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back>← ', page), url
+        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back>← ', no_titles(page)), url
     # with nowhere better known, My profile goes back to Home (Dashboard for a teacher)
-    assert 'href="/home" data-back>← Home</a>' in sam.get('/profile').data.decode()
+    assert 'href="/home" data-back>← Home</a>' in no_titles(sam.get('/profile').data.decode())
     # the script that points each Back at the page it was opened from is on every page
     assert 'js/trail.js' in sam.get('/profile').data.decode()
-    assert 'data-back-href>Cancel</a>' in teach.get('/chpass').data.decode()
+    assert 'data-back-href>Cancel</a>' in no_titles(teach.get('/chpass').data.decode())
 
 
 def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
@@ -734,7 +734,7 @@ def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
     page = teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
-    assert 'data-back-next' in page and 'data-back-href>Cancel</a>' in page
+    assert 'data-back-next' in no_titles(page) and 'data-back-href>Cancel</a>' in no_titles(page)
     form = {'title': vq.title, 'vplist': vq.vpid_lst}
     r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/viewvquiz/{}'.format(vq.id)))
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/viewvquiz/{}'.format(vq.id))
@@ -898,10 +898,10 @@ def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
     home = teach.get('/home').data.decode()
     assert '“Mine”' in home and 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back>← Home</a>' in page
+    assert 'href="/home" data-back>← Home</a>' in no_titles(page)
     S.submit(cq, {1: '4'})
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back>← Home</a>' in page and 'Answer key' not in page
+    assert 'href="/home" data-back>← Home</a>' in no_titles(page) and 'Answer key' not in no_titles(page)
     # taken away: told as a student is, not sent to the Archive
     teach.post('/quiz/delcq/{}'.format(cq.id))
     r = teach.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()

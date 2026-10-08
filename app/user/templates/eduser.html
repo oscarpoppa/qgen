@@ -13,8 +13,8 @@
     {{ field(form.email, 'Optional. Leave blank for no email address.', attrs={'type': 'email'}) }}
     {{ check(form.is_admin, 'Administrators can create problems and quizzes, and see everyone’s results.') }}
     <div class="btn-row">
-      <button type="submit" class="btn">Save</button>
-      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href>Cancel</a>
+      <button type="submit" class="btn" title="Save these changes and go back to {{ came[1] }}">Save</button>
+      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Go back to {{ came[1] }} without saving">Cancel</a>
     </div>
   </form>
 </div>

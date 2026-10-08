@@ -1,6 +1,6 @@
 """Folders on each person's own My quizzes page: make, rename, remove, nest, and move
 quizzes and folders into them (by the "Move to" list or by dragging)."""
-from test_flow import app_db, login  # noqa: F401  (fixture)
+from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
 from test_archive import ids
 from test_dashboard import make_quiz
 
@@ -87,7 +87,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert '+ New folder inside' in page and 'No quizzes in this folder itself' in page
     assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
-    assert '<a href="/mypage?folder={}">Math</a>'.format(math) in page  # Math › Algebra
+    assert '<a href="/mypage?folder={}">Math</a>'.format(math) in no_titles(page)  # Math › Algebra
     # a folder can't go inside itself, or inside a folder in it
     assert sam.post('/mypage/move', data={'folder': math, 'to': algebra}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'

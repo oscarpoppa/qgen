@@ -57,6 +57,7 @@
     var btn = el('button', 'btn btn-secondary cal-btn');
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Choose ' + label + ' from a calendar');
+    btn.title = 'Choose ' + label + ' from a calendar';
     btn.setAttribute('aria-haspopup', 'dialog');
     btn.innerHTML = '<span aria-hidden="true">📅</span>';
     row.appendChild(btn);
@@ -98,11 +99,11 @@
 
     var head = el('div', 'cal-head');
     var prev = el('button', 'btn btn-secondary btn-sm', '‹');
-    prev.type = 'button'; prev.setAttribute('aria-label', 'Previous month');
+    prev.type = 'button'; prev.setAttribute('aria-label', 'Previous month'); prev.title = 'Show the month before';
     var title = el('div', 'cal-title');
     title.setAttribute('aria-live', 'polite');
     var next = el('button', 'btn btn-secondary btn-sm', '›');
-    next.type = 'button'; next.setAttribute('aria-label', 'Next month');
+    next.type = 'button'; next.setAttribute('aria-label', 'Next month'); next.title = 'Show the month after';
     head.appendChild(prev); head.appendChild(title); head.appendChild(next);
     box.appendChild(head);
 
@@ -139,6 +140,7 @@
     var today = el('button', 'btn btn-secondary btn-sm', 'Today');
     var clear = el('button', 'btn btn-secondary btn-sm', 'Clear');
     var done = el('button', 'btn btn-sm', 'Done');
+    today.title = 'Pick today\'s date'; clear.title = 'Empty this date box'; done.title = 'Close the calendar';
     [today, clear, done].forEach(function (b) { b.type = 'button'; foot.appendChild(b); });
     box.appendChild(foot);
 
@@ -163,6 +165,7 @@
         b.type = 'button';
         b.setAttribute('role', 'gridcell');
         b.setAttribute('aria-label', friendly(day, false));
+        b.title = 'Pick ' + friendly(day, false);
         if (day.getMonth() !== cursor.getMonth()) b.classList.add('cal-other');
         if (sameDay(day, now)) { b.classList.add('cal-today'); b.setAttribute('aria-current', 'date'); }
         if (sameDay(day, chosen)) { b.classList.add('cal-chosen'); b.setAttribute('aria-selected', 'true'); }

@@ -2,7 +2,7 @@
 several, folders hold folders; usable on the Assign and Messages pages, which follow changes."""
 import re
 
-from test_flow import app_db, login  # noqa: F401  (fixture)
+from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
 from test_archive import ids
 
 FETCH = {'X-Requested-With': 'fetch'}
@@ -181,9 +181,9 @@ def test_assigning_from_the_users_page(app_db):
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
     assert 'name="users" value="{}" form="assign-people"'.format(ids('kim')) in page
     assert '<form method="get" action="/quiz/assign" id="assign-people"' in page
-    assert 'href="/quiz/assign?users={}">Assign</a>'.format(ids('kim')) in page
-    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in page
-    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(p2) in page  # the box inside
+    assert 'href="/quiz/assign?users={}">Assign</a>'.format(ids('kim')) in no_titles(page)
+    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in no_titles(page)
+    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(p2) in no_titles(page)  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" checked', page))
     opened = lambda page: re.findall(r'<details class="box pick-group" data-fixed data-group="(\w+)" open>', page)
     # a folder: everyone in it (and in the folders inside it), checked, with the folder open
@@ -204,10 +204,10 @@ def test_results_pages_lead_back_to_users(app_db):
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
     for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id)):
-        assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in teach.get(url).data.decode(), url
+        assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in no_titles(teach.get(url).data.decode()), url
     # one student's page: Assign a quiz to them
     assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
-        teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+        no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
 
 
 def test_users_page_leads_to_each_student_page(app_db):
@@ -217,5 +217,5 @@ def test_users_page_leads_to_each_student_page(app_db):
     sam = ids('sam')
     assert 'href="/quiz/listuser/{}" title="sam&#39;s quizzes, results and awards">Student page</a>'.format(sam) in page \
         or 'href="/quiz/listuser/{}" title="sam\'s quizzes, results and awards">Student page</a>'.format(sam) in page
-    assert '<a class="person-link" href="/quiz/listuser/{}" draggable="false">sam</a>'.format(sam) in page  # the name too
+    assert '<a class="person-link" href="/quiz/listuser/{}" draggable="false">sam</a>'.format(sam) in no_titles(page)  # the name too
     assert '>Quizzes</a>' not in page

@@ -9,7 +9,7 @@
     fetch(menu.dataset.url, { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) {
-        pop.innerHTML = html ? html + '<p class="small"><a href="' + menu.dataset.dashboard + '">Dashboard →</a></p>'
+        pop.innerHTML = html ? html + '<p class="small"><a href="' + menu.dataset.dashboard + '" title="See what everyone online is working on">Dashboard →</a></p>'
                              : '<p class="muted small">Couldn\'t load the list. Please try again.</p>';
       }, function () { pop.innerHTML = '<p class="muted small">Couldn\'t load the list. Please try again.</p>'; });
   });

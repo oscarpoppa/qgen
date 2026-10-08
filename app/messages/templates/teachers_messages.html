@@ -13,8 +13,8 @@
 <div style="max-width:760px">
     {# who: every teacher, or just between you and one of them #}
     <nav class="card btn-row small" aria-label="Which teachers">
-      <a class="btn btn-sm {{ 'btn-secondary' if other }}" href="{{ url_for('messages.teachers_page') }}"{% if not other %} aria-current="page"{% endif %}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</a>
-      {% for t in staff.teachers %}<a class="btn btn-sm {{ 'btn-secondary' if not other or other.id != t.teacher.id }}" href="{{ url_for('messages.teachers_page', with=t.teacher.id) }}"{% if other and other.id == t.teacher.id %} aria-current="page"{% endif %}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{% if t.unread %} ({{ t.unread }} new){% endif %}</a>{% endfor %}
+      <a class="btn btn-sm {{ 'btn-secondary' if other }}" href="{{ url_for('messages.teachers_page') }}" title="Show the messages with every teacher"{% if not other %} aria-current="page"{% endif %}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</a>
+      {% for t in staff.teachers %}<a class="btn btn-sm {{ 'btn-secondary' if not other or other.id != t.teacher.id }}" href="{{ url_for('messages.teachers_page', with=t.teacher.id) }}" title="Show just your messages with {{ t.teacher.shown_name }}"{% if other and other.id == t.teacher.id %} aria-current="page"{% endif %}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{% if t.unread %} ({{ t.unread }} new){% endif %}</a>{% endfor %}
     </nav>
     <div class="card">{% set show_with = false %}{% include "_staff_thread.html" %}</div>
     <form method="post" action="{{ url_for('messages.send_staff') }}" class="card" novalidate>
@@ -32,7 +32,7 @@
         <label for="staff-body" class="sr-only">Message</label>
         <textarea id="staff-body" name="body" rows="3" maxlength="{{ max_len }}" required placeholder="Write to {{ other.shown_name if other else 'all the teachers' }}…"></textarea>
       </div>
-      <button class="btn">Send</button>
+      <button class="btn" title="{{ 'Send this to the teachers you checked' if staff.teachers|length > 1 else 'Send this to ' ~ (other.shown_name if other else staff.teachers[0].teacher.shown_name) }}">Send</button>
       <p class="muted small" style="margin:6px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>
     </form>
 </div>

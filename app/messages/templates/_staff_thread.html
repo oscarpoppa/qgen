@@ -28,7 +28,7 @@
       </div>
       <div class="msg-body">{{ m.body }}</div>
       {% if show_with is defined and show_with and not mine and m.sender %}
-        <button type="button" class="btn-link small show-student" data-student="t{{ m.sender.id }}">Reply to {{ m.sender.shown_name }}</button>
+        <button type="button" class="btn-link small show-student" data-student="t{{ m.sender.id }}" title="Show just your messages with {{ m.sender.shown_name }}">Reply to {{ m.sender.shown_name }}</button>
       {% endif %}
     </div>
     </li>

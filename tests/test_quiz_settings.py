@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from test_flow import app_db, login, problem_form, take_page  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, take_page, no_titles  # noqa: F401  (fixture)
 
 
 def make_quiz(app, db, teacher, **quiz):
@@ -494,7 +494,7 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     with app.test_request_context():
         S.submit(cq, {1: '4'})
     # one attempt: the same one-line row, with the same small button
-    assert 'btn btn-secondary btn-xs" href="/quiz/take/{}">Results</a>'.format(cq.id) in sam.get('/mypage').data.decode()
+    assert 'btn btn-secondary btn-xs" href="/quiz/take/{}">Results</a>'.format(cq.id) in no_titles(sam.get('/mypage').data.decode())
     with app.test_request_context():
         again = S.retake(cq)
         S.submit(again, {1: '4'})

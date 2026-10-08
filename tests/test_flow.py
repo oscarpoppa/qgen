@@ -33,6 +33,12 @@ def login(app, name):
     return c
 
 
+def no_titles(html):
+    """A page without its tooltips (title="..."), for checking the rest of a link's markup."""
+    import re
+    return re.sub(r' title="[^"]*"', '', html)
+
+
 def take_page(client, cqid):
     """A quiz's page after pressing "Start the quiz" on its start card (as opening it did before)."""
     client.post('/quiz/take/{}/start'.format(cqid))

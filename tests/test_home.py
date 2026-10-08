@@ -2,7 +2,7 @@
 import re
 from datetime import datetime, timedelta
 
-from test_flow import app_db, login  # noqa: F401  (fixture)
+from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
 from test_archive import ids
 from test_dashboard import make_quiz, give
 
@@ -38,11 +38,11 @@ def test_students_land_on_home_with_their_counts(app_db):
     waiting = page.split('class="box-title">Waiting for you</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
-    assert '<a href="/home" class="active" aria-current="page">Home</a>' in page  # in the menu for students
+    assert '<a href="/home" class="active" aria-current="page">Home</a>' in no_titles(page)  # in the menu for students
     # the boxes fold away (remembered in the browser)
     assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page
     # teachers have Home too (they take quizzes as students do); they still land on the Dashboard
-    assert '<a href="/home">Home</a>' in teach.get('/dashboard').data.decode()
+    assert '<a href="/home">Home</a>' in no_titles(teach.get('/dashboard').data.decode())
     assert teach.get('/home').status_code == 200
 
 

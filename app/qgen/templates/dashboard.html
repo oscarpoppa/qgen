@@ -3,14 +3,14 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   <span class="level-buttons">
-    <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#dash-live" aria-label="Expand all boxes">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#dash-live" aria-label="Collapse all boxes">Collapse all</button></span>
+    <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#dash-live" aria-label="Expand all boxes" title="Open every box on the Dashboard">Expand all</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#dash-live" aria-label="Collapse all boxes" title="Fold every box on the Dashboard down to its heading">Collapse all</button></span>
   <div class="actions dash-actions" aria-label="Quick actions">
-    <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
-    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a>
-    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}">Assign a quiz</a>
-    <button type="button" class="btn btn-secondary btn-sm" data-open-pane="messages">Message students</button>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('upload.upload') }}">Upload</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
+    <button type="button" class="btn btn-secondary btn-sm" data-open-pane="messages" title="Open the messages panel to write to students">Message students</button>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('upload.upload') }}" title="Upload pictures and files to the site for problems to use">Upload</a>
   </div>
 </div>
 

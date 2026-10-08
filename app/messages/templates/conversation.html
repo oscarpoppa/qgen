@@ -14,19 +14,19 @@
         {% for r in rows %}<option value="{{ url_for('messages.conversation', student_id=r.student.id) }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.shown_name }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
       </select>
     </form>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}">Student page</a>
-    <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}">All messages</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="{{ student.shown_name }}'s quizzes, results and awards">Student page</a>
+    <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}" title="The Messages page, with every student's conversation">All messages</a>
   </div>
 </div>
 <div class="card">
-  {% if older %}<p class="small" style="text-align:center"><a href="{{ url_for('messages.conversation', student_id=student.id, show=show_more) }}">Show older messages</a></p>{% endif %}
+  {% if older %}<p class="small" style="text-align:center"><a href="{{ url_for('messages.conversation', student_id=student.id, show=show_more) }}" title="Also show messages from further back">Show older messages</a></p>{% endif %}
   {% set me_teacher = true %}{% include "_thread.html" %}
   <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="to" value="{{ student.id }}">
     <label for="body" class="sr-only">Message to {{ student.shown_name }}</label>
     <textarea id="body" name="body" rows="2" maxlength="{{ tuning.get('max_message') }}" required placeholder="Write to {{ student.shown_name }}…"></textarea>
-    <button class="btn">Send</button>
+    <button class="btn" title="Send this to {{ student.shown_name }}">Send</button>
   </form>
 </div>
 {% endblock %}

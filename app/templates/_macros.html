@@ -1,7 +1,7 @@
 {# Shared form pieces. Use: {% from "_macros.html" import field, check, errors, tip %} #}
 
 {# A small "?" next to a label: hover, focus or tap shows `body` (trusted template markup). #}
-{% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
+{% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" title="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
 
 {# above: markup between the label and the box, e.g. a row of math buttons for that box #}
 {% macro field(f, help=None, attrs={}, tip_body=None, above=None) %}
@@ -45,8 +45,8 @@
       <input type="file" accept="image/*" hidden>
     </div>
     <div class="btn-row dz-actions">
-      <button type="button" class="btn btn-secondary btn-sm dz-pick">Choose one already uploaded</button>
-      <button type="button" class="btn btn-danger btn-sm dz-clear" {% if not f.data %}hidden{% endif %}>Remove picture</button>
+      <button type="button" class="btn btn-secondary btn-sm dz-pick" title="Pick a picture from the ones uploaded before">Choose one already uploaded</button>
+      <button type="button" class="btn btn-danger btn-sm dz-clear" title="Take the picture off (the uploaded file is kept)" {% if not f.data %}hidden{% endif %}>Remove picture</button>
     </div>
     <div class="dz-gallery thumbs" hidden></div>
     {{ f(type='hidden') }}
@@ -66,7 +66,7 @@
    (Dashboard, Grading, a student page...), else to fallback (app/nav.py) #}
 {% macro back_button(fallback_url, fallback_label, cls='btn btn-secondary') %}
   {%- set target = back(fallback_url, fallback_label) -%}
-  <a class="{{ cls }}" href="{{ target[0] }}" data-back>← {{ target[1] }}</a>
+  <a class="{{ cls }}" href="{{ target[0] }}" title="Go back to {{ target[1] }}" data-back>← {{ target[1] }}</a>
 {%- endmacro %}
 
 {# an empty place in a row's buttons, the size of the missing button, so the buttons of every
@@ -79,30 +79,30 @@
 {# after a quiz: back to Home (or wherever they came from), and the next quiz to do, if any #}
 {% macro after_quiz(cq, up_next) %}
   {{ back_button(url_for('user.home'), 'Home') }}
-  {% if up_next %}<a class="btn" href="{{ url_for('qgen.qtake', cidx=up_next.id) }}">Next: “{{ up_next.vquiz.title }}” →</a>{% endif %}
+  {% if up_next %}<a class="btn" href="{{ url_for('qgen.qtake', cidx=up_next.id) }}" title="Start your next quiz, “{{ up_next.vquiz.title }}”">Next: “{{ up_next.vquiz.title }}” →</a>{% endif %}
 {%- endmacro %}
 
 {# a teacher looking at one attempt: its student, the quiz's results, and the answer key #}
 {% macro attempt_links(cq) %}
   {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "'s student page") }}
-  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}">Quiz results</a>
+  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone's results for “{{ cq.vquiz.title }}”">Quiz results</a>
 {%- endmacro %}
 
 {# a person in a teacher's list: picture and name, going to their student page #}
 {% macro person_link(u, size=24, strong=true) -%}
   {%- if u -%}
-  <a class="person person-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" title="{{ u.shown_name }}'s student page">{{ avatar(u, size) }}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
+  <a class="person person-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" title="Open {{ u.shown_name }}'s student page: quizzes, results and folders">{{ avatar(u, size) }}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
   {%- else %}<span class="muted">someone</span>{% endif -%}
 {%- endmacro %}
 
 {# a quiz's title in a teacher's list, going to that quiz's results #}
 {% macro quiz_link(vq) -%}
-  <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="This quiz's results">“{{ vq.title }}”</a>
+  <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See everyone's results for this quiz">“{{ vq.title }}”</a>
 {%- endmacro %}
 
-{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none) %}
+{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none) %}
   <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}">{{ label }}</button>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ label }}</button>
   </form>
 {% endmacro %}
 

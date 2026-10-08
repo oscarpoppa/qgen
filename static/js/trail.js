@@ -48,11 +48,13 @@
   document.querySelectorAll('a[data-back]').forEach(function (a) {
     a.href = before.p;
     a.textContent = '← ' + label;
+    a.title = 'Go back to ' + before.t;
     a.addEventListener('click', function () { write(GOING, before.k); });
   });
   //a Cancel (its own words) goes to the same place
   document.querySelectorAll('a[data-back-href]').forEach(function (a) {
     a.href = before.p;
+    if (!a.title) a.title = 'Leave without saving and go back to ' + before.t;
     a.addEventListener('click', function () { write(GOING, before.k); });
   });
   document.querySelectorAll('input[data-back-next]').forEach(function (i) { i.value = before.p; });

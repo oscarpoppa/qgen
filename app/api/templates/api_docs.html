@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-head"><h1>API for apps</h1>
-  <div class="actions">{{ back_button(url_for('user.profile'), 'My profile') }}<a class="btn btn-secondary" href="{{ url_for('apiv2.openapi_json') }}">openapi.json</a></div></div>
+  <div class="actions">{{ back_button(url_for('user.profile'), 'My profile') }}<a class="btn btn-secondary" href="{{ url_for('apiv2.openapi_json') }}" title="This API described for tools, as an OpenAPI file">openapi.json</a></div></div>
 <div class="card">
   <p>Every address below starts with <code>/api/v2</code>. First sign in with <code>POST /api/v2/tokens</code>
     to get a personal access token, then send it with each request:</p>
@@ -21,7 +21,7 @@
         <td data-label="Address"><code>{{ path }}</code></td>
         <td data-label="Who" class="small">{{ who }}</td>
         <td data-label="What">{{ summary }}
-          {% if example %}<details class="box box-mini small"><summary><span class="fold" aria-hidden="true"></span>Example body</summary><pre>{{ example|tojson(indent=2) }}</pre></details>{% endif %}</td>
+          {% if example %}<details class="box box-mini small"><summary title="Show an example request body"><span class="fold" aria-hidden="true"></span>Example body</summary><pre>{{ example|tojson(indent=2) }}</pre></details>{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>

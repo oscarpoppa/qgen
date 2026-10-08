@@ -21,26 +21,26 @@
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
               data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
-              title="Drag onto a folder to move {{ item.shown_name }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false">{{ item.shown_name }}</a></strong></span></td>
+              title="Drag onto a folder to move {{ item.shown_name }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false" title="{{ item.shown_name }}'s student page (or drag onto a folder to move them)">{{ item.shown_name }}</a></strong></span></td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
           <td data-label="Last seen">{% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>
             {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
             {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
           <td class="actions">
-            <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}">Assign</a>
+            <a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Give {{ item.shown_name }} a quiz">Assign</a>
             {# their page: quizzes and results, awards #}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.shown_name }}'s quizzes, results and awards">Student page</a>
             {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% else %}{{ slot('Message') }}{% endif %}
             {# the rest, less often needed, in a small menu (keeps a row short on a phone) #}
             <details class="menu row-menu">
-              <summary class="btn btn-secondary btn-sm" aria-label="More for {{ item.shown_name }}">More</summary>
+              <summary class="btn btn-secondary btn-sm" aria-label="More for {{ item.shown_name }}" title="More for {{ item.shown_name }}: edit, reset password, delete">More</summary>
               <div class="menu-list">
-                <a href="{{ url_for('user.eduser', uid=item.id) }}">Edit</a>
+                <a href="{{ url_for('user.eduser', uid=item.id) }}" title="Change {{ item.shown_name }}'s name, email or teacher access">Edit</a>
                 {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" data-confirm="Remove {{ item.shown_name }}’s picture?" data-confirm-ok="Remove">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="menu-btn">Remove picture</button></form>{% endif %}
-                {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'menu-btn', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.') }}
-                {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string) }}{% endif %}
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="menu-btn" title="Take down {{ item.shown_name }}’s picture; their initials show instead">Remove picture</button></form>{% endif %}
+                {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'menu-btn', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with') }}
+                {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% endif %}
               </div>
             </details>
           </td>
@@ -54,15 +54,15 @@
 
 {% block content %}
 <div class="page-head"><h1>Users</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}">Results by student</a>
-    <a class="btn btn-secondary" href="{{ url_for('user.settings') }}">Sign-up &amp; site settings</a></div></div>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}" title="Every student's quiz scores, one student at a time">Results by student</a>
+    <a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
 
-{% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}">Assign a quiz to this folder</a>{% endif %}{% endset %}
+{% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Give a quiz to everyone in {{ fk.name(fk.node.folder) }}">Assign a quiz to this folder</a>{% endif %}{% endset %}
 {% call folders_page(fk, actions) %}
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>
-      <button class="btn btn-sm">Assign a quiz to them →</button>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear">Clear</button>
+      <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button>
     </form>
     {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Filter users…" aria-label="Filter users">{% endif %}
     <div id="folder-items">

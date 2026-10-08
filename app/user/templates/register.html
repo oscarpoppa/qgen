@@ -11,8 +11,8 @@
     {{ field(form.email, 'Leave blank if the student has no email address.', attrs={'type': 'email', 'autocomplete': 'email'}) }}
     {{ field(form.password, attrs={'autocomplete': 'new-password'}) }}
     {{ field(form.retype_password, attrs={'autocomplete': 'new-password'}) }}
-    {{ form.submit(class='btn', value='Create account', style='width:100%') }}
+    {{ form.submit(class='btn', value='Create account', style='width:100%', title='Make your account with the class code and name above') }}
   </form>
-  <p class="muted small" style="margin-top:14px">Already have an account? <a href="{{ url_for('user.login') }}">Log in</a></p>
+  <p class="muted small" style="margin-top:14px">Already have an account? <a href="{{ url_for('user.login') }}" title="Go in with the account you already have">Log in</a></p>
 </div>
 {% endblock %}

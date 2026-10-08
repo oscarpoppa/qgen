@@ -5,7 +5,7 @@
     <form method="post" action="{{ url_for('messages.clear_notices') }}" class="dock-form notice-clear-all"
           data-confirm="Clear all your notices? This can't be undone." data-confirm-ok="Clear all">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn-link small">Clear all</button>
+      <button class="btn-link small" title="Take away every notice in this list (asks first)">Clear all</button>
     </form>
     <ol class="notice-list" aria-label="Notices">
       {% for m in items %}
@@ -19,7 +19,7 @@
             <div>{{ m.body }}</div>
             <div class="small muted">{{ m.created.strftime('%b %d, %I:%M %p') }}
               {% if m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
-              {% if m.link %} · <a href="{{ m.link }}">{{ link_label(m.link, for_student=not teacher) }}</a>{% endif %}</div>
+              {% if m.link %} · <a href="{{ m.link }}" title="Go to the page this notice is about">{{ link_label(m.link, for_student=not teacher) }}</a>{% endif %}</div>
           </div>
           <form method="post" action="{{ url_for('messages.clear_notices', notice_id=m.id) }}" class="dock-form notice-clear">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
