@@ -3,15 +3,29 @@
  * The scroll position is noted when such a form is sent (POST) and, if the page that comes
  * back is the same one, put back. The message saying what happened ("Moved ... to ...")
  * is at the top of the page, so it floats at the top of the window for a few seconds.
+ * The same for a link to another view of the same page (a folder, a filter: ?folder=3).
  * Not after a page that scrolled somewhere itself (to what was just moved or saved), and
- * not for forms marked data-fresh-page (handing in a quiz opens its results at the top). */
+ * not for forms or links marked data-fresh-page (handing in a quiz opens its results at the top). */
 (function () {
   var KEY = 'qgen-place';
+  function note() {
+    try { sessionStorage.setItem(KEY, JSON.stringify({ path: location.pathname, y: window.scrollY, at: Date.now() })); } catch (err) {}
+  }
   document.addEventListener('submit', function (e) {
     var f = e.target;
     if ((f.method || '').toLowerCase() !== 'post' || f.hasAttribute('data-fresh-page')) return;
-    try { sessionStorage.setItem(KEY, JSON.stringify({ path: location.pathname, y: window.scrollY, at: Date.now() })); } catch (err) {}
+    note();
   }, true);
+  //a link to another view of the same page (a folder, a filter: ?folder=3) keeps the place too
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target || a.hasAttribute('download') || a.hasAttribute('data-fresh-page')) return;
+    var to;
+    try { to = new URL(a.href, location.href); } catch (err) { return; }
+    if (to.origin !== location.origin || to.pathname !== location.pathname || to.hash) return;
+    note();
+  });
 
   var place = null;
   try { place = JSON.parse(sessionStorage.getItem(KEY) || 'null'); sessionStorage.removeItem(KEY); } catch (err) {}
