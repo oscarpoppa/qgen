@@ -80,6 +80,12 @@ def mypage():
     due = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
     days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
+    #their badges count tries (a quiz given twice and not started is 2 new)
+    tries = {'new': sum(1 for g in groups for a in g['attempts'] if a.status == 'new'),
+             'started': sum(1 for g in groups for a in g['attempts'] if a.status == 'started'),
+             'due': sum(1 for g in groups for a in g['attempts'] if a.id in due_ids)}
+    def n_tries(n):
+        return '{} {}'.format(n, 'try' if n == 1 else 'tries')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
              else working if view == 'started' else due if view == 'soon' else root['groups'])
     if showing:
@@ -110,13 +116,13 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
-        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(len(fresh)),
-                     'badge_title': '{} new {}'.format(len(fresh), 'quiz' if len(fresh) == 1 else 'quizzes')},
+        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
+                     'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
                     {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working),
-                     'badge': '{} started'.format(len(working)), 'badge_class': 'badge-accent',
-                     'badge_title': '{} started and not handed in'.format(len(working))},
-                    {'key': 'soon', 'icon': '⏰', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(len(due)), 'badge_class': 'badge-bad',
-                     'badge_title': '{} to hand in within {}'.format(len(due), within)}],
+                     'badge': '{} started'.format(tries['started']), 'badge_class': 'badge-accent',
+                     'badge_title': '{} started and not handed in'.format(n_tries(tries['started']))},
+                    {'key': 'soon', 'icon': '⏰', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
+                     'badge_title': '{} to hand in within {}'.format(n_tries(tries['due']), within)}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '

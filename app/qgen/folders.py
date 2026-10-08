@@ -203,8 +203,8 @@ def move_folder(user, folder_id, to_id):
 
 def tree(user, groups, due_ids=()):
     """My quizzes arranged in folders: the main list as {'folder': None, 'folders': [...],
-    'groups': [...], 'count': quizzes inside, at any depth, and how many of those need the
-    student: 'new' (not started), 'started' (started, not handed in) and 'due' (a try in
+    'groups': [...], 'count': quizzes inside, at any depth, and how many tries in them need
+    the student: 'new' (not started), 'started' (started, not handed in) and 'due' (in
     due_ids: closing soon), each also as '<kind>_here' (not counting the folders inside)};
     each folder the same shape, with 'depth'. `groups` are attempts_by_quiz()'s, kept in
     their order. Also returns every folder as (folder, depth) in the order of a "Move to"
@@ -224,13 +224,13 @@ def tree(user, groups, due_ids=()):
         if node['folder'] is not None:
             flat.append((node['folder'], depth))
         node['count'] = len(node['groups']) + sum(walk(child, depth + 1) for child in node['folders'])
-        #quizzes that need the student, here and in the folders inside (badges on the folder,
-        #and on every folder it's in)
-        tests = {'new': lambda g: any(a.status == 'new' for a in g['attempts']),
-                 'started': lambda g: any(a.status == 'started' for a in g['attempts']),
-                 'due': lambda g: any(a.id in due_ids for a in g['attempts'])}
+        #tries that need the student, here and in the folders inside (the numbers on the folder,
+        #and on every folder it's in): a quiz given twice and not started counts 2
+        tests = {'new': lambda a: a.status == 'new',
+                 'started': lambda a: a.status == 'started',
+                 'due': lambda a: a.id in due_ids}
         for kind, test in tests.items():
-            node[kind + '_here'] = sum(1 for g in node['groups'] if test(g))
+            node[kind + '_here'] = sum(1 for g in node['groups'] for a in g['attempts'] if test(a))
             node[kind] = node[kind + '_here'] + sum(child[kind] for child in node['folders'])
         return node['count']
     walk(root, 0)

@@ -1501,9 +1501,11 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 /* a folder's "needs the student" numbers (new, started, due soon), in those folders' colors */
 .side-flags { display: inline-flex; gap: 3px; flex: 0 0 auto; align-items: center; }
 .side-flag { min-width: 1.6em; text-align: center; padding: 1px 5px; font-size: .72rem; }
-/* a folder with something new / started / due inside: a small dot of that color (the New,
-   In progress and Due folders carry the full badge with the count) */
-.side-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+/* a folder with tries new / started / due inside: a small circle of that color with how many
+   (the New, In progress and Due folders carry the full badge); the folder's own count of
+   quizzes stays plain and gray beside them */
+.side-dot { display: inline-block; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; flex: none;
+  font-size: .68rem; font-weight: 700; line-height: 16px; text-align: center; color: var(--surface); }
 .side-dot.dot-new { background: var(--warn); }
 .side-dot.dot-started { background: var(--accent); }
 .side-dot.dot-due { background: var(--bad); }

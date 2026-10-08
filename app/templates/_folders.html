@@ -9,11 +9,10 @@
 {% from "_macros.html" import box_label, count_of %}
 
 {# what in a folder needs the student (My quizzes): new, started and due soon, here and in the
-   folders inside (here=true: here only, for Not in a folder), as small colored dots in the
+   folders inside (here=true: here only, for Not in a folder), as small colored circles with how many tries, in the
    colors of New, In progress and Due within; each says what it is on hover #}
 {% macro flag_badges(fk, n, here=false) -%}
   {%- set sfx = '_here' if here else '' -%}
-  {%- set one, many = fk.unit, fk.units -%}
   {%- set shown = [] -%}
   {%- for kind, cls in (('due', 'badge-bad'), ('started', 'badge-accent'), ('new', 'badge-warn')) -%}
     {%- set k = n[kind ~ sfx] if (n is mapping and (kind ~ sfx) in n) else 0 -%}
@@ -21,9 +20,9 @@
   {%- endfor -%}
   {%- if shown -%}<span class="side-flags">
     {%- for k, cls, kind in shown -%}
-      {%- set what = (one if k == 1 else many) -%}
-      {%- set words = k ~ ' ' ~ (('new ' ~ what) if kind == 'new' else (what ~ ' in progress') if kind == 'started' else (what ~ ' due soon')) -%}
-      <span class="side-dot dot-{{ kind }}" title="{{ words }}" role="img" aria-label="{{ words }}"></span>
+      {%- set tries = 'try' if k == 1 else 'tries' -%}
+      {%- set words = k ~ ' ' ~ (('new ' ~ tries) if kind == 'new' else (tries ~ ' in progress') if kind == 'started' else (tries ~ ' due soon')) -%}
+      <span class="side-dot dot-{{ kind }}" title="{{ words }}" role="img" aria-label="{{ words }}">{{ k }}</span>
     {%- endfor -%}</span>{%- endif -%}
 {%- endmacro %}
 

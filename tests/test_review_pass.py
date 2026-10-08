@@ -867,11 +867,11 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
     page = sam.get('/mypage?folder=main').data.decode()
     # in the side list, with a badge counting what's new
-    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1 new</span>' in page
+    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 try not started yet">1 new</span>' in page
     # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
-    assert '<span class="side-dot dot-new" title="1 new quiz" role="img" aria-label="1 new quiz"></span>' in page
+    assert '<span class="side-dot dot-new" title="1 new try" role="img" aria-label="1 new try">1</span>' in page
     # and Not in a folder has the started one
-    assert '<span class="side-dot dot-started" title="1 quiz in progress" role="img" aria-label="1 quiz in progress"></span>' in page
+    assert '<span class="side-dot dot-started" title="1 try in progress" role="img" aria-label="1 try in progress">1</span>' in page
     # only the automatic folders carry full badges; the others have dots
     assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
@@ -1108,8 +1108,8 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
     for f in (top, inner):
         row = side[side.index('data-folder="{}"'.format(f.id)):]
         row = row[:row.index('</div>')]
-        assert 'dot-started" title="1 quiz in progress"' in row and 'dot-due" title="1 quiz due soon"' in row
-        assert 'dot-new" title="1 new quiz"' in row  # Soon isn't started yet
+        assert 'dot-started" title="1 try in progress"' in row and 'dot-due" title="1 try due soon"' in row
+        assert 'dot-new" title="1 new try"' in row  # Soon isn't started yet
         assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
     cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
     begun_head = cards[cards.index('data-quiz="{}"'.format(begun.id)):]
@@ -1117,3 +1117,15 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
     soon_head = cards[cards.index('data-quiz="{}"'.format(soon.id)):]
     soon_head = soon_head[:soon_head.index('</summary>')]
     assert '>Due soon</span>' in soon_head and '>New</span>' in soon_head and 'Hand it in by' in soon_head
+
+
+def test_folder_numbers_count_tries_not_quizzes(app_db):
+    """A quiz given twice and not started is 2 new tries, on its folder and the New folder."""
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teach)
+    for _ in range(2):
+        teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
+    page = sam.get('/mypage?folder=main').data.decode()
+    assert '2 tries not started yet">2 new</span>' in page
+    assert '<span class="side-dot dot-new" title="2 new tries" role="img" aria-label="2 new tries">2</span>' in page
