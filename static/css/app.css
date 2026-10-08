@@ -131,7 +131,10 @@ main:focus { outline: none; }
 .btn.nav-toggle { display: none; }
 
 main.container { padding-top: 24px; padding-bottom: 48px; }
-/* pages with a side list (My quizzes): as wide as the window, with the usual margins */
+/* pages use the window's width (up to 1600px); reading pages and forms stay narrower, and
+   pages with a side list (My quizzes, Problems...) take all of it, with the usual margins */
+main.container { max-width: 1600px; }
+main.container.container-narrow { max-width: 1080px; }
 main.container.container-wide { max-width: none; }
 
 .page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -1039,6 +1042,8 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .awards-locked .award-icon { filter: grayscale(1); opacity: .5; }
 .awards-locked .award-text { color: var(--muted); }
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+/* a wide window: a third column of boxes rather than two very wide ones */
+@media (min-width: 1500px) { .dash-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .dash-wide { grid-column: 1 / -1; }
 .dash-card { margin-bottom: 0; min-width: 0; }
 .dash-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -1603,3 +1608,8 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
 /* one problem's results: the summary, and its most common wrong answers */
 .problem-summary .common-wrong { margin-top: 10px; }
 .problem-summary .common-wrong ul { margin: 4px 0 0; padding-left: 1.2rem; }
+
+/* a problem's History: the answers get room; the question (long) gives way */
+.history-table td[data-label="Their answer"], .history-table td[data-label="Correct answer"] { min-width: 8rem; }
+.history-table td[data-label="Their question"] { min-width: 14rem; max-width: 36rem; }
+.history-table td[data-label="Score"] { white-space: nowrap; }

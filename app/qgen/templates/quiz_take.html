@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# reading and forms: lines no wider than is comfortable #}
+{% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button with context %}
 {# the student taking it is never reloaded mid-answer: offered instead (a teacher's view just updates) #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz has changed. Reload to see it.', button='Reload', ask=True) if not preview else watch('attempt:%d' % cq.id) }}{% endblock %}

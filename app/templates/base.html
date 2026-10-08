@@ -135,7 +135,7 @@
     </div>
   </header>
 
-  {# a page can use the whole window's width by setting main_class to " container-wide" #}
+  {# pages are up to 1600px wide; main_class " container-wide" uses the whole window, " container-narrow" keeps reading pages and forms at 1080px #}
   <main id="main" tabindex="-1" class="container{% block main_class %}{% endblock %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}

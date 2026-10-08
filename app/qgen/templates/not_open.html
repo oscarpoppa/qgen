@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# reading and forms: lines no wider than is comfortable #}
+{% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button with context %}
 {# when it opens (or the teacher changes it) the student is offered the quiz; never started for them #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz may be open now.', button='Go to the quiz', ask=True) }}{% endblock %}

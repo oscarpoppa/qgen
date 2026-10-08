@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{# reading and forms: lines no wider than is comfortable #}
+{% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button with context %}
 {# before a quiz starts: what's ahead, and nothing (nor its timer) starts until "Start the quiz" #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz has changed. Reload to see it.', button='Reload', ask=True) }}{% endblock %}
