@@ -20,13 +20,28 @@
     if (paper && questionCard.nextElementSibling !== picCard) questionCard.after(picCard);
     if (!paper && picHome && picCard.nextElementSibling !== picHome) picHome.before(picCard);
     picCard.classList.toggle('paper-page', paper);
-    picCard.querySelectorAll('[data-paper]').forEach(function (el) {
+    form.querySelectorAll('[data-paper]').forEach(function (el) {
       if (!('plain' in el.dataset)) el.dataset.plain = el.textContent;
       el.textContent = paper ? el.dataset.paper : el.dataset.plain;
     });
-    var step = picCard.querySelector('.step-num');
-    if (step) step.hidden = paper;
-    if (questionBox) questionBox.placeholder = paper ? 'e.g. Connect the dots from 1 to 20.' : questionHint;
+    if (questionBox) {
+      questionBox.placeholder = paper ? 'e.g. Connect the dots from 1 to 20. (Or leave it empty: the page says it all.)' : questionHint;
+      //the question is optional, and has no random values to put in it
+      var field = questionBox.closest('.field');
+      var label = field && field.querySelector('label[for="' + questionBox.id + '"]');
+      var help = field && field.querySelector('.help');
+      [[label, 'Instructions (optional)'], [help, 'What the student should do, like “Color the flower.” Leave it empty if the page says it all.']].forEach(function (x) {
+        if (!x[0]) return;
+        if (!('plain' in x[0].dataset)) x[0].dataset.plain = x[0].textContent;
+        x[0].textContent = paper ? x[1] : x[0].dataset.plain;
+      });
+    }
+    //the steps count 1, 2, 3… in the order they show
+    var n = 0;
+    form.querySelectorAll('.card-head .step-num').forEach(function (s) {
+      var card = s.closest('.card');
+      if (card && !card.hidden) s.textContent = ++n;
+    });
     //a slot for the page, ready to fill
     if (paper && !document.querySelector('#images-body .image-row')) document.getElementById('add-image').click();
   }
