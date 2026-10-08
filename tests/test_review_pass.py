@@ -684,9 +684,12 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     cq.startdate = datetime.now()
     db.session.commit()
     home = sam.get('/home').data.decode()
-    # new and in progress open My quizzes' own folders; due soon its own view
+    # each counter opens My quizzes' own folder of the same name
     assert 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
-    assert 'href="/mypage?show=soon"' in home
+    assert 'href="/mypage?folder=soon"' in home
+    due = sam.get('/mypage?folder=soon').data.decode()
+    assert re.findall(r'<h2 title="([^"]+)" class="box-title">', due) == ['Soon']
+    assert '⏰</span> Due within 2 days</a>' in due and '>1 due</span>' in due and 'hand these in soon' in due
     new = sam.get('/mypage?folder=new').data.decode()
     assert '“New one”' in new or 'New one' in new
     assert 'Begun' in sam.get('/mypage?folder=started').data.decode()

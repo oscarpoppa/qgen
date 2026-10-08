@@ -12,12 +12,12 @@
 
 {% set days = tuning.get('due_soon_days') %}
 <div class="dash-counters home-counters" aria-label="Your quizzes">
-  {# these two open My quizzes' own New and In progress folders #}
+  {# these open My quizzes' own New, In progress and Due within … folders #}
   <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='new') }}">
     <span class="dash-num">{{ todo }}</span><span>new</span></a>
   <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='started') }}">
     <span class="dash-num">{{ started }}</span><span>in progress</span></a>
-  <a class="dash-count{{ ' has' if soon }}" href="{{ url_for('user.mypage', show='soon') }}"
+  <a class="dash-count{{ ' has' if soon }}" href="{{ url_for('user.mypage', folder='soon') }}"
      title="Not handed in yet, and closing in the next {{ days }} day{{ '' if days == 1 else 's' }}">
     <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
 </div>

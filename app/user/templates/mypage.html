@@ -54,7 +54,7 @@
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}
           {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open, compact=true) }}{% endif %}</span>
       </summary>
-      {% if fk.view in ('all', 'new', 'started') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
+      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
       <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
         {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
@@ -124,7 +124,7 @@
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_cards(n.groups, n.folder.id) }}{% endcall %}{% endfor %}{% endif %}
     {{ quiz_cards(shown, fk.view) }}
   </div>
-  {% if not shown and (showing or fk.view in ('new', 'started')) %}
+  {% if not shown and (showing or fk.view in ('new', 'started', 'soon')) %}
     <p class="card empty small">{{ nothing }}</p>
   {% elif not shown %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>

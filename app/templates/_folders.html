@@ -79,7 +79,7 @@
           <li><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page(av.key) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}><span aria-hidden="true">{{ av.icon }}</span> {{ av.label }}</a>
-            {% if av.badge and av.count %}<span class="badge badge-warn side-new-badge" title="{{ av.count }} new {{ fk.unit if av.count == 1 else fk.units }}">{{ av.badge }}</span>
+            {% if av.badge and av.count %}<span class="badge badge-warn side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
             {% else %}<span class="side-count muted small">{{ av.count or '' }}</span>{% endif %}</div></li>
         {% endfor %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}

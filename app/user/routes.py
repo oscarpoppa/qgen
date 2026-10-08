@@ -64,25 +64,28 @@ def mypage():
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new', 'started'))
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new', 'started', 'soon'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet (also each in its own folder)
     working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
+    #and "Due within N days": not handed in yet and closing within that time (as Home counts them)
+    from app import tuning
+    from app.qgen.models import waiting_quizzes
+    from datetime import datetime
+    now = datetime.now()
+    waiting = waiting_quizzes(current_user, now)
+    due_ids = {cq.id for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()}
+    due = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
+    days = tuning.get('due_soon_days')
+    within = '{} day{}'.format(days, '' if days == 1 else 's')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
-             else working if view == 'started' else root['groups'])
+             else working if view == 'started' else due if view == 'soon' else root['groups'])
     if showing:
-        from app import tuning
-        from app.qgen.models import waiting_quizzes
-        from datetime import datetime
-        now = datetime.now()
-        waiting = waiting_quizzes(current_user, now)
         wanted = {cq.id for cq in waiting if
                   (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status == 'started')
                   or (showing == 'soon' and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
         shown = [g for g in groups if any(a.id in wanted for a in g['attempts'])]
-        days = tuning.get('due_soon_days')
-        within = '{} day{}'.format(days, '' if days == 1 else 's')
         heading, nothing = {
             'todo': ('📝 To do: quizzes you haven’t started', 'You have no quizzes waiting to be started. 🎉'),
             'started': ('✏️ Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in. 🎉'),
@@ -92,6 +95,8 @@ def mypage():
         heading, nothing = '🆕 New: quizzes you haven’t started', 'No new quizzes right now. 🎉'
     elif view == 'started':
         heading, nothing = '✏️ In progress: quizzes you’ve started and not handed in', 'Nothing in progress right now. 🎉'
+    elif view == 'soon':
+        heading, nothing = '⏰ Due within {}: hand these in soon'.format(within), 'Nothing is due within {}. 🎉'.format(within)
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -104,8 +109,11 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
-        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(len(fresh))},
-                    {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working), 'badge': None}],
+        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(len(fresh)),
+                     'badge_title': '{} new {}'.format(len(fresh), 'quiz' if len(fresh) == 1 else 'quizzes')},
+                    {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working), 'badge': None},
+                    {'key': 'soon', 'icon': '⏰', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(len(due)),
+                     'badge_title': '{} to hand in within {}'.format(len(due), within)}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
