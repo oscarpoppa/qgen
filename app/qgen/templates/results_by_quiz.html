@@ -19,6 +19,7 @@
     <div class="box-body">
     {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Open a page with only the results for “{{ vq.title }}”">Just this quiz</a>
       · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems without changing it">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change “{{ vq.title }}”: its problems and settings">Edit quiz</a></p>{% endif %}
+    {% if q.paper and q.rows %}<p class="small box-links"><a href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">🖨 Print paper pages</a></p>{% endif %}
     {% if q.rows %}
       {# a long class: find a student in this quiz #}
       {% if q.students > 8 %}<input type="search" class="filter" data-filter="#quiz-{{ vq.id }}" placeholder="Find a student…" aria-label="Find a student in {{ vq.title }}">{% endif %}

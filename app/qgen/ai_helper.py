@@ -54,7 +54,7 @@ VALUES_ONLY_SCHEMA = {
 PROBLEM_SCHEMA = {
     'type': 'object',
     'properties': {
-        'qtype': {'type': 'string', 'enum': list(REGISTRY)},
+        'qtype': {'type': 'string', 'enum': [k for k in REGISTRY if k != 'paper']},
         'title': {'type': 'string'},
         'question': {'type': 'string'},
         'values': {'type': 'array', 'items': VALUE_SCHEMA},
@@ -193,7 +193,7 @@ def clean(fill, kind):
            'off_topic': fill.get('off_topic') is True}
     if kind == 'problem':
         out.update(
-            qtype=fill.get('qtype') if fill.get('qtype') in REGISTRY else 'numeric',
+            qtype=fill.get('qtype') if fill.get('qtype') in REGISTRY and fill.get('qtype') != 'paper' else 'numeric',
             title=str(fill.get('title') or '')[:64],
             question=str(fill.get('question') or ''),
             answer=str(fill.get('answer') or ''),

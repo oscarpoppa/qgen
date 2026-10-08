@@ -32,7 +32,10 @@
     </div>
     {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
     <div class="qtext">{{ it.text }}</div>
-    {% if it.essay %}
+    {% if it.paper %}
+      <p class="paper-note"><span aria-hidden="true">✏️</span> Done on paper.</p>
+      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
+    {% elif it.essay %}
       <div class="label">Your answer</div>
       <div class="essay-text">{{ it.submitted_html if it.submitted else '(no answer)' }}</div>
       {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}

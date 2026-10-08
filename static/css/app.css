@@ -853,6 +853,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* View pages: problems and quizzes as students see them */
 .sample-item .card-head { align-items: center; }
 .sample-item .qtext { margin: 4px 0 12px; }
+.paper-note { margin: 8px 0 0; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
 .sample-item .essay-box, .sample-item .answer-line { border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
 .sample-item .ans-mark { display: inline-block; width: 1.2em; }
 .sample-item .q-only { display: none; }
@@ -1485,3 +1486,13 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .side-flags { display: inline-flex; gap: 3px; flex: 0 0 auto; align-items: center; }
 .side-flag { min-width: 1.6em; text-align: center; padding: 1px 5px; font-size: .72rem; }
 .sub-head .side-flags { margin-left: 6px; }
+
+/* Paper only pages printed for each student (print_paper.html): one per sheet, name on top */
+.paper-sheet { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.paper-sheet-head { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 10px; }
+.paper-sheet-img { display: block; max-width: 100%; height: auto; margin: 8px auto 0; }
+@media print {
+  .paper-sheet { border: 0; border-radius: 0; padding: 0; margin: 0; break-after: page; }
+  .paper-sheet:last-child { break-after: auto; }
+  .paper-sheet-img { max-height: 88vh; object-fit: contain; }
+}

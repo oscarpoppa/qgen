@@ -138,7 +138,7 @@ def problem_hints(qtype_key, question, answer, options):
             hints.append(hint('warn', 'The list for "{}" has only one item, so every student gets the same one.'.format(name)))
 
     #anti-copying: how many different versions can students get, and can answers be passed along?
-    if not [h for h in hints if h['level'] == 'error'] and qt.key != 'essay':
+    if not [h for h in hints if h['level'] == 'error'] and qt.auto_graded:
         n, same_answer = variety(qt, question, answer, options)
         if n == 1:
             hints.append(hint('warn', 'Every student gets exactly the same question and answer, so answers can be passed along. '
@@ -200,7 +200,7 @@ def problem_hints(qtype_key, question, answer, options):
 
 def _same_for_all(p):
     """A problem every student gets identically: no random values or pictures to differ (written answers aside)."""
-    return (not p.options.get('values') and get_qtype(p.qtype).key != 'essay'
+    return (not p.options.get('values') and get_qtype(p.qtype).auto_graded
             and len(p.options.get('images') or []) < 2)
 
 

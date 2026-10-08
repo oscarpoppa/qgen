@@ -21,7 +21,7 @@ import random
 import re
 from decimal import Decimal, ROUND_HALF_UP
 
-from wtforms import StringField, TextAreaField, RadioField, SelectMultipleField
+from wtforms import HiddenField, StringField, TextAreaField, RadioField, SelectMultipleField
 from wtforms.widgets import ListWidget, CheckboxInput
 
 from . import friendly as F
@@ -298,6 +298,7 @@ class QType:
     key = ''
     label = ''
     auto_graded = True
+    paper = False  # done on paper: no answer box, the teacher scores it
     answer_label = 'Answer'
     answer_help = ''
     uses_choices = False
@@ -692,12 +693,39 @@ class Essay(QType):
         return None
 
 
+class PaperOnly(QType):
+    """Done on paper (draw, circle, color in): the page is the problem's picture, the
+    student has no answer box, and the teacher types the score from the paper."""
+    key = 'paper'
+    label = 'Paper only (done on paper; you grade it)'
+    auto_graded = False
+    paper = True
+    answer_label = 'Answer key (optional, only you see it)'
+    answer_help = 'Shown to you while grading.'
+
+    def validate_parts(self, answer, options, known):
+        errors = [] if options.get('images') else ['A Paper only problem needs its page in the picture section.']
+        return errors + F.check_text('answer key', answer, known)
+
+    def make_field(self, name, conc_opts):
+        return HiddenField(name)
+
+    def to_stored(self, data):
+        return ''
+
+    def is_blank(self, stored):
+        return False  # never "left blank": the work is on paper, so it always waits for a grade
+
+    def grade(self, stored, conc_ansr, conc_opts, options):
+        return None
+
+
 def enumerate_choices(conc_opts):
     for i, text in enumerate(conc_opts.get('choices', [])):
         yield str(i), text
 
 
-REGISTRY = {t.key: t for t in (Numeric(), Text(), ChoiceOne(), ChoiceMany(), TrueFalse(), Essay())}
+REGISTRY = {t.key: t for t in (Numeric(), Text(), ChoiceOne(), ChoiceMany(), TrueFalse(), Essay(), PaperOnly())}
 
 
 def get_qtype(key):

@@ -413,7 +413,11 @@ def assign():
             flash(Markup('Assigned “{}” to {}. <a href="{}">See the results →</a>').format(
                 vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
         #back where they came from (a student page, a quiz's results...), else ready for the next one
-        return redirect(next_arg(url_for('qgen.assign')))
+        then = next_arg(url_for('qgen.assign'))
+        if created and paper_problems(vquiz):
+            #pages done on paper: straight to printing a copy for each of them
+            return redirect(url_for('qgen.print_paper', vqid=vquiz.id, users=[cq.taker.id for cq in created], next=then))
+        return redirect(then)
     #for the Subject menu, which narrows the Quiz menu in the page
     #a quiz in "Algebra › Linear equations" is also under "Algebra"
     above = S.subject_ancestors('quizzes')
@@ -451,6 +455,29 @@ def assign():
     return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from, choices=S.subject_choices('quizzes'),
                            choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen,
                            people=people, root=root, chosen=chosen, open_groups=open_groups)
+
+
+def paper_problems(vquiz):
+    """The quiz's Paper only problems, in quiz order (every one in a pick-from group too,
+    since a student's picks aren't drawn until they start), each once."""
+    probs = {p.id: p for p in vquiz.vproblems}
+    ids = dict.fromkeys(i for i in layout.all_ids(layout.parse(vquiz.vpid_lst)) if i in probs)
+    return [probs[i] for i in ids if get_qtype(probs[i].qtype).paper]
+
+
+@qgen_bp.route('/quiz/print/<int:vqid>')
+@login_required
+@pw_check
+@admin_only
+def print_paper(vqid):
+    """The quiz's paper pages, one copy per student with their name on top; the print
+    dialog opens by itself."""
+    vquiz = db.get_or_404(VQuiz, vqid)
+    ids = [int(u) for u in request.args.getlist('users') if u.isdigit()]
+    students = [u for u in (db.session.get(User, i) for i in dict.fromkeys(ids)) if u]
+    then = next_arg(url_for('qgen.quiz_results_page', vqid=vquiz.id))
+    return render_template('print_paper.html', title='Print: ' + vquiz.title, vquiz=vquiz, pages=paper_problems(vquiz),
+                           students=students or [None], then=then, then_name=place_name(then), today=datetime.now())
 
 
 # ---------------------------------------------------------------- taking
@@ -737,7 +764,8 @@ def quiz_results(quizzes):
         scores = [g['combined'] for _, g in rows if g['combined'] is not None]
         out.append({'vquiz': vq, 'rows': rows, 'students': len(rows), 'done': len(scores),
                     'average': sum(scores) / len(scores) if scores else None,
-                    'waiting': sum(1 for _, g in rows for cq in g['attempts'] if cq.status == 'review')})
+                    'waiting': sum(1 for _, g in rows for cq in g['attempts'] if cq.status == 'review'),
+                    'paper': any(get_qtype(p.qtype).paper for p in vq.vproblems)})
     return out
 
 #route to list contents/transcript of a specific concrete quiz

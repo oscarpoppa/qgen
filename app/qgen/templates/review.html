@@ -32,19 +32,23 @@
       {% if it.essay and row.form %}
         <div class="split">
           <div>
+            {% if it.paper %}
+            <p class="paper-note"><span aria-hidden="true">✏️</span> Done on paper. Score it from {{ cq.taker.shown_name }}’s paper.</p>
+            {% else %}
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
             <div class="btn-row" style="margin-top:8px">
               <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right" title="Highlight the selected words in this answer as right">Mark right</button>
               <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong" title="Highlight the selected words in this answer as wrong">Mark wrong</button>
               <button type="button" class="btn btn-sm btn-secondary hl-clear" title="Remove every right and wrong highlight from this answer">Clear highlights</button>
             </div>
+            {% endif %}
           </div>
           <div>
             {{ row.form.cpid() }}{{ row.form.highlights() }}
             {{ field(row.form.credit, '0 = no credit, 100 = full credit.', attrs={'type': 'number', 'min': 0, 'max': 100, 'step': 5}) }}
             {{ field(row.form.feedback, attrs={'rows': 4}) }}
             {% if row.notes %}<div class="feedback"><strong>Your grading notes:</strong> {{ row.notes }}</div>{% endif %}
-            {% if it.correct %}<div class="feedback"><strong>Model answer:</strong> {{ it.correct }}</div>{% endif %}
+            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
           </div>
         </div>
       {% else %}

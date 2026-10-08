@@ -141,6 +141,7 @@ class TranscriptItem:
     #pick-one / pick-several / true-false: every choice the student saw, in their order,
     #as {'text', 'picked', 'right'}; None for other types
     choices: Optional[list] = None
+    paper: bool = False  # done on paper: no typed answer to show
 
     @property
     def mark(self):
@@ -172,6 +173,7 @@ def transcript_item(cp):
         credit=cp.credit,
         feedback=cp.feedback,
         choices=transcript_choices(qt, cp),
+        paper=qt.paper,
     )
 
 

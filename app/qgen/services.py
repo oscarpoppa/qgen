@@ -606,7 +606,7 @@ def _sample_item(vp, rng, num=None):
     """One student's version of a problem, for viewing only."""
     qt = get_qtype(vp.qtype)
     prob, ansr, opts = instantiate_problem(vp, rng)
-    return {'num': num, 'vpid': vp.id, 'title': vp.title, 'qtype': qt.label, 'essay': not qt.auto_graded,
+    return {'num': num, 'vpid': vp.id, 'title': vp.title, 'qtype': qt.label, 'essay': not qt.auto_graded, 'paper': qt.paper,
             'text': prob, 'correct': qt.show_correct(ansr, opts), 'choices': opts.get('choices'),
             'right': opts.get('correct', []), 'image': opts.get('image')}
 

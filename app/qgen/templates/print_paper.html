@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{# A quiz's Paper only pages, one copy per student with their name on top. The print
+   dialog opens by itself; on screen there's Print again and the way back. #}
+{% block content %}
+<div class="page-head no-print">
+  <h1>Print the paper pages</h1>
+  <div class="actions">
+    <button type="button" class="btn" id="print-again" title="Open the print dialog again">🖨 Print</button>
+    <a class="btn btn-secondary" href="{{ then }}" title="Go back to {{ then_name or 'the page before' }}">← {{ then_name or 'Back' }}</a>
+  </div>
+</div>
+{% if not pages %}
+  <div class="card empty">“{{ vquiz.title }}” has no Paper only problems, so there’s nothing to print.</div>
+{% else %}
+  <p class="muted small no-print">{{ students|length }} cop{{ 'y' if students|length == 1 else 'ies' }} of {{ pages|length }} page{{ '' if pages|length == 1 else 's' }}, each copy starting on a new sheet.</p>
+  {% for u in students %}
+    {% for p in pages %}
+      <section class="paper-sheet">
+        <div class="paper-sheet-head">
+          <strong>{{ u.shown_name if u else 'Name: ________________' }}</strong>
+          <span>{{ vquiz.title }}</span>
+          <span>{{ today.strftime('%b %d, %Y') }}</span>
+        </div>
+        <div class="qtext">{{ p.raw_prob }}</div>
+        {% for img in p.options.get('images') or [] %}
+          <img class="paper-sheet-img" src="{{ url_for('static', filename=img.file) }}" alt="Page for {{ p.title }}">
+        {% endfor %}
+      </section>
+    {% endfor %}
+  {% endfor %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var again = document.getElementById('print-again');
+  again.addEventListener('click', function () { window.print(); });
+  {% if pages %}
+  //once the pictures are in, so they all print
+  window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });
+  {% endif %}
+})();
+</script>
+{% endblock %}
