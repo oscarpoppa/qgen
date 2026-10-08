@@ -383,23 +383,29 @@
   });
 
   //what's waiting, on the tab's icon: a red number for new notices, a blue one for unread
-  //messages (a tab's title can only be plain text, so it carries no count)
+  //messages, the same as on the Notices and Messages buttons (a tab's title can only be
+  //plain text, so it carries no count)
   var iconLink = document.querySelector('link[rel="icon"]');
   var baseIcon = iconLink && iconLink.href, baseType = iconLink && iconLink.type;
+  //a new <link> each time: Firefox only notices a tab icon that's added, not one whose address changes
+  function putIcon(href, type) {
+    var fresh = document.createElement('link');
+    fresh.rel = 'icon';
+    if (type) fresh.type = type;
+    fresh.href = href;
+    if (iconLink && iconLink.parentNode) iconLink.parentNode.replaceChild(fresh, iconLink);
+    else document.head.appendChild(fresh);
+    iconLink = fresh;
+  }
   var iconImg = null, shownBadge = '0/0';
   function tabBadge(notices, messages) {
     var key = notices + '/' + messages;
     if (key === shownBadge) return;
     shownBadge = key;
     if (!notices && !messages) {
-      if (baseIcon) { iconLink.type = baseType; iconLink.href = baseIcon; }
+      if (baseIcon) putIcon(baseIcon, baseType);
       else if (iconLink) { iconLink.remove(); iconLink = null; }  // no site icon: back to the browser's own
       return;
-    }
-    if (!iconLink) {
-      iconLink = document.createElement('link');
-      iconLink.rel = 'icon';
-      document.head.appendChild(iconLink);
     }
     function dot(ctx, x, y, n, color) {
       var r = 8;
@@ -420,7 +426,7 @@
       if (notices && messages) { dot(ctx, 23, 9, messages, '#1a73e8'); dot(ctx, 23, 23, notices, '#d93025'); }
       else if (notices) dot(ctx, 23, 23, notices, '#d93025');
       else dot(ctx, 23, 23, messages, '#1a73e8');
-      try { iconLink.type = 'image/png'; iconLink.href = c.toDataURL('image/png'); } catch (e) {}
+      try { putIcon(c.toDataURL('image/png'), 'image/png'); } catch (e) {}
     }
     if (!baseIcon) draw();  // the badge on its own
     else if (!iconImg) {
@@ -453,7 +459,7 @@
         welcome = false;
         welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
       }
-      tabBadge(isOpen('notices') ? 0 : res.notices, isOpen('messages') ? 0 : res.unread);
+      tabBadge(res.notices, res.unread);  // the same numbers as the Notices and Messages buttons
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
        ['notices', res.latest_notice, res.notice_preview, res.notices, res.notices_state]].forEach(function (x) {
@@ -557,6 +563,12 @@
   setupSplit();
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
+  //the tab's icon right away, from the counts the page came with (the next check keeps it up to date)
+  function shownCount(sel) {
+    var b = document.querySelector(sel);
+    return b && !b.hidden ? parseInt(b.textContent, 10) || 0 : 0;
+  }
+  tabBadge(shownCount('.nav-notices'), shownCount('.nav-unread'));
   if (!PANES.some(isOpen)) check();
   setInterval(check, every);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
