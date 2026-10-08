@@ -9,10 +9,10 @@
     {% endif %}
     <div>
       <h2 style="margin:0">{{ cq.vquiz.title }}</h2>
-      <div class="muted small">{{ cq.taker.username }}</div>
+      <div class="muted small">{{ cq.taker.shown_name if cq.taker else '' }}</div>
       <div class="muted small">
         {% if cq.startdate %}Started {{ cq.startdate.strftime('%b %d %Y, %I:%M %p') }} · {% endif %}
-        {% if cq.compdate %}Submitted {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}{% else %}Not handed in{% endif %}
+        {% if cq.compdate %}Handed in {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}{% else %}Not handed in{% endif %}
         {% if cq.graded_date %} · Graded {{ cq.graded_date.strftime('%b %d %Y') }}{% endif %}
       </div>
     </div>
@@ -34,11 +34,11 @@
     <div class="qtext">{{ it.text }}</div>
     {% if it.paper %}
       <p class="paper-note"><span aria-hidden="true">✏️</span> Done on paper.</p>
-      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
+      {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% elif it.essay %}
       <div class="label">Your answer</div>
       <div class="essay-text">{{ it.submitted_html if it.submitted else '(no answer)' }}</div>
-      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
+      {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% elif it.choices %}
       {# every choice the student saw: their pick, and (once answers are shown) the right ones #}
       <ul class="choice-list review-choices" aria-label="Choices">
@@ -61,7 +61,7 @@
         {# once answers are shown: under every question, right or wrong #}
         <dt>Correct answer</dt><dd>{{ it.correct }}</dd>
       </dl>
-      {% if it.feedback %}<div class="feedback"><strong>Instructor:</strong> {{ it.feedback }}</div>{% endif %}
+      {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% endif %}
   </section>
 {% endfor %}

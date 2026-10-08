@@ -162,7 +162,7 @@ def test_grading_queue_and_recent_handins(app_db):
     assert [h.id for h in D.recent_handins()] == [c.id, a.id, b.id]
     page = teacher.get('/dashboard').data.decode()
     assert '/quiz/review/{}'.format(b.id) in page and '/quiz/take/{}'.format(c.id) in page
-    assert 'badge-ok">100%' in page and 'being graded' in page
+    assert 'badge-ok">100%' in page and 'Being graded' in page
 
 
 def test_student_messages_are_counted_but_not_listed(app_db):

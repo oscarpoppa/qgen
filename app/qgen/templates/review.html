@@ -25,8 +25,8 @@
         {% if not (it.essay or it.check) %}
           <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
           <span class="muted small">graded automatically</span>
-        {% elif it.check %}<span class="badge badge-warn" title="Not one of your answers exactly: you decide how much it gets">check this answer</span>
-        {% else %}<span class="badge badge-warn">needs your grade</span>{% endif %}
+        {% elif it.check %}<span class="badge badge-warn" title="Not one of your answers exactly: you decide how much it gets">Check this answer</span>
+        {% else %}<span class="badge badge-warn">Needs your grade</span>{% endif %}
       </div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
       <div class="qtext">{{ it.text }}</div>

@@ -8,9 +8,9 @@
                   <div class="btn-row result-attempt">
                     <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap" title="See {{ student.shown_name }}'s answers and score for this try">{{ cq.when_label }}</a>
                     {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this try">waiting for grading</a>
-                    {% elif cq.status == 'started' %}<span class="badge badge-accent">in progress</span>
-                    {% else %}<span class="badge">not started</span>{% endif %}
+                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this try">Waiting for grading</a>
+                    {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
+                    {% else %}<span class="badge">Not started</span>{% endif %}
                     <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Details</a>
                     {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)') }}</span>
                   </div>

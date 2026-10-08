@@ -700,7 +700,7 @@ def review(cqid):
     queue = waiting_for_grading()
     place = next((i for i, w in enumerate(queue) if w.id == cq.id), None)
     return render_template('review.html', cq=cq, form=form, items=items, queue=queue, place=place,
-                           others=len([w for w in queue if w.id != cq.id]), title='Grade: {} – {}'.format(cq.taker.username, cq.vquiz.title))
+                           others=len([w for w in queue if w.id != cq.id]), title='Grade: {} – {}'.format(cq.taker.shown_name, cq.vquiz.title))
 
 
 # ---------------------------------------------------------------- students

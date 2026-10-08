@@ -214,7 +214,7 @@ def test_upload_read_check_and_save(app_db, ai):
 
     # the draft
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'Page 1: Adding and taking away' in page and 'Page 2: On the farm' in page and 'picture only' in page
+    assert 'Page 1: Adding and taking away' in page and 'Page 2: On the farm' in page and 'Picture only' in page
     assert 'Some versions have a negative answer' in page  # the take-away pool can go below zero
     assert 'Students get versions like:' in page
     assert 'Kept as on the page: Counts the apples in the picture.' in page

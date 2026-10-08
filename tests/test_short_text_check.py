@@ -43,7 +43,7 @@ def test_close_answer_waits_for_the_teacher(app_db):
     assert cq.needs_review and not cq.completed and text.credit is None and text.conc_opts['to_check']
     # on the Grading page, with the answer, the accepted answers and a credit box
     page = teacher.get('/quiz/review/{}'.format(cq.id)).data.decode()
-    assert 'check this answer' in page and 'a brown horse' in page and 'Accepted answers:' in page
+    assert 'Check this answer' in page and 'a brown horse' in page and 'Accepted answers:' in page
     r = teacher.post('/quiz/review/{}'.format(cq.id), data={'items-0-cpid': text.id, 'items-0-credit': 100,
                                                           'items-0-feedback': 'Yes, a horse.', 'finalize': 'Finish'})
     assert r.status_code == 302

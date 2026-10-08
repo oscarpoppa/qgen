@@ -148,7 +148,7 @@
       <details class="box card scan-page" open data-page="{{ n }}" data-box="scan-page:{{ n }}">
         <summary>
           {{ box_label('📄', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
-          {% if page.kind == 'picture' %}<span class="badge">picture only</span>{% elif page.kind == 'other' %}<span class="badge">nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">joined to page {{ leads[n] }}</span>{% endif %}
+          {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
         </summary>
         <input type="hidden" name="{{ pre }}shown" value="1">
         <div class="scan-split">

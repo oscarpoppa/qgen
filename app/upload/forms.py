@@ -4,6 +4,6 @@ from wtforms.validators import DataRequired, ValidationError
 
 
 class UploadForm(FlaskForm):
-    thefile = FileField('Select File', validators=[DataRequired()])
+    thefile = FileField('Select file', validators=[DataRequired()])
     submit = SubmitField('Submit')
 

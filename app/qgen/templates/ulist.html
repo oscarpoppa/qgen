@@ -18,10 +18,10 @@
             {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's tries and scores on this quiz">Quiz history</a>
             <span class="result-box-sum">
-              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">waiting for grading</span>{% endif %}
+              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">Waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
-              {% elif latest.status == 'started' %}<span class="badge badge-accent">in progress</span>
-              {% elif latest.status == 'new' %}<span class="badge">not started</span>{% endif %}
+              {% elif latest.status == 'started' %}<span class="badge badge-accent">In progress</span>
+              {% elif latest.status == 'new' %}<span class="badge">Not started</span>{% endif %}
             </span>
           </summary>
           <div class="table-wrap stack">

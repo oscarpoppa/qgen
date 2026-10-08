@@ -11,7 +11,7 @@
 {% macro action(cq, compact=false) %}
   {% set size = 'btn-xs' if compact else 'btn-sm' %}
   {% if cq.status == 'completed' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this try">{{ 'Results' if compact else 'View results' }}</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this try">Results</a>
   {% elif cq.status == 'review' %}
     <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See what you handed in. Your teacher is still checking it">View</a>
   {% elif cq.not_open_yet() %}

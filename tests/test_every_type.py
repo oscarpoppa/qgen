@@ -143,7 +143,7 @@ def test_every_question_type_end_to_end(app_db):
     assert 'Everything' in teacher.get('/quiz/review').data.decode()
     review = teacher.get('/quiz/review/{}'.format(cq.id)).data.decode()
     sensible(review, 'grading page')
-    assert 'check this answer' in review and 'Done on paper' in review and 'A star' in review
+    assert 'Check this answer' in review and 'Done on paper' in review and 'A star' in review
     rows = re.findall(r'name="items-(\d+)-cpid"[^>]*value="(\d+)"|value="(\d+)"[^>]*name="items-(\d+)-cpid"', review)
     cpids = {int(m[0] or m[3]): int(m[1] or m[2]) for m in rows}
     teacher_parts = [cp for cp in cq.cproblems if cp.credit is None]

@@ -24,7 +24,7 @@
               data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
               title="Drag onto a folder to move {{ item.shown_name }} there">{{ avatar(item, 32) }}<strong><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false" title="{{ item.shown_name }}'s student page (or drag onto a folder to move them)">{{ item.shown_name }}</a></strong></span></td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
-          <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Administrator</span>{% else %}Student{% endif %}</td>
+          <td data-label="Role">{% if item.is_admin %}<span class="badge badge-accent">Teacher</span>{% else %}Student{% endif %}</td>
           <td data-label="Last seen">{% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>
             {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
             {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</td>
