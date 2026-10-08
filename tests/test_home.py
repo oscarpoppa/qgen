@@ -180,3 +180,15 @@ def test_every_box_opens_and_is_remembered_the_same_way(app_db):
     for js in ('dashboard.js', 'subjects.js', 'folders.js'):
         text = open(os.path.join(here, 'static', 'js', js)).read()
         assert 'localStorage.setItem(KEY' not in text and 'data-dash-boxes' not in text and 'itemKey' not in text
+
+
+def test_buttons_that_reload_the_page_keep_your_place(app_db):
+    """Every page notes where it was scrolled when a form is sent and puts it back if the same
+    page comes back (static/js/place.js); handing in, starting a quiz and the editors don't."""
+    import os
+    app, db = app_db
+    from test_flow import login
+    assert 'js/place.js' in login(app, 'sam').get('/home').data.decode()
+    here = os.path.join(os.path.dirname(__file__), '..', 'app', 'qgen', 'templates')
+    for name in ('quiz_take.html', 'quiz_start.html', 'problem_form.html', 'quiz_form.html', 'assign.html'):
+        assert 'data-fresh-page' in open(os.path.join(here, name)).read(), name

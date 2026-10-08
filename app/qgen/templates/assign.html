@@ -26,7 +26,7 @@
 <div class="page-head"><h1>{{ title }}</h1>
   <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back>← {{ came_from[1] }}</a>{% else %}{{ back_home() }}{% endif %}</div></div>
 
-<form method="post" class="card" style="max-width:640px" novalidate>
+<form method="post" class="card" style="max-width:640px" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
   {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
   {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}

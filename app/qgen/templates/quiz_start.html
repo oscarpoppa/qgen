@@ -21,7 +21,7 @@
     <li><span aria-hidden="true">🧮</span> <span>{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span></li>
     <li><span aria-hidden="true">💾</span> <span>Your answers are saved as you go.</span></li>
   </ul>
-  <form method="post" action="{{ url_for('qgen.start_quiz', cidx=cq.id) }}">
+  <form method="post" action="{{ url_for('qgen.start_quiz', cidx=cq.id) }}" data-fresh-page>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-lg start-btn">Start the quiz</button>
   </form>

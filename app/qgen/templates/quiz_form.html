@@ -29,7 +29,7 @@
 </div>
 
 <div class="editor">
-<form method="post" id="quiz-form" novalidate>
+<form method="post" id="quiz-form" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vquizzes') }}" data-back-next>

@@ -19,7 +19,7 @@
 
 {% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
 
-<form method="post" id="take-form" novalidate
+<form method="post" id="take-form" data-fresh-page novalidate
       {% if not preview %}data-save-url="{{ url_for('qgen.qsave', cidx=cq.id) }}"{% endif %}
       {% if deadline and not preview %}data-remaining="{{ [((deadline - now()).total_seconds())|int, 0]|max }}"{% endif %}>
   {{ form.hidden_tag() }}

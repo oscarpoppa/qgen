@@ -1440,3 +1440,9 @@ details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
   .folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list),
   .folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list) { max-height: none !important; }
 }
+
+/* back where you were after a button reloaded the page: what happened floats at the top of
+   the window for a few seconds (static/js/place.js) */
+.alerts.alerts-float { position: fixed; top: calc(var(--topbar-h, 56px) + 10px); left: 50%; transform: translateX(-50%);
+  z-index: 60; width: min(560px, calc(100vw - 32px)); margin: 0; box-shadow: 0 8px 24px rgba(16, 24, 40, .25); cursor: pointer; }
+@media print { .alerts.alerts-float { position: static; transform: none; box-shadow: none; } }
