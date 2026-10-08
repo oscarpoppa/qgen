@@ -735,7 +735,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card[open] .quiz-flag { display: none; }
 
 /* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
-.folders-layout { display: grid; grid-template-columns: minmax(170px, 260px) minmax(0, 1fr); gap: 20px; align-items: start; }
+/* the folder list, its divider (static/js/splitter.js: drag to widen; remembered) and the list */
+.folders-layout { display: grid; grid-template-columns: var(--side-w, minmax(170px, 260px)) 12px minmax(0, 1fr); column-gap: 4px; row-gap: 20px; align-items: start; }
 .folder-side { position: sticky; top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px;
   background: var(--surface); max-height: calc(100vh - 24px); overflow: auto; }
 .folder-side-head { display: none; list-style: none; cursor: pointer; }
@@ -834,6 +835,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* phones and narrow windows: the folder list sits above the quizzes and folds away */
 @media (max-width: 760px) {
   .folders-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .folder-split { display: none; }
   .folder-side { position: static; max-height: none; }
   .folder-side-head { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; }
   .folder-side-head::before { content: "▸"; color: var(--muted); }
@@ -1454,3 +1456,18 @@ details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
 .builder-boxes .sub-box { margin-bottom: 10px; }
 @media (max-width: 760px) { .builder-boxes { max-height: none; overflow: visible; padding-right: 0; } }
 @media print { .builder-boxes { max-height: none; overflow: visible; } }
+
+/* sideways dividers (static/js/splitter.js): a thin line that lights up, with a grip, to drag */
+.vsplit { position: relative; cursor: col-resize; touch-action: none; }
+.vsplit::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; margin-left: -.5px; background: transparent; }
+.vsplit::after { content: ""; position: absolute; top: 50%; left: 50%; width: 5px; height: 36px; margin: -18px 0 0 -2.5px;
+  border-radius: 3px; background: var(--border); }
+.vsplit:hover::before, .vsplit.dragging::before, .vsplit:focus-visible::before { background: var(--accent); width: 3px; margin-left: -1.5px; }
+.vsplit:hover::after, .vsplit.dragging::after, .vsplit:focus-visible::after { background: var(--accent); }
+.vsplit:focus { outline: none; }
+html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-select: none !important; }
+.folder-split { align-self: stretch; min-height: 120px; }
+.folder-split::after { top: 140px; }  /* the grip beside the folder list's top, not lost far below */
+.dock-edge { position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; z-index: 2; }
+@media (max-width: 480px) { .dock-edge { display: none; } }
+@media print { .vsplit { display: none; } }

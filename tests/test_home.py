@@ -192,3 +192,18 @@ def test_buttons_that_reload_the_page_keep_your_place(app_db):
     here = os.path.join(os.path.dirname(__file__), '..', 'app', 'qgen', 'templates')
     for name in ('quiz_take.html', 'quiz_start.html', 'problem_form.html', 'quiz_form.html', 'assign.html'):
         assert 'data-fresh-page' in open(os.path.join(here, name)).read(), name
+
+
+def test_sideways_dividers_for_the_folder_list_and_the_side_panel(app_db):
+    """static/js/splitter.js on every page: a divider between a folder page's folder list and
+    its list, and on the Notices / Messages panel's left edge; the folder layout leaves it a
+    column whose width the divider sets."""
+    import os
+    app, db = app_db
+    from test_flow import login
+    assert 'js/splitter.js' in login(app, 'teach').get('/quiz/listvq').data.decode()
+    here = os.path.join(os.path.dirname(__file__), '..', 'static')
+    js = open(os.path.join(here, 'js', 'splitter.js')).read()
+    css = open(os.path.join(here, 'css', 'app.css')).read()
+    assert "'qgen-side-width'" in js and "'qgen-dock-width'" in js and "'--dock-w'" in js
+    assert 'grid-template-columns: var(--side-w, minmax(170px, 260px)) 12px minmax(0, 1fr)' in css

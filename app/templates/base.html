@@ -256,6 +256,7 @@
   <script src="{{ asset('js/masonry.js') }}" defer></script>
   <script src="{{ asset('js/place.js') }}" defer></script>
   <script src="{{ asset('js/grip.js') }}" defer></script>
+  <script src="{{ asset('js/splitter.js') }}" defer></script>
   <script src="{{ asset('js/trail.js') }}"{% if current_user.is_authenticated %} data-signed-in{% endif %} defer></script>
   {% if current_user.is_authenticated %}
   <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" data-every="{{ tuning_poll_ms() }}"{% if just_signed_in() %} data-welcome{% endif %} defer></script>
