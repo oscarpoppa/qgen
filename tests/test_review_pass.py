@@ -467,7 +467,7 @@ def test_grading_list_by_quiz(app_db):
     for vq, who in ((a, 'sam'), (b, 'kim'), (a, 'kim')):
         S.submit(give(vq, who), {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
-    assert page.count('<details class="box card grading-group" open>') == 2 and '3 waiting, oldest first' in page
+    assert page.count('<details class="box card grading-group" data-list>') == 2 and '3 waiting, oldest first' in page
     assert page.index('“A”') < page.index('“B”')
 
 

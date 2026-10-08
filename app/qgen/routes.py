@@ -664,8 +664,7 @@ def list_users():
         page=lambda v: url_for('qgen.list_users', folder=v),
         unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
         hint=Markup('The <a href="{}">Users page</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
-        fold_key='qgen-folded-results-student-folders', open_key='qgen-open-results-student-subfolders',
-        item_key='qgen-open-results-students')
+        fold_key='qgen-folded-results-student-folders')
     return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='Results by student',
                            find_label='Find a student or quiz…')
 
@@ -706,8 +705,7 @@ def results_by_quiz():
         page=lambda v: url_for('qgen.results_by_quiz', folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
         hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
-        fold_key='qgen-folded-results-quiz-folders', open_key='qgen-open-results-quiz-subfolders',
-        item_key='qgen-open-results-quizzes')
+        fold_key='qgen-folded-results-quiz-folders')
     return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk,
                            rules=RETAKE_RULES, title='Results by quiz', find_label='Find a quiz or student…')
 
@@ -1140,7 +1138,7 @@ def subject_kit(kind, view, node, root, flat, nodes):
         name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add…', drag_what='a ' + unit,
         hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
              'Students never see them.'.format(units, unit),
-        fold_key='qgen-folded-{}-folders'.format(kind), open_key='qgen-open-{}-subfolders'.format(kind),
+        fold_key='qgen-folded-{}-folders'.format(kind),
         purge_url=lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid),
         purge_question=lambda n: S.purge_question(kind, n['folder']))
 
@@ -1202,7 +1200,7 @@ def archive_kit(view, node, root, flat, nodes, total):
         name=lambda f: f.name, folder_icon=lambda f: '👤' if f.student_id else '📁',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
         hint='Each student has a folder (👤) for their archived attempts; you can add your own and put folders inside folders.',
-        fold_key='qgen-folded-archive-folders', open_key='qgen-open-archive-subfolders',
+        fold_key='qgen-folded-archive-folders',
         purge_url=lambda fid: url_for('qgen.purge_archive_folder', fid=fid),
         purge_question=lambda n: archive_purge_question(n['folder']))
 

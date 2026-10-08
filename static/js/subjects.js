@@ -1,6 +1,5 @@
 /* Subject containers on the Problems and Quizzes pages and in the quiz builder:
- * - each container opens and closes; which are open is remembered in this browser
- *   (the wrapper's data-store names the key); "Open all" / "Close all"
+ * - each container opens, folds and is remembered like every box (static/js/boxes.js)
  * - an item in several subjects is in several containers: checking one copy checks them all
  * - each container's heading says how many in it are checked
  * - searching opens the containers with matches and hides the rest; clearing the
@@ -42,32 +41,10 @@
     var cancel = e.target.closest('[data-rename-cancel]');
     if (cancel) cancel.closest('form').hidden = true;
   });
+  //each box opens, folds and is remembered like every box (static/js/boxes.js)
   var boxes = Array.prototype.slice.call(wrap.querySelectorAll('details.subject-box'));
-  var key = wrap.dataset.store;
   var searching = false;
-
-  function load() {
-    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
-  }
-  function store() {
-    if (searching) return;
-    var open = boxes.filter(function (b) { return b.open; }).map(function (b) { return b.dataset.box; });
-    try { localStorage.setItem(key, JSON.stringify(open)); } catch (e) { /* private window: not remembered */ }
-  }
-
-  //first visit: everything open, so nothing seems missing (except empty folders, marked data-empty)
-  var saved = load();
-  function firstOpen(b) { return !('empty' in b.dataset); }
-  boxes.forEach(function (b) { b.open = saved ? saved.indexOf(b.dataset.box) !== -1 : firstOpen(b); });
-  boxes.forEach(function (b) { b.addEventListener('toggle', store); });
-
-  document.querySelectorAll('[data-boxes]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var open = btn.dataset.boxes === 'open';
-      boxes.forEach(function (b) { if (!b.hidden) b.open = open; });
-      store();
-    });
-  });
+  function restore(b) { if (window.qgenBoxes) window.qgenBoxes.restore(b); }
 
   //checkboxes: list pages use name="items", the builder uses class="pick"
   var ticks = Array.prototype.slice.call(wrap.querySelectorAll('input[name="items"], input.pick'));
@@ -110,7 +87,7 @@
   document.addEventListener('qgen-filtered', function (e) {
     var q = (e.target.value || '').trim();
     if (q) {
-      if (!searching) { store(); searching = true; }
+      searching = true;
       boxes.forEach(function (b) {
         var hit = Array.prototype.some.call(b.querySelectorAll('tbody tr'), function (r) { return !r.hidden; });
         b.hidden = !hit;
@@ -118,8 +95,7 @@
       });
     } else if (searching) {
       searching = false;
-      var back = load();
-      boxes.forEach(function (b) { b.hidden = false; b.open = back ? back.indexOf(b.dataset.box) !== -1 : firstOpen(b); });
+      boxes.forEach(function (b) { b.hidden = false; restore(b); });
     }
   });
 
@@ -127,7 +103,6 @@
   var shown = wrap.querySelectorAll('tr[data-show]');
   if (shown.length) {
     shown.forEach(function (r) { r.closest('details').open = true; r.classList.add('just-saved'); });
-    store();
     shown[0].scrollIntoView({ block: 'center' });
   }
   update();

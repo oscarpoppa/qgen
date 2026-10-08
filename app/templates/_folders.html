@@ -52,7 +52,7 @@
    / Collapse all, Folder options) and `actions` (the page's own buttons beside the title) #}
 {% macro folders_page(fk, actions='') %}
 <div class="folders-layout" data-move-url="{{ fk.move_url }}" data-view="{{ fk.view }}"
-     data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}" data-open-key="{{ fk.open_key }}"{% if fk.item_key %} data-item-key="{{ fk.item_key }}"{% endif %}>
+     data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}">
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{% set auto_now = fk.auto_views|selectattr('key', 'equalto', fk.view)|first %}{{ fk.name(fk.node.folder) if fk.node else auto_now.label if auto_now else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
@@ -162,7 +162,7 @@
    title to move it in. The caller draws a node's things: {% call(n) sub_box(fk, child) %} #}
 {% macro sub_box(fk, n) %}
   {% set f = n.folder %}
-  <details class="box sub-box" data-sub="{{ f.id }}">
+  <details class="box sub-box" data-sub="{{ f.id }}" data-list>
     <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}

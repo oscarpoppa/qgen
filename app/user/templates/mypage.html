@@ -42,7 +42,7 @@
     {# each quiz folds down to its title and score; the page remembers which are folded #}
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    <details class="box card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" open>
+    <details class="box card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         {# how many tries are in this box #}
         {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'try', 'tries'), 'h2', g.vquiz.title) }}
@@ -50,7 +50,9 @@
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span>
-        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}</span>
+        {# folded: its score or state, and Start / Continue when a try is waiting (one click from the quiz) #}
+        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not has_new %}{{ status(latest, latest in g.counted) }}{% endif %}
+          {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open, compact=true) }}{% endif %}</span>
       </summary>
       {% if fk.view in ('all', 'new', 'started') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}">📁 {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
@@ -85,7 +87,7 @@
   {% set done = gs|rejectattr('open')|list %}
   {% if todo %}<h3 class="list-section">To do <span class="badge badge-warn">{{ todo|length }}</span></h3>{{ cards(todo) }}{% endif %}
   {% if done %}
-    <details class="box month-box done-box" data-remember="done-{{ key }}">
+    <details class="box month-box done-box" data-remember="done-{{ key }}" data-closed>
       <summary>{{ box_label('✅', 'Done', count_of(done|length, 'quiz', 'quizzes')) }}<span class="muted small">handed in</span></summary>
       {{ cards(done) }}
     </details>
@@ -145,8 +147,8 @@
 
 {% block scripts %}
 <script>
-/* folded quizzes, remembered in this browser (a convenience; nothing is lost without
- * it). A folded box remembers its attempts; if the teacher changes one while it's
+/* folded quizzes (folding is static/js/boxes.js's, like every box). A folded box remembers
+ * its attempts in this browser; if the teacher changes one while it's
  * folded, the box is outlined and labeled until it's opened:
  *   "Score ready" - an attempt waiting for grading has been graded
  *   "Changed" - a score changed afterwards, or one of its tries was taken away (all of
@@ -197,10 +199,11 @@
     d.classList.toggle('quiz-alert', !!text);
   }
 
+  //which are folded is up to static/js/boxes.js (run before this); a folded one held what
+  //it had when it was last seen folded
   cards.forEach(function (d) {
     var id = d.dataset.quiz;
-    if (!(id in folded)) return;
-    d.open = false;
+    if (d.open || !(id in folded)) return;
     if (folded[id] === null) { folded[id] = { states: d.dataset.states }; return; }
     flag(d, change(parse(folded[id].states), parse(d.dataset.states)));
   });

@@ -10,7 +10,7 @@
    folder), which is where a drag takes one out of #}
 {% macro archive_table(items, here=none) %}
   {% for month in items|groupby_month %}
-    <details class="box month-box"{% if loop.first %} open{% endif %}>
+    <details class="box month-box" data-list>
       <summary>{{ box_label('📅', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table">

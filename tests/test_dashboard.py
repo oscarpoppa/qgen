@@ -244,7 +244,7 @@ def test_dashboard_boxes_open_and_close(app_db):
     page = teacher.get('/dashboard').data.decode()
     for key in ('now', 'glance', 'out', 'queue', 'handins'):
         assert 'data-box="{}" open>'.format(key) in page
-    assert 'data-dash-boxes="open"' in page and 'data-dash-boxes="close"' in page and 'js/dashboard.js' in page
+    assert 'data-level="open" data-level-of="#dash-live"' in page and 'data-level="close" data-level-of="#dash-live"' in page and 'js/dashboard.js' in page
     assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()
 
 

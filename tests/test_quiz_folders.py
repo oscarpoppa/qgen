@@ -85,7 +85,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == ['Week 1']  # in Algebra's box
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     assert '+ New folder inside' in page and 'No quizzes in this folder itself' in page
-    assert '<details class="box sub-box" data-sub="{}">'.format(algebra) in page
+    assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
     assert '<a href="/mypage?folder={}">Math</a>'.format(math) in page  # Math › Algebra
     # a folder can't go inside itself, or inside a folder in it
@@ -215,7 +215,7 @@ def test_folders_inside_show_as_boxes_with_their_own_expand_and_collapse(app_db)
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     # Math's own quiz, and Algebra as a box holding its quiz
     assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Week 2', 'Week 1']
-    assert '<details class="box sub-box" data-sub="{}">'.format(algebra) in page
+    assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
     assert page.index('data-sub="{}"'.format(algebra)) < page.index('title="Week 2"') < page.index('title="Week 1"')
     # Expand all / Collapse all for Math, and for Algebra's box
     assert page.count('data-level="open"') == 2 and 'aria-label="Collapse all in Algebra"' in page

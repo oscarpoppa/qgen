@@ -40,7 +40,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert '>Continue</a>' in page and page.count('>Start</a>') == 2
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in page  # in the menu for students
     # the boxes fold away (remembered in the browser)
-    assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page and 'qgen-home-closed' in page
+    assert 'data-box="waiting" open>' in page and 'data-box="awards" open>' in page
     # teachers have Home too (they take quizzes as students do); they still land on the Dashboard
     assert '<a href="/home">Home</a>' in teach.get('/dashboard').data.decode()
     assert teach.get('/home').status_code == 200
@@ -160,3 +160,23 @@ def test_box_grids_are_packed_on_every_page(app_db):
     assert 'js/masonry.js' in home and 'class="dash-grid"' in home
     js = open(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'masonry.js')).read()
     assert "'.dash-grid, .grid'" in js
+
+
+def test_every_box_opens_and_is_remembered_the_same_way(app_db):
+    """One script for every box (static/js/boxes.js): loaded right after the page, for this
+    person; page sections drawn open, list boxes marked data-list, no other memory left; and
+    scroll areas let the mouse wheel go on to the page."""
+    import os
+    app, db = app_db
+    from test_flow import login
+    page = login(app, 'sam').get('/home').data.decode()
+    sam_id = __import__('app.user.models', fromlist=['User']).User.query.filter_by(username='sam').one().id
+    assert 'js/boxes.js?v=' in page and 'data-user="{}"'.format(sam_id) in page
+    assert page.index('js/boxes.js') < page.index('</main>') + 400 and 'qgen-home-closed' not in page
+    assert 'data-box="waiting" open>' in page
+    here = os.path.join(os.path.dirname(__file__), '..')
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert 'overscroll-behavior' not in css
+    for js in ('dashboard.js', 'subjects.js', 'folders.js'):
+        text = open(os.path.join(here, 'static', 'js', js)).read()
+        assert 'localStorage.setItem(KEY' not in text and 'data-dash-boxes' not in text and 'itemKey' not in text

@@ -11,7 +11,7 @@
   {% for cq in waiting %}{% if cq.vquiz_id not in seen %}{% set _ = seen.append(cq.vquiz_id) %}{% endif %}{% endfor %}
   {% for vquiz_id in seen %}
     {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
-    <details class="box card grading-group" open>
+    <details class="box card grading-group" data-list>
       <summary class="dash-head">{{ box_label('📝', quiz_link(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}</summary>
       <div class="table-wrap stack">
         <table>

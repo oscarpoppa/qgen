@@ -103,7 +103,7 @@ def mypage():
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(groups), main_count=len(root['groups']),
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
-        fold_key='qgen-folded-folders', open_key='qgen-open-subfolders', title=heading,
+        fold_key='qgen-folded-folders', title=heading,
         auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(len(fresh))},
                     {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working), 'badge': None}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
@@ -429,7 +429,7 @@ def userdet():
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         box_tools=lambda n: Markup('<a href="{}">Assign a quiz to this folder</a> · ').format(url_for('qgen.assign', folder=n['folder'].id))
         if n['count'] else '',
-        fold_key='qgen-folded-user-folders', open_key='qgen-open-user-subfolders')
+        fold_key='qgen-folded-user-folders')
     return render_template('udet.html', ulst=ulst, title='Users', fk=fk, shown=shown, folders_of=folders_of)
 
 

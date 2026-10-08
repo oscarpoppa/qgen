@@ -44,46 +44,9 @@
   var side = document.querySelector('details.folder-side');
   if (side && window.matchMedia('(max-width: 760px)').matches) side.open = false;
 
-  //folder boxes start folded; the ones left open are remembered
-  var OPEN = layout.dataset.openKey, opened = load(OPEN), subs = document.querySelectorAll('details.sub-box');
-  subs.forEach(function (d) { if (opened[d.dataset.sub]) d.open = true; });
-  subs.forEach(function (d) {
-    d.addEventListener('toggle', function () {
-      if (searching) return;  // opened by a search: not remembered
-      if (d.open) opened[d.dataset.sub] = true; else delete opened[d.dataset.sub];
-      save(OPEN, opened);
-    });
-  });
-  //Expand all / Collapse all: only what's directly in that level (folders and quizzes alike):
-  //its boxes, a quiz's "N items in the order" and a problem's shortened question. The pair
-  //shows only where there are at least two of those to open or close
-  var FOLDS = 'details.sub-box, details.quiz-card, details.month-box, details.item-box, details.problem-list, .clamp';
-  function folds(level) {
-    return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
-      if (d.parentElement.closest('.level') !== level || d.closest('[hidden]')) return false;
-      //a question short enough to show whole has nothing to open
-      return !d.classList.contains('clamp') || d.classList.contains('open') || d.scrollHeight > d.clientHeight + 1;
-    });
-  }
-  function setFold(d, want) {
-    if (d.classList.contains('clamp')) d.classList.toggle('open', want);
-    else d.open = want;
-  }
-  document.querySelectorAll('[data-level]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var want = btn.dataset.level === 'open';
-      folds(btn.closest('.level')).forEach(function (d) { setFold(d, want); });
-    });
-  });
-  function showLevelButtons() {
-    document.querySelectorAll('.level-buttons').forEach(function (pair) {
-      var level = pair.closest('.level');
-      pair.hidden = !level || folds(level).length < 2;
-    });
-  }
-  showLevelButtons();
-  document.addEventListener('qgen-filtered', function () { setTimeout(showLevelButtons, 0); });
-  window.addEventListener('resize', function () { clearTimeout(showLevelButtons._t); showLevelButtons._t = setTimeout(showLevelButtons, 150); });
+  //folder boxes (and every other box) open, fold and are remembered, and Expand all /
+  //Collapse all work, in static/js/boxes.js
+  function restore(d) { if (window.qgenBoxes) window.qgenBoxes.restore(d); }
 
   //"Move to" / "Add to" lists act as soon as a folder is picked
   document.querySelectorAll('.move-select').forEach(function (sel) {
@@ -167,17 +130,6 @@
     }
   });
 
-  //sections that fold (My quizzes' "Done"): open or not is remembered in this browser
-  var REMEMBER = 'qgen-open-sections', remembered = load(REMEMBER);
-  document.querySelectorAll('details[data-remember]').forEach(function (d) {
-    if (remembered[d.dataset.remember]) d.open = true;
-    d.addEventListener('toggle', function () {
-      if (searching) return;
-      if (d.open) remembered[d.dataset.remember] = true; else delete remembered[d.dataset.remember];
-      save(REMEMBER, remembered);
-    });
-  });
-
   //"Find a quiz" on My quizzes: hides the quiz boxes whose title doesn't match (then the
   //same as a search below)
   var findCards = document.querySelector('input.filter-cards');
@@ -190,20 +142,10 @@
     findCards.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true }));
   });
 
-  //the results pages: a box per student (or quiz), closed to begin with; the open ones are
-  //remembered (data-item-key). "Find…" matches a box's name or a row; "Show" keeps only the
-  //rows waiting for grading, or not handed in yet (tr[data-state])
+  //the results pages: a box per student (or quiz). "Find…" matches a box's name or a row;
+  //"Show" keeps only the rows waiting for grading, or not handed in yet (tr[data-state])
   var searching = null;
-  var ITEMS = layout.dataset.itemKey, itemOpen = ITEMS ? load(ITEMS) : {};
   var itemBoxes = Array.prototype.slice.call(document.querySelectorAll('.folder-main details.item-box'));
-  if (ITEMS) itemBoxes.forEach(function (d) {
-    d.open = !!itemOpen[d.dataset.box];
-    d.addEventListener('toggle', function () {
-      if (searching) return;
-      if (d.open) itemOpen[d.dataset.box] = true; else delete itemOpen[d.dataset.box];
-      save(ITEMS, itemOpen);
-    });
-  });
   var findItems = document.querySelector('input.filter-items'), stateFilter = document.querySelector('select.state-filter');
   function filterItems() {
     var q = findItems ? findItems.value.trim().toLowerCase() : '', st = stateFilter ? stateFilter.value : 'all';
@@ -243,7 +185,7 @@
       });
     } else if (searching) {
       boxes().forEach(function (d, i) { d.hidden = false; d.open = searching[i]; });
-      itemBoxes.forEach(function (d) { d.open = !!itemOpen[d.dataset.box]; });
+      itemBoxes.forEach(restore);
       searching = null;
     }
   });

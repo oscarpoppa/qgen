@@ -181,7 +181,7 @@ def test_folders_inside_folders(app_db):
     page = teacher.get('/quiz/listvp?folder={}'.format(math.id)).data.decode()
     # Math counts what's in Algebra too; Algebra is a box inside it; the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert '<details class="box sub-box" data-sub="{}">'.format(alg.id) in page and shown(teacher, 'problems', math.id) == ['Area']
+    assert '<details class="box sub-box" data-sub="{}" data-list>'.format(alg.id) in page and shown(teacher, 'problems', math.id) == ['Area']
     assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     # never inside itself
     FETCH = {'X-Requested-With': 'fetch'}
@@ -291,7 +291,7 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': geo.id, 'items': [probs['Add'].id, probs['Area'].id]})
     builder = teacher.get('/quiz/makevquiz').data.decode()
     # each problem in each of its containers, with its own checkbox (same value, different id)
-    assert 'data-store="qgen-open-subjects-builder"' in builder and 'Rename' not in builder
+    assert 'Rename' not in builder
     assert 'id="pick-{}-{}"'.format(alg.id, probs['Add'].id) in builder
     assert 'id="pick-{}-{}"'.format(geo.id, probs['Add'].id) in builder
     assert builder.count('class="pick" value="{}"'.format(probs['Add'].id)) == 2
@@ -348,7 +348,7 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     # the Users page links to Results by student, whose students are boxes that open and close
     assert 'href="/quiz/listuser">Results by student</a>' in teacher.get('/userdet').data.decode()
     results = teacher.get('/quiz/listuser').data.decode()
-    assert 'data-item-key="qgen-open-results-students"' in results and '<details class="box card subject-box student item-box"' in results
+    assert '<details class="box card subject-box student item-box"' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results
 
 

@@ -77,21 +77,3 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-/* the boxes that are folded stay folded next time (this browser only) */
-(function () {
-  var KEY = 'qgen-home-closed', shut = [];
-  try { shut = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch (e) {}
-  var boxes = document.querySelectorAll('details[data-box]');
-  boxes.forEach(function (d) { if (shut.indexOf(d.dataset.box) !== -1) d.open = false; });
-  boxes.forEach(function (d) {
-    d.addEventListener('toggle', function () {
-      var now = [];
-      boxes.forEach(function (b) { if (!b.open) now.push(b.dataset.box); });
-      try { localStorage.setItem(KEY, JSON.stringify(now)); } catch (e) {}
-    });
-  });
-})();
-</script>
-{% endblock %}

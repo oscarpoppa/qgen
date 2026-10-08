@@ -96,7 +96,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
     # 7th grade: kim directly, and Period 2 as a box holding sam; it counts both
-    assert people(teach, g7) == ['sam', 'kim'] and '<details class="box sub-box" data-sub="{}">'.format(p2) in page
+    assert people(teach, g7) == ['sam', 'kim'] and '<details class="box sub-box" data-sub="{}" data-list>'.format(p2) in page
     assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
     # not inside itself
@@ -130,7 +130,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     teach.post('/users/folders/add', data={'user': ids('teach'), 'to': g7})  # a teacher in it gets no student message
     # Assign: the people in the folders (folders inside them too), then those in no folder, then everyone
     page = teach.get('/quiz/assign').data.decode()
-    assert '<details class="box pick-group" data-group="{}">'.format(g7) in page
+    assert '<details class="box pick-group" data-fixed data-group="{}">'.format(g7) in page
     assert page.index('data-group="{}"'.format(g7)) < page.index('data-group="{}"'.format(p2)) < \
         page.index('data-group="none"') < page.index('data-group="all"')
     assert page.count('type="checkbox" name="users"') == 3  # only the boxes under All users are sent
@@ -185,7 +185,7 @@ def test_assigning_from_the_users_page(app_db):
     assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in page
     assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(p2) in page  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" checked', page))
-    opened = lambda page: re.findall(r'<details class="box pick-group" data-group="(\w+)" open>', page)
+    opened = lambda page: re.findall(r'<details class="box pick-group" data-fixed data-group="(\w+)" open>', page)
     # a folder: everyone in it (and in the folders inside it), checked, with the folder open
     page = teach.get('/quiz/assign?folder={}'.format(g7)).data.decode()
     assert checked(page) == sorted([ids('sam'), ids('kim')]) and opened(page) == [str(g7)]

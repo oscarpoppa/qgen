@@ -2,8 +2,9 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="open">Expand all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-dash-boxes="close">Collapse all</button>
+  <span class="level-buttons">
+    <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#dash-live" aria-label="Expand all boxes">Expand all</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#dash-live" aria-label="Collapse all boxes">Collapse all</button></span>
   <div class="actions dash-actions" aria-label="Quick actions">
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}">+ New problem</a>
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}">+ New quiz</a>

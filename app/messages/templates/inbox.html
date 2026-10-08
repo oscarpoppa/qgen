@@ -81,7 +81,7 @@
 {% endif %}
 
 <div class="folders-layout" data-view="{{ view }}" data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}"
-     data-fold-key="qgen-folded-message-folders" data-open-key="qgen-open-message-subfolders">
+     data-fold-key="qgen-folded-message-folders">
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{{ node.folder.name if node else 'Not in a folder' if view == 'main' else 'All students' }}</span></summary>

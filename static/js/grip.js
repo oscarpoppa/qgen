@@ -9,7 +9,7 @@
     '#folder-items > details.sub-box > .sub-body', 'details.item-box > .box-body',
     'details.result-folder > .result-folder-body', 'details.month-box > .table-wrap',
     'details.done-box > .quiz-grid', '.dash-card .dash-list', 'details.grading-group > .table-wrap',
-    '.pick-list', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list'
+    '.pick-list', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list', '.awards-scroll'
   ];
   var MIN = 96, STEP = 48;
   function store(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }

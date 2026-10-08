@@ -59,12 +59,13 @@
       <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span></div>
       {% if has_problems %}
         <div class="builder-filters">
-          <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
+          <span class="level-buttons">
+          <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#all-problems" aria-label="Expand all problem folders">Expand all</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#all-problems" aria-label="Collapse all problem folders">Collapse all</button></span>
           <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
         </div>
         <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
-        <div id="all-problems" class="subject-boxes builder-boxes" data-store="qgen-open-subjects-builder">
+        <div id="all-problems" class="subject-boxes builder-boxes">
           {% for subject, items in problem_boxes %}
             {% if subject or items %}
               {% call subject_box('problems', subject, items, tools=false, label=problem_paths.get(subject.id) if subject else none) %}

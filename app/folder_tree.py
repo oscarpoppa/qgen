@@ -145,7 +145,7 @@ def kit(view, node, root, flat, nodes, page, **words):
     """What _folders.html needs to draw a page's folders. page(view) -> the page's address
     for 'main', 'all' or a folder's id. words: create_url, rename_url(id), delete_url(id),
     move_url, add_url / remove_url (things in several folders), unit / units ("quiz" /
-    "quizzes"), all_label, placeholder, hint, drag_what, add_words, fold_key, open_key,
+    "quizzes"), all_label, placeholder, hint, drag_what, add_words, fold_key,
     order (('main', 'all') or ('all', 'main')), all_count, name(folder), folder_icon(folder)."""
     out = {
         'view': view, 'node': node, 'root': root, 'flat': flat, 'nodes': nodes, 'page': page,
@@ -153,7 +153,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
         'main_label': 'Not in a folder', 'order': ('main', 'all'),
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
-        'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False, 'item_key': None,
+        'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
         #automatic entries in the side list after Not in a folder (My quizzes: New, In progress):

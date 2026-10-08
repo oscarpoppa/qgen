@@ -69,7 +69,7 @@
 {% macro subject_box(kind, subject, items, tools=true, label=none) %}
 {% set key = subject.id if subject else 'unsorted' %}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
-<details class="box card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}">
+<details class="box card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}" data-list>
   <summary>
     {{ box_label('📁' if subject else '📥', (label or subject.title) if subject else 'Not in a folder',
                  count_of(items|length, 'problem' if kind == 'problems' else 'quiz', noun)) }}

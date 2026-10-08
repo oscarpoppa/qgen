@@ -146,6 +146,8 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+  {# boxes open, fold and are remembered the same way everywhere; before the page's own scripts #}
+  <script src="{{ asset('js/boxes.js') }}"{% if current_user.is_authenticated %} data-user="{{ current_user.id }}"{% endif %}></script>
 
   {% if current_user.is_authenticated %}
   {# the side panels: notices (automatic) above messages (the conversation); each can be hidden #}
