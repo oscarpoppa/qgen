@@ -1480,3 +1480,8 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .move-mini { display: inline-flex; margin: 0; flex: 0 0 auto; }
 .move-mini select { width: 3.4em; min-height: 0; padding: 2px 4px; font-size: .85rem; cursor: pointer; }
 .quiz-card[open] .move-mini { margin-left: auto; }
+
+/* a folder's "needs the student" numbers (new, started, due soon), in those folders' colors */
+.side-flags { display: inline-flex; gap: 3px; flex: 0 0 auto; align-items: center; }
+.side-flag { min-width: 1.6em; text-align: center; padding: 1px 5px; font-size: .72rem; }
+.sub-head .side-flags { margin-left: 6px; }

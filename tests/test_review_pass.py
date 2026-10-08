@@ -867,7 +867,9 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     # in the side list, with a badge counting what's new
     assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1 new</span>' in page
     # the folder it's filed in says so too (it may be out of sight in another folder)
-    assert 'title="1 new quiz in it">1 new</span>' in page
+    assert '<span class="badge badge-warn side-flag" title="1 new quiz">1</span>' in page
+    # and Not in a folder has the started one
+    assert '<span class="badge badge-accent side-flag" title="1 quiz in progress">1</span>' in page
     page = sam.get('/mypage?folder=new').data.decode()
     assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Fresh']
     assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too
@@ -882,7 +884,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
         c.startdate = datetime.now()
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
-    assert ' new</span>' not in mine.split('class="side-list')[1].split('</nav>')[0] and '2 started</span>' in mine
+    assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 started</span>' in mine
     assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
     assert 'nothing new</span>' in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
 
@@ -1079,3 +1081,34 @@ def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automati
     page = r.data.decode()
     assert 'Fresh' in page and '📁 Week 1 (here now)' in page  # still in New, now in Week 1
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(wk.id)).data.decode()
+
+
+def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
+    """A quiz new, in progress or due soon has a badge (open or folded), and so has its folder
+    and every folder that folder is in."""
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    from app.qgen.models import QuizFolder
+    begun, soon = make_quiz(app, teach, 'Begun'), make_quiz(app, teach, 'Soon')
+    give(begun, 'sam').startdate = datetime.now()
+    give(soon, 'sam', closes_at=datetime.now() + timedelta(hours=3))
+    db.session.commit()
+    sam.post('/mypage/folders', data={'name': 'Top'})
+    top = QuizFolder.query.filter_by(owner_id=ids('sam'), name='Top').one()
+    sam.post('/mypage/folders', data={'name': 'Inner', 'parent': top.id})
+    inner = QuizFolder.query.filter_by(name='Inner').one()
+    for q in (begun, soon):
+        sam.post('/mypage/move', data={'quiz': q.id, 'to': inner.id})
+    page = sam.get('/mypage?folder={}'.format(top.id)).data.decode()
+    side = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
+    for f in (top, inner):
+        row = side[side.index('data-folder="{}"'.format(f.id)):]
+        row = row[:row.index('</div>')]
+        assert 'title="1 quiz in progress">1</span>' in row and 'title="1 quiz due soon">1</span>' in row
+        assert 'title="1 new quiz">1</span>' in row  # Soon isn't started yet
+    cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
+    begun_head = cards[cards.index('data-quiz="{}"'.format(begun.id)):]
+    assert '>In progress</span>' in begun_head[:begun_head.index('</summary>')]
+    soon_head = cards[cards.index('data-quiz="{}"'.format(soon.id)):]
+    soon_head = soon_head[:soon_head.index('</summary>')]
+    assert '>Due soon</span>' in soon_head and '>New</span>' in soon_head and 'Hand it in by' in soon_head

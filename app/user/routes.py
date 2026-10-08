@@ -53,7 +53,14 @@ def mypage():
     from app.qgen import folders
     mark_quizzes_seen(current_user.id)
     groups = attempts_by_quiz(current_user.cquizzes)
-    root, all_folders = folders.tree(current_user, groups)
+    #"due": not handed in yet and closing within the due-soon time (as Home counts them)
+    from app import tuning
+    from app.qgen.models import waiting_quizzes
+    from datetime import datetime
+    now = datetime.now()
+    waiting = waiting_quizzes(current_user, now)
+    due_ids = {cq.id for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()}
+    root, all_folders = folders.tree(current_user, groups, due_ids)
     nodes, home = folders.index(root)
     #which part the side list has chosen: the quizzes in no folder (a quiz is in one place
     #only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
@@ -69,13 +76,7 @@ def mypage():
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet (also each in its own folder)
     working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
-    #and "Due within N days": not handed in yet and closing within that time (as Home counts them)
-    from app import tuning
-    from app.qgen.models import waiting_quizzes
-    from datetime import datetime
-    now = datetime.now()
-    waiting = waiting_quizzes(current_user, now)
-    due_ids = {cq.id for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()}
+    #and "Due within N days": closing soon (due_ids, above)
     due = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
     days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
@@ -127,7 +128,10 @@ def mypage():
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
+    #the try that's due soon, by quiz (its badge says when)
+    due_by_quiz = {cq.vquiz_id: cq for cq in waiting if cq.id in due_ids}
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
+                           due_by_quiz=due_by_quiz,
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
                            showing=showing, nothing=nothing)
 

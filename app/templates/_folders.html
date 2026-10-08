@@ -8,6 +8,24 @@
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
 {% from "_macros.html" import box_label, count_of %}
 
+{# what in a folder needs the student (My quizzes): new, started and due soon, here and in the
+   folders inside (here=true: here only, for Not in a folder), as small colored numbers in the
+   colors of New, In progress and Due within; each says what it is on hover #}
+{% macro flag_badges(fk, n, here=false) -%}
+  {%- set sfx = '_here' if here else '' -%}
+  {%- set one, many = fk.unit, fk.units -%}
+  {%- set shown = [] -%}
+  {%- for kind, cls in (('new', 'badge-warn'), ('started', 'badge-accent'), ('due', 'badge-bad')) -%}
+    {%- set k = n[kind ~ sfx] if (n is mapping and (kind ~ sfx) in n) else 0 -%}
+    {%- if k -%}{%- set _ = shown.append((k, cls, kind)) -%}{%- endif -%}
+  {%- endfor -%}
+  {%- if shown -%}<span class="side-flags">
+    {%- for k, cls, kind in shown -%}
+      {%- set what = (one if k == 1 else many) -%}
+      <span class="badge {{ cls }} side-flag" title="{{ k }} {{ ('new ' ~ what) if kind == 'new' else (what ~ ' in progress') if kind == 'started' else (what ~ ' due soon') }}">{{ k }}</span>
+    {%- endfor -%}</span>{%- endif -%}
+{%- endmacro %}
+
 {# the folder list down the side (on a phone: a list that folds away, above the contents) #}
 {% macro side_folder(fk, n) %}
   {% set f = n.folder %}
@@ -17,8 +35,8 @@
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ fk.page(f.id) }}" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
         <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <span class="side-name">{{ fk.name(n.folder) }}</span></a>
-      {# something new (not started) in it, or in a folder inside it #}
-      {% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}
+      {# quizzes that need the student in it, or in a folder inside it #}
+      {{ flag_badges(fk, n) }}
       <span class="side-count muted small" title="{{ fk.units|capitalize }} in it, and in the folders inside it">{{ n.count or '' }}</span>
     </div>
     {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(fk, child) }}{% endfor %}</ul>{% endif %}
@@ -69,7 +87,7 @@
           <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page('main') }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
-            {% if fk.root.new_here %}<span class="badge badge-warn side-new-badge" title="{{ fk.root.new_here }} new {{ fk.unit if fk.root.new_here == 1 else fk.units }} in no folder">{{ fk.root.new_here }} new</span>{% endif %}
+            {{ flag_badges(fk, fk.root, true) }}
             <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
           {% endif %}
         {% endfor %}
@@ -163,7 +181,7 @@
 {% macro sub_box(fk, n) %}
   {% set f = n.folder %}{% set draw = caller %}{# (kept: inside the nested call below, caller is that call's) #}
   <details class="box sub-box" data-sub="{{ f.id }}" data-list>
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
         <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a href="{{ fk.page(f.id) }}">Open this folder</a></span></div>
