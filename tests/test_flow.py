@@ -131,6 +131,10 @@ def test_whole_school_week(app_db):
     assert b'value="a"' in r.data and b'value="40"' in r.data
 
     # --- the live helper
+    # no title: the helper says so first, and never "Looks good"
+    hints = teacher.post('/quiz/checkvprob', data=dict(forms[0], title='')).get_json()['hints']
+    assert hints[0]['level'] == 'error' and 'short title' in hints[0]['text'] and not [h for h in hints if h['level'] == 'ok']
+    assert not [h for h in teacher.post('/quiz/checkvprob', data=forms[0]).get_json()['hints'] if 'short title' in h['text']]
     hints = teacher.post('/quiz/checkvprob', data=dict(forms[0], question='[a] + [c] = ?')).get_json()['hints']
     assert any(h['action'] and h['action']['type'] == 'add_value' and h['action']['name'] == 'c' for h in hints)
 

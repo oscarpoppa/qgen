@@ -935,6 +935,11 @@ def check_vprob():
     form = ProblemForm()
     form.validate()
     hints = problem_hints(form.qtype.data, form.question.data, form.answer.data, form.options())
+    if not (form.title.data or '').strip():
+        #saving needs one too: said here first, so it never comes as a surprise
+        from .coach import hint
+        hints = [hint('error', 'Give the problem a short title (only you see it), so you can find it in your lists.')] + \
+            [h for h in hints if h['level'] != 'ok']
     return jsonify(hints=with_folder_hint('problems', hints, new=not request.args.get('vp', type=int)))
 
 #quiz page: hints about the checked problems
