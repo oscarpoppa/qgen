@@ -10,6 +10,7 @@ os.environ['SECRET_KEY'] = 'test-only-secret'
 import tempfile
 os.environ['STATIC_DIR'] = tempfile.mkdtemp(prefix='qgen-test-static-')
 os.environ['SCAN_DIR'] = tempfile.mkdtemp(prefix='qgen-test-scans-')
+os.environ['AI_JOB_DIR'] = tempfile.mkdtemp(prefix='qgen-test-ai-jobs-')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 

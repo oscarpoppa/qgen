@@ -238,6 +238,10 @@ legend { font-weight: 700; padding: 0 6px; }
 .pick-bar { align-items: center; margin-bottom: 8px; }
 /* every filter box is the same width (narrower only when the window is) */
 .filter-list { flex: 0 1 260px; width: 260px; max-width: 100%; margin: 0; }
+/* the box with its Clear right beside it, never split onto two lines */
+.filter-box { display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.filter-box .filter-list { min-width: 8rem; }
+.filter-box .btn { flex: none; }
 .filter-bar { margin-bottom: 8px; }
 .pick-count { margin-left: auto; }
 /* Users page: when people are checked, a bar to give them a quiz */

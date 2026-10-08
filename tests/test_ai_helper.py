@@ -241,3 +241,45 @@ def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):
         assert teacher.post('/quiz/ai/list', json={'text': 'x', 'name': 'n', 'values': 'junk'}).get_json()['ok']  # bad context: ignored
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
+
+
+def test_answers_come_in_the_background(app_db, monkeypatch):
+    """On the site the AI's answer is fetched later (a request may not run long enough)."""
+    app, db = app_db
+    import json, os, time
+    from app.qgen import ai_jobs
+    teacher = login(app, 'teach')
+    app.config.update(ANTHROPIC_API_KEY='test-key', AI_JOBS='inline')
+    try:
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(GOOD_PROBLEM))
+        r = teacher.post('/quiz/ai/problem', json={'text': 'a train problem'})
+        assert r.status_code == 202 and r.get_json()['ok'] and len(r.get_json()['job']) == 32
+        job = r.get_json()['job']
+        # someone else can't collect it
+        from app.user.models import User
+        lee = User(username='lee', is_admin=True)
+        lee.set_password('pw-for-tests')
+        db.session.add(lee)
+        db.session.commit()
+        assert login(app, 'lee').get('/quiz/ai/job/' + job).status_code == 404
+        got = teacher.get('/quiz/ai/job/' + job)
+        assert got.status_code == 200 and got.get_json()['fill']['title'] == 'Train'
+        assert teacher.get('/quiz/ai/job/' + job).status_code == 404  # collected once, then gone
+        # still running: "pending"; running far too long (the site restarted): an error
+        ai_jobs._write('a' * 32, {'user': 1, 'pending': True, 'at': time.time()})
+        assert teacher.get('/quiz/ai/job/' + 'a' * 32).get_json() == {'ok': True, 'pending': True}
+        ai_jobs._write('b' * 32, {'user': 1, 'pending': True, 'at': time.time() - 600})
+        r = teacher.get('/quiz/ai/job/' + 'b' * 32)
+        assert r.status_code == 504 and 'took too long' in r.get_json()['error']
+        # the list button too, and the checks still answer at once
+        monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient({'items': ['4', '9'], 'cannot_do': None, 'off_topic': False}))
+        r = teacher.post('/quiz/ai/list', json={'text': 'squares', 'name': 'n'})
+        assert teacher.get('/quiz/ai/job/' + r.get_json()['job']).get_json()['items'] == '4, 9'
+        assert teacher.post('/quiz/ai/values', json={'text': ''}).status_code == 400
+        # answers nobody collected are removed after an hour
+        old = os.path.join(app.config['AI_JOB_DIR'], 'c' * 32 + '.json')
+        open(old, 'w').write(json.dumps({'user': 1, 'pending': True}))
+        os.utime(old, (time.time() - 7200, time.time() - 7200))
+        assert ai_jobs.remove_old() >= 1 and not os.path.exists(old)
+    finally:
+        app.config.update(ANTHROPIC_API_KEY=None, AI_JOBS=None)

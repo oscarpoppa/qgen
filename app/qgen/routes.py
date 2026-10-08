@@ -839,52 +839,74 @@ def ret_cquiz(cqid):
 
 # ---------------------------------------------------------------- AI helper
 
-def ai_call(kind, text, work):
-    """Every AI button goes through here: session check, API key, size and hourly
-    limits, and the call log. `work(key, text)` returns (result, usage)."""
+def ai_call(kind, text, work, finish):
+    """Every AI button goes through here: session check, API key, size and hourly limits
+    (answered at once), then the AI's answer, logged, in the background (app/qgen/ai_jobs.py):
+    the page gets {ok, job} and asks /quiz/ai/job/<job> until it's ready. `work(key, text)`
+    returns (result, usage); `finish(result)` turns it into (JSON body, status). Tests (TESTING
+    without AI_JOBS) get the answer straight away."""
     from datetime import timedelta
-    from .ai_helper import AIError
     from app import tuning
-    hourly = tuning.get('ai_hourly')
     from .models import AICall
+    from . import ai_jobs
+    hourly = tuning.get('ai_hourly')
     if not json_csrf_ok():
-        return None, (jsonify(ok=False, error='Your session expired. Please reload the page.'), 400)
+        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
     key = current_app.config.get('ANTHROPIC_API_KEY')
     if not key:
-        return None, (jsonify(ok=False, error='The AI helper isn\'t set up (no API key).'), 400)
+        return jsonify(ok=False, error='The AI helper isn\'t set up (no API key).'), 400
     text = (text or '').strip()
     if not text:
-        return None, (jsonify(ok=False, error='Please describe what you want first.'), 400)
+        return jsonify(ok=False, error='Please describe what you want first.'), 400
     if len(text) > 8000:
-        return None, (jsonify(ok=False, error='That\'s too long for the AI helper; please shorten it.'), 400)
+        return jsonify(ok=False, error='That\'s too long for the AI helper; please shorten it.'), 400
     since = datetime.now() - timedelta(hours=1)
     if AICall.query.filter(AICall.user_id == current_user.id, AICall.created >= since).count() >= hourly:
-        return None, (jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(hourly)), 429)
-    call = AICall(user_id=current_user.id, created=datetime.now(), kind=kind, request=text, ok=False)
-    try:
-        result, usage = work(key, text)
-        call.ok = True
-        call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
-        return result, None
-    except AIError as exc:
-        return None, (jsonify(ok=False, error=str(exc)), 502)
-    finally:
-        db.session.add(call)
-        db.session.commit()
-        current_app.logger.info('{} used the AI helper ({}, ok={}, tokens in/out {}/{})'.format(
-            current_user.username, kind, call.ok, call.input_tokens, call.output_tokens))
+        return jsonify(ok=False, error='You\'ve used the AI helper {} times in the last hour. Please wait a bit.'.format(hourly)), 429
+    user_id, username = current_user.id, current_user.username
+
+    def run():
+        from .ai_helper import AIError
+        call = AICall(user_id=user_id, created=datetime.now(), kind=kind, request=text, ok=False)
+        try:
+            result, usage = work(key, text)
+            call.ok = True
+            call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
+            return finish(result)
+        except AIError as exc:
+            return {'ok': False, 'error': str(exc)}, 502
+        finally:
+            db.session.add(call)
+            db.session.commit()
+            current_app.logger.info('{} used the AI helper ({}, ok={}, tokens in/out {}/{})'.format(
+                username, kind, call.ok, call.input_tokens, call.output_tokens))
+
+    if current_app.testing and not current_app.config.get('AI_JOBS'):
+        body, status = run()
+        return jsonify(body), status
+    return jsonify(ok=True, job=ai_jobs.start(user_id, run)), 202
+
+@qgen_bp.route('/quiz/ai/job/<job>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def ai_job(job):
+    """The page asking whether its AI answer is ready."""
+    from . import ai_jobs
+    body, status = ai_jobs.collect(job, current_user.id)
+    return jsonify(body), status
 
 def ai_fill(kind):
     """Shared by both "Fill in for me" buttons; always answers with JSON."""
     from .ai_helper import ask, problems_with
     text = (request.get_json(silent=True) or {}).get('text')
-    fill, failed = ai_call(kind, text, lambda key, t: ask(key, kind, t))
-    if failed:
-        return failed
-    if fill.get('off_topic'):
-        #the helper is for school quiz problems only; nothing else is filled in
-        return jsonify(ok=False, error='The AI helper only writes school quiz problems. Please describe a quiz question for your students.'), 422
-    return jsonify(ok=True, fill=fill, note=fill.get('cannot_do'), problems=problems_with(fill, kind))
+
+    def finish(fill):
+        if fill.get('off_topic'):
+            #the helper is for school quiz problems only; nothing else is filled in
+            return {'ok': False, 'error': 'The AI helper only writes school quiz problems. Please describe a quiz question for your students.'}, 422
+        return {'ok': True, 'fill': fill, 'note': fill.get('cannot_do'), 'problems': problems_with(fill, kind)}, 200
+    return ai_call(kind, text, lambda key, t: ask(key, kind, t), finish)
 
 @qgen_bp.route('/quiz/ai/problem', methods=['POST'])
 @login_required
@@ -913,14 +935,14 @@ def ai_list():
     columns = len([p for p in name.split('=')]) if '=' in name else 1
     #the question and the other random values, so the description can refer to them
     context = describe_context(data.get('question'), data.get('values') if isinstance(data.get('values'), list) else [], name)
-    result, failed = ai_call('list', data.get('text'), lambda key, t: ask_list(key, t, columns, context=context))
-    if failed:
-        return failed
-    if result['off_topic']:
-        return jsonify(ok=False, error='The AI helper only fills in lists for school quiz problems.'), 422
-    if not result['items']:
-        return jsonify(ok=False, error=result['cannot_do'] or 'The AI helper couldn\'t make that list. Please describe it another way.'), 422
-    return jsonify(ok=True, items=', '.join(result['items']), count=len(result['items']), note=result['cannot_do'])
+
+    def finish(result):
+        if result['off_topic']:
+            return {'ok': False, 'error': 'The AI helper only fills in lists for school quiz problems.'}, 422
+        if not result['items']:
+            return {'ok': False, 'error': result['cannot_do'] or 'The AI helper couldn\'t make that list. Please describe it another way.'}, 422
+        return {'ok': True, 'items': ', '.join(result['items']), 'count': len(result['items']), 'note': result['cannot_do']}, 200
+    return ai_call('list', data.get('text'), lambda key, t: ask_list(key, t, columns, context=context), finish)
 
 
 # ---------------------------------------------------------------- live helper

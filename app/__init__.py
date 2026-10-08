@@ -159,10 +159,12 @@ def _close_expired_quizzes():
     except Exception as exc:
         db.session.rollback()
         app.logger.error('announcing opened quizzes failed: {}'.format(exc))
-    #workbook scans nobody has touched for a month
+    #workbook scans nobody has touched for a month, and AI answers nobody collected
     try:
         from app.qgen.scan import remove_old_jobs
+        from app.qgen import ai_jobs
         remove_old_jobs()
+        ai_jobs.remove_old()
     except Exception as exc:
         db.session.rollback()
         app.logger.error('removing old scans failed: {}'.format(exc))

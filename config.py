@@ -22,5 +22,7 @@ class Config(object):
     STATIC_DIR = os.environ.get('STATIC_DIR') or os.path.join(basedir, 'static')
     #workbook pages being scanned (private: not under static), until saved or discarded
     SCAN_DIR = os.environ.get('SCAN_DIR') or os.path.join(basedir, 'instance', 'scans')
+    #the AI helper's answers while the page waits for them (app/qgen/ai_jobs.py)
+    AI_JOB_DIR = os.environ.get('AI_JOB_DIR') or os.path.join(basedir, 'instance', 'ai-jobs')
     #optional: enables the "Fill in for me" helper on the problem page
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')

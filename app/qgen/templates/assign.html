@@ -50,9 +50,9 @@
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     <span class="label">Students</span>
     <div class="btn-row small pick-bar">
-      <input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
+      <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button></span>
       <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button>
     </div>
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}

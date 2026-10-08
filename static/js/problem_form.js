@@ -407,14 +407,34 @@
     });
   });
 
+  //an AI button's request: the answer comes back at once, or (as on the site) the work runs in
+  //the background and we ask every 2 seconds until it's ready (app/qgen/ai_jobs.py), up to 5 minutes
+  function aiRequest(url, body) {
+    return fetch(url, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.job) return res;
+      var started = Date.now();
+      return new Promise(function (done) {
+        (function ask() {
+          fetch(url.replace(/\/(problem|values|list)$/, '/job/') + res.job, { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (got) {
+              if (!got.pending) return done(got);
+              if (Date.now() - started > 5 * 60 * 1000) return done({ ok: false, error: 'The AI helper took too long. Please try again.' });
+              setTimeout(ask, 2000);
+            }, function () { setTimeout(ask, 4000); });  // a moment offline: keep asking
+        })();
+      });
+    });
+  }
+
   function fill(btn, kind, text, status) {
       form.querySelectorAll('.ai-go').forEach(function (b) { b.disabled = true; });
       status.innerHTML = '<span class="spinner"></span> Thinking… this can take up to a minute.';
-      fetch(btn.dataset.url, {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
-        body: JSON.stringify({ text: text })
-      }).then(function (r) { return r.json(); }).then(function (res) {
+      aiRequest(btn.dataset.url, { text: text }).then(function (res) {
         if (!res.ok) { status.textContent = res.error || 'Something went wrong.'; return; }
         var f = res.fill || {};
         if (kind === 'problem') {
@@ -448,12 +468,8 @@
     function go() {
       btn.disabled = true;
       status.innerHTML = '<span class="spinner"></span> Making the list…';
-      fetch(btn.dataset.url, {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
-        body: JSON.stringify({ text: text, name: row.querySelector('[name$="-name"]').value,
-                               question: (form.querySelector('[name=question]') || {}).value || '', values: otherValues(row) })
-      }).then(function (r) { return r.json(); }).then(function (res) {
+      aiRequest(btn.dataset.url, { text: text, name: row.querySelector('[name$="-name"]').value,
+                                   question: (form.querySelector('[name=question]') || {}).value || '', values: otherValues(row) }).then(function (res) {
         if (!res.ok) { status.textContent = res.error || 'Something went wrong.'; return; }
         items.value = res.items;
         items.dispatchEvent(new Event('input', { bubbles: true }));
