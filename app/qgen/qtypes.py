@@ -472,6 +472,10 @@ class Text(QType):
         #a right answer inside a longer one ("a brown horse" for "horse"): the teacher decides
         if any(re.search(r'(?<!\w)' + re.escape(a) + r'(?!\w)', got) for a in answers if a):
             return None
+        #a labeled picture ("what animal is this?"): there are many ways to name what's in it,
+        #so an answer that isn't the label goes to the teacher too, not straight to wrong
+        if picture_labels(options or {}):
+            return None
         return 0.0
 
     def show_correct(self, conc_ansr, conc_opts):

@@ -10,6 +10,12 @@ def test_grading_rule():
                           ('a brown horse', None), ('horse!', None), ('seahorse', 0.0), ('horses', 0.0)):
         assert qt.grade(typed, 'horse\npony', {}, {}) == credit, typed
     assert qt.grade('a pony', 'horse\npony', {}, {}) is None
+    # a labeled picture: anything but its label waits for the teacher; blank is still wrong
+    pics = {'images': [{'file': 'a.png', 'label': 'dog'}, {'file': 'b.png', 'label': 'cat'}]}
+    assert qt.grade('dog', 'dog', {}, pics) == 1.0 and qt.grade('spike', 'dog', {}, pics) is None
+    assert qt.grade('', 'dog', {}, pics) == 0.0
+    # pictures without labels: as before
+    assert qt.grade('spike', 'dog', {}, {'images': [{'file': 'a.png', 'label': ''}]}) == 0.0
 
 
 def test_close_answer_waits_for_the_teacher(app_db):
