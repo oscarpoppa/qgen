@@ -1572,3 +1572,15 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 #pictures-card.paper-page #add-image, #pictures-card.paper-page .remove-image,
 #pictures-card.paper-page .image-row > .field + .field { display: none; }
 #pictures-card.paper-page .image-row { border: 0; padding: 0; box-shadow: none; background: none; }
+
+/* a box that can be pulled wider by its side edge, over its neighbors (static/js/stretch.js) */
+[data-stretch] { position: relative; }
+[data-stretch].is-stretched { z-index: 20; box-shadow: 0 6px 24px rgba(0, 0, 0, .28); }
+.stretch-edge { position: absolute; top: 12px; bottom: 12px; right: -7px; width: 14px; cursor: ew-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center; border-radius: 6px; z-index: 2; }
+.stretch-edge.on-left { right: auto; left: -7px; }
+.stretch-edge span { display: block; width: 5px; height: 56px; border-radius: 3px; background: var(--border); transition: background .15s, height .15s; }
+.stretch-edge:hover span, .stretch-edge:focus-visible span, html.stretching .stretch-edge span { background: var(--accent); height: 80px; }
+.stretch-edge:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+html.stretching, html.stretching * { cursor: ew-resize !important; user-select: none; }
+@media print { .stretch-edge { display: none; } [data-stretch] { width: auto !important; margin-left: 0 !important; } }

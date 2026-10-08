@@ -60,7 +60,8 @@
     {% endif %}
   </details>
 
-  <details class="box card dash-card" data-box="awards" open>
+  {# can be pulled wider by its side edge, over the box beside it (static/js/stretch.js) #}
+  <details class="box card dash-card" data-box="awards" data-stretch="awards" open>
     <summary class="dash-head">{{ box_label('🏆', 'Your awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
     {% if awards %}
       {{ award_list(awards) }}
@@ -77,3 +78,7 @@
 </div>
 {% endblock %}
 
+
+{% block scripts %}
+<script src="{{ asset('js/stretch.js') }}"></script>
+{% endblock %}
