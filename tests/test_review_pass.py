@@ -240,7 +240,7 @@ def test_assign_goes_back_to_the_student_page(app_db):
     r = teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')], 'next': '/quiz/listuser/{}'.format(ids('sam'))})
     assert r.headers['Location'] == '/quiz/listuser/{}'.format(ids('sam'))
     r = teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('kim')]}, follow_redirects=True)
-    assert 'See its results →' in r.data.decode()
+    assert 'See its history →' in r.data.decode()
 
 
 def test_grade_next(app_db):

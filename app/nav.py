@@ -74,7 +74,7 @@ def _named(endpoint, args):
         return 'Messages: {}'.format(name) if name else None
     if endpoint == 'qgen.quiz_results_page':
         title = quiz('vqid')
-        return 'Quiz results: {}'.format(title) if title else None
+        return 'Quiz history: {}'.format(title) if title else None
     if endpoint in ('qgen.list_vquiz', 'qgen.view_vquiz'):
         return quiz('vqid')
     if endpoint == 'qgen.problem_results':
@@ -125,7 +125,7 @@ def back(fallback_url, fallback_label):
 LINK_LABELS = {
     'qgen.review': 'Grade it',
     'qgen.list_user': 'Student page',
-    'qgen.quiz_results_page': 'Quiz results',
+    'qgen.quiz_results_page': 'Quiz history',
     'qgen.archived': 'See it in the Archive',
     'messages.conversation': 'Open the messages',
 }

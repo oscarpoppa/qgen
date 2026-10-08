@@ -100,7 +100,7 @@ def test_assign_message_links_to_the_quiz_and_its_results(app_db):
     vq, _ = _quiz(app, db, teacher, with_paper=False)
     sam = User.query.filter_by(username='sam').one()
     page = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]}, follow_redirects=True).data.decode()
-    assert '<a href="/quiz/viewvquiz/{}">View the quiz</a> · <a href="/quiz/results/{}">See its results →</a>'.format(vq.id, vq.id) in page
+    assert '<a href="/quiz/viewvquiz/{}">View the quiz</a> · <a href="/quiz/results/{}">See its history →</a>'.format(vq.id, vq.id) in page
 
 
 def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):

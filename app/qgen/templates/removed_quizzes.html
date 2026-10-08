@@ -21,7 +21,7 @@
         <td class="actions">
           <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=vq.id) }}" class="inline-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put “{{ vq.title }}” back on the Quizzes page and Assign">Bring back</button></form>
-          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See every student's tries and scores for “{{ vq.title }}”">Results</a>{% else %}{{ slot('Results') }}{% endif %}
+          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's tries and scores on “{{ vq.title }}”">History</a>{% else %}{{ slot('History') }}{% endif %}
           <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems">View</a>
           {# for good: students' tries go to the Archive first (still readable there) #}
           {% set n = vq.cquizzes|length %}

@@ -443,7 +443,7 @@ def assign():
         for cq in created:
             current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, cq.taker.username))
         if created:
-            flash(Markup('Assigned “{}” to {}. <a href="{}">View the quiz</a> · <a href="{}">See its results →</a>').format(
+            flash(Markup('Assigned “{}” to {}. <a href="{}">View the quiz</a> · <a href="{}">See its history →</a>').format(
                 vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.view_vquiz', vqid=vquiz.id),
                 url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
         #back where they came from (a student page, a quiz's results...), else ready for the next one
@@ -781,7 +781,7 @@ def quiz_results_page(vqid):
     if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.results_by_quiz'))
     return render_template('results_by_quiz.html', quizzes=quiz_results([vq]), rules=RETAKE_RULES, single=True,
-                           title='Quiz results: {}'.format(vq.title))
+                           title='Quiz history: {}'.format(vq.title))
 
 def quiz_results(quizzes):
     """[{'vquiz', 'rows': [(student, group from attempts_by_quiz)] by name, 'students', 'average'

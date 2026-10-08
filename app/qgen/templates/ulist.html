@@ -16,7 +16,7 @@
         <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
             {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
-            <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz">Quiz results</a>
+            <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's tries and scores on this quiz">Quiz history</a>
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
@@ -90,7 +90,7 @@
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Quiz"><a href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz"><strong>{{ g.vquiz.title }}</strong></a></td>
+              <td data-label="Quiz"><a href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="This quiz's history: everyone's tries and scores"><strong>{{ g.vquiz.title }}</strong></a></td>
               {{ result_cells(g, item, rules) }}
             </tr>
           {% endfor %}

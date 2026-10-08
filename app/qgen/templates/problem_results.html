@@ -37,7 +37,7 @@
   {% for vq, rows in quizzes %}
     <details class="box card subject-box result-quiz" open data-box="problem-quiz:{{ vq.id }}">
       <summary>{{ box_label('📝', vq.title, count_of(rows|length, 'answer', 'answers')) }}
-        <span class="box-end"><a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Everyone's results for “{{ vq.title }}”">Quiz results</a></span></summary>
+        <span class="box-end"><a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Everyone's tries and scores on “{{ vq.title }}”">Quiz history</a></span></summary>
       <div class="table-wrap stack">
         <table class="history-table">
           <thead><tr><th>Student</th><th>Handed in</th><th>Their question</th><th>Their answer</th><th>Correct answer</th><th>Score</th></tr></thead>

@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="page-head">
-  <h1><a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's results">{{ cq.vquiz.title }}</a></h1>
+  <h1><a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's history: every student's tries and scores">{{ cq.vquiz.title }}</a></h1>
   <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}'s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
   <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>

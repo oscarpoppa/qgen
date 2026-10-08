@@ -85,7 +85,7 @@
 {# a teacher looking at one attempt: its student, the quiz's results, and the answer key #}
 {% macro attempt_links(cq) %}
   {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "'s student page") }}
-  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone's results for “{{ cq.vquiz.title }}”">Quiz results</a>
+  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone's tries and scores on “{{ cq.vquiz.title }}”">Quiz history</a>
 {%- endmacro %}
 
 {# a person in a teacher's list: picture and name, going to their student page #}
@@ -97,7 +97,7 @@
 
 {# a quiz's title in a teacher's list, going to that quiz's results #}
 {% macro quiz_link(vq) -%}
-  <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See everyone's results for this quiz">“{{ vq.title }}”</a>
+  <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="This quiz's history: everyone's tries and scores">“{{ vq.title }}”</a>
 {%- endmacro %}
 
 {# Expand all / Collapse all for a list of boxes that fold (target: what holds them; what: the
