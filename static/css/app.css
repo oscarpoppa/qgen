@@ -316,7 +316,11 @@ td.actions .btn { margin-left: 4px; }
   font-weight: 700; margin-right: 8px; flex: none;
 }
 .question .qtext { font-size: 1.05rem; margin-bottom: 12px; overflow-wrap: anywhere; }
-.question .qimg { max-width: min(420px, 100%); border-radius: 8px; margin-bottom: 12px; display: block; }
+/* a picture in a quiz or problem (taking it, its results, grading, previews): scaled down to
+   fit, keeping its shape, never wider than the column nor taller than about half the window */
+img.qimg { display: block; width: auto; height: auto; max-width: min(100%, 520px); max-height: min(360px, 50vh);
+  object-fit: contain; border-radius: 8px; margin-bottom: 12px; }
+img.qimg.card { padding: 0; max-width: min(100%, 640px); }  /* the one at the top of a quiz */
 .progress { position: sticky; top: 64px; z-index: 5; background: var(--bg); padding: 8px 0; }
 .progress-bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .progress-bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
@@ -366,7 +370,7 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 
 /* legacy stored transcripts (plain HTML from before the redesign) */
 .legacy-transcript red, .legacy-transcript .wrong { color: var(--bad); }
-.legacy-transcript img { max-width: min(420px, 100%); }
+.legacy-transcript img { max-width: min(520px, 100%); max-height: min(360px, 50vh); width: auto; height: auto; object-fit: contain; }
 
 /* ---------- drag-and-drop image picker ---------- */
 

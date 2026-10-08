@@ -207,3 +207,14 @@ def test_sideways_dividers_for_the_folder_list_and_the_side_panel(app_db):
     css = open(os.path.join(here, 'css', 'app.css')).read()
     assert "'qgen-side-width'" in js and "'qgen-dock-width'" in js and "'--dock-w'" in js
     assert 'grid-template-columns: var(--side-w, minmax(170px, 260px)) 12px minmax(0, 1fr)' in css
+
+
+def test_quiz_and_problem_pictures_are_scaled_to_fit(app_db):
+    """Every quiz or problem picture (class qimg, wherever it shows) keeps its shape and is
+    never wider than its column nor taller than about half the window."""
+    import os, re
+    css = open(os.path.join(os.path.dirname(__file__), '..', 'static', 'css', 'app.css')).read()
+    rule = re.search(r'img\.qimg \{([^}]*)\}', css).group(1)
+    assert 'max-height: min(360px, 50vh)' in rule and 'max-width: min(100%, 520px)' in rule
+    assert 'width: auto' in rule and 'height: auto' in rule and 'object-fit: contain' in rule
+    assert '.question .qimg' not in css  # one rule for all of them
