@@ -87,6 +87,8 @@ def test_routes_guard_key_limit_and_log(app_db, monkeypatch):
         assert teacher.post('/quiz/ai/values', json={'text': ''}).status_code == 400
         # the problem page has no "Review with AI"
         page = teacher.get('/quiz/makevprob').data.decode()
+        # the AI helper box starts folded (and stays so on every visit)
+        assert '<details class="box card ai-box" data-fixed>' in page
         assert 'Fill in for me' in page and 'Review with AI' not in page and 'data-review-url' not in page
         from app.qgen.models import VProblem
         teacher.post('/quiz/makevprob', data=problem_form('numeric', 'T', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}]))

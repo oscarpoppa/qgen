@@ -106,9 +106,10 @@
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vprobs') }}" data-back-next>
 
   {% if ai_enabled %}
-  <div class="card ai-box">
-    <div class="card-head"><h2>Describe it in plain English</h2><span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span>{{ tip('the AI helper', tip_ai) }}</div>
-    <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”.</p>
+  {# folded until it's wanted: it takes a lot of room (always starts folded: data-fixed) #}
+  <details class="box card ai-box" data-fixed>
+    <summary>{{ box_label('✨', 'Describe it in plain English', none, 'h2') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
+    <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</p>
     <div class="field">
       <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
       <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
@@ -124,7 +125,7 @@
       </div>
     </div>
     <div class="ai-status small" role="status" aria-live="polite"></div>
-  </div>
+  </details>
   {% endif %}
 
   <div class="card" id="question-card">
