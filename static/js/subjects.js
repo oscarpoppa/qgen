@@ -42,7 +42,8 @@
     if (cancel) cancel.closest('form').hidden = true;
   });
   //each box opens, folds and is remembered like every box (static/js/boxes.js)
-  var boxes = Array.prototype.slice.call(wrap.querySelectorAll('details.subject-box'));
+  //the quiz editor's folder boxes (folders inside folders), or a results page's boxes
+  var boxes = Array.prototype.slice.call(wrap.querySelectorAll('details.sub-box, details.subject-box'));
   var searching = false;
   function restore(b) { if (window.qgenBoxes) window.qgenBoxes.restore(b); }
 

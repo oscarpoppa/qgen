@@ -32,11 +32,11 @@
 {% endmacro %}
 
 {# a Quizzes page folder on a student page, with this student's quizzes in it (and its own
-   folders); open to begin with, the ones closed are remembered in this browser #}
+   folders): the same folder box as the folder pages #}
 {% macro quiz_folder(n, item) %}
-  <details class="box card result-folder" data-folder-box="{{ n.folder.id }}" data-list>
-    <summary>{{ box_label('📁', n.name, count_of(n.count, 'quiz', 'quizzes')) }}</summary>
-    <div class="result-folder-body">
+  <details class="box sub-box" data-folder-box="{{ n.folder.id }}" data-list>
+    <summary class="sub-head">{{ box_label('📁', n.name, count_of(n.count, 'quiz', 'quizzes'), 'h3') }}</summary>
+    <div class="sub-body">
       {% for child in n.folders if child.count %}{{ quiz_folder(child, item) }}{% endfor %}
       {% for g in n['items'] %}{{ result_box(g, item) }}{% endfor %}
     </div>
@@ -61,11 +61,11 @@
         <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
         <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></div>
       {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
-      <details class="box card result-folder new-folder-box" data-folder-box="new" data-list>
-        <summary>{{ box_label('🆕', 'New') }}
+      <details class="box sub-box new-folder-box" data-folder-box="new" data-list>
+        <summary class="sub-head">{{ box_label('🆕', 'New', none, 'h3') }}
           {% if fresh %}<span class="badge badge-warn" title="Assigned and not started yet">{{ fresh|length }} new</span>
           {% else %}<span class="muted small">nothing new</span>{% endif %}</summary>
-        <div class="result-folder-body">
+        <div class="sub-body">
           {% for g in fresh %}{{ result_box(g, item) }}{% else %}<p class="muted small box-empty">Every quiz {{ item.shown_name }} has been given is started.</p>{% endfor %}
         </div>
       </details>
@@ -73,10 +73,9 @@
         {# in the Quizzes page's folders (a quiz in several folders is in each) #}
         {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}
         {% if quiz_tree['items'] %}
-          <details class="card result-folder" data-folder-box="none" open>
-            <summary><span class="fold" aria-hidden="true"></span><span aria-hidden="true">📥</span> <strong>Not in a folder</strong>
-              <span class="muted small">{{ quiz_tree['items']|length }} quiz{{ '' if quiz_tree['items']|length == 1 else 'zes' }}</span></summary>
-            <div class="result-folder-body">{% for g in quiz_tree['items'] %}{{ result_box(g, item) }}{% endfor %}</div>
+          <details class="box sub-box" data-folder-box="none" data-list>
+            <summary class="sub-head">{{ box_label('📥', 'Not in a folder', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
+            <div class="sub-body">{% for g in quiz_tree['items'] %}{{ result_box(g, item) }}{% endfor %}</div>
           </details>
         {% endif %}
       {% else %}

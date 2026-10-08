@@ -1,94 +1,19 @@
 {# Folders (called subjects in the code): the teacher's own containers for sorting problems and quizzes.
-   Use: {% from "_subjects.html" import subject_toolbar, file_bar, subject_box, subject_labels, subject_checks with context %} #}
+   Use: {% from "_subjects.html" import pick_folder_box, subject_labels, subject_checks with context %} #}
 {% from "_macros.html" import tip, box_label, count_of %}
 
 {% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Not in a folder</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
 
-{# above the containers: new folder, open/close them all, and a search across all of them #}
-{% macro subject_toolbar(kind, filter_target, count) %}
-{% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
-<div class="card subject-bar">
-  <details class="subject-new">
-    <summary class="btn btn-secondary btn-sm">+ New folder</summary>
-    <form method="post" action="{{ url_for('qgen.new_subject', kind=kind) }}" class="subject-name-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label class="sr-only" for="new-subject-name">Name of the new folder</label>
-      <input id="new-subject-name" name="name" maxlength="64" required placeholder="e.g. Algebra">
-      <button class="btn btn-sm">Make folder</button>
-    </form>
-  </details>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="open">Expand all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-boxes="close">Collapse all</button>
-  {{ tip('subjects', subjects_help) }}
-  {% if count > 5 %}<input type="search" class="filter" data-filter="{{ filter_target }}" placeholder="Search all {{ noun }}…" aria-label="Search all {{ noun }}">{% endif %}
-</div>
-{% endmacro %}
-
-{# "Add to" / "Remove from" a folder, for the checked rows (each checkbox has form="file-form") #}
-{% macro file_bar(kind, all_subjects) %}
-<form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <span class="muted small file-count" aria-live="polite">0 checked</span>
-  {% if all_subjects %}
-    <label class="sr-only" for="file-subject">Folder</label>
-    <select id="file-subject" name="subject">
-      {% for g in all_subjects %}<option value="{{ g.id }}">{{ g.title }}</option>{% endfor %}
-    </select>
-    <button class="btn btn-sm" name="action" value="add">Add to folder</button>
-    <button class="btn btn-secondary btn-sm" name="action" value="remove">Remove from folder</button>
-  {% else %}
-    <span class="muted small">Make a folder first (+ New folder), then check {{ 'problems' if kind == 'problems' else 'quizzes' }} to put in it.</span>
-  {% endif %}
-</form>
-{% endmacro %}
-
-{# one collapsible container; the caller draws its rows #}
-{# Rename and Delete in a container's heading (shown even when it's closed); Rename opens
-   a name box under the heading. what: "folder" (the default) or anything else. #}
-{% macro box_actions(key, name, rename_url, delete_url, delete_question, what='folder') %}
-  <span class="box-actions">
-    <button type="button" class="btn btn-secondary btn-xs" data-rename="rename-form-{{ key }}" aria-label="Rename the {{ what }} “{{ name }}”">✎ Rename</button>
-    <form method="post" action="{{ delete_url }}" class="inline-form" data-confirm="{{ delete_question }}" data-confirm-ok="Delete {{ what }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-danger btn-xs" aria-label="Delete the {{ what }} “{{ name }}”">🗑 Delete</button>
-    </form>
-  </span>
-{% endmacro %}
-
-{% macro rename_form(key, name, rename_url, what='folder') %}
-  <form method="post" action="{{ rename_url }}" class="subject-name-form box-rename" id="rename-form-{{ key }}" hidden>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="sr-only" for="rename-{{ key }}">New name for “{{ name }}”</label>
-    <input id="rename-{{ key }}" name="name" maxlength="64" required value="{{ name }}">
-    <button class="btn btn-sm">Save name</button>
-    <button type="button" class="btn btn-secondary btn-sm" data-rename-cancel>Cancel</button>
-  </form>
-{% endmacro %}
-
-{# one collapsible container; the caller draws its rows #}
-{% macro subject_box(kind, subject, items, tools=true, label=none) %}
-{% set key = subject.id if subject else 'unsorted' %}
-{% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
-<details class="box card subject-box{{ ' unsorted-box' if not subject }}" id="subject-{{ key }}" data-box="{{ key }}" data-list>
-  <summary>
-    {{ box_label('📁' if subject else '📥', (label or subject.title) if subject else 'Not in a folder',
-                 count_of(items|length, 'problem' if kind == 'problems' else 'quiz', noun)) }}
-    <span class="badge badge-accent box-ticked" hidden></span>
-    {% if subject and tools %}
-      {% set n = items|length %}
-      {% set what = noun if n != 1 else ('problem' if kind == 'problems' else 'quiz') %}
-      {% set kept = ('Its ' ~ n ~ ' ' ~ what ~ (' move' if n != 1 else ' moves') ~ ' up a level (unless also in another folder).') if n else 'It is empty.' %}
-      {{ box_actions(key, subject.title, url_for('qgen.rename_subject', kind=kind, sid=subject.id),
-                     url_for('qgen.delete_subject', kind=kind, sid=subject.id), 'Delete the folder “' ~ subject.title ~ '”? ' ~ kept) }}
-    {% endif %}
-  </summary>
-  <div class="box-body">
-    {% if subject and tools %}{{ rename_form(key, subject.title, url_for('qgen.rename_subject', kind=kind, sid=subject.id)) }}{% endif %}
-    {% if items %}
-      {{ caller() }}
-    {% else %}
-      <p class="muted small box-empty">{{ ('Empty. Check ' ~ noun ~ ' in other containers and choose “Add to folder”.' if tools else 'No ' ~ noun ~ ' in this folder yet.') if subject else 'Every one is in a folder.' }}</p>
-    {% endif %}
+{# the quiz editor's problem folders: the same folder boxes as the folder pages, folders
+   inside folders, each with its own problems; the caller draws a folder's rows:
+   {% call(items, key) pick_folder_box(n) %}...{% endcall %} (key: the folder's id) #}
+{% macro pick_folder_box(n) %}
+{% set rows = caller %}
+<details class="box sub-box" data-sub="{{ n.folder.id }}" data-list>
+  <summary class="sub-head">{{ box_label('📁', n.name, count_of(n.count, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
+  <div class="sub-body">
+    {% for c in n.folders %}{% call(items, key) pick_folder_box(c) %}{{ rows(items, key) }}{% endcall %}{% endfor %}
+    {% if n['items'] %}{{ rows(n['items'], n.folder.id) }}{% elif not n.folders %}<p class="muted small">Empty.</p>{% endif %}
   </div>
 </details>
 {% endmacro %}

@@ -198,7 +198,7 @@ def del_vprob(vpid):
 # ---------------------------------------------------------------- quizzes
 
 def quiz_page(form, title, vq=None, subject_error=None):
-    return render_template('quiz_form.html', form=form, title=title, problem_boxes=S.subject_boxes('problems'), problem_paths=S.subject_paths('problems'),
+    return render_template('quiz_form.html', form=form, title=title, problem_root=S.subject_tree('problems')[0],
                            has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
                            retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],

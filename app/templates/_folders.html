@@ -161,14 +161,14 @@
    what's in it (folded to begin with; the open ones are remembered). Drop something on its
    title to move it in. The caller draws a node's things: {% call(n) sub_box(fk, child) %} #}
 {% macro sub_box(fk, n) %}
-  {% set f = n.folder %}
+  {% set f = n.folder %}{% set draw = caller %}{# (kept: inside the nested call below, caller is that call's) #}
   <details class="box sub-box" data-sub="{{ f.id }}" data-list>
     <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{% if n.new %}<span class="badge badge-warn side-new-badge" title="{{ n.new }} new {{ fk.unit if n.new == 1 else fk.units }} in it">{{ n.new }} new</span>{% endif %}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
         <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a href="{{ fk.page(f.id) }}">Open this folder</a></span></div>
-      {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ caller(c) }}{% endcall %}{% endfor %}
-      {{ caller(n) }}
+      {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
+      {{ draw(n) }}
       {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
     </div>
   </details>

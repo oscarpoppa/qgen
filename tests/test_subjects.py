@@ -381,3 +381,33 @@ def test_the_quiz_builder_says_what_students_get(app_db):
     assert '<h2>Questions in this quiz</h2>' in page and 'id="order-total"' in page
     assert 'Want each student to get only some of these?' in page
     assert 'Order in the quiz' not in page and 'shuffle-note' not in page
+
+
+def test_folders_four_deep_show_on_folder_pages_and_in_the_quiz_editor(app_db):
+    """A folder in a folder in a folder in a folder: the Problems page and the quiz editor draw
+    every level (each a standard folder box inside the one it's in), with its problems."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    from app.qgen.models import VPGroup
+    probs = make_problems(teacher, 'P1', 'P2', 'P3', 'P4')
+    parent, chain = None, []
+    for name in ('L1', 'L2', 'L3', 'L4'):
+        g = VPGroup(title=name, parent_id=parent)
+        db.session.add(g)
+        db.session.flush()
+        chain.append(g)
+        parent = g.id
+    for g, p in zip(chain, probs.values()):
+        g.vproblems.append(p)
+    db.session.commit()
+    page = teacher.get('/quiz/listvp?folder={}'.format(chain[0].id))
+    assert page.status_code == 200
+    builder = teacher.get('/quiz/makevquiz')
+    assert builder.status_code == 200
+    html = builder.data.decode()
+    for g in chain:
+        assert '<details class="box sub-box" data-sub="{}" data-list>'.format(g.id) in html
+    # nested: L4's box is inside L3's, inside L2's, inside L1's
+    starts = [html.index('data-sub="{}"'.format(g.id)) for g in chain]
+    assert starts == sorted(starts) and html.index('class="box-title">L4</h3>') < html.index('</details>', starts[3])
+    assert html.count('class="pick" value="{}"'.format(probs['P4'].id)) == 1

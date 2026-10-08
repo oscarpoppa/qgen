@@ -1,9 +1,30 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import field, check, image_drop %}
-{% from "_subjects.html" import subject_checks, subject_labels, subject_box with context %}
+{% from "_subjects.html" import subject_checks, subject_labels, pick_folder_box with context %}
+{% from "_macros.html" import box_label, count_of %}
 
 {# editing: another tab's changes are offered, never reloaded under the typing #}
+{# one folder's problems in the quiz editor, each with its check box (key: the folder) #}
+{% macro problem_rows(items, key) %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th></tr></thead>
+    <tbody>
+    {% for p in items %}
+      {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
+      <tr>
+        <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
+        <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
+          <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
+          <div class="small muted clamp">{{ p.raw_prob }}</div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
 {% block body_attrs %}{% if vq and vq.id %}{{ watch('editquiz:%d' % vq.id, note='This quiz has been changed somewhere else since you opened it.', ask=True) }}{% endif %}{% endblock %}
 
 {# the editors use more of a wide window (the helper sits beside the form) #}
@@ -66,28 +87,13 @@
         </div>
         <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
         <div id="all-problems" class="subject-boxes builder-boxes">
-          {% for subject, items in problem_boxes %}
-            {% if subject or items %}
-              {% call subject_box('problems', subject, items, tools=false, label=problem_paths.get(subject.id) if subject else none) %}
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th></tr></thead>
-                  <tbody>
-                  {% for p in items %}
-                    {% set box_id = 'pick-' ~ (subject.id if subject else 'u') ~ '-' ~ p.id %}
-                    <tr>
-                      <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
-                      <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
-                        <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
-                        <div class="small muted clamp">{{ p.raw_prob }}</div></td>
-                    </tr>
-                  {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-              {% endcall %}
-            {% endif %}
-          {% endfor %}
+          {% for n in problem_root.folders %}{% call(items, key) pick_folder_box(n) %}{{ problem_rows(items, key) }}{% endcall %}{% endfor %}
+          {% if problem_root['items'] %}
+          <details class="box sub-box" data-box="unsorted" data-list>
+            <summary class="sub-head">{{ box_label('📥', 'Not in a folder', count_of(problem_root['items']|length, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
+            <div class="sub-body">{{ problem_rows(problem_root['items'], 'u') }}</div>
+          </details>
+          {% endif %}
         </div>
       {% else %}
         <div class="empty">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}">Create one first</a>.</div>

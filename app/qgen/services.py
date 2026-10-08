@@ -252,21 +252,6 @@ def subject_tree(kind, items=None):
     return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes, key=key)
 
 
-def subject_paths(kind):
-    """{folder id: its name with the folders it's in, "Algebra › Linear equations"}."""
-    group_cls = subject_kind(kind)[0]
-    folders = {g.id: g for g in group_cls.query.all()}
-    out = {}
-    for gid, g in folders.items():
-        names, up, seen = [], g, set()
-        while up is not None and up.id not in seen:
-            seen.add(up.id)
-            names.insert(0, up.title)
-            up = folders.get(up.parent_id)
-        out[gid] = ' › '.join(names)
-    return out
-
-
 def subject_ancestors(kind):
     """{folder id: the ids of it and the folders it's in}: something in a folder is also
     under the folders above it (the Assign page's Folder menu)."""
@@ -339,16 +324,6 @@ def subject_choices(kind):
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
     return out
-
-
-def subject_boxes(kind):
-    """The containers on the Problems (Quizzes) page: [(subject, items)] by subject name,
-    then (None, the items in no subject) for Unsorted. An item in several subjects is in
-    each of their containers. Newest items first."""
-    root, flat, nodes = subject_tree(kind)
-    boxes = [(g, nodes[g.id]['items']) for g, _d in flat]
-    boxes.append((None, root['items']))
-    return boxes
 
 
 def new_subject_name_error(kind, name):
