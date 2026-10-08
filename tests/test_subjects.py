@@ -238,7 +238,8 @@ def test_new_items_can_be_given_a_subject(app_db):
     vp = VProblem.query.one()
     assert [g.title for g in vp.vpgroups] == ['Algebra']
     assert r.headers['Location'].endswith('/quiz/listvp?show={}'.format(vp.id))
-    assert 'data-item="{}" data-box="problem:{}" data-show'.format(vp.id, vp.id) in teacher.get(r.headers['Location']).data.decode()
+    import re
+    assert re.search(r'data-item="{}" data-box="problem:{}" [^>]*data-show'.format(vp.id, vp.id), teacher.get(r.headers['Location']).data.decode())
     # none chosen: in no folder (Not in a folder)
     teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1'))
     assert VProblem.query.filter_by(title='Later').one().vpgroups == []

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, in_folders with context %}
@@ -16,7 +17,7 @@
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
-        <tr data-box="user:{{ item.id }}">
+        <tr data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><span class="person drag-person" data-drag="user" data-id="{{ item.id }}"
@@ -64,7 +65,7 @@
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button>
     </form>
-    {% if ulst|length > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Filter users…" aria-label="Filter users">{% endif %}
+    {% if ulst|length > 5 %}{{ filter_bar('#folder-items', 'person', 'people', boxes='details.sub-box') }}{% endif %}
     <div id="folder-items">
       {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ people_table(n.people, n.folder) }}{% endcall %}{% endfor %}{% endif %}
       {{ people_table(shown, fk.node.folder if fk.node else none) }}
@@ -73,7 +74,7 @@
 {% endcall %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>
 <script>
 /* checking people: someone listed twice (in a folder and a folder inside it) is checked in
  * both; the bar says how many are checked and takes them to Assign */

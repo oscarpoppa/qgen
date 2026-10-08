@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_folders.html" import folders_page, sub_box, empty_note, move_menu with context %}
 {% from "_macros.html" import box_label, count_of %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
@@ -19,7 +20,7 @@
           {% for a in month['items'] %}
             {% set blocker = blockers.get(a.id) %}
             {% set home = fk.nodes[a.folder_id].folder if a.folder_id in fk.nodes else none %}
-            <tr data-box="attempt:{{ a.id }}">
+            <tr data-box="attempt:{{ a.id }}" data-name="{{ (a.student_name or '')|lower }} {{ (a.quiz_title or '')|lower }}">
               <td class="tick-col"><input type="checkbox" name="items" value="{{ a.id }}" form="file-form" aria-label="Check {{ a.student_name }}’s “{{ a.quiz_title }}”"></td>
               <td data-label="Student"><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{{ a.student_name }}</span>
@@ -63,7 +64,7 @@
 
 {% call folders_page(fk) %}
   <div class="folder-tools-bar">
-    {% if total > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Search the archive…" aria-label="Search the archive">{% endif %}
+    {% if total > 5 %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box') }}{% endif %}
     {% if total %}
     <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -90,4 +91,4 @@
 {% endcall %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

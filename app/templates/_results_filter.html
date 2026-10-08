@@ -1,12 +1,15 @@
-{# Above the results pages' lists: find a name (a student, or a quiz), and show only what's
-   waiting for grading or not handed in yet (static/js/folders.js) #}
+{# Above the results pages' lists: the standard filter bar for a name (a student, or a quiz),
+   and "Show" to keep only what's waiting for grading or not handed in yet (static/js/folders.js
+   narrows the boxes; static/js/filter.js runs the bar). Set filter_one / filter_many first. #}
+{% from "_macros.html" import filter_bar with context %}
 <div class="folder-tools-bar results-filter">
-  <input type="search" class="filter-items" placeholder="{{ find_label|default('Find…') }}" aria-label="{{ find_label|default('Find') }}">
+  {% call filter_bar('#folder-items', filter_one, filter_many, items='details.item-box', boxes='details.sub-box, details.month-box', id='results-filter') %}
   <label class="small muted">Show
     <select class="state-filter" aria-label="Show which results">
       <option value="all">Everything</option>
       <option value="review">Waiting for grading</option>
       <option value="out">Not handed in yet</option>
     </select></label>
+  {% endcall %}
 </div>
 <p class="card empty small filter-none" hidden>Nothing here matches. Try “Everything”, or another folder.</p>

@@ -13,7 +13,7 @@
       <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th>Question</th><th>Answer</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
-        <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+        <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title or 'Untitled' }}”"></td>{% endif %}
           <td data-label="Title"><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
               data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong>
@@ -76,4 +76,4 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

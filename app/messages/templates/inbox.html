@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import avatar with context %}
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
@@ -42,16 +43,16 @@
   </div>
   <fieldset class="field" id="chosen" hidden>
     <legend>Students</legend>
+    {{ filter_bar('#chosen', 'student', 'students', items='li') }}
     <div class="btn-row small" style="margin-bottom:8px">
-      <input type="search" class="filter-list" placeholder="Filter…" aria-label="Filter students" style="max-width:200px">
       <button type="button" class="btn btn-secondary btn-sm" data-set="1" title="Check every student shown in the list below">Check all</button>
-      <button type="button" class="btn btn-secondary btn-sm" data-set="0" title="Uncheck every student shown in the list below">Clear</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-set="0" title="Uncheck every student shown in the list below">Uncheck all</button>
     </div>
     {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
       {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}" title="Check everyone in {{ uf.path }} and the folders inside it">📁 {{ uf.path }}</button>{% endfor %}</div>{% endif %}
     <ul class="choice-list" style="max-height:240px;overflow:auto">
       {% for r in rows %}
-        <li><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.shown_name }}</label></li>
+        <li data-name="{{ r.student.username|lower }} {{ (r.student.nickname or '')|lower }}"><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.shown_name }}</label></li>
       {% endfor %}
     </ul>
   </fieldset>
@@ -143,10 +144,6 @@
   }
   to.addEventListener('change', show); show();
   var items = chosen.querySelectorAll('li');
-  chosen.querySelector('.filter-list').addEventListener('input', function () {
-    var q = this.value.trim().toLowerCase();
-    items.forEach(function (li) { li.hidden = q && li.textContent.toLowerCase().indexOf(q) === -1; });
-  });
   //"Check a folder": checks everyone in it (and in the folders inside it)
   chosen.querySelectorAll('[data-ids]').forEach(function (b) {
     b.addEventListener('click', function () {

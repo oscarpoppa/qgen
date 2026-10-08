@@ -16,7 +16,7 @@
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
-        <tr data-item="{{ item.id }}" data-box="quiz:{{ item.id }}"{% if show and show == item.id|string %} data-show{% endif %}>
+        <tr data-item="{{ item.id }}" data-box="quiz:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title }}”"></td>{% endif %}
           <td data-label="Quiz"><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
               data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title }}</strong>
@@ -94,4 +94,4 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/filter.js') }}"></script><script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

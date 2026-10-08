@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
@@ -131,7 +132,7 @@
 <div class="student-single">{{ student_box(ulst[0]) }}</div>
 {% else %}
 {% call folders_page(fk) %}
-  {% include "_results_filter.html" %}
+  {% set filter_one, filter_many = 'student', 'students' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
     {% for item in shown %}{{ student_box(item) }}{% endfor %}

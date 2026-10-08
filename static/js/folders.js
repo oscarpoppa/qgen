@@ -136,65 +136,29 @@
     }
   });
 
-  //"Find a quiz" on My quizzes: hides the quiz boxes whose title doesn't match (then the
-  //same as a search below)
-  var findCards = document.querySelector('input.filter-cards');
-  if (findCards) findCards.addEventListener('input', function () {
-    var q = findCards.value.trim().toLowerCase();
-    document.querySelectorAll('.folder-main details.quiz-card').forEach(function (c) {
-      var title = (c.querySelector('h2') || c).textContent.toLowerCase();
-      c.hidden = !!q && title.indexOf(q) === -1;
-    });
-    findCards.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true }));
-  });
-
-  //the results pages: a box per student (or quiz). "Find…" matches a box's name or a row;
-  //"Show" keeps only the rows waiting for grading, or not handed in yet (tr[data-state])
-  var searching = null;
+  //the results pages: a box per student (or quiz). The filter bar (static/js/filter.js) matches
+  //a box's name or a row in it; "Show" keeps only the rows waiting for grading, or not handed
+  //in yet (tr[data-state]). Boxes it opened go back as they were when it's cleared.
+  var resultsBar = document.getElementById('results-filter');
   var itemBoxes = Array.prototype.slice.call(document.querySelectorAll('.folder-main details.item-box'));
-  var findItems = document.querySelector('input.filter-items'), stateFilter = document.querySelector('select.state-filter');
-  function filterItems() {
-    var q = findItems ? findItems.value.trim().toLowerCase() : '', st = stateFilter ? stateFilter.value : 'all';
+  if (resultsBar) resultsBar.qgenFilter = function (q) {
+    var stateFilter = resultsBar.querySelector('select.state-filter'), st = stateFilter ? stateFilter.value : 'all';
+    var active = !!q || st !== 'all';
     itemBoxes.forEach(function (d) {
       var named = !q || (d.dataset.name || '').indexOf(q) !== -1, rows = d.querySelectorAll('tr[data-state]'), shown = 0;
       rows.forEach(function (r) {
-        var ok = (st === 'all' || r.dataset.state === st) && (named || r.textContent.toLowerCase().indexOf(q) !== -1);
+        var ok = (st === 'all' || r.dataset.state === st) && (named || (r.dataset.name || r.textContent).toLowerCase().indexOf(q) !== -1);
         r.hidden = !ok;
         if (ok) shown++;
       });
       d.hidden = rows.length ? !shown : !(named && st === 'all');
-      if ((q || st !== 'all') && !d.hidden) d.open = true;
+      if (active && !d.hidden) d.open = true;
+      else if (!active) restore(d);
     });
-    document.dispatchEvent(new CustomEvent('qgen-filtered', { detail: { active: !!q || st !== 'all' } }));
     var none = document.querySelector('.filter-none');
     if (none) none.hidden = itemBoxes.some(function (d) { return !d.hidden; });
-  }
-  if (findItems) findItems.addEventListener('input', filterItems);
-  if (stateFilter) stateFilter.addEventListener('change', filterItems);
-
-  //searching (filter.js hides the rows that don't match): folder boxes with a match open,
-  //the others hide; clearing the search puts them back as they were
-  if (typeof searching === 'undefined') searching = null;
-  //what a search opens and hides: folder boxes, months, Done
-  function boxes() { return Array.prototype.slice.call(document.querySelectorAll('.folder-main details.sub-box, .folder-main details.month-box')); }
-  document.addEventListener('qgen-filtered', function (e) {
-    var q = e.detail && 'active' in e.detail ? e.detail.active : (e.target.value || '').trim();
-    if (q) {
-      if (!searching) searching = boxes().map(function (d) { return d.open; });
-      boxes().forEach(function (d) { d.hidden = false; });
-      boxes().reverse().forEach(function (d) {
-        var hit = Array.prototype.some.call(d.querySelectorAll('tbody tr, details.quiz-card, details.item-box'), function (r) {
-          return !r.hidden && !r.closest('[hidden]');
-        });
-        d.hidden = !hit;
-        if (hit) d.open = true;
-      });
-    } else if (searching) {
-      boxes().forEach(function (d, i) { d.hidden = false; d.open = searching[i]; });
-      itemBoxes.forEach(restore);
-      searching = null;
-    }
-  });
+    return itemBoxes.filter(function (d) { return !d.hidden; }).length;
+  };
 
   //just saved (?show=): the folder box it's in opens, and it's shown
   var saved = document.querySelector('.folder-main tr[data-show]');

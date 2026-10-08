@@ -2,8 +2,6 @@
  * - each container opens, folds and is remembered like every box (static/js/boxes.js)
  * - an item in several subjects is in several containers: checking one copy checks them all
  * - each container's heading says how many in it are checked
- * - searching opens the containers with matches and hides the rest; clearing the
- *   search puts them back as they were
  * - after saving, the saved item's containers open and it is scrolled to (data-show)
  * Also: a select[data-autosubmit] sends its form when changed (the Archive page). */
 (function () {
@@ -44,8 +42,6 @@
   //each box opens, folds and is remembered like every box (static/js/boxes.js)
   //the quiz editor's folder boxes (folders inside folders), or a results page's boxes
   var boxes = Array.prototype.slice.call(wrap.querySelectorAll('details.sub-box, details.subject-box'));
-  var searching = false;
-  function restore(b) { if (window.qgenBoxes) window.qgenBoxes.restore(b); }
 
   //checkboxes: list pages use name="items", the builder uses class="pick"
   var ticks = Array.prototype.slice.call(wrap.querySelectorAll('input[name="items"], input.pick'));
@@ -81,22 +77,6 @@
     if (!ticks.some(function (t) { return t.checked; })) {
       e.preventDefault();
       if (count) { count.textContent = 'Check at least one first'; count.classList.add('error'); }
-    }
-  });
-
-  //search (filter.js hides rows, then tells us)
-  document.addEventListener('qgen-filtered', function (e) {
-    var q = (e.target.value || '').trim();
-    if (q) {
-      searching = true;
-      boxes.forEach(function (b) {
-        var hit = Array.prototype.some.call(b.querySelectorAll('tbody tr'), function (r) { return !r.hidden; });
-        b.hidden = !hit;
-        b.open = hit;
-      });
-    } else if (searching) {
-      searching = false;
-      boxes.forEach(function (b) { b.hidden = false; restore(b); });
     }
   });
 

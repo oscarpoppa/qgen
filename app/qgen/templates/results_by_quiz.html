@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_results.html" import result_cells with context %}
@@ -22,13 +23,13 @@
     {% if q.paper and q.rows %}<p class="small box-links"><a href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">🖨 Print paper pages</a></p>{% endif %}
     {% if q.rows %}
       {# a long class: find a student in this quiz #}
-      {% if q.students > 8 %}<input type="search" class="filter" data-filter="#quiz-{{ vq.id }}" placeholder="Find a student…" aria-label="Find a student in {{ vq.title }}">{% endif %}
+      {% if q.students > 8 %}{{ filter_bar('#quiz-' ~ vq.id, 'student', 'students', compact=true) }}{% endif %}
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
           <tbody>
           {% for student, g in q.rows %}
-            <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
+            <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
               <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="See all of {{ student.shown_name }}'s quizzes, tries and scores">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>
@@ -58,7 +59,7 @@
 <div class="subject-boxes">{{ quiz_box(quizzes[0]) }}</div>
 {% else %}
 {% call folders_page(fk) %}
-  {% include "_results_filter.html" %}
+  {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
     {% for q in quizzes %}{{ quiz_box(q) }}{% endfor %}
@@ -69,6 +70,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ asset('js/filter.js') }}"></script>
 {% if single %}<script src="{{ asset('js/subjects.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
 {% endblock %}

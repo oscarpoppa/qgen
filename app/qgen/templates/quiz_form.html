@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import field, check, image_drop %}
 {% from "_subjects.html" import subject_checks, subject_labels, pick_folder_box with context %}
@@ -13,7 +14,7 @@
     <tbody>
     {% for p in items %}
       {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
-      <tr>
+      <tr data-item="{{ p.id }}" data-name="{{ (p.title or 'untitled')|lower }}">
         <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
         <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
           <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
@@ -83,7 +84,7 @@
           <span class="level-buttons">
           <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#all-problems" aria-label="Expand all problem folders" title="Open every problem folder">Expand all</button>
           <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#all-problems" aria-label="Collapse all problem folders" title="Close every problem folder">Collapse all</button></span>
-          <input type="search" class="filter" data-filter="#all-problems" placeholder="Search all problems…" aria-label="Search all problems">
+          {{ filter_bar('#all-problems', 'problem', 'problems', boxes='details.sub-box, details.subject-box') }}
         </div>
         <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
         <div id="all-problems" class="subject-boxes builder-boxes">
@@ -134,7 +135,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ asset('js/filter.js') }}"></script>
 <script src="{{ asset('js/quiz_form.js') }}"></script>
 <script src="{{ asset('js/subjects.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>

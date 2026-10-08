@@ -1,8 +1,9 @@
+{% from "_macros.html" import filter_bar with context %}
 {# Above the Problems and Quizzes pages' lists: a search, and a bar for the checked rows
    (put them in a folder, or take them out). It stays at the top while scrolling. #}
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
 <div class="folder-tools-bar">
-  {% if total > 5 %}<input type="search" class="filter" data-filter="#folder-items" placeholder="Search {{ noun }}…" aria-label="Search {{ noun }}">{% endif %}
+  {% if total > 5 %}{{ filter_bar('#folder-items', 'problem' if kind == 'problems' else 'quiz', noun, boxes='details.sub-box, details.subject-box') }}{% endif %}
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">

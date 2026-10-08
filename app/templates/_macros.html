@@ -100,6 +100,22 @@
   <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See everyone's results for this quiz">“{{ vq.title }}”</a>
 {%- endmacro %}
 
+{# The filter bar, the same on every page (static/js/filter.js): a "Filter by name…" box, how
+   many match ("12 problems") and Clear. target: the list it narrows; items: what in it counts
+   as one thing; boxes: its folder boxes (open where there's a match); one/many: what they're
+   called. compact: just the box (inside a small box). Put more in the bar with a call block
+   (a results page's "Show"). Hidden until its script runs. #}
+{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none) -%}
+<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %} hidden>
+  <input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter {{ many }} by name" title="Type part of a name to show only the {{ many }} that match">
+  {%- if caller %}{{ caller() }}{% endif %}
+  {%- if not compact %}
+  <span class="pick-count muted" data-filter-count aria-live="polite"></span>
+  <button type="button" class="btn btn-secondary btn-sm" data-filter-clear title="Show all the {{ many }} again">Clear</button>
+  {%- endif %}
+</div>
+{%- endmacro %}
+
 {% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none) %}
   <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ label }}</button>

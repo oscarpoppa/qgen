@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field %}
 
@@ -41,11 +42,7 @@
   </div>
   <script type="application/json" id="quiz-subjects">{{ quiz_subjects|tojson }}</script>
   {# a box under the Quiz label narrows the menu by name (within the folder chosen above) #}
-  {% set quiz_filter %}<div class="btn-row small pick-bar" id="quiz-filter-bar" hidden>
-    <input type="search" class="filter-list" id="quiz-filter" placeholder="Filter by name…" aria-label="Filter quizzes by name" title="Type part of a quiz's name to narrow the Quiz menu">
-    <span class="pick-count muted" id="quiz-filter-count" aria-live="polite"></span>
-    <button type="button" class="btn btn-secondary btn-sm" id="quiz-filter-clear" title="Show every quiz in the folder again">Clear</button>
-  </div>{% endset %}
+  {% set quiz_filter %}{{ filter_bar('#vquiz', 'quiz', 'quizzes', items='option', id='quiz-filter-bar') }}{% endset %}
   {{ field(form.vquiz, above=quiz_filter) }}
   {# the people, in the Users page's folders (which open and close), then those in no folder,
      then everyone. Only the boxes under "All users" are sent; the ones in folders follow
@@ -107,7 +104,7 @@
     var subs = (bySubject[id] || []).map(String);
     return v === 'all' || (v === 'none' ? subs.length === 0 : subs.indexOf(v) !== -1);
   }
-  var filter = document.getElementById('quiz-filter');
+  var bar = document.getElementById('quiz-filter-bar'), filter = bar && bar.querySelector('input[type=search]');
   function rebuild() {
     var v = subject.value, keep = quiz.value, words = filter ? filter.value.trim().toLowerCase() : '';
     quiz.innerHTML = '';
@@ -121,20 +118,13 @@
       quiz.add(none);
       none.selected = true;
     }
-    var shown = Array.prototype.filter.call(quiz.options, function (o) { return o.value; }).length;
-    var count = document.getElementById('quiz-filter-count');
-    if (count) count.textContent = shown + (shown === 1 ? ' quiz' : ' quizzes');
+    return Array.prototype.filter.call(quiz.options, function (o) { return o.value; }).length;
   }
   var field = document.getElementById('assign-subject-field');
   if ('keepQuiz' in field.dataset && quiz.value && !fits(quiz.value, subject.value)) subject.value = 'all';
-  subject.addEventListener('change', rebuild);
-  if (filter) {
-    document.getElementById('quiz-filter-bar').hidden = false;
-    filter.addEventListener('input', rebuild);
-    document.getElementById('quiz-filter-clear').addEventListener('click', function () { filter.value = ''; rebuild(); filter.focus(); });
-    //Enter in the box doesn't send the form
-    filter.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
-  }
+  //the filter bar (static/js/filter.js, which runs after this) narrows the menu this way
+  if (bar) bar.qgenFilter = rebuild;
+  subject.addEventListener('change', function () { if (bar && bar.qgenRun) bar.qgenRun(); else rebuild(); });
   field.hidden = false;
   rebuild();
 })();

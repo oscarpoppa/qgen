@@ -236,7 +236,9 @@ legend { font-weight: 700; padding: 0 6px; }
 /* radio / checkbox answer lists */
 /* Assign: people in folders that open and close, each with a box that checks them all */
 .pick-bar { align-items: center; margin-bottom: 8px; }
-.pick-bar .filter-list { flex: 1 1 180px; max-width: 260px; margin: 0; }
+/* every filter box is the same width (narrower only when the window is) */
+.filter-list { flex: 0 1 260px; width: 260px; max-width: 100%; margin: 0; }
+.filter-bar { margin-bottom: 8px; }
 .pick-count { margin-left: auto; }
 /* Users page: when people are checked, a bar to give them a quiz */
 .pick-bar-users { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
@@ -307,7 +309,6 @@ td.actions .btn { margin-left: 4px; }
   .stack td.actions .btn { margin: 4px 4px 0 0; }
 }
 
-.filter { max-width: 320px; margin-bottom: 12px; }
 
 /* ---------- quiz & transcript ---------- */
 
@@ -958,7 +959,6 @@ th.tick-col, td.tick-col { width: 36px; }
 .subject-check-list { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .subject-check { display: inline-flex; align-items: center; gap: 6px; font-weight: normal; }
 .builder-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
-.builder-filters .filter { margin-bottom: 0; }
 .archived-banner .btn-row form { margin: 0; }
 @media (max-width: 640px) {
   .subject-tools { margin-left: 0; }
@@ -966,7 +966,6 @@ th.tick-col, td.tick-col { width: 36px; }
 }
 /* subject containers */
 .subject-bar > details.subject-new { flex-basis: auto; }
-.subject-bar .filter { margin: 0 0 0 auto; }
 .subject-boxes { display: flex; flex-direction: column; gap: 12px; }
 /* never squeezed by the column they sit in (that cut containers off in the quiz builder) */
 .subject-box { padding: 0; overflow: hidden; flex-shrink: 0; }
@@ -1172,7 +1171,6 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 /* the Problems and Quizzes pages: search and the bar for checked rows, kept in view */
 .folder-tools-bar { position: sticky; top: var(--topbar-h, 56px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
   gap: 8px 16px; padding: 8px 0; margin-bottom: 8px; background: var(--bg); }
-.folder-tools-bar .filter { margin: 0; max-width: 18rem; }
 .folder-tools-bar .file-bar { margin: 0; }
 .drag-item { cursor: grab; }
 details.problem-list > summary { cursor: pointer; color: var(--muted); }
