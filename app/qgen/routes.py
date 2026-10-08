@@ -141,7 +141,7 @@ def problem_results(vpid):
                         if r['cp'].credit is not None and r['cp'].credit < 1 and (r['item'].submitted or '').strip())
         common = [(answer, n) for answer, n in wrong.most_common(5) if n > 1]
     return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, summary=summary, common=common,
-                           title='History: {}'.format(vp.title or 'Untitled'))
+                           title='Problem history: {}'.format(vp.title or 'Untitled'))
 
 #route to view a problem as students get it (three sample versions), without editing
 @qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
@@ -781,7 +781,7 @@ def quiz_results_page(vqid):
     if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.results_by_quiz'))
     return render_template('results_by_quiz.html', quizzes=quiz_results([vq]), rules=RETAKE_RULES, single=True,
-                           title='Results: {}'.format(vq.title))
+                           title='Quiz results: {}'.format(vq.title))
 
 def quiz_results(quizzes):
     """[{'vquiz', 'rows': [(student, group from attempts_by_quiz)] by name, 'students', 'average'

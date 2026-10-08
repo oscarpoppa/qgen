@@ -848,7 +848,7 @@ def test_results_by_quiz(app_db):
     assert 'not started' in box and '%</span>' in box and 'Details' in box and 'Archive' in box
     assert 'average 0%' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Results: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
+    assert 'Quiz results: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
     assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Results by quiz
     # where it's linked from
     assert '/quiz/results' in teacher.get('/dashboard').data.decode()

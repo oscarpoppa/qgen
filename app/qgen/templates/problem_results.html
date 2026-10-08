@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, box_label, count_of, avatar, filter_bar with context %}
+{% from "_macros.html" import back_button, box_label, count_of, avatar, filter_bar, expand_collapse with context %}
 {# One problem's History: every handed-in answer to it, in whatever quiz it was in, by quiz
    (like a quiz's Results, for a problem). #}
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
   <div class="actions">
+    {{ expand_collapse('#problem-results', 'quizzes') }}
     <a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of {{ vp.title or 'Untitled' }}">View problem</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit</a>
     {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}

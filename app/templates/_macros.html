@@ -100,6 +100,14 @@
   <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="See everyone's results for this quiz">“{{ vq.title }}”</a>
 {%- endmacro %}
 
+{# Expand all / Collapse all for a list of boxes that fold (target: what holds them; what: the
+   boxes, in words). Shown only when there are two or more to fold (static/js/boxes.js). #}
+{% macro expand_collapse(target, what) -%}
+<span class="level-buttons">
+  <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="{{ target }}" aria-label="Expand all {{ what }}" title="Open every one of the {{ what }}">Expand all</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="{{ target }}" aria-label="Collapse all {{ what }}" title="Fold every one of the {{ what }} down to its heading">Collapse all</button></span>
+{%- endmacro %}
+
 {# The filter bar, the same on every page (static/js/filter.js): a "Filter by name…" box, how
    many match ("12 problems") and Clear. target: the list it narrows; items: what in it counts
    as one thing; boxes: its folder boxes (open where there's a match); one/many: what they're

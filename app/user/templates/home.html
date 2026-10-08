@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import expand_collapse with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_awards.html" import award_list %}
 {# a student's Home: what's waiting for them, and the awards they've earned. It follows
@@ -8,7 +9,8 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.shown_name }}!</h1>
   <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a></div></div>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a>
+    {{ expand_collapse('#home-boxes', 'boxes') }}</div></div>
 
 {% set days = tuning.get('due_soon_days') %}
 <div class="dash-counters home-counters" aria-label="Your quizzes">
@@ -22,7 +24,7 @@
     <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
 </div>
 
-<div class="dash-grid">
+<div class="dash-grid" id="home-boxes">
   {# each box folds away (remembered in this browser), like the Dashboard's #}
   <details class="box card dash-card" id="waiting" data-box="waiting" open>
     <summary class="dash-head">{{ box_label('⏳', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>

@@ -195,7 +195,11 @@ def test_problem_history(app_db):
     assert 'href="/quiz/problem-results/{}"'.format(vp.id) in page
     page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
     sensible(page, 'problem history')
-    assert '<h1>History: Capital</h1>' in page and '>History</a>' in teacher.get('/quiz/listvp').data.decode()
+    assert '<h1>Problem history: Capital</h1>' in page and '>History</a>' in teacher.get('/quiz/listvp').data.decode()
+    assert 'data-level="open" data-level-of="#problem-results"' in page  # Expand all / Collapse all over its quizzes
+    assert '<h1>Quiz results: Geo 1</h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
+    home = login(app, 'sam').get('/home').data.decode()
+    assert 'data-level-of="#home-boxes"' in home and 'id="home-boxes"' in home
     assert '4 answers from 2 students' in page and 'average 50%' in page and '2 fully right' in page
     assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="') == 4
     assert 'Most common wrong answers' in page and '<strong>Lyon</strong> <span class="muted">(2 times)</span>' in page

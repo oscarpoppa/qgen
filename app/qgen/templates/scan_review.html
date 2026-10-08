@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, post_button, box_label, count_of with context %}
+{% from "_macros.html" import back_button, post_button, box_label, count_of, expand_collapse with context %}
 {# The draft of a scan (app/qgen/scan.py): each page beside its picture, with its quiz
    settings, crop boxes and drafted problems. Nothing is saved until Save. #}
 
@@ -102,6 +102,7 @@
 <div class="page-head">
   <h1>Scan: {{ job.name }}</h1>
   <div class="actions">
+    {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
     {{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}
     {{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}
   </div>
