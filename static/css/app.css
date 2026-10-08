@@ -1503,10 +1503,14 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .paper-sheet-head { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 10px; }
 .paper-sheet-img { display: block; max-width: 100%; height: auto; margin: 8px auto 0; }
 @media print {
-  .paper-sheet { border: 0; border-radius: 0; padding: 0; margin: 0; break-after: page; }
+  /* each copy fills its sheet: small margins, the page as big as fits under the name line */
+  .paper-sheet { page: paper; border: 0; border-radius: 0; padding: 0; margin: 0; break-after: page; }
   .paper-sheet:last-child { break-after: auto; }
-  .paper-sheet-img { max-height: 88vh; object-fit: contain; }
+  .paper-sheet-head { margin-bottom: 4px; padding-bottom: 4px; }
+  .paper-sheet .qtext { margin: 0 0 4px; }
+  .paper-sheet-img { width: 100%; height: auto; max-height: calc(100vh - 0.9in); object-fit: contain; margin: 0 auto; }
 }
+@page paper { margin: 0.3in; }
 
 /* Scan workbook pages: the draft (scan_review.html): the page with its crop boxes on the
    left, its quiz and drafted problems on the right; stacked on a phone */
