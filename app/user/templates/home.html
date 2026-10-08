@@ -29,7 +29,7 @@
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
-        <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+        <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>“{{ cq.vquiz.title }}”</strong></span>
           {% if cq.status == 'started' %}<span class="badge badge-accent">Started</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">🔒 Start</button>

@@ -410,8 +410,9 @@ def assign():
         for cq in created:
             current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, cq.taker.username))
         if created:
-            flash(Markup('Assigned “{}” to {}. <a href="{}">See the results →</a>').format(
-                vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
+            flash(Markup('Assigned “{}” to {}. <a href="{}">View the quiz</a> · <a href="{}">See its results →</a>').format(
+                vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.view_vquiz', vqid=vquiz.id),
+                url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
         #back where they came from (a student page, a quiz's results...), else ready for the next one
         then = next_arg(url_for('qgen.assign'))
         if created and paper_problems(vquiz):

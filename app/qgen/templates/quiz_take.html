@@ -54,10 +54,10 @@
         {% elif it.qtype == 'numeric' and not preview %}
           {# math keys for a number answer: worked out when graded (2√3, π/2, 3^2) #}
           <div class="keypad" role="group" aria-label="Math keys for question {{ it.num }}">
-            {% for key, title, tip in [('√', 'Square root', 'Type a square root'), ('π', 'Pi', 'Type pi (about 3.14)'), ('^', 'Power', 'Type a power, like 3^2 for 3 squared'), ('(', 'Open bracket', 'Type a left parenthesis'), (')', 'Close bracket', 'Type a right parenthesis'), ('/', 'Divided by (fraction)', 'Type a divide sign, or a fraction like 1/2'), (',', 'Comma (several answers)', 'Type a comma between answers')] %}
+            {% for key, title, tip in [('√', 'Square root', 'Type a square root'), ('π', 'Pi', 'Type pi (about 3.14)'), ('×', 'Times', 'Type a times sign, like 6 × 2'), ('^', 'Power', 'Type a power, like 3^2 for 3 squared'), ('(', 'Open bracket', 'Type a left parenthesis'), (')', 'Close bracket', 'Type a right parenthesis'), ('/', 'Divided by (fraction)', 'Type a divide sign, or a fraction like 1/2'), (',', 'Comma (several answers)', 'Type a comma between answers')] %}
               <button type="button" class="key" data-ins="{{ key }}" title="{{ tip }}" aria-label="{{ title }}">{{ key }}</button>
             {% endfor %}
-            <span class="small muted">You can type math like 2√3, π/2 or 3^2.</span>
+            <span class="small muted">You can type math like 6×2, 2√3, π/2 or 3^2.</span>
           </div>
         {% endif %}
       {% endif %}

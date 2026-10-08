@@ -118,14 +118,15 @@ def _close_enough(got, want, precision):
 
 
 #a student's answer with math in it (2√3, π/2, 2^0.5, (1+√5)/2), not just plain numbers
-_MATHY = re.compile(r'[√π^*()]|sqrt|pi', re.I)
+_MATHY = re.compile(r'[√π^*()×·÷]|sqrt|pi|\d\s*x\s*\d', re.I)
 _REAL_MATH = re.compile(r'[√π^]|sqrt|pi', re.I)
 
 
 def _student_expr(part):
     """A student's way of writing math -> a formula the calculator reads:
-    2√3 -> 2*sqrt(3), √(x) -> sqrt(x), 2π -> 2*pi, (a)(b) -> (a)*(b)."""
+    2√3 -> 2*sqrt(3), √(x) -> sqrt(x), 2π -> 2*pi, (a)(b) -> (a)*(b), 6×2 or 6x2 -> 6*2."""
     e = part.strip().replace('−', '-').replace('π', 'pi').replace('√', 'sqrt')
+    e = re.sub(r'(?<=\d)\s*[xX]\s*(?=\d)', '*', e)              # 6x2 (a times sign typed as x)
     e = re.sub(r'sqrt\s*(\d+(?:\.\d+)?|pi)', r'sqrt(\1)', e)    # √3 -> sqrt(3)
     e = re.sub(r'(\d|\)|pi)\s*(sqrt|pi|\()', r'\1*\2', e)       # 2√3, 2π, 2(…), )(
     e = re.sub(r'(\)|pi)\s*(\d)', r'\1*\2', e)                   # (…)2, π2

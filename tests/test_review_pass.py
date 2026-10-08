@@ -238,7 +238,7 @@ def test_assign_goes_back_to_the_student_page(app_db):
     r = teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')], 'next': '/quiz/listuser/{}'.format(ids('sam'))})
     assert r.headers['Location'] == '/quiz/listuser/{}'.format(ids('sam'))
     r = teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('kim')]}, follow_redirects=True)
-    assert 'See the results →' in r.data.decode()
+    assert 'See its results →' in r.data.decode()
 
 
 def test_grade_next(app_db):
@@ -866,10 +866,12 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     page = sam.get('/mypage?folder=main').data.decode()
     # in the side list, with a badge counting what's new
     assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 new quiz">1 new</span>' in page
-    # the folder it's filed in says so too (it may be out of sight in another folder)
-    assert '<span class="badge badge-warn side-flag" title="1 new quiz">1</span>' in page
+    # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
+    assert '<span class="side-dot dot-new" title="1 new quiz" role="img" aria-label="1 new quiz"></span>' in page
     # and Not in a folder has the started one
-    assert '<span class="badge badge-accent side-flag" title="1 quiz in progress">1</span>' in page
+    assert '<span class="side-dot dot-started" title="1 quiz in progress" role="img" aria-label="1 quiz in progress"></span>' in page
+    # only the automatic folders carry full badges; the others have dots
+    assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
     assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Fresh']
     assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too
@@ -1104,8 +1106,9 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
     for f in (top, inner):
         row = side[side.index('data-folder="{}"'.format(f.id)):]
         row = row[:row.index('</div>')]
-        assert 'title="1 quiz in progress">1</span>' in row and 'title="1 quiz due soon">1</span>' in row
-        assert 'title="1 new quiz">1</span>' in row  # Soon isn't started yet
+        assert 'dot-started" title="1 quiz in progress"' in row and 'dot-due" title="1 quiz due soon"' in row
+        assert 'dot-new" title="1 new quiz"' in row  # Soon isn't started yet
+        assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
     cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
     begun_head = cards[cards.index('data-quiz="{}"'.format(begun.id)):]
     assert '>In progress</span>' in begun_head[:begun_head.index('</summary>')]

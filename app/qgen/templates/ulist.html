@@ -11,7 +11,8 @@
 {# one quiz on a student page: its attempts and the score that counts #}
 {% macro result_box(g, item) %}
         {% set latest = g.latest %}
-        <details class="box card result-box" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
+        {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'equalto', 'started')|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
+        <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
             {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's results for this quiz">Quiz results</a>

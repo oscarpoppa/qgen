@@ -179,6 +179,10 @@ def test_students_may_type_math_answers():
     qt = get_qtype('numeric')
     assert qt.grade('2√3', '3.4641', {}, {}) == 1.0 and qt.grade('√-4', '-4', {}, {}) == 0.0
     assert qt.grade('3.46', '3.4641', {}, {}) == 1.0 and qt.grade('3/4', '0.75', {}, {}) == 1.0
+    # a times sign from the math keys (×), or typed as x, ·, ÷ between numbers
+    for typed in ('6×2', '6 × 2', '6x2', '6 X 2', '4·3', '24÷2', '3×(2+2)'):
+        assert qt.grade(typed, '12', {}, {}) == 1.0, typed
+    assert qt.grade('6×3', '12', {}, {}) == 0.0
     # drawn as real math (a full root sign), built from the formula, not the typed text
     assert qt.show_submitted('2√3', {}) == r'\( 2 \sqrt{3} \)  (= 3.4641)' and qt.show_submitted('3/4', {}) == '3/4'
     from app.qgen.qtypes import student_math
@@ -215,7 +219,7 @@ def test_exact_form_of_a_numeric_answer(app_db):
     assert cp.conc_opts['display'] == r'\( \sqrt{%d} \)' % n
     # the student types math with the keypad's symbols; it's worked out and graded
     page = take_page(login(app, 'sam'), cq.id).data.decode()
-    assert 'class="keypad"' in page and 'data-ins="√"' in page
+    assert 'class="keypad"' in page and 'data-ins="√"' in page and 'data-ins="×"' in page
     with app.test_request_context():
         S.submit(cq, {1: '√{}'.format(n)})
     assert cq.score == 100

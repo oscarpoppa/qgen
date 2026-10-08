@@ -127,7 +127,7 @@
   </div>
   {% endif %}
 
-  <div class="card">
+  <div class="card" id="question-card">
     <div class="card-head"><span class="step-num" aria-hidden="true">1</span><h2>The question</h2></div>
     <div class="form-row">
       {{ field(form.qtype, tip_body=tip_qtype) }}
@@ -143,7 +143,8 @@
     <div class="name-chips" data-default="question" hidden><span class="muted">Insert a value:</span></div>
   </div>
 
-  <div class="card">
+  {# not for Paper only: the page is the same for everyone #}
+  <div class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay">
     <div class="card-head"><span class="step-num" aria-hidden="true">2</span><h2>Random values</h2><span class="muted small">picked separately for each student</span>{{ tip('random values', tip_values) }}</div>
     <div class="values-guide small muted">Help with: <span>Name{{ tip('value names', tip_name) }}</span> <span>Kind{{ tip('kinds of value', tip_kind) }}</span> <span>Settings{{ tip('value settings', tip_settings) }}</span></div>
     <div class="table-wrap stack values-table">
@@ -200,9 +201,10 @@
     <div class="t-essay">{{ field(form.grading_notes, 'Shown to you next to the student’s answer while grading.', attrs={'rows': 3}, tip_body=tip_notes) }}</div>
   </div>
 
-  <div class="card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2>Pictures</h2><span class="muted small">optional</span>{{ tip('pictures', tip_pictures) }}</div>
-    <p class="muted small">Add one picture, or several: each student is shown one of them at random.</p>
+  {# for Paper only, problem_form.js moves this up under the question as "The page to print" #}
+  <div class="card" id="pictures-card">
+    <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2 data-paper="📄 The page to print">Pictures</h2><span class="muted small" data-paper="needed">optional</span>{{ tip('pictures', tip_pictures) }}</div>
+    <p class="muted small" data-paper="The page students draw or write on (a dot-to-dot, a coloring page…): upload a scan or photo, or choose one already uploaded. It’s printed for each student, with their name on top, when you assign the quiz.">Add one picture, or several: each student is shown one of them at random.</p>
     <div id="images-body">
       {% for row in form.images %}{{ image_row(row) }}{% endfor %}
     </div>

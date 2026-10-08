@@ -25,7 +25,7 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert '">Grading' in teach.get('/dashboard').data.decode()
     # the student page: each quiz a box that folds
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<details class="box card result-box" data-list data-quiz-box="{}-{}">'.format(ids('sam'), vq.id) in page
+    assert 'class="box card result-box quiz-is-new" data-list data-quiz-box="{}-{}">'.format(ids('sam'), vq.id) in page
     assert 'data-level="open" data-level-of="#student-' in page and '<span class="badge">not started</span>' in page
     # Results by student (everyone) keeps its table
     assert 'class="card result-box"' not in teach.get('/quiz/listuser').data.decode()

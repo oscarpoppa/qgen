@@ -395,7 +395,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
         second = S.retake(first)
     state = lambda: sam.get('/messages/poll?watch=mine').get_json()['watch']
     home = sam.get('/mypage').data.decode()
-    assert home.count('class="box card quiz-card"') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
+    assert home.count('class="box card quiz-card') == 1 and 'data-attempts="{},{}"'.format(first.id, second.id) in home
     s0 = state()
 
     # the teacher deletes one attempt: the box stays with the other, and the page is told
@@ -410,7 +410,7 @@ def test_deleting_one_attempt_updates_the_students_quiz_box(app_db):
     teacher.post('/quiz/delcq/{}'.format(first.id))
     assert state() != s1
     home = sam.get('/mypage').data.decode()
-    assert 'class="box card quiz-card"' not in home and 'Boxed' not in home
+    assert 'class="box card quiz-card' not in home and 'Boxed' not in home
     assert not Message.query.filter(Message.link == '/quiz/take/{}'.format(first.id)).count()
     # the quiz itself still exists for the teacher, and deleting an assigned quiz is still refused
     assert VQuiz.query.get(vq.id) is not None

@@ -15,6 +15,7 @@
   --bad: #b3261e;
   --bad-soft: #fbe7e5;
   --warn: #8a5a00;
+  --new-edge: #c99a06;     /* a new quiz's box: gold */
   --warn-soft: #fdf1d9;
   --info-soft: #e6f0fb;
   --radius: 10px;
@@ -39,6 +40,7 @@
     --bad: #f08a80;
     --bad-soft: #3a1c1a;
     --warn: #e6b450;
+    --new-edge: #e3b341;
     --warn-soft: #3a2e14;
     --info-soft: #1c2a3d;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4);
@@ -389,7 +391,10 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .dropzone .dz-hint { color: var(--muted); font-size: .9rem; }
 .dz-actions { margin-top: 8px; }
 .dz-gallery { margin-top: 10px; max-height: 320px; overflow-y: auto; padding: 4px; }
-.dz-gallery .thumb { cursor: pointer; }
+.dz-gallery .thumb { cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  min-width: 0; height: auto; overflow: hidden; white-space: normal; font-weight: normal; }
+.dz-gallery .thumb img { display: block; max-width: 100%; width: auto; height: 90px; object-fit: contain; }
+.dz-gallery .thumb .name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dz-gallery .thumb:hover, .dz-gallery .thumb:focus-visible { border-color: var(--accent); }
 .dropzone.big { flex-direction: column; justify-content: center; text-align: center; min-height: 180px; }
 
@@ -1485,6 +1490,12 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 /* a folder's "needs the student" numbers (new, started, due soon), in those folders' colors */
 .side-flags { display: inline-flex; gap: 3px; flex: 0 0 auto; align-items: center; }
 .side-flag { min-width: 1.6em; text-align: center; padding: 1px 5px; font-size: .72rem; }
+/* a folder with something new / started / due inside: a small dot of that color (the New,
+   In progress and Due folders carry the full badge with the count) */
+.side-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.side-dot.dot-new { background: var(--warn); }
+.side-dot.dot-started { background: var(--accent); }
+.side-dot.dot-due { background: var(--bad); }
 .sub-head .side-flags { margin-left: 6px; }
 
 /* Paper only pages printed for each student (print_paper.html): one per sheet, name on top */
@@ -1546,3 +1557,9 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .scan-try { align-self: flex-start; margin-top: 4px; }
 .scan-actions { position: sticky; bottom: 0; z-index: 5; }
 .scan-progress-list { margin: 8px 0 0; padding-left: 1.4rem; }
+
+/* a quiz box with a quiz waiting: gold while it's new (not started), blue once it's in
+   progress (My quizzes, the teacher's student page, Home's Waiting for you) */
+.quiz-is-new { border-color: var(--new-edge) !important; box-shadow: inset 0 0 0 1px var(--new-edge); }
+.quiz-is-started { border-color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
+.dash-list > li.quiz-is-new, .dash-list > li.quiz-is-started { border: 1px solid; border-radius: 8px; padding-left: 8px; padding-right: 8px; margin: 4px 0; }

@@ -9,12 +9,35 @@
 
   /* ---------- show only what applies ---------- */
 
+  //Paper only: the Pictures card moves up under the question and becomes "The page to print"
+  var picCard = document.getElementById('pictures-card');
+  var picHome = picCard && picCard.nextElementSibling;
+  var questionBox = form.querySelector('[name=question]');
+  var questionHint = questionBox && questionBox.placeholder;
+  function showPaper(paper) {
+    if (!picCard) return;
+    var questionCard = document.getElementById('question-card');
+    if (paper && questionCard.nextElementSibling !== picCard) questionCard.after(picCard);
+    if (!paper && picHome && picCard.nextElementSibling !== picHome) picHome.before(picCard);
+    picCard.classList.toggle('paper-page', paper);
+    picCard.querySelectorAll('[data-paper]').forEach(function (el) {
+      if (!('plain' in el.dataset)) el.dataset.plain = el.textContent;
+      el.textContent = paper ? el.dataset.paper : el.dataset.plain;
+    });
+    var step = picCard.querySelector('.step-num');
+    if (step) step.hidden = paper;
+    if (questionBox) questionBox.placeholder = paper ? 'e.g. Connect the dots from 1 to 20.' : questionHint;
+    //a slot for the page, ready to fill
+    if (paper && !document.querySelector('#images-body .image-row')) document.getElementById('add-image').click();
+  }
+
   function showType() {
     var t = qtype.value;
     form.querySelectorAll('[class*="t-"]').forEach(function (el) {
       var types = Array.prototype.filter.call(el.classList, function (c) { return c.indexOf('t-') === 0; });
       if (types.length) el.hidden = types.indexOf('t-' + t) === -1;
     });
+    showPaper(t === 'paper');
   }
 
   //a plain-words line under each value row saying what its kind does

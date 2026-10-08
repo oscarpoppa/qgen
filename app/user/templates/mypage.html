@@ -42,7 +42,8 @@
     {# each quiz folds down to its title and score; the page remembers which are folded #}
     {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    <details class="box card quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
+    {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'equalto', 'started')|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
+    <details class="box card quiz-card {{ edge }}" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         {# how many tries are in this box #}
         {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'try', 'tries'), 'h2', g.vquiz.title) }}

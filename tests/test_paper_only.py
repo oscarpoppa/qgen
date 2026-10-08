@@ -32,6 +32,9 @@ def test_paper_only_needs_a_picture(app_db):
     # it's on the editor's list of question kinds, with its tip
     page = teacher.get('/quiz/makevprob').data.decode()
     assert 'value="paper"' in page and 'Paper only' in page
+    # for Paper only the Pictures card becomes "The page to print" (problem_form.js), and Random values hides
+    assert 'id="pictures-card"' in page and 'data-paper="📄 The page to print"' in page
+    assert 'class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay"' in page
 
 
 def test_take_grade_and_print(app_db):
@@ -81,6 +84,34 @@ def test_take_grade_and_print(app_db):
     assert cq.completed and abs(cq.score - 75) < 0.01
     page = s.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert 'Done on paper.' in page
+
+
+def test_assign_message_links_to_the_quiz_and_its_results(app_db):
+    app, db = app_db
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    vq, _ = _quiz(app, db, teacher, with_paper=False)
+    sam = User.query.filter_by(username='sam').one()
+    page = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]}, follow_redirects=True).data.decode()
+    assert '<a href="/quiz/viewvquiz/{}">View the quiz</a> · <a href="/quiz/results/{}">See its results →</a>'.format(vq.id, vq.id) in page
+
+
+def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    vq, _ = _quiz(app, db, teacher, with_paper=False)
+    sam = User.query.filter_by(username='sam').one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
+    s = login(app, 'sam')
+    assert 'quiz-card quiz-is-new' in s.get('/mypage').data.decode()
+    assert 'class="quiz-is-new"' in s.get('/home').data.decode()
+    assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    take_page(s, CQuiz.query.one().id)
+    assert 'quiz-card quiz-is-started' in s.get('/mypage').data.decode()
+    assert 'class="quiz-is-started"' in s.get('/home').data.decode()
+    assert 'result-box quiz-is-started' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
 
 
 def test_quiz_without_paper_redirects_as_before(app_db):
