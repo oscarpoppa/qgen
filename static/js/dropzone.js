@@ -37,7 +37,11 @@
     if (multiple) input.multiple = true;
 
     function show(file, url) {
-      if (hidden) hidden.value = file || '';
+      if (hidden && hidden.value !== (file || '')) {
+        hidden.value = file || '';
+        //so the page's Helper (and anything else watching the form) checks it again
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       if (preview) {
         if (url) { preview.src = url; preview.hidden = false; } else { preview.removeAttribute('src'); preview.hidden = true; }
       }

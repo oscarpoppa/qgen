@@ -29,6 +29,13 @@ def test_paper_only_needs_a_picture(app_db):
     teacher = login(app, 'teach')
     r = teacher.post('/quiz/makevprob', data=problem_form('paper', 'Color', 'Color the triangles red.'))
     assert r.status_code == 200 and b'needs its page in the picture section' in r.data
+    hints = teacher.post('/quiz/checkvprob', data=problem_form('paper', 'Color', '')).get_json()['hints']
+    assert hints[0]['level'] == 'error' and 'page to print' in hints[0]['text']
+    # just a picture to color, no question: fine
+    pic = _picture(teacher)
+    flower = problem_form('paper', 'Flower', '', images=[{'file': pic, 'label': ''}])
+    assert teacher.post('/quiz/checkvprob', data=flower).get_json()['hints'][0]['level'] == 'ok'
+    assert teacher.post('/quiz/makevprob', data=flower).status_code == 302
     # it's on the editor's list of question kinds, with its tip
     page = teacher.get('/quiz/makevprob').data.decode()
     assert 'value="paper"' in page and 'Paper only' in page

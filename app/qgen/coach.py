@@ -64,6 +64,11 @@ def problem_hints(qtype_key, question, answer, options):
     qt = get_qtype(qtype_key)
     question, answer = question or '', answer or ''
     hints = []
+    if qt.paper:
+        #the page is the problem: it only has to be there (the question is optional)
+        if not options.get('images'):
+            return [hint('error', 'Add the page to print: upload a scan or photo under “The page to print”, or choose one already uploaded.')]
+        return [hint('ok', 'Looks good. The page prints for each student when you assign the quiz.')]
     if not question.strip():
         return [hint('tip', 'Start by writing the question. Put a random value in square brackets, like [speed].')]
 

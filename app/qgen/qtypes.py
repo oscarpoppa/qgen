@@ -712,6 +712,12 @@ class PaperOnly(QType):
     answer_label = 'Answer key (optional, only you see it)'
     answer_help = 'Shown to you while grading.'
 
+    def validate(self, question, answer, options):
+        #the page may say it all (a flower to color): no question needed
+        if not (question or '').strip():
+            return self.validate_parts(answer, options, F.known_names(options.get('values') or []))
+        return super().validate(question, answer, options)
+
     def validate_parts(self, answer, options, known):
         errors = [] if options.get('images') else ['A Paper only problem needs its page in the picture section.']
         return errors + F.check_text('answer key', answer, known)
