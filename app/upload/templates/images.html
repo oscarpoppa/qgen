@@ -20,6 +20,6 @@
   {% endfor %}
   </div>
 {% else %}
-  <div class="card empty"><span class="big">🖼️</span>No pictures yet. <a href="{{ url_for('upload.upload') }}" title="Add pictures to use in problems">Upload some</a>.</div>
+  <div class="card empty"><span class="big">{{ icon('picture') }}</span>No pictures yet. <a href="{{ url_for('upload.upload') }}" title="Add pictures to use in problems">Upload some</a>.</div>
 {% endif %}
 {% endblock %}

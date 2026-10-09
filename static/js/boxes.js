@@ -74,7 +74,7 @@
     var sum = e.target.closest && e.target.closest('summary');
     var d = sum && sum.parentElement;
     if (!d || !d.matches(BOX)) return;
-    //a list in a heading (My quizzes' "📁 ▾") is used, not the box opened or folded
+    //a list in a heading (My quizzes' "Move… ▾") is used, not the box opened or folded
     if (e.target.closest('select')) { e.preventDefault(); return; }
     if (d.hasAttribute('data-fixed') || d.closest('[data-keep-open]')) return;
     if (e.target.closest('a, button, input, label') && e.target.closest('a, button, input, label') !== sum) return;

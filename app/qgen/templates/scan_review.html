@@ -43,7 +43,7 @@
     <div class="scan-item-head">
       <label class="check" title="Include this one when saving"><input type="checkbox" name="{{ ip }}include" class="scan-include"{% if item.include %} checked{% endif %}> <span class="qnum">{{ i + 1 }}</span></label>
       <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem's title (only you see it)" class="scan-title">
-      {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">✏️ Paper only</span>{% endif %}
+      {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">{{ icon('pencil') }} Paper only</span>{% endif %}
     </div>
     {{ errs(key) }}
     <div class="scan-item-body">
@@ -147,7 +147,7 @@
       {% set pre = 'p' ~ n ~ '-' %}
       <details class="box card scan-page" open data-page="{{ n }}" data-box="scan-page:{{ n }}">
         <summary>
-          {{ box_label('📄', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
+          {{ box_label('file', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
           {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
         </summary>
         <input type="hidden" name="{{ pre }}shown" value="1">
@@ -156,16 +156,16 @@
             <div class="scan-canvas" data-page="{{ n }}">
               <img src="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" alt="Page {{ n }} as scanned" draggable="false">
               {% for pic in page.pictures %}
-                <div class="crop" data-for="{{ pre }}{{ pic.id }}-box" title="{{ pic.label or 'Picture' }}: drag to move, drag the corners to resize"><span class="crop-label">🖼 {{ pic.label or 'picture' }}</span></div>
+                <div class="crop" data-for="{{ pre }}{{ pic.id }}-box" title="{{ pic.label or 'Picture' }}: drag to move, drag the corners to resize"><span class="crop-label">{{ icon('picture') }} {{ pic.label or 'picture' }}</span></div>
               {% endfor %}
               {% for item in page['items'] %}{% if item.kind == 'paper' %}
-                <div class="crop crop-paper" data-for="p{{ n }}i{{ loop.index0 }}-box" title="What gets printed for “{{ item.title }}”: drag to move, drag the corners to resize"><span class="crop-label">✏️ {{ item.title }}</span></div>
+                <div class="crop crop-paper" data-for="p{{ n }}i{{ loop.index0 }}-box" title="What gets printed for “{{ item.title }}”: drag to move, drag the corners to resize"><span class="crop-label">{{ icon('pencil') }} {{ item.title }}</span></div>
               {% endif %}{% endfor %}
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
           </div>
           <div class="scan-right">
-            {% if page.notes %}<p class="hint small">📝 {{ page.notes }}</p>{% endif %}
+            {% if page.notes %}<p class="hint small">{{ icon('note') }} {{ page.notes }}</p>{% endif %}
             {% if page.kind == 'problems' %}
               <div class="scan-quiz">
                 <label class="label" for="{{ pre }}title">Quiz title</label>

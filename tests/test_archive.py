@@ -314,7 +314,7 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     page, _ = archive_view(teacher)
     counts = side_counts(page)
     assert 'kim' in counts and 'sam' in counts and 'teach' not in counts
-    assert page.index('<span class="side-name">kim') < page.index('<span class="side-name">sam') and '👤' in page
+    assert page.index('<span class="side-name">kim') < page.index('<span class="side-name">sam') and __import__('app.icons', fromlist=['PATHS']).PATHS['user'] in page
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     assert 'Nothing archived for sam yet.' in archive_view(teacher, sam_folder.id)[0]
     # a new student gets one automatically

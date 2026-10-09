@@ -59,7 +59,7 @@
     btn.setAttribute('aria-label', 'Choose ' + label + ' from a calendar');
     btn.title = 'Choose ' + label + ' from a calendar';
     btn.setAttribute('aria-haspopup', 'dialog');
-    btn.innerHTML = '<span aria-hidden="true">📅</span>';
+    btn.innerHTML = window.qgenIcon ? window.qgenIcon('calendar') : '<span aria-hidden="true">Cal</span>';
     row.appendChild(btn);
     var reading = el('div', 'cal-reading small muted');
     reading.setAttribute('aria-live', 'polite');

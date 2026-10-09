@@ -154,7 +154,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
         'main_label': 'Not in a folder',
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
-        'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
+        'folder_icon': lambda f: 'folder', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
         #automatic entries in the side list after Not in a folder (My quizzes: New, In progress):

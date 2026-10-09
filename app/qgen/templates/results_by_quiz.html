@@ -13,7 +13,7 @@
   {% set vq = q.vquiz %}
   <details class="box card subject-box quiz-result item-box" data-list id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
-      {{ box_label('📝', vq.title, count_of(q.students, 'student', 'students')) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
+      {{ box_label('note', vq.title, count_of(q.students, 'student', 'students')) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
       {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
       {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
     </summary>
@@ -22,7 +22,7 @@
       {% if not single %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Open the history of “{{ vq.title }}” on its own page">History</a>
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems without changing it">View quiz</a>
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change “{{ vq.title }}”: its problems and settings">Edit quiz</a>{% endif %}
-      {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">🖨 Print paper pages</a>{% endif %}
+      {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">{{ icon('printer') }} Print paper pages</a>{% endif %}
     </div>{% endif %}
     {% if q.rows %}
       {# a long class: find a student in this quiz #}

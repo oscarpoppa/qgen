@@ -134,7 +134,7 @@
       crop.className = 'crop crop-new';
       crop.dataset.for = pre + '-' + id + '-box';
       crop.title = 'New picture: drag to move, drag the corners to resize';
-      crop.innerHTML = '<span class="crop-label">🖼 new picture</span>';
+      crop.innerHTML = '<span class="crop-label">' + (window.qgenIcon ? window.qgenIcon('picture') + ' ' : '') + 'new picture</span>';
       form.querySelector('.scan-canvas[data-page="' + n + '"]').appendChild(crop);
       setUp(crop);
       var label = row.querySelector('input[type=text]');

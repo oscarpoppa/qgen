@@ -202,6 +202,16 @@ main.container.container-wide { max-width: none; }
 
 .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
 .empty .big { font-size: var(--fs-3xl); display: block; margin-bottom: 6px; }
+/* the site's icons (app/icons.py): line drawings in the text's own color */
+svg.ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: 0 0 auto;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg.ico .ico-fill-ok { fill: var(--ok); stroke: none; }
+.empty .big { color: var(--muted); }
+.empty .big svg.ico { width: 1.2em; height: 1.2em; stroke-width: 1.5; }
+/* folders and section headings: the accent color, so they read as places to go */
+.box-icon svg.ico, .side-link svg.ico, .folder-tab svg.ico, .folder-title svg.ico { color: var(--accent); }
+.award-icon { color: var(--new-edge); }
+.award-icon svg.ico { stroke-width: 1.75; }
 
 /* ---------- buttons ---------- */
 
@@ -1566,7 +1576,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 
 /* "📁 ▾" in a quiz's heading on My quizzes: its list moves the quiz to a folder */
 .move-mini { display: inline-flex; margin: 0; flex: 0 0 auto; }
-.move-mini select { width: 3.4em; min-height: 0; padding: 2px 4px; font-size: var(--fs-sm); cursor: pointer; }
+.move-mini select { width: auto; min-height: 0; padding: 2px 4px; font-size: var(--fs-sm); cursor: pointer; }
 .quiz-card[open] .move-mini { margin-left: auto; }
 
 /* a folder's "needs the student" numbers (new, started, due soon), in those folders' colors */

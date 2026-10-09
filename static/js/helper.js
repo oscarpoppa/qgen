@@ -8,7 +8,7 @@
   var list = panel.querySelector('.hints');
   var status = panel.querySelector('.helper-status');
   var timer = null, seq = 0;
-  var ICON = { error: '✗', warn: '!', tip: '💡', ok: '✓' };
+  var ICON = { error: '✗', warn: '!', tip: '•', ok: '✓' };
 
   function render(target, hints) {
     target.innerHTML = '';
@@ -17,7 +17,8 @@
       li.className = 'hint hint-' + h.level;
       var icon = document.createElement('span');
       icon.className = 'hint-icon'; icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = ICON[h.level] || '•';
+      if (h.level === 'tip' && window.qgenIcon) icon.innerHTML = window.qgenIcon('bulb');  // the site's drawn icon (app/icons.py)
+      else icon.textContent = ICON[h.level] || '•';
       var text = document.createElement('span');
       text.textContent = h.text;
       li.appendChild(icon); li.appendChild(text);

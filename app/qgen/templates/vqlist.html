@@ -64,7 +64,7 @@
   <h1>{{ title }}</h1>
   <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
     {% if removed_count %}<a class="btn btn-secondary" href="{{ url_for('qgen.removed_vquizzes') }}" title="See quizzes you took off Quizzes, and restore them">Removed quizzes ({{ removed_count }})</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a> {% if config.ANTHROPIC_API_KEY and not single %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">📷 Scan workbook pages</a>{% endif %}</div>
+    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a> {% if config.ANTHROPIC_API_KEY and not single %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
 </div>
 {% if single and items[0].removed_at %}
   <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=items[0].id) }}" class="alert alert-warning">
@@ -76,7 +76,7 @@
 {% if single %}
   {{ quiz_table(items, ticks=false) }}
 {% elif not total %}
-  <div class="card empty"><span class="big">🗂️</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</div>
+  <div class="card empty"><span class="big">{{ icon('folders') }}</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</div>
 {% else %}
   {% call folders_page(fk) %}
     {% include "_folder_tools.html" %}

@@ -17,7 +17,7 @@
   {% elif cq.not_open_yet() %}
     {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
     {% set opens = cq.opens_at|when %}
-    <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">🔒 Start</button>
+    <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">{{ icon('lock') }} Start</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
     <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Keep working on this quiz">Continue</a>
@@ -47,7 +47,7 @@
     <details class="box card quiz-card {{ edge }}" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         {# how many tries are in this box #}
-        {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts'), 'h2', g.vquiz.title) }}
+        {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts'), 'h2', g.vquiz.title) }}
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
@@ -63,7 +63,7 @@
         {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
       </summary>
-      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">📁 {{ here.name }}</a></p>{% endif %}
+      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">{{ icon('folder') }} {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
       <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
         {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
@@ -127,7 +127,7 @@
     {{ quiz_cards(shown, fk.view) }}{% endif %}
   </div>
   {% if not shown and (showing or fk.view in ('new', 'started', 'soon')) %}
-    <p class="card empty small">{{ nothing }}</p>
+    <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
   {% elif not shown %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
@@ -135,13 +135,13 @@
 {% endif %}
 {% if not groups %}
   {% if current_user.is_admin %}
-  <div class="card empty"><span class="big">📚</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
+  <div class="card empty"><span class="big">{{ icon('books') }}</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
     <div class="btn-row" style="justify-content:center;margin-top:12px">
       <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}" title="See all problems, and make quizzes from them">Problems</a>
       <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}" title="Read and write messages to students">Messages</a></div></div>
   {% else %}
-  <div class="card empty"><span class="big">📚</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
+  <div class="card empty"><span class="big">{{ icon('books') }}</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}
 {% endif %}
 

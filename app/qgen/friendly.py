@@ -662,7 +662,7 @@ def validate_values(values):
         for other in row.get('different_from') or []:
             if other not in seen:
                 hint = _suggest(other, seen) or (' "Never the same as" takes the names of other values, like a, b'
-                                                 ' (to describe a list for the helper, use the ✨ box).' if ' ' in other else '')
+                                                 ' (to describe a list for the helper, use the box under the list).' if ' ' in other else '')
                 errors.append('{}: "Never the same as" says "{}", but there\'s no value with that name.{}'
                               .format(row.get('name'), other, hint))
     if not errors:

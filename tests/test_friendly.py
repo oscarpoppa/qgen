@@ -173,7 +173,7 @@ def test_large_ranges_still_sampled():
 def test_a_description_typed_in_never_the_same_as_is_explained():
     errors = F.validate_values([{'name': 'square', 'kind': 'list', 'items': '4, 9', 'different_from': ['All perfect squares']}])
     text = ' '.join(errors)
-    assert 'no value with that name' in text and 'use the ✨ box' in text
+    assert 'no value with that name' in text and 'use the box under the list' in text
 
 
 def test_numbered_picks_without_how_many_say_what_to_do():

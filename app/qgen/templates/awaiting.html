@@ -8,13 +8,13 @@
 {% block content %}
 <div class="card card-narrow empty">
   {% if current_user == cq.taker %}
-    <span class="big">🎉</span>
+    <span class="big">{{ icon('party') }}</span>
     <h1>Handed in!</h1>
     <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. Your teacher is checking your written answers.
       Your score will show up here when they're done.</p>
     <p class="btn-row" style="justify-content:center">{{ after_quiz() }}</p>
   {% else %}
-    <span class="big">⏳</span>
+    <span class="big">{{ icon('hourglass') }}</span>
     <h1>Waiting for grading</h1>
     <p>{{ cq.taker.shown_name }}'s answers to <strong>{{ cq.vquiz.title }}</strong> are in. The written answers need grading;
       the score will appear here when grading is done.</p>

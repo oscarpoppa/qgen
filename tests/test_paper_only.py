@@ -40,7 +40,7 @@ def test_paper_only_needs_a_picture(app_db):
     page = teacher.get('/quiz/makevprob').data.decode()
     assert 'value="paper"' in page and 'Paper only' in page
     # for Paper only the Pictures card becomes "The page to print" (problem_form.js), and Random values hides
-    assert 'id="pictures-card"' in page and 'data-paper="📄 The page to print"' in page
+    assert 'id="pictures-card"' in page and 'data-paper="The page to print"' in page
     assert 'class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay"' in page
 
 
@@ -61,7 +61,7 @@ def test_take_grade_and_print(app_db):
     assert 'window.print()' in page
     assert 'href="/quiz/results/{}"'.format(vq.id) in no_titles(page)
     # and from the quiz's results later
-    assert '🖨 Print paper pages' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert '</svg> Print paper pages' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     # students can't open it
     s = login(app, 'sam')
     assert s.get('/quiz/print/{}'.format(vq.id)).status_code == 302
@@ -137,7 +137,7 @@ def test_quiz_without_paper_redirects_as_before(app_db):
     sam = User.query.filter_by(username='sam').one()
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert r.status_code == 302 and '/quiz/print' not in r.headers['Location']
-    assert '🖨 Print paper pages' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert '</svg> Print paper pages' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
 
 
 def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):

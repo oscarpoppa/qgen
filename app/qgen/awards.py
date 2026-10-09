@@ -53,7 +53,7 @@ def earned(user):
             if not _perfect(combined_score(rule, scores[:i])):
                 break
             since = attempts[i - 1]
-        out.append({'kind': 'perfect', 'icon': '🌟', 'title': 'Perfect score', 'detail': '100% on "{}"'.format(since.vquiz.title),
+        out.append({'kind': 'perfect', 'icon': 'star', 'title': 'Perfect score', 'detail': '100% on "{}"'.format(since.vquiz.title),
                     'when': since.compdate, 'quiz': since.vquiz})
     #milestones: different quizzes finished
     seen = set()
@@ -63,7 +63,7 @@ def earned(user):
         seen.add(c.vquiz_id)
         if len(seen) in MILESTONES:
             n = len(seen)
-            out.append({'kind': 'milestone', 'icon': '🏁' if n == 1 else '🏆', 'quiz': None, 'when': c.compdate,
+            out.append({'kind': 'milestone', 'icon': 'flag' if n == 1 else 'trophy', 'quiz': None, 'when': c.compdate,
                         'title': 'First quiz' if n == 1 else '{} quizzes'.format(n),
                         'detail': 'Finished your first quiz' if n == 1 else 'Finished {} different quizzes'.format(n)})
     #streaks: in a row at 90% or more; each length once, when first reached
@@ -72,7 +72,7 @@ def earned(user):
         run = run + 1 if c.score >= STREAK_SCORE else 0
         if run in STREAKS and run not in reached:
             reached.add(run)
-            out.append({'kind': 'streak', 'icon': '🔥', 'quiz': None, 'when': c.compdate,
+            out.append({'kind': 'streak', 'icon': 'flame', 'quiz': None, 'when': c.compdate,
                         'title': '{} in a row'.format(run),
                         'detail': '{} quizzes in a row at {}% or more'.format(run, STREAK_SCORE)})
     #comebacks: a retake well above the try before it
@@ -81,7 +81,7 @@ def earned(user):
         prev = before.get(c.vquiz_id)
         if prev is not None and c.score - prev >= COMEBACK_POINTS and c.vquiz_id not in came_back:
             came_back.add(c.vquiz_id)
-            out.append({'kind': 'comeback', 'icon': '🚀', 'title': 'Comeback', 'quiz': c.vquiz, 'when': c.compdate,
+            out.append({'kind': 'comeback', 'icon': 'rocket', 'title': 'Comeback', 'quiz': c.vquiz, 'when': c.compdate,
                         'detail': 'Up {:.0f} points on "{}" ({:.0f}% → {:.0f}%)'.format(c.score - prev, c.vquiz.title, prev, c.score)})
         before[c.vquiz_id] = c.score
     out.sort(key=lambda a: (a['when'] is not None, a['when'] or 0), reverse=True)
@@ -95,14 +95,14 @@ def still_to_earn(user, have):
     titles = {a['title'] for a in have}
     out = []
     if 'perfect' not in kinds:
-        out.append({'icon': '🌟', 'title': 'Perfect score', 'detail': 'Have 100% as the score that counts on a quiz'})
+        out.append({'icon': 'star', 'title': 'Perfect score', 'detail': 'Have 100% as the score that counts on a quiz'})
     nxt = next((n for n in MILESTONES if ('First quiz' if n == 1 else '{} quizzes'.format(n)) not in titles), None)
     if nxt:
-        out.append({'icon': '🏁' if nxt == 1 else '🏆', 'title': 'First quiz' if nxt == 1 else '{} quizzes'.format(nxt),
+        out.append({'icon': 'flag' if nxt == 1 else 'trophy', 'title': 'First quiz' if nxt == 1 else '{} quizzes'.format(nxt),
                     'detail': 'Finish your first quiz' if nxt == 1 else 'Finish {} different quizzes'.format(nxt)})
     nxt = next((n for n in STREAKS if '{} in a row'.format(n) not in titles), None)
     if nxt:
-        out.append({'icon': '🔥', 'title': '{} in a row'.format(nxt), 'detail': 'Score {}% or more on {} quizzes in a row'.format(STREAK_SCORE, nxt)})
+        out.append({'icon': 'flame', 'title': '{} in a row'.format(nxt), 'detail': 'Score {}% or more on {} quizzes in a row'.format(STREAK_SCORE, nxt)})
     if 'comeback' not in kinds:
-        out.append({'icon': '🚀', 'title': 'Comeback', 'detail': 'Do {} points better on a retake'.format(COMEBACK_POINTS)})
+        out.append({'icon': 'rocket', 'title': 'Comeback', 'detail': 'Do {} points better on a retake'.format(COMEBACK_POINTS)})
     return out

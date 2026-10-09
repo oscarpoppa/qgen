@@ -12,7 +12,7 @@
 {% macro archive_table(items, here=none) %}
   {% for month in items|groupby_month %}
     <details class="box month-box" data-list>
-      <summary>{{ box_label('📅', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
+      <summary>{{ box_label('calendar', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table">
           <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>When</th><th>Folder</th><th></th></tr></thead>
@@ -74,8 +74,8 @@
       <label class="small" for="move-folder">Move them to</label>
       <select id="move-folder" name="folder">
         <option value="" selected>Choose a folder…</option>
-        {% for f, depth in fk.flat %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.folder_icon(f) }} {{ f.name }}</option>{% endfor %}
-        <option value="top">📥 {{ fk.main_label }}</option>
+        {% for f, depth in fk.flat %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ f.name }}</option>{% endfor %}
+        <option value="top">{{ fk.main_label }}</option>
       </select>
       <button class="btn btn-sm" title="Move the checked attempts to the folder chosen at left">Move</button>
     </form>
@@ -86,7 +86,7 @@
     {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
     {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
-    {% elif not total %}<div class="card empty"><span class="big">🗄️</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
+    {% elif not total %}<div class="card empty"><span class="big">{{ icon('archive') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
     {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
   </div>
 {% endcall %}

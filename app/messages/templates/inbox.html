@@ -12,7 +12,7 @@
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ url_for('messages.inbox', folder=f.id) }}" class="side-link" title="Show the conversations of the students in {{ f.name }}"{% if view == f.id|string %} aria-current="page"{% endif %}>
-        <span aria-hidden="true">📁</span> <span class="side-name">{{ f.name }}</span></a>
+        {{ icon('folder') }} <span class="side-name">{{ f.name }}</span></a>
       {% if n.unread %}<span class="count" aria-label="{{ n.unread }} unread">{{ n.unread }}</span>{% endif %}
     </div>
     {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
@@ -34,7 +34,7 @@
       <option value="chosen">Chosen students…</option>
       {% if user_folders %}<optgroup label="A folder (from the Users page)">
         {% for uf in user_folders %}{% set n = uf.ids|select('in', students)|list|length %}
-          <option value="folder:{{ uf.id }}"{% if not n %} disabled{% endif %}>{{ '\u00a0\u00a0\u00a0' * (uf.depth - 1) }}📁 {{ uf.name }} ({{ n }} student{{ '' if n == 1 else 's' }})</option>
+          <option value="folder:{{ uf.id }}"{% if not n %} disabled{% endif %}>{{ '\u00a0\u00a0\u00a0' * (uf.depth - 1) }}{{ uf.name }} ({{ n }} student{{ '' if n == 1 else 's' }})</option>
         {% endfor %}</optgroup>{% endif %}
       <optgroup label="One student">
       {% for r in rows %}<option value="{{ r.student.id }}">{{ r.student.shown_name }}</option>{% endfor %}
@@ -49,7 +49,7 @@
       <button type="button" class="btn btn-secondary btn-sm" data-set="0" title="Uncheck every student shown in the list below">Uncheck all</button>
     </div>
     {% if user_folders %}<div class="btn-row small folder-picks" style="margin-bottom:8px"><span class="muted">Check a folder:</span>
-      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}" title="Check everyone in {{ uf.path }} and the folders inside it">📁 {{ uf.path }}</button>{% endfor %}</div>{% endif %}
+      {% for uf in user_folders %}<button type="button" class="btn btn-secondary btn-xs" data-ids="{{ uf.ids|tojson|forceescape }}" title="Check everyone in {{ uf.path }} and the folders inside it">{{ icon('folder') }} {{ uf.path }}</button>{% endfor %}</div>{% endif %}
     <ul class="choice-list" style="max-height:240px;overflow:auto">
       {% for r in rows %}
         <li data-name="{{ r.student.username|lower }} {{ (r.student.nickname or '')|lower }}"><input type="checkbox" name="students" value="{{ r.student.id }}" id="st-{{ r.student.id }}"><label for="st-{{ r.student.id }}">{{ r.student.shown_name }}</label></li>
@@ -69,7 +69,7 @@
     <h2>Pinned</h2>
     <ul class="hints">
       {% for m in pinned %}
-        <li class="hint"><span class="hint-icon" aria-hidden="true">📌</span>
+        <li class="hint"><span class="hint-icon" aria-hidden="true">{{ icon('pin') }}</span>
           <span>{{ m.body }} <span class="small muted">· {{ m.created.strftime('%b %d') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name }}{% endif %}</span></span>
           <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
@@ -90,13 +90,13 @@
       <ul class="side-list side-top">
         <li><div class="side-row{{ ' current' if view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('messages.inbox', folder='all') }}" class="side-link" title="Show every student's conversation"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> All students</a>
+          <a href="{{ url_for('messages.inbox', folder='all') }}" class="side-link" title="Show every student's conversation"{% if view == 'all' %} aria-current="page"{% endif %}>{{ icon('users') }} All students</a>
           {% set total = rows|sum(attribute='unread') %}{% if total %}<span class="count" aria-label="{{ total }} unread">{{ total }}</span>{% endif %}</div></li>
         {% if root.folders %}
         {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
         <li><div class="side-row{{ ' current' if view == 'main' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('messages.inbox', folder='main') }}" class="side-link" title="Show the students who aren't in any folder"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> Not in a folder</a>
+          <a href="{{ url_for('messages.inbox', folder='main') }}" class="side-link" title="Show the students who aren't in any folder"{% if view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Not in a folder</a>
           {% if root.unread %}<span class="count" aria-label="{{ root.unread }} unread">{{ root.unread }}</span>{% endif %}</div></li>
         {% endif %}
       </ul>
@@ -104,7 +104,7 @@
     </nav>
   </details>
   <section class="folder-main" aria-labelledby="folder-title">
-    <h2 id="folder-title" class="folder-title">{% for p in path[:-1] %}<a href="{{ url_for('messages.inbox', folder=p.id) }}" title="Show the conversations in {{ p.name }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ ('📁 ' ~ node.folder.name) if node else 'Not in a folder' if view == 'main' else 'All students' }}</h2>
+    <h2 id="folder-title" class="folder-title">{% for p in path[:-1] %}<a href="{{ url_for('messages.inbox', folder=p.id) }}" title="Show the conversations in {{ p.name }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{% if node %}{{ icon('folder') }} {{ node.folder.name }}{% elif view == 'main' %}Not in a folder{% else %}All students{% endif %}</h2>
 {% if shown %}
   <div class="table-wrap stack list-scroll">
     <table>
@@ -126,7 +126,7 @@
     </table>
   </div>
 {% else %}
-  <div class="card empty"><span class="big">👥</span>{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>
+  <div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>
 {% endif %}
   </section>
 </div>

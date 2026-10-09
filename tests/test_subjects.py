@@ -82,7 +82,7 @@ def side_counts(page):
     """{name in the folder list: its count} from a page with folders down the side."""
     import re
     return {name.strip(): int(n) if n.strip() else 0 for name, n in
-            re.findall(r'class="side-link"[^>]*>\s*(?:<span[^>]*>[^<]*</span>\s*)?(?:<span class="side-name">)?([^<]+)(?:</span>)?</a>\s*'
+            re.findall(r'class="side-link"[^>]*>\s*(?:<span[^>]*>[^<]*</span>\s*)?(?:<svg\b[^>]*>.*?</svg>\s*)?(?:<span class="side-name">)?([^<]+)(?:</span>)?</a>\s*'
                        r'<span class="side-count[^"]*"[^>]*>([^<]*)</span>', page)}
 
 

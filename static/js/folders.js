@@ -244,7 +244,8 @@
       dragging = pending;
       ghost = document.createElement('div');
       ghost.className = 'drag-ghost';
-      ghost.textContent = (dragging.kind === 'folder' ? '📁 ' : '') + dragging.label;
+      ghost.textContent = dragging.label;
+      if (dragging.kind === 'folder' && window.qgenIcon) ghost.insertAdjacentHTML('afterbegin', window.qgenIcon('folder') + ' ');
       document.body.appendChild(ghost);
       dragging.el.classList.add('dragging');
       document.body.classList.add('folder-dragging');

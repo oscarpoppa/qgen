@@ -11,7 +11,7 @@
   <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_allowed else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span>
   {# leaving is safe: answers are saved as they're typed #}
   <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "'s student page") }}{% else %}{{ back_button(url_for('user.home'), 'Home') }}{% endif %}
-    {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false" title="Open a calculator to help you work things out"><span aria-hidden="true">🧮</span> Calculator</button>{% endif %}</div>
+    {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false" title="Open a calculator to help you work things out">{{ icon('calculator') }} Calculator</button>{% endif %}</div>
 </div>
 
 {% if preview %}
@@ -47,7 +47,7 @@
         {{ it.field(class='choice-list') }}
       {% elif it.qtype == 'paper' %}
         {{ it.field() }}
-        <p class="paper-note"><span aria-hidden="true">✏️</span> Do this one on paper. Your teacher will check it.</p>
+        <p class="paper-note">{{ icon('pencil') }} Do this one on paper. Your teacher will check it.</p>
       {% elif it.qtype == 'essay' %}
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
       {% else %}
@@ -79,7 +79,7 @@
 {# outside the quiz form: nothing typed here is saved or handed in (static/js/calculator.js) #}
 <section class="calc card" id="calc" role="dialog" aria-labelledby="calc-title" hidden>
   <div class="calc-head" title="Drag to move">
-    <h2 id="calc-title"><span aria-hidden="true">🧮</span> Calculator</h2>
+    <h2 id="calc-title">{{ icon('calculator') }} Calculator</h2>
     <button type="button" class="dock-close calc-close" aria-label="Close the calculator" title="Close the calculator">✕</button>
   </div>
   <input type="text" class="calc-input" aria-label="Calculation" autocomplete="off" spellcheck="false" placeholder="e.g. 45 × 2.5">

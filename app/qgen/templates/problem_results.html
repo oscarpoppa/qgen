@@ -14,7 +14,7 @@
 </div>
 
 {% if not summary.tries %}
-  <div class="card empty"><span class="big">📊</span>Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
+  <div class="card empty"><span class="big">{{ icon('chart') }}</span>Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
 {% else %}
   <div class="card problem-summary">
     <div class="btn-row">
@@ -37,7 +37,7 @@
   <div id="problem-results">
   {% for vq, rows in quizzes %}
     <details class="box card subject-box result-quiz" open data-box="problem-quiz:{{ vq.id }}">
-      <summary>{{ box_label('📝', vq.title, count_of(rows|length, 'answer', 'answers')) }}
+      <summary>{{ box_label('note', vq.title, count_of(rows|length, 'answer', 'answers')) }}
         <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Everyone's attempts and scores on “{{ vq.title }}”">History</a></span></summary>
       <div class="table-wrap stack">
         <table class="history-table">

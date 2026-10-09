@@ -15,7 +15,7 @@
       {% endfor %}
     </ul>
   {% elif s.paper %}
-    <div class="essay-box muted small"><span aria-hidden="true">✏️</span> Done on paper; you grade it.</div>
+    <div class="essay-box muted small">{{ icon('pencil') }} Done on paper; you grade it.</div>
     {% if s.correct %}<p class="ans small"><span class="badge">Answer key (only you see it)</span> {{ s.correct }}</p>{% endif %}
   {% elif s.essay %}
     <div class="essay-box muted small">The student writes an answer here; you grade it.</div>

@@ -1,4 +1,4 @@
-"""The AI helper's buttons ("Fill in for me", "Fill in the values", "✨ Fill list") answer in
+"""The AI helper's buttons ("Fill in for me", "Fill in the values", "Fill list") answer in
 the background: the AI can take longer than the site lets one page request run (gunicorn
 stops a request after 30 seconds, nginx waits 60), so a request only checks and starts the
 work, and the page asks every couple of seconds until the answer is ready.

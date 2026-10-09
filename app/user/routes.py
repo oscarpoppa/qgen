@@ -94,16 +94,16 @@ def mypage():
                   or (showing == 'soon' and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
         shown = [g for g in groups if any(a.id in wanted for a in g['attempts'])]
         heading, nothing = {
-            'todo': ('📝 To do: quizzes you haven’t started', 'You have no quizzes waiting to be started. 🎉'),
-            'started': ('✏️ Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in. 🎉'),
-            'soon': ('⏰ Due within {}'.format(within), 'Nothing is due within {}. 🎉'.format(within)),
+            'todo': ('To do: quizzes you haven’t started', 'You have no quizzes waiting to be started.'),
+            'started': ('Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in.'),
+            'soon': ('Due within {}'.format(within), 'Nothing is due within {}.'.format(within)),
         }[showing]
     elif view == 'new':
-        heading, nothing = '🆕 New: quizzes you haven’t started', 'No new quizzes right now. 🎉'
+        heading, nothing = 'New: quizzes you haven’t started', 'No new quizzes right now.'
     elif view == 'started':
-        heading, nothing = '✏️ In progress: quizzes you’ve started and not handed in', 'Nothing in progress right now. 🎉'
+        heading, nothing = 'In progress: quizzes you’ve started and not handed in', 'Nothing in progress right now.'
     elif view == 'soon':
-        heading, nothing = '⏰ Due within {}: hand these in soon'.format(within), 'Nothing is due within {}. 🎉'.format(within)
+        heading, nothing = 'Due within {}: hand these in soon'.format(within), 'Nothing is due within {}.'.format(within)
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -117,12 +117,12 @@ def mypage():
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
         #the automatic folders, always in this order (the student page's boxes too): New, In progress, Due
-        auto_views=[{'key': 'new', 'icon': '🆕', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
+        auto_views=[{'key': 'new', 'icon': 'sparkle', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
-                    {'key': 'started', 'icon': '✏️', 'label': 'In progress', 'count': len(working),
+                    {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': len(working),
                      'badge': '{} started'.format(tries['started']), 'badge_class': 'badge-accent',
                      'badge_title': '{} started and not handed in'.format(n_tries(tries['started']))},
-                    {'key': 'soon', 'icon': '⏰', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
+                    {'key': 'soon', 'icon': 'alarm', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
                      'badge_title': '{} to hand in within {}'.format(n_tries(tries['due']), within)}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),

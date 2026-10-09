@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from test_flow import app_db, login, problem_form, take_page, no_titles  # noqa: F401  (fixture)
+from app.icons import icon as ico
 
 
 def make_quiz(app, db, teacher, **quiz):
@@ -954,13 +955,13 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     sam = login(app, 'sam')
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
     page = sam.get('/mypage?folder=started').data.decode()
-    assert '✏️</span> In progress</a>' in page and 'Nothing in progress right now.' in page
-    assert page.index('🆕</span> New</a>') < page.index('✏️</span> In progress</a>')
+    assert '</svg> In progress</a>' in page and 'Nothing in progress right now.' in page
+    assert page.index('{} New</a>'.format(ico('sparkle'))) < page.index('{} In progress</a>'.format(ico('pencil')))
     take_page(sam, cq.id)
     page = sam.get('/mypage?folder=started').data.decode()
     assert 'In progress: quizzes you’ve started and not handed in' in page and 'Settings quiz' in page
     assert 'Nothing in progress' not in page
-    row = page[page.index('✏️</span> In progress</a>'):]
+    row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
     assert 'class="badge badge-accent side-new-badge" title="1 attempt started and not handed in">1 started</span>' in row[:row.index('</li>')]
     # remembered like any folder: back to My quizzes shows it again
     assert 'In progress: quizzes' in sam.get('/mypage').data.decode()

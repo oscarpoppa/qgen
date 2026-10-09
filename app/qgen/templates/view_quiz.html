@@ -21,7 +21,7 @@
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div id="sample-quiz" class="sample-quiz answers-off">
   {% for s in items %}{% with show_titles = true %}{% include "_sample_item.html" %}{% endwith %}{% else %}
-    <div class="card empty"><span class="big">📝</span>This quiz has no problems yet.</div>
+    <div class="card empty"><span class="big">{{ icon('note') }}</span>This quiz has no problems yet.</div>
   {% endfor %}
 </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
 {% from "_macros.html" import avatar, person_name, box_label, count_of with context %}
 <details class="box card dash-card" id="dash-right-now" data-box="now" open>
-  <summary class="dash-head">{{ box_label('🟢', 'Right now', none, 'h2') }}
+  <summary class="dash-head">{{ box_label('online', 'Right now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
     {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}
     <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></summary>

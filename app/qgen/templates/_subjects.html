@@ -10,7 +10,7 @@
 {% macro pick_folder_box(n) %}
 {% set rows = caller %}
 <details class="box sub-box" data-sub="{{ n.folder.id }}" data-list>
-  <summary class="sub-head">{{ box_label('📁', n.name, count_of(n.count, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
+  <summary class="sub-head">{{ box_label('folder', n.name, count_of(n.count, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
   <div class="sub-body">
     {% for c in n.folders %}{% call(items, key) pick_folder_box(c) %}{{ rows(items, key) }}{% endcall %}{% endfor %}
     {% if n['items'] %}{{ rows(n['items'], n.folder.id) }}{% elif not n.folders %}<p class="muted small">Empty.</p>{% endif %}
@@ -31,14 +31,14 @@
   <input type="hidden" name="subjects_shown" value="1">
   <div class="subject-check-list">
     {% for g, depth in all_subjects %}
-      <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.4 }}em"{% endif %}><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> 📁 {{ g.title }}</label>
+      <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.4 }}em"{% endif %}><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} {{ g.title }}</label>
     {% endfor %}
   </div>
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
-  <div class="help">You can check more than one. With none checked, it goes in 📥 Not in a folder, to file later if you like.</div>
+  <div class="help">You can check more than one. With none checked, it goes in {{ icon('tray') }} Not in a folder, to file later if you like.</div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

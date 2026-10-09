@@ -20,7 +20,7 @@
 <div class="dash-grid">
   {% include "_dashboard_now.html" %}
   <details class="box card dash-card" data-box="glance" open>
-    <summary class="dash-head">{{ box_label('📊', 'Site at a glance', none, 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
     <div class="dash-glance">
       <a href="{{ url_for('user.userdet') }}" title="Open Users to see every student's account"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
@@ -41,7 +41,7 @@
     </div>
   </details>
   <details class="box card dash-card dash-wide" id="dash-out" data-box="out" open>
-    <summary class="dash-head">{{ box_label('📤', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
       <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
@@ -65,7 +65,7 @@
     </div>
   </details>
   <details class="box card dash-card" data-box="queue" open>
-    <summary class="dash-head">{{ box_label('✏️', 'Waiting for grading', count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('pencil', 'Waiting for grading', count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
     {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}" title="Open Grading to see every attempt waiting, oldest first">All {{ waiting }} in Grading →</a></p>{% endif %}
     {% if queue %}
@@ -86,13 +86,13 @@
   </details>
   {# what's pinned to the top of students' messages, and whether they've read it #}
   <details class="box card dash-card" data-box="pinned" open>
-    <summary class="dash-head">{{ box_label('📌', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('pin', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}" title="Open Messages to send, pin or unpin messages">Messages →</a></p>
     {% if pinned %}
       <ul class="dash-list dash-pinned">
       {% for p in pinned %}
-        <li><span aria-hidden="true">📌</span>
+        <li>{{ icon('pin') }}
           <span class="dash-pin-text">{{ p.msg.body }}</span>
           <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
                 data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in their messages, just not at the top." data-confirm-ok="Unpin">
@@ -109,7 +109,7 @@
     </div>
   </details>
   <details class="box card dash-card" data-box="handins" open>
-    <summary class="dash-head">{{ box_label('📥', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('tray', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
     {% if handins %}

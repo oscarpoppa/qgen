@@ -34,7 +34,7 @@
         <div class="split">
           <div>
             {% if it.paper %}
-            <p class="paper-note"><span aria-hidden="true">✏️</span> Done on paper. Score it from {{ cq.taker.shown_name }}’s paper.</p>
+            <p class="paper-note">{{ icon('pencil') }} Done on paper. Score it from {{ cq.taker.shown_name }}’s paper.</p>
             {% else %}
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
             <div class="btn-row" style="margin-top:8px">

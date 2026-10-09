@@ -185,8 +185,8 @@ def test_teachers_only_and_needs_a_key(app_db):
     assert r.status_code == 302 and '/quiz/listvq' in r.headers['Location']
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
     try:
-        assert '📷 Scan workbook pages' in teacher.get('/quiz/listvq').data.decode()
-        assert '📷 Scan workbook pages' in teacher.get('/quiz/listvp').data.decode()
+        assert '</svg> Scan workbook pages' in teacher.get('/quiz/listvq').data.decode()
+        assert '</svg> Scan workbook pages' in teacher.get('/quiz/listvp').data.decode()
         assert 'Upload and read' in teacher.get('/quiz/scan').data.decode()
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
@@ -218,7 +218,7 @@ def test_upload_read_check_and_save(app_db, ai):
     assert 'Some versions have a negative answer' in page  # the take-away pool can go below zero
     assert 'Students get versions like:' in page
     assert 'Kept as on the page: Counts the apples in the picture.' in page
-    assert '✏️ Paper only' in page and 'The bottom is blurry.' in page
+    assert '</svg> Paper only</span>' in page and 'The bottom is blurry.' in page
     assert 'built-in method' not in page  # a missing setting shows as empty, never as Python's own names
     assert 'data-for="p1i3-box"' in page and 'id="p1i3-box"' in page  # the paper item's print box is drawn
     assert teacher.get('/quiz/scan/{}/page/1'.format(job.id)).headers['Content-Type'] == 'image/jpeg'

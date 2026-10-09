@@ -56,6 +56,10 @@ from flask_wtf.csrf import generate_csrf
 from datetime import datetime
 from app.qgen.models import CQuiz, Setting, attempts_by_quiz
 
+#the site's drawn icons (app/icons.py), in every template and macro
+from app import icons as _icons
+app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_script=_icons.icon_script)
+
 @app.template_filter('when')
 def when_filter(d, style='day'):
     """A date and time without leading zeros, as people write it: 'day' "Tue Oct 7, 9:05 AM",

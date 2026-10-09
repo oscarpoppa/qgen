@@ -141,7 +141,8 @@ def test_the_assigned_notice_shows_the_students_picture(app_db):
     assign(teach, vq, 'sam')
     assert shared().student_id == ids('sam')  # filed under sam: the panel shows sam's picture
     panel = teach.get('/messages/notices').data.decode()
-    assert 'teach assigned' in panel and '👥' not in panel
+    from app.icons import PATHS
+    assert 'teach assigned' in panel and PATHS['users'] not in panel
     # sam never sees the teachers' notice about him
     sam = login(app, 'sam')
     assert 'teach assigned' not in sam.get('/messages/notices').data.decode()
@@ -149,4 +150,4 @@ def test_the_assigned_notice_shows_the_students_picture(app_db):
     # several students: a group icon
     assign(teach, vq, 'sam', 'kim')
     assert shared().student_id == ids('teach')
-    assert '<span class="notice-icon" aria-hidden="true">👥</span>' in teach.get('/messages/notices').data.decode()
+    assert '<span class="notice-icon" aria-hidden="true"><svg class="ico"' in teach.get('/messages/notices').data.decode()

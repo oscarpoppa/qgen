@@ -9,6 +9,7 @@ from sqlalchemy import event
 from test_flow import app_db, login, take_page, no_titles  # noqa: F401  (fixture)
 from test_dashboard import make_quiz, give
 from test_archive import ids
+from app.icons import icon as ico
 
 
 def poll(client, key):
@@ -390,7 +391,7 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
     for url, who in pages.items():
         page = who.get(url).data.decode()
         assert '<div class="folders-layout"' in page and 'class="folder-side"' in page, url
-        assert '📥</span> Not in a folder' in page and '🗂️</span> All' in page and '+ New folder' in page, url
+        assert '</svg> Not in a folder' in page and '</svg> All' in page and '+ New folder' in page, url
         assert 'data-fold-key="' in page and 'Expand all' in page, url
     # one name for "in no folder" everywhere on screen
     root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app')
@@ -705,7 +706,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     assert 'href="/mypage?folder=soon"' in home
     due = sam.get('/mypage?folder=soon').data.decode()
     assert re.findall(r'<h2 title="([^"]+)" class="box-title">', due) == ['Soon']
-    assert '⏰</span> Due within 2 days</a>' in due and '>1 due</span>' in due and 'hand these in soon' in due
+    assert '</svg> Due within 2 days</a>' in due and '>1 due</span>' in due and 'hand these in soon' in due
     new = sam.get('/mypage?folder=new').data.decode()
     assert '“New one”' in new or 'New one' in new
     assert 'Begun' in sam.get('/mypage?folder=started').data.decode()
@@ -763,16 +764,16 @@ def test_home_counter_views_say_what_they_show(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     give(make_quiz(app, teach, 'New one'), 'sam')
     page = sam.get('/mypage?show=todo').data.decode()
-    assert '<h2 id="folder-title" class="folder-title">📝 To do: quizzes you haven’t started</h2>' in page
+    assert '<h2 id="folder-title" class="folder-title">To do: quizzes you haven’t started</h2>' in page
     page = sam.get('/mypage?show=started').data.decode()
-    assert '✏️ Started: quizzes you haven’t handed in</h2>' in page
-    assert 'You have no quizzes started and not handed in. 🎉' in page
+    assert '>Started: quizzes you haven’t handed in</h2>' in page
+    assert 'You have no quizzes started and not handed in. {}'.format(ico('party')) in page
     page = sam.get('/mypage?show=soon').data.decode()
     with app.app_context():
         from app import tuning
         days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
-    assert '⏰ Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. 🎉'.format(within) in page
+    assert '>Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. {}'.format(within, ico('party')) in page
     # the ordinary page keeps its own heading
     assert 'class="folder-title">All quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
 
@@ -889,7 +890,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
     assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Fresh']
-    assert '🆕 New: quizzes you haven’t started</h2>' in page and '📁 Math</a>' in page  # its folder too
+    assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page  # its folder too
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
     # the teacher's student page: a New box with the same quiz and a badge
@@ -898,14 +899,14 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert '1 new</span>' in box and 'Fresh' in box and 'Begun' not in box and 'Done' not in box
     # and an In progress box beside it, like My quizzes' own
     box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
-    assert '✏️' in box and 'In progress' in box and '1 started</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
+    assert str(ico('pencil')) in box and 'In progress' in box and '1 started</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
     # started: no longer new, no badge
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
     assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 started</span>' in mine
-    assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
+    assert 'No new quizzes right now. {}'.format(ico('party')) in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert 'nothing new</span>' in page
     box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
@@ -1087,7 +1088,7 @@ def test_uploading_never_replaces_a_file_already_there(app_db):
 
 
 def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automatic_folders(app_db):
-    """Every quiz on My quizzes has "📁 ▾" in its heading (new, started or done), whose list
+    """Every quiz on My quizzes has "Move… ▾" in its heading (new, started or done), whose list
     moves it at once; moved, it's still in New / In progress."""
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
@@ -1102,7 +1103,7 @@ def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automati
     assert 'class="move-form move-mini"' in head and 'Not in a folder (here now)' in head
     r = sam.post('/mypage/move', data={'quiz': fresh.id, 'to': wk.id, 'view': 'new', 'from': 'top'}, follow_redirects=True)
     page = r.data.decode()
-    assert 'Fresh' in page and '📁 Week 1 (here now)' in page  # still in New, now in Week 1
+    assert 'Fresh' in page and '>Week 1 (here now)</option>' in page  # still in New, now in Week 1
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(wk.id)).data.decode()
 
 
@@ -1218,7 +1219,7 @@ def test_folder_lists_have_one_order(app_db):
         teach.post('/quiz/subjects/{}/new'.format(kind), data={'name': 'Fall'})
     def side(page):
         nav = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
-        return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<span class="side-name">)?([^<]+)', nav)]
+        return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<svg\b[^>]*>.*?</svg>\s*)?(?:<span class="side-name">)?([^<]+)', nav)]
     for who, url in ((teach, '/quiz/listvp'), (teach, '/quiz/listvq'), (teach, '/userdet'), (teach, '/quiz/listuser'),
                      (teach, '/quiz/results'), (teach, '/quiz/archive')):
         page = who.get(url).data.decode()
@@ -1297,3 +1298,34 @@ def test_folders_on_top_and_their_contents_below(app_db):
     assert "d.classList.contains('tab-box')" in boxes
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
+
+
+def test_drawn_icons_everywhere_and_no_emoji():
+    """The site's icons are drawn (app/icons.py), chosen over emoji (2026-10-09): every icon
+    a template names exists, and no emoji is left in the pages, the code that fills them or
+    the page scripts. Text symbols stay (✓ ✕ ✗ ◐ ○ ★), and so do the tab title's 🟡/🔵
+    dots, since a tab's title can only hold text."""
+    import os
+    from app.icons import PATHS
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    emoji = re.compile('[\U0001F300-\U0001FAFF☀-➿⭐⏰-⏿\U0001F100-\U0001F1FF]')
+    keep = set('✓✕✗◐○★✔✖')
+    named, found = set(), []
+    for top in ('app', os.path.join('static', 'js')):
+        for dp, _dn, files in os.walk(os.path.join(here, top)):
+            for f in files:
+                if not f.endswith(('.html', '.py', '.js')):
+                    continue
+                path = os.path.join(dp, f)
+                text = open(path, encoding='utf8').read()
+                if f.endswith('.html'):
+                    named |= set(re.findall(r"""\b(?:icon|box_label|pick_group\('[^']*',)\s*\(?\s*'([a-z]+)'""", text))
+                    text = re.sub(r'\{#.*?#\}', '', text, flags=re.S)  # notes for programmers
+                for i, line in enumerate(text.splitlines(), 1):
+                    if line.lstrip().startswith(('#', '//', '/*', '*')) or '<title>' in line:
+                        continue
+                    left = [c for c in emoji.findall(line) if c not in keep]
+                    if left:
+                        found.append('{}:{}: {}'.format(os.path.relpath(path, here), i, ''.join(left)))
+    assert not found, found
+    assert named and named <= set(PATHS), named - set(PATHS)

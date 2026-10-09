@@ -20,7 +20,7 @@
   {% for gkey, glabel, items in groups %}
   <details class="box card dash-card tech-group" open>
     {% set changed = items|selectattr('key', 'in', current_changed)|list|length %}
-    <summary class="dash-head">{{ box_label('⚙️', glabel, none, 'h2') }}{% if changed %}<span class="badge badge-accent">{{ changed }} changed</span>{% endif %}</summary>
+    <summary class="dash-head">{{ box_label('gear', glabel, none, 'h2') }}{% if changed %}<span class="badge badge-accent">{{ changed }} changed</span>{% endif %}</summary>
     <div class="dash-body">
     {% for t in items %}
       {% set is_changed = current[t.key] != t.default %}

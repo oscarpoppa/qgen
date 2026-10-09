@@ -15,7 +15,7 @@
   {% for vquiz_id in seen %}
     {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
     <details class="box card grading-group" data-list>
-      <summary class="dash-head">{{ box_label('📝', quiz_name(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}
+      <summary class="dash-head">{{ box_label('note', quiz_name(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}
         <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vquiz_id) }}" title="This quiz's history: everyone's attempts and scores">History</a></span></summary>
       <div class="table-wrap stack">
         <table>
@@ -38,6 +38,6 @@
   {% endfor %}
   </div>
 {% else %}
-  <div class="card empty"><span class="big">✅</span>Nothing waiting. Written answers show up here when students hand them in.</div>
+  <div class="card empty"><span class="big">{{ icon('checkbox') }}</span>Nothing waiting. Written answers show up here when students hand them in.</div>
 {% endif %}
 {% endblock %}

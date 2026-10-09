@@ -91,7 +91,7 @@
           {% for n in problem_root.folders %}{% call(items, key) pick_folder_box(n) %}{{ problem_rows(items, key) }}{% endcall %}{% endfor %}
           {% if problem_root['items'] %}
           <details class="box sub-box" data-box="unsorted" data-list>
-            <summary class="sub-head">{{ box_label('📥', 'Not in a folder', count_of(problem_root['items']|length, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
+            <summary class="sub-head">{{ box_label('tray', 'Not in a folder', count_of(problem_root['items']|length, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
             <div class="sub-body">{{ problem_rows(problem_root['items'], 'u') }}</div>
           </details>
           {% endif %}

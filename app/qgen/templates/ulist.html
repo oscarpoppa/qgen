@@ -15,7 +15,7 @@
         {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'equalto', 'started')|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
         <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
-            {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
+            {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">Waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
@@ -37,7 +37,7 @@
    folders): the same folder box as the folder pages #}
 {% macro quiz_folder(n, item) %}
   <details class="box sub-box" data-folder-box="{{ n.folder.id }}" data-list>
-    <summary class="sub-head">{{ box_label('📁', n.name, count_of(n.count, 'quiz', 'quizzes'), 'h3') }}</summary>
+    <summary class="sub-head">{{ box_label('folder', n.name, count_of(n.count, 'quiz', 'quizzes'), 'h3') }}</summary>
     <div class="sub-body">
       {% for child in n.folders if child.count %}{{ quiz_folder(child, item) }}{% endfor %}
       {% for g in n['items'] %}{{ result_box(g, item) }}{% endfor %}
@@ -65,7 +65,7 @@
         <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Fold all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></div>
       {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
       <details class="box sub-box new-folder-box" data-folder-box="new" data-list>
-        <summary class="sub-head">{{ box_label('🆕', 'New', none, 'h3') }}
+        <summary class="sub-head">{{ box_label('sparkle', 'New', none, 'h3') }}
           {% if fresh %}<span class="badge badge-warn" title="Assigned and not started yet">{{ fresh|length }} new</span>
           {% else %}<span class="muted small">nothing new</span>{% endif %}</summary>
         <div class="sub-body">
@@ -74,7 +74,7 @@
       </details>
       {# automatic: quizzes started and not handed in yet (each also in its folder below) #}
       <details class="box sub-box new-folder-box" data-folder-box="started" data-list>
-        <summary class="sub-head">{{ box_label('✏️', 'In progress', none, 'h3') }}
+        <summary class="sub-head">{{ box_label('pencil', 'In progress', none, 'h3') }}
           {% if working %}<span class="badge badge-accent" title="Started and not handed in yet">{{ working|length }} started</span>
           {% else %}<span class="muted small">nothing in progress</span>{% endif %}</summary>
         <div class="sub-body">
@@ -87,7 +87,7 @@
         {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}
         {% if quiz_tree['items'] %}
           <details class="box sub-box" data-folder-box="none" data-list>
-            <summary class="sub-head">{{ box_label('📥', 'Not in a folder', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
+            <summary class="sub-head">{{ box_label('tray', 'Not in a folder', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
             <div class="sub-body">{% for g in quiz_tree['items'] %}{{ result_box(g, item) }}{% endfor %}</div>
           </details>
         {% endif %}
@@ -131,7 +131,7 @@
 {% if single %}
 {# folded to begin with (the count shows how many); open or not is remembered in this browser #}
 <details class="box card subject-box student-awards" id="student-awards">
-  <summary>{{ box_label('🏆', 'Awards', count_of(awards|length, 'award', 'awards')) }}</summary>
+  <summary>{{ box_label('trophy', 'Awards', count_of(awards|length, 'award', 'awards')) }}</summary>
   <div class="box-body">{% if awards %}{{ award_list(awards) }}
     {# a wide bar under the list to drag (or arrow keys): taller or shorter #}
 {% else %}<p class="muted small">No awards yet.</p>{% endif %}</div>

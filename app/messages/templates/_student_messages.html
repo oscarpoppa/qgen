@@ -16,7 +16,7 @@
   {% if pinned %}
     {# kept at the top until the teacher unpins it; it's shown only here, not also in the conversation below #}
     <div class="pinned-box">
-      <div class="pinned-label"><span aria-hidden="true">📌</span> Pinned by your teacher</div>
+      <div class="pinned-label">{{ icon('pin') }} Pinned by your teacher</div>
       <ul class="pinned-list" aria-label="Pinned by your teacher">
         {% for m in pinned %}<li class="msg msg-announcement msg-pinned"><div class="msg-meta small">
           <strong>{{ m.sender.shown_name if m.sender else 'Teacher' }}</strong> <span class="muted">{{ m.created.strftime('%b %d') }}</span></div>

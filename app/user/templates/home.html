@@ -27,24 +27,24 @@
 <div class="dash-grid" id="home-boxes">
   {# each box folds away (remembered in this browser), like the Dashboard's #}
   <details class="box card dash-card" id="waiting" data-box="waiting" open>
-    <summary class="dash-head">{{ box_label('⏳', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('hourglass', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
         <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>“{{ cq.vquiz.title }}”</strong></span>
           {% if cq.status == 'started' %}<span class="badge badge-accent">Started</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
-          {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">🔒 Start</button>
+          {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">{{ icon('lock') }} Start</button>
           {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Keep working on' if cq.status == 'started' else 'Start' }} “{{ cq.vquiz.title }}”">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>
       {% endfor %}
       </ul>
     {% else %}
-      <p class="muted">You're all caught up. Nothing to do right now. 🎉</p>
+      <p class="muted">You're all caught up. Nothing to do right now. {{ icon('party') }}</p>
     {% endif %}
   </details>
 
   <details class="box card dash-card" data-box="recent" open>
-    <summary class="dash-head">{{ box_label('✅', 'Recently completed', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('checkbox', 'Recently completed', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
       <a href="{{ url_for('user.mypage', folder='all') }}" title="See every quiz you've had, old and new">All my quizzes →</a></p>
     {% if recent %}
@@ -64,7 +64,7 @@
 
   {# can be pulled wider by its side edge, over the box beside it (static/js/stretch.js) #}
   <details class="box card dash-card" data-box="awards" data-stretch="awards" open>
-    <summary class="dash-head">{{ box_label('🏆', 'Your awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('trophy', 'Your awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
     {% if awards %}
       {{ award_list(awards) }}
     {% else %}
@@ -72,7 +72,7 @@
     {% endif %}
     {% if to_earn %}
       <details class="box home-sub" data-box="to-earn" open>
-        <summary>{{ box_label('🎯', 'Still to earn', count_of(to_earn|length, 'award', 'awards'), 'h3') }}</summary>
+        <summary>{{ box_label('target', 'Still to earn', count_of(to_earn|length, 'award', 'awards'), 'h3') }}</summary>
         {{ award_list(to_earn, locked=true) }}
       </details>
     {% endif %}

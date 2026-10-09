@@ -33,7 +33,7 @@
     {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
     <div class="qtext">{{ it.text }}</div>
     {% if it.paper %}
-      <p class="paper-note"><span aria-hidden="true">✏️</span> Done on paper.</p>
+      <p class="paper-note">{{ icon('pencil') }} Done on paper.</p>
       {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% elif it.essay %}
       <div class="label">Your answer</div>

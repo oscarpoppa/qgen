@@ -51,7 +51,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     # All: each folder a box (sam is in both), then Not in a folder as a box
     assert sorted(people(teach, 'all')) == ['kim', 'sam', 'sam', 'teach']
     page = teach.get('/userdet?folder=all').data.decode()
-    assert page.count('📁 7th grade</a>') == 2 and 'aria-label="Take sam out of Math club"' in page
+    assert page.count('</svg> 7th grade</a>') == 2 and 'aria-label="Take sam out of Math club"' in page
     # dragging from one folder to another moves them (their other folders stay)
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
         'Moved sam to "8th grade".'
@@ -149,7 +149,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     # Messages: the folders down the side, a folder's students only
     page = teach.get('/messages').data.decode()
     assert '<span class="side-name">7th grade</span>' in page
-    assert '<option value="folder:{}">📁 7th grade (1 student)</option>'.format(g7) in page
+    assert '<option value="folder:{}">7th grade (1 student)</option>'.format(g7) in page
     rows = lambda v: re.findall(r'<td data-label="Student"><span class="person">.*?<strong>([^<]+)</strong>',
                                 teach.get('/messages?folder={}'.format(v)).data.decode(), re.S)
     assert rows(g7) == ['sam'] and rows('main') == ['kim'] and sorted(rows('all')) == ['kim', 'sam']

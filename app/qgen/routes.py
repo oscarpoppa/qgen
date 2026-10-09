@@ -1288,9 +1288,9 @@ def archive_kit(view, node, root, flat, nodes, total):
         rename_url=lambda fid: url_for('qgen.rename_archive_folder', fid=fid),
         delete_url=lambda fid: url_for('qgen.delete_archive_folder', fid=fid),
         unit='attempt', units='attempts', all_label='All archived', all_count=total,
-        name=lambda f: f.name, folder_icon=lambda f: '👤' if f.student_id else '📁',
+        name=lambda f: f.name, folder_icon=lambda f: 'user' if f.student_id else 'folder',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
-        hint='Each student has a folder (👤) for their archived attempts; you can add your own and put folders inside folders.',
+        hint='Each student has a folder (the one with a person on it) for their archived attempts; you can add your own and put folders inside folders.',
         fold_key='qgen-folded-archive-folders',
         purge_url=lambda fid: url_for('qgen.purge_archive_folder', fid=fid),
         purge_question=lambda n: archive_purge_question(n['folder']))

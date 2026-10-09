@@ -194,7 +194,7 @@ def test_fill_list_route(app_db, monkeypatch):
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
     try:
         page = teacher.get('/quiz/makevprob').data.decode()
-        assert '✨ Fill list' in page and 'data-url="/quiz/ai/list"' in page
+        assert '</svg> Fill list</button>' in page and 'data-url="/quiz/ai/list"' in page
         monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(SQUARES))
         r = teacher.post('/quiz/ai/list', json={'text': 'all the perfect squares from 4 to 100', 'name': 'n'})
         assert r.get_json() == {'ok': True, 'items': '4, 9, 16, 25, 36, 49, 64, 81, 100', 'count': 9, 'note': None}
@@ -211,7 +211,7 @@ def test_fill_list_route(app_db, monkeypatch):
         assert login(app, 'sam').post('/quiz/ai/list', json={'text': 'x'}).status_code == 302  # teachers only
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
-    assert '✨ Fill list' not in teacher.get('/quiz/makevprob').data.decode()  # no key: not shown
+    assert '</svg> Fill list' not in teacher.get('/quiz/makevprob').data.decode()  # no key: not shown
 
 
 def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):

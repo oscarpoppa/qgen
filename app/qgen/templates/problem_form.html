@@ -51,9 +51,9 @@
         {{ row.form.pick_n(placeholder='how many? (optional)', title='Pick this many different items. With 2 and name who, use [who1] and [who2]', class='k-list', **{'aria-label': 'How many to pick'}) }}
         {# the AI helper fills the list from a description; the teacher checks it like anything typed #}
         {% if ai_enabled %}<div class="k-list list-ai">
-          <span class="small muted list-ai-label">✨ Or describe the list, and the helper writes it:</span>
+          <span class="small muted list-ai-label">{{ icon('sparkle') }} Or describe the list, and the helper writes it:</span>
           <input type="text" class="list-ai-text" maxlength="500" placeholder="Describe the list, e.g. all the perfect squares from 4 to 100" aria-label="Describe the list for the AI helper">
-          <button type="button" class="btn btn-secondary btn-sm list-ai-go" data-url="{{ url_for('qgen.ai_list') }}" title="The AI helper writes the list from your description; check it after">✨ Fill list</button>
+          <button type="button" class="btn btn-secondary btn-sm list-ai-go" data-url="{{ url_for('qgen.ai_list') }}" title="The AI helper writes the list from your description; check it after">{{ icon('sparkle') }} Fill list</button>
           <span class="list-ai-status small" aria-live="polite"></span>
         </div>{% endif %}
         {{ row.form.formula(placeholder='e.g. speed * hours', title='Worked out from other values, without brackets. + - * / ^ ( ) sqrt abs round min max', class='k-calc', **{'aria-label': 'Formula'}) }}
@@ -109,7 +109,7 @@
   {% if ai_enabled %}
   {# folded until it's wanted: it takes a lot of room (always starts folded: data-fixed) #}
   <details class="box card ai-box" data-fixed>
-    <summary>{{ box_label('✨', 'Describe it in plain English', none, 'h2') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
+    <summary>{{ box_label('sparkle', 'Describe it in plain English', none, 'h2') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
     <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</p>
     <div class="field">
       <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
@@ -205,7 +205,7 @@
 
   {# for Paper only, problem_form.js moves this up under the question as "The page to print" #}
   <div class="card" id="pictures-card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2 data-paper="📄 The page to print">Pictures</h2><span class="muted small" data-paper="needed">optional</span>{{ tip('pictures', tip_pictures) }}</div>
+    <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2 data-paper="The page to print">Pictures</h2><span class="muted small" data-paper="needed">optional</span>{{ tip('pictures', tip_pictures) }}</div>
     <p class="muted small" data-paper="The page students draw or write on (a dot-to-dot, a coloring page…): upload a scan or photo, or choose one already uploaded. It’s printed for each student, with their name on top, when you assign the quiz.">Add one picture, or several: each student is shown one of them at random.</p>
     <div id="images-body">
       {% for row in form.images %}{{ image_row(row) }}{% endfor %}
@@ -232,7 +232,7 @@
 </div>
 
 <details class="box card help-box" data-closed>
-  <summary>{{ box_label('💡', 'Examples of each question type', none, 'h2') }}</summary>
+  <summary>{{ box_label('bulb', 'Examples of each question type', none, 'h2') }}</summary>
   <h3>Numeric</h3>
   <pre>Question: A train goes [speed] mph for [hours] hours. How far does it travel?
 Values:   speed  Whole number  40 to 80, in steps of 5

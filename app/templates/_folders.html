@@ -34,7 +34,7 @@
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ fk.name(n.folder) }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(n.folder) }}”" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
-        <span aria-hidden="true">{{ fk.folder_icon(f) }}</span> <span class="side-name">{{ fk.name(n.folder) }}</span></a>
+        {{ draw_icon(fk.folder_icon(f)) }} <span class="side-name">{{ fk.name(n.folder) }}</span></a>
       {# quizzes that need the student in it, or in a folder inside it #}
       {{ flag_badges(fk, n) }}
       <span class="side-count muted small" title="{{ fk.units|capitalize }} in it, and in the folders inside it">{{ n.count or '' }}</span>
@@ -84,14 +84,14 @@
         {# one order on every page: All, the automatic ones (My quizzes), the folders, then Not in a folder #}
         <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> {{ fk.all_label }}</a>
+          <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} {{ fk.all_label }}</a>
           <span class="side-count muted small">{{ fk.all_count or '' }}</span></div></li>
         {% for av in fk.auto_views %}
           {# automatic (each quiz also stays in its own folder): a badge while there's something
              in it ("1 new", "3 started", "1 due") #}
           <li><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
-            <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}><span aria-hidden="true">{{ av.icon }}</span> {{ av.label }}</a>
+            <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
             {% if av.badge and av.count %}<span class="badge {{ av.badge_class or 'badge-warn' }} side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
             {% else %}<span class="side-count muted small">{{ av.count or '' }}</span>{% endif %}</div></li>
         {% endfor %}
@@ -99,7 +99,7 @@
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
         <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren't in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
+          <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren't in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
           {{ flag_badges(fk, fk.root, true) }}
           <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
       </ul>
@@ -115,7 +115,7 @@
       {% if fk.node %}
         {% set f = fk.node.folder %}
         <h2 id="folder-title" class="folder-title">
-          {% for p in fk.path[:-1] %}<a href="{{ fk.page(p.id) }}" title="Go up to the folder “{{ fk.name(p) }}”">{{ fk.name(p) }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ fk.folder_icon(f) }} {{ fk.name(fk.node.folder) }}</h2>
+          {% for p in fk.path[:-1] %}<a href="{{ fk.page(p.id) }}" title="Go up to the folder “{{ fk.name(p) }}”">{{ fk.name(p) }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ draw_icon(fk.folder_icon(f)) }} {{ fk.name(fk.node.folder) }}</h2>
         <div class="title-actions">
           {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
           {{ actions }}
@@ -137,7 +137,7 @@
                   <select name="to" class="move-select" aria-label="Move {{ fk.name(fk.node.folder) }} to another folder" title="Pick a folder to move “{{ fk.name(fk.node.folder) }}” into; it moves right away">
                     <option value="top"{% if not f.parent_id %} selected{% endif %}>The top (in no folder)</option>
                     {% for g, depth in fk.flat if g.id not in skip %}
-                      <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}📁 {{ fk.name(g) }}</option>
+                      <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(g) }}</option>
                     {% endfor %}
                   </select></label>
                 <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
@@ -202,7 +202,7 @@
   {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
   {% if loose %}
   <details class="box sub-box" data-sub="none" data-list>
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('📥', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('tray', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.main_label) }}
         <span class="small"><a class="btn btn-secondary btn-xs" href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></div>
@@ -226,7 +226,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="{{ fk.view }}">
       <input type="hidden" name="{{ what }}" value="{{ ident }}"><input type="hidden" name="folder" value="{{ f.id }}">
-      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">📁 {{ fk.name(f) }}</a>
+      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">{{ icon('folder') }} {{ fk.name(f) }}</a>
       <button class="chip-x" aria-label="Take {{ label }} out of {{ fk.name(f) }}" title="Take {{ label }} out of {{ fk.name(f) }} (it stays in its other folders)">✕</button>
     </form>
   {% endfor %}
@@ -239,7 +239,7 @@
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     <select name="to" class="move-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in another folder too">
       <option value="">+ Add…</option>
-      {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}📁 {{ fk.name(f) }}</option>{% endfor %}
+      {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
     </select>
     <noscript><button class="btn btn-secondary btn-xs" title="Put it in the folder you picked">Add</button></noscript>
   </form>
@@ -258,14 +258,14 @@
       <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Pick a folder to move {{ label }} into; it moves right away">
         <option value="top"{% if not here %} selected{% endif %}>{{ fk.main_label }}</option>
         {% for f, depth in fk.flat %}
-          <option value="{{ f.id }}"{% if here and here.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}📁 {{ fk.name(f) }}</option>
+          <option value="{{ f.id }}"{% if here and here.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>
         {% endfor %}
       </select></label>
     <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
   </form>
 {% endmacro %}
 
-{# the same, small enough for a box's heading (My quizzes): "📁 ▾", whose list moves the
+{# the same, small enough for a box's heading (My quizzes): "Move… ▾", whose list moves the
    thing at once; the folder it's in now is marked and can't be picked #}
 {% macro move_mini(fk, what, ident, label, here) %}
   <form method="post" action="{{ fk.move_url }}" class="move-form move-mini">
@@ -274,10 +274,10 @@
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
     <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Move {{ label }} to another folder">
-      <option value="" selected>📁</option>
-      <option value="top"{% if not here %} disabled{% endif %}>📥 {{ fk.main_label }}{{ ' (here now)' if not here }}</option>
+      <option value="" selected>Move…</option>
+      <option value="top"{% if not here %} disabled{% endif %}>{{ fk.main_label }}{{ ' (here now)' if not here }}</option>
       {% for f, depth in fk.flat %}
-        <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}📁 {{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
+        <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
       {% endfor %}
     </select>
     <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>

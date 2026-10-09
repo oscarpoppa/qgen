@@ -21,7 +21,7 @@
     </ul>{% elif not children %}<p class="muted small">Nobody in it.</p>{% endif %}
   </details>
 {% endmacro %}
-{% macro pick_folder(n) %}{{ pick_group(n.folder.id, '📁', n.folder.name, n.people, n.folders) }}{% endmacro %}
+{% macro pick_folder(n) %}{{ pick_group(n.folder.id, 'folder', n.folder.name, n.people, n.folders) }}{% endmacro %}
 
 {% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 
@@ -58,9 +58,9 @@
     </div>
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
-      {% if root.folders %}{{ pick_group('none', '📥', 'Not in a folder', root.people) }}{% endif %}
+      {% if root.folders %}{{ pick_group('none', 'tray', 'Not in a folder', root.people) }}{% endif %}
       <details class="box pick-group" data-fixed data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
-        <summary>{{ box_label('👥', 'All users') }}<span class="badge box-count pick-of"></span>
+        <summary>{{ box_label('users', 'All users') }}<span class="badge box-count pick-of"></span>
           <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone" title="Check or uncheck everyone">Check all</button></span></summary>
         <ul class="choice-list pick-list">
           {% for u in people %}

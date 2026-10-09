@@ -13,8 +13,8 @@
         <li class="notice{{ ' notice-new' if m.id in unread_ids }}"{% if m.id in unread_ids %} data-seen-url="{{ url_for('messages.notice_seen', notice_id=m.id) }}"{% endif %}>
           {# a teacher's notices about students show the student; their own quizzes' notices, the bell #}
           {# a quiz given to several students at once shows a group (it has no one student) #}
-          {% if teacher and not m.from_teacher and link_kind(m.link) == 'qgen.quiz_results_page' and ' assigned "' in m.body %}<span class="notice-icon" aria-hidden="true">👥</span>
-          {% elif teacher and not m.from_teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">🔔</span>{% endif %}
+          {% if teacher and not m.from_teacher and link_kind(m.link) == 'qgen.quiz_results_page' and ' assigned "' in m.body %}<span class="notice-icon" aria-hidden="true">{{ icon('users') }}</span>
+          {% elif teacher and not m.from_teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">{{ icon('bell') }}</span>{% endif %}
           <div class="notice-text">
             <div>{{ m.body }}</div>
             <div class="small muted">{{ m.created.strftime('%b %d, %I:%M %p') }}

@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="card card-narrow empty">
-  <span class="big">🔒</span>
+  <span class="big">{{ icon('lock') }}</span>
   <h1>You can't start this quiz yet</h1>
   <p class="muted">{{ cq.vquiz.title }}</p>
   <p>It opens <strong>{{ cq.opens_at|when('long') }}</strong>{% if cq.closes_at %}

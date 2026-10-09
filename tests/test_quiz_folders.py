@@ -3,6 +3,7 @@ quizzes and folders into them (by the "Move to" list or by dragging)."""
 from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
 from test_archive import ids
 from test_dashboard import make_quiz
+from app.icons import icon as ico
 
 FETCH = {'X-Requested-With': 'fetch'}
 
@@ -35,21 +36,21 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert 'Folder &#34;Unit 1&#34; made.' in r.data.decode() or 'Folder "Unit 1" made.' in r.data.decode()
     unit = folder_id('Unit 1', 'sam')
     page = sam.get('/mypage').data.decode()
-    assert page.count('aria-label="Move “Week 1” to a folder"') == 1 and '📁 Unit 1</option>' in page
+    assert page.count('aria-label="Move “Week 1” to a folder"') == 1 and '>Unit 1</option>' in page
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
         {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
     # a quiz is in one place only: the folder shows it, and the main list doesn't any more
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage?folder=main').data.decode()
-    assert 'aria-current="page"><span aria-hidden="true">📥</span> Not in a folder' in page
+    assert 'aria-current="page">{} Not in a folder'.format(ico('tray')) in page
     assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
-    assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and '📁 Unit 1</a></p>' in all_page
-    assert 'aria-current="page"><span aria-hidden="true">🗂️</span> All quizzes' in all_page
+    assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and '</svg> Unit 1</a></p>' in all_page
+    assert 'aria-current="page">{} All quizzes'.format(ico('folders')) in all_page
     import re
-    assert re.search(r'aria-current="page">\s*<span aria-hidden="true">📁</span> <span class="side-name">Unit 1',
+    assert re.search(r'aria-current="page">\s*<svg class="ico"[^>]*>.*?</svg> <span class="side-name">Unit 1',
                      sam.get('/mypage?folder={}'.format(unit)).data.decode())
     # a folder that isn't theirs (or is gone) shows the main list
     assert cards(kim, unit) == ['Week 1']
