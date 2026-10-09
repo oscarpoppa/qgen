@@ -430,11 +430,23 @@ def eduser(uid):
     return render_template('eduser.html', title='Edit user: {}'.format(uobj.shown_name), form=form)
 
 # route to admin-initiated user detail listing
+#People: everyone in the user folders, seen two ways: Accounts (this page: roles, last seen,
+#editing) or Results (qgen.list_users: their quizzes and scores). The menu opens the one used last.
+@user_bp.route('/people', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def people():
+    target = 'qgen.list_users' if session.get('people_view') == 'results' else 'user.userdet'
+    return redirect(url_for(target, **request.args))
+
+
 @user_bp.route('/userdet', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def userdet():
+    session['people_view'] = 'accounts'
     from . import groups
     from app import folder_tree
     ulst = User.query.order_by(User.username).all()
@@ -449,14 +461,14 @@ def userdet():
         rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
         add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
-        unit='person', units='people', all_label='All users', all_count=len(ulst), name=lambda f: f.name,
+        unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
         placeholder='e.g. 7th grade', add_words='+ Add…', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         box_tools=lambda n: Markup('<a class="btn btn-xs" href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz to this folder</a> ').format(
             url_for('qgen.assign', folder=n['folder'].id), n['folder'].name)
         if n['count'] else '',
         fold_key='qgen-folded-user-folders')
-    return render_template('udet.html', ulst=ulst, title='Users', fk=fk, shown=shown, folders_of=folders_of)
+    return render_template('udet.html', ulst=ulst, title='People', fk=fk, shown=shown, folders_of=folders_of)
 
 
 def _group_done(message, error=False, show=None, moved=None):

@@ -1,0 +1,9 @@
+{# People's two views of the same people in the same folders: Accounts (user.userdet) and
+   Results (qgen.list_users). The switch keeps the folder you're in; the menu's People opens
+   the one used last. #}
+{% macro people_switch(current, folder) %}
+  <nav class="seg-switch" aria-label="What to show for each person">
+    <a href="{{ url_for('user.userdet', folder=folder) }}" title="Roles, last seen, folders, and editing accounts"{% if current == 'accounts' %} aria-current="page"{% endif %}>Accounts</a>
+    <a href="{{ url_for('qgen.list_users', folder=folder) }}" title="Each student's quizzes, attempts and scores"{% if current == 'results' %} aria-current="page"{% endif %}>Results</a>
+  </nav>
+{% endmacro %}

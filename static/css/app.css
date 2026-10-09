@@ -157,6 +157,13 @@ main.container.container-wide { max-width: none; }
 
 .page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .page-head h1 { margin: 0; }
+/* two views of one page (People: Accounts | Results), side by side in the page's heading */
+.seg-switch { display: inline-flex; border: 1px solid var(--field-border); border-radius: var(--r); overflow: hidden; }
+.seg-switch a { padding: 6px 14px; color: var(--text); text-decoration: none; font-weight: 600; background: var(--surface); }
+.seg-switch a + a { border-left: 1px solid var(--field-border); }
+.seg-switch a:hover { background: var(--surface-2); }
+.seg-switch a[aria-current="page"] { background: var(--accent); color: var(--accent-text); }
+@media (pointer: coarse) { .seg-switch a { min-height: 44px; display: inline-flex; align-items: center; } }
 .page-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
 @media (max-width: 1000px) {
@@ -1540,13 +1547,11 @@ details.box .box-end { margin-left: auto; display: inline-flex; gap: 6px; align-
 details.box-mini > summary:hover { text-decoration: underline; }
 details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
 
-/* one scroll at a time: inside a list that scrolls in the page (a folder page's list, the
-   messages list), a folder, a student's or quiz's results, a month or Done just grows when
-   opened, never a second scroll area inside the first */
-@media (min-width: 761px) {
-  .folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list),
-  .folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list) { max-height: none !important; }
-}
+/* one scroll at a time: on a folder page (whose list scrolls with the page) and in the messages
+   list, a folder, a student's or quiz's results, a month or Done just grows when opened, on
+   phones too, never a scroll area inside the page */
+.folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list),
+.folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list) { max-height: none !important; }
 
 /* back where you were after a button reloaded the page: what happened floats at the top of
    the window for a few seconds (static/js/place.js) */

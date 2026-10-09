@@ -97,9 +97,9 @@
   function folds(level) {
     if (!level) return [];
     return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
-      //hidden by a filter: left alone; a row of folder buttons (foldertabs.js) opens one at a time
-      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]')
-        && !(d.classList.contains('tab-box') && d.qgenRow && !d.qgenRow.classList.contains('tabs-off'));
+      //hidden by a filter: left alone (folders shown as a row of buttons count too: Expand all
+      //shows them all open, static/js/foldertabs.js)
+      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]');
     });
   }
   document.addEventListener('click', function (e) {

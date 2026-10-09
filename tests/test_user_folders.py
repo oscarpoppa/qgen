@@ -204,17 +204,30 @@ def test_assigning_from_the_users_page(app_db):
 
 
 def test_results_pages_lead_back_to_users(app_db):
+    """People: Accounts and Results are two views of one page (2026-10-09): each has the
+    switch, keeping the folder; the menu's People opens the view used last; one student's
+    page goes Back to People."""
     app, db = app_db
     teach = login(app, 'teach')
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
-    for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam'))):
-        assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in no_titles(teach.get(url).data.decode()), url
-    # results by quiz are about quizzes, not people: back to the Dashboard (when there's no trail)
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(teach.get('/quiz/results').data.decode())
+    accounts = no_titles(teach.get('/userdet?folder=all').data.decode())
+    assert '<h1>People</h1>' in accounts and 'data-trail-key="people"' in accounts
+    assert 'href="/userdet?folder=all" aria-current="page">Accounts</a>' in accounts and 'href="/quiz/listuser?folder=all">Results</a>' in accounts
+    assert teach.get('/people').headers['Location'] == '/userdet'
+    results = no_titles(teach.get('/quiz/listuser?folder=all').data.decode())
+    assert '<h1>People</h1>' in results and 'href="/quiz/listuser?folder=all" aria-current="page">Results</a>' in results
+    assert teach.get('/people?folder=all').headers['Location'] == '/quiz/listuser?folder=all'  # used last
+    # the menu: one People entry, lit on both views; Results by student isn't in the Quizzes menu
+    assert '>People</a>' in results and 'class="active" aria-current="page">People</a>' in results
+    assert '>Results by student</a>' not in results.split('<main')[0]
+    assert '<a class="btn btn-secondary" href="/people" data-back>← People</a>' in \
+        no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
     # one quiz's history is about the quiz: back to Quizzes (when there's no trail to follow)
     assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in \
         no_titles(teach.get('/quiz/results/{}'.format(vq.id)).data.decode())
+    # results by quiz are about quizzes, not people: back to the Dashboard (when there's no trail)
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(teach.get('/quiz/results').data.decode())
     # one student's page: Assign a quiz to them
     assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())

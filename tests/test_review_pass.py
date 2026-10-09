@@ -213,11 +213,11 @@ def test_back_goes_where_you_came_from(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': 'http://localhost/dashboard'}).data.decode()
     assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(page)
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in no_titles(page)
+    assert '<a class="btn btn-secondary" href="/people" data-back>← People</a>' in no_titles(page)
     # from another site, or from the page itself: its own Back
     for ref in ('https://evil.example/dashboard', 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
         page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': ref}).data.decode()
-        assert '← Users</a>' in page, ref
+        assert '← People</a>' in page, ref
     # and a student page names the student
     page = teach.get('/quiz/results', headers={'Referer': 'http://localhost/quiz/listuser/{}'.format(ids('sam'))}).data.decode()
     assert "← sam&#39;s student page</a>" in page
@@ -391,7 +391,7 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
     for url, who in pages.items():
         page = who.get(url).data.decode()
         assert '<div class="folders-layout"' in page and 'class="folder-side"' in page, url
-        assert '</svg> Not in a folder' in page and '</svg> All' in page and '+ New folder' in page, url
+        assert '</svg> Not in a folder' in page and ('</svg> All' in page or '</svg> Everyone' in page) and '+ New folder' in page, url
         assert 'data-fold-key="' in page and 'Expand all' in page, url
     # one name for "in no folder" everywhere on screen
     root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app')
@@ -1299,7 +1299,7 @@ def test_folders_on_top_and_their_contents_below(app_db):
     assert 'data-units="' in teach.get('/userdet').data.decode()
     boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     assert "if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;" in boxes
-    assert "d.classList.contains('tab-box')" in boxes
+    assert "row.qgenExpanded = true" in js  # Expand all shows every folder open; Collapse all brings the buttons back
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
 

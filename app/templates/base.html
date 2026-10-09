@@ -94,12 +94,11 @@
             </details>
             <details class="menu">
               <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign',
-                                'qgen.list_users', 'qgen.list_user', 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }} title="Make, assign and see results of quizzes">Quizzes</summary>
+                                'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }} title="Make, assign and see results of quizzes">Quizzes</summary>
               <div class="menu-list">
                 {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz'), tip='Browse, edit and organize every quiz') }}
                 {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
                 {{ item('qgen.assign', 'Assign a quiz', tip='Give a quiz to students or groups, with a due date') }}
-                {{ item('qgen.list_users', 'Results by student', ('qgen.list_user',), tip='Pick a student to see all their quizzes and scores') }}
                 {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student\'s score on it') }}
               </div>
             </details>
@@ -108,7 +107,8 @@
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             {% endcall %}
             {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page'), tip='All your conversations with students and teachers') }}
-            {{ item('user.userdet', 'Users', ('user.eduser',), tip='Add, edit and organize student and teacher accounts') }}
+            {# People: Accounts (user.userdet) and Results (qgen.list_users); opens the view used last #}
+            {{ item('user.people', 'People', ('user.userdet', 'user.eduser', 'qgen.list_users', 'qgen.list_user'), tip='Everyone: their accounts, folders and quiz results') }}
             {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
             <details class="menu">
               <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }} title="Upload and manage pictures and files">Files</summary>

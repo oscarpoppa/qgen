@@ -256,10 +256,11 @@
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
     <label class="small muted">Move to
       <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Pick a folder to move {{ label }} into; it moves right away">
-        <option value="top"{% if not here %} selected{% endif %}>{{ fk.main_label }}</option>
+        {# the folders, then Not in a folder: the order of every folder list #}
         {% for f, depth in fk.flat %}
           <option value="{{ f.id }}"{% if here and here.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>
         {% endfor %}
+        <option value="top"{% if not here %} selected{% endif %}>{{ fk.main_label }}</option>
       </select></label>
     <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
   </form>
@@ -275,10 +276,10 @@
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
     <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Move {{ label }} to another folder">
       <option value="" selected>Move…</option>
-      <option value="top"{% if not here %} disabled{% endif %}>{{ fk.main_label }}{{ ' (here now)' if not here }}</option>
       {% for f, depth in fk.flat %}
         <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
       {% endfor %}
+      <option value="top"{% if not here %} disabled{% endif %}>{{ fk.main_label }}{{ ' (here now)' if not here }}</option>
     </select>
     <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
   </form>

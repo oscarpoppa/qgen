@@ -357,8 +357,8 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert page.count('<span class="badge">Teacher-graded</span>') == 2
     assert 'Model answer: Light scatters.' in page
-    # the Users page links to Results by student, whose students are boxes that open and close
-    assert 'href="/quiz/listuser">Results by student</a>' in no_titles(teacher.get('/userdet').data.decode())
+    # People's Accounts view switches to its Results view, whose students are boxes that open and close
+    assert 'href="/quiz/listuser?folder=main">Results</a>' in no_titles(teacher.get('/userdet').data.decode())
     results = teacher.get('/quiz/listuser').data.decode()
     assert '<details class="box card subject-box student item-box"' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results

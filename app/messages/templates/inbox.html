@@ -32,7 +32,7 @@
     <select id="to" name="to">
       <option value="all">Everyone (announcement)</option>
       <option value="chosen">Chosen students…</option>
-      {% if user_folders %}<optgroup label="A folder (from the Users page)">
+      {% if user_folders %}<optgroup label="A folder (from People)">
         {% for uf in user_folders %}{% set n = uf.ids|select('in', students)|list|length %}
           <option value="folder:{{ uf.id }}"{% if not n %} disabled{% endif %}>{{ '\u00a0\u00a0\u00a0' * (uf.depth - 1) }}{{ uf.name }} ({{ n }} student{{ '' if n == 1 else 's' }})</option>
         {% endfor %}</optgroup>{% endif %}
@@ -100,7 +100,7 @@
           {% if root.unread %}<span class="count" aria-label="{{ root.unread }} unread">{{ root.unread }}</span>{% endif %}</div></li>
         {% endif %}
       </ul>
-      <p class="muted small side-hint">Folders are made on the <a href="{{ url_for('user.userdet') }}" title="Make folders and put students in them on the Users page">Users page</a>.</p>
+      <p class="muted small side-hint">Folders are made in <a href="{{ url_for('user.userdet') }}" title="Make folders and put students in them in People's Accounts view">People</a>.</p>
     </nav>
   </details>
   <section class="folder-main" aria-labelledby="folder-title">

@@ -7,7 +7,7 @@
 <div class="card card-narrow">
   <h1>Edit user</h1>
   {# back to where they came from (the Users page's folder, a student page...), also after saving #}
-  {% set came = back(url_for('user.userdet'), 'Users') %}
+  {% set came = back(url_for('user.userdet'), 'People') %}
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
     <input type="hidden" name="next" value="{{ came[0] }}" data-back-next>

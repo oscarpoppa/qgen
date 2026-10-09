@@ -710,8 +710,10 @@ def review(cqid):
 @pw_check
 @admin_only
 def list_users():
-    """Results by student, in the Users page's folders: ?folder= all (the default), main (in
-    no folder) or a folder's id."""
+    """People's Results view (Results by student), in the user folders: ?folder= all (the
+    default), main (in no folder) or a folder's id. Its other view is Accounts (user.userdet)."""
+    from flask import session
+    session['people_view'] = 'results'
     from app import folder_tree
     from app.user import groups
     from .models import RETAKE_RULES
@@ -723,9 +725,9 @@ def list_users():
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.list_users', folder=v),
         unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
-        hint=Markup('The <a href="{}">Users page</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
+        hint=Markup('Folders are made and filled in <a href="{}">Accounts</a>.').format(url_for('user.userdet', folder=view)),
         fold_key='qgen-folded-results-student-folders')
-    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='Results by student')
+    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='People')
 
 #route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])

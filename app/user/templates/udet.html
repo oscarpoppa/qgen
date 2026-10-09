@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
+{% from "_people.html" import people_switch %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
@@ -50,10 +51,11 @@
   {% endif %}
 {% endmacro %}
 
+{# People's two views count as one page for Back buttons (static/js/trail.js) #}
+{% block html_attrs %} data-trail-key="people"{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Users</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('qgen.list_users') }}" title="Every student's quiz scores, one student at a time">Results by student</a>
-    <a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
+<div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
 
 {% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Give a quiz to everyone in {{ fk.name(fk.node.folder) }}">Assign a quiz to this folder</a>{% endif %}{% endset %}
 {% call folders_page(fk, actions) %}

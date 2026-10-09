@@ -103,7 +103,7 @@
         b.title = (title ? 'Show what’s in “' + title.textContent.trim() + '”' : 'Show this folder') + ' (press again to close it)';
         if (head.hasAttribute('data-drop')) b.setAttribute('data-drop', head.getAttribute('data-drop'));
         b.addEventListener('click', function () {
-          if (row.classList.contains('tabs-off')) return;
+          if (row.classList.contains('tabs-off')) return;  // (hidden then anyway)
           var opening = !box.open;
           if (opening) only(row, box);
           box.open = opening;
@@ -115,23 +115,58 @@
           sync(row);
         });
       });
-      only(row);
-      sync(row);
+      //several remembered open (only Expand all does that): back as it was left, all shown
+      if (boxesIn(row).filter(function (d) { return d.open; }).length > 1) { row.qgenExpanded = true; aside(row); }
+      else { only(row); sync(row); }
+    });
+    //inside a folder shown expanded, a row whose folders are all open was expanded too (a row
+    //of one folder can't tell by itself)
+    document.querySelectorAll('.folder-tabs:not(.tabs-off)').forEach(function (row) {
+      var up = row.parentElement.closest('details.tab-box');
+      var boxes = boxesIn(row);
+      if (up && up.qgenRow && up.qgenRow.qgenExpanded && boxes.length && boxes.every(function (d) { return d.open; })) {
+        row.qgenExpanded = true;
+        aside(row);
+      }
     });
     if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();  // Expand all / Collapse all: only where there's still something to open
   }
 
   //while a filter is typed: plain boxes (every folder with a match open), then the row again
+  //(the row also steps aside after Expand all, below: either one keeps it aside)
+  function aside(row) {
+    var off = !!(row.qgenSearching || row.qgenExpanded);
+    row.classList.toggle('tabs-off', off);
+    row.parentElement.classList.toggle('tabs-searching', off);
+    if (!off) only(row);
+    sync(row);
+  }
   document.addEventListener('qgen-filtered', function (e) {
     var on = !!(e.detail && e.detail.active);
-    document.querySelectorAll('.folder-tabs').forEach(function (row) {
-      row.classList.toggle('tabs-off', on);
-      row.parentElement.classList.toggle('tabs-searching', on);
-      if (!on) only(row);
-      sync(row);
-    });
+    document.querySelectorAll('.folder-tabs').forEach(function (row) { row.qgenSearching = on; aside(row); });
     if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
   });
+
+  //Expand all: every folder open at once, as boxes with their headings (one button row can only
+  //show one); Collapse all: all closed, and the row of buttons again. The rows step aside before
+  //boxes.js opens or closes the boxes (this runs first), so it opens and remembers them too.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-level]');
+    if (!btn) return;
+    var level = btn.dataset.levelOf ? document.querySelector(btn.dataset.levelOf) : btn.closest('.level');
+    if (!level) return;
+    var rows = Array.prototype.slice.call(level.querySelectorAll('.folder-tabs'));
+    if (!rows.length) return;
+    if (btn.dataset.level === 'open') {
+      rows.forEach(function (row) { row.qgenExpanded = true; aside(row); });
+    } else {
+      rows.forEach(function (row) { row.qgenExpanded = true; aside(row); });  // so boxes.js closes them all...
+      setTimeout(function () {  // ...then the buttons again
+        rows.forEach(function (row) { row.qgenExpanded = false; aside(row); });
+        if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
+      }, 0);
+    }
+  }, true);
 
   setUp(document);
   //parts drawn later

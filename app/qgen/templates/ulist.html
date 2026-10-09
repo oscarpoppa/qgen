@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
+{% from "_people.html" import people_switch %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
@@ -115,11 +116,13 @@
   </details>
 {% endmacro %}
 
+{# People's two views count as one page for Back buttons (static/js/trail.js) #}
+{% block html_attrs %}{% if not single %} data-trail-key="people"{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
-  {# back where they came from (Dashboard, Grading, a quiz's results...), else the Users page #}
-  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+  <h1>{{ title }}</h1>{% if not single %}{{ people_switch('results', fk.view) }}{% endif %}
+  {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
+  <div class="actions">{% if single %}{{ back_button(url_for('user.people'), 'People') }}{% endif %}
     {% if single %}
       {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
       <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
@@ -143,7 +146,7 @@
 <div class="student-single">{{ student_box(ulst[0]) }}</div>
 {% else %}
 {% call folders_page(fk) %}
-  {% set filter_one, filter_many = 'student', 'students' %}{% include "_results_filter.html" %}
+  {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
     {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
