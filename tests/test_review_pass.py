@@ -1151,3 +1151,18 @@ def test_standard_wording_and_history_buttons(app_db):
     # the teachers' messages page: one name, and Back to Messages
     page = no_titles(teach.get('/messages/teachers').data.decode())
     assert 'Messages between teachers' in page and '← Messages</a>' in page and 'Messages with' not in page
+
+
+def test_pages_come_back_as_they_were_left(app_db):
+    """Back to a page with a filter or folders: static/js/keep.js puts back its filter, its
+    open boxes and the place on the page (trail.js marks a return with data-came-back)."""
+    import os
+    app, db = app_db
+    teach = login(app, 'teach')
+    for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/listuser'):
+        assert '/js/keep.js' in teach.get(url).data.decode(), url
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    trail = open(os.path.join(root, 'static', 'js', 'trail.js')).read()
+    keep = open(os.path.join(root, 'static', 'js', 'keep.js')).read()
+    assert "setAttribute('data-came-back'" in trail and "hasAttribute('data-came-back')" in keep
+    assert "addEventListener('pagehide'" in keep and 'qgenRun' in keep

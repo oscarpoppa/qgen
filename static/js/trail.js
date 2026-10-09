@@ -36,6 +36,7 @@
     trail[trail.length - 1] = here;                         // the same page again
   } else if (last !== -1 && (going === here.k || historyMove || last === trail.length - 2)) {
     trail = trail.slice(0, last).concat([here]);            // back to a page on the trail
+    document.documentElement.setAttribute('data-came-back', '');  // static/js/keep.js puts it back as it was
   } else {
     trail.push(here);
   }
