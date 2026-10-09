@@ -1277,3 +1277,23 @@ def test_list_items_have_only_buttons(app_db):
             links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link)\b', a)]
             assert not links, (url, links, item[:300])
         assert 'row-menu' not in main and 'person-link' not in main, url
+
+
+def test_folders_on_top_and_their_contents_below(app_db):
+    """Side-by-side folder boxes become one row of folder buttons (static/js/foldertabs.js),
+    so a folder is never listed below another folder's things (the user, 2026-10-09). Every
+    folder list page loads it; folder boxes start closed; Expand all leaves the rows alone."""
+    import os
+    app, db = app_db
+    teach = login(app, 'teach')
+    for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/listuser', '/quiz/results', '/quiz/archive', '/mypage'):
+        assert 'js/foldertabs.js' in teach.get(url).data.decode(), url
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
+    assert "details.sub-box[data-sub], details.sub-box[data-folder-box]" in js
+    assert "'qgen-filtered'" in js and 'tabs-off' in js and "data-drop" in js
+    boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
+    assert "if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;" in boxes
+    assert "d.classList.contains('tab-box')" in boxes
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css

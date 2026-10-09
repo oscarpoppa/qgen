@@ -45,6 +45,8 @@
   //how it starts before the person changes it (the HTML's own open is read once, first)
   function starting(d) {
     if (d.hasAttribute('data-closed')) return false;
+    //a folder (shown as a folder button, static/js/foldertabs.js) waits to be picked
+    if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;
     if (d.hasAttribute('data-list')) return listed(d).length === 1;
     return d.dataset.drawnOpen === '1';
   }
@@ -95,7 +97,9 @@
   function folds(level) {
     if (!level) return [];
     return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
-      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]');  // hidden by a filter: left alone
+      //hidden by a filter: left alone; a row of folder buttons (foldertabs.js) opens one at a time
+      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]')
+        && !(d.classList.contains('tab-box') && d.qgenRow && !d.qgenRow.classList.contains('tabs-off'));
     });
   }
   document.addEventListener('click', function (e) {
@@ -120,7 +124,7 @@
   document.addEventListener('qgen-filtered', showLevelButtons);
   window.addEventListener('resize', showLevelButtons);
 
-  window.qgenBoxes = { restore: restore, idOf: idOf };
+  window.qgenBoxes = { restore: restore, idOf: idOf, levels: showLevelButtons };
   setUp(document);
   //boxes drawn later (the Dashboard's refresh, pages that redraw parts of themselves)
   if (window.MutationObserver) new MutationObserver(function (changes) {

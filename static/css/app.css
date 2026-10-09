@@ -852,6 +852,22 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .sub-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .sub-tools > span { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 @media (max-width: 600px) { .sub-box { padding: 8px; } }
+/* folders on top, what's in them below (static/js/foldertabs.js): side-by-side folder boxes
+   become one row of folder buttons; the open one's contents show under the whole row */
+.folder-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.folder-tabs.tabs-off { display: none; }
+.folder-tab { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 5px 12px;
+  border: 1px solid var(--field-border); border-radius: var(--r-lg); background: var(--surface); color: var(--text);
+  font: inherit; font-weight: 600; cursor: pointer; }
+.folder-tab .box-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 24ch; }
+.folder-tab .box-count { font-weight: 500; }
+.folder-tab:hover { border-color: var(--accent); }
+.folder-tab[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--accent); }
+.folder-tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.folder-tabs:not(.tabs-off) ~ details.tab-box > summary { display: none; }
+.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }
+.folder-tabs:not(.tabs-off) ~ details.tab-box[open] { border-color: var(--accent); }
+.folder-tabs:not(.tabs-off) ~ details.tab-box > .sub-body { margin-top: 0; }
 .quiz-folder-label { margin: -4px 0 6px; }
 .quiz-folder-label a { color: var(--muted); text-decoration: none; }
 .quiz-folder-label a:hover { text-decoration: underline; }
@@ -1208,6 +1224,8 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
   body { background: #fff; color: #000; }
   html.dock-notices body, html.dock-messages body { padding-right: 0 !important; }
   .topbar, .dock, .toast, dialog, .no-print, ul.alerts, .archived-banner .btn-row, .calc, .skip-link { display: none !important; }
+  /* folder buttons (foldertabs.js): on paper, plain headings */
+  .folder-tabs { display: none !important; } details.tab-box > summary { display: flex !important; }
   main.container { max-width: none; padding: 0; margin: 0; }
   .card { box-shadow: none; }
   /* a question isn't split across two pages when it fits on one */
