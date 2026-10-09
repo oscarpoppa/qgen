@@ -1129,3 +1129,25 @@ def test_folder_numbers_count_tries_not_quizzes(app_db):
     page = sam.get('/mypage?folder=main').data.decode()
     assert '2 tries not started yet">2 new</span>' in page
     assert '<span class="side-dot dot-new" title="2 new tries" role="img" aria-label="2 new tries">2</span>' in page
+
+
+def test_standard_wording_and_history_buttons(app_db):
+    app, db = app_db
+    from app.qgen.models import VQuiz
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    # History only once there's some: not on a quiz or problem nobody has taken
+    from app.qgen.models import VProblem
+    vp = VProblem.query.first()
+    assert '>History</a>' not in no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
+    assert '>History</a>' not in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    give(VQuiz.query.one(), 'sam')
+    page = no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
+    assert 'href="/quiz/results/{}">History</a>'.format(vq.id) in page
+    assert 'href="/quiz/problem-results/{}">History</a>'.format(vp.id) in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    # unchecking everyone says so (Clear is the filter box's)
+    for url in ('/userdet', '/quiz/assign'):
+        assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get(url).data.decode()), url
+    # the teachers' messages page: one name, and Back to Messages
+    page = no_titles(teach.get('/messages/teachers').data.decode())
+    assert 'Messages between teachers' in page and '← Messages</a>' in page and 'Messages with' not in page

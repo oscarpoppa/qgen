@@ -726,8 +726,7 @@ def list_users():
         unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
         hint=Markup('The <a href="{}">Users page</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
         fold_key='qgen-folded-results-student-folders')
-    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='Results by student',
-                           find_label='Find a student or quiz…')
+    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='Results by student')
 
 #route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
@@ -768,7 +767,7 @@ def results_by_quiz():
         hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
         fold_key='qgen-folded-results-quiz-folders')
     return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk,
-                           rules=RETAKE_RULES, title='Results by quiz', find_label='Find a quiz or student…')
+                           rules=RETAKE_RULES, title='Results by quiz')
 
 #one quiz's results
 @qgen_bp.route('/quiz/results/<int:vqid>', methods=['GET'])

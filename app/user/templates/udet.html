@@ -67,7 +67,7 @@
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Clear</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
     </form>
     {% if ulst|length > 5 %}{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box') }}{% endif %}
     <div id="folder-items">

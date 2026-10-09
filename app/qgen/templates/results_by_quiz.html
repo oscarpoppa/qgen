@@ -47,7 +47,7 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions">{{ back_button(url_for('user.userdet'), 'Users') }}
+  <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% else %}{{ back_button(url_for('user.userdet'), 'Users') }}{% endif %}
     {% if single %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="Look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">View quiz</a>
       <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Change “{{ quizzes[0].vquiz.title }}”: its problems and settings">Edit quiz</a>

@@ -89,6 +89,7 @@
   {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
   <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
     {% if vp and vp.id %}<a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of the saved problem">View</a>{% endif %}
+    {% if vp and vp.id and vp.cproblems %}<a class="btn btn-secondary" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="Every answer students have given to {{ vp.title or 'this problem' }}, quiz by quiz">History</a>{% endif %}
     {# back to how the page was when it opened: blank for a new problem, the saved version when editing #}
     {% if vp and vp.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>

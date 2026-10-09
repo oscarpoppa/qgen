@@ -39,7 +39,7 @@
   <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
     {% if vq and vq.id %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="See one student's version of the saved quiz">View</a>
-      <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's tries and scores on {{ vq.title }}">History</a>
+      {% if vq.cquizzes %}<a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's tries and scores on {{ vq.title }}">History</a>{% endif %}
       {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give {{ vq.title }} to students">Assign</a>{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}

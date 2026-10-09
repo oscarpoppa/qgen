@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
+{# reading: lines no wider than is comfortable #}
+{% block main_class %} container-narrow{% endblock %}
 {% block body_attrs %}{{ watch('archived:%d' % a.id) }}{% endblock %}
 
 {% block content %}

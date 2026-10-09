@@ -55,7 +55,7 @@ def _named(endpoint, args):
     fixed = {
         'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.list_users': 'Results by student',
         'qgen.results_by_quiz': 'Results by quiz', 'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
-        'user.userdet': 'Users', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Messages with teachers',
+        'user.userdet': 'Users', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Messages between teachers',
         'qgen.archive': 'Archive', 'user.home': 'Home', 'user.mypage': 'My quizzes',
     }
     if endpoint in fixed:

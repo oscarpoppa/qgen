@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="page-head"><h1>Messages between teachers</h1>
-  <div class="actions">{{ back_button(url_for('messages.inbox'), 'Messages with students') }}</div></div>
+  <div class="actions">{{ back_button(url_for('messages.inbox'), 'Messages') }}</div></div>
 
 {% if not staff.teachers %}
   <div class="card"><p class="muted">There are no other teachers yet. Once another teacher has an account, you can write to them here.</p></div>

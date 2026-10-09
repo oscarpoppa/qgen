@@ -32,7 +32,7 @@
     {% endif %}
   </div>
 
-  {% if summary.tries > 8 %}{{ filter_bar('#problem-results', 'answer', 'answers', boxes='details.result-quiz') }}{% endif %}
+  {% if summary.tries > 5 %}{{ filter_bar('#problem-results', 'answer', 'answers', boxes='details.result-quiz') }}{% endif %}
   <div id="problem-results">
   {% for vq, rows in quizzes %}
     <details class="box card subject-box result-quiz" open data-box="problem-quiz:{{ vq.id }}">
