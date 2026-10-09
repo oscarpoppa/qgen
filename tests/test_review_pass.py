@@ -557,7 +557,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     # no quiz folders at all: the quizzes are listed as before
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
-    assert not re.search(r'data-folder-box="(?!new")', page) and '>C</span>' in page  # only the automatic New box
+    assert not re.search(r'data-folder-box="(?!new"|started")', page) and '>C</span>' in page  # only the automatic New and In progress boxes
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):
@@ -890,6 +890,9 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     box = page.split('data-folder-box="new"')[1].split('        </div>\n      </details>')[0]
     assert '1 new</span>' in box and 'Fresh' in box and 'Begun' not in box and 'Done' not in box
+    # and an In progress box beside it, like My quizzes' own
+    box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
+    assert '✏️' in box and 'In progress' in box and '1 started</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
     # started: no longer new, no badge
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
@@ -897,7 +900,10 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     mine = sam.get('/mypage').data.decode()
     assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 started</span>' in mine
     assert 'No new quizzes right now. 🎉' in sam.get('/mypage?folder=new').data.decode()
-    assert 'nothing new</span>' in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert 'nothing new</span>' in page
+    box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
+    assert '2 started</span>' in box and 'Fresh' in box and 'Begun' in box
 
 
 def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):

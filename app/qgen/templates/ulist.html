@@ -71,6 +71,15 @@
           {% for g in fresh %}{{ result_box(g, item) }}{% else %}<p class="muted small box-empty">Every quiz {{ item.shown_name }} has been given is started.</p>{% endfor %}
         </div>
       </details>
+      {# automatic: quizzes started and not handed in yet (each also in its folder below) #}
+      <details class="box sub-box new-folder-box" data-folder-box="started" data-list>
+        <summary class="sub-head">{{ box_label('✏️', 'In progress', none, 'h3') }}
+          {% if working %}<span class="badge badge-accent" title="Started and not handed in yet">{{ working|length }} started</span>
+          {% else %}<span class="muted small">nothing in progress</span>{% endif %}</summary>
+        <div class="sub-body">
+          {% for g in working %}{{ result_box(g, item) }}{% else %}<p class="muted small box-empty">{{ item.shown_name }} has no quiz started and not handed in.</p>{% endfor %}
+        </div>
+      </details>
       {% if quiz_tree and quiz_tree.folders|selectattr('count')|list %}
         {# in the Quizzes page's folders (a quiz in several folders is in each) #}
         {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}

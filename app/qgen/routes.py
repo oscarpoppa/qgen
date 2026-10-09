@@ -742,9 +742,12 @@ def list_user(uid):
     #their quizzes in the Quizzes page's folders (only the folders with some of theirs in them count)
     quiz_tree = S.subject_tree('quizzes', items=attempts_by_quiz(ulst.cquizzes))[0] if ulst.cquizzes else None
     #the automatic "New" box: quizzes given to them and not started yet
-    fresh = [g for g in attempts_by_quiz(ulst.cquizzes) if any(a.status == 'new' for a in g['attempts'])]
+    groups = attempts_by_quiz(ulst.cquizzes)
+    fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
+    #and "In progress": started and not handed in yet (like My quizzes' own)
+    working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
     return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s student page".format(ulst.shown_name),
-                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh)
+                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working)
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
 @qgen_bp.route('/quiz/results', methods=['GET'])
