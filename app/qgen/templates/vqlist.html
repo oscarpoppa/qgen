@@ -44,19 +44,13 @@
           </td>
           <td class="actions">
             {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}" title="Give {{ item.title }} to students">Assign</a>{% else %}{{ slot('Assign') }}{% endif %}
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="See one student's version of {{ item.title }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Change this quiz's questions and settings">Edit</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="Every student's attempts and scores on {{ item.title }}">History</a>{% else %}{{ slot('History') }}{% endif %}
-            {# the rest in a small menu (keeps a row short), as on the Users page #}
-            <details class="menu row-menu">
-              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title }}”" title="More for “{{ item.title }}”: view, remove or delete">More</summary>
-              <div class="menu-list">
-                <a href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="See one student's version of {{ item.title }}">View</a>
-                {# assigned: removed (students keep it, it can come back); never assigned: deleted #}
-                {% if item.removed_at %}
-                {% elif item.cquizzes %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Remove', 'menu-btn menu-danger', 'Remove “' ~ (item.title)|string ~ '” from Quizzes? Students keep their copies and scores, and its results stay. You can restore it from Removed quizzes.', tip='Take it off Quizzes; students keep their copies and scores') }}
-                {% else %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz'), tip='Delete this quiz for good (it was never assigned)') }}{% endif %}
-              </div>
-            </details>
+            {# assigned: removed (students keep it, it can be restored); never assigned: deleted #}
+            {% if item.removed_at %}
+            {% elif item.cquizzes %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Remove', 'btn btn-danger btn-sm', 'Remove “' ~ (item.title)|string ~ '” from Quizzes? Students keep their copies and scores, and its results stay. You can restore it from Removed quizzes.', tip='Take it off Quizzes; students keep their copies and scores') }}
+            {% else %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz'), tip='Delete this quiz for good (it was never assigned)') }}{% endif %}
           </td>
         </tr>
       {% endfor %}

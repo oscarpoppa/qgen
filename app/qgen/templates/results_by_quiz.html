@@ -14,13 +14,16 @@
   <details class="box card subject-box quiz-result item-box" data-list id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
       {{ box_label('📝', vq.title, count_of(q.students, 'student', 'students')) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
-      {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">average {{ '%.0f' % q.average }}%</span>{% endif %}
+      {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
       {% if q.waiting %}<span class="badge badge-warn">{{ q.waiting }} waiting for grading</span>{% endif %}
     </summary>
     <div class="box-body">
-    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Open the history of “{{ vq.title }}” on its own page">Quiz history</a>
-      · <a href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems without changing it">View quiz</a> · <a href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change “{{ vq.title }}”: its problems and settings">Edit quiz</a></p>{% endif %}
-    {% if q.paper and q.rows %}<p class="small box-links"><a href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">🖨 Print paper pages</a></p>{% endif %}
+    {% if not single or (q.paper and q.rows) %}<div class="btn-row box-links">
+      {% if not single %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Open the history of “{{ vq.title }}” on its own page">History</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems without changing it">View quiz</a>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change “{{ vq.title }}”: its problems and settings">Edit quiz</a>{% endif %}
+      {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">🖨 Print paper pages</a>{% endif %}
+    </div>{% endif %}
     {% if q.rows %}
       {# a long class: find a student in this quiz #}
       {% if q.students > 8 %}{{ filter_bar('#quiz-' ~ vq.id, 'student', 'students', compact=true) }}{% endif %}
@@ -30,15 +33,16 @@
           <tbody>
           {% for student, g in q.rows %}
             <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="See all of {{ student.shown_name }}'s quizzes, attempts and scores">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
-              {{ result_cells(g, student, rules) }}
+              <td data-label="Student"><span class="person nowrap">{{ avatar(student, 24) }}{{ student.shown_name }}</span></td>
+              {{ result_cells(g, student, rules, student_page=true) }}
             </tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <p class="muted small box-empty">Not assigned to anyone yet.{% if not vq.removed_at %} <a href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give “{{ vq.title }}” to students">Assign it</a>{% endif %}</p>
+      <p class="muted small box-empty">Not assigned to anyone yet.</p>
+      {% if not vq.removed_at %}<div class="btn-row"><a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give “{{ vq.title }}” to students">Assign</a></div>{% endif %}
     {% endif %}
     </div>
   </details>

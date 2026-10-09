@@ -179,10 +179,10 @@
         if (!d.contains(e.target) && !(d._floatList && d._floatList.contains(e.target))) d.removeAttribute('open');
       });
     });
-    /* pop-up menus inside lists and boxes (a row's "More", a message's delete choices) are lifted
+    /* pop-up menus inside lists and boxes (a message's delete choices) are lifted
        out to the page while open, by their button, so no box's edge can cut them off; upward
        when there isn't room below. They go back when closed. */
-    var FLOAT = 'details.row-menu, details.float-menu';
+    var FLOAT = 'details.float-menu';
     function floatOpen(d) {
       var list = d._floatList || d.querySelector(':scope > .menu-list, :scope > .msg-del-choices'), btn = d.querySelector('summary');
       if (!list || !btn) return;

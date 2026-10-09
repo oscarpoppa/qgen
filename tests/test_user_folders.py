@@ -150,7 +150,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     page = teach.get('/messages').data.decode()
     assert '<span class="side-name">7th grade</span>' in page
     assert '<option value="folder:{}">📁 7th grade (1 student)</option>'.format(g7) in page
-    rows = lambda v: re.findall(r'<td data-label="Student"><a class="person person-link"[^>]*>.*?<strong>([^<]+)</strong>',
+    rows = lambda v: re.findall(r'<td data-label="Student"><span class="person">.*?<strong>([^<]+)</strong>',
                                 teach.get('/messages?folder={}'.format(v)).data.decode(), re.S)
     assert rows(g7) == ['sam'] and rows('main') == ['kim'] and sorted(rows('all')) == ['kim', 'sam']
     # writing to a folder reaches its students (folders inside included)
@@ -225,5 +225,6 @@ def test_users_page_leads_to_each_student_page(app_db):
     sam = ids('sam')
     assert 'href="/quiz/listuser/{}" title="sam&#39;s quizzes, results and awards">Student page</a>'.format(sam) in page \
         or 'href="/quiz/listuser/{}" title="sam\'s quizzes, results and awards">Student page</a>'.format(sam) in page
-    assert '<a class="person-link" href="/quiz/listuser/{}" draggable="false">sam</a>'.format(sam) in no_titles(page)  # the name too
+    # the name itself is plain text, not a link: only buttons act on a person
+    assert '<strong class="box-title">sam</strong>' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page

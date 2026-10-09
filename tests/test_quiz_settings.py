@@ -844,9 +844,9 @@ def test_results_by_quiz(app_db):
     page = teacher.get('/quiz/results').data.decode()
     assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
     box = page.split('id="quiz-{}"'.format(vq.id))[1]
-    assert box.index('kim</a>') < box.index('sam</a>')  # students by name
+    assert box.index('kim</span>') < box.index('sam</span>')  # students by name
     assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Archive' in box
-    assert 'average 0%' in box  # sam's score counts; kim has none yet
+    assert 'Average 0%' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'Quiz history: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
     assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Results by quiz

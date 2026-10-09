@@ -329,6 +329,11 @@ th { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); background:
 tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
 td.actions { white-space: nowrap; text-align: right; }
+/* a row's buttons: a little tighter than elsewhere, so they all fit on one line */
+td.actions .btn-sm, .result-attempt-buttons .btn-sm { padding-left: 8px; padding-right: 8px; }
+/* a list too narrow for a row's buttons on one line: they make a neat block, two or
+   three to a line, instead of running past the edge */
+@container listarea (max-width: 1080px) { td.actions { white-space: normal; width: 11.5rem; } }
 td.actions .btn { margin-left: 4px; }
 .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .clamp.open { -webkit-line-clamp: unset; }
@@ -479,15 +484,21 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .msg-mine.msg-with-avatar { flex-direction: row-reverse; }
 
 .inline-form { display: inline; margin: 0; }
-/* Results by student: on wider screens each attempt (date, score, Details, Delete) stays on
+/* Results by student: on wider screens each attempt (date, score, its buttons) stays on
    one line; the table makes the column wide enough, and the score column's picker gives way */
 .result-attempt { margin: 2px 0; }
 .result-attempt-note { margin: -2px 0 4px; }
-.btn-row.result-attempt-buttons { flex-wrap: nowrap; }  /* Details and Delete stay together */
+.btn-row.result-attempt-buttons { gap: 6px; }
 @media (min-width: 641px) {
   td.attempts { white-space: nowrap; }
   .btn-row.result-attempt { flex-wrap: nowrap; }
   td.attempts + td select { max-width: 100%; }
+}
+/* ...unless the list is too narrow for that: then an attempt's buttons go under its date */
+@container listarea (max-width: 1080px) {
+  td.attempts { white-space: normal; }
+  .btn-row.result-attempt { flex-wrap: wrap; }
+  .result-attempt-buttons { margin-left: 0; padding-left: 0; }
 }
 @media (max-width: 640px) { .result-attempt { margin: 0 0 12px; } .result-attempt-note { margin: -8px 0 12px; } }
 td.actions .inline-form .btn { margin-left: 4px; }
@@ -839,6 +850,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .sub-box[open] > .sub-head .fold { transform: rotate(90deg); }
 .sub-body { margin-top: 10px; }
 .sub-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sub-tools > span { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 @media (max-width: 600px) { .sub-box { padding: 8px; } }
 .quiz-folder-label { margin: -4px 0 6px; }
 .quiz-folder-label a { color: var(--muted); text-decoration: none; }
@@ -869,8 +881,6 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .chip-x:hover { color: var(--bad); }
 .person-folders .move-form { margin-top: 2px; }
 .drag-person { cursor: grab; }
-.person-link { color: inherit; text-decoration: none; }
-.person-link:hover { text-decoration: underline; }
 /* Users: each person a box that folds to their name (like My quizzes' quizzes) */
 .grid.person-grid { align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
 .person-grid + .person-grid { margin-top: 12px; }
@@ -1158,6 +1168,7 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 .dash-body > .dash-links .dash-go-links a { margin-left: 0; }
 .online-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .online-people li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.online-people .online-go { margin-left: auto; }
 @media (prefers-reduced-motion: reduce) { details.dash-card > summary::before { transition: none; } }
 
 /* the top bar's "online" menu (teachers) */
@@ -1204,15 +1215,6 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
   a { color: inherit; text-decoration: none; }
 }
 
-/* a row's "More" menu (Users): the less used actions, as a short list */
-.row-menu { display: inline-block; }
-.row-menu > summary.btn::after { content: " ▾"; font-size: .75em; }
-.row-menu .menu-list { left: auto; right: 0; text-align: left; }
-.row-menu .menu-list form { display: block; margin: 0; }
-.menu-btn { display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; color: var(--text);
-  padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; }
-.menu-btn:hover { background: var(--surface-2); }
-.menu-btn.menu-danger { color: var(--bad); }
 
 /* a page title that's also a link (the grading page's quiz): looks like a title until pointed at */
 .page-head h1 a, .page-head a.person { color: inherit; text-decoration: none; }
@@ -1325,7 +1327,6 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
 /* (its drag bar is the standard one, static/js/grip.js) */
 @media print { .student-awards .awards-scroll { max-height: none !important; overflow: visible; } }
 /* the floating "More" menu stays above everything near it */
-details.row-menu .menu-list { z-index: 60; min-width: 11rem; }
 /* a pop-up menu lifted out to the page (base.html): drawn like a drop-down, over everything */
 .floating-menu { position: fixed !important; z-index: 200; display: flex; flex-direction: column; min-width: 11rem; max-width: calc(100vw - 16px);
   background: var(--surface); border: 1px solid var(--border) !important; border-radius: var(--r-lg); box-shadow: var(--shadow) !important; padding: 6px !important; }
@@ -1367,6 +1368,13 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 td.actions { padding-top: 5px; padding-bottom: 5px; }
 /* "+ Add…" lists all the same width; the problem count stays on one line */
 .person-folders .move-select { width: 9.5rem; min-width: 0; }
+/* the Folders column stays narrow (chips one under another), so a row's buttons fit beside it */
+td.person-folders { max-width: 10.5rem; }
+/* a results row's own buttons (History or Student page, Retake, Archive all) one under
+   another at the right: the row is already as tall as its attempts */
+.btn-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.btn-stack .inline-form .btn, td.actions .btn-stack .btn { margin-left: 0; }
+.stack .btn-stack { align-items: flex-start; }
 details.problem-list > summary { white-space: nowrap; }
 /* a student's tries in a results cell: Details and Archive line up at the right, whatever the date's length */
 .result-attempt { display: flex; align-items: center; }
@@ -1377,7 +1385,7 @@ td.actions { font-size: 0; }
 td.actions > :not(.btn):not(form) { font-size: var(--fs-md); }
 td.actions > form { display: inline-block; }
 td.actions > * { vertical-align: middle; }
-td.actions .btn, td.actions .inline-form .btn, td.actions details.row-menu { margin-left: 6px; }
+td.actions .btn, td.actions .inline-form .btn { margin-left: 6px; }
 td.actions > :first-child, td.actions > :first-child .btn { margin-left: 0; }
 
 /* boxes that open inside a list (a folder's box, a student's or quiz's results, a month in the

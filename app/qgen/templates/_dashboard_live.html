@@ -1,6 +1,6 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
    so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
-{% from "_macros.html" import avatar, person_link, quiz_link, box_label, count_of with context %}
+{% from "_macros.html" import avatar, person_name, box_label, count_of with context %}
 {% macro score(value) -%}
   <span class="badge {{ 'badge-ok' if value >= 70 else 'badge-warn' if value >= 50 else 'badge-bad' }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
@@ -48,14 +48,15 @@
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
-        <li>{{ person_link(o.cq.taker) }}
-          {# this student's own copy of the quiz (their questions and answers so far), not everyone's results #}
-          <span><a href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="{{ o.cq.taker.shown_name if o.cq.taker else 'The student' }}'s copy of this quiz">“{{ o.cq.vquiz.title }}”</a></span>
+        <li>{{ person_name(o.cq.taker) }}
+          <span>“{{ o.cq.vquiz.title }}”</span>
           {% if o.state == 'started' %}<span class="badge badge-accent">In progress</span>
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="See all of {{ o.cq.taker.shown_name if o.cq.taker else 'this student' }}'s quizzes, attempts and scores">Student page</a></li>
+          {# this student's own copy of the quiz (their questions and answers so far), and their student page #}
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Their attempt</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="Open {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -70,11 +71,12 @@
     {% if queue %}
       <ul class="dash-list">
       {% for cq in queue %}
-        <li>{{ person_link(cq.taker) }}
+        <li>{{ person_name(cq.taker) }}
           {# just the quiz's name: Grade opens this hand-in #}
           <span>“{{ cq.vquiz.title }}”</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span>
-          <a class="btn btn-sm dash-go" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">Grade</a></li>
+          <span class="btn-row dash-go"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">Grade</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Open {{ cq.taker.shown_name if cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -113,12 +115,13 @@
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
-        <li>{{ person_link(cq.taker) }}
+        <li>{{ person_name(cq.taker) }}
           {# just the quiz's name: the Results button opens this hand-in itself #}
           <span>“{{ cq.vquiz.title }}”</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">Being graded</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a></li>
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Open {{ cq.taker.shown_name if cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endfor %}
       </ul>
     {% else %}

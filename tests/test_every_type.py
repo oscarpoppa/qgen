@@ -200,7 +200,7 @@ def test_problem_history(app_db):
     assert '<h1>Quiz history: Geo 1</h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
     home = login(app, 'sam').get('/home').data.decode()
     assert 'data-level-of="#home-boxes"' in home and 'id="home-boxes"' in home
-    assert '4 answers from 2 students' in page and 'average 50%' in page and '2 fully right' in page
+    assert '4 answers from 2 students' in page and 'Average 50%' in page and '2 fully right' in page
     assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="') == 4
     assert 'Most common wrong answers' in page and '<strong>Lyon</strong> <span class="muted">(2 times)</span>' in page
     assert teacher.get('/quiz/problem-results/999').status_code == 302  # gone: back to Problems

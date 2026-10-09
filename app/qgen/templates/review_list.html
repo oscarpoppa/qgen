@@ -1,20 +1,22 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_link, quiz_link, box_label, count_of, expand_collapse with context %}
+{% from "_macros.html" import person_name, quiz_name, box_label, count_of, expand_collapse with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions">{{ expand_collapse('#grading-groups', 'quizzes') }}</div></div>
+  <div class="actions">{% if waiting %}<a class="btn" href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Grade the oldest</a>{% endif %}
+    {{ expand_collapse('#grading-groups', 'quizzes') }}</div></div>
 {% if waiting %}
   {# grouped by quiz (the quiz waiting longest first), oldest hand-in first inside #}
-  <p class="muted small">{{ waiting|length }} waiting, oldest first. <a href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Start with the oldest →</a></p>
+  <p class="muted small">{{ waiting|length }} waiting, oldest first.</p>
   {% set seen = [] %}
   {% for cq in waiting %}{% if cq.vquiz_id not in seen %}{% set _ = seen.append(cq.vquiz_id) %}{% endif %}{% endfor %}
   <div id="grading-groups">
   {% for vquiz_id in seen %}
     {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
     <details class="box card grading-group" data-list>
-      <summary class="dash-head">{{ box_label('📝', quiz_link(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}</summary>
+      <summary class="dash-head">{{ box_label('📝', quiz_name(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}
+        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vquiz_id) }}" title="This quiz's history: everyone's attempts and scores">History</a></span></summary>
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
@@ -22,10 +24,11 @@
           {% for cq in rows %}
             {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
             <tr>
-              <td data-label="Student">{{ person_link(cq.taker) }}</td>
+              <td data-label="Student">{{ person_name(cq.taker) }}</td>
               <td data-label="Handed in">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
-              <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">ready to finish</span>{% endif %}</td>
-              <td class="actions"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">Grade</a></td>
+              <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
+              <td class="actions"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">Grade</a>
+                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Open {{ cq.taker.shown_name if cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></td>
             </tr>
           {% endfor %}
           </tbody>

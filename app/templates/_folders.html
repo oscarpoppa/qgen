@@ -185,7 +185,7 @@
     <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
-        <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a href="{{ fk.page(f.id) }}" title="Go into “{{ fk.name(n.folder) }}” to see just what's in it">Open this folder</a></span></div>
+        <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs" href="{{ fk.page(f.id) }}" title="Go into “{{ fk.name(n.folder) }}” to see just what's in it">Open this folder</a></span></div>
       {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
       {{ draw(n) }}
       {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
@@ -204,7 +204,7 @@
     <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('📥', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
     <div class="sub-body level">
       <div class="sub-tools">{{ level_buttons(fk.main_label) }}
-        <span class="small"><a href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></div>
+        <span class="small"><a class="btn btn-secondary btn-xs" href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></div>
       {{ draw(fk.root) }}
     </div>
   </details>

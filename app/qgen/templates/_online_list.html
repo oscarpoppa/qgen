@@ -1,12 +1,13 @@
 {# Who's on the site: online now (a page open in the last 2 minutes), then anyone active
    recently (both spans are Technical settings). Used on the Dashboard and in the top bar's "online" menu. #}
 {% set recent_min = tuning.get('recently') %}
-{% from "_macros.html" import avatar, person_link with context %}
+{% from "_macros.html" import avatar, person_name with context %}
 <div class="online-list">
   <h3 class="dash-sub">Online now <span class="badge badge-ok">{{ online|length }}</span></h3>
   {% if online %}
-    {% macro online_row(u) %}<li>{{ person_link(u, 24, strong=false) }}
-        {% if u.id == current_user.id %}<span class="muted small">(you)</span>{% elif u.is_admin %}<span class="badge">teacher</span>{% endif %}</li>{% endmacro %}
+    {% macro online_row(u) %}<li>{{ person_name(u, 24, strong=false) }}
+        {% if u.id == current_user.id %}<span class="muted small">(you)</span>{% elif u.is_admin %}<span class="badge">teacher</span>{% endif %}
+        <a class="btn btn-secondary btn-xs online-go" href="{{ url_for('qgen.list_user', uid=u.id) }}" title="Open {{ u.shown_name }}'s student page">Student page</a></li>{% endmacro %}
     <ul class="online-people">{% for u in online[:8] %}{{ online_row(u) }}{% endfor %}</ul>
     {% if online|length > 8 %}<details class="box box-mini more-list" data-more="online"><summary class="small"><span class="fold" aria-hidden="true"></span>+{{ online|length - 8 }} more</summary>
       <ul class="online-people">{% for u in online[8:] %}{{ online_row(u) }}{% endfor %}</ul></details>{% endif %}
@@ -15,9 +16,10 @@
   {% endif %}
   {% if recent %}
     <h3 class="dash-sub">Active in the last {{ 'hour' if recent_min == 60 else ('{} hours'.format(recent_min // 60) if recent_min % 60 == 0 else '{} minutes'.format(recent_min)) }}</h3>
-    {% macro recent_row(u) %}<li>{{ person_link(u, 24, strong=false) }}
+    {% macro recent_row(u) %}<li>{{ person_name(u, 24, strong=false) }}
         {% if u.is_admin %}<span class="badge">teacher</span>{% endif %}
-        <span class="muted small">{{ u.seen_label(now) }}</span></li>{% endmacro %}
+        <span class="muted small">{{ u.seen_label(now) }}</span>
+        <a class="btn btn-secondary btn-xs online-go" href="{{ url_for('qgen.list_user', uid=u.id) }}" title="Open {{ u.shown_name }}'s student page">Student page</a></li>{% endmacro %}
     <ul class="online-people">{% for u in recent[:8] %}{{ recent_row(u) }}{% endfor %}</ul>
     {% if recent|length > 8 %}<details class="box box-mini more-list" data-more="recent"><summary class="small"><span class="fold" aria-hidden="true"></span>+{{ recent|length - 8 }} more</summary>
       <ul class="online-people">{% for u in recent[8:] %}{{ recent_row(u) }}{% endfor %}</ul></details>{% endif %}

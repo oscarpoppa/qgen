@@ -63,7 +63,7 @@
         {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
       </summary>
-      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">📁 {{ here.name }}</a></p>{% endif %}
+      {% if fk.view in ('all', 'new', 'started', 'soon') and here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">📁 {{ here.name }}</a></p>{% endif %}
       {% set ahead = g.open or latest %}
       <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
         {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}

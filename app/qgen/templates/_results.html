@@ -2,16 +2,21 @@
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
 {% from "_macros.html" import post_button, slot with context %}
-{% macro result_cells(g, student, rules) %}
+{# history / student_page: also a History button (Results by student) or a Student page button
+   (Results by quiz) for the row, since the quiz or student named in it is plain text #}
+{% macro result_cells(g, student, rules, history=false, student_page=false) %}
               <td data-label="Attempts" class="attempts">
                 {% for cq in g.attempts %}
                   <div class="btn-row result-attempt">
-                    <a href="{{ url_for('qgen.qtake', cidx=cq.id) }}" class="nowrap" title="See {{ student.shown_name }}'s answers and score for this attempt">{{ cq.when_label }}</a>
+                    <span class="nowrap">{{ cq.when_label }}</span>
                     {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}<a class="badge badge-warn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this attempt">Waiting for grading</a>
+                    {% elif cq.status == 'review' %}<span class="badge badge-warn">Waiting for grading</span>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
                     {% else %}<span class="badge">Not started</span>{% endif %}
-                    <span class="btn-row result-attempt-buttons"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Answer key</a>
+                    <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this attempt">Grade</a>{% endif %}
+                    {% if cq.status in ('completed', 'review') %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s answers and score for this attempt">Results</a>
+                    {% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s copy of this quiz, as it is now">Their attempt</a>{% endif %}
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Answer key</a>
                     {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)') }}</span>
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at.strftime('%b %d %I:%M %p') }}</div>{% endif %}
@@ -31,9 +36,11 @@
                   <span class="muted">The quiz's own rule is {{ rules[g.vquiz.retake_rule]|lower }}.</span></div>{% endif %}
                 {% endif %}
               </td>
-              <td class="actions">
+              <td class="actions"><div class="btn-stack">
+                {% if history %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="This quiz's history: everyone's attempts and scores">History</a>{% endif %}
+                {% if student_page %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}'s student page: quizzes, results and folders">Student page</a>{% endif %}
                 {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new attempt at this quiz, with new values') }}{% else %}{{ slot('Retake') }}{% endif %}
                 {# several tries: all of them to the Archive at once (one try has its own Archive button) #}
-                {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all ' ~ g.attempts|length ~ ' attempts', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s tries at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s tries at this quiz to the Archive') }}{% else %}{{ slot('Archive all 2 tries') }}{% endif %}
-              </td>
+                {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all ' ~ g.attempts|length ~ ' attempts', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all 2 tries') }}{% endif %}
+              </div></td>
 {% endmacro %}

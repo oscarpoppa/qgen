@@ -112,7 +112,7 @@
       <tbody>
       {% for r in shown %}
         <tr>
-          <td data-label="Student"><a class="person person-link" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" title="Read and answer {{ r.student.shown_name }}'s messages">{{ avatar(r.student, 28) }}<strong>{{ r.student.shown_name }}</strong></a>
+          <td data-label="Student"><span class="person">{{ avatar(r.student, 28) }}<strong>{{ r.student.shown_name }}</strong></span>
             {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
           <td data-label="Latest">
             {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.shown_name ~ ': ' }}{{ r.last.body }}</div>

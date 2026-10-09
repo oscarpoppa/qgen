@@ -1,5 +1,5 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
-{% from "_macros.html" import avatar, person_link, quiz_link, box_label, count_of with context %}
+{% from "_macros.html" import avatar, person_name, box_label, count_of with context %}
 <details class="box card dash-card" id="dash-right-now" data-box="now" open>
   <summary class="dash-head">{{ box_label('🟢', 'Right now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
@@ -9,10 +9,12 @@
     <h3 class="dash-sub">Taking a quiz</h3>
     {% if taking %}
       {% macro taking_row(t) %}
-        <li>{{ person_link(t.cq.taker) }}
-          {# their quiz as it stands (what they've answered so far) #}
-          <span><a href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="{{ t.cq.taker.shown_name if t.cq.taker }}’s quiz, as it is now">“{{ t.cq.vquiz.title }}”</a></span>
-          <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></li>
+        <li>{{ person_name(t.cq.taker) }}
+          <span>“{{ t.cq.vquiz.title }}”</span>
+          <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span>
+          {# their quiz as it stands (what they've answered so far), and their student page #}
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="See {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}'s questions and answers so far">Their attempt</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=t.cq.assignee) }}" title="Open {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endmacro %}
       <ul class="dash-list">{% for t in taking[:8] %}{{ taking_row(t) }}{% endfor %}</ul>
       {# a whole class at once: the first 8, and the rest folded away #}

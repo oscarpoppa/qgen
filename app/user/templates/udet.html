@@ -23,7 +23,7 @@
         <span class="fold" aria-hidden="true"></span>
         {# checked people can be given a quiz together (the bar above the list) #}
         <input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}">
-        <span class="person">{{ avatar(item, 32) }}<strong class="box-title"><a class="person-link" href="{{ url_for('qgen.list_user', uid=item.id) }}" draggable="false" title="{{ item.shown_name }}'s student page (or drag onto a folder to move them)">{{ item.shown_name }}</a></strong></span>
+        <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong></span>
         {% if item.is_admin %}<span class="badge badge-accent">Teacher</span>{% endif %}
         {% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>{% endif %}
         <span class="box-end"><a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Give {{ item.shown_name }} a quiz">Assign</a></span>
@@ -39,17 +39,10 @@
         {# their page: quizzes and results, awards #}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.shown_name }}'s quizzes, results and awards">Student page</a>
         {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% endif %}
-        {# the rest, less often needed, in a small menu #}
-        <details class="menu row-menu">
-          <summary class="btn btn-secondary btn-sm" aria-label="More for {{ item.shown_name }}" title="More for {{ item.shown_name }}: edit, reset password, delete">More</summary>
-          <div class="menu-list">
-            <a href="{{ url_for('user.eduser', uid=item.id) }}" title="Change {{ item.shown_name }}'s name, email or teacher access">Edit</a>
-            {% if item.avatar %}<form method="post" action="{{ url_for('user.remove_avatar', uid=item.id) }}" data-confirm="Remove {{ item.shown_name }}’s picture?" data-confirm-ok="Remove">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="menu-btn" title="Take down {{ item.shown_name }}’s picture; their initials show instead">Remove picture</button></form>{% endif %}
-            {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'menu-btn', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with') }}
-            {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% endif %}
-          </div>
-        </details>
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}" title="Change {{ item.shown_name }}'s name, email or teacher access">Edit</a>
+        {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with') }}
+        {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead') }}{% endif %}
+        {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% endif %}
       </div>
     </details>
   {% endfor %}

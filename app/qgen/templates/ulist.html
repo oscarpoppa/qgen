@@ -16,12 +16,12 @@
         <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}">
           <summary>
             {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
-            <a class="small" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's attempts and scores on this quiz">Quiz history</a>
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">Waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
               {% elif latest.status == 'started' %}<span class="badge badge-accent">In progress</span>
               {% elif latest.status == 'new' %}<span class="badge">Not started</span>{% endif %}
+              <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's attempts and scores on this quiz">History</a>
             </span>
           </summary>
           <div class="table-wrap stack">
@@ -54,9 +54,10 @@
       {{ box_label(avatar(item, 30), item.shown_name, count_of(n, 'quiz', 'quizzes')) }}
     </summary>
     <div class="box-body">
-    {% if not single %}<p class="small box-links"><a href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Open a page with just {{ item.shown_name }}'s quizzes and awards">{{ item.shown_name }}'s student page</a>
-      {% if not item.is_admin %}· <a href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% endif %}
-      · <a href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></p>{% endif %}
+    {% if not single %}<div class="btn-row box-links">
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Open a page with just {{ item.shown_name }}'s quizzes and awards">Student page</a>
+      {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% endif %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></div>{% endif %}
     {% if item.cquizzes and single %}
       {# one student: each quiz is a box that folds to its name, attempts and score #}
       <div class="btn-row small quiz-box-bar"><span class="level-buttons">
@@ -100,8 +101,8 @@
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Quiz"><a href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="This quiz's history: everyone's attempts and scores"><strong>{{ g.vquiz.title }}</strong></a></td>
-              {{ result_cells(g, item, rules) }}
+              <td data-label="Quiz"><strong>{{ g.vquiz.title }}</strong></td>
+              {{ result_cells(g, item, rules, history=true) }}
             </tr>
           {% endfor %}
           </tbody>

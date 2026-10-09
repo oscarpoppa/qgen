@@ -450,7 +450,7 @@ def userdet():
         unit='person', units='people', all_label='All users', all_count=len(ulst), name=lambda f: f.name,
         placeholder='e.g. 7th grade', add_words='+ Add…', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
-        box_tools=lambda n: Markup('<a href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz to this folder</a> · ').format(
+        box_tools=lambda n: Markup('<a class="btn btn-xs" href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz to this folder</a> ').format(
             url_for('qgen.assign', folder=n['folder'].id), n['folder'].name)
         if n['count'] else '',
         fold_key='qgen-folded-user-folders')

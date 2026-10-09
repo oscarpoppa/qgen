@@ -88,16 +88,17 @@
   <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone's attempts and scores on “{{ cq.vquiz.title }}”">Quiz history</a>
 {%- endmacro %}
 
-{# a person in a teacher's list: picture and name, going to their student page #}
-{% macro person_link(u, size=24, strong=true) -%}
+{# a person in a teacher's list: picture and name, plain (the item's own buttons, such as
+   "Student page", go beside it: names are never links) #}
+{% macro person_name(u, size=24, strong=true) -%}
   {%- if u -%}
-  <a class="person person-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" title="Open {{ u.shown_name }}'s student page: quizzes, results and folders">{{ avatar(u, size) }}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
+  <span class="person">{{ avatar(u, size) }}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</span>
   {%- else %}<span class="muted">someone</span>{% endif -%}
 {%- endmacro %}
 
-{# a quiz's title in a teacher's list, going to that quiz's results #}
-{% macro quiz_link(vq) -%}
-  <a href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="This quiz's history: everyone's attempts and scores">“{{ vq.title }}”</a>
+{# a quiz's title in a teacher's list, plain (its "History" button goes beside it) #}
+{% macro quiz_name(vq) -%}
+  “{{ vq.title }}”
 {%- endmacro %}
 
 {# Expand all / Collapse all for a list of boxes that fold (target: what holds them; what: the

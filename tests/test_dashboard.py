@@ -135,7 +135,8 @@ def test_taking_a_quiz_right_now(app_db):
     sam.get('/messages/poll?watch=attempt:{}'.format(other.id))
     part = teacher.get('/dashboard/now').data.decode()
     assert 'Taking a quiz' in part and '<strong>sam</strong>' in part
-    assert 'href="/quiz/take/{}"'.format(other.id) in part and '“Other”</a>' in part
+    # the quiz's name is plain; "Their attempt" opens their quiz as it is now
+    assert 'href="/quiz/take/{}"'.format(other.id) in part and '<span>“Other”</span>' in part and '>Their attempt</a>' in part
     assert 'data-url="/dashboard/now"' in teacher.get('/dashboard').data.decode()
 
 

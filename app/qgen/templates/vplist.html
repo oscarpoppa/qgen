@@ -39,12 +39,7 @@
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="See three students' versions of {{ item.title or 'Untitled' }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Change this problem's question, values and answer">Edit</a>
             {% if item.cproblems %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">History</a>{% else %}{{ slot('History') }}{% endif %}
-            <details class="menu row-menu">
-              <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title or 'Untitled' }}”" title="More for “{{ item.title or 'Untitled' }}”: delete">More</summary>
-              <div class="menu-list">
-                {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'menu-btn menu-danger', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem'), tip='Delete this problem for good') }}
-              </div>
-            </details>
+            {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem'), tip='Delete this problem for good') }}
           </td>
         </tr>
       {% endfor %}

@@ -526,7 +526,8 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     page = teach.get('/dashboard').data.decode()
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
-    assert '<a href="/quiz/take/{}" title="sam'.format(cq.id) in box and 's copy of this quiz">“Week 1”</a>' in box
+    assert '<span>“Week 1”</span>' in box  # the name is plain; the button opens their copy
+    assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Their attempt</a>' in box
     assert '/quiz/results/{}'.format(vq.id) not in box
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
@@ -597,7 +598,7 @@ def test_taking_a_quiz_away_updates_everything(app_db):
     home = sam.get('/home').data.decode()
     assert 'Perfect score' not in home.split('Still to earn')[0]
     results = teach.get('/quiz/results/{}'.format(a.id)).data.decode()
-    assert 'average 0%' in results
+    assert 'Average 0%' in results
     # take away the unfinished one: off Home's "Waiting for you" and the Dashboard's list
     assert '“B”' in home
     teach.post('/quiz/delcq/{}'.format(todo.id))
@@ -1240,3 +1241,26 @@ def test_one_set_of_sizes_and_accessible_controls():
     assert 'border: 1px solid var(--field-border)' in css
     assert 'color: var(--on-ok)' in css and 'color: var(--on-bad)' in css and '--on-ok: #0f1320' in css
     assert '@media (pointer: coarse)' in css and 'min-height: 44px !important' in css
+
+
+def test_list_items_have_only_buttons(app_db):
+    """On every list, an item's name is plain text and its actions are buttons: no text link
+    in a row, a Dashboard line or a box's heading, and no "More" menus."""
+    import re
+    from app.qgen import services as S
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach, essay=True)
+    S.submit(give(vq, 'sam'), {1: 'Light makes sugar.'})
+    give(vq, 'kim')
+    pages = ['/dashboard', '/dashboard/now', '/quiz/review', '/quiz/listvp?folder=all', '/quiz/listvq?folder=all', '/userdet',
+             '/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id), '/messages']
+    for url in pages:
+        page = teach.get(url).data.decode()
+        main = page[page.index('<main'):page.index('</main>')] if '<main' in page else page
+        items = re.findall(r'<tr[ >].*?</tr>|<li>.*?</li>|<summary[ >].*?</summary>', main, re.S)
+        for item in items:
+            # (the folder list down the side is where to go, not an item: its entries are links)
+            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link)\b', a)]
+            assert not links, (url, links, item[:300])
+        assert 'row-menu' not in main and 'person-link' not in main, url
