@@ -46,7 +46,9 @@ if [ -S /tmp/qgen.sock ] && [ -n "$running" ]; then
     [ "$from" != "$HERE" ] && echo "  note: that's not this folder ($HERE)"
 else
     rm -f /tmp/qgen.sock
-    gunicorn --bind unix:/tmp/qgen.sock --workers 4 quizapp:app --daemon --log-level DEBUG
+    #one worker with many threads: each open page keeps a connection for instant updates
+    #(app/push.py), which needs them all in one process; QGEN_PUSH=1 turns them on
+    QGEN_PUSH=1 gunicorn --bind unix:/tmp/qgen.sock --workers 1 --threads 100 quizapp:app --daemon --log-level DEBUG
     #it runs in the background: make sure it's still there once it has had time to start
     for i in 1 2 3 4 5 6 7 8 9 10; do
         [ -S /tmp/qgen.sock ] && break

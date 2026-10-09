@@ -623,6 +623,8 @@ def qsave(cidx):
     #only questions the page sent (a question with nothing checked sends just its marker)
     sent = {cp.ordinal: form[fieldname_base.format(cp.ordinal)].data for cp in cq.cproblems
             if fieldname_base.format(cp.ordinal) in request.form or fieldname_base.format(cp.ordinal) + '_present' in request.form}
+    from app import push
+    push.not_me()
     try:
         S.autosave(cq, sent)
     except S.ServiceError as exc:

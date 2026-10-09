@@ -222,9 +222,10 @@ def _mark_for_teacher(teacher, ids, cleared=False):
                 db.session.add(MessageRead(message_id=i, user_id=teacher.id, cleared=cleared))
             elif cleared:
                 have[i].cleared = True
-        Message.query.filter(Message.id.in_(ids), Message.seen_by_teacher.is_(False)) \
-            .update({'seen_by_teacher': True}, synchronize_session=False)
         try:
+            #(the update writes the new rows first, so it can be the one that finds another tab's)
+            Message.query.filter(Message.id.in_(ids), Message.seen_by_teacher.is_(False)) \
+                .update({'seen_by_teacher': True}, synchronize_session=False)
             db.session.commit()
             return
         except IntegrityError:

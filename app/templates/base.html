@@ -264,6 +264,11 @@
   <script src="{{ asset('js/keep.js') }}" defer></script>
   {% if current_user.is_authenticated %}
   <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" data-every="{{ tuning_poll_ms() }}"{% if just_signed_in() %} data-welcome{% endif %} defer></script>
+  {% if push_on() %}
+  {# instant updates (app/push.py); without the library, pages check in as before #}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script src="{{ asset('js/push.js') }}" data-every="{{ tuning_poll_ms() }}" defer></script>
+  {% endif %}
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

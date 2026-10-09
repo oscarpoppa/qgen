@@ -25,6 +25,11 @@ def _sqlite_foreign_keys(dbapi_conn, record):
         cur.execute('PRAGMA foreign_keys=ON')
         cur.close()
 migrate = Migrate(app, db) 
+#instant updates (app/push.py): only when the server is started for them
+import os as _os
+app.config.setdefault('PUSH', _os.environ.get('QGEN_PUSH') == '1')
+from app import push
+push.init(app)
 login = LoginManager(app)
 login.login_view = 'user.login'
 
@@ -132,7 +137,7 @@ def page_helpers():
         return bool(session.pop('qgen_welcome', False))
     from app import tuning, live, nav
     from app.qgen.models import RETAKE_RULES_SHORT
-    return dict(short_rules=RETAKE_RULES_SHORT, watch=live.watch, back=nav.back, link_label=nav.link_label, link_kind=nav.link_kind, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, new_quiz_count=new_quiz_count, tab_counts=tab_counts, tuning=tuning,
+    return dict(push_on=lambda: bool(app.config.get('PUSH')), short_rules=RETAKE_RULES_SHORT, watch=live.watch, back=nav.back, link_label=nav.link_label, link_kind=nav.link_kind, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, new_quiz_count=new_quiz_count, tab_counts=tab_counts, tuning=tuning,
                 tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color)

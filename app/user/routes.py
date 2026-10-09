@@ -284,6 +284,8 @@ def logout():
     current_app.logger.info('{} has logged out'.format(current_user.username))
     current_user.logged_in = False
     current_user.save()
+    from app import push
+    push.sign_out(current_user.id)
     logout_user()
     return redirect(url_for('user.login'))
 

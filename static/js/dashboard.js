@@ -1,8 +1,8 @@
 /* The Dashboard:
  * - its boxes open, fold and are remembered like every box (static/js/boxes.js), also
  *   across the refresh
- * - everything below the title refreshes (every 30 seconds unless Technical settings
- *   say otherwise) while the tab is visible,
+ * - everything below the title refreshes the moment something on it changes (push.js),
+ *   or every 30 seconds (Technical settings) when that can't be known, while the tab is visible,
  *   and at once when the tab is shown again, without moving the page
  * - buttons with data-open-pane open the Notices or Messages panel */
 (function () {
@@ -26,15 +26,17 @@
   //that refreshes, and a form that's been replaced can't be sent. It refreshes as soon as
   //the question is answered.
   function busy() { return !!document.querySelector('dialog[open]'); }
-  var waiting = false;
+  var waiting = false, lastHtml = null, lastRefresh = Date.now(), soonTimer = null;
   function refresh() {
     if (document.hidden) return;
     if (busy()) { waiting = true; return; }
     waiting = false;
+    lastRefresh = Date.now();
     fetch(box.dataset.url, { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) {
-        if (!html) return;
+        if (!html || html === lastHtml) return;  // nothing new: leave the page alone
+        lastHtml = html;
         if (busy()) { waiting = true; return; }  // a question was asked while it loaded
         //"+N more" lists opened stay open across the refresh
         var more = {};
@@ -54,7 +56,14 @@
         }, 400);
       }, function () {});
   }
-  setInterval(refresh, Math.max(10000, +box.dataset.every || 30000));
+  //with instant updates (push.js) it redraws when the server says something changed, and
+  //every few minutes as a backup (times like "5 min ago" move on); without them, as set
+  var every = Math.max(10000, +box.dataset.every || 30000), BACKUP = Math.max(every, 300000);
+  setInterval(function () { if (!window.qgenLive || Date.now() - lastRefresh >= BACKUP - 1000) refresh(); }, every);
+  document.addEventListener('qgen-changed', function () {
+    if (soonTimer) return;
+    soonTimer = setTimeout(function () { soonTimer = null; refresh(); }, Math.max(0, lastRefresh + 1500 - Date.now()));
+  });
   document.addEventListener('close', function () { if (waiting) setTimeout(refresh, 0); }, true);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();

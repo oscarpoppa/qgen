@@ -2,7 +2,8 @@
  * graded...) and Messages (the conversation). Each can be shown or hidden with
  * its button in the top bar; the choice is remembered in this browser.
  *
- * Every 30 seconds (Technical settings) the page asks whether anything new has arrived: the buttons'
+ * The page asks whether anything new has arrived the moment the server says something
+ * changed (push.js), or every 30 seconds (Technical settings) when it can't: the buttons'
  * counts update, an open panel reloads, and a hidden one gets a pop-up and a
  * pulsing button. Opening a panel marks what it shows as seen.
  *
@@ -392,6 +393,7 @@
 
   function check() {
     if (document.hidden) return;
+    lastCheck = Date.now();
     fetch(pollUrl + (watchKey ? (pollUrl.indexOf('?') < 0 ? '?' : '&') + 'watch=' + encodeURIComponent(watchKey) : ''), { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
@@ -517,6 +519,16 @@
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
   if (!PANES.some(isOpen)) check();
-  setInterval(check, every);
+  //with instant updates (push.js) the server says when to check; the regular check-in is
+  //then only a backup, every few minutes. Without them, every check-in time as before.
+  var lastCheck = Date.now(), soonTimer = null, BACKUP = Math.max(every, 300000), GAP = 1500;
+  setInterval(function () { if (!window.qgenLive || Date.now() - lastCheck >= BACKUP - 1000) check(); }, every);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+  //"something changed": check now, or, right after a check, once the moment has passed
+  //(a burst of changes makes one or two check-ins, not one each)
+  document.addEventListener('qgen-changed', function () {
+    if (soonTimer) return;
+    var wait = Math.max(0, lastCheck + GAP - Date.now());
+    soonTimer = setTimeout(function () { soonTimer = null; check(); }, wait);
+  });
 })();
