@@ -8,8 +8,8 @@
 
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.shown_name }}!</h1>
-  <div class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
+    <a class="btn btn-secondary" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a>
     {{ expand_collapse('#home-boxes', 'boxes') }}</div></div>
 
 {% set days = tuning.get('due_soon_days') %}

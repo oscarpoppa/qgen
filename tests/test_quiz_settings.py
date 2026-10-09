@@ -845,7 +845,7 @@ def test_results_by_quiz(app_db):
     assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
     box = page.split('id="quiz-{}"'.format(vq.id))[1]
     assert box.index('kim</a>') < box.index('sam</a>')  # students by name
-    assert 'Not started' in box and '%</span>' in box and 'Details' in box and 'Archive' in box
+    assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Archive' in box
     assert 'average 0%' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'Quiz history: Settings quiz' in one and 'id="quiz-{}"'.format(vq.id) in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
@@ -858,7 +858,7 @@ def test_results_by_quiz(app_db):
     assert login(app, 'sam').get('/quiz/results').status_code == 302
     # Results by student still draws the same rows
     by_student = teacher.get('/quiz/listuser/{}'.format(student(db, 'sam').id)).data.decode()
-    assert 'Settings quiz' in by_student and 'Details' in by_student and 'Retake' in by_student
+    assert 'Settings quiz' in by_student and 'Answer key' in by_student and 'Retake' in by_student
 
 
 def test_unshuffled_order_warns_only_when_a_problem_is_the_same_for_everyone(app_db):

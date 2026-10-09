@@ -57,12 +57,12 @@
   </details>
 {% endmacro %}
 
-{# Expand all / Collapse all for one level: what's directly in it (folder boxes and the boxes
-   of the things in it), not what's further down #}
-{% macro level_buttons(label) %}
+{# Expand all / Collapse all for one level: every box in it (folders, folders inside them, and
+   the boxes of the things in them). size: btn-sm beside a title, btn-xs inside a folder box #}
+{% macro level_buttons(label, size='btn-xs') %}
   <span class="level-buttons">
-    <button type="button" class="btn btn-secondary btn-xs" data-level="open" aria-label="Expand all in {{ label }}" title="Open every box in {{ label }}">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-xs" data-level="close" aria-label="Collapse all in {{ label }}" title="Close every box in {{ label }}">Collapse all</button>
+    <button type="button" class="btn btn-secondary {{ size }}" data-level="open" aria-label="Expand all in {{ label }}" title="Open every box in {{ label }}">Expand all</button>
+    <button type="button" class="btn btn-secondary {{ size }}" data-level="close" aria-label="Collapse all in {{ label }}" title="Fold every box in {{ label }} down to its heading">Collapse all</button>
   </span>
 {% endmacro %}
 
@@ -121,7 +121,7 @@
         <h2 id="folder-title" class="folder-title">
           {% for p in fk.path[:-1] %}<a href="{{ fk.page(p.id) }}" title="Go up to the folder “{{ fk.name(p) }}”">{{ fk.name(p) }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ fk.folder_icon(f) }} {{ fk.name(fk.node.folder) }}</h2>
         <div class="title-actions">
-          {{ level_buttons(fk.name(fk.node.folder)) }}
+          {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
           {{ actions }}
           {% if not fk.readonly %}<details class="folder-tools">
             <summary class="btn btn-secondary btn-sm" title="Rename, move or remove this folder">Folder options</summary>
@@ -172,7 +172,7 @@
         </div>
       {% else %}
         <h2 id="folder-title" class="folder-title">{{ fk.title or (fk.all_label if fk.view == 'all' else fk.main_label) }}</h2>
-        <div class="title-actions">{{ level_buttons(fk.title or (fk.all_label if fk.view == 'all' else fk.main_label)) }}{{ actions }}</div>
+        <div class="title-actions">{{ level_buttons(fk.title or (fk.all_label if fk.view == 'all' else fk.main_label), 'btn-sm') }}{{ actions }}</div>
       {% endif %}
     </div>
     {{ caller() }}

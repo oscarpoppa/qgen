@@ -102,9 +102,9 @@
 <div class="page-head">
   <h1>Scan: {{ job.name }}</h1>
   <div class="actions">
-    {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
-    {{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}
     {{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}
+    {{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}
+    {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
   </div>
 </div>
 

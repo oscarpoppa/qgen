@@ -5,7 +5,11 @@
  *
  * Any form with data-confirm="question" asks first (data-confirm-ok names the
  * button, e.g. "Delete"). Scripts can call qgenAsk(question, okLabel, danger, cancelLabel),
- * which resolves to true or false. */
+ * which resolves to true or false.
+ *
+ * Messages that need no answer ("That didn't work...") use qgenSay(text, kind): the same
+ * floating message as the page's own (kind: 'success', 'warning' or 'error'), which fades
+ * after a few seconds or goes when clicked; never the browser's alert() pop-up. */
 (function () {
   var box = null;
 
@@ -74,3 +78,15 @@
     });
   }, true);
 })();
+
+window.qgenSay = function (text, kind) {
+  var list = document.createElement('ul'), item = document.createElement('li');
+  list.className = 'alerts';
+  list.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  item.className = 'alert alert-' + (kind || 'error');
+  item.textContent = text;
+  list.appendChild(item);
+  var main = document.querySelector('main') || document.body;
+  main.insertBefore(list, main.firstChild);
+  if (window.qgenFloat) window.qgenFloat(list);
+};

@@ -44,8 +44,8 @@
           </td>
           <td class="actions">
             {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}" title="Give {{ item.title }} to students">Assign</a>{% else %}{{ slot('Assign') }}{% endif %}
-            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="Every student's tries and scores on {{ item.title }}">History</a>{% else %}{{ slot('History') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Change this quiz's questions and settings">Edit</a>
+            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="Every student's tries and scores on {{ item.title }}">History</a>{% else %}{{ slot('History') }}{% endif %}
             {# the rest in a small menu (keeps a row short), as on the Users page #}
             <details class="menu row-menu">
               <summary class="btn btn-secondary btn-sm" aria-label="More for “{{ item.title }}”" title="More for “{{ item.title }}”: view, remove or delete">More</summary>
@@ -76,7 +76,7 @@
   <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=items[0].id) }}" class="alert alert-warning">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     This quiz was removed from Quizzes {{ items[0].removed_at|when('date') }}. Students keep their copies and scores.
-    <button class="btn btn-sm" title="Put this quiz back on Quizzes">Bring it back</button></form>
+    <button class="btn btn-sm" title="Put this quiz back on Quizzes">Bring back</button></form>
 {% endif %}
 
 {% if single %}

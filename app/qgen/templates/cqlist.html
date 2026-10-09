@@ -5,7 +5,7 @@
 {% block content %}
 {% for item in cqlst %}
 <div class="page-head">
-  <h1>{{ item.vquiz.title }}</h1>
+  <h1>Answer key: {{ item.vquiz.title }}</h1>
   <span class="badge">{{ item.taker.shown_name }}</span>
   <div class="actions">{{ attempt_links(item) }}
     <a class="btn btn-secondary" href="{{ url_for('qgen.qtake', cidx=item.id) }}" title="See {{ item.taker.shown_name if item.taker else 'the student' }}'s results page for this try, with the score">Results</a></div>

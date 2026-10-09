@@ -200,7 +200,7 @@
           location.reload();
           return;
         }
-        alert(res.error || 'That didn\'t work. Please reload the page and try again.');
+        window.qgenSay(res.error || 'That didn\'t work. Please reload the page and try again.', 'error');
       });
   }
 

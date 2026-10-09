@@ -12,7 +12,7 @@
   </div>
 </div>
 {% if not pages %}
-  <div class="card empty">“{{ vquiz.title }}” has no Paper only problems, so there’s nothing to print.</div>
+  <div class="card empty"><span class="big">🖨</span>“{{ vquiz.title }}” has no Paper only problems, so there’s nothing to print.</div>
 {% else %}
   <p class="muted small no-print">{{ students|length }} cop{{ 'y' if students|length == 1 else 'ies' }} of {{ pages|length }} page{{ '' if pages|length == 1 else 's' }}, each copy starting on a new sheet.</p>
   {% for u in students %}

@@ -3,12 +3,12 @@
 {% from "_subjects.html" import subject_labels with context %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ vp.title }}</h1>
+  <h1>View: {{ vp.title }}</h1>
   <div class="actions">
+    {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
     <a class="btn" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="Draw three new versions">New examples</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit</a>
     {% if vp.cproblems %}<a class="btn btn-secondary" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="Every answer students have given to this problem, in every quiz it's been in">History</a>{% endif %}
-    {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
   </div>
 </div>
 <p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.

@@ -6,15 +6,15 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   <div class="actions">
-    {{ expand_collapse('#problem-results', 'quizzes') }}
-    <a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of {{ vp.title or 'Untitled' }}">View problem</a>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit</a>
     {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
+    <a class="btn btn-secondary" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="See three students' versions of {{ vp.title or 'Untitled' }}">View problem</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit problem</a>
+    {{ expand_collapse('#problem-results', 'quizzes') }}
   </div>
 </div>
 
 {% if not summary.tries %}
-  <div class="card empty">Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
+  <div class="card empty"><span class="big">📊</span>Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
 {% else %}
   <div class="card problem-summary">
     <div class="btn-row">

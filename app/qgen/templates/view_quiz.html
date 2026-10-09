@@ -3,11 +3,11 @@
 {% from "_subjects.html" import subject_labels with context %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ vq.title }}</h1>
+  <h1>View: {{ vq.title }}</h1>
   <div class="actions">
+    {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
     <a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Draw another student's version">Another version</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Change this quiz's questions and settings">Edit</a>
-    {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
   </div>
 </div>
 <div class="btn-row small" style="margin-bottom:12px">
@@ -21,7 +21,7 @@
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div id="sample-quiz" class="sample-quiz answers-off">
   {% for s in items %}{% with show_titles = true %}{% include "_sample_item.html" %}{% endwith %}{% else %}
-    <div class="card empty">This quiz has no problems yet.</div>
+    <div class="card empty"><span class="big">📝</span>This quiz has no problems yet.</div>
   {% endfor %}
 </div>
 {% endblock %}

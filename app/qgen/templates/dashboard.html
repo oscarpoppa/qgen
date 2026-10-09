@@ -3,13 +3,13 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  {{ expand_collapse('#dash-live', 'boxes') }}
   <div class="actions dash-actions" aria-label="Quick actions">
-    <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
-    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
-    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
-    <button type="button" class="btn btn-secondary btn-sm" data-open-pane="messages" title="Open the messages panel to write to students">Message students</button>
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('upload.upload') }}" title="Upload pictures and files to the site for problems to use">Upload</a>
+    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
+    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
+    <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
+    <button type="button" class="btn btn-secondary" data-open-pane="messages" title="Open the messages panel to write to students">Message students</button>
+    <a class="btn btn-secondary" href="{{ url_for('upload.upload') }}" title="Upload pictures and files to the site for problems to use">Upload</a>
+    {{ expand_collapse('#dash-live', 'boxes') }}
   </div>
 </div>
 

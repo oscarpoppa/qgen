@@ -223,10 +223,10 @@
                          headers: { 'X-Requested-With': 'fetch' } })
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'The page is out of date. Please reload it and try again.' }; }); })
       .then(function (res) {
-        if (!res.ok) alert(res.error || 'That didn\'t work. Please try again.');
+        if (!res.ok) window.qgenSay(res.error || 'That didn\'t work. Please try again.', 'error');
         load(p);
       }, function () {
-        alert('Couldn\'t reach the server. Please try again.');
+        window.qgenSay('Couldn\'t reach the server. Please try again.', 'error');
         if (button) button.disabled = false;
       });
   });
