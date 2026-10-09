@@ -1222,3 +1222,21 @@ def test_folder_lists_have_one_order(app_db):
         and names[4] == 'Not in a folder', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert page.index('data-folder-box="new"') < page.index('data-folder-box="started"')
+
+
+def test_one_set_of_sizes_and_accessible_controls():
+    """app.css: text sizes and corners come from one short set of tokens; no all-caps
+    labels; field borders and the new-quiz gold reach 3:1; text on colored fills follows
+    the theme; touch screens get finger-sized controls."""
+    import os, re
+    css = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'css', 'app.css')).read()
+    body = css[css.index('  --shadow:'):]
+    sizes = set(re.findall(r'\bfont(?:-size)?\s*:\s*[^;}]*?(\d*\.?\d+rem)', body))
+    assert not sizes, sizes  # every rem size is a --fs-* token
+    corners = set(re.findall(r'radius\s*:\s*([^;}]*)', body)) - {'var(--r-sm)', 'var(--r)', 'var(--r-lg)', '50%', '999px', '0', '0 var(--r) var(--r) 0'}
+    assert not corners, corners
+    assert 'uppercase' not in css
+    assert '--field-border: #7d8695' in css and '--new-edge: #b08300' in css
+    assert 'border: 1px solid var(--field-border)' in css
+    assert 'color: var(--on-ok)' in css and 'color: var(--on-bad)' in css and '--on-ok: #0f1320' in css
+    assert '@media (pointer: coarse)' in css and 'min-height: 44px !important' in css
