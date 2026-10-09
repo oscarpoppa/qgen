@@ -22,7 +22,7 @@
                 {% if g.attempts|length > 1 or g.overridden %}
                 <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="small" style="margin-top:4px">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="rule" aria-label="How {{ student.shown_name }}'s attempts count" onchange="this.form.submit()" style="min-height:32px;padding:2px 6px">
+                  <select name="rule" aria-label="How {{ student.shown_name }}'s attempts count" onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" style="min-height:32px;padding:2px 6px">
                     <option value="" {{ 'selected' if not g.overridden }} title="{{ rules[g.vquiz.retake_rule] }}">Quiz rule ({{ short_rules.get(g.vquiz.retake_rule, g.vquiz.retake_rule)|lower }})</option>
                     {% for key, label in rules.items() %}<option value="{{ key }}" title="{{ label }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ short_rules.get(key, label) }}</option>{% endfor %}
                   </select>

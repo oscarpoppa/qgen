@@ -36,6 +36,13 @@ def test_safe_next(app_db):
         assert safe_next('http://localhost/quiz/results', 'F') == '/quiz/results'
         for bad in (None, '', 'quiz', '//evil', 'https://evil/quiz', 'ftp://localhost/x', '/\\evil', 'javascript:x', '/a\nb'):
             assert safe_next(bad, 'F') == 'F', bad
+        # the live site: nginx passes the name on without the port, the browser's address has it
+        assert safe_next('http://localhost:8080/quiz/results?folder=2', 'F') == '/quiz/results?folder=2'
+        assert safe_next('http://evil:8080/quiz', 'F') == 'F' and safe_next('http://localhost.evil/x', 'F') == 'F'
+    # when the port is known, only that port is this site
+    with app.test_request_context('/', base_url='http://localhost:5057'):
+        assert safe_next('http://localhost:5057/quiz/results', 'F') == '/quiz/results'
+        assert safe_next('http://localhost:8080/quiz/results', 'F') == 'F'
 
 
 def test_actions_dont_go_back_to_another_site(app_db):
@@ -1166,3 +1173,21 @@ def test_pages_come_back_as_they_were_left(app_db):
     keep = open(os.path.join(root, 'static', 'js', 'keep.js')).read()
     assert "setAttribute('data-came-back'" in trail and "hasAttribute('data-came-back')" in keep
     assert "addEventListener('pagehide'" in keep and 'qgenRun' in keep
+
+
+def test_score_counted_stays_on_the_page_behind_nginx(app_db):
+    """Changing "Score counted" on Results by quiz comes back to Results by quiz, even
+    behind nginx (Host without the port, Referer with it), not to the student page."""
+    app, db = app_db
+    from app.qgen import services as S
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    for _ in range(2):
+        S.submit(give(vq, 'sam'), {1: '5'})
+    from app.qgen.models import CQuiz
+    cq = CQuiz.query.order_by(CQuiz.id.desc()).first()
+    r = teach.post('/quiz/retakerule/{}'.format(cq.id), data={'rule': 'latest'},
+                   headers={'Host': 'localhost', 'Referer': 'http://localhost:8080/quiz/results?folder=2'})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/results?folder=2'), r.headers['Location']
+    page = teach.get('/quiz/results').data.decode()
+    assert 'this.form.requestSubmit ? this.form.requestSubmit()' in page  # keeps the place on the page

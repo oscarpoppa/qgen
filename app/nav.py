@@ -8,6 +8,21 @@ from urllib.parse import urlsplit, urlunsplit
 from flask import request
 
 
+def _this_host(parts):
+    """Whether a full address (urlsplit parts) is on this site. The live site is behind nginx,
+    which passes its name on without the port ("localhost" for "localhost:8080"): then the
+    same name on any port counts, since the port the browser used isn't known here."""
+    host = request.host
+    if parts.netloc == host:
+        return True
+    if host.startswith('['):  # [::1]:8080
+        name, _, rest = host[1:].partition(']')
+        port = rest[1:]
+    else:
+        name, _, port = host.partition(':')
+    return not port and parts.hostname is not None and parts.hostname == name.lower()
+
+
 def safe_next(target, fallback=None):
     """target if it's a page on this site (a path, or a full address on this host), as a
     path; else fallback."""
@@ -19,7 +34,7 @@ def safe_next(target, fallback=None):
         return fallback
     parts = urlsplit(target)
     if parts.scheme or parts.netloc:
-        if parts.scheme not in ('http', 'https') or parts.netloc != request.host:
+        if parts.scheme not in ('http', 'https') or not _this_host(parts):
             return fallback
     if not parts.path.startswith('/') or parts.path.startswith('//'):
         return fallback

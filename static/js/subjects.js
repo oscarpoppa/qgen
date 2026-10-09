@@ -6,7 +6,8 @@
  * Also: a select[data-autosubmit] sends its form when changed (the Archive page). */
 (function () {
   document.querySelectorAll('select[data-autosubmit]').forEach(function (sel) {
-    sel.addEventListener('change', function () { sel.form.submit(); });
+    //(requestSubmit: like pressing a button, so the page keeps its place, static/js/place.js)
+    sel.addEventListener('change', function () { if (sel.form.requestSubmit) sel.form.requestSubmit(); else sel.form.submit(); });
   });
 
   var wrap = document.querySelector('.subject-boxes');
