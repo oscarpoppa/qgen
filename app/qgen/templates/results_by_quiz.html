@@ -30,7 +30,7 @@
           <tbody>
           {% for student, g in q.rows %}
             <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="See all of {{ student.shown_name }}'s quizzes, tries and scores">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
+              <td data-label="Student"><a class="person nowrap" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="See all of {{ student.shown_name }}'s quizzes, attempts and scores">{{ avatar(student, 24) }}{{ student.shown_name }}</a></td>
               {{ result_cells(g, student, rules) }}
             </tr>
           {% endfor %}

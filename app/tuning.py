@@ -64,7 +64,7 @@ TUNABLES = [
     _t('min_password', 'security', 'Shortest password', 'For new passwords (existing ones keep working).',
        'characters', 8, 6, 64),
     _t('lockout_tries', 'security', 'Wrong passwords before a pause',
-       'After this many wrong passwords for one username, logging in is paused.', 'tries', 10, 3, 50),
+       'After this many wrong passwords for one username, logging in is paused.', 'attempts', 10, 3, 50),
     _t('lockout_minutes', 'security', 'Length of the pause',
        'How long logging in is paused, and how far back wrong passwords are counted.', 'minutes', 15, 1, 240),
     _t('token_days', 'security', 'New app tokens last',

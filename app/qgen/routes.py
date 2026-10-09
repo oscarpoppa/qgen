@@ -340,7 +340,7 @@ def del_vquiz(vqid):
         return redirect(back_to(url_for('qgen.list_vquizzes')))
     if done == 'removed':
         flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
-                     '<a href="{}">Removed quizzes</a> can bring it back.').format(title, url_for('qgen.removed_vquizzes')), 'success')
+                     'You can restore it from <a href="{}">Removed quizzes</a>.').format(title, url_for('qgen.removed_vquizzes')), 'success')
     else:
         flash('Deleted quiz “{}”.'.format(title), 'success')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
@@ -375,7 +375,7 @@ def delete_removed_vquiz(vqid):
         return redirect(url_for('qgen.removed_vquizzes'))
     if count:
         flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Archive</a>, where you can still read {}.').format(
-            title, count, 'try is' if count == 1 else 'tries are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
+            title, count, 'attempt is' if count == 1 else 'attempts are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
     else:
         flash('Deleted “{}” for good.'.format(title), 'success')
     current_app.logger.info("{} deleted removed VQuiz: ({}) '{}', {} tries archived".format(current_user.username, vqid, title, count))
@@ -844,7 +844,7 @@ def take_away(vqid, uid):
     count = S.take_away(student, vq, by=current_user)
     if count:
         flash(Markup('Archived {}’s {} {} at “{}”. They’re in the <a href="{}">Archive</a>, where you can view or restore {}.').format(
-            student.shown_name, count, 'try' if count == 1 else 'tries', vq.title, url_for('qgen.archive'),
+            student.shown_name, count, 'attempt' if count == 1 else 'attempts', vq.title, url_for('qgen.archive'),
             'it' if count == 1 else 'them'), 'success')
         current_app.logger.info("{} took VQuiz ({}) '{}' away from {}: {} archived".format(
             current_user.username, vqid, vq.title, student.username, count))

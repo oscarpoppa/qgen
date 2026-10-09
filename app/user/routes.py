@@ -85,7 +85,7 @@ def mypage():
              'started': sum(1 for g in groups for a in g['attempts'] if a.status == 'started'),
              'due': sum(1 for g in groups for a in g['attempts'] if a.id in due_ids)}
     def n_tries(n):
-        return '{} {}'.format(n, 'try' if n == 1 else 'tries')
+        return '{} {}'.format(n, 'attempt' if n == 1 else 'attempts')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
              else working if view == 'started' else due if view == 'soon' else root['groups'])
     if showing:

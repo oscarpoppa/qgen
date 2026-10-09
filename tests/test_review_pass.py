@@ -364,7 +364,7 @@ def test_student_wording(app_db):
     page = take_page(sam, cq.id).data.decode()
     assert 'value="Hand it in"' in page and "Once you hand it in, you can't change your answers." in page
     mine = sam.get('/mypage').data.decode()
-    assert '1 try</span>' in mine
+    assert '1 attempt</span>' in mine
     # the teacher's pages keep their own words
     assert 'Hand it in' not in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
 
@@ -824,9 +824,9 @@ def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
         S.retake(first)
     give(vq, 'kim')
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Archive all 2 tries' in page and 'Take away' not in page
+    assert 'Archive all 2 attempts' in page and 'Take away' not in page
     r = teach.post('/quiz/takeaway/{}/{}'.format(vq.id, ids('sam')), follow_redirects=True).data.decode()
-    assert 'Archived sam’s 2 tries at “Twice”. They’re in the' in r
+    assert 'Archived sam’s 2 attempts at “Twice”. They’re in the' in r
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 0
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 2
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('kim')).count() == 1
@@ -842,9 +842,9 @@ def test_a_removed_quiz_can_be_deleted_for_good(app_db):
     give(vq, 'kim')
     teach.post('/quiz/delvq/{}'.format(vq.id))
     page = teach.get('/quiz/removed').data.decode()
-    assert '/quiz/removed/{}/delete'.format(vq.id) in page and '2 tries leave students’ My quizzes' in page
+    assert '/quiz/removed/{}/delete'.format(vq.id) in page and '2 attempts leave students’ My quizzes' in page
     r = teach.post('/quiz/removed/{}/delete'.format(vq.id), follow_redirects=True).data.decode()
-    assert 'Deleted “Gone soon” for good. Its 2 tries are in the' in r
+    assert 'Deleted “Gone soon” for good. Its 2 attempts are in the' in r
     assert db.session.get(VQuiz, vq.id) is None and CQuiz.query.count() == 0
     assert {a.quiz_title for a in ArchivedAttempt.query} == {'Gone soon'} and ArchivedAttempt.query.count() == 2
 
@@ -867,11 +867,11 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
     page = sam.get('/mypage?folder=main').data.decode()
     # in the side list, with a badge counting what's new
-    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 try not started yet">1 new</span>' in page
+    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 attempt not started yet">1 new</span>' in page
     # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
-    assert '<span class="side-dot dot-new" title="1 new try" role="img" aria-label="1 new try">1</span>' in page
+    assert '<span class="side-dot dot-new" title="1 new attempt" role="img" aria-label="1 new attempt">1</span>' in page
     # and Not in a folder has the started one
-    assert '<span class="side-dot dot-started" title="1 try in progress" role="img" aria-label="1 try in progress">1</span>' in page
+    assert '<span class="side-dot dot-started" title="1 attempt in progress" role="img" aria-label="1 attempt in progress">1</span>' in page
     # only the automatic folders carry full badges; the others have dots
     assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
@@ -1108,8 +1108,8 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
     for f in (top, inner):
         row = side[side.index('data-folder="{}"'.format(f.id)):]
         row = row[:row.index('</div>')]
-        assert 'dot-started" title="1 try in progress"' in row and 'dot-due" title="1 try due soon"' in row
-        assert 'dot-new" title="1 new try"' in row  # Soon isn't started yet
+        assert 'dot-started" title="1 attempt in progress"' in row and 'dot-due" title="1 attempt due soon"' in row
+        assert 'dot-new" title="1 new attempt"' in row  # Soon isn't started yet
         assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
     cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
     begun_head = cards[cards.index('data-quiz="{}"'.format(begun.id)):]
@@ -1127,8 +1127,8 @@ def test_folder_numbers_count_tries_not_quizzes(app_db):
     for _ in range(2):
         teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
     page = sam.get('/mypage?folder=main').data.decode()
-    assert '2 tries not started yet">2 new</span>' in page
-    assert '<span class="side-dot dot-new" title="2 new tries" role="img" aria-label="2 new tries">2</span>' in page
+    assert '2 attempts not started yet">2 new</span>' in page
+    assert '<span class="side-dot dot-new" title="2 new attempts" role="img" aria-label="2 new attempts">2</span>' in page
 
 
 def test_standard_wording_and_history_buttons(app_db):

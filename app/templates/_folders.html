@@ -20,7 +20,7 @@
   {%- endfor -%}
   {%- if shown -%}<span class="side-flags">
     {%- for k, cls, kind in shown -%}
-      {%- set tries = 'try' if k == 1 else 'tries' -%}
+      {%- set tries = 'attempt' if k == 1 else 'attempts' -%}
       {%- set words = k ~ ' ' ~ (('new ' ~ tries) if kind == 'new' else (tries ~ ' in progress') if kind == 'started' else (tries ~ ' due soon')) -%}
       <span class="side-dot dot-{{ kind }}" title="{{ words }}" role="img" aria-label="{{ words }}">{{ k }}</span>
     {%- endfor -%}</span>{%- endif -%}

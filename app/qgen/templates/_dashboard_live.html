@@ -44,7 +44,7 @@
     <summary class="dash-head">{{ box_label('📤', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
-      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, tries and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
+      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
@@ -55,7 +55,7 @@
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="See all of {{ o.cq.taker.shown_name if o.cq.taker else 'this student' }}'s quizzes, tries and scores">Student page</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="See all of {{ o.cq.taker.shown_name if o.cq.taker else 'this student' }}'s quizzes, attempts and scores">Student page</a></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -109,7 +109,7 @@
   <details class="box card dash-card" data-box="handins" open>
     <summary class="dash-head">{{ box_label('📥', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, tries and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
+    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
@@ -118,7 +118,7 @@
           <span>“{{ cq.vquiz.title }}”</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">Being graded</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
-          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this try">Results</a></li>
+          <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a></li>
       {% endfor %}
       </ul>
     {% else %}

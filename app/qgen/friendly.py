@@ -450,7 +450,7 @@ def draw_values(values, rng=None, complex_ok=False):
                for row in values
                for other in (row.get('different_from') or []) if other in env):
             return env
-    raise FriendlyError('I couldn\'t find values that are all different after {} tries. '
+    raise FriendlyError('I couldn\'t find values that are all different after {} attempts. '
                         'Try wider ranges or fewer "different from" rules.'.format(MAX_TRIES))
 
 

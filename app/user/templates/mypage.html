@@ -11,7 +11,7 @@
 {% macro action(cq, compact=false) %}
   {% set size = 'btn-xs' if compact else 'btn-sm' %}
   {% if cq.status == 'completed' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this try">Results</a>
+    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this attempt">Results</a>
   {% elif cq.status == 'review' %}
     <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See what you handed in. Your teacher is still checking it">View</a>
   {% elif cq.not_open_yet() %}
@@ -47,7 +47,7 @@
     <details class="box card quiz-card {{ edge }}" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
         {# how many tries are in this box #}
-        {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'try', 'tries'), 'h2', g.vquiz.title) }}
+        {{ box_label('📝', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts'), 'h2', g.vquiz.title) }}
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}

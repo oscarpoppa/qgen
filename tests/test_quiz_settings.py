@@ -538,12 +538,12 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
-    assert '<span class="badge box-count">1 try</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
-    assert '<span class="badge box-count">2 tries</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()
 
 
 def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
@@ -654,7 +654,7 @@ def test_changing_the_quizs_retake_rule_applies_to_every_student(app_db):
     assert 'differs' not in teacher.get('/quiz/listvq').data.decode()
     # sam's own My quizzes and the teacher's Results by student count it the new way
     sam = login(app, 'sam')
-    assert '(your latest try counts)' in sam.get('/mypage').data.decode()
+    assert '(your latest attempt counts)' in sam.get('/mypage').data.decode()
     results = teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()
     assert 'Just for sam' not in results and "The quiz's own rule" not in results
 
@@ -961,7 +961,7 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     assert 'In progress: quizzes you’ve started and not handed in' in page and 'Settings quiz' in page
     assert 'Nothing in progress' not in page
     row = page[page.index('✏️</span> In progress</a>'):]
-    assert 'class="badge badge-accent side-new-badge" title="1 try started and not handed in">1 started</span>' in row[:row.index('</li>')]
+    assert 'class="badge badge-accent side-new-badge" title="1 attempt started and not handed in">1 started</span>' in row[:row.index('</li>')]
     # remembered like any folder: back to My quizzes shows it again
     assert 'In progress: quizzes' in sam.get('/mypage').data.decode()
     S.submit(cq, {1: '4'})

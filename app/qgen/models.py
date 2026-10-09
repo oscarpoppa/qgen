@@ -279,11 +279,11 @@ RETAKE_RULES_SHORT = {'best': 'Best', 'latest': 'Latest', 'average': 'Average', 
 
 #the same, said to the student taking the quiz (My quizzes)
 RETAKE_RULES_FOR_STUDENT = {
-    'best': 'Your best try counts',
-    'latest': 'Your latest try counts',
-    'average': 'All your tries are averaged',
-    'first': 'Your first try counts',
-    'best2': 'Your best two tries are averaged',
+    'best': 'Your best attempt counts',
+    'latest': 'Your latest attempt counts',
+    'average': 'All your attempts are averaged',
+    'first': 'Your first attempt counts',
+    'best2': 'Your best two attempts are averaged',
 }
 
 
