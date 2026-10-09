@@ -364,15 +364,6 @@ def waiting_quizzes(user, now=None):
     return waiting
 
 
-def next_quiz(user, after=None, now=None):
-    """The next quiz they can start or continue now (not one that hasn't opened yet), other
-    than `after`; None if there isn't one."""
-    now = now or datetime.now()
-    return next((cq for cq in waiting_quizzes(user, now)
-                 if cq.id != getattr(after, 'id', after) and not cq.not_open_yet(now)
-                 and not (cq.closes_at and cq.closes_at < now)), None)
-
-
 def mark_quizzes_seen(user_id):
     """They've opened My quizzes: nothing there is new to the menu any more."""
     if CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.seen_by_taker.is_(False)) \

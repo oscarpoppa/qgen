@@ -82,15 +82,15 @@
         </div>
       </details>
       {% if quiz_tree and quiz_tree.folders|selectattr('count')|list %}
-        {# the same order as every folder list: the automatic ones (above), Not in a folder,
-           then the Quizzes page's folders (a quiz in several folders is in each) #}
+        {# the same order as every folder list: the automatic ones (above), the Quizzes page's
+           folders (a quiz in several folders is in each), then Not in a folder #}
+        {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}
         {% if quiz_tree['items'] %}
           <details class="box sub-box" data-folder-box="none" data-list>
             <summary class="sub-head">{{ box_label('📥', 'Not in a folder', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
             <div class="sub-body">{% for g in quiz_tree['items'] %}{{ result_box(g, item) }}{% endfor %}</div>
           </details>
         {% endif %}
-        {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}
       {% else %}
         {% for g in attempts_by_quiz(item.cquizzes) %}{{ result_box(g, item) }}{% endfor %}
       {% endif %}

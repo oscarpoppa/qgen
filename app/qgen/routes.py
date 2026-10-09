@@ -554,13 +554,10 @@ def qtake(cidx):
         cq.seen_by_taker = True
         db.session.commit()
     state = S.attempt_state(cq)
-    #handed in: the taker is offered what's next
-    from .models import next_quiz
-    up_next = next_quiz(current_user, cq) if is_taker else None
     if state == 'completed':
-        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title), up_next=up_next)
+        return render_template('transcript.html', cq=cq, title=title, transcript=transcript_html(cq, title))
     if state == 'review':
-        return render_template('awaiting.html', cq=cq, title=title, up_next=up_next)
+        return render_template('awaiting.html', cq=cq, title=title)
     if state == 'not_open' and is_taker:
         return render_template('not_open.html', cq=cq, title=title)
     #out of time: close it with whatever was autosaved

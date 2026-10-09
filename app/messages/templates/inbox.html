@@ -93,11 +93,11 @@
           <a href="{{ url_for('messages.inbox', folder='all') }}" class="side-link" title="Show every student's conversation"{% if view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">👥</span> All students</a>
           {% set total = rows|sum(attribute='unread') %}{% if total %}<span class="count" aria-label="{{ total }} unread">{{ total }}</span>{% endif %}</div></li>
         {% if root.folders %}
+        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
         <li><div class="side-row{{ ' current' if view == 'main' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ url_for('messages.inbox', folder='main') }}" class="side-link" title="Show the students who aren't in any folder"{% if view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> Not in a folder</a>
           {% if root.unread %}<span class="count" aria-label="{{ root.unread }} unread">{{ root.unread }}</span>{% endif %}</div></li>
-        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
         {% endif %}
       </ul>
       <p class="muted small side-hint">Folders are made on the <a href="{{ url_for('user.userdet') }}" title="Make folders and put students in them on the Users page">Users page</a>.</p>

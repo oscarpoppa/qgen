@@ -315,14 +315,14 @@ def file_items(kind, item_ids, subject, add=True):
 
 
 def subject_choices(kind):
-    """The folder menu: [(value, label, count)] for All, Not in a folder and each folder
-    (indented under the one it's in; counted with the folders inside it)."""
+    """The folder menu: [(value, label, count)] for All, each folder (indented under the one
+    it's in; counted with the folders inside it), then Not in a folder."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     _root, flat, counted = subject_tree(kind)
-    out = [('all', 'All', item_cls.query.count()),
-           ('none', 'Not in a folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count())]
+    out = [('all', 'All', item_cls.query.count())]
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
+    out.append(('none', 'Not in a folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count()))
     return out
 
 

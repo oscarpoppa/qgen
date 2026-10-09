@@ -147,7 +147,7 @@ def kit(view, node, root, flat, nodes, page, **words):
     move_url, add_url / remove_url (things in several folders), unit / units ("quiz" /
     "quizzes"), all_label, placeholder, hint, drag_what, add_words, fold_key,
     all_count, name(folder), folder_icon(folder). The folder list's order is the same on
-    every page: All, the automatic ones (auto_views), Not in a folder, then the folders."""
+    every page: All, the automatic ones (auto_views), the folders, then Not in a folder."""
     out = {
         'view': view, 'node': node, 'root': root, 'flat': flat, 'nodes': nodes, 'page': page,
         'path': path(nodes, node), 'inside': inside, 'indent': indent,

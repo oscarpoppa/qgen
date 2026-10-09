@@ -269,7 +269,9 @@ def test_grade_next(app_db):
     assert '1 of 1 waiting' in page and 'Finish and grade next' not in page
 
 
-def test_after_handing_in_the_student_is_offered_the_next_quiz(app_db):
+def test_after_handing_in_there_is_no_next_quiz_only_back(app_db):
+    """No "Next: ..." link (the user removed it, 2026-10-09): it made the next quiz's start
+    card go Back to this one's results instead of the page the student started from."""
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B essay', essay=True)
@@ -279,7 +281,7 @@ def test_after_handing_in_the_student_is_offered_the_next_quiz(app_db):
     S.submit(done, {1: 'Light makes sugar.'})
     page = sam.get('/quiz/take/{}'.format(done.id)).data.decode()
     assert 'Handed in!' in page and 'Your teacher is checking' in page
-    assert '<a class="btn" href="/quiz/take/{}">Next: “A” →</a>'.format(nxt.id) in no_titles(page)
+    assert 'Next:' not in page and 'href="/quiz/take/{}"'.format(nxt.id) not in page
     assert '← Home</a>' in page
     assert 'instructor' not in page.lower()
 
@@ -551,12 +553,12 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
     # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
-    # (Not in a folder before the folders, as in every folder list)
-    assert page.index('data-folder-box="none"') < page.index('data-folder-box="{}"'.format(math.id))
-    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):]
+    # (the folders before Not in a folder, as in every folder list)
+    assert page.index('data-folder-box="{}"'.format(math.id)) < page.index('data-folder-box="none"')
+    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
     assert '>A</span>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</span>' in math_box
     empty = VQGroup.query.filter_by(title='Empty one').one()
-    assert '>C</span>' in page[page.index('data-folder-box="none"'):page.index('data-folder-box="{}"'.format(math.id))]
+    assert '>C</span>' in page[page.index('data-folder-box="none"'):] and '>C</span>' not in math_box
     assert 'data-folder-box="{}"'.format(empty.id) not in page
     # no quiz folders at all: the quizzes are listed as before
     kim_q = give(c, 'kim')
@@ -1204,25 +1206,36 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
 
 
 def test_folder_lists_have_one_order(app_db):
-    """Every folder list: All, the automatic ones (New, In progress, Due within...), Not in
-    a folder, then the folders; the student page's boxes in the same order."""
+    """Every folder list: All, the automatic ones (New, In progress, Due within...), the
+    folders, then Not in a folder (the user moved it last, 2026-10-09); the student page's
+    boxes, the All views' boxes and the folder menus in the same order."""
     import re
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     vq = make_quiz(app, teach)
     give(vq, 'sam')
+    for kind in ('problems', 'quizzes'):
+        teach.post('/quiz/subjects/{}/new'.format(kind), data={'name': 'Fall'})
     def side(page):
         nav = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
         return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<span class="side-name">)?([^<]+)', nav)]
     for who, url in ((teach, '/quiz/listvp'), (teach, '/quiz/listvq'), (teach, '/userdet'), (teach, '/quiz/listuser'),
                      (teach, '/quiz/results'), (teach, '/quiz/archive')):
-        names = side(who.get(url).data.decode())
-        assert names[0] != 'Not in a folder' and names[1] == 'Not in a folder', (url, names)  # All (or Everyone) first
+        page = who.get(url).data.decode()
+        names = side(page)
+        assert names[0] != 'Not in a folder' and names[-1] == 'Not in a folder', (url, names)  # All (or Everyone) first
+        if url in ('/quiz/listvp', '/quiz/listvq'):
+            nav = page.split('<nav aria-label="Folders">')[1]
+            assert 0 < nav.index('Fall') < nav.index('Not in a folder'), url
     names = side(sam.get('/mypage').data.decode())
     assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3].startswith('Due within') \
         and names[4] == 'Not in a folder', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert page.index('data-folder-box="new"') < page.index('data-folder-box="started"')
+    # the folder menus too: All, the folders, Not in a folder
+    from app.qgen import services as S
+    with app.test_request_context():
+        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All', 'Fall', 'Not in a folder']
 
 
 def test_one_set_of_sizes_and_accessible_controls():
