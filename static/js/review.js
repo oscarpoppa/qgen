@@ -75,8 +75,9 @@
     box.querySelectorAll('.hl-btn').forEach(function (btn) {
       btn.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep the selection
       btn.addEventListener('click', function () {
-        var range = selectionIn(area);
-        if (!range) { alert('First select some words in this answer.'); return; }
+        //nothing selected: the whole answer (highlighting is optional; the grade is the Credit box)
+        var range = selectionIn(area) || (area.dataset.text ? [0, area.dataset.text.length] : null);
+        if (!range) return;  // "(no answer)": nothing to highlight
         //a new highlight replaces any it overlaps
         var spans = spansOf(area).filter(function (s) { return s[1] <= range[0] || s[0] >= range[1]; });
         spans.push([range[0], range[1], btn.dataset.kind]);

@@ -13,7 +13,7 @@
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
   <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
-<p class="muted">Select words in an answer, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> to highlight them. Click a highlight to remove it.</p>
+<p class="muted">Type each score in <strong>Credit</strong>. If you like, you can also highlight an answer for the student: select words, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> (with nothing selected, the whole answer is highlighted). Click a highlight to remove it.</p>
 
 <form method="post" id="review-form" novalidate>
   {{ form.hidden_tag() }}
@@ -38,8 +38,8 @@
             {% else %}
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
             <div class="btn-row" style="margin-top:8px">
-              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right" title="Highlight the selected words in this answer as right">Mark right</button>
-              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong" title="Highlight the selected words in this answer as wrong">Mark wrong</button>
+              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right" title="Highlight the selected words (or the whole answer) as right; optional, the score is the Credit box">Mark right</button>
+              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong" title="Highlight the selected words (or the whole answer) as wrong; optional, the score is the Credit box">Mark wrong</button>
               <button type="button" class="btn btn-sm btn-secondary hl-clear" title="Remove every right and wrong highlight from this answer">Clear highlights</button>
             </div>
             {% endif %}
