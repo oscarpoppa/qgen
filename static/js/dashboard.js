@@ -3,7 +3,7 @@
  *   across the refresh
  * - everything below the title refreshes (every 30 seconds unless Technical settings
  *   say otherwise) while the tab is visible,
- *   and at once when the tab is shown again
+ *   and at once when the tab is shown again, without moving the page
  * - buttons with data-open-pane open the Notices or Messages panel */
 (function () {
   var box = document.getElementById('dash-live');
@@ -39,8 +39,19 @@
         //"+N more" lists opened stay open across the refresh
         var more = {};
         box.querySelectorAll('details[data-more]').forEach(function (d) { if (d.open) more[d.dataset.more] = true; });
+        //the page keeps its place: until the new boxes are laid out (static/js/masonry.js),
+        //the page could be shorter for a moment and the browser would pull the reader up
+        var y = window.scrollY, moved = false;
+        function mine() { moved = true; }  // the reader scrolling meanwhile: theirs to keep
+        ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(function (t) { window.addEventListener(t, mine, { passive: true }); });
+        box.style.minHeight = box.offsetHeight + 'px';
         box.innerHTML = html;
         box.querySelectorAll('details[data-more]').forEach(function (d) { if (more[d.dataset.more]) d.open = true; });
+        setTimeout(function () {
+          ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(function (t) { window.removeEventListener(t, mine); });
+          box.style.minHeight = '';
+          if (!moved && Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);  // as far as the page now goes
+        }, 400);
       }, function () {});
   }
   setInterval(refresh, Math.max(10000, +box.dataset.every || 30000));

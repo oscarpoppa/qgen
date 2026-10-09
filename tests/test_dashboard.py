@@ -343,3 +343,13 @@ def test_pinned_messages_box(app_db):
     teach.post('/messages/pin/{}'.format(mid), data={'pinned': '0'})
     assert Message.query.filter_by(body='No class Friday', pinned=True).count() == 0
     assert 'class="box-title">Pinned messages</h2><span class="badge box-count">1 message</span>' in teach.get('/dashboard/now').data.decode()
+
+
+def test_refresh_keeps_the_page_where_it_was():
+    """The Dashboard's refresh holds its height until the new boxes are laid out, and puts
+    the reader back where they were (unless they scrolled meanwhile): no jump to the top."""
+    import os
+    js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'dashboard.js')).read()
+    hold = js.index("box.style.minHeight = box.offsetHeight + 'px'")
+    assert hold < js.index('box.innerHTML = html') < js.index("box.style.minHeight = ''")
+    assert 'if (!moved && Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y)' in js
