@@ -81,21 +81,11 @@
         <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder (the one you're in stays in view)">Collapse all</button>
       </div>
       <ul class="side-list side-top">
-        {% for which in fk.order %}
-          {% if which == 'all' %}
-          <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
-            <span class="side-fold-space" aria-hidden="true"></span>
-            <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> {{ fk.all_label }}</a>
-            <span class="side-count muted small">{{ fk.all_count or '' }}</span></div></li>
-          {% else %}
-          {# what's in no folder; dropping something here takes it out of the folder it came from #}
-          <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
-            <span class="side-fold-space" aria-hidden="true"></span>
-            <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren't in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
-            {{ flag_badges(fk, fk.root, true) }}
-            <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
-          {% endif %}
-        {% endfor %}
+        {# one order on every page: All, the automatic ones (My quizzes), Not in a folder, then the folders #}
+        <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}><span aria-hidden="true">🗂️</span> {{ fk.all_label }}</a>
+          <span class="side-count muted small">{{ fk.all_count or '' }}</span></div></li>
         {% for av in fk.auto_views %}
           {# automatic (each quiz also stays in its own folder): a badge while there's something
              in it ("1 new", "3 started", "1 due") #}
@@ -105,6 +95,12 @@
             {% if av.badge and av.count %}<span class="badge {{ av.badge_class or 'badge-warn' }} side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
             {% else %}<span class="side-count muted small">{{ av.count or '' }}</span>{% endif %}</div></li>
         {% endfor %}
+        {# what's in no folder; dropping something here takes it out of the folder it came from #}
+        <li><div class="side-row{{ ' current' if fk.view == 'main' }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
+          <span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren't in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}><span aria-hidden="true">📥</span> {{ fk.main_label }}</a>
+          {{ flag_badges(fk, fk.root, true) }}
+          <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ fk.main_count or '' }}</span></div></li>
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
@@ -197,13 +193,12 @@
   </details>
 {% endmacro %}
 
-{# the All view: every top folder as a box (its folders inside it as boxes too), then what's
-   in no folder as a box of its own, so Expand all / Collapse all opens and folds them all.
+{# the All view: what's in no folder as a box of its own, then every top folder as a box (its
+   folders inside it as boxes too), in the folder list's order, so Expand all / Collapse all opens and folds them all.
    loose: how many are in no folder. The caller draws a node's things, like sub_box's:
    {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Not in a folder, n is fk.root) #}
 {% macro all_boxes(fk, loose) %}
   {% set draw = caller %}
-  {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
   {% if loose %}
   <details class="box sub-box" data-sub="none" data-list>
     <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('📥', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
@@ -214,6 +209,7 @@
     </div>
   </details>
   {% endif %}
+  {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
 {% endmacro %}
 
 {# what's shown when the folder (or Not in a folder) has nothing of its own #}

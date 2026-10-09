@@ -146,12 +146,13 @@ def kit(view, node, root, flat, nodes, page, **words):
     for 'main', 'all' or a folder's id. words: create_url, rename_url(id), delete_url(id),
     move_url, add_url / remove_url (things in several folders), unit / units ("quiz" /
     "quizzes"), all_label, placeholder, hint, drag_what, add_words, fold_key,
-    order (('main', 'all') or ('all', 'main')), all_count, name(folder), folder_icon(folder)."""
+    all_count, name(folder), folder_icon(folder). The folder list's order is the same on
+    every page: All, the automatic ones (auto_views), Not in a folder, then the folders."""
     out = {
         'view': view, 'node': node, 'root': root, 'flat': flat, 'nodes': nodes, 'page': page,
         'path': path(nodes, node), 'inside': inside, 'indent': indent,
         'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
-        'main_label': 'Not in a folder', 'order': ('main', 'all'),
+        'main_label': 'Not in a folder',
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: '📁', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
         'add_words': 'Move to…', 'placeholder': 'Folder name',

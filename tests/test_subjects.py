@@ -135,7 +135,7 @@ def test_quizzes_page_lists_by_folder(app_db):
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [VQuiz.query.filter_by(title='Q2').one().id]})
     assert shown(teacher, 'quizzes', p2.id) == ['Q2'] and shown(teacher, 'quizzes', 'main') == ['Q1']
     # All quizzes: each folder a box, then Not in a folder as a box, for Expand all / Collapse all
-    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q2', 'Q1']
+    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q1', 'Q2']  # Not in a folder first, like the folder list
     page = teacher.get('/quiz/listvq?folder=all').data.decode()
     assert 'data-sub="{}"'.format(p2.id) in page and 'data-sub="none"' in page and 'data-drop="top"' in page
 

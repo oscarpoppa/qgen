@@ -1226,7 +1226,7 @@ def subject_kit(kind, view, node, root, flat, nodes):
         rename_url=lambda fid: url_for('qgen.rename_subject', kind=kind, sid=fid),
         delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
         add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
-        unit=unit, units=units, all_label='All ' + units, order=('all', 'main'), all_count=root['all_count'],
+        unit=unit, units=units, all_label='All ' + units, all_count=root['all_count'],
         name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+ Add…', drag_what='a ' + unit,
         hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
              'Students never see them.'.format(units, unit),
@@ -1288,7 +1288,7 @@ def archive_kit(view, node, root, flat, nodes, total):
         create_url=url_for('qgen.new_archive_folder'), move_url=url_for('qgen.move_archive_item'),
         rename_url=lambda fid: url_for('qgen.rename_archive_folder', fid=fid),
         delete_url=lambda fid: url_for('qgen.delete_archive_folder', fid=fid),
-        unit='attempt', units='attempts', all_label='All archived', order=('all', 'main'), all_count=total,
+        unit='attempt', units='attempts', all_label='All archived', all_count=total,
         name=lambda f: f.name, folder_icon=lambda f: '👤' if f.student_id else '📁',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
         hint='Each student has a folder (👤) for their archived attempts; you can add your own and put folders inside folders.',

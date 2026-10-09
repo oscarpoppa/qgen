@@ -550,10 +550,13 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
     # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
-    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
+    # (Not in a folder before the folders, as in every folder list)
+    assert page.index('data-folder-box="none"') < page.index('data-folder-box="{}"'.format(math.id))
+    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):]
     assert '>A</span>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</span>' in math_box
     empty = VQGroup.query.filter_by(title='Empty one').one()
-    assert '>C</span>' in page[page.index('data-folder-box="none"'):] and 'data-folder-box="{}"'.format(empty.id) not in page
+    assert '>C</span>' in page[page.index('data-folder-box="none"'):page.index('data-folder-box="{}"'.format(math.id))]
+    assert 'data-folder-box="{}"'.format(empty.id) not in page
     # no quiz folders at all: the quizzes are listed as before
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
@@ -1197,3 +1200,25 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/results?folder=2'), r.headers['Location']
     page = teach.get('/quiz/results').data.decode()
     assert 'this.form.requestSubmit ? this.form.requestSubmit()' in page  # keeps the place on the page
+
+
+def test_folder_lists_have_one_order(app_db):
+    """Every folder list: All, the automatic ones (New, In progress, Due within...), Not in
+    a folder, then the folders; the student page's boxes in the same order."""
+    import re
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teach)
+    give(vq, 'sam')
+    def side(page):
+        nav = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
+        return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<span class="side-name">)?([^<]+)', nav)]
+    for who, url in ((teach, '/quiz/listvp'), (teach, '/quiz/listvq'), (teach, '/userdet'), (teach, '/quiz/listuser'),
+                     (teach, '/quiz/results'), (teach, '/quiz/archive')):
+        names = side(who.get(url).data.decode())
+        assert names[0] != 'Not in a folder' and names[1] == 'Not in a folder', (url, names)  # All (or Everyone) first
+    names = side(sam.get('/mypage').data.decode())
+    assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3].startswith('Due within') \
+        and names[4] == 'Not in a folder', names
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert page.index('data-folder-box="new"') < page.index('data-folder-box="started"')
