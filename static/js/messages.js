@@ -248,9 +248,11 @@
   /* ---------- something new while a panel is hidden ---------- */
 
   var recentToasts = [];  // shown in the last few seconds: carried over if the page reloads itself
+  //a student's quiz page (data-quiet): nothing pops up or pulses; the buttons' counts still go up
+  var quiet = root.hasAttribute('data-quiet');
   function toast(p, info) {
     var box = document.getElementById('toasts');
-    if (!box || !info) return;
+    if (!box || !info || quiet) return;
     recentToasts.push({ p: p, info: info, at: Date.now() });
     var t = document.createElement('div');
     t.className = 'toast toast-' + p;
@@ -276,7 +278,7 @@
   //"Welcome back": what's waiting, with a button for each panel that has something
   function welcomeBack(unread, notices) {
     var box = document.getElementById('toasts');
-    if (!box || !(unread || notices)) return;
+    if (!box || !(unread || notices) || quiet) return;
     var t = document.createElement('div');
     t.className = 'toast toast-notices';
     var title = document.createElement('strong');
@@ -311,6 +313,7 @@
   }
 
   function pulse(p) {
+    if (quiet) return;
     document.querySelectorAll('.dock-btn[data-pane="' + p + '"]').forEach(function (b) {
       b.classList.remove('pulse');
       void b.offsetWidth;  // restart the animation

@@ -148,14 +148,14 @@ main:focus { outline: none; }
 
 .btn.nav-toggle { display: none; }
 
-main.container { padding-top: 24px; padding-bottom: 48px; }
+main.container { padding-top: 16px; padding-bottom: 48px; }
 /* pages use the window's width (up to 1600px); reading pages and forms stay narrower, and
    pages with a side list (My quizzes, Problems...) take all of it, with the usual margins */
 main.container { max-width: 1600px; }
 main.container.container-narrow { max-width: 1080px; }
 main.container.container-wide { max-width: none; }
 
-.page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .page-head h1 { margin: 0; }
 .page-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -202,6 +202,9 @@ main.container.container-wide { max-width: none; }
 
 .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
 .empty .big { font-size: var(--fs-3xl); display: block; margin-bottom: 6px; }
+/* inside a list (a folder, a folder page, a box): one short line, not a page-sized message */
+:is(.folder-main, .sub-body, .box-body, .dash-card) .empty { padding: 10px 14px; text-align: left; }
+:is(.folder-main, .sub-body, .box-body, .dash-card) .empty .big { display: inline; font-size: var(--fs-lg); margin: 0 6px 0 0; }
 /* the site's icons (app/icons.py): line drawings in the text's own color */
 svg.ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: 0 0 auto;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -224,9 +227,9 @@ svg.ico .ico-fill-ok { fill: var(--ok); stroke: none; }
   text-decoration: none; cursor: pointer; white-space: nowrap;
 }
 .btn:hover, button:hover, input[type=submit]:hover { filter: brightness(1.08); }
-.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--field-border); }  /* an outline that reads as a button (3:1) */
 .btn-secondary:hover { background: var(--surface-2); filter: none; }
-.btn-danger { background: var(--surface); color: var(--bad); border-color: var(--border); }
+.btn-danger { background: var(--surface); color: var(--bad); border-color: var(--field-border); }
 .btn-danger:hover { background: var(--bad-soft); filter: none; }
 .btn-ok { background: var(--ok); border-color: var(--ok); color: var(--on-ok); }
 .btn-sm { padding: 5px 10px; min-height: 32px; font-size: var(--fs-sm); }
@@ -250,7 +253,7 @@ input:not([type]), select, textarea {
   background: var(--surface);
 }
 textarea { min-height: 96px; resize: vertical; }
-input:focus, select:focus, textarea:focus, .btn:focus-visible, button:focus-visible, a:focus-visible {
+input:focus, select:focus, textarea:focus, .btn:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
   outline-offset: 1px; border-color: var(--accent);
 }
@@ -266,6 +269,8 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
   /* the small round ones (?, ✕, pin) keep their shape, a little bigger */
   button.tip, .msg-x, .msg-pin { width: 32px; height: 32px; }
   .notice-x, .dock-close, .chip-x { min-height: 32px; min-width: 32px; }
+  /* a quiz's answer keys and the calculator: finger-sized for children on tablets */
+  .keypad .key, .math-btn, .calc-keys button { min-height: 44px; min-width: 44px; }
 }
 .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .check label { font-weight: 500; margin: 0; }
@@ -287,7 +292,7 @@ legend { font-weight: 700; padding: 0 6px; }
 .filter-bar { margin-bottom: 8px; }
 .pick-count { margin-left: auto; }
 /* Users page: when people are checked, a bar to give them a quiz */
-.pick-bar-users { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
+.pick-bar-users { position: sticky; top: calc(var(--topbar-h) + 7px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
   padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--r-lg); background: var(--accent-soft); }
 .pick-users-count { font-weight: 600; margin-right: auto; }
 .pick-groups { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 6px; }
@@ -333,6 +338,9 @@ legend { font-weight: 700; padding: 0 6px; }
 /* ---------- tables ---------- */
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow); }
+/* a table already inside a box (a student's or quiz's results, a folder, a month): no second frame */
+:is(details.subject-box, details.sub-box, details.month-box, details.item-box) .table-wrap { border: 0; border-radius: 0; box-shadow: none; background: none; }
+details.sub-box .card { box-shadow: none; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); background: var(--surface-2); }
@@ -375,7 +383,7 @@ td.actions .btn { margin-left: 4px; }
 img.qimg { display: block; width: auto; height: auto; max-width: min(100%, 520px); max-height: min(360px, 50vh);
   object-fit: contain; border-radius: var(--r); margin-bottom: 12px; }
 img.qimg.card { padding: 0; max-width: min(100%, 640px); }  /* the one at the top of a quiz */
-.progress { position: sticky; top: 64px; z-index: 5; background: var(--bg); padding: 8px 0; }
+.progress { position: sticky; top: calc(var(--topbar-h) + 7px); z-index: 5; background: var(--bg); padding: 8px 0; }
 .progress-bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .progress-bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
 
@@ -474,7 +482,7 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 
 /* ---------- live helper ---------- */
 .editor { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
-.editor > .helper { position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
+.editor > .helper { position: sticky; top: calc(var(--topbar-h) + 15px); max-height: calc(100vh - var(--topbar-h) - 33px); overflow-y: auto; }
 @media (max-width: 960px) { .editor { grid-template-columns: minmax(0, 1fr); } .editor > .helper { position: static; max-height: none; order: -1; } }
 .hints { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .hint { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; font-size: var(--fs-sm); padding: 8px 10px; border-radius: var(--r); background: var(--surface-2); }
@@ -806,8 +814,9 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
 /* the folder list, its divider (static/js/splitter.js: drag to widen; remembered) and the list */
 .folders-layout { display: grid; grid-template-columns: var(--side-w, minmax(170px, 260px)) 12px minmax(0, 1fr); column-gap: 4px; row-gap: 20px; align-items: start; }
-.folder-side { position: sticky; top: 12px; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px;
-  background: var(--surface); max-height: calc(100vh - 24px); overflow: auto; }
+/* sticks below the top bar (also sticky), never under it */
+.folder-side { position: sticky; top: calc(var(--topbar-h) + 12px); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px;
+  background: var(--surface); max-height: calc(100vh - var(--topbar-h) - 24px); overflow: auto; }
 .folder-side-head { display: none; list-style: none; cursor: pointer; }
 .folder-side-head::-webkit-details-marker { display: none; }
 .side-list { list-style: none; margin: 0; padding: 0; }
@@ -864,7 +873,13 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 @media (max-width: 600px) { .sub-box { padding: 8px; } }
 /* folders on top, what's in them below (static/js/foldertabs.js): side-by-side folder boxes
    become one row of folder buttons; the open one's contents show under the whole row */
-.folder-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.folder-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; padding: 8px 10px;
+  border-radius: var(--r-lg); background: var(--surface-2); border: 1px dashed var(--field-border); }
+.folder-tabs-label { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; margin-right: 2px; }
+/* where a folder's own things start, after its folders */
+.folder-items-head { margin: 14px 0 8px; padding-top: 10px; border-top: 2px solid var(--border);
+  font-size: var(--fs-md); color: var(--muted); }
+.folder-tabs.tabs-off ~ .folder-items-head { display: none; }
 .folder-tabs.tabs-off { display: none; }
 .folder-tab { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 5px 12px;
   border: 1px solid var(--field-border); border-radius: var(--r-lg); background: var(--surface); color: var(--text);
@@ -876,7 +891,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .folder-tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .folder-tabs:not(.tabs-off) ~ details.tab-box > summary { display: none; }
 .folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }
-.folder-tabs:not(.tabs-off) ~ details.tab-box[open] { border-color: var(--accent); }
+/* the open folder's contents: no box around them (that took width), just a line down the left
+   in the open button's color, so it's clear where they end */
+.folder-tabs:not(.tabs-off) ~ details.tab-box[open] { border: 0; border-left: 3px solid var(--accent); border-radius: 0;
+  padding: 2px 0 2px 12px; margin: 0 0 4px 2px; background: none; }
 .folder-tabs:not(.tabs-off) ~ details.tab-box > .sub-body { margin-top: 0; }
 .quiz-folder-label { margin: -4px 0 6px; }
 .quiz-folder-label a { color: var(--muted); text-decoration: none; }
@@ -1036,6 +1054,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .file-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
 .file-bar select { width: auto; max-width: 14rem; }
 .file-count.error { color: var(--bad); }
+.file-bar-idle select, .file-bar-idle button { display: none; }
 th.tick-col, td.tick-col { width: 36px; }
 .subject-label { font-weight: 500; font-size: var(--fs-xs); margin-left: 2px; vertical-align: middle; }
 .subject-checks { border: 0; padding: 0; margin: 12px 0; }
@@ -1452,17 +1471,9 @@ ol.attempt-list { max-height: 12rem; overflow-y: auto; }
    nor the awards box (its list has its own scroll and drag bar) */
 .student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
 .student-single details.subject-box > .box-body { max-height: none; overflow-y: visible; }
-/* a folder page's list (All quizzes, a folder, Not in a folder...) scrolls inside itself, about a
-   window high, so the page doesn't keep growing; the folder list and the bar above stay put.
-   The folder boxes inside it then scroll a little less high. Phones: the page scrolls as usual. */
-@media (min-width: 761px) {
-  .folder-main > #folder-items, .folder-main > .list-scroll {
-    max-height: max(360px, calc(100vh - 325px)); overflow-y: auto;
-    scrollbar-gutter: stable; padding-right: 4px;
-  }
-  .folder-main > #folder-items > details.sub-box > .sub-body { max-height: min(45vh, 480px); }
-}
-@media print { .folder-main > #folder-items, .folder-main > .list-scroll { max-height: none; overflow: visible; } }
+/* a folder page's list (All quizzes, a folder, Not in a folder...) scrolls with the page: one
+   scroll, not a list scrolling inside a page that scrolls too. The folder list beside it and
+   the bar above it stick below the top bar instead, so they stay in view. */
 
 .grip-bar[hidden] { display: none; }
 @media print { .grip-bar { display: none; } }
@@ -1470,7 +1481,6 @@ ol.attempt-list { max-height: 12rem; overflow-y: auto; }
 .dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
 .order-list, ol.attempt-list, #folder-items > details.sub-box > .sub-body, details.item-box > .box-body,
 details.result-folder > .result-folder-body, details.month-box > .table-wrap, details.done-box > .quiz-grid { padding-right: 12px; }
-@media (min-width: 761px) { .folder-main > #folder-items, .folder-main > .list-scroll { padding-right: 12px; } }
 .student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
 .student-single details.subject-box > .box-body { padding-right: 0; }
 
@@ -1483,7 +1493,6 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 
 /* My quizzes: the page scrolls, not the list (quiz boxes in a grid, scrolled inside a scrolled
    page, were clumsy and got cut off at the list's edge); only a quiz box's tries keep their own */
-.my-quizzes .folder-main > #folder-items,
 .my-quizzes #folder-items > details.sub-box > .sub-body,
 .my-quizzes details.done-box > .quiz-grid { max-height: none; overflow-y: visible; padding-right: 0; }
 

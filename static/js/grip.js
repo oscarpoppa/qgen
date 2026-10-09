@@ -1,12 +1,11 @@
-/* Areas that scroll inside themselves (a folder page's list, the boxes that open in it, the
- * Dashboard's lists...) get a wide bar underneath to drag them taller or shorter (or the up
+/* Areas that scroll inside themselves (a student's or quiz's box of results, the Dashboard's
+ * lists...; a folder page's own list scrolls with the page) get a wide bar underneath to drag them taller or shorter (or the up
  * and down arrow keys on it). The height is remembered in this browser, for that area on that
  * page. Every such area has its bar while it has more in it than fits (on a phone the page
  * scrolls instead, and there's none). */
 (function () {
   var AREAS = [
-    '.folder-main > #folder-items', '.folder-main > .list-scroll',
-    '#folder-items > details.sub-box > .sub-body', 'details.item-box > .box-body',
+    'details.item-box > .box-body',
     'details.month-box > .table-wrap',
     '.dash-card .dash-list', 'details.grading-group > .table-wrap',
     '.pick-list', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list', '.awards-scroll', '#all-problems'

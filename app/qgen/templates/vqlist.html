@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
-{% block body_attrs %}{{ watch('quiz:%d' % items[0].id if single else 'quizzes') }}{% endblock %}
+{% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
-{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
 
 {# here: the folder these rows are listed under (None: All quizzes or Not in a folder), which
    is where a drag takes a quiz out of #}
@@ -62,20 +61,11 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
+  <div class="actions">
     {% if removed_count %}<a class="btn btn-secondary" href="{{ url_for('qgen.removed_vquizzes') }}" title="See quizzes you took off Quizzes, and restore them">Removed quizzes ({{ removed_count }})</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a> {% if config.ANTHROPIC_API_KEY and not single %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
+    <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
 </div>
-{% if single and items[0].removed_at %}
-  <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=items[0].id) }}" class="alert alert-warning">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    This quiz was removed from Quizzes {{ items[0].removed_at|when('date') }}. Students keep their copies and scores.
-    <button class="btn btn-sm" title="Put this quiz back on Quizzes">Restore</button></form>
-{% endif %}
-
-{% if single %}
-  {{ quiz_table(items, ticks=false) }}
-{% elif not total %}
+{% if not total %}
   <div class="card empty"><span class="big">{{ icon('folders') }}</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</div>
 {% else %}
   {% call folders_page(fk) %}

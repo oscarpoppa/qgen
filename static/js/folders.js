@@ -124,10 +124,12 @@
     ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
     return Object.keys(ids).length;
   }
-  //nothing checked: the bar says what to do, and its list and buttons are grayed out
+  //nothing checked: the bar just says what to do (its list and buttons show once something is
+  //checked, so the bar takes one line instead of three)
   function syncBar() {
     if (!fileForm) return;
     var n = counted(), sel = fileForm.querySelector('select');
+    fileForm.classList.toggle('file-bar-idle', !n);
     if (fileCount) {
       fileCount.textContent = n ? n + ' checked:' : (fileCount.dataset.hint || '0 checked');
       fileCount.classList.remove('error');

@@ -59,7 +59,8 @@
         {# folded: its score (or state, when nothing's waiting: the badges above say new / in
            progress), and Start / Continue when a try is waiting (one click from the quiz) #}
         <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% endif %}
-          {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open, compact=true) }}{% endif %}</span>
+          {#- Start / Continue: a child's main button, the regular small size, not the extra small one -#}
+          {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open) }}{% endif %}</span>
         {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
       </summary>

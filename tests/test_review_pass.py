@@ -1293,6 +1293,10 @@ def test_folders_on_top_and_their_contents_below(app_db):
     js = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
     assert "details.sub-box[data-sub], details.sub-box[data-folder-box]" in js
     assert "'qgen-filtered'" in js and 'tabs-off' in js and "data-drop" in js
+    # where the folders end and the folder's own things begin (the user, 2026-10-09): the row
+    # is labeled "Folders", and a heading ("Problems in “Arithmetic” itself") comes after it
+    assert "folder-tabs-label" in js and "folder-items-head" in js and "itself'" in js
+    assert 'data-units="' in teach.get('/userdet').data.decode()
     boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     assert "if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;" in boxes
     assert "d.classList.contains('tab-box')" in boxes

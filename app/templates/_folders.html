@@ -110,7 +110,7 @@
   </details>
 
   {# the whole section is one level for Expand all / Collapse all (beside its title) #}
-  <section class="folder-main level" aria-labelledby="folder-title">
+  <section class="folder-main level" aria-labelledby="folder-title" data-units="{{ fk.units }}">
     <div class="folder-title-row">
       {% if fk.node %}
         {% set f = fk.node.folder %}

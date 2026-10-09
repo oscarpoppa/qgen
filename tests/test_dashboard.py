@@ -176,8 +176,9 @@ def test_student_messages_are_counted_but_not_listed(app_db):
     before = MessageRead.query.count()
     page = teacher.get('/dashboard').data.decode()
     assert 'First question' not in page and 'Recent messages' not in page and 'data-box="messages"' not in page
-    # the order: Right now beside Site at a glance, then Assigned, then grading and hand-ins
-    order = [page.index('data-box="{}"'.format(k)) for k in ('now', 'glance', 'out', 'queue', 'handins')]
+    # the order: Right now beside Site at a glance, then grading and hand-ins, and the full-width
+    # Assigned last (in the middle it left a hole beside a shorter box)
+    order = [page.index('data-box="{}"'.format(k)) for k in ('now', 'glance', 'queue', 'handins', 'out')]
     assert order == sorted(order) and page.index('dash-counters') < order[0]
     assert MessageRead.query.count() == before
     assert '1</span><span>unread message</span>' in page
@@ -243,8 +244,9 @@ def test_dashboard_boxes_open_and_close(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
-    for key in ('now', 'glance', 'out', 'queue', 'handins'):
+    for key in ('now', 'out', 'queue', 'handins'):
         assert 'data-box="{}" open>'.format(key) in page
+    assert 'data-box="glance">' in page  # numbers to look at now and then: starts folded
     assert 'data-level="open" data-level-of="#dash-live"' in page and 'data-level="close" data-level-of="#dash-live"' in page and 'js/dashboard.js' in page
     assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()
 
@@ -262,7 +264,7 @@ def test_the_whole_dashboard_refreshes(app_db):
         S.submit(cq, {1: '4'})
     part = teacher.get('/dashboard/now').data.decode()
     assert 'Nothing handed in yet.' not in part and '/quiz/take/{}'.format(cq.id) in part  # Recent hand-ins
-    for key in ('now', 'glance', 'out', 'queue', 'handins'):
+    for key in ('now', 'out', 'queue', 'handins'):
         assert 'data-box="{}" open>'.format(key) in part
 
 

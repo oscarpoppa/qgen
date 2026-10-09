@@ -44,7 +44,7 @@ def test_every_page_is_drawn_with_the_fingerprint_its_check_in_gives(app_db):
     aid = ArchivedAttempt.query.one().id
     pages = {
         teacher: ['/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/review', '/quiz/listvq',
-                  '/quiz/listvq/{}'.format(vq.id), '/quiz/listcq/{}'.format(done.id), '/quiz/take/{}'.format(later.id),
+                  '/quiz/listcq/{}'.format(done.id), '/quiz/take/{}'.format(later.id),
                   '/quiz/archive', '/quiz/archive/{}'.format(aid), '/userdet', '/messages',
                   '/messages/{}'.format(ids('sam'))],
         sam: ['/mypage', '/quiz/take/{}'.format(done.id), '/quiz/take/{}'.format(waiting.id),

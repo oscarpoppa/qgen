@@ -208,8 +208,10 @@ def test_results_pages_lead_back_to_users(app_db):
     teach = login(app, 'teach')
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
-    for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results'):
+    for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam'))):
         assert '<a class="btn btn-secondary" href="/userdet" data-back>← Users</a>' in no_titles(teach.get(url).data.decode()), url
+    # results by quiz are about quizzes, not people: back to the Dashboard (when there's no trail)
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(teach.get('/quiz/results').data.decode())
     # one quiz's history is about the quiz: back to Quizzes (when there's no trail to follow)
     assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in \
         no_titles(teach.get('/quiz/results/{}'.format(vq.id)).data.decode())

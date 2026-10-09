@@ -14,8 +14,8 @@ def test_clear_page_names_and_back_buttons(app_db):
     cq = give(vq, 'sam')
     title = lambda page: re.search(r'<title>([^<]*)</title>', page).group(1)
     # names, not numbers
-    page = teach.get('/quiz/listvq/{}'.format(vq.id)).data.decode()
-    assert '<h1>Week 1</h1>' in page and '← Quizzes</a>' in page
+    # one quiz's old address: its row on Quizzes, lit up (the one-row page is gone)
+    assert teach.get('/quiz/listvq/{}'.format(vq.id)).headers['Location'] == '/quiz/listvq?show={}'.format(vq.id)
     assert title(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()).startswith("Answer key: sam – Week 1")
     assert title(teach.get('/edituser/{}'.format(ids('sam'))).data.decode()).startswith('Edit user: sam')
     assert title(app.test_client().get('/login').data.decode()).startswith('Log in')

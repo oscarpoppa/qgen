@@ -19,7 +19,8 @@
 
 <div class="dash-grid">
   {% include "_dashboard_now.html" %}
-  <details class="box card dash-card" data-box="glance" open>
+  {# numbers to look at now and then: starts folded (opening it is remembered) #}
+  <details class="box card dash-card" data-box="glance">
     <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
     <div class="dash-glance">
@@ -38,30 +39,6 @@
         <span class="muted">{{ glance.ai_calls }} request{{ '' if glance.ai_calls == 1 else 's' }} in {{ glance.month }}{% if glance.ai_tokens %} ({{ '{:,}'.format(glance.ai_tokens) }} tokens){% endif %}</span>
       {% else %}<span class="badge">off</span>{% endif %}
     </p>
-    </div>
-  </details>
-  <details class="box card dash-card dash-wide" id="dash-out" data-box="out" open>
-    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
-    <div class="dash-body">
-    <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
-      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
-    {% if out %}
-      <ul class="dash-list">
-      {% for o in out %}
-        <li>{{ person_name(o.cq.taker) }}
-          <span>“{{ o.cq.vquiz.title }}”</span>
-          {% if o.state == 'started' %}<span class="badge badge-accent">In progress</span>
-          {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
-          {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
-          <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
-          {# this student's own copy of the quiz (their questions and answers so far), and their student page #}
-          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Their attempt</a>
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="Open {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
-      {% endfor %}
-      </ul>
-    {% else %}
-      <p class="muted small">Every assigned quiz has been handed in.</p>
-    {% endif %}
     </div>
   </details>
   <details class="box card dash-card" data-box="queue" open>
@@ -126,6 +103,31 @@
       </ul>
     {% else %}
       <p class="muted small">Nothing handed in yet.</p>
+    {% endif %}
+    </div>
+  </details>
+  {# full width, so last: in the middle it left a hole beside the shorter box above it #}
+  <details class="box card dash-card dash-wide" id="dash-out" data-box="out" open>
+    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <div class="dash-body">
+    <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
+      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
+    {% if out %}
+      <ul class="dash-list">
+      {% for o in out %}
+        <li>{{ person_name(o.cq.taker) }}
+          <span>“{{ o.cq.vquiz.title }}”</span>
+          {% if o.state == 'started' %}<span class="badge badge-accent">In progress</span>
+          {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
+          {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
+          <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
+          {# this student's own copy of the quiz (their questions and answers so far), and their student page #}
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Their attempt</a>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="Open {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">Every assigned quiz has been handed in.</p>
     {% endif %}
     </div>
   </details>

@@ -199,15 +199,14 @@ def list_vprobs():
     return subject_page('problems', 'vplist.html', qtypes=REGISTRY, title='Problems', all_subjects=S.subject_tree('problems')[1],
                         archived=S.archived_counts()[1], archive_warning=S.archive_warning)
 
-#route to list a specific virtual problem
+#one problem: its row on the Problems page, opened and lit up (old links and notices lead here)
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def list_vprob(vpid):
-    vplst = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
-    return render_template('vplist.html', boxes=None, items=[vplst], total=1, qtypes=REGISTRY, title=vplst.title or 'Untitled problem',
-                           kind='problems', single=True, archived=S.archived_counts()[1], archive_warning=S.archive_warning)
+    vp = VProblem.query.filter_by(id=vpid).first_or_404('No vproblem with id {}'.format(vpid))
+    return redirect(url_for('qgen.list_vprobs', show=vp.id))
 
 #route to delete a specific virtual problem
 @qgen_bp.route('/quiz/delvp/<vpid>', methods=['POST'])
@@ -312,17 +311,18 @@ def list_vquizzes():
                         all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning,
                         removed_count=len(S.removed_quizzes()))
 
-#route to list a specific virtual quiz
+#one quiz: its row on the Quizzes page, opened and lit up (old links and notices lead here)
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def list_vquiz(vqid):
-    vqlst = VQuiz.query.filter_by(id=vqid).first() if str(vqid).isdigit() else None
-    if vqlst is None:
+    vq = VQuiz.query.filter_by(id=vqid).first() if str(vqid).isdigit() else None
+    if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.list_vquizzes'))
-    return render_template('vqlist.html', boxes=None, items=[vqlst], total=1, title=vqlst.title or 'Untitled quiz', layout=layout, rules=RETAKE_RULES,
-                           kind='quizzes', single=True, archived=S.archived_counts()[0], archive_warning=S.archive_warning)
+    if vq.removed_at:  # not on Quizzes: the Removed quizzes page, where it can be restored
+        return redirect(url_for('qgen.removed_vquizzes'))
+    return redirect(url_for('qgen.list_vquizzes', show=vq.id))
 
 #route to delete a specific virtual quiz
 @qgen_bp.route('/quiz/delvq/<vqid>', methods=['POST'])

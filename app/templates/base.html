@@ -1,5 +1,5 @@
 {% from "_macros.html" import avatar with context %}<!doctype html>
-<html lang="en">
+<html lang="en"{% block html_attrs %}{% endblock %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,13 +22,17 @@
     /* open the side panels before the page draws, so it doesn't jump: each is
        remembered per browser; the first time, both open on wide screens */
     (function () {
-      var wide = window.matchMedia('(min-width: 1001px)').matches, c = document.documentElement.classList;
+      //the first time, they open only where there's room for them beside the page (1440px)
+      var wide = window.matchMedia('(min-width: 1001px)').matches, roomy = window.matchMedia('(min-width: 1440px)').matches;
+      var c = document.documentElement.classList;
       ['notices', 'messages'].forEach(function (p) {
         var v = null;
         try { v = localStorage.getItem('qgen-dock-' + p); } catch (e) {}
-        if (v === 'open' || (v === null && wide)) c.add('dock-' + p);
+        if (v === 'open' || (v === null && roomy)) c.add('dock-' + p);
       });
       if (!wide) c.remove('dock-notices', 'dock-messages');  // on phones they open when tapped
+      //a student's quiz page: nothing beside it (their choice is kept for other pages)
+      if (document.documentElement.hasAttribute('data-quiet')) c.remove('dock-notices', 'dock-messages');
       //where the divider between the two panels was left (messages.js)
       try { var split = +localStorage.getItem('qgen-dock-split'); if (split >= 10 && split <= 90) document.documentElement.style.setProperty('--dock-split', split + '%'); } catch (e) {}
     })();

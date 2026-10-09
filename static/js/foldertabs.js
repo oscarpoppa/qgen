@@ -34,6 +34,28 @@
     open.forEach(function (d) { if (d !== keep) d.open = false; });
   }
 
+  //where the folders end and this folder's own things begin: a heading over them ("Problems in
+  //“Arithmetic” itself"), when there are any after the folders
+  function itemsHead(row, group) {
+    var last = group[group.length - 1], next = last.nextElementSibling;
+    while (next && (next.hidden || next.matches('script, input[type=hidden]'))) next = next.nextElementSibling;
+    if (!next || next.classList.contains('folder-items-head')) return;
+    var units = (row.closest('[data-units]') || {}).dataset;
+    units = units && units.units ? units.units : 'things';
+    var owner = row.parentElement.closest('details.sub-box'), name = null;
+    if (owner) {
+      var t = owner.querySelector(':scope > summary .box-title');
+      name = t && t.textContent.trim();
+    } else {
+      var title = document.getElementById('folder-title');
+      name = title && title.textContent.trim();
+    }
+    var head = document.createElement('h3');
+    head.className = 'folder-items-head';
+    head.textContent = units.charAt(0).toUpperCase() + units.slice(1) + (name ? ' in \u201c' + name + '\u201d itself' : ' here');
+    last.parentElement.insertBefore(head, next);
+  }
+
   function setUp(scope) {
     (scope || document).querySelectorAll(TABBED).forEach(function (d) {
       if (d.qgenRow) return;
@@ -45,8 +67,15 @@
         row.className = 'folder-tabs';
         row.setAttribute('role', 'group');
         row.setAttribute('aria-label', 'Folders');
+        //a band of its own that says what it is, so a folder button never reads as a heading
+        //for the things below it
+        var label = document.createElement('span');
+        label.className = 'folder-tabs-label';
+        label.textContent = group.length === 1 ? 'Folder' : 'Folders';
+        row.appendChild(label);
         parent.insertBefore(row, group[0]);
         parent.classList.add('has-folder-tabs');
+        itemsHead(row, group);
       }
       group.forEach(function (box) {
         if (box.qgenRow) return;

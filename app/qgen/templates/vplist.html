@@ -1,9 +1,8 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
-{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
 
 {# here: the folder these rows are listed under (None: All problems or Not in a folder), which
    is where a drag takes a problem out of #}
@@ -53,13 +52,11 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}{% endif %}
-    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY and not single %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
 </div>
 
-{% if single %}
-  {{ problem_table(items, ticks=false) }}
-{% elif not total %}
+{% if not total %}
   <div class="card empty"><span class="big">{{ icon('note') }}</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
   {% call folders_page(fk) %}
