@@ -37,6 +37,12 @@
     }
     shows.push({ id: li.dataset.folder, show: show });
     show(!folded[li.dataset.folder]);
+    //a folder above the one being looked at can't be folded: the folder you're in always shows
+    if (path.slice(0, -1).map(String).indexOf(String(li.dataset.folder)) !== -1) {
+      btn.disabled = true;
+      btn.title = 'You\u2019re in a folder inside this one, so it stays open';
+      return;
+    }
     btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); save(FOLD, folded); });
   });
   save(FOLD, folded);

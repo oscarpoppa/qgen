@@ -1333,3 +1333,13 @@ def test_drawn_icons_everywhere_and_no_emoji():
                         found.append('{}:{}: {}'.format(os.path.relpath(path, here), i, ''.join(left)))
     assert not found, found
     assert named and named <= set(PATHS), named - set(PATHS)
+
+
+def test_a_folder_above_the_one_youre_in_cant_be_folded():
+    """Inside a folder, the folders above it in the folder list can't be folded (the user,
+    2026-10-09: the folder you were in vanished from the list)."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js = open(os.path.join(here, 'static', 'js', 'folders.js')).read()
+    assert 'path.slice(0, -1)' in js and 'btn.disabled = true' in js and 'so it stays open' in js
+    assert '.side-fold:disabled' in open(os.path.join(here, 'static', 'css', 'app.css')).read()
