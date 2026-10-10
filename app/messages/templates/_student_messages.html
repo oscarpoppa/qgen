@@ -19,7 +19,7 @@
       <div class="pinned-label">{{ icon('pin') }} Pinned by your teacher</div>
       <ul class="pinned-list" aria-label="Pinned by your teacher">
         {% for m in pinned %}<li class="msg msg-announcement msg-pinned"><div class="msg-meta small">
-          <strong>{{ m.sender.shown_name if m.sender else 'Teacher' }}</strong> <span class="muted">{{ m.created.strftime('%b %d') }}</span></div>
+          <strong>{{ m.sender.shown_name if m.sender else 'Teacher' }}</strong> <span class="muted">{{ m.created|when('short') }}</span></div>
           <div class="msg-body">{{ m.body }}</div></li>{% endfor %}
       </ul>
     </div>

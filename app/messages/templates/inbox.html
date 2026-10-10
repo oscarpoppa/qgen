@@ -70,7 +70,7 @@
     <ul class="hints">
       {% for m in pinned %}
         <li class="hint"><span class="hint-icon" aria-hidden="true">{{ icon('pin') }}</span>
-          <span>{{ m.body }} <span class="small muted">· {{ m.created.strftime('%b %d') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name }}{% endif %}</span></span>
+          <span>{{ m.body }} <span class="small muted">· {{ m.created|when('short') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name }}{% endif %}</span></span>
           <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
             <button class="btn btn-secondary btn-sm" title="Stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">Unpin</button>
@@ -116,7 +116,7 @@
             {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
           <td data-label="Latest">
             {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.shown_name ~ ': ' }}{{ r.last.body }}</div>
-              <div class="small muted">{{ r.last.created.strftime('%b %d, %I:%M %p') }}</div>
+              <div class="small muted">{{ r.last.created|when }}</div>
             {% else %}<span class="muted small">No messages yet</span>{% endif %}
           </td>
           <td class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" title="Read and answer {{ r.student.shown_name }}'s messages">Open</a></td>

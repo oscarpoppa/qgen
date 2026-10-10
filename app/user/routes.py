@@ -120,7 +120,7 @@ def mypage():
         auto_views=[{'key': 'new', 'icon': 'sparkle', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
                     {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': len(working),
-                     'badge': '{} started'.format(tries['started']), 'badge_class': 'badge-accent',
+                     'badge': '{} in progress'.format(tries['started']), 'badge_class': 'badge-accent',
                      'badge_title': '{} started and not handed in'.format(n_tries(tries['started']))},
                     {'key': 'soon', 'icon': 'alarm', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
                      'badge_title': '{} to hand in within {}'.format(n_tries(tries['due']), within)}],

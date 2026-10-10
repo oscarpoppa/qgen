@@ -17,7 +17,7 @@
           {% elif teacher and not m.from_teacher %}{{ avatar(m.student, 26) }}{% else %}<span class="notice-icon" aria-hidden="true">{{ icon('bell') }}</span>{% endif %}
           <div class="notice-text">
             <div>{{ m.body }}</div>
-            <div class="small muted">{{ m.created.strftime('%b %d, %I:%M %p') }}
+            <div class="small muted">{{ m.created|when }}
               {% if m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
               {% if m.link %} · <a href="{{ m.link }}" title="Go to the page this notice is about">{{ link_label(m.link, for_student=not teacher) }}</a>{% endif %}</div>
           </div>

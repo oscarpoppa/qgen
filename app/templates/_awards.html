@@ -6,7 +6,7 @@
   {% for a in items %}
     <li class="award{{ ' award-' ~ a.kind if a.kind }}"><span class="award-icon" aria-hidden="true">{{ draw_icon(a.icon) }}</span>
       <span class="award-text"><strong>{{ a.title }}</strong><span class="small">{{ a.detail }}</span>
-        {% if a.when %}<span class="small muted">{{ a.when.strftime('%b %d, %Y') }}</span>{% endif %}</span></li>
+        {% if a.when %}<span class="small muted">{{ a.when|when('short') }}</span>{% endif %}</span></li>
   {% endfor %}
   </ul>
   </div>

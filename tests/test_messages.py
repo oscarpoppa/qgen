@@ -290,7 +290,7 @@ def test_teachers_get_a_notice_when_a_quiz_is_assigned(app_db):
     assert len(notices) == 1
     body = notices[0].body
     assert body.startswith('teach assigned "Quiz 7" to 2 students: ') and 'sam' in body and 'kim' in body
-    assert 'Due {}'.format(due.strftime('%b %d at %I:%M %p')) in body and '20 minute time limit.' in body
+    assert 'Due {}'.format(__import__('app').when_filter(due)) in body and '20 minute time limit.' in body
     assert notices[0].student_id == User.query.filter_by(username='teach').one().id
     # "Open" goes to the students' copies: with two students, the quiz's results listing each
     assert notices[0].link == '/quiz/results/{}'.format(VQuiz.query.one().id)

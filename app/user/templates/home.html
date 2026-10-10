@@ -7,7 +7,7 @@
 {% block body_attrs %}{{ watch('home') }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.shown_name }}!</h1>
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.nickname or current_user.username }}!</h1>
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
     <a class="btn btn-secondary" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a>
     {{ expand_collapse('#home-boxes', 'boxes') }}</div></div>
@@ -32,7 +32,7 @@
       <ul class="dash-list">
       {% for cq in waiting %}
         <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>“{{ cq.vquiz.title }}”</strong></span>
-          {% if cq.status == 'started' %}<span class="badge badge-accent">Started</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
+          {% if cq.status == 'started' %}<span class="badge badge-accent">In progress</span>{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}<span class="badge badge-warn">New</span>{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm dash-go" disabled title="You can't start this yet.">{{ icon('lock') }} Start</button>
           {% else %}<a class="btn btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Keep working on' if cq.status == 'started' else 'Start' }} “{{ cq.vquiz.title }}”">{{ 'Continue' if cq.status == 'started' else 'Start' }}</a>{% endif %}</li>

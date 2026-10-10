@@ -31,6 +31,12 @@ class ServiceError(ValueError):
     """Something that was asked for can't be done, worded for people to read."""
 
 
+def _when(d):
+    """A date in notices, written the way the site writes every date ("Fri Oct 9, 4:22 PM")."""
+    from app import when_filter
+    return when_filter(d)
+
+
 # ---------------------------------------------------------------- subjects
 
 #a teacher's own subjects for sorting problems and quizzes (separate lists; an item can
@@ -700,7 +706,7 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
         except ServiceError as exc:
             failed.append((student, str(exc)))
             continue
-        when = ' It opens {}.'.format(cq.opens_at.strftime('%b %d at %I:%M %p')) if cq.opens_at else ''
+        when = ' It opens {}.'.format(_when(cq.opens_at)) if cq.opens_at else ''
         notify(student.id, 'New quiz: "{}".{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
         created.append(cq)
     if created:
@@ -716,9 +722,9 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
     shown = ', '.join(names[:6]) + (' and {} more'.format(len(names) - 6) if len(names) > 6 else '')
     details = []
     if opens_at:
-        details.append('Opens {}.'.format(opens_at.strftime('%b %d at %I:%M %p')))
+        details.append('Opens {}.'.format(_when(opens_at)))
     if closes_at:
-        details.append('Due {}.'.format(closes_at.strftime('%b %d at %I:%M %p')))
+        details.append('Due {}.'.format(_when(closes_at)))
     if time_limit:
         details.append('{} minute time limit.'.format(time_limit))
     body = '{} assigned "{}" to {} student{}: {}.{}'.format(
@@ -1238,7 +1244,7 @@ def announce_opened(now=None, student_id=None):
                                      .values(open_notice_sent=True)).rowcount
         if claimed != 1 or attempt_state(cq, now) != 'open' or cq.startdate:
             continue
-        closes = ' It closes {}.'.format(cq.closes_at.strftime('%b %d at %I:%M %p')) if cq.closes_at else ''
+        closes = ' It closes {}.'.format(_when(cq.closes_at)) if cq.closes_at else ''
         notify(cq.assignee, '"{}" is open now. You can start it.{}'.format(cq.vquiz.title, closes),
                _link('qgen.qtake', cidx=cq.id))
         told += 1

@@ -64,7 +64,7 @@
         {% elif not m.from_teacher and m.kind != 'notice' and not me_teacher %}<span class="muted">to all teachers</span>{% endif %}
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
-        <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
+        <span class="muted">{{ m.created|when }}</span>
         {% if m.pinned and not can_pin %}<span title="Pinned" aria-label="pinned">{{ icon('pin') }}</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>

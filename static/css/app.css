@@ -145,8 +145,8 @@ main:focus { outline: none; }
 .nav-right .menu-list { left: auto; right: 0; }
 .menu-list a { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
 .menu-list a:hover { background: var(--surface-2); }
-/* a heading inside a drop-down (More: Files, Site) */
-.menu-label { padding: 8px 10px 2px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+/* a line between groups in a drop-down (More: Archive | files | Settings) */
+.menu-rule { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
 
 .btn.nav-toggle { display: none; }
 
@@ -263,7 +263,7 @@ input:not([type]), select, textarea {
 }
 textarea { min-height: 96px; resize: vertical; }
 input:focus, select:focus, textarea:focus, .btn:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline: 3px solid var(--accent);  /* solid: a see-through one was about 1.75:1 against white (3:1 needed) */
   outline-offset: 1px; border-color: var(--accent);
 }
 .field.has-error input, .field.has-error textarea, .field.has-error select { border-color: var(--bad); }
@@ -324,6 +324,15 @@ legend { font-weight: 700; padding: 0 6px; }
   border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
 .choice-list li:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .choice-list label { flex: 1; cursor: pointer; }
+/* a quiz's answers: the whole card is the button (the label fills it), at least 48px tall for
+   small fingers, and the chosen one is plain to see */
+.question .choice-list li { padding: 0 0 0 14px; gap: 0; min-height: 48px; cursor: pointer; }
+.question .choice-list li:hover { border-color: var(--accent); }
+.question .choice-list input[type=radio], .question .choice-list input[type=checkbox] { width: 22px; height: 22px; flex: none; margin: 0; }
+.question .choice-list label { align-self: stretch; display: flex; align-items: center; padding: 12px 14px 12px 12px; min-height: 48px; }
+.question .choice-list li:has(input:checked) { box-shadow: inset 0 0 0 1px var(--accent); }
+.question .choice-list li:has(input:checked) label { font-weight: 600; }
+.question .choice-list li:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- alerts & badges ---------- */
 
@@ -333,8 +342,9 @@ legend { font-weight: 700; padding: 0 6px; }
 .alert-error { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
 .alert-warning { background: var(--warn-soft); }
 
+/* status words ("In progress", "New", "Teacher is checking", a score): 14px, readable for children */
 .badge {
-  display: inline-block; font-size: var(--fs-xs); font-weight: 600; line-height: 1;
+  display: inline-block; font-size: var(--fs-sm); font-weight: 600; line-height: 1;
   padding: 5px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
   white-space: nowrap;
 }

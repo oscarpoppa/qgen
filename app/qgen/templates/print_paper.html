@@ -21,7 +21,7 @@
         <div class="paper-sheet-head">
           <strong>{{ u.shown_name if u else 'Name: ________________' }}</strong>
           <span>{{ vquiz.title }}</span>
-          <span>{{ today.strftime('%b %d, %Y') }}</span>
+          <span>{{ today|when('short') }}</span>
         </div>
         <div class="qtext">{{ p.raw_prob }}</div>
         {% for img in p.options.get('images') or [] %}

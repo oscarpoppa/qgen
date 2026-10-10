@@ -323,7 +323,7 @@ def test_nicknames(app_db):
     assert db.session.get(User, ids('sam')).nickname == 'Sammy the Great'
     for url in ('/userdet', '/quiz/listuser', '/quiz/assign', '/messages', '/quiz/listuser/{}'.format(ids('sam'))):
         assert 'sam (Sammy the Great)' in teach.get(url).data.decode(), url
-    assert 'Hi, sam (Sammy the Great)!' in sam.get('/home').data.decode()
+    assert 'Hi, Sammy the Great!' in sam.get('/home').data.decode()  # the nickname, when there is one
     # too long, or someone else's name: refused, nothing changes
     sam.post('/profile/nickname', data={'nickname': 'x' * 33})
     sam.post('/profile/nickname', data={'nickname': 'KIM'})
@@ -899,18 +899,18 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert '1 new</span>' in box and 'Fresh' in box and 'Begun' not in box and 'Done' not in box
     # and an In progress box beside it, like My quizzes' own
     box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
-    assert str(ico('pencil')) in box and 'In progress' in box and '1 started</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
+    assert str(ico('pencil')) in box and 'In progress' in box and '1 in progress</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
     # started: no longer new, no badge
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
-    assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 started</span>' in mine
+    assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 in progress</span>' in mine
     assert 'No new quizzes right now. {}'.format(ico('party')) in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert 'nothing new</span>' in page
     box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
-    assert '2 started</span>' in box and 'Fresh' in box and 'Begun' in box
+    assert '2 in progress</span>' in box and 'Fresh' in box and 'Begun' in box
 
 
 def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
@@ -1359,8 +1359,44 @@ def test_teacher_menu_fits_one_line(app_db):
         assert label in top, label
     assert '>Messages</a>' not in nav and '>Home</a>' not in top and 'My quizzes' not in top
     more = top.split('>More</summary>')[1]
-    for label in ('>Archive</a>', '>Upload</a>', '>Images</a>', '>Other files</a>', '>Settings</a>'):
+    for label in ('>Archive</a>', '>Upload files</a>', '>Pictures</a>', '>Other files</a>', '>Settings</a>'):
         assert label in more, label
     assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="count nav-quizzes"' in name_menu.split('</summary>')[0]
     student = no_titles(sam.get('/home').data.decode()).split('<nav class="nav')[1].split('<div class="nav-right">')[0]
     assert '>Home</a>' in student and 'My quizzes' in student and '>More</summary>' not in student
+
+
+def test_kid_friendly_review_batch(app_db):
+    """The second UI review (2026-10-09), items 1, 2, 4, 5, 6, 13 and 14: big answer cards, 14px
+    status words, one way of writing dates, the nickname in the greeting, "In progress",
+    a plainer More menu, and a solid focus outline."""
+    import os
+    app, db = app_db
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    # 14: the focus outline is solid (a see-through one was about 1.75:1 on white)
+    assert 'outline: 3px solid var(--accent);  /* solid' in css and 'var(--accent) 35%, transparent);\n  outline-offset' not in css
+    # 1: a quiz's answers are whole-card buttons at least 48px tall
+    assert '.question .choice-list label { align-self: stretch; display: flex; align-items: center; padding: 12px 14px 12px 12px; min-height: 48px; }' in css
+    # 2: status words are 14px
+    assert 'display: inline-block; font-size: var(--fs-sm); font-weight: 600; line-height: 1;' in css
+    # 4: every date goes through the |when filter: no hand-written formats in the pages
+    for dp, _dn, files in os.walk(os.path.join(here, 'app')):
+        for f in files:
+            if f.endswith('.html'):
+                assert '.strftime(' not in open(os.path.join(dp, f)).read(), f
+    from app import when_filter
+    from datetime import datetime
+    assert when_filter(datetime(2026, 10, 9, 16, 22)) == 'Fri Oct 9, 4:22 PM'
+    assert when_filter(datetime(2025, 10, 7, 9, 5), 'short') == 'Tue Oct 7, 2025'
+    # 5 and 6: the greeting and the badge a child sees
+    from app.user.models import User
+    db.session.get(User, ids('sam')).nickname = 'Sammy'
+    db.session.commit()
+    sam = login(app, 'sam')
+    assert 'Hi, Sammy!' in sam.get('/home').data.decode()
+    # 13: the More menu: lines between groups, plain names
+    teach = login(app, 'teach')
+    more = teach.get('/dashboard').data.decode().split('>More</summary>')[1].split('</details>')[0]
+    assert more.count('<hr class="menu-rule">') == 2 and '>Upload files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
+    assert '<h1>Pictures</h1>' in teach.get('/images').data.decode()

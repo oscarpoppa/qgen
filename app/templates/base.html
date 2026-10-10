@@ -116,11 +116,11 @@
                                 'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Archive, files and settings">More</summary>
               <div class="menu-list">
                 {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
-                <span class="menu-label">Files</span>
-                {{ item('upload.upload', 'Upload', tip='Upload pictures and other files for your problems') }}
-                {{ item('upload.images', 'Images', tip='See and manage the pictures you uploaded') }}
+                <hr class="menu-rule">
+                {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
+                {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
                 {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
-                <span class="menu-label">Site</span>
+                <hr class="menu-rule">
                 {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
               </div>
             </details>

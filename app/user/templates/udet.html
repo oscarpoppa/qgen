@@ -33,7 +33,7 @@
         <dt>Folders</dt><dd class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</dd>
         <dt>Role</dt><dd>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</dd>
         <dt>Last seen</dt><dd>{% if item.online %}online now
-          {% elif item.last_seen %}<span title="{{ item.last_seen.strftime('%b %d %Y, %I:%M %p') }}">{{ item.seen_label() }}</span>
+          {% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>
           {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</dd>
       </dl>
       <div class="btn-row">

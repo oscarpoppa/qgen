@@ -41,7 +41,7 @@
         <tr>
           <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a></td>
           <td data-label="Pages">{{ j.pages }}</td>
-          <td data-label="Last changed" class="nowrap">{{ j.updated_at.strftime('%b %d, %I:%M %p') }}</td>
+          <td data-label="Last changed" class="nowrap">{{ j.updated_at|when }}</td>
           <td class="btn-row">
             <a class="btn btn-sm" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">Continue</a>
             {{ post_button(url_for('qgen.scan_discard', job_id=j.id), 'Discard', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}

@@ -63,9 +63,14 @@ app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_sc
 @app.template_filter('when')
 def when_filter(d, style='day'):
     """A date and time without leading zeros, as people write it: 'day' "Tue Oct 7, 9:05 AM",
-    'long' "Tuesday Oct 7 at 9:05 AM", 'date' "Oct 7, 9:05 AM"."""
+    'long' "Tuesday Oct 7 at 9:05 AM", 'date' "Oct 7, 9:05 AM", 'short' (no time) "Tue Oct 7",
+    with the year when it isn't this year ("Tue Oct 7, 2025"). Every date the site shows goes
+    through here, so there's one way of writing them."""
     if d is None:
         return ''
+    if style == 'short':
+        year = '' if d.year == datetime.now().year else ', {}'.format(d.year)
+        return '{:%a %b} {}{}'.format(d, d.day, year)
     clock = '{}:{:%M} {:%p}'.format(d.hour % 12 or 12, d, d)
     if style == 'long':
         return '{:%A %b} {} at {}'.format(d, d.day, clock)

@@ -65,7 +65,7 @@ def upload():
 @admin_only
 def images():
     imgs = [(f,f[2:]) for f in static_files() if f.startswith('T_')]
-    return render_template('images.html', imgs=imgs, title='Images')
+    return render_template('images.html', imgs=imgs, title='Pictures')
 
 #admin-only list non-image files on server
 @upload_bp.route('/nonimages', methods=['GET'])

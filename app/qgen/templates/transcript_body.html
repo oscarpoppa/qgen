@@ -11,9 +11,9 @@
       <h2 style="margin:0">{{ cq.vquiz.title }}</h2>
       <div class="muted small">{{ cq.taker.shown_name if cq.taker else '' }}</div>
       <div class="muted small">
-        {% if cq.startdate %}Started {{ cq.startdate.strftime('%b %d %Y, %I:%M %p') }} · {% endif %}
-        {% if cq.compdate %}Handed in {{ cq.compdate.strftime('%b %d %Y, %I:%M %p') }}{% else %}Not handed in{% endif %}
-        {% if cq.graded_date %} · Graded {{ cq.graded_date.strftime('%b %d %Y') }}{% endif %}
+        {% if cq.startdate %}Started {{ cq.startdate|when }} · {% endif %}
+        {% if cq.compdate %}Handed in {{ cq.compdate|when }}{% else %}Not handed in{% endif %}
+        {% if cq.graded_date %} · Graded {{ cq.graded_date|when('short') }}{% endif %}
       </div>
     </div>
   </div>

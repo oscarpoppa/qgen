@@ -76,7 +76,7 @@
       {# automatic: quizzes started and not handed in yet (each also in its folder below) #}
       <details class="box sub-box new-folder-box" data-folder-box="started" data-list>
         <summary class="sub-head">{{ box_label('pencil', 'In progress', none, 'h3') }}
-          {% if working %}<span class="badge badge-accent" title="Started and not handed in yet">{{ working|length }} started</span>
+          {% if working %}<span class="badge badge-accent" title="Started and not handed in yet">{{ working|length }} in progress</span>
           {% else %}<span class="muted small">nothing in progress</span>{% endif %}</summary>
         <div class="sub-body">
           {% for g in working %}{{ result_box(g, item) }}{% else %}<p class="muted small box-empty">{{ item.shown_name }} has no quiz started and not handed in.</p>{% endfor %}

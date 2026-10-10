@@ -23,7 +23,7 @@
             {%- if not mine and others|length < m.recipients|length %}to you{{ ' and ' ~ others|join(', ') if others }} only
             {%- else %}to {{ m.recipients|map(attribute='shown_name')|join(', ') or 'a teacher' }} only{% endif %}</span>
         {% endif %}
-        <span class="muted">{{ m.created.strftime('%b %d, %I:%M %p') }}</span>
+        <span class="muted">{{ m.created|when }}</span>
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}</div>

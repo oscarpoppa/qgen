@@ -439,7 +439,7 @@ def test_a_newly_assigned_quiz_says_new(app_db):
     # opened: no longer new
     take_page(sam, CQuiz.query.one().id)
     home = sam.get('/mypage').data.decode()
-    assert '<span class="badge badge-warn">New</span>' not in home and 'Started' in home
+    assert '<span class="badge badge-warn">New</span>' not in home and 'In progress</span>' in home
 
 
 def test_view_problems_and_quizzes_without_editing(app_db):
@@ -962,7 +962,7 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     assert 'In progress: quizzes you’ve started and not handed in' in page and 'Settings quiz' in page
     assert 'Nothing in progress' not in page
     row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
-    assert 'class="badge badge-accent side-new-badge" title="1 attempt started and not handed in">1 started</span>' in row[:row.index('</li>')]
+    assert 'class="badge badge-accent side-new-badge" title="1 attempt started and not handed in">1 in progress</span>' in row[:row.index('</li>')]
     # remembered like any folder: back to My quizzes shows it again
     assert 'In progress: quizzes' in sam.get('/mypage').data.decode()
     S.submit(cq, {1: '4'})
