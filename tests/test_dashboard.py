@@ -179,9 +179,10 @@ def test_student_messages_are_counted_but_not_listed(app_db):
     # the order: Right now beside Site at a glance, then grading and hand-ins, and the full-width
     # Assigned last (in the middle it left a hole beside a shorter box)
     order = [page.index('data-box="{}"'.format(k)) for k in ('now', 'glance', 'queue', 'handins', 'out')]
-    assert order == sorted(order) and page.index('dash-counters') < order[0]
+    assert order == sorted(order) and 'dash-counters' not in page  # no counters row (2026-10-09)
     assert MessageRead.query.count() == before
-    assert '1</span><span>unread message</span>' in page
+    # counted on the Messages button, top right
+    assert __import__('re').search(r'class="count nav-unread"[^>]*>1</span>', page)
 
 
 def test_site_at_a_glance(app_db):
@@ -356,3 +357,21 @@ def test_refresh_keeps_the_page_where_it_was():
     hold = js.index("box.style.minHeight = box.offsetHeight + 'px'")
     assert hold < js.index('box.innerHTML = html') < js.index("box.style.minHeight = ''")
     assert 'if (!moved && Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y)' in js
+
+
+def test_folded_dashboard_boxes_are_a_row_of_buttons(app_db):
+    """The Dashboard (2026-10-09, option A): folded boxes sit together as a row of buttons
+    above the open ones (static/js/dashchips.js), no counters row, "due soon" on the Assigned
+    box's heading, and no Upload button in the heading (it's under More)."""
+    import os
+    app, db = app_db
+    teacher = login(app, 'teach')
+    page = teacher.get('/dashboard').data.decode()
+    assert 'js/dashchips.js' in page and 'dash-counters' not in page
+    head = page.split('<div class="actions dash-actions"')[1].split('</div>')[0]
+    assert '>Upload</a>' not in head and 'data-level="open"' in head
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js = open(os.path.join(here, 'static', 'js', 'dashchips.js')).read()
+    assert "d._byHand = Date.now();" in js and "classList.toggle('dash-folded', !d.open)" in js
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert '.dash-grid > details.dash-folded { display: none; }' in css

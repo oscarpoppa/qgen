@@ -8,7 +8,6 @@
     <a class="btn" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
     <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
     <button type="button" class="btn btn-secondary" data-open-pane="messages" title="Open the messages panel to write to students">Message students</button>
-    <a class="btn btn-secondary" href="{{ url_for('upload.upload') }}" title="Upload pictures and files to the site for problems to use">Upload</a>
     {{ expand_collapse('#dash-live', 'boxes') }}
   </div>
 </div>
@@ -18,4 +17,5 @@
 </div>
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/dashboard.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/dashboard.js') }}" defer></script>
+<script src="{{ asset('js/dashchips.js') }}" defer></script>{% endblock %}

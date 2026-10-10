@@ -4,18 +4,9 @@
 {% macro score(value) -%}
   <span class="badge {{ 'badge-ok' if value >= 70 else 'badge-warn' if value >= 50 else 'badge-bad' }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
-<div class="dash-counters" aria-label="To do">
-  <a class="dash-count{{ ' has' if counts.grading }}" href="{{ url_for('qgen.review_list') }}" title="Open Grading: written answers handed in that need your grade">
-    <span class="dash-num">{{ counts.grading }}</span><span>waiting for grading</span></a>
-  <a class="dash-count{{ ' has' if counts.messages }}" href="{{ url_for('messages.inbox') }}" title="Open Messages to read what students sent you">
-    <span class="dash-num">{{ counts.messages }}</span><span>unread message{{ '' if counts.messages == 1 else 's' }}</span></a>
-  <button type="button" class="dash-count{{ ' has' if counts.notices }}" data-open-pane="notices" title="Open the notices panel to read site notices">
-    <span class="dash-num">{{ counts.notices }}</span><span>unread notice{{ '' if counts.notices == 1 else 's' }}</span></button>
-  {% set soon = tuning.get('due_soon_days') %}
-  <a class="dash-count{{ ' has' if counts.closing }}" href="#dash-out"
-     title="Assigned quizzes with a closing time in the next {{ soon }} day{{ "" if soon == 1 else "s" }} that the student hasn't handed in yet (one per student)">
-    <span class="dash-num">{{ counts.closing }}</span><span>not handed in, due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span></a>
-</div>
+{# no counters row: grading waiting shows on the menu's Grading, unread messages and notices
+   on their buttons (top right), and "due soon" on the Assigned box's heading #}
+{% set soon = tuning.get('due_soon_days') %}
 
 <div class="dash-grid">
   {% include "_dashboard_now.html" %}
@@ -108,7 +99,8 @@
   </details>
   {# full width, so last: in the middle it left a hole beside the shorter box above it #}
   <details class="box card dash-card dash-wide" id="dash-out" data-box="out" open>
-    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
+      {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn't handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
       <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>

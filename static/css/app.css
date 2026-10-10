@@ -901,6 +901,24 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   font-size: var(--fs-md); color: var(--muted); }
 .folder-tabs.tabs-off ~ .folder-items-head { display: none; }
 .folder-tabs.tabs-off { display: none; }
+/* the Dashboard (static/js/dashchips.js): folded boxes are a row of buttons above the open ones */
+.dash-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; padding: 8px 10px;
+  border-radius: var(--r-lg); background: var(--surface-2); border: 1px dashed var(--field-border); }
+.dash-chips[hidden] { display: none; }
+.dash-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 5px 12px;
+  border: 1px solid var(--field-border); border-radius: var(--r-lg); background: var(--surface); color: var(--text);
+  font: inherit; font-weight: 600; cursor: pointer; }
+.dash-chip::before { content: "\25B8"; color: var(--muted); font-size: .8em; margin-right: 6px; }
+.dash-chip:hover { border-color: var(--accent); }
+.dash-chip .box-icon svg.ico { color: var(--accent); }
+/* a narrow window or a phone: buttons wrap their words instead of running off the side */
+.dash-chip { display: inline-block; min-width: 0; text-align: left; line-height: 1.6; }
+.dash-chip > * { margin-right: 6px; vertical-align: middle; }
+.dash-chip > :last-child { margin-right: 0; }
+.dash-chip .box-icon { display: inline-flex; }
+.dash-chip .box-title { white-space: normal; }
+.dash-chip .muted { display: none; }  /* "updated 9:17 PM" belongs in the open box, not on its button */
+.dash-grid > details.dash-folded { display: none; }
 .folder-tab { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 5px 12px;
   border: 1px solid var(--field-border); border-radius: var(--r-lg); background: var(--surface); color: var(--text);
   font: inherit; font-weight: 600; cursor: pointer; }
@@ -1275,6 +1293,7 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
   .topbar, .dock, .toast, dialog, .no-print, ul.alerts, .archived-banner .btn-row, .calc, .skip-link { display: none !important; }
   /* folder buttons (foldertabs.js): on paper, plain headings */
   .folder-tabs { display: none !important; } details.tab-box > summary { display: flex !important; }
+  .dash-chips { display: none !important; } .dash-grid > details.dash-folded { display: block !important; }
   main.container { max-width: none; padding: 0; margin: 0; }
   .card { box-shadow: none; }
   /* a question isn't split across two pages when it fits on one */
