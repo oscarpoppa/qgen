@@ -79,11 +79,13 @@
       <nav class="nav{{ ' nav-few' if current_user.is_authenticated and not current_user.is_admin }}" id="nav" aria-label="Main">
         {% if current_user.is_authenticated %}
           {% if current_user.is_admin %}{{ item('qgen.dashboard', 'Dashboard', tip='Overview: who is working now, what needs grading, recent results') }}{% endif %}
-          {# quizzes given since My quizzes was last opened (anyone: teachers take quizzes too); kept current by messages.js #}
-          {# Home for everyone: teachers take quizzes too, and see them as students do #}
+          {# students: Home and My quizzes (quizzes given since My quizzes was last opened: kept
+             current by messages.js); teachers find their own under their name, top right #}
+          {% if not current_user.is_admin %}
           {{ item('user.home', 'Home', tip='Your start page: quizzes to do and your awards') }}
           {% call item('user.mypage', 'My quizzes', tip='All the quizzes your teacher gave you, in folders') %}
             <span class="count nav-quizzes" title="Quizzes for you to do" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
+          {% endif %}
           {% if current_user.is_admin %}
             <details class="menu">
               <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }} title="Find, write and edit problems">Problems</summary>
@@ -106,24 +108,34 @@
             {% call item('qgen.review_list', 'Grading', ('qgen.review',), tip='Written answers waiting for you to grade') %}
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             {% endcall %}
-            {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page'), tip='All your conversations with students and teachers') }}
             {# People: Accounts (user.userdet) and Results (qgen.list_users); opens the view used last #}
             {{ item('user.people', 'People', ('user.userdet', 'user.eduser', 'qgen.list_users', 'qgen.list_user'), tip='Everyone: their accounts, folders and quiz results') }}
-            {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
+            {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
-              <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }} title="Upload and manage pictures and files">Files</summary>
+              <summary{{ under(('qgen.archive', 'qgen.archived', 'upload.upload', 'upload.images', 'upload.nonimages',
+                                'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Archive, files and settings">More</summary>
               <div class="menu-list">
+                {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
+                <span class="menu-label">Files</span>
                 {{ item('upload.upload', 'Upload', tip='Upload pictures and other files for your problems') }}
                 {{ item('upload.images', 'Images', tip='See and manage the pictures you uploaded') }}
                 {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
+                <span class="menu-label">Site</span>
+                {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
               </div>
             </details>
-            {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
           {% endif %}
           <div class="nav-right">
             <details class="menu">
-              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') }}" title="Your profile, password and logging out">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}</summary>
+              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') or (current_user.is_admin and here in ('user.home', 'user.mypage')) }}" title="{{ 'Your own quizzes, your profile, password and logging out' if current_user.is_admin else 'Your profile, password and logging out' }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}
+                {%- if current_user.is_admin %}<span class="count nav-quizzes" title="Quizzes for you to do (My quizzes, in this menu)" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</summary>
               <div class="menu-list">
+                {% if current_user.is_admin %}
+                {# a teacher's own quizzes (teachers take quizzes too, and see them as students do) #}
+                {% call item('user.mypage', 'My quizzes', tip='Quizzes given to you, to take like a student') %}
+                  <span class="count nav-quizzes" title="Quizzes for you to do" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
+                {{ item('user.home', 'Home', tip='Your student start page: quizzes to do and your awards') }}
+                {% endif %}
                 {{ item('user.profile', 'My profile', tip='Change your nickname and picture') }}
                 {{ item('user.chpass', 'Change password', tip='Pick a new password for logging in') }}
                 <a href="{{ url_for('user.logout') }}" title="Sign out of the site on this device">Log out</a>

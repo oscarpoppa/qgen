@@ -1343,3 +1343,24 @@ def test_a_folder_above_the_one_youre_in_cant_be_folded():
     js = open(os.path.join(here, 'static', 'js', 'folders.js')).read()
     assert 'path.slice(0, -1)' in js and 'btn.disabled = true' in js and 'so it stays open' in js
     assert '.side-fold:disabled' in open(os.path.join(here, 'static', 'css', 'app.css')).read()
+
+
+def test_teacher_menu_fits_one_line(app_db):
+    """The teacher's top menu (U1, 2026-10-09): Dashboard, Problems, Quizzes, Grading, People
+    and More (Archive, Files, Settings); their own Home and My quizzes are under their name
+    (its count on the name too); no Messages link (the Messages button at the top right). A
+    student's menu keeps Home and My quizzes."""
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    page = no_titles(teach.get('/dashboard').data.decode())
+    nav = page.split('<nav class="nav')[1].split('</nav>')[0]
+    top, name_menu = nav.split('<div class="nav-right">')
+    for label in ('>Dashboard</a>', '>People</a>', '>More</summary>', '>Problems</summary>', '>Quizzes</summary>', 'Grading'):
+        assert label in top, label
+    assert '>Messages</a>' not in nav and '>Home</a>' not in top and 'My quizzes' not in top
+    more = top.split('>More</summary>')[1]
+    for label in ('>Archive</a>', '>Upload</a>', '>Images</a>', '>Other files</a>', '>Settings</a>'):
+        assert label in more, label
+    assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="count nav-quizzes"' in name_menu.split('</summary>')[0]
+    student = no_titles(sam.get('/home').data.decode()).split('<nav class="nav')[1].split('<div class="nav-right">')[0]
+    assert '>Home</a>' in student and 'My quizzes' in student and '>More</summary>' not in student

@@ -145,6 +145,8 @@ main:focus { outline: none; }
 .nav-right .menu-list { left: auto; right: 0; }
 .menu-list a { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
 .menu-list a:hover { background: var(--surface-2); }
+/* a heading inside a drop-down (More: Files, Site) */
+.menu-label { padding: 8px 10px 2px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
 
 .btn.nav-toggle { display: none; }
 
