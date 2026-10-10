@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, back_home with context %}
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
 {# a Users page folder in the list down the side (folders are made and filled on the Users
@@ -21,7 +21,9 @@
 
 {% block content %}
 <div class="page-head"><h1>Messages</h1>
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Talk with other teachers; students never see these">Messages between teachers{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
+  {# back where you came from (the side panel's link is on every page), else the Dashboard #}
+  <div class="actions">{{ back_home() }}
+    <a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Talk with other teachers; students never see these">Messages between teachers{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
 
 <form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate data-students="{{ rows|length }}"
       data-confirm="Are you sure you want to send this to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}?" data-confirm-ok="Send to everyone">

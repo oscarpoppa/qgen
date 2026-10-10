@@ -1405,3 +1405,14 @@ def test_kid_friendly_review_batch(app_db):
     teach.post('/quiz/makevprob', data=problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []))
     assert 'aria-label="Include “Sum”"' in teach.get('/quiz/makevquiz').data.decode()
     assert 'width: 24px; height: 24px; min-height: 0; padding: 0; margin-left: 2px;' in css
+
+
+def test_the_messages_page_has_a_way_back(app_db):
+    """The Messages page left the menu (2026-10-09), so it has a Back button: to the page you
+    came from, else the Dashboard."""
+    app, db = app_db
+    teach = login(app, 'teach')
+    page = no_titles(teach.get('/messages').data.decode())
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in page
+    page = no_titles(teach.get('/messages', headers={'Referer': 'http://localhost/quiz/listvq'}).data.decode())
+    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in page
