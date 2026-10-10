@@ -3,23 +3,29 @@
    "@" is the selected text (or where it goes), "¶" is where the cursor ends up. #}
 {% from "_macros.html" import tip %}
 {% set tip_formula %}<p>The answer is worked out from each student's values, so it's written as a formula, not as display math. The buttons write it for you; select something first to put it inside, e.g. select <code>[a]</code> and press √.</p><ul><li><code>[a]^2</code> → a squared</li><li><code>sqrt([a])</code> → square root</li><li><code>([a])^(1/3)</code> → cube root</li><li><code>pi * [r]^2</code> → π r²</li><li><code>abs([a] - [b])</code> → distance between them</li><li><code>round([a] / 3, 2)</code> → rounded to 2 places</li><li><code>sqrt([a]), -sqrt([a])</code> → two answers (±): separate them with a comma</li></ul><p>To show students the answer as 2√3 rather than 3.4641, fill in “Show the correct answer as” below.</p>{% endset %}
-<div class="math-toolbar" role="toolbar" aria-label="Formula buttons" data-target="{{ formula_target|default('answer') }}">
-  {% for label, formula, title in [
-      ('x²', '@^2¶', 'Squared'),
-      ('xⁿ', '@^¶', 'Power'),
-      ('√', 'sqrt(@¶)', 'Square root'),
-      ('ⁿ√', '(@)^(1/¶)', 'nth root (e.g. 3 for a cube root)'),
-      ('a⁄b', '(@)/(¶)', 'Fraction'),
-      ('×', ' * ¶', 'Times'),
-      ('÷', ' / ¶', 'Divided by'),
-      ('( )', '(@¶)', 'Brackets'),
-      ('π', 'pi¶', 'Pi'),
-      ('|x|', 'abs(@¶)', 'Absolute value'),
-      ('round', 'round(@¶, 2)', 'Round (to 2 decimal places; change the 2)'),
-      ('±', 'pm', 'Plus or minus: two answers, the selection and its negative'),
-      (',', ', ¶', 'Another answer (separate several answers with commas)'),
-  ] %}
-    <button type="button" class="math-btn formula-btn" data-formula="{{ formula }}" title="{{ title }}" aria-label="{{ title }}">{{ label }}</button>
-  {% endfor %}
-  {{ tip('formula buttons', tip_formula) }}
-</div>
+{# every bar of keys looks the same: under a small "Math keys" heading that folds (keys_folded:
+   start folded, e.g. the optional "Show the correct answer as" box while it's empty) #}
+{# the keys both bars have, in the same order (_math_toolbar.html), then this bar's own #}
+<details class="math-keys"{% if not keys_folded|default(false) %} open{% endif %}>
+  <summary class="math-keys-head" title="Show or hide the buttons that write math">Math keys</summary>
+  <div class="math-toolbar" role="toolbar" aria-label="Formula buttons" data-target="{{ formula_target|default('answer') }}">
+    {% for label, formula, title in [
+        ('x²', '@^2¶', 'Squared'),
+        ('xⁿ', '@^¶', 'Power'),
+        ('√', 'sqrt(@¶)', 'Square root'),
+        ('ⁿ√', '(@)^(1/¶)', 'nth root (e.g. 3 for a cube root)'),
+        ('a⁄b', '(@)/(¶)', 'Fraction'),
+        ('×', ' * ¶', 'Times'),
+        ('÷', ' / ¶', 'Divided by'),
+        ('π', 'pi¶', 'Pi'),
+        ('|x|', 'abs(@¶)', 'Absolute value'),
+        ('±', 'pm', 'Plus or minus: two answers, the selection and its negative'),
+        ('( )', '(@¶)', 'Brackets'),
+        ('round', 'round(@¶, 2)', 'Round (to 2 decimal places; change the 2)'),
+        (',', ', ¶', 'Another answer (separate several answers with commas)'),
+    ] %}
+      <button type="button" class="math-btn formula-btn" data-formula="{{ formula }}" title="{{ title }}" aria-label="{{ title }}">{{ label }}</button>
+    {% endfor %}
+    {{ tip('formula buttons', tip_formula) }}
+  </div>
+</details>

@@ -314,3 +314,21 @@ def test_each_row_of_math_buttons_sits_under_its_label(app_db):
     # the exact form has a worked example with a value, kept as written (inside <code>, which the math display skips)
     assert 'if the answer is <code>sqrt([a])</code>, write <code>\\( \\sqrt{[a]} \\)</code>' in page
     assert 'sees √3 (≈ 1.7321)' in page
+
+
+def test_every_bar_of_math_keys_looks_the_same(app_db):
+    """Both kinds of key bar sit under the same small "Math keys" heading that folds, with the
+    keys they share in the same order; the optional "Show the correct answer as" bar starts
+    folded while its box is empty (it's rarely needed), the others start open."""
+    import re
+    app, db = app_db
+    page = login(app, 'teach').get('/quiz/makevprob').data.decode()
+    bars = re.findall(r'<details class="math-keys"( open)?>\s*<summary class="math-keys-head"[^>]*>Math keys</summary>'
+                      r'\s*<div class="math-toolbar"[^>]*data-target="(\w+)"(.*?)</div>\s*</details>', page, re.S)
+    found = {target: (bool(opened), re.findall(r'<button[^>]*>([^<]+)</button>', keys)) for opened, target, keys in bars}
+    assert set(found) == {'question', 'choices', 'answer', 'answer_display'}
+    assert not found['answer_display'][0]
+    assert found['question'][0] and found['choices'][0] and found['answer'][0]
+    shared = ['x²', 'xⁿ', '√', 'ⁿ√', 'a⁄b', '×', '÷', 'π', '|x|', '±']
+    for target, (opened, keys) in found.items():
+        assert keys[:len(shared)] == shared, target

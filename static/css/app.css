@@ -1012,6 +1012,15 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .list-ai .list-ai-text { flex: 1 1 240px; min-width: 0; }
 .list-ai-status { flex-basis: 100%; }
 .math-toolbar { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 0 0 6px; }
+/* every bar of math keys under the same small heading that folds (the optional ones start folded) */
+.math-keys { margin: 0 0 4px; }
+.math-keys-head { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; color: var(--muted);
+  font-size: var(--fs-sm); font-weight: 600; padding: 2px 6px 2px 0; margin-bottom: 4px; border-radius: var(--r-sm); }
+.math-keys-head::-webkit-details-marker { display: none; }
+.math-keys-head::before { content: "\25B8"; font-size: .8em; transition: transform .15s; }
+.math-keys[open] > .math-keys-head::before { transform: rotate(90deg); }
+.math-keys-head:hover { color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .math-keys-head::before { transition: none; } }
 .math-btn {
   min-width: 34px; min-height: 30px; padding: 2px 8px; font: 500 var(--fs-md)/1 "Cambria Math", "STIX Two Math", Georgia, serif;
   background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm);
