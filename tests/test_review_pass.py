@@ -1400,3 +1400,8 @@ def test_kid_friendly_review_batch(app_db):
     more = teach.get('/dashboard').data.decode().split('>More</summary>')[1].split('</details>')[0]
     assert more.count('<hr class="menu-rule">') == 2 and '>Upload files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
     assert '<h1>Pictures</h1>' in teach.get('/images').data.decode()
+    # 15 and 16: the quiz builder's problem boxes have names; the "?" buttons are 24px
+    from test_flow import problem_form
+    teach.post('/quiz/makevprob', data=problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []))
+    assert 'aria-label="Include “Sum”"' in teach.get('/quiz/makevquiz').data.decode()
+    assert 'width: 24px; height: 24px; min-height: 0; padding: 0; margin-left: 2px;' in css

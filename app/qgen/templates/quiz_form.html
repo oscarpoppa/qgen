@@ -15,7 +15,7 @@
     {% for p in items %}
       {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
       <tr data-item="{{ p.id }}" data-name="{{ (p.title or 'untitled')|lower }}">
-        <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}"></td>
+        <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}" aria-label="Include “{{ p.title or 'Untitled' }}”"></td>
         <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
           <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
           <div class="small muted clamp">{{ p.raw_prob }}</div></td>

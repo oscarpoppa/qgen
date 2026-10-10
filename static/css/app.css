@@ -581,7 +581,7 @@ input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
 .tip-wrap { display: inline-flex; vertical-align: middle; }
 button.tip {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; min-height: 0; padding: 0; margin-left: 2px;
+  width: 24px; height: 24px; min-height: 0; padding: 0; margin-left: 2px;  /* 24px: the smallest target WCAG 2.5.8 allows */
   border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   background: var(--accent-soft); color: var(--accent);
   font: 700 var(--fs-xs)/1 inherit; cursor: help; flex: 0 0 auto;
