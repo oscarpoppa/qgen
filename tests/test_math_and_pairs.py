@@ -317,9 +317,8 @@ def test_each_row_of_math_buttons_sits_under_its_label(app_db):
 
 
 def test_every_bar_of_math_keys_looks_the_same(app_db):
-    """Both kinds of key bar sit under the same small "Math keys" heading that folds, with the
-    keys they share in the same order; the optional "Show the correct answer as" bar starts
-    folded while its box is empty (it's rarely needed), the others start open."""
+    """Both kinds of key bar sit under the same small "Math keys" heading, with the keys they
+    share in the same order; every bar starts folded, out of the way until it's clicked."""
     import re
     app, db = app_db
     page = login(app, 'teach').get('/quiz/makevprob').data.decode()
@@ -327,8 +326,7 @@ def test_every_bar_of_math_keys_looks_the_same(app_db):
                       r'\s*<div class="math-toolbar"[^>]*data-target="(\w+)"(.*?)</div>\s*</details>', page, re.S)
     found = {target: (bool(opened), re.findall(r'<button[^>]*>([^<]+)</button>', keys)) for opened, target, keys in bars}
     assert set(found) == {'question', 'choices', 'answer', 'answer_display'}
-    assert not found['answer_display'][0]
-    assert found['question'][0] and found['choices'][0] and found['answer'][0]
+    assert not any(opened for opened, keys in found.values())
     shared = ['x²', 'xⁿ', '√', 'ⁿ√', 'a⁄b', '×', '÷', 'π', '|x|', '±']
     for target, (opened, keys) in found.items():
         assert keys[:len(shared)] == shared, target

@@ -188,7 +188,7 @@
     </div>
     <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
     <div class="t-numeric">
-      {% set display_bar %}{% with math_target = 'answer_display', keys_folded = not form.answer_display.data %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
+      {% set display_bar %}{% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
       {# a worked example: what to write, with a value in [brackets], and what a student then sees #}
       {% set display_help %}Optional. Shows the exact form next to the number; students are still graded on the number.
         <span class="display-example">For example, if the answer is <code>sqrt([a])</code>, write <code>\( \sqrt{[a]} \)</code>
