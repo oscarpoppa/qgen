@@ -4,12 +4,14 @@
 {% from "_macros.html" import filter_bar with context %}
 <div class="folder-tools-bar results-filter">
   {% call filter_bar('#folder-items', filter_one, filter_many, items='details.item-box', boxes='details.sub-box, details.month-box', id='results-filter') %}
-  <label class="small muted">Show
+  {# "Show" on the same line as its menu, in line with the name box and Clear; the choices say
+     what they keep #}
+  <label class="small muted show-pick">Show
     <select class="state-filter" aria-label="Show which results">
-      <option value="all">Everything</option>
-      <option value="review">Waiting for grading</option>
-      <option value="out">Not handed in yet</option>
+      <option value="all">All results</option>
+      <option value="review">Waiting for grading only</option>
+      <option value="out">Not handed in yet only</option>
     </select></label>
   {% endcall %}
 </div>
-<p class="card empty small filter-none" hidden>Nothing here matches. Try “Everything”, or another folder.</p>
+<p class="card empty small filter-none" hidden>Nothing here matches. Try “All results”, or another folder.</p>

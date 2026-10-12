@@ -1998,3 +1998,6 @@ select.add-select option { text-align: left; font-weight: 400; }
 .folder-tab.is-empty[aria-expanded="true"] { opacity: 1; }
 /* phones: a heading's lone button (a quiz's own page: Print) takes the whole line */
 @media (max-width: 640px) { .subject-box > summary .box-actions:has(> :only-child) { grid-template-columns: minmax(0, 1fr); } }
+/* the results pages' "Show" menu: its word beside it, the menu as tall as the name box and Clear */
+.results-filter label.show-pick { display: inline-flex; align-items: center; gap: 6px; margin: 0; white-space: nowrap; }
+.results-filter label.show-pick select { min-height: 36px; padding-top: 4px; padding-bottom: 4px; width: auto; }
