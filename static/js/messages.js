@@ -81,7 +81,8 @@
     if (open) {
       //its pop-ups are answered; opening Notices with its button (or a pop-up's) marks them seen
       document.querySelectorAll('.toast-' + p).forEach(function (t) { t.remove(); });
-      load(p, true);
+      //a reply still being written stays as it was (loading it afresh would lose it)
+      if (!(p === 'messages' && busyTyping())) load(p, true);
     }
     //the conversation's panel changed size: keep the newest message in view
     if (isOpen('messages')) requestAnimationFrame(showNewest);
@@ -156,11 +157,11 @@
   });
 
   //a click on the page closes panels that slide over it (not pinned); a click on a pop-up,
-  //a dialog or anything the panels opened leaves them be
+  //a dialog, the menus, or Messages with a reply half-written leaves them be
   document.addEventListener('click', function (e) {
     if (justOpened || pinned() || !PANES.some(isOpen) || !e.target.closest || !document.contains(e.target)) return;
-    if (e.target.closest('.dock, .dock-buttons, .toasts, dialog, .nav-menu, .nav-toggle')) return;
-    PANES.forEach(function (q) { if (isOpen(q)) setOpen(q, false); });
+    if (e.target.closest('.dock, .dock-buttons, .toasts, dialog, nav.nav, details.menu, .floating-menu, .nav-toggle')) return;
+    PANES.forEach(function (q) { if (isOpen(q) && !(q === 'messages' && busyTyping())) setOpen(q, false); });
   });
 
   document.addEventListener('keydown', function (e) {

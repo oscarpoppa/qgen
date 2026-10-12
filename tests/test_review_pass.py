@@ -1439,6 +1439,10 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     assert "if (pinned()) store('qgen-dock-' + p, open ? 'open' : 'closed');" in js
     # a click on the page closes them, but not the click that opened them (e.g. "Message students")
     assert 'if (justOpened || pinned() ||' in js and "if (e.key !== 'Escape' || pinned()) return;" in js
+    # ...nor a click in the top menus, and Messages stays open while a reply is half-written;
+    # reopened, it keeps the reply rather than loading over it
+    assert "nav.nav, details.menu, .floating-menu" in js and "!(q === 'messages' && busyTyping())" in js
+    assert "if (!(p === 'messages' && busyTyping())) load(p, true);" in js
 
 
 def test_results_rows_are_one_line_tall(app_db):
@@ -1471,13 +1475,20 @@ def test_a_folded_student_says_where_they_are(app_db):
     head = sam[:sam.index('</summary>')]
     assert '1 done · avg 100%' in head and '1 not started' in head and 'to grade' not in head
     # colored like every other score: green from 70%, amber from 50%, red below
-    assert 'class="badge badge-ok" title="Attempts handed in and graded' in head
+    assert 'class="badge badge-ok" title="Quizzes with a score that counts' in head
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '5'})
         db.session.commit()
     page = teacher.get('/quiz/listuser').data.decode()
     kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert 'class="badge badge-bad" title="Attempts handed in and graded, and their average score">1 done · avg 0%' in kim[:kim.index('</summary>')]
+    assert 'class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done · avg 0%' in kim[:kim.index('</summary>')]
+    # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the box
+    with app.test_request_context():
+        S.submit(give(vq, 'kim'), {1: '4'})
+        db.session.commit()
+    page = teacher.get('/quiz/listuser').data.decode()
+    kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
+    assert '1 done · avg 100%' in kim[:kim.index('</summary>')]
     emma = page[page.index('id="student-{}"'.format(ids('teach'))):]
     assert 'student-sums' not in emma[:emma.index('</summary>')]  # nothing given: nothing to say
 

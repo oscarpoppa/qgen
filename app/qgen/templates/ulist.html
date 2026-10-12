@@ -55,12 +55,13 @@
       {{ box_label(avatar(item, 30), item.shown_name, count_of(n, 'quiz', 'quizzes')) }}
       {# folded, the heading still says where they are: done (and their average), to grade,
          in progress, not started #}
-      {% set sum_done = item.cquizzes|selectattr('status', 'equalto', 'completed')|list %}
+      {# done: quizzes with a score that counts (one per quiz, retakes counted by its rule, as in the box) #}
+      {% set sum_done = attempts_by_quiz(item.cquizzes)|map(attribute='combined')|reject('none')|list %}
       {% set sum_waiting = item.cquizzes|selectattr('status', 'equalto', 'review')|list|length %}
       {% set sum_going = item.cquizzes|selectattr('status', 'equalto', 'started')|list|length %}
       {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
       {% if not single and item.cquizzes %}<span class="student-sums">
-        {% if sum_done %}{% set sum_avg = (sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length) %}<span class="badge {{ score_class(sum_avg) }}" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
+        {% if sum_done %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) %}<span class="badge {{ score_class(sum_avg) }}" title="Quizzes with a score that counts, and the average of those scores">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
         {% if sum_waiting %}<span class="badge badge-warn" title="Attempts waiting for you to grade written answers">{{ sum_waiting }} to grade</span>{% endif %}
         {% if sum_going %}<span class="badge badge-accent" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
         {% if sum_fresh %}<span class="badge" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}

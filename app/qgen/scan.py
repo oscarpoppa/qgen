@@ -552,6 +552,8 @@ def save_picture(job, page_n, box, name):
         fname = unique_name(secure_filename('{}.jpg'.format(name)) or 'scan.jpg')
         crop.convert('RGB').save(os.path.join(static_dir(), fname), 'JPEG', quality=88)
     trythumb(static_dir(), fname, quiet=True)
+    from app.upload.routes import files_changed
+    files_changed()
     return fname
 
 

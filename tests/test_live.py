@@ -271,6 +271,10 @@ def test_more_pages_keep_themselves_up_to_date(app_db, monkeypatch):
     monkeypatch.setattr('app.push.tell', lambda rooms: told.append(set(rooms)))
     teacher.post('/upload/json', data={'file': (png_bytes('red'), 'new.png')}, content_type='multipart/form-data')
     assert moved('/images') and moved('/nonimages') and {'teachers'} in told
+    # (pictures cut from scanned pages tell them too)
+    import inspect
+    from app.qgen import scan
+    assert 'files_changed()' in inspect.getsource(scan)
     # a setting changed: both settings pages
     from app.qgen.models import Setting
     Setting.put('site_name', 'Room 12')
