@@ -706,12 +706,10 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     cq.startdate = datetime.now()
     db.session.commit()
     home = sam.get('/home').data.decode()
-    # each counter opens My quizzes' own folder of the same name
+    # New and In progress open My quizzes on the tab of the same name; Due, its quizzes due soon
     assert 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
-    assert 'href="/mypage?folder=soon"' in home
-    due = sam.get('/mypage?folder=soon').data.decode()
-    assert re.findall(r'<h2 title="([^"]+)" class="box-title">', due) == ['Soon']
-    assert '</svg> Due within 2 days</a>' in due and '>1 due</span>' in due and 'hand these in soon' in due
+    assert 'href="/mypage?show=soon"' in home and 'href="/mypage?folder=soon"' not in home
+    assert 'data-start="new"' in sam.get('/mypage?folder=new').data.decode()
     new = sam.get('/mypage?folder=new').data.decode()
     assert '“New one”' in new or 'New one' in new
     assert 'Begun' in sam.get('/mypage?folder=started').data.decode()
@@ -893,8 +891,11 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     # only the automatic folders carry full badges; the others have dots
     assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
-    assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Fresh']
-    assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page  # its folder too
+    # the New tab holds just it (static/js/folderfilter.js), and its card names its folder
+    import json
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
+    assert [t['keys'] for t in tree if t['id'] == 'new'] == [['quiz:{}'.format(fresh.id)]] and 'data-start="new"' in page
+    assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
     # the teacher's student page: a New folder button with the same quiz, and In progress beside it
@@ -907,7 +908,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
     assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 in progress</span>' in mine
-    assert 'No new quizzes right now. {}'.format(ico('party')) in sam.get('/mypage?folder=new').data.decode()
+    assert 'No new quizzes right now.' in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = dict((t[0], t[1]) for t in student_filter(page))
     assert tree['New'] == [] and tree['In progress'] == sorted([fresh.id, begun.id])
@@ -1230,8 +1231,7 @@ def test_folder_lists_have_one_order(app_db):
             nav = page.split('<nav aria-label="Folders">')[1]
             assert 0 < nav.index('Fall') < nav.index('Uncategorized'), url
     names = side(sam.get('/mypage').data.decode())
-    assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3].startswith('Due within') \
-        and names[4] == 'Uncategorized', names
+    assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3] == 'Uncategorized', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     names = [t[0] for t in student_filter(page)]
     assert names.index('New') < names.index('In progress')

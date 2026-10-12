@@ -724,7 +724,7 @@ def list_users():
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.list_users', folder=v),
-        unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
+        unit='person', units='people', all_label='All people', all_count=len(ulst), name=lambda f: f.name,
         hint=Markup('Folders are made and filled in <a href="{}">Accounts</a>.').format(url_for('user.userdet', folder=view)),
         fold_key='qgen-folded-results-student-folders')
     return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='People')
@@ -1301,7 +1301,7 @@ def archive_kit(view, node, root, flat, nodes, total):
         create_url=url_for('qgen.new_archive_folder'), move_url=url_for('qgen.move_archive_item'),
         rename_url=lambda fid: url_for('qgen.rename_archive_folder', fid=fid),
         delete_url=lambda fid: url_for('qgen.delete_archive_folder', fid=fid),
-        unit='attempt', units='attempts', all_label='All archived', all_count=total,
+        unit='attempt', units='attempts', all_label='All attempts', all_count=total,
         name=lambda f: f.name, folder_icon=lambda f: 'user' if f.student_id else 'folder',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
         hint='Each student has a folder (the one with a person on it) for their archived attempts; you can add your own and put folders inside folders.',

@@ -63,9 +63,10 @@
 
     //the page starts on All; only coming back to it from itself (a button here that reloads it,
     //e.g. a move or a drop) keeps the folder that was chosen
-    var chosen = 'all', fromHere = false;
+    //(data-start: the tab an address asks for, e.g. My quizzes?folder=new from Home)
+    var chosen = box.dataset.start || 'all', fromHere = false;
     try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
-    try { if (fromHere) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
+    try { if (fromHere && !box.dataset.start) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
     //(a folder's own things, outside the folders inside it: 'self:<id>')
     function base() { return chosen.indexOf('self:') === 0 ? chosen.slice(5) : chosen; }
     function isFolder(id) { return /^\d+$/.test(id) && !!byId[id]; }
@@ -194,7 +195,8 @@
       note.hidden = shown || chosen === 'all';
       list.hidden = !shown && chosen !== 'all';  // (no empty frame above the note)
       var nm = byId[base()] ? byId[base()].name : '';
-      note.textContent = chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
+      //(a tab can bring its own words for when it's empty: 'empty' in its data)
+      note.textContent = byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
       //empty tables' headings and the counts follow
       list.querySelectorAll('table').forEach(function (t) {
         var rowsIn = t.querySelectorAll('tbody tr[data-box]');

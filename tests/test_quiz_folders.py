@@ -85,8 +85,10 @@ def test_folders_inside_folders_and_removing_them(app_db):
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': algebra})
     assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == ['Week 1']  # in Algebra's box
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
-    assert '+ New folder inside' in page and 'No uncategorized quizzes in this folder' in page
-    assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
+    # Math's page: everything in it in one list, with the tabs every level has (All in “Math”,
+    # Algebra, Uncategorized: static/js/folderfilter.js)
+    assert '+ New folder inside' in page and 'data-all-label="All in “Math”"' in page
+    assert '"id": {}'.format(algebra) in page and 'data-no-main' not in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
     assert '<a href="/mypage?folder={}">Math</a>'.format(math) in no_titles(page)  # Math › Algebra
     # a folder can't go inside itself, or inside a folder in it
@@ -200,9 +202,9 @@ def test_a_retake_brings_the_quiz_out_of_its_folder(app_db):
     assert QuizPlacement.query.filter_by(owner_id=ids('kim')).count() == 1
 
 
-def test_folders_inside_show_as_boxes_with_their_own_expand_and_collapse(app_db):
+def test_a_folder_page_lists_everything_in_it_with_tabs_for_its_folders(app_db):
     app, db = app_db
-    import re
+    import re, json
     teach, sam = login(app, 'teach'), login(app, 'sam')
     w1, w2 = make_quiz(app, teach, 'Week 1'), make_quiz(app, teach, 'Week 2')
     assign(teach, w1, 'sam')
@@ -214,12 +216,10 @@ def test_folders_inside_show_as_boxes_with_their_own_expand_and_collapse(app_db)
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': math})
     sam.post('/mypage/move', data={'quiz': w2.id, 'to': algebra})
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
-    # Math's own quiz, and Algebra as a box holding its quiz
-    assert re.findall(r'<h2 title="([^"]+)" class="box-title">', page) == ['Week 2', 'Week 1']
-    assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
-    assert page.index('data-sub="{}"'.format(algebra)) < page.index('title="Week 2"') < page.index('title="Week 1"')
-    # Expand all / Collapse all for Math, and for Algebra's box
-    assert page.count('data-level="open"') == 2 and 'aria-label="Collapse all in Algebra"' in page
-    assert 'aria-label="Expand all in Math"' in page
-    # Algebra's box: drop a quiz on its title to move it in
-    assert '<summary class="sub-head" data-drop="{}">'.format(algebra) in page
+    # Math's quiz and Algebra's, each once, in one list
+    assert sorted(re.findall(r'<h2 title="([^"]+)" class="box-title">', page)) == ['Week 1', 'Week 2']
+    # the tabs: Algebra holds Week 2 (what's in Math and not in Algebra is its Uncategorized)
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
+    assert [(t['id'], t['name'], t['keys']) for t in tree] == [(algebra, 'Algebra', ['quiz:{}'.format(w2.id)])]
+    # a tab takes a drop (data-droppable), and Expand all / Collapse all for the page
+    assert 'data-droppable' in page and 'aria-label="Expand all in Math"' in page

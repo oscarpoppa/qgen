@@ -7,7 +7,7 @@
 {% block main_class %} container-wide{% endblock %}
 
 {# archived attempts, by the month they were archived (newest first; the newest month open,
-   older ones folded). here: the folder they're listed under (None: All archived or Not in a
+   older ones folded). here: the folder they're listed under (None: All attempts or Not in a
    folder), which is where a drag takes one out of #}
 {% macro archive_table(items, here=none) %}
   {% for month in items|groupby_month %}

@@ -959,12 +959,12 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     sam = login(app, 'sam')
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
     page = sam.get('/mypage?folder=started').data.decode()
-    assert '</svg> In progress</a>' in page and 'Nothing in progress right now.' in page
+    # the page opens on its In progress tab (static/js/folderfilter.js), with nothing in it yet
+    assert '</svg> In progress</a>' in page and 'data-start="started"' in page and '"id": "started"' in page
     assert page.index('{} New</a>'.format(ico('sparkle'))) < page.index('{} In progress</a>'.format(ico('pencil')))
     take_page(sam, cq.id)
     page = sam.get('/mypage?folder=started').data.decode()
     assert 'In progress: quizzes you’ve started, or handed in and not graded yet' in page and 'Settings quiz' in page
-    assert 'Nothing in progress' not in page
     row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
     assert 'class="badge badge-accent side-new-badge" title="1 attempt started, or handed in and not graded yet">1 in progress</span>' in row[:row.index('</li>')]
     # back to My quizzes from the menu starts on All again

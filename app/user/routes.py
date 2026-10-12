@@ -71,24 +71,21 @@ def mypage():
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all', extra=('new', 'started', 'soon'))
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all', extra=('new', 'started'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet, or handed in and waiting to be graded
     #(also each in its own folder)
     working = [g for g in groups if any(a.status in ('started', 'review') for a in g['attempts'])]
-    #and "Due within N days": closing soon (due_ids, above)
-    due = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
     days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     #their badges count tries (a quiz given twice and not started is 2 new)
     tries = {'new': sum(1 for g in groups for a in g['attempts'] if a.status == 'new'),
-             'started': sum(1 for g in groups for a in g['attempts'] if a.status in ('started', 'review')),
-             'due': sum(1 for g in groups for a in g['attempts'] if a.id in due_ids)}
+             'started': sum(1 for g in groups for a in g['attempts'] if a.status in ('started', 'review'))}
     def n_tries(n):
         return '{} {}'.format(n, 'attempt' if n == 1 else 'attempts')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
-             else working if view == 'started' else due if view == 'soon' else root['groups'])
+             else working if view == 'started' else root['groups'])
     if showing:
         wanted = {cq.id for cq in current_user.cquizzes if
                   (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status in ('started', 'review'))
@@ -103,8 +100,6 @@ def mypage():
         heading, nothing = 'New: quizzes you haven’t started', 'No new quizzes right now.'
     elif view == 'started':
         heading, nothing = 'In progress: quizzes you’ve started, or handed in and not graded yet', 'Nothing in progress right now.'
-    elif view == 'soon':
-        heading, nothing = 'Due within {}: hand these in soon'.format(within), 'Nothing is due within {}.'.format(within)
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -117,14 +112,12 @@ def mypage():
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
-        #the automatic folders, always in this order (the student page's boxes too): New, In progress, Due
+        #the automatic folders, always in this order (the teacher's view of a student too): New, In progress
         auto_views=[{'key': 'new', 'icon': 'sparkle', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
                     {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': len(working),
                      'badge': '{} in progress'.format(tries['started']), 'badge_class': 'badge-accent',
-                     'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))},
-                    {'key': 'soon', 'icon': 'alarm', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
-                     'badge_title': '{} to hand in within {}'.format(n_tries(tries['due']), within)}],
+                     'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
@@ -133,6 +126,23 @@ def mypage():
             'It' if n['count'] == 1 else 'They', 'es' if n['count'] == 1 else '', 'it' if n['count'] == 1 else 'them',
             'it' if n['count'] == 1 else 'them') if n['count'] else
             'Delete the folder “{}”{}? It’s empty.'.format(n['folder'].name, ' and the folders inside it' if n['folders'] else ''))
+    #the folder tabs over their one list of quizzes (static/js/folderfilter.js), as on every
+    #folder page: All quizzes, New, In progress, their folders, then Uncategorized
+    def keys(gs):
+        return sorted('quiz:{}'.format(g['vquiz'].id) for g in gs)
+    def under(n):
+        return n['groups'] + [g for c in n['folders'] for g in under(c)]
+    def tab(n):
+        return {'id': n['folder'].id, 'name': n['folder'].name, 'count': n['count'], 'url': url_for('user.mypage', folder=n['folder'].id),
+                'keys': keys(under(n)), 'children': [tab(c) for c in n['folders']]}
+    quiz_filter = ([{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [],
+                     'url': url_for('user.mypage', folder='new'), 'empty': 'No new quizzes right now.'},
+                    {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [],
+                     'url': url_for('user.mypage', folder='started'), 'empty': 'Nothing in progress right now.'}]
+                   + [tab(c) for c in root['folders']])
+    #a folder's own page: just what's in it, with tabs for the folders inside it
+    if node:
+        quiz_filter, shown = [tab(c) for c in node['folders']], under(node)
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
@@ -141,7 +151,7 @@ def mypage():
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
                            due_by_quiz=due_by_quiz,
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
-                           showing=showing, nothing=nothing)
+                           showing=showing, nothing=nothing, quiz_filter=quiz_filter)
 
 
 def _folder_done(message, error=False, show=None, moved=None):
@@ -462,7 +472,7 @@ def userdet():
         rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
         add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
-        unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
+        unit='person', units='people', all_label='All people', all_count=len(ulst), name=lambda f: f.name,
         placeholder='e.g. 7th grade', add_words='+', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         #a plain button (blue is for the page's own action); grayed out in an empty folder;
