@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
@@ -65,7 +65,7 @@
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}
-      {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
+      {% elif fk.node and fk.node.folders %}{% call(n) folder_items(fk, 'problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
       {% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
     </div>
   {% endcall %}

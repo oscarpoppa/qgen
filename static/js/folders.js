@@ -47,9 +47,14 @@
   });
   save(FOLD, folded);
   //Expand all / Collapse all above the list (the folders above the one you're in stay open)
+  //(always there: grayed out, with why, when no folder in the list has folders inside it)
   var levels = document.querySelector('.side-levels');
+  if (levels) levels.hidden = false;
+  if (levels && !shows.length) levels.querySelectorAll('[data-side-level]').forEach(function (b) {
+    b.disabled = true;
+    b.title = 'No folder here has folders inside it';
+  });
   if (levels && shows.length) {
-    levels.hidden = false;
     levels.addEventListener('click', function (e) {
       var b = e.target.closest('[data-side-level]');
       if (!b) return;
@@ -179,7 +184,8 @@
       else if (!active) restore(d);
     });
     var none = document.querySelector('.filter-none');
-    if (none) none.hidden = itemBoxes.some(function (d) { return !d.hidden; });
+    //(only for the name and Show filters: an empty folder says so itself, folderfilter.js)
+    if (none) none.hidden = !active || itemBoxes.some(function (d) { return !d.hidden; });
     return itemBoxes.filter(function (d) { return !d.hidden; }).length;
   };
 

@@ -229,6 +229,24 @@
   {% endif %}
 {% endmacro %}
 
+{# one folder's page when it has folders inside it: like the All view, everything in it (and in
+   the folders inside it) in one list, each once, with folder buttons over it ("All in “X”",
+   its folders, then "“X” itself"). The caller draws the list: {% call(n) folder_items(fk, key_prefix) %} #}
+{% macro folder_items(fk, key_prefix) %}
+  {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
+  {% set name = fk.name(fk.node.folder) %}
+  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All in “{{ name }}”"
+       data-main-label="“{{ name }}” itself" data-main-url="" data-all-url="" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-remember="{{ request.endpoint }}:{{ fk.view }}"{% if not fk.readonly %} data-droppable{% endif %}>
+    <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
+    {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
+    <div class="folder-filter-list">
+      {# (no folder of their own here: a drag from this list puts a copy in, as from All) #}
+      {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
+    </div>
+  </div>
+{% endmacro %}
+
 {# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
   <p class="card empty small">{% if fk.node %}Nothing in this folder{{ ' itself' if has_folders }} yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.

@@ -208,16 +208,25 @@
       e.preventDefault();
       choose(id);
     });
+    //the page's heading names what's shown: the folder chosen (the All label to begin with)
+    var heading = document.getElementById('folder-title'), headingWas = heading ? heading.innerHTML : '';
+    function retitle() {
+      if (!heading || box.dataset.allUrl === '') return;  // (a folder's own page keeps its name and path)
+      if (chosen === 'all') { heading.innerHTML = headingWas; return; }
+      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : byId[chosen].name;
+    }
     function choose(id) {
       chosen = id;
       try { sessionStorage.setItem(memKey, chosen); } catch (err) {}
       draw();
       apply();
       markSide();
+      retitle();
     }
     draw();
     apply();
     markSide();
+    retitle();
   }
   function all() { document.querySelectorAll('[data-folder-filter]').forEach(setUp); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();

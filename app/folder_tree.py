@@ -154,6 +154,22 @@ def filter_tree(root, name, page, key_prefix):
     return [one(c) for c in root['folders']]
 
 
+def subtree(node):
+    """Everything in a folder and in the folders inside it, each once, in list order (a page's
+    things are under 'items', or 'people' on the people pages)."""
+    out, seen = [], set()
+    def walk(n):
+        for item in n.get('items') or n.get('people') or []:
+            key = id(item)
+            if key not in seen:
+                seen.add(key)
+                out.append(item)
+        for child in n['folders']:
+            walk(child)
+    walk(node)
+    return out
+
+
 def kit(view, node, root, flat, nodes, page, **words):
     """What _folders.html needs to draw a page's folders. page(view) -> the page's address
     for 'main', 'all' or a folder's id. words: create_url, rename_url(id), delete_url(id),
@@ -179,6 +195,8 @@ def kit(view, node, root, flat, nodes, page, **words):
     }
     out['main_count'] = root['count']
     out.update(words)
-    #the All view's folder buttons (_folders.html all_boxes)
-    out['filter_tree'] = lambda key_prefix: filter_tree(root, out['name'], page, key_prefix)
+    #the folder buttons over one list (_folders.html all_boxes, folder_items): the folders at the
+    #top, or those inside one folder (node)
+    out['filter_tree'] = lambda key_prefix, node=None: filter_tree(node or root, out['name'], page, key_prefix)
+    out['subtree'] = subtree
     return out

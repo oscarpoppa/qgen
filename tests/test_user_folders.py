@@ -101,8 +101,8 @@ def test_folders_inside_folders_and_removing_them(app_db):
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': p2})
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
-    # 7th grade: kim directly, and Period 2 as a box holding sam; it counts both
-    assert people(teach, g7) == ['sam', 'kim'] and '<details class="box sub-box" data-sub="{}" data-list>'.format(p2) in page
+    # 7th grade: one list of kim (directly) and sam (in Period 2), with a folder button for Period 2; it counts both
+    assert people(teach, g7) == ['kim', 'sam'] and '"name": "Period 2"' in page
     assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
     # each person a box that folds to their name (like My quizzes' quizzes), so Expand all /
