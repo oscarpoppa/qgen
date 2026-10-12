@@ -8,6 +8,7 @@
   {%- else -%}{{ '{:,}'.format(value) }} {{ t.unit if value != 1 else t.unit[:-1] }}{%- endif -%}
 {%- endmacro %}
 
+{% block body_attrs %}{{ watch('settings', note='The settings have been changed somewhere else since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
   <div class="actions">{{ back_button(url_for('user.settings'), 'Settings') }}{{ expand_collapse('#tech-form', 'groups') }}</div></div>

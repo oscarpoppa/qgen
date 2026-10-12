@@ -230,3 +230,61 @@ def test_a_teacher_taking_their_own_quiz_isnt_told_they_changed_it(app_db):
     before = watch(teacher, 'attempt:{}'.format(sams.id))
     sam.post('/quiz/take/{}/save'.format(sams.id), data={'Number1': '5', 'Number1_present': '1'})
     assert watch(teacher, 'attempt:{}'.format(sams.id)) != before
+
+
+def test_more_pages_keep_themselves_up_to_date(app_db, monkeypatch):
+    """A problem's History, View quiz, View problem, the problem editor, Pictures, Other files,
+    the settings pages and the profile follow changes too: each is drawn with the fingerprint
+    its check-in gives, and the fingerprint moves when what the page shows does."""
+    app, db = app_db
+    from test_flow import png_bytes
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teacher)
+    vp = vq.vproblems[0]
+    pages = {teacher: ['/quiz/problem-results/{}'.format(vp.id), '/quiz/viewvprob/{}'.format(vp.id),
+                       '/quiz/viewvquiz/{}'.format(vq.id), '/quiz/editvprob/{}'.format(vp.id), '/images',
+                       '/nonimages', '/settings', '/settings/technical', '/profile'],
+             sam: ['/profile']}
+    keys = {}
+    for client, urls in pages.items():
+        for url in urls:
+            key, state = drawn(client.get(url).data.decode())
+            assert key, url
+            assert watch(client, key) == state, url
+            keys[url] = (client, key, state)
+    # the forms offer a Refresh button rather than reloading under someone's typing
+    for url in ('/quiz/editvprob/{}'.format(vp.id), '/settings', '/profile'):
+        assert 'data-watch-ask' in teacher.get(url).data.decode(), url
+
+    def moved(url):
+        client, key, state = keys[url]
+        return watch(client, key) != state
+
+    # an answer handed in: the problem's History (not the problem's own pages)
+    with app.test_request_context():
+        S = services(app)
+        S.submit(give(vq, 'sam'), {1: '4'})
+        db.session.commit()
+    assert moved('/quiz/problem-results/{}'.format(vp.id))
+    # a picture uploaded: Pictures and Other files, and the teachers' pages are told at once
+    told = []
+    monkeypatch.setattr('app.push.tell', lambda rooms: told.append(set(rooms)))
+    teacher.post('/upload/json', data={'file': (png_bytes('red'), 'new.png')}, content_type='multipart/form-data')
+    assert moved('/images') and moved('/nonimages') and {'teachers'} in told
+    # a setting changed: both settings pages
+    from app.qgen.models import Setting
+    Setting.put('site_name', 'Room 12')
+    db.session.commit()
+    assert moved('/settings') and moved('/settings/technical')
+    # sam's nickname changed by a teacher: sam's profile
+    from app.user.models import User
+    db.session.get(User, ids('sam')).nickname = 'Sammy'
+    db.session.commit()
+    assert moved('/profile')  # (sam's: drawn after the teacher's, so it's the one kept)
+    # the problem edited: its view and editor pages, and the quiz shown with it
+    vp.raw_prob = 'What is 3 + 3?'
+    db.session.commit()
+    assert moved('/quiz/viewvprob/{}'.format(vp.id)) and moved('/quiz/editvprob/{}'.format(vp.id))
+    assert moved('/quiz/viewvquiz/{}'.format(vq.id))
+    # students can't follow teachers' pages
+    assert watch(sam, 'problem:{}'.format(vp.id)) is None and watch(sam, 'settings') is None

@@ -5,7 +5,7 @@
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
-{# here: the folder these rows are listed under (None: All quizzes or Not in a folder), which
+{# here: the folder these rows are listed under (None: All quizzes or Uncategorized), which
    is where a drag takes a quiz out of #}
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">

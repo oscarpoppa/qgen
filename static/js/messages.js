@@ -40,6 +40,10 @@
 
   function pane(p) { return document.getElementById('dock-' + p); }
   function isOpen(p) { return root.classList.contains('dock-' + p); }
+  //pinned: the panels sit beside the page and stay as left (wide screens; base.html sets it
+  //before the page draws). Otherwise they slide over the page and start closed on each page.
+  var justOpened = false;
+  function pinned() { return root.classList.contains('dock-pinned') && !narrow.matches; }
 
   //the top bar's height, so the panels start right under it
   function measure() {
@@ -54,6 +58,13 @@
         if (isOpen(p)) b.classList.remove('pulse');
       });
     });
+    var on = root.classList.contains('dock-pinned');
+    document.querySelectorAll('.dock-pin').forEach(function (b) {
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var say = on ? 'Let the panels slide over the page (they close when you click the page)' : 'Keep the panels beside the page';
+      b.title = say;
+      b.setAttribute('aria-label', say);
+    });
     dock.hidden = !PANES.some(isOpen);
   }
 
@@ -61,8 +72,11 @@
     //on phones and small windows one panel at a time, so the conversation has room
     if (open && narrow.matches) PANES.forEach(function (q) { if (q !== p) root.classList.remove('dock-' + q); });
     root.classList.toggle('dock-' + p, open);
-    //remember wide-screen choices; on phones panels are opened as needed
-    if (!narrow.matches) store('qgen-dock-' + p, open ? 'open' : 'closed');
+    //the click that opened it (from a button anywhere, e.g. the Dashboard's "Message students")
+    //isn't a click on the page that closes it again
+    if (open) { justOpened = true; setTimeout(function () { justOpened = false; }, 0); }
+    //pinned panels are remembered; panels that slide over the page are opened as needed
+    if (pinned()) store('qgen-dock-' + p, open ? 'open' : 'closed');
     syncButtons();
     if (open) {
       //its pop-ups are answered; opening Notices with its button (or a pop-up's) marks them seen
@@ -111,6 +125,17 @@
   /* ---------- clicks ---------- */
 
   document.addEventListener('click', function (e) {
+    var pin = e.target.closest('.dock-pin');
+    if (pin) {
+      var on = !root.classList.contains('dock-pinned');
+      root.classList.toggle('dock-pinned', on);
+      store('qgen-dock-pinned', on ? '1' : null);
+      //pinning keeps what's open now
+      PANES.forEach(function (q) { store('qgen-dock-' + q, on && isOpen(q) ? 'open' : null); });
+      syncButtons();
+      if (isOpen('messages')) requestAnimationFrame(showNewest);
+      return;
+    }
     var btn = e.target.closest('.dock-btn, .dock-close');
     if (btn) {
       var p = btn.dataset.pane;
@@ -130,9 +155,17 @@
     if (dismiss) dismiss.closest('.toast').remove();
   });
 
+  //a click on the page closes panels that slide over it (not pinned); a click on a pop-up,
+  //a dialog or anything the panels opened leaves them be
+  document.addEventListener('click', function (e) {
+    if (justOpened || pinned() || !PANES.some(isOpen) || !e.target.closest || !document.contains(e.target)) return;
+    if (e.target.closest('.dock, .dock-buttons, .toasts, dialog, .nav-menu, .nav-toggle')) return;
+    PANES.forEach(function (q) { if (isOpen(q)) setOpen(q, false); });
+  });
+
   document.addEventListener('keydown', function (e) {
-    //Esc closes a panel that covers the page (phones)
-    if (e.key !== 'Escape' || !narrow.matches) return;
+    //Esc closes a panel that covers the page (not pinned, or a phone)
+    if (e.key !== 'Escape' || pinned()) return;
     var inPane = e.target.closest && e.target.closest('.dock-pane');
     if (inPane) {
       var p = inPane.id.replace('dock-', '');

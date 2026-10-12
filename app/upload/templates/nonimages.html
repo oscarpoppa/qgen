@@ -2,6 +2,7 @@
 {% from "_macros.html" import back_button, back_home with context %}
 {% from "_macros.html" import post_button with context %}
 
+{% block body_attrs %}{{ watch('files') }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>Other files</h1>

@@ -58,7 +58,7 @@
     </div>
     <div class="pick-groups">
       {% for n in root.folders %}{{ pick_folder(n) }}{% endfor %}
-      {% if root.folders %}{{ pick_group('none', 'tray', 'Not in a folder', root.people) }}{% endif %}
+      {% if root.folders %}{{ pick_group('none', 'tray', 'Uncategorized', root.people) }}{% endif %}
       <details class="box pick-group" data-fixed data-group="all"{% if not root.folders or 'all' in open_groups %} open{% endif %}>
         <summary>{{ box_label('users', 'All users') }}<span class="badge box-count pick-of"></span>
           <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone" title="Check or uncheck everyone">Check all</button></span></summary>

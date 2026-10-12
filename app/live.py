@@ -288,6 +288,73 @@ def _editquiz(vqid, now):
     return tuple(vq), own, _quiz_folders()
 
 
+def _problem_row(vpid):
+    """One problem as its pages show it: the problem itself, its folders, and whether anyone
+    has answered it yet (its History button)."""
+    from app.qgen.models import CProblem, VProblem, vproblem_vpgroup
+    vp = VProblem.query.filter_by(id=vpid).with_entities(
+        VProblem.id, VProblem.title, VProblem.qtype, VProblem.raw_prob, VProblem.raw_ansr, VProblem.options_json,
+        VProblem.image, VProblem.calculator_ok).first()
+    if vp is None:
+        return None
+    folders = sorted(r[0] for r in db.session.query(vproblem_vpgroup.c.vpgroup_id).filter(vproblem_vpgroup.c.vproblem_id == vpid))
+    answered = db.session.query(CProblem.id).filter(CProblem.vproblem_id == vpid).first() is not None
+    return tuple(vp), folders, answered
+
+
+def _problem(vpid, now):
+    """One problem being viewed or edited (someone else saving it, filing it, or the first
+    answer to it coming in)."""
+    from app.qgen.models import VPGroup
+    row = _problem_row(vpid)
+    if row is None:
+        return 'gone'
+    return row, [(g.id, g.parent_id, g.title) for g in VPGroup.query.order_by(VPGroup.id)]
+
+
+def _problemresults(vpid, now):
+    """A problem's History: every handed-in answer to it, their grades, and the quizzes they
+    were in."""
+    from app.qgen.models import CProblem, CQuiz, VQuiz
+    row = _problem_row(vpid)
+    if row is None:
+        return 'gone'
+    answers = db.session.query(CProblem.id, CProblem.submitted, CProblem.credit, CProblem.feedback, CQuiz.id,
+                               CQuiz.assignee, CQuiz.completed, CQuiz.needs_review, CQuiz.vquiz_id) \
+        .join(CQuiz, CQuiz.id == CProblem.cquiz_id).filter(CProblem.vproblem_id == vpid).order_by(CProblem.id).all()
+    ids = sorted({a[-1] for a in answers if a[-1] is not None})
+    quizzes = VQuiz.query.filter(VQuiz.id.in_(ids)).with_entities(VQuiz.id, VQuiz.title).order_by(VQuiz.id).all() if ids else []
+    return row, [tuple(a) for a in answers], [tuple(q) for q in quizzes]
+
+
+def _viewquiz(vqid, now):
+    """A quiz shown as one student would get it: the quiz and the problems in it."""
+    from app.qgen.models import VQuiz
+    quiz = _editquiz(vqid, now)
+    if quiz == 'gone':
+        return quiz
+    vq = db.session.get(VQuiz, vqid)
+    return quiz, [_problem_row(p.id) for p in sorted(vq.vproblems, key=lambda p: p.id)]
+
+
+def _files(now):
+    """Pictures and Other files: what's been uploaded."""
+    from app.upload.routes import static_files
+    return sorted(static_files())
+
+
+def _settings(now):
+    """The settings pages: every setting."""
+    from app.qgen.models import Setting
+    return [tuple(r) for r in Setting.query.with_entities(Setting.key, Setting.value).order_by(Setting.key)]
+
+
+def _profile(now):
+    """Someone's own profile (changed in another tab, or by a teacher)."""
+    u = current_user
+    return u.username, u.nickname, u.email, u.avatar, u.is_admin
+
+
 # key -> (teachers only?, function(argument, now))
 KINDS = {
     'mine': (False, lambda arg, now: _mine(now)),  # a teacher's own quizzes too
@@ -309,9 +376,16 @@ KINDS = {
     'users': (True, lambda arg, now: _users(now)),
     'messages': (True, lambda arg, now: _messages(now)),
     'conversation': (True, _conversation),
+    'problem': (True, _problem),
+    'problemresults': (True, _problemresults),
+    'viewquiz': (True, _viewquiz),
+    'files': (True, lambda arg, now: _files(now)),
+    'settings': (True, lambda arg, now: _settings(now)),
+    'profile': (False, lambda arg, now: _profile(now)),
 }
 
-WITH_ID = {'attempt', 'student', 'quizresults', 'grading', 'quiz', 'editquiz', 'archived', 'conversation'}
+WITH_ID = {'attempt', 'student', 'quizresults', 'grading', 'quiz', 'editquiz', 'archived', 'conversation',
+           'problem', 'problemresults', 'viewquiz'}
 
 
 def state(key, now=None):

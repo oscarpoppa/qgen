@@ -91,7 +91,7 @@ def test_problems_page_lists_by_folder(app_db):
     from app.qgen.models import VPGroup
     teacher = login(app, 'teach')
     probs = make_problems(teacher, 'Add', 'Area', 'Angles')
-    # no folders yet: All problems, and the same Not in a folder
+    # no folders yet: All problems, and the same Uncategorized
     assert shown(teacher, 'problems') == ['Angles', 'Area', 'Add']
     assert shown(teacher, 'problems', 'main') == ['Angles', 'Area', 'Add']
     for name in ('Geometry', 'Algebra'):
@@ -105,7 +105,7 @@ def test_problems_page_lists_by_folder(app_db):
     assert shown(teacher, 'problems', alg.id) == ['Area', 'Add'] and shown(teacher, 'problems', geo.id) == ['Angles', 'Area']
     assert shown(teacher, 'problems', 'main') == []
     page = teacher.get('/quiz/listvp').data.decode()
-    assert side_counts(page) == {'All problems': 3, 'Not in a folder': 0, 'Algebra': 2, 'Geometry': 2}
+    assert side_counts(page) == {'All problems': 3, 'Uncategorized': 0, 'Algebra': 2, 'Geometry': 2}
     assert 'Expand all' in page and 'Collapse all' in page and 'Put in folder' in page
     # taken out of a folder: in no folder if it's in no other
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove'})
@@ -134,8 +134,8 @@ def test_quizzes_page_lists_by_folder(app_db):
     p2 = VQGroup.query.one()
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [VQuiz.query.filter_by(title='Q2').one().id]})
     assert shown(teacher, 'quizzes', p2.id) == ['Q2'] and shown(teacher, 'quizzes', 'main') == ['Q1']
-    # All quizzes: each folder a box, then Not in a folder as a box, for Expand all / Collapse all
-    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q2', 'Q1']  # Not in a folder last, like the folder list
+    # All quizzes: each folder a box, then Uncategorized as a box, for Expand all / Collapse all
+    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q2', 'Q1']  # Uncategorized last, like the folder list
     page = teacher.get('/quiz/listvq?folder=all').data.decode()
     assert 'data-sub="{}"'.format(p2.id) in page and 'data-sub="none"' in page and 'data-drop="top"' in page
 
@@ -163,7 +163,7 @@ def test_one_at_a_time_and_dragging(app_db):
     teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': fall.id, 'from': 'all'}, headers=FETCH)
     db.session.expire_all()
     assert sorted(g.title for g in q.vqgroups) == ['Fall', 'Spring']
-    # dragged out of Fall onto Not in a folder: out of Fall only
+    # dragged out of Fall onto Uncategorized: out of Fall only
     teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': 'top', 'from': fall.id}, headers=FETCH)
     db.session.expire_all()
     assert [g.title for g in q.vqgroups] == ['Spring']
@@ -231,7 +231,7 @@ def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
     import json, re
     mapping = json.loads(re.search(r'id="quiz-subjects">([^<]*)</script>', page).group(1))
     assert sorted(mapping[str(VQuiz.query.one().id)]) == sorted([math.id, alg.id])
-    assert '\u00a0\u00a0\u00a0Algebra (1)' in page and 'Not in a folder (0)' in page
+    assert '\u00a0\u00a0\u00a0Algebra (1)' in page and 'Uncategorized (0)' in page
 
 
 def test_new_items_can_be_given_a_subject(app_db):
@@ -251,7 +251,7 @@ def test_new_items_can_be_given_a_subject(app_db):
     assert r.headers['Location'].endswith('/quiz/listvp?show={}'.format(vp.id))
     import re
     assert re.search(r'data-item="{}" data-box="problem:{}" [^>]*data-show'.format(vp.id, vp.id), teacher.get(r.headers['Location']).data.decode())
-    # none chosen: in no folder (Not in a folder)
+    # none chosen: in no folder (Uncategorized)
     teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1'))
     assert VProblem.query.filter_by(title='Later').one().vpgroups == []
     # a new subject typed on the form (an existing name in another case is reused)

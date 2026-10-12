@@ -43,7 +43,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     # a quiz is in one place only: the folder shows it, and the main list doesn't any more
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage?folder=main').data.decode()
-    assert 'aria-current="page">{} Not in a folder'.format(ico('tray')) in page
+    assert 'aria-current="page">{} Uncategorized'.format(ico('tray')) in page
     assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
@@ -64,7 +64,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert kim.post('/mypage/move', data={'quiz': w2.id, 'to': folder_id('K', 'kim')}, headers=FETCH).get_json() == \
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
-    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to Not in a folder.'
+    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to Uncategorized.'
     assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'

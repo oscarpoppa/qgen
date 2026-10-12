@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
 {% from "_subjects.html" import subject_labels with context %}
+{% block body_attrs %}{{ watch('viewquiz:%d' % vq.id, note='This quiz has been changed since you opened it.', button='Reload', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>View: {{ vq.title }}</h1>

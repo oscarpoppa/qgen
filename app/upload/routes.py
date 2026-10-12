@@ -10,6 +10,13 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 from os import listdir, remove, path as osp
 
+
+def files_changed():
+    """Uploads aren't in the database, so saving one tells no one by itself: tell the
+    teachers' open pages (Pictures, Other files) to check now."""
+    from app.push import tell, TEACHERS
+    tell({TEACHERS})
+
 #uploads live in the configured static folder (css/ and js/ subfolders are site assets)
 def static_dir():
     return osp.join(current_app.config['STATIC_DIR'], '')
@@ -50,6 +57,7 @@ def upload():
         saved = unique_name(fname)
         ufile.save(path + saved)
         trythumb(path, saved, quiet=True)
+        files_changed()
         if saved == fname:
             flash('Uploaded “{}”.'.format(saved), 'success')
         else:
@@ -93,6 +101,7 @@ def delimg(fname):
         try:
             remove(static_dir() + fname)
             remove(static_dir() + 'T_' + fname)
+            files_changed()
             flash('Image and thumbnail removed: {}'.format(fname))
             current_app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
         except Exception as exc:
@@ -111,6 +120,7 @@ def delnonimg(fname):
     else:
         try:
             remove(static_dir() + fname)
+            files_changed()
             flash('File removed: {}'.format(fname))
             current_app.logger.info('{} removed file {}'.format(current_user.username, fname))
         except Exception as exc:
@@ -155,6 +165,7 @@ def upload_json():
     fname = unique_name(fname)
     ufile.save(static_dir() + fname)
     trythumb(static_dir(), fname, quiet=True)
+    files_changed()
     current_app.logger.info('{} uploaded {}'.format(current_user.username, fname))
     return jsonify(ok=True, name=fname, url=url_for('static', filename=fname))
 

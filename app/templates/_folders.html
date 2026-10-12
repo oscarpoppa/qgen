@@ -9,7 +9,7 @@
 {% from "_macros.html" import box_label, count_of %}
 
 {# what in a folder needs the student (My quizzes): new, started and due soon, here and in the
-   folders inside (here=true: here only, for Not in a folder), as small colored circles with how many tries, in the
+   folders inside (here=true: here only, for Uncategorized), as small colored circles with how many tries, in the
    colors of New, In progress and Due within; each says what it is on hover #}
 {% macro flag_badges(fk, n, here=false) -%}
   {%- set sfx = '_here' if here else '' -%}
@@ -81,7 +81,7 @@
         <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder (the one you're in stays in view)">Collapse all</button>
       </div>
       <ul class="side-list side-top">
-        {# one order on every page: All, the automatic ones (My quizzes), the folders, then Not in a folder #}
+        {# one order on every page: All, the automatic ones (My quizzes), the folders, then Uncategorized #}
         <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} {{ fk.all_label }}</a>
@@ -196,7 +196,7 @@
 {# the All view: every top folder as a box (its folders inside it as boxes too), then what's
    in no folder as a box of its own, in the folder list's order, so Expand all / Collapse all opens and folds them all.
    loose: how many are in no folder. The caller draws a node's things, like sub_box's:
-   {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Not in a folder, n is fk.root) #}
+   {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Uncategorized, n is fk.root) #}
 {% macro all_boxes(fk, loose) %}
   {% set draw = caller %}
   {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
@@ -212,7 +212,7 @@
   {% endif %}
 {% endmacro %}
 
-{# what's shown when the folder (or Not in a folder) has nothing of its own #}
+{# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
   <p class="card empty small">{% if fk.node %}Nothing in this folder{{ ' itself' if has_folders }} yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
   {% elif fk.view == 'main' %}Everything is in a folder. Pick a folder, or {{ fk.all_label }}.{% else %}Nothing here yet.{% endif %}</p>
@@ -256,7 +256,7 @@
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
     <label class="small muted">Move to
       <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Pick a folder to move {{ label }} into; it moves right away">
-        {# the folders, then Not in a folder: the order of every folder list #}
+        {# the folders, then Uncategorized: the order of every folder list #}
         {% for f, depth in fk.flat %}
           <option value="{{ f.id }}"{% if here and here.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>
         {% endfor %}

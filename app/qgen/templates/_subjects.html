@@ -2,7 +2,7 @@
    Use: {% from "_subjects.html" import pick_folder_box, subject_labels, subject_checks with context %} #}
 {% from "_macros.html" import tip, box_label, count_of %}
 
-{% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Not in a folder</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
+{% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Uncategorized</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
 
 {# the quiz editor's problem folders: the same folder boxes as the folder pages, folders
    inside folders, each with its own problems; the caller draws a folder's rows:
@@ -38,7 +38,7 @@
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
-  <div class="help">You can check more than one. With none checked, it goes in {{ icon('tray') }} Not in a folder, to file later if you like.</div>
+  <div class="help">You can check more than one. With none checked, it goes in {{ icon('tray') }} Uncategorized, to file later if you like.</div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

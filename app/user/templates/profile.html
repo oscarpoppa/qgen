@@ -4,6 +4,7 @@
 {% from "_macros.html" import back_button, back_home with context %}
 {% from "_macros.html" import avatar with context %}
 
+{% block body_attrs %}{{ watch('profile', note='Your profile has been changed somewhere else since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>My profile</h1>
   <div class="actions">{{ back_home() }}</div></div>

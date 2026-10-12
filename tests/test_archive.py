@@ -352,7 +352,7 @@ def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
     teacher.post('/quiz/archive/folders/new', data={'name': '2025-26'})
     year = ArchiveFolder.query.filter_by(name='2025-26').one()
     assert year.student_id is None
-    for bad in ('2025-26', ' not in a folder ', '', 'x' * 65):   # taken, kept for Not in a folder, empty, too long
+    for bad in ('2025-26', ' uncategorized ', '', 'x' * 65):   # taken, kept for Uncategorized, empty, too long
         teacher.post('/quiz/archive/folders/new', data={'name': bad})
     assert ArchiveFolder.query.count() == 3
     sams = [a.id for a in ArchivedAttempt.query.filter_by(folder_id=sam_f.id)]
@@ -373,7 +373,7 @@ def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
     res = teacher.post('/quiz/archive/folders/move', data={'folder': year.id, 'to': kim_f.id}, headers=FETCH)
     assert res.status_code == 400 and 'inside itself' in res.get_json()['error']
 
-    # removing a folder: what's in it moves up a level (here, to the top: not in a folder)
+    # removing a folder: what's in it moves up a level (here, to the top: uncategorized)
     r = teacher.post('/quiz/archive/folders/{}/delete'.format(year.id), follow_redirects=True)
     assert b'moved up a level' in r.data
     db.session.expire_all()

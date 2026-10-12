@@ -82,6 +82,7 @@
 {# the editors use more of a wide window (the helper sits beside the form) #}
 {% block main_class %} container-editor{% endblock %}
 
+{% block body_attrs %}{% if vp and vp.id %}{{ watch('problem:%d' % vp.id, note='This problem has been changed somewhere else since you opened it.', ask=True) }}{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>

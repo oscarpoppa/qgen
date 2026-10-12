@@ -25,6 +25,7 @@
   var me = document.currentScript;
   var KEY = 'qgen-boxes:' + ((me && me.dataset.user) || '') + ':' + location.pathname;
   var BOX = 'details.box:not(.box-mini)';
+  var FOLDER = 'details.sub-box[data-sub], details.sub-box[data-folder-box]';
   var memory = {};
   try { memory = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (e) {} }
@@ -45,8 +46,17 @@
   //how it starts before the person changes it (the HTML's own open is read once, first)
   function starting(d) {
     if (d.hasAttribute('data-closed')) return false;
-    //a folder (shown as a folder button, static/js/foldertabs.js) waits to be picked
-    if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;
+    //a folder (shown as a folder button, static/js/foldertabs.js) waits to be picked, except
+    //that the first one in a row at the top of the page starts open, so a page (the All views)
+    //never starts with nothing showing but folder buttons; once any folder in that row is
+    //opened or closed by hand, that's remembered instead
+    if (d.matches(FOLDER)) {
+      if (d.parentElement.closest(FOLDER)) return false;
+      var row = Array.prototype.filter.call(d.parentElement.children, function (b) {
+        return b.matches && b.matches(FOLDER) && !b.hidden;
+      });
+      return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });
+    }
     if (d.hasAttribute('data-list')) return listed(d).length === 1;
     return d.dataset.drawnOpen === '1';
   }

@@ -4,7 +4,7 @@
 {# the folder list beside the problems needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
-{# here: the folder these rows are listed under (None: All problems or Not in a folder), which
+{# here: the folder these rows are listed under (None: All problems or Uncategorized), which
    is where a drag takes a problem out of #}
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">

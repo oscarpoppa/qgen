@@ -13,7 +13,7 @@
           <span>“{{ t.cq.vquiz.title }}”</span>
           <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span>
           {# their quiz as it stands (what they've answered so far), and their student page #}
-          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="See {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}'s questions and answers so far">Their attempt</a>
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="See {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}'s questions and answers so far">Assigned</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=t.cq.assignee) }}" title="Open {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endmacro %}
       <ul class="dash-list">{% for t in taking[:8] %}{{ taking_row(t) }}{% endfor %}</ul>

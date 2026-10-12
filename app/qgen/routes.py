@@ -36,7 +36,7 @@ def ticked_subjects(item, rel):
 
 def subject_form_error(kind, new):
     """The Folder question on the edit forms: a problem in error only when the new folder's
-    name is (choosing a folder is optional: with none, it's in Not in a folder). None when fine."""
+    name is (choosing a folder is optional: with none, it's in Uncategorized). None when fine."""
     if not request.form.get('subjects_shown'):
         return None
     name = request.form.get('new_subject', '')
@@ -1132,7 +1132,7 @@ def purge_subject(kind, sid):
     return _subject_done(kind, ' '.join(said), show=(parent or 'all') if request.form.get('view') == str(sid) else None)
 
 #dragging (and the folder's "Move to" list): a problem or quiz onto a folder (from a folder:
-#moved out of that one; from All or Not in a folder: put in it), onto Not in a folder (out
+#moved out of that one; from All or Uncategorized: put in it), onto Uncategorized (out
 #of the folder it came from), or a folder onto a folder ("top": the top level)
 @qgen_bp.route('/quiz/subjects/<kind>/move', methods=['POST'])
 @login_required
@@ -1237,7 +1237,7 @@ def subject_kit(kind, view, node, root, flat, nodes):
 
 
 def subject_page(kind, template, **extra):
-    """The Problems or Quizzes page: ?folder= all (the default), main (not in a folder) or a
+    """The Problems or Quizzes page: ?folder= all (the default), main (uncategorized) or a
     folder's id."""
     from app import folder_tree
     root, flat, nodes = S.subject_tree(kind)
@@ -1318,7 +1318,7 @@ def _archive_done(message, error=False, show=None, moved=None):
         values['moved'] = moved
     return redirect(url_for('qgen.archive', **values))
 
-#route to the archive of deleted attempts: ?folder= all (the default), main (not in a folder)
+#route to the archive of deleted attempts: ?folder= all (the default), main (uncategorized)
 #or a folder's id
 @qgen_bp.route('/quiz/archive', methods=['GET'])
 @login_required
@@ -1404,7 +1404,7 @@ def purge_archive_folder(fid):
     return _archive_done('Deleted the folder “{}”{}.'.format(name, ' and its {} archived attempt{}'.format(gone, '' if gone == 1 else 's') if gone else ''),
                          show=(parent or 'all') if request.form.get('view') == str(fid) else None)
 
-#dragging, and the "Move to…" lists: an archived attempt onto a folder (or Not in a folder),
+#dragging, and the "Move to…" lists: an archived attempt onto a folder (or Uncategorized),
 #or a folder onto a folder ("top": the top level)
 @qgen_bp.route('/quiz/archive/folders/move', methods=['POST'])
 @login_required
@@ -1431,7 +1431,7 @@ def move_archive_item():
     except S.ServiceError as exc:
         return _archive_done(str(exc), error=True)
 
-#route to move the checked archived attempts to a folder (or to Not in a folder)
+#route to move the checked archived attempts to a folder (or to Uncategorized)
 @qgen_bp.route('/quiz/archive/move', methods=['POST'])
 @login_required
 @pw_check

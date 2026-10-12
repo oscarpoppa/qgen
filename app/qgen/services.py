@@ -322,13 +322,13 @@ def file_items(kind, item_ids, subject, add=True):
 
 def subject_choices(kind):
     """The folder menu: [(value, label, count)] for All, each folder (indented under the one
-    it's in; counted with the folders inside it), then Not in a folder."""
+    it's in; counted with the folders inside it), then Uncategorized."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     _root, flat, counted = subject_tree(kind)
     out = [('all', 'All', item_cls.query.count())]
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
-    out.append(('none', 'Not in a folder', item_cls.query.filter(~getattr(item_cls, rel).any()).count()))
+    out.append(('none', 'Uncategorized', item_cls.query.filter(~getattr(item_cls, rel).any()).count()))
     return out
 
 
@@ -905,7 +905,7 @@ def archived_attempts(subject='all'):
 
 
 FOLDER_NAME_MAX = 64
-UNSORTED = 'Not in a folder'
+UNSORTED = 'Uncategorized'
 
 
 def student_folder(user):
@@ -1014,7 +1014,7 @@ def move_archive_folder(folder, target):
 
 
 def move_archived(ids, folder):
-    """Move archived attempts to a folder (None: not in a folder). Returns how many moved."""
+    """Move archived attempts to a folder (None: uncategorized). Returns how many moved."""
     wanted = _ids(ids)
     if not wanted:
         return 0

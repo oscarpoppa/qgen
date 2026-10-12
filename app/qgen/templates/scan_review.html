@@ -135,7 +135,7 @@
       </div>
       <div class="field">
         <label class="label" for="scan-folder">Folder</label>
-        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="64" placeholder="(none: Not in a folder)">
+        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="64" placeholder="(none: Uncategorized)">
         <div class="help">The problems go in this folder on Problems, and the quizzes in this folder on Quizzes. A folder with this name is used if there is one.</div>
         {{ errs('folder') }}
       </div>

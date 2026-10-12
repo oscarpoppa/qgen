@@ -48,7 +48,7 @@ def test_make_folders_and_put_people_in_them(app_db):
         'Put sam in "Math club".'
     assert in_folders('sam') == ['7th grade', 'Math club']
     assert sorted(people(teach)) == ['kim', 'teach'] and people(teach, g7) == ['sam'] and people(teach, club) == ['sam']
-    # All: each folder a box (sam is in both), then Not in a folder as a box
+    # All: each folder a box (sam is in both), then Uncategorized as a box
     assert sorted(people(teach, 'all')) == ['kim', 'sam', 'sam', 'teach']
     page = teach.get('/userdet?folder=all').data.decode()
     assert page.count('</svg> 7th grade</a>') == 2 and 'aria-label="Take sam out of Math club"' in page

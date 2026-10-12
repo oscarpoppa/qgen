@@ -239,7 +239,7 @@ def move_to_folder():
         else:
             target = folders.move_quiz(current_user, request.form.get('quiz'), to)
             what = db.session.get(VQuiz, int(request.form.get('quiz'))).title
-            where = '"{}"'.format(target.name) if target else 'Not in a folder'
+            where = '"{}"'.format(target.name) if target else 'Uncategorized'
             moved = 'quiz:{}'.format(request.form.get('quiz'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)

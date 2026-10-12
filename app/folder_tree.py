@@ -147,17 +147,17 @@ def kit(view, node, root, flat, nodes, page, **words):
     move_url, add_url / remove_url (things in several folders), unit / units ("quiz" /
     "quizzes"), all_label, placeholder, hint, drag_what, add_words, fold_key,
     all_count, name(folder), folder_icon(folder). The folder list's order is the same on
-    every page: All, the automatic ones (auto_views), the folders, then Not in a folder."""
+    every page: All, the automatic ones (auto_views), the folders, then Uncategorized."""
     out = {
         'view': view, 'node': node, 'root': root, 'flat': flat, 'nodes': nodes, 'page': page,
         'path': path(nodes, node), 'inside': inside, 'indent': indent,
         'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
-        'main_label': 'Not in a folder',
+        'main_label': 'Uncategorized',
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: 'folder', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
-        #automatic entries in the side list after Not in a folder (My quizzes: New, In progress):
+        #automatic entries in the side list after Uncategorized (My quizzes: New, In progress):
         #[{'key', 'icon', 'label', 'count', 'badge' (text for a badge while count, or None: a plain count)}]
         'auto_views': (),
         'purge_url': None,  # (folder id) -> where "Delete folder and everything in it" goes

@@ -114,7 +114,7 @@
           {% else %}<span class="badge badge-warn">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
           {# this student's own copy of the quiz (their questions and answers so far), and their student page #}
-          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Their attempt</a>
+          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Assigned</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=o.cq.assignee) }}" title="Open {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>
       {% endfor %}
       </ul>

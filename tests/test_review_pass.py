@@ -391,7 +391,7 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
     for url, who in pages.items():
         page = who.get(url).data.decode()
         assert '<div class="folders-layout"' in page and 'class="folder-side"' in page, url
-        assert '</svg> Not in a folder' in page and ('</svg> All' in page or '</svg> Everyone' in page) and '+ New folder' in page, url
+        assert '</svg> Uncategorized' in page and ('</svg> All' in page or '</svg> Everyone' in page) and '+ New folder' in page, url
         assert 'data-fold-key="' in page and 'Expand all' in page, url
     # one name for "in no folder" everywhere on screen
     root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app')
@@ -504,7 +504,7 @@ def test_a_folder_is_optional_when_making_a_problem_or_quiz(app_db):
     from test_flow import problem_form
     from app.qgen.models import VProblem, VQuiz
     form = dict(problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []), subjects_shown='1')
-    # no folder chosen: the Helper doesn't ask for one, and it saves into Not in a folder
+    # no folder chosen: the Helper doesn't ask for one, and it saves into Uncategorized
     hints = teach.post('/quiz/checkvprob', data=form).get_json()['hints']
     assert not any('folder' in h['text'].lower() for h in hints)
     teach.post('/quiz/makevprob', data=form)
@@ -530,7 +530,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
     assert '<span>“Week 1”</span>' in box  # the name is plain; the button opens their copy
-    assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Their attempt</a>' in box
+    assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Assigned</a>' in box
     assert '/quiz/results/{}'.format(vq.id) not in box
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
@@ -554,7 +554,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
     # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
-    # (the folders before Not in a folder, as in every folder list)
+    # (the folders before Uncategorized, as in every folder list)
     assert page.index('data-folder-box="{}"'.format(math.id)) < page.index('data-folder-box="none"')
     math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
     assert '>A</span>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</span>' in math_box
@@ -640,7 +640,7 @@ def test_folder_pages_remember_the_folder_you_were_in(app_db):
     sam.get('/home')
     page = sam.get('/mypage').data.decode()
     assert shown(page) == str(folder.id) and '>A</h2>' in page and '>B</h2>' not in page
-    # the side list's links say which folder, so "Not in a folder" and "All" can be picked again
+    # the side list's links say which folder, so "Uncategorized" and "All" can be picked again
     assert 'href="/mypage?folder=main"' in page and 'href="/mypage?folder=all"' in page
     sam.get('/mypage?folder=all')
     assert shown(sam.get('/mypage').data.decode()) == 'all'
@@ -838,7 +838,7 @@ def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
         S.retake(first)
     give(vq, 'kim')
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Archive all 2 attempts' in page and 'Take away' not in page
+    assert 'Archive all (2)' in page and 'Take away' not in page
     r = teach.post('/quiz/takeaway/{}/{}'.format(vq.id, ids('sam')), follow_redirects=True).data.decode()
     assert 'Archived sam’s 2 attempts at “Twice”. They’re in the' in r
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 0
@@ -884,7 +884,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 attempt not started yet">1 new</span>' in page
     # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
     assert '<span class="side-dot dot-new" title="1 new attempt" role="img" aria-label="1 new attempt">1</span>' in page
-    # and Not in a folder has the started one
+    # and Uncategorized has the started one
     assert '<span class="side-dot dot-started" title="1 attempt in progress" role="img" aria-label="1 attempt in progress">1</span>' in page
     # only the automatic folders carry full badges; the others have dots
     assert 'side-flag"' not in page
@@ -1100,7 +1100,7 @@ def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automati
     page = sam.get('/mypage?folder=new').data.decode()
     head = page[page.index('data-quiz="{}"'.format(fresh.id)):]
     head = head[:head.index('</summary>')]
-    assert 'class="move-form move-mini"' in head and 'Not in a folder (here now)' in head
+    assert 'class="move-form move-mini"' in head and 'Uncategorized (here now)' in head
     r = sam.post('/mypage/move', data={'quiz': fresh.id, 'to': wk.id, 'view': 'new', 'from': 'top'}, follow_redirects=True)
     page = r.data.decode()
     assert 'Fresh' in page and '>Week 1 (here now)</option>' in page  # still in New, now in Week 1
@@ -1208,7 +1208,7 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
 
 def test_folder_lists_have_one_order(app_db):
     """Every folder list: All, the automatic ones (New, In progress, Due within...), the
-    folders, then Not in a folder (the user moved it last, 2026-10-09); the student page's
+    folders, then Uncategorized (the user moved it last, 2026-10-09); the student page's
     boxes, the All views' boxes and the folder menus in the same order."""
     import re
     app, db = app_db
@@ -1224,19 +1224,19 @@ def test_folder_lists_have_one_order(app_db):
                      (teach, '/quiz/results'), (teach, '/quiz/archive')):
         page = who.get(url).data.decode()
         names = side(page)
-        assert names[0] != 'Not in a folder' and names[-1] == 'Not in a folder', (url, names)  # All (or Everyone) first
+        assert names[0] != 'Uncategorized' and names[-1] == 'Uncategorized', (url, names)  # All (or Everyone) first
         if url in ('/quiz/listvp', '/quiz/listvq'):
             nav = page.split('<nav aria-label="Folders">')[1]
-            assert 0 < nav.index('Fall') < nav.index('Not in a folder'), url
+            assert 0 < nav.index('Fall') < nav.index('Uncategorized'), url
     names = side(sam.get('/mypage').data.decode())
     assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3].startswith('Due within') \
-        and names[4] == 'Not in a folder', names
+        and names[4] == 'Uncategorized', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert page.index('data-folder-box="new"') < page.index('data-folder-box="started"')
-    # the folder menus too: All, the folders, Not in a folder
+    # the folder menus too: All, the folders, Uncategorized
     from app.qgen import services as S
     with app.test_request_context():
-        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All', 'Fall', 'Not in a folder']
+        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All', 'Fall', 'Uncategorized']
 
 
 def test_one_set_of_sizes_and_accessible_controls():
@@ -1298,7 +1298,10 @@ def test_folders_on_top_and_their_contents_below(app_db):
     assert "folder-tabs-label" in js and "folder-items-head" in js and "itself'" in js
     assert 'data-units="' in teach.get('/userdet').data.decode()
     boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
-    assert "if (d.matches('details.sub-box[data-sub], details.sub-box[data-folder-box]')) return false;" in boxes
+    # folders wait to be picked, except the first in a top-level row, while nothing about that row
+    # is remembered (an All view never starts as only folder buttons)
+    assert "if (d.matches(FOLDER)) {" in boxes and "if (d.parentElement.closest(FOLDER)) return false;" in boxes
+    assert "return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });" in boxes
     assert "row.qgenExpanded = true" in js  # Expand all shows every folder open; Collapse all brings the buttons back
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
@@ -1416,3 +1419,75 @@ def test_the_messages_page_has_a_way_back(app_db):
     assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in page
     page = no_titles(teach.get('/messages', headers={'Referer': 'http://localhost/quiz/listvq'}).data.decode())
     assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in page
+
+
+def test_side_panels_slide_over_the_page_unless_pinned(app_db):
+    """Notices and Messages start closed and slide over the page, so it keeps its whole width;
+    the pin in a panel's heading keeps them beside the page instead, as they were left."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app, db = app_db
+    page = login(app, 'teach').get('/dashboard').data.decode()
+    assert page.count('class="dock-pin"') == 2 and 'aria-pressed="false"' in page
+    start = page[page.index('/* the side panels start closed'):page.index('})();', page.index('/* the side panels start closed'))]
+    assert "localStorage.getItem('qgen-dock-pinned') === '1'" in start and 'roomy' not in start
+    assert "if (pinned && wide) {" in start  # only pinned panels open by themselves
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert 'html:not(.dock-pinned) .dock { z-index: 30;' in css
+    assert 'html.dock-pinned.dock-notices body, html.dock-pinned.dock-messages body { padding-right: var(--dock-w); }' in css
+    js = open(os.path.join(here, 'static', 'js', 'messages.js')).read()
+    assert "if (pinned()) store('qgen-dock-' + p, open ? 'open' : 'closed');" in js
+    # a click on the page closes them, but not the click that opened them (e.g. "Message students")
+    assert 'if (justOpened || pinned() ||' in js and "if (e.key !== 'Escape' || pinned()) return;" in js
+
+
+def test_results_rows_are_one_line_tall(app_db):
+    """A results row's buttons sit side by side where there's room (each student one line,
+    not three stacked buttons), and "Archive all" says how many in brackets."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app, db = app_db
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert 'td.actions .btn-stack { flex-direction: row; justify-content: flex-end; align-items: center; }' in css
+    assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
+    tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
+    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (2)')" in tpl
+
+
+def test_a_folded_student_says_where_they_are(app_db):
+    """Results by student: each student's folded heading shows quizzes done (and the average),
+    to grade, in progress and not started, so the list says something before any click."""
+    app, db = app_db
+    from test_dashboard import make_quiz, give
+    from app.qgen import services as S
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, teacher)
+    with app.test_request_context():
+        S.submit(give(vq, 'sam'), {1: '4'})
+        give(vq, 'sam')
+        db.session.commit()
+    page = teacher.get('/quiz/listuser').data.decode()
+    sam = page[page.index('id="student-{}"'.format(ids('sam'))):]
+    head = sam[:sam.index('</summary>')]
+    assert '1 done · avg 100%' in head and '1 not started' in head and 'to grade' not in head
+    kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
+    assert 'student-sums' not in kim[:kim.index('</summary>')]  # nothing given to kim: nothing to say
+
+
+def test_uncategorized_everywhere(app_db):
+    """What isn't in any folder is "Uncategorized", on every page (the teacher chose the word)."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app, db = app_db
+    teacher = login(app, 'teach')
+    from app.qgen import services as S
+    make_quiz(app, teacher)
+    S.subject_named('quizzes', 'Week 1')  # "Uncategorized" shows beside folders
+    for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/assign', '/quiz/makevquiz', '/messages', '/mypage'):
+        page = teacher.get(url).data.decode()
+        assert 'not in a folder' not in page.lower(), url
+    assert 'Uncategorized' in teacher.get('/quiz/listvq').data.decode()
+    for root, _, files in os.walk(os.path.join(here, 'app')):
+        for f in files:
+            if f.endswith(('.html', '.py')):
+                assert 'not in a folder' not in open(os.path.join(root, f)).read().lower(), f

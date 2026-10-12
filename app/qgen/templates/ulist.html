@@ -53,6 +53,18 @@
   <details class="box card subject-box student item-box" data-list id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
       {{ box_label(avatar(item, 30), item.shown_name, count_of(n, 'quiz', 'quizzes')) }}
+      {# folded, the heading still says where they are: done (and their average), to grade,
+         in progress, not started #}
+      {% set sum_done = item.cquizzes|selectattr('status', 'equalto', 'completed')|list %}
+      {% set sum_waiting = item.cquizzes|selectattr('status', 'equalto', 'review')|list|length %}
+      {% set sum_going = item.cquizzes|selectattr('status', 'equalto', 'started')|list|length %}
+      {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
+      {% if not single and item.cquizzes %}<span class="student-sums">
+        {% if sum_done %}<span class="badge badge-ok" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % ((sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length)) }}%</span>{% endif %}
+        {% if sum_waiting %}<span class="badge badge-warn" title="Attempts waiting for you to grade written answers">{{ sum_waiting }} to grade</span>{% endif %}
+        {% if sum_going %}<span class="badge badge-accent" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
+        {% if sum_fresh %}<span class="badge" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}
+      </span>{% endif %}
     </summary>
     <div class="box-body">
     {% if not single %}<div class="btn-row box-links">
@@ -84,11 +96,11 @@
       </details>
       {% if quiz_tree and quiz_tree.folders|selectattr('count')|list %}
         {# the same order as every folder list: the automatic ones (above), the Quizzes page's
-           folders (a quiz in several folders is in each), then Not in a folder #}
+           folders (a quiz in several folders is in each), then Uncategorized #}
         {% for n in quiz_tree.folders if n.count %}{{ quiz_folder(n, item) }}{% endfor %}
         {% if quiz_tree['items'] %}
           <details class="box sub-box" data-folder-box="none" data-list>
-            <summary class="sub-head">{{ box_label('tray', 'Not in a folder', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
+            <summary class="sub-head">{{ box_label('tray', 'Uncategorized', count_of(quiz_tree['items']|length, 'quiz', 'quizzes'), 'h3') }}</summary>
             <div class="sub-body">{% for g in quiz_tree['items'] %}{{ result_box(g, item) }}{% endfor %}</div>
           </details>
         {% endif %}
