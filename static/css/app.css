@@ -1936,3 +1936,6 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
   border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
 .pick-wrap[open] .fold { transform: rotate(90deg); }
 .pick-wrap:not([open]) > summary .pick-wrap-note { text-decoration: underline dotted; }
+/* (the Dashboard's lists style their people plainly: a name link keeps its dotted underline there too) */
+.dash-list a.person.name-link { text-decoration: underline dotted; text-decoration-color: var(--muted); }
+.dash-list a.person.name-link:hover, .dash-list a.person.name-link:focus-visible { text-decoration-style: solid; text-decoration-color: currentColor; }

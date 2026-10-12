@@ -134,4 +134,8 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
   window.addEventListener('scroll', hide, true);
   window.addEventListener('pagehide', hide);
+  //a part of the page redrawn under the pointer (the Dashboard's refresh...): its tip goes too
+  if (window.MutationObserver) new MutationObserver(function () {
+    if (on && !on.isConnected) hide();
+  }).observe(document.body, { childList: true, subtree: true });
 })();
