@@ -24,7 +24,15 @@
     boxesIn(row).forEach(function (d) {
       var b = d.qgenTab;
       b.hidden = d.hidden;  // a folder the page hid (e.g. nothing in it for this search)
-      if (d.qgenPair) d.qgenPair.hidden = !(d.open && !searching && !d.hidden);
+      //its Expand all / Collapse all: at the row's end while it's the open folder button; back on
+      //its own heading while the folders show as boxes (searching, or after Expand all)
+      var pair = d.qgenPair;
+      if (pair) {
+        var head = d.querySelector(':scope > summary');
+        if (searching && pair.parentElement !== head) head.appendChild(pair);
+        else if (!searching && pair.parentElement === head) pairsOf(row).appendChild(pair);
+        pair.hidden = searching ? false : !(d.open && !d.hidden);
+      }
       b.setAttribute('aria-expanded', d.open && !searching ? 'true' : 'false');
     });
   }
@@ -60,9 +68,27 @@
       var title = document.getElementById('folder-title');
       name = title && title.textContent.trim();
     }
-    var head = document.createElement('h3');
+    var head = document.createElement('div'), h = document.createElement('h3');
     head.className = 'folder-items-head';
-    head.textContent = units.charAt(0).toUpperCase() + units.slice(1) + (name ? ' in \u201c' + name + '\u201d itself' : ' here');
+    h.className = 'folder-items-title';
+    h.textContent = units.charAt(0).toUpperCase() + units.slice(1) + (name ? ' in \u201c' + name + '\u201d itself' : ' here');
+    head.appendChild(h);
+    //Expand all / Collapse all for just these things (not the folders above): boxes.js
+    var what = h.textContent.charAt(0).toLowerCase() + h.textContent.slice(1);
+    var pair = document.createElement('span');
+    pair.className = 'level-buttons';
+    [['open', 'Expand all', 'Open every one of the '], ['close', 'Collapse all', 'Fold every one of the ']].forEach(function (b) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary btn-xs';
+      btn.dataset.level = b[0];
+      btn.dataset.levelItems = '';
+      btn.textContent = b[1];
+      btn.setAttribute('aria-label', b[1] + ' ' + what);
+      btn.title = b[2] + what;
+      pair.appendChild(btn);
+    });
+    head.appendChild(pair);
     last.parentElement.insertBefore(head, next);
   }
 
@@ -170,7 +196,7 @@
   //boxes.js opens or closes the boxes (this runs first), so it opens and remembers them too.
   document.addEventListener('click', function (e) {
     var btn = e.target.closest && e.target.closest('[data-level]');
-    if (!btn) return;
+    if (!btn || 'levelItems' in btn.dataset) return;  // (a folder's own things only: no folder rows)
     var level = btn.dataset.levelOf ? document.querySelector(btn.dataset.levelOf) : btn.closest('.level');
     if (!level) return;
     var rows = Array.prototype.slice.call(level.querySelectorAll('.folder-tabs'));

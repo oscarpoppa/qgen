@@ -908,9 +908,11 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-radius: var(--r-lg); background: var(--surface-2); border: 1px dashed var(--field-border); }
 .folder-tabs-label { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; margin-right: 2px; }
 /* where a folder's own things start, after its folders */
-.folder-items-head { margin: 14px 0 8px; padding-top: 10px; border-top: 2px solid var(--border);
-  font-size: var(--fs-md); color: var(--muted); }
-.folder-tabs.tabs-off ~ .folder-items-head { display: none; }
+.folder-items-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0 8px; padding-top: 10px; border-top: 2px solid var(--border); }
+.folder-items-title { margin: 0; font-size: var(--fs-md); color: var(--muted); }
+.folder-items-head .level-buttons { margin-left: auto; display: inline-flex; gap: 6px; }
+.folder-items-head .level-buttons[hidden] { display: none; }
+/* (it stays while the folders show as boxes too: the line between them and the folder's own things) */
 .folder-tabs.tabs-off { display: none; }
 /* the Dashboard (static/js/dashchips.js): folded boxes are a row of buttons above the open ones */
 .dash-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; padding: 8px 10px;

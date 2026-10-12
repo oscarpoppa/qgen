@@ -101,6 +101,15 @@
   //Expand all / Collapse all
   var FOLDS = BOX;
   function levelOf(btn) {
+    //a folder's own things (the boxes after its "… itself" line, foldertabs.js), not its folders
+    if ('levelItems' in btn.dataset) {
+      var list = [], head = btn.closest('.folder-items-head');
+      for (var el = head && head.nextElementSibling; el; el = el.nextElementSibling) {
+        if (el.matches(FOLDS)) list.push(el);
+        Array.prototype.push.apply(list, el.querySelectorAll(FOLDS));
+      }
+      return { querySelectorAll: function () { return list; } };
+    }
     var sel = btn.dataset.levelOf;
     return sel ? document.querySelector(sel) : btn.closest('.level');
   }

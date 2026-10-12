@@ -1627,7 +1627,7 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     assert "var head = btn.closest('summary');" in js and "e.preventDefault();" in js and "head.parentElement.open = true;" in js
     tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
     assert "c.classList.contains('head-pair')" in tabs and "pairsOf(row).appendChild(c);" in tabs
-    assert "if (d.qgenPair) d.qgenPair.hidden = !(d.open && !searching && !d.hidden);" in tabs
+    assert "pair.hidden = searching ? false : !(d.open && !d.hidden);" in tabs
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
     give(vq, 'sam')
@@ -1680,3 +1680,21 @@ def test_assign_says_who_gets_the_quiz(app_db):
     assert '<details class="pick-wrap">' in page and 'change who gets it' in page
     page = teach.get('/quiz/assign').data.decode()
     assert 'Nobody yet: check the students below.' in page and '<details class="pick-wrap" open>' in page
+
+
+def test_a_folders_own_things_have_a_divider_and_their_own_expand_collapse():
+    """Where a folder's folders end and its own things begin there's a line ("People in “8th
+    Grade” itself"), also while the folders show as boxes; on it, Expand all / Collapse all for
+    just those things (not the folders above), which leaves the folder rows alone."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
+    boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert "btn.dataset.levelItems = '';" in tabs and "head.appendChild(pair);" in tabs
+    assert "if (!btn || 'levelItems' in btn.dataset) return;" in tabs
+    assert "if ('levelItems' in btn.dataset) {" in boxes and "var list = [], head = btn.closest('.folder-items-head');" in boxes
+    assert '.folder-tabs.tabs-off ~ .folder-items-head { display: none; }' not in css
+    assert '.folder-items-head .level-buttons { margin-left: auto;' in css
+    # a tabbed folder's pair goes back on its own heading while the folders show as boxes
+    assert "if (searching && pair.parentElement !== head) head.appendChild(pair);" in tabs
