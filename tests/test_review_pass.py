@@ -1665,3 +1665,18 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert '<button class="btn btn-secondary btn-sm btn-all" title="Move every one of sam' in page and '>Archive all (2)</button>' in page
+
+
+def test_assign_says_who_gets_the_quiz(app_db):
+    """Coming from People with students checked, Assign names them at the top ("Gets the quiz",
+    one chip each with a ✕) and folds the student list away; with nobody chosen the list is open."""
+    app, db = app_db
+    teach = login(app, 'teach')
+    page = teach.get('/quiz/assign?users={}&users={}'.format(ids('sam'), ids('kim'))).data.decode()
+    top = page[page.index('id="recipients"'):page.index('id="pick-people"')]
+    assert '<span class="label">Gets the quiz</span>' in top
+    assert '<span class="person-chip" data-user="{}">sam<button type="button" class="chip-x" aria-label="Leave sam out"'.format(ids('sam')) in top
+    assert 'data-user="{}">kim<'.format(ids('kim')) in top and 'recipient-none' not in top
+    assert '<details class="pick-wrap">' in page and 'change who gets it' in page
+    page = teach.get('/quiz/assign').data.decode()
+    assert 'Nobody yet: check the students below.' in page and '<details class="pick-wrap" open>' in page

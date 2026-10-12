@@ -33,6 +33,15 @@
   {{ form.hidden_tag() }}
   {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
   {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}
+  {# who gets it, first and in plain sight: the students checked on the People page (or below),
+     each with a ✕ to leave them out; kept up to date as people are checked below #}
+  <div class="field recipients" id="recipients">
+    <span class="label">Gets the quiz</span>
+    <div class="recipient-list" aria-live="polite">
+      {% for u in people if u.id in chosen %}<span class="person-chip" data-user="{{ u.id }}">{{ u.shown_name }}<button type="button" class="chip-x" aria-label="Leave {{ u.shown_name }} out" title="Leave {{ u.shown_name }} out">✕</button></span>
+      {% else %}<span class="muted small recipient-none">Nobody yet: check the students below.</span>{% endfor %}
+    </div>
+  </div>
   {# narrows the Quiz menu (needs the page's script, so it starts hidden) #}
   <div class="field" id="assign-subject-field" hidden{% if quiz_chosen %} data-keep-quiz{% endif %}>
     <label class="label" for="assign-subject">Folder</label>
@@ -50,7 +59,9 @@
      then everyone. Only the boxes under "All users" are sent; the ones in folders follow
      them, so someone in two folders is checked in both and gets one copy. #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
-    <span class="label">Students</span>
+    {# came with students already checked: the list folds away (open it to change who) #}
+    <details class="pick-wrap"{% if not chosen or form.users.errors %} open{% endif %}>
+    <summary class="label pick-wrap-head"><span class="fold" aria-hidden="true"></span>Students <span class="muted small pick-wrap-note">{{ 'change who gets it' if chosen else '' }}</span></summary>
     <div class="btn-row small pick-bar">
       <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button></span>
@@ -64,14 +75,15 @@
           <span class="box-end"><button type="button" class="btn btn-secondary btn-xs pick-all" aria-label="Check everyone" title="Check or uncheck everyone">Check all</button></span></summary>
         <ul class="choice-list pick-list">
           {% for u in people %}
-            <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}"{% if u.id in chosen %} checked{% endif %}>
+            <li><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}" data-name="{{ u.shown_name }}"{% if u.id in chosen %} checked{% endif %}>
               <label for="users-{{ u.id }}">{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
           {% endfor %}
         </ul>
       </details>
     </div>
-    {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
     <div class="help">Only the people checked get the quiz. A folder's “Check all” checks everyone in it. Each student gets a different random version of the quiz.</div>
+    </details>
+    {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   <fieldset>
     <legend>When (optional)</legend>
@@ -158,9 +170,38 @@
       head.textContent = (every ? 'Uncheck ' : 'Check ') + (filtering ? 'these' : 'all');
       head.hidden = !n;
     });
-    var picked = box.querySelectorAll('input[name="users"]:checked').length;
-    count.textContent = picked + ' chosen';
+    var picked = box.querySelectorAll('input[name="users"]:checked');
+    count.textContent = picked.length + ' chosen';
+    //"Gets the quiz" at the top: who's checked, each with a ✕
+    var list = document.querySelector('#recipients .recipient-list');
+    if (list) {
+      list.textContent = '';
+      picked.forEach(function (i) {
+        var chip = document.createElement('span'), x = document.createElement('button');
+        chip.className = 'person-chip';
+        chip.dataset.user = i.dataset.user;
+        chip.textContent = i.dataset.name;
+        x.type = 'button'; x.className = 'chip-x'; x.textContent = '✕';
+        x.setAttribute('aria-label', 'Leave ' + i.dataset.name + ' out'); x.title = 'Leave ' + i.dataset.name + ' out';
+        chip.appendChild(x);
+        list.appendChild(chip);
+      });
+      if (!picked.length) {
+        var none = document.createElement('span');
+        none.className = 'muted small recipient-none';
+        none.textContent = 'Nobody yet: check the students below.';
+        list.appendChild(none);
+        var wrap = box.querySelector('.pick-wrap');
+        if (wrap) wrap.open = true;
+      }
+    }
   }
+  document.getElementById('recipients').addEventListener('click', function (e) {
+    var x = e.target.closest('.chip-x');
+    if (!x) return;
+    set(x.closest('.person-chip').dataset.user, false);
+    refresh();
+  });
   function set(id, on) {
     box.querySelectorAll('input[data-user="' + id + '"]').forEach(function (i) { i.checked = on; });
   }

@@ -1924,3 +1924,15 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 /* a row of folder buttons: the open folder's Expand all / Collapse all at the row's right end */
 .folder-tabs .tab-pairs { margin-left: auto; display: inline-flex; }
 .folder-tabs .tab-pair[hidden] { display: none; }
+
+/* Assign: who gets the quiz, at the top, one chip per student (✕ leaves them out); the student
+   list below folds away when they came already checked */
+.recipient-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.person-chip { display: inline-flex; align-items: center; gap: 2px; padding: 3px 4px 3px 10px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--surface-2); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.pick-wrap > summary.pick-wrap-head { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; margin-bottom: 8px; }
+.pick-wrap > summary.pick-wrap-head::-webkit-details-marker { display: none; }
+.pick-wrap .fold { display: inline-block; width: 0; height: 0; border-style: solid; border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+.pick-wrap[open] .fold { transform: rotate(90deg); }
+.pick-wrap:not([open]) > summary .pick-wrap-note { text-decoration: underline dotted; }
