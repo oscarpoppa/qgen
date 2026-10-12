@@ -1878,3 +1878,26 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 /* a folder's own Expand all / Collapse all (added by boxes.js where the page has none) */
 .sub-tools.folder-pair { justify-content: flex-end; margin-bottom: 8px; }
 .sub-tools.folder-pair[hidden] { display: none; }
+
+/* a student page: every quiz box's table has the same columns (the score column and the Retake
+   column a set width, the attempts column the rest), so the buttons of quiz boxes at one folder
+   level line up under one another */
+@media (min-width: 641px) {
+  .result-box > .table-wrap > table { table-layout: fixed; width: 100%; }
+  .result-box > .table-wrap > table > thead th:nth-child(2) { width: 16rem; }
+  .result-box > .table-wrap > table > thead th:nth-child(3) { width: 7.5rem; }
+}
+/* "Results" and "Assigned" share a place in an attempt's buttons: one width, so the buttons
+   beside them don't shift from row to row */
+.result-attempt-buttons .attempt-open { min-width: 5.5rem; text-align: center; }
+/* ...and where they go two by two, they keep to the right of the attempts column, so they line
+   up whether or not they fit beside the date */
+@media (min-width: 641px) {
+  @container listarea (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }
+  @container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }
+}
+/* "Archive all" acts on every attempt, not the one above it: a line sets it apart and it has its
+   own look (tinted, dashed edge), unlike the attempts' own buttons */
+.btn-row.result-archive-all { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
+.btn.btn-all { background: var(--surface-2); border-style: dashed; color: var(--muted); }
+.btn.btn-all:not(:disabled):hover { color: var(--text); }

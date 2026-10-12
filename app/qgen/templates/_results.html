@@ -14,16 +14,17 @@
                     {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
                     {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
                     <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this attempt">Grade</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}
-                    {% if cq.status in ('completed', 'review') %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s answers and score for this attempt">Results</a>
-                    {% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s copy of this quiz, as it is now">Assigned</a>{% endif %}
+                    {% if cq.status in ('completed', 'review') %}<a class="btn btn-secondary btn-sm attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s answers and score for this attempt">Results</a>
+                    {% else %}<a class="btn btn-secondary btn-sm attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s copy of this quiz, as it is now">Assigned</a>{% endif %}
                     <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Answer key</a>
                     {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)') }}</span>
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at|when }}</div>{% endif %}
                 {% endfor %}
                 {# all of this student's attempts to the Archive at once: under the attempts, in line with
-                   each attempt's own Archive button (grayed out when there's only one) #}
-                <div class="btn-row result-attempt result-archive-all">{% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button') }}{% endif %}</div>
+                   each attempt's own Archive button (grayed out when there's only one); set apart by a
+                   line and its own look, since it acts on every attempt, not the last one #}
+                <div class="btn-row result-attempt result-archive-all">{% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all') }}{% endif %}</div>
               </td>
               <td data-label="Score counted">
                 {% if g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}

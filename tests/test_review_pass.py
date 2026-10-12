@@ -1463,7 +1463,7 @@ def test_results_rows_are_one_line_tall(app_db):
     assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
-    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button')" in tpl
+    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all')" in tpl
 
 
 def test_a_folded_student_says_where_they_are(app_db):
@@ -1615,3 +1615,28 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse():
     assert "return p.closest('details.sub-box') === d;" in js  # a folder that already has one keeps it
     assert "body.classList.add('level');" in js and "bar.className = 'sub-tools folder-pair';" in js
     assert "if (pair.parentElement.classList.contains('folder-pair')) pair.parentElement.hidden = pair.hidden;" in js
+
+
+def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
+    """A student page's quiz boxes share one set of column widths (score and Retake columns fixed,
+    attempts the rest) and an attempt's "Results"/"Assigned" button has one width, so the buttons
+    of quiz boxes at one folder level sit under one another, two by two included. "Archive all"
+    looks different from an attempt's own buttons."""
+    import os
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    give(vq, 'sam')
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert 'class="btn btn-secondary btn-sm attempt-open"' in page and '>Assigned</a>' in page
+    assert '<thead><tr><th>Attempts</th><th>Score counted</th><th></th></tr></thead>' in page
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert '.result-box > .table-wrap > table { table-layout: fixed; width: 100%; }' in css
+    assert '.result-box > .table-wrap > table > thead th:nth-child(2) { width: 16rem; }' in css
+    assert '.result-attempt-buttons .attempt-open { min-width: 5.5rem; text-align: center; }' in css
+    assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
+    # "Archive all" acts on every attempt: set apart by a line, with its own look
+    assert 'class="btn btn-secondary btn-sm btn-all" disabled title="Only one attempt' in page
+    assert '.btn-row.result-archive-all { border-top: 1px solid var(--border);' in css
+    assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
