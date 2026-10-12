@@ -86,6 +86,13 @@
     if (!d || !d.matches(BOX)) return;
     //a list in a heading (My quizzes' "Move… ▾") is used, not the box opened or folded
     if (e.target.closest('select')) { e.preventDefault(); return; }
+    //a button or link on a heading line (History, Archive all, Open this folder...) does its job;
+    //the box stays as it was
+    var ctl = e.target.closest('a, button');
+    if (ctl && ctl !== sum && !ctl.hasAttribute('data-level')) {
+      var was = d.open;
+      setTimeout(function () { if (d.open !== was) d.open = was; }, 0);
+    }
     if (d.hasAttribute('data-fixed') || d.closest('[data-keep-open]')) return;
     if (e.target.closest('a, button, input, label') && e.target.closest('a, button, input, label') !== sum) return;
     d._byHand = Date.now();  // its toggle event comes a moment later
@@ -148,7 +155,7 @@
     document.querySelectorAll('details.sub-box').forEach(function (d) {
       var body = d.querySelector(':scope > summary + *');
       if (!body || body.qgenPair) return;
-      var own = Array.prototype.some.call(body.querySelectorAll('.level-buttons'), function (p) {
+      var own = Array.prototype.some.call(d.querySelectorAll('.level-buttons'), function (p) {
         return p.closest('details.sub-box') === d;
       });
       body.qgenPair = true;
@@ -173,9 +180,19 @@
     addFolderPairs();
     clearTimeout(showLevelButtons._t);
     showLevelButtons._t = setTimeout(function () {
+      //never two pairs for the same boxes: a pair that would open or fold exactly what one
+      //shown before it (further out) does is left out
+      var shown = [];
       document.querySelectorAll('.level-buttons').forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
-        pair.hidden = !btn || folds(levelOf(btn)).length < 2;
+        var set = btn ? folds(levelOf(btn)) : [];
+        pair.hidden = set.length < 2;
+        if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
+        var same = shown.some(function (other) {
+          return other.length === set.length && other.every(function (d, i) { return d === set[i]; });
+        });
+        if (same) pair.hidden = true;
+        else shown.push(set);
       });
     }, 0);
   }

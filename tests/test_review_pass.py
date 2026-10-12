@@ -1698,3 +1698,34 @@ def test_a_folders_own_things_have_a_divider_and_their_own_expand_collapse():
     assert '.folder-items-head .level-buttons { margin-left: auto;' in css
     # a tabbed folder's pair goes back on its own heading while the folders show as boxes
     assert "if (searching && pair.parentElement !== head) head.appendChild(pair);" in tabs
+
+
+def test_set_wide_controls_sit_on_the_heading_line(app_db):
+    """Controls for a whole box go on its heading line, not a row of their own: a folder's
+    Expand all / Collapse all / Open this folder (folder pages), a student-page quiz's
+    "Archive all", Results by quiz's History / View / Edit / Print, and Results by student's
+    Student page / Message / Assign. And never two Expand/Collapse pairs for the same boxes."""
+    import os, re
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    give(vq, 'sam'); give(vq, 'sam')
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    box = page[page.index('data-quiz-box='):]
+    head = box[:box.index('</summary>')]
+    assert '>History</a>' in head and '>Archive all (2)</button>' in head
+    assert 'result-archive-all' not in box[:box.index('</details>')]
+    page = teach.get('/quiz/results').data.decode()
+    head = page[page.index('id="quiz-{}"'.format(vq.id)):]
+    head = head[:head.index('</summary>')]
+    assert '<span class="box-actions">' in head and '>View quiz</a>' in head and '>Edit quiz</a>' in head
+    assert 'box-links' not in page[page.index('<main'):]
+    page = teach.get('/quiz/listuser').data.decode()
+    head = page[page.index('id="student-{}"'.format(ids('sam'))):]
+    head = head[:head.index('</summary>')]
+    assert '<span class="box-actions">' in head and '>Student page</a>' in head and '>Assign a quiz</a>' in head
+    folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
+    assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders
+    js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()
+    assert 'if (same) pair.hidden = true;' in js  # a pair for the same boxes as one before it is left out
+    assert "setTimeout(function () { if (d.open !== was) d.open = was; }, 0);" in js  # heading buttons don't fold the box

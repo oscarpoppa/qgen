@@ -2,7 +2,11 @@
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
 {% from "_macros.html" import post_button, slot with context %}
-{% macro result_cells(g, student, rules) %}
+{# "Archive all (n)": every one of this student's attempts at the quiz, grayed out with only one #}
+{% macro archive_all_button(g, student) -%}
+{% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all') }}{% endif %}
+{%- endmacro %}
+{% macro result_cells(g, student, rules, archive_all=true) %}
               <td data-label="Attempts" class="attempts">
                 {% for cq in g.attempts %}
                   <div class="btn-row result-attempt">
@@ -20,9 +24,9 @@
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at|when }}</div>{% endif %}
                 {% endfor %}
                 {# all of this student's attempts to the Archive at once: under the attempts, in line with
-                   each attempt's own Archive button (grayed out when there's only one); set apart by a
-                   line and its own look, since it acts on every attempt, not the last one #}
-                <div class="btn-row result-attempt result-archive-all">{% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all') }}{% endif %}</div>
+                   each attempt's own Archive button, set apart by a line (a student page's quiz box has
+                   it on its heading line instead: archive_all=false) #}
+                {% if archive_all %}<div class="btn-row result-attempt result-archive-all">{{ archive_all_button(g, student) }}</div>{% endif %}
               </td>
               <td data-label="Score counted">
                 {# while the latest attempt is not started or in progress, a dash (as in its heading, which

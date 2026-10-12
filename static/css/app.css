@@ -899,8 +899,6 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
 .sub-box[open] > .sub-head .fold { transform: rotate(90deg); }
 .sub-body { margin-top: 10px; }
-.sub-tools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.sub-tools > span { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 @media (max-width: 600px) { .sub-box { padding: 8px; } }
 /* folders on top, what's in them below (static/js/foldertabs.js): side-by-side folder boxes
    become one row of folder buttons; the open one's contents show under the whole row */
@@ -1878,10 +1876,11 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .history-table td .nowrap { white-space: nowrap; }
 /* a folder's own Expand all / Collapse all (added by boxes.js where the page has none) */
 /* a folder's own Expand all / Collapse all, on its heading line at the right (boxes.js) */
-.head-pair { margin-left: auto; flex: 0 0 auto; display: inline-flex; }
+.head-pair { margin-left: auto; flex: 0 0 auto; display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.head-pair .head-tools { display: inline-flex; gap: 6px; align-items: center; }
 .head-pair .level-buttons { display: inline-flex; gap: 6px; }
 .head-pair .level-buttons[hidden] { display: none; }
-@media (max-width: 640px) { .sub-head:has(> .head-pair > .level-buttons:not([hidden])) { flex-wrap: wrap; row-gap: 6px; } }
+@media (max-width: 640px) { .sub-head:has(> .head-pair) { flex-wrap: wrap; row-gap: 6px; } }
 
 /* a student page: every quiz box's table has the same columns (the score column and the Retake
    column a set width, the attempts column the rest), so the buttons of quiz boxes at one folder
@@ -1941,3 +1940,8 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 /* (the Dashboard's lists style their people plainly: a name link keeps its dotted underline there too) */
 .dash-list a.person.name-link { text-decoration: underline dotted; text-decoration-color: var(--muted); }
 .dash-list a.person.name-link:hover, .dash-list a.person.name-link:focus-visible { text-decoration-style: solid; text-decoration-color: currentColor; }
+/* a quiz's or student's own buttons on its heading line (Results pages): they wrap at the right,
+   and under the name where the line is too narrow */
+.subject-box > summary .box-actions { flex-wrap: wrap; justify-content: flex-end; }
+@container page (max-width: 900px) { .subject-box > summary:has(> .box-actions) { flex-wrap: wrap; row-gap: 6px; } }
+@container listarea (max-width: 900px) { .subject-box > summary:has(> .box-actions) { flex-wrap: wrap; row-gap: 6px; } }

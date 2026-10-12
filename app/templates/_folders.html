@@ -59,10 +59,10 @@
 
 {# Expand all / Collapse all for one level: every box in it (folders, folders inside them, and
    the boxes of the things in them). size: btn-sm beside a title, btn-xs inside a folder box #}
-{% macro level_buttons(label, size='btn-xs') %}
+{% macro level_buttons(label, size='btn-xs', of=none) %}
   <span class="level-buttons">
-    <button type="button" class="btn btn-secondary {{ size }}" data-level="open" aria-label="Expand all in {{ label }}" title="Open every box in {{ label }}">Expand all</button>
-    <button type="button" class="btn btn-secondary {{ size }}" data-level="close" aria-label="Collapse all in {{ label }}" title="Fold every box in {{ label }} down to its heading">Collapse all</button>
+    <button type="button" class="btn btn-secondary {{ size }}" data-level="open"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Expand all in {{ label }}" title="Open every box in {{ label }}">Expand all</button>
+    <button type="button" class="btn btn-secondary {{ size }}" data-level="close"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Collapse all in {{ label }}" title="Fold every box in {{ label }} down to its heading">Collapse all</button>
   </span>
 {% endmacro %}
 
@@ -182,10 +182,11 @@
 {% macro sub_box(fk, n) %}
   {% set f = n.folder %}{% set draw = caller %}{# (kept: inside the nested call below, caller is that call's) #}
   <details class="box sub-box" data-sub="{{ f.id }}" data-list>
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}</summary>
-    <div class="sub-body level">
-      <div class="sub-tools">{{ level_buttons(fk.name(n.folder)) }}
-        <span class="small">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs" href="{{ fk.page(f.id) }}" title="Go into “{{ fk.name(n.folder) }}” to see just what's in it">Open this folder</a></span></div>
+    {# the folder's own controls on its heading line (no row of their own) #}
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}
+      <span class="head-pair">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}
+        <span class="head-tools">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs" href="{{ fk.page(f.id) }}" title="Go into “{{ fk.name(n.folder) }}” to see just what's in it">Open this folder</a></span></span></summary>
+    <div class="sub-body level" id="folder-body-{{ f.id }}">
       {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
       {{ draw(n) }}
       {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
@@ -202,10 +203,10 @@
   {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
   {% if loose %}
   <details class="box sub-box" data-sub="none" data-list>
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('tray', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}</summary>
-    <div class="sub-body level">
-      <div class="sub-tools">{{ level_buttons(fk.main_label) }}
-        <span class="small"><a class="btn btn-secondary btn-xs" href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></div>
+    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('tray', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}
+      <span class="head-pair">{{ level_buttons(fk.main_label, of='#folder-body-none') }}
+        <span class="head-tools"><a class="btn btn-secondary btn-xs" href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></span></summary>
+    <div class="sub-body level" id="folder-body-none">
       {{ draw(fk.root) }}
     </div>
   </details>
