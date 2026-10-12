@@ -2022,3 +2022,34 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 @media (max-width: 640px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
 @container listarea (max-width: 860px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
 @container page (max-width: 780px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
+
+/* ---------- folder pages: file-folder tabs (folderfilter.js) ----------
+   The folder buttons are tabs on a file folder: the chosen one joins the panel under it (the
+   same color, no line between), and the panel holds what's in that folder: the row of its own
+   folders (smaller tabs) and the list. */
+.folder-filter-rows { gap: 0; margin: 0; }
+.folder-filter-rows > .folder-tabs:first-child { background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
+  padding: 0 0 0 4px; gap: 4px; align-items: flex-end; flex-wrap: wrap; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tabs-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab { border: 1px solid var(--border); border-bottom: 0; border-radius: 10px 10px 0 0;
+  background: var(--surface-2); margin-bottom: -1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab:hover { background: var(--surface); }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] { background: var(--surface); border-color: var(--border);
+  border-top: 3px solid var(--accent); padding-top: 5px; position: relative; z-index: 1; box-shadow: none; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding: 0 4px 4px 0; }
+/* the panel: the chosen folder's own folders (a smaller row of tabs), then the list */
+.folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--border); border-top: 0; border-bottom: 0; border-radius: 0;
+  background: var(--surface); padding: 10px 12px 0; gap: 4px; align-items: flex-end; }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab { min-height: 32px; padding: 4px 10px; border-radius: 8px 8px 0 0; border: 1px solid var(--border);
+  border-bottom: 0; background: var(--surface-2); box-shadow: none; font-size: var(--fs-sm); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.folder-filter-rows > .folder-tabs-inner > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding-bottom: 6px; }
+.folder-filter .folder-filter-list, .folder-filter .folder-filter-empty { margin: 0; border: 1px solid var(--border); border-top: 0;
+  border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--surface); padding: 12px; }
+.folder-filter .folder-filter-list > .table-wrap { margin: 0; }
+/* phones: the tabs stay in one row that scrolls sideways inside itself (the page never does) */
+@media (max-width: 640px) {
+  .folder-filter-rows > .folder-tabs:first-child { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+  .folder-filter-rows > .folder-tabs:first-child > .folder-tab { flex: 0 0 auto; }
+  .folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { flex: 0 0 auto; }
+}
