@@ -1458,6 +1458,9 @@ def test_results_rows_are_one_line_tall(app_db):
     assert 'td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; }' in css
     # an attempt's own line never wraps where the list is wide: the row's buttons stack instead
     assert '@media (min-width: 641px) { .btn-row.result-attempt-buttons { flex-wrap: nowrap; } }' in css
+    # ...and narrow pages without a folder list (a quiz's history, one student) wrap by the page's width
+    tail = css[css.index('@container page (max-width: 1080px) {\n  td.attempts { white-space: normal; }'):]
+    assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
     assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (2)')" in tpl

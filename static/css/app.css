@@ -1764,3 +1764,14 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
 
 /* Results by student: a folded student's heading says where they are */
 .student-sums { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
+
+/* results tables outside a folder page (a quiz's history, one student's page) have no "listarea"
+   container: the same narrow-list wrapping by the page's own width, so they never scroll sideways */
+@container page (max-width: 1080px) {
+  td.attempts { white-space: normal; }
+  .btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }
+  .result-attempt-buttons { margin-left: 0; padding-left: 0; }
+  td.actions:has(.btn-stack) { white-space: normal; }
+  td.actions .btn-stack { flex-direction: column; align-items: flex-end; }
+}
+@media (max-width: 640px) { .stack td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; } }
