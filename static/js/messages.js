@@ -81,8 +81,7 @@
     if (open) {
       //its pop-ups are answered; opening Notices with its button (or a pop-up's) marks them seen
       document.querySelectorAll('.toast-' + p).forEach(function (t) { t.remove(); });
-      //a reply still being written stays as it was (loading it afresh would lose it)
-      if (!(p === 'messages' && busyTyping())) load(p, true);
+      load(p, true);
     }
     //the conversation's panel changed size: keep the newest message in view
     if (isOpen('messages')) requestAnimationFrame(showNewest);
@@ -104,14 +103,26 @@
 
   //markSeen: the person opened the panel themselves (only Notices uses it: loading it
   //otherwise, e.g. because a notice arrived while it was open, leaves new ones new)
+  //(a reply half-written in Messages is put back after loading, as long as it's still the
+  //same conversation: switching to another one asks first, see showStudent's callers)
+  var drawnView = null;
   function load(p, markSeen) {
     var body = pane(p).querySelector('.dock-body');
+    var view = p === 'messages' ? stored('qgen-dock-view') : null;
+    var typing = p === 'messages' && busyTyping() ? { view: drawnView, text: pane(p).querySelector('textarea').value } : null;
     return fetch(paneUrl(p, markSeen), { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) {
         if (html === null) { body.innerHTML = '<p class="muted small">Couldn\'t load this. Please reload the page.</p>'; return; }
         body.innerHTML = html;
         loaded[p] = true;
+        if (p === 'messages') {
+          if (typing && typing.view === view) {
+            var t = body.querySelector('textarea');
+            if (t) t.value = typing.text;
+          }
+          drawnView = view;
+        }
         if (p === 'messages') { splitFit(); showNewest(); }
         //opening it marked things seen: the counts change
         check();
@@ -146,10 +157,16 @@
     }
     var open = e.target.closest('.toast-open');
     if (open) {
-      //a message from another teacher: open the panel on that conversation
-      if (open.dataset.view) store('qgen-dock-view', open.dataset.view);
-      setOpen(open.dataset.pane, true);
-      open.closest('.toast').remove();
+      //a message from another teacher: open the panel on that conversation (a reply half-written
+      //to someone else: asked first, as when switching students; kept if they say no)
+      var toast = open.closest('.toast'), view = open.dataset.view, pane_ = open.dataset.pane;
+      var go = function (switchTo) {
+        if (switchTo) store('qgen-dock-view', view);
+        setOpen(pane_, true);
+        toast.remove();
+      };
+      if (!view || !busyTyping() || view === drawnView) { go(!!view); return; }
+      ask('Discard the message you were writing?', 'Discard').then(function (yes) { go(yes); });
       return;
     }
     var dismiss = e.target.closest('.toast-close');

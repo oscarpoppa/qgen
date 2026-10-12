@@ -1440,9 +1440,11 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     # a click on the page closes them, but not the click that opened them (e.g. "Message students")
     assert 'if (justOpened || pinned() ||' in js and "if (e.key !== 'Escape' || pinned()) return;" in js
     # ...nor a click in the top menus, and Messages stays open while a reply is half-written;
-    # reopened, it keeps the reply rather than loading over it
+    # loaded again (reopened, a new message), it shows what's new and puts the reply back, as long
+    # as it's the same conversation; a pop-up switching to another conversation asks first
     assert "nav.nav, details.menu, .floating-menu" in js and "!(q === 'messages' && busyTyping())" in js
-    assert "if (!(p === 'messages' && busyTyping())) load(p, true);" in js
+    assert "if (typing && typing.view === view) {" in js and "if (t) t.value = typing.text;" in js
+    assert "if (!view || !busyTyping() || view === drawnView) { go(!!view); return; }" in js
 
 
 def test_results_rows_are_one_line_tall(app_db):
