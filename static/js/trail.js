@@ -49,7 +49,10 @@
   var label = before.t.length > LONGEST ? before.t.slice(0, LONGEST - 1).trim() + '…' : before.t;
   document.querySelectorAll('a[data-back]').forEach(function (a) {
     a.href = before.p;
-    a.textContent = '← ' + label;
+    //(the words in their own span, so a long name ends in "…" instead of widening the page)
+    var span = a.querySelector('.back-label');
+    if (!span) { span = document.createElement('span'); span.className = 'back-label'; a.textContent = ''; a.appendChild(span); }
+    span.textContent = '← ' + label;
     a.title = 'Go back to ' + before.t;
     a.addEventListener('click', function () { write(GOING, before.k); });
   });

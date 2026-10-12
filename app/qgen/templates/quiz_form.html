@@ -36,7 +36,7 @@
   <h1>{{ title }}</h1>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving"><span class="back-label">← {{ came[1] }}</span></a>
     {% if vq and vq.id %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="See one student's version of the saved quiz">View</a>
       {% if vq.cquizzes %}<a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's attempts and scores on {{ vq.title }}">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}

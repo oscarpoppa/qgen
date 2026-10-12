@@ -221,13 +221,13 @@ def test_results_pages_lead_back_to_users(app_db):
     # the menu: one People entry, lit on both views; Results by student isn't in the Quizzes menu
     assert '>People</a>' in results and 'class="active" aria-current="page">People</a>' in results
     assert '>Results by student</a>' not in results.split('<main')[0]
-    assert '<a class="btn btn-secondary" href="/people" data-back>← People</a>' in \
+    assert '<a class="btn btn-secondary" href="/people" data-back><span class="back-label">← People</span></a>' in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
     # one quiz's history is about the quiz: back to Quizzes (when there's no trail to follow)
-    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in \
+    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back><span class="back-label">← Quizzes</span></a>' in \
         no_titles(teach.get('/quiz/results/{}'.format(vq.id)).data.decode())
     # results by quiz are about quizzes, not people: back to the Dashboard (when there's no trail)
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(teach.get('/quiz/results').data.decode())
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in no_titles(teach.get('/quiz/results').data.decode())
     # one student's page: Assign a quiz to them
     assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())

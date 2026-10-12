@@ -1778,7 +1778,8 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
 .btn-row.result-archive-all { justify-content: flex-end; }
 @media (max-width: 640px) { .btn-row.result-archive-all { justify-content: flex-start; } }
 /* a "← back" button named after a long quiz title is cut short ("…"); its tooltip has the whole name */
-a.btn[data-back] { display: inline-block; max-width: min(22rem, calc(100vw - 32px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+a.btn[data-back] { max-width: min(22rem, calc(100vw - 32px)); min-width: 0; }
+a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .page-head .actions { min-width: 0; max-width: 100%; }
 /* a problem's History: where its table won't fit, the long columns wrap and the row's buttons
    stack, rather than the table scrolling sideways */
@@ -1869,3 +1870,8 @@ a.btn[data-back] { display: inline-block; max-width: min(22rem, calc(100vw - 32p
   .keypad .key { width: 100%; }
   .keypad > :not(.key) { grid-column: 1 / -1; margin-left: 0; }
 }
+/* (review notes) a narrow folder list's three-button rows: three across, like phones */
+@container listarea (max-width: 860px) {
+  .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: repeat(3, 1fr); }
+}
+.history-table td .nowrap { white-space: nowrap; }

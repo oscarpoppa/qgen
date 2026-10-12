@@ -211,16 +211,16 @@ def test_back_goes_where_you_came_from(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': 'http://localhost/dashboard'}).data.decode()
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in no_titles(page)
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in no_titles(page)
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<a class="btn btn-secondary" href="/people" data-back>← People</a>' in no_titles(page)
+    assert '<a class="btn btn-secondary" href="/people" data-back><span class="back-label">← People</span></a>' in no_titles(page)
     # from another site, or from the page itself: its own Back
     for ref in ('https://evil.example/dashboard', 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
         page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': ref}).data.decode()
-        assert '← People</a>' in page, ref
+        assert '← People</span></a>' in page, ref
     # and a student page names the student
     page = teach.get('/quiz/results', headers={'Referer': 'http://localhost/quiz/listuser/{}'.format(ids('sam'))}).data.decode()
-    assert "← sam&#39;s student page</a>" in page
+    assert "← sam&#39;s student page</span></a>" in page
 
 
 def test_editing_a_quiz_returns_where_it_started(app_db):
@@ -283,7 +283,7 @@ def test_after_handing_in_there_is_no_next_quiz_only_back(app_db):
     page = sam.get('/quiz/take/{}'.format(done.id)).data.decode()
     assert 'Handed in!' in page and 'Your teacher is checking' in page
     assert 'Next:' not in page and 'href="/quiz/take/{}"'.format(nxt.id) not in page
-    assert '← Home</a>' in page
+    assert '← Home</span></a>' in page
     assert 'instructor' not in page.lower()
 
 
@@ -737,9 +737,9 @@ def test_pages_off_the_menu_have_a_back_button(app_db):
                      (teach, '/messages/{}'.format(ids('sam'))), (sam, '/quiz/take/{}'.format(cq.id)),
                      (sam, '/no/such/page')):
         page = who.get(url).data.decode()
-        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back>← ', no_titles(page)), url
+        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back><span class="back-label">← ', no_titles(page)), url
     # with nowhere better known, My profile goes back to Home (Dashboard for a teacher)
-    assert 'href="/home" data-back>← Home</a>' in no_titles(sam.get('/profile').data.decode())
+    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(sam.get('/profile').data.decode())
     # the script that points each Back at the page it was opened from is on every page
     assert 'js/trail.js' in sam.get('/profile').data.decode()
     assert 'data-back-href>Cancel</a>' in no_titles(teach.get('/chpass').data.decode())
@@ -922,10 +922,10 @@ def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
     home = teach.get('/home').data.decode()
     assert '“Mine”' in home and 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back>← Home</a>' in no_titles(page)
+    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(page)
     S.submit(cq, {1: '4'})
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back>← Home</a>' in no_titles(page) and 'Answer key' not in no_titles(page)
+    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(page) and 'Answer key' not in no_titles(page)
     # taken away: told as a student is, not sent to the Archive
     teach.post('/quiz/delcq/{}'.format(cq.id))
     r = teach.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()
@@ -1170,7 +1170,7 @@ def test_standard_wording_and_history_buttons(app_db):
         assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get(url).data.decode()), url
     # the teachers' messages page: one name, and Back to Messages
     page = no_titles(teach.get('/messages/teachers').data.decode())
-    assert 'Messages between teachers' in page and '← Messages</a>' in page and 'Messages with' not in page
+    assert 'Messages between teachers' in page and '← Messages</span></a>' in page and 'Messages with' not in page
 
 
 def test_pages_come_back_as_they_were_left(app_db):
@@ -1416,9 +1416,9 @@ def test_the_messages_page_has_a_way_back(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = no_titles(teach.get('/messages').data.decode())
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back>← Dashboard</a>' in page
+    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in page
     page = no_titles(teach.get('/messages', headers={'Referer': 'http://localhost/quiz/listvq'}).data.decode())
-    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back>← Quizzes</a>' in page
+    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back><span class="back-label">← Quizzes</span></a>' in page
 
 
 def test_side_panels_slide_over_the_page_unless_pinned(app_db):
@@ -1592,7 +1592,7 @@ def test_tidy_layouts_at_every_width(app_db):
     import os
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    for rule in ('a.btn[data-back] { display: inline-block; max-width: min(22rem, calc(100vw - 32px)); overflow: hidden; text-overflow: ellipsis;',
+    for rule in ('a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }',
                  '.btn-row.result-archive-all { justify-content: flex-end; }',
                  '.person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }',
                  '.history-table thead { display: none; }',

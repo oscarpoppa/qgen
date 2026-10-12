@@ -66,7 +66,7 @@
    (Dashboard, Grading, a student page...), else to fallback (app/nav.py) #}
 {% macro back_button(fallback_url, fallback_label, cls='btn btn-secondary') %}
   {%- set target = back(fallback_url, fallback_label) -%}
-  <a class="{{ cls }}" href="{{ target[0] }}" title="Go back to {{ target[1] }}" data-back>← {{ target[1] }}</a>
+  <a class="{{ cls }}" href="{{ target[0] }}" title="Go back to {{ target[1] }}" data-back><span class="back-label">← {{ target[1] }}</span></a>
 {%- endmacro %}
 
 {# a button that doesn't apply to this item: shown, grayed out, with why (rows of the same kind

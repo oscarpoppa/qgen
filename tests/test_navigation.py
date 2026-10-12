@@ -20,7 +20,7 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert title(teach.get('/edituser/{}'.format(ids('sam'))).data.decode()).startswith('Edit user: sam')
     assert title(app.test_client().get('/login').data.decode()).startswith('Log in')
     # Back says where it goes
-    assert "← sam&#39;s student page</a>" in teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()
+    assert "← sam&#39;s student page</span></a>" in teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()
     # one name per action: Grading in the menu
     assert '">Grading' in teach.get('/dashboard').data.decode()
     # the student page: each quiz a box that folds
