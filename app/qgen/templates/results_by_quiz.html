@@ -66,7 +66,7 @@
 {% call folders_page(fk) %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.view == 'all' and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length) %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}
+    {% if fk.view == 'all' and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=quizzes|map(attribute='vquiz')|list) %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}
     {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
     {% for q in quizzes %}{{ quiz_box(q) }}{% endfor %}{% endif %}
   </div>

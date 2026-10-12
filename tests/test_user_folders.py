@@ -2,7 +2,7 @@
 several, folders hold folders; usable on the Assign and Messages pages, which follow changes."""
 import re
 
-from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
+from test_flow import app_db, login, no_titles, without_all_box  # noqa: F401  (fixture)
 from test_archive import ids
 
 FETCH = {'X-Requested-With': 'fetch'}
@@ -15,7 +15,7 @@ def folder(name):
 
 def people(c, view=None):
     """The names in the Users page's tables (each table row once per listing)."""
-    page = c.get('/userdet' + ('?folder={}'.format(view) if view is not None else '')).data.decode()
+    page = without_all_box(c.get('/userdet' + ('?folder={}'.format(view) if view is not None else '')).data.decode())
     return re.findall(r'data-name="([^"]+)"\s+title="Drag onto a folder', page)
 
 

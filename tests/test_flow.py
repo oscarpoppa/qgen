@@ -33,6 +33,21 @@ def login(app, name):
     return c
 
 
+def without_all_box(html):
+    """A folder page without its "All" box (every item once more, in one list), for counting
+    what's in the folders themselves."""
+    import re
+    start = html.find('<details class="box sub-box all-box"')
+    if start == -1:
+        return html
+    depth, i = 0, start
+    for m in re.finditer(r'<details\b|</details>', html[start:]):
+        depth += 1 if m.group(0) == '<details' else -1
+        if depth == 0:
+            return html[:start] + html[start + m.end():]
+    return html
+
+
 def no_titles(html):
     """A page without its tooltips (title="..."), for checking the rest of a link's markup."""
     import re

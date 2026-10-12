@@ -198,8 +198,18 @@
    in no folder as a box of its own, in the folder list's order, so Expand all / Collapse all opens and folds them all.
    loose: how many are in no folder. The caller draws a node's things, like sub_box's:
    {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Uncategorized, n is fk.root) #}
-{% macro all_boxes(fk, loose) %}
+{% macro all_boxes(fk, loose, every=none) %}
   {% set draw = caller %}
+  {# first, "All": every one of them in one list (each once), the folder button that's open to
+     begin with; then the folders. Its copies get their own ids (all_copy). #}
+  {% if every is not none %}
+  <details class="box sub-box all-box" data-sub="every" data-list>
+    <summary class="sub-head">{{ box_label('folders', fk.all_label, count_of(every|length, fk.unit, fk.units), 'h3') }}</summary>
+    <div class="sub-body level" id="folder-body-every">
+      {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length})|all_copy }}
+    </div>
+  </details>
+  {% endif %}
   {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
   {% if loose %}
   <details class="box sub-box" data-sub="none" data-list>

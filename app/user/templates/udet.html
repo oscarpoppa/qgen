@@ -66,7 +66,7 @@
     </form>
     {% if ulst|length > 5 %}{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box') }}{% endif %}
     <div id="folder-items">
-      {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length) %}{{ people_table(n.people, n.folder) }}{% endcall %}
+      {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown) %}{{ people_table(n.people, n.folder) }}{% endcall %}
       {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ people_table(n.people, n.folder) }}{% endcall %}{% endfor %}{% endif %}
       {{ people_table(shown, fk.node.folder if fk.node else none) }}{% endif %}
     </div>

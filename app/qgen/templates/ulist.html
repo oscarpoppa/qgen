@@ -165,7 +165,7 @@
 {% call folders_page(fk) %}
   {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
+    {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
     {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% endfor %}{% endif %}
     {% for item in shown %}{{ student_box(item) }}{% endfor %}{% endif %}
   </div>

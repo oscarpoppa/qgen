@@ -1,5 +1,5 @@
 """Subjects: the teacher's own lists for sorting problems and quizzes."""
-from test_flow import app_db, login, problem_form, no_titles  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form, no_titles, without_all_box  # noqa: F401  (fixture)
 
 
 
@@ -52,7 +52,7 @@ def shown(teacher, kind, folder='all'):
     """The titles listed on the Problems (or Quizzes) page for ?folder=, outside folder boxes."""
     import re
     url = '/quiz/listvp' if kind == 'problems' else '/quiz/listvq'
-    page = teacher.get(url + ('?folder={}'.format(folder) if folder is not None else '')).data.decode()
+    page = without_all_box(teacher.get(url + ('?folder={}'.format(folder) if folder is not None else '')).data.decode())
     items = page[page.index('id="folder-items"'):] if 'id="folder-items"' in page else ''
     #folder boxes (details.sub-box) are skipped: what's in them is listed in their own view
     while '<details class="box sub-box"' in items:
@@ -74,7 +74,7 @@ def everything(teacher, kind):
     """All titles in ?folder=all, boxes and all, in page order (a thing in two folders twice)."""
     import re
     url = '/quiz/listvp' if kind == 'problems' else '/quiz/listvq'
-    page = teacher.get(url + '?folder=all').data.decode()
+    page = without_all_box(teacher.get(url + '?folder=all').data.decode())
     return re.findall(r'aria-label="Check “([^”]+)”"', page[page.index('id="folder-items"'):])
 
 

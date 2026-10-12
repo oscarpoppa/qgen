@@ -71,7 +71,7 @@
   {% call folders_page(fk) %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
-      {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length) %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}
+      {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items) %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}
       {% else %}{% if fk.node %}{% for child in fk.node.folders %}{% call(n) sub_box(fk, child) %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}{% endfor %}{% endif %}
       {% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
     </div>

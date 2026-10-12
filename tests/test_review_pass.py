@@ -1737,3 +1737,23 @@ def test_grading_tables_line_their_buttons_up():
     css = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'css', 'app.css')).read()
     assert '.grading-group > .table-wrap > table { table-layout: fixed; width: 100%; }' in css
     assert '.grading-group > .table-wrap > table > thead th:nth-child(4) { width: 6.5rem; }' in css
+
+
+def test_folder_pages_open_on_all(app_db):
+    """A folder page's All view starts with an "All" box (the first folder button, open to begin
+    with): every item in one list, each once, its copies' ids prefixed so none is on the page twice."""
+    import re
+    app, db = app_db
+    teach = login(app, 'teach')
+    teach.post('/quiz/vqgroups', data={'name': 'Week 1'})
+    make_quiz(app, teach, 'Loose one')
+    for url in ('/quiz/listvq?folder=all', '/quiz/results?folder=all', '/userdet?folder=all', '/quiz/listuser?folder=all'):
+        page = teach.get(url).data.decode()
+        if 'class="box sub-box all-box"' not in page:
+            continue  # (no folders on this page in the test data: no All box needed)
+        assert page.index('data-sub="every"') < page.index('data-sub="none"'), url
+        ids = re.findall(r'\sid="([^"]+)"', page)
+        assert len(ids) == len(set(ids)), (url, [i for i in ids if ids.count(i) > 1][:3])
+    from app import all_copy
+    out = str(all_copy('<details id="quiz-3"><button data-level-of="#quiz-3 > .x"></button><label for="u-1"></label><b data-id="7"></b></details>'))
+    assert 'id="all-quiz-3"' in out and 'data-level-of="#all-quiz-3 > .x"' in out and 'for="all-u-1"' in out and 'data-id="7"' in out
