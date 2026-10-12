@@ -14,18 +14,20 @@
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title or 'Untitled' }}”"></td>{% endif %}
-          <td data-label="Title"><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
-              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong>
+          {# the row folds to its title (and folders and buttons); open, it shows its kind, question
+             and answer too. Folded to begin with; Expand all / Collapse all and the page remember it #}
+          <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
+              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
             <div class="small muted">
               <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
               {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
-            </div>
+            </div></details>
           </td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
-          <td data-label="Question"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
-          <td data-label="Answer">
+          <td data-label="Question" class="row-more"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
+          <td data-label="Answer" class="row-more">
             {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}
               {# written answers: no answer key; a model answer, if given, is only a guide #}
               <span class="badge">Teacher-graded</span>

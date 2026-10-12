@@ -17,17 +17,19 @@
         {% set byid = {} %}{% for p in item.vproblems %}{% set _ = byid.update({p.id: p}) %}{% endfor %}
         <tr data-item="{{ item.id }}" data-box="quiz:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title }}”"></td>{% endif %}
-          <td data-label="Quiz"><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
-              data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title }}</strong>
+          {# the row folds to its title (and folders and buttons); open, it shows its settings and its
+             problems too. Folded to begin with; Expand all / Collapse all and the page remember it #}
+          <td data-label="Quiz"><details class="box row-fold" data-box="quiz-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
+              data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title }}</strong></summary>
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
               · {% if item.calculator_allowed %}calculator OK{% else %}no calculator{% endif %}
               {% if item.shuffle_order %}· order shuffled{% endif %}
               {% set own = item.cquizzes|selectattr('own_retake_rule')|map(attribute='assignee')|unique|list|length %}
               · assigned {{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}
               · retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
-              <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</div></td>
+              <span class="badge badge-warn" title="Set on Results by student">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</div></details></td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
-          <td data-label="Problems">
+          <td data-label="Problems" class="row-more">
             {# the problems fold away (a long quiz would make a tall row) #}
             <details class="box box-mini problem-list"><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
             <ol class="small" style="margin:0;padding-left:1.2em">

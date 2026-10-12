@@ -188,6 +188,8 @@
   if (saved) {
     var up = saved.closest('details.sub-box');
     while (up) { up.open = true; up = up.parentElement.closest('details.sub-box'); }
+    var row = saved.querySelector('details.row-fold');  // (a row that folds: shown open)
+    if (row) row.open = true;
     saved.classList.add('just-saved');
     saved.scrollIntoView({ block: 'center' });
   }
