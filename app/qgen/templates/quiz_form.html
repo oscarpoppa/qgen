@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_macros.html" import back_button with context %}
+{% from "_macros.html" import back_button, slot with context %}
 {% from "_macros.html" import field, check, image_drop %}
 {% from "_subjects.html" import subject_checks, subject_labels, pick_folder_box with context %}
 {% from "_macros.html" import box_label, count_of %}
@@ -8,7 +8,7 @@
 {# editing: another tab's changes are offered, never reloaded under the typing #}
 {# one folder's problems in the quiz editor, each with its check box (key: the folder) #}
 {% macro problem_rows(items, key) %}
-<div class="table-wrap">
+<div class="table-wrap pick-table">
   <table>
     <thead><tr><th style="width:40px"><span class="sr-only">Include</span></th><th>Title</th></tr></thead>
     <tbody>
@@ -39,8 +39,8 @@
   <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving">← {{ came[1] }}</a>
     {% if vq and vq.id %}
       <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="See one student's version of the saved quiz">View</a>
-      {% if vq.cquizzes %}<a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's attempts and scores on {{ vq.title }}">History</a>{% endif %}
-      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give {{ vq.title }} to students">Assign</a>{% endif %}
+      {% if vq.cquizzes %}<a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's attempts and scores on {{ vq.title }}">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}
+      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give {{ vq.title }} to students">Assign</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"

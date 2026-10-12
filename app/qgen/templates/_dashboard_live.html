@@ -86,7 +86,7 @@
         <li>{{ person_name(cq.taker) }}
           {# just the quiz's name: the Results button opens this hand-in itself #}
           <span>“{{ cq.vquiz.title }}”</span>
-          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn">Being graded</span>{% endif %}
+          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span>
           <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Open {{ cq.taker.shown_name if cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></span></li>

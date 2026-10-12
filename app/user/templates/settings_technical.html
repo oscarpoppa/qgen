@@ -40,7 +40,7 @@
             <span class="tech-unit">{{ t.unit }}</span>
           {% endif %}
           {% if is_changed %}<button class="btn btn-secondary btn-sm" name="reset" value="{{ t.key }}" formnovalidate
-                  title="Back to {{ amount(t, t.default) }}" aria-label="Reset {{ t.label }} to {{ amount(t, t.default) }}">Reset</button>{% endif %}
+                  title="Back to {{ amount(t, t.default) }}" aria-label="Reset {{ t.label }} to {{ amount(t, t.default) }}">Reset</button>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Already the default">Reset</button>{% endif %}
         </div>
         <p class="help" id="h-{{ t.key }}">{{ t.help }}
           <span class="muted">Default: {{ amount(t, t.default) }}{% if t.unit != 'choice' %}; allowed {{ '{:,}'.format(t.min) }}–{{ '{:,}'.format(t.max) }}{% endif %}.</span></p>

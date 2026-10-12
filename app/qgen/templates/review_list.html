@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, quiz_name, box_label, count_of, expand_collapse with context %}
+{% from "_macros.html" import person_name, quiz_name, box_label, count_of, expand_collapse, slot with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions">{% if waiting %}<a class="btn" href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Grade the oldest</a>{% endif %}
+  <div class="actions">{% if waiting %}<a class="btn" href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Grade the oldest</a>{% else %}{{ slot('Grade the oldest', 'Nothing is waiting for grading', 'btn') }}{% endif %}
     {{ expand_collapse('#grading-groups', 'quizzes') }}</div></div>
 {% if waiting %}
   {# grouped by quiz (the quiz waiting longest first), oldest hand-in first inside #}

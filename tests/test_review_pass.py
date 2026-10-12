@@ -801,7 +801,7 @@ def test_removing_an_assigned_quiz_keeps_everything_for_students(app_db):
     # brought back
     teach.post('/quiz/removed/{}/back'.format(vq.id))
     assert db.session.get(VQuiz, vq.id).removed_at is None
-    assert 'Removed quizzes (' not in teach.get('/quiz/listvq').data.decode()
+    assert 'disabled title="No quizzes have been removed">Removed quizzes (0)</button>' in teach.get('/quiz/listvq').data.decode()
     # never assigned: deleted for good, as before
     other = make_quiz(app, teach, 'Unused')
     teach.post('/quiz/delvq/{}'.format(other.id))
@@ -1463,7 +1463,7 @@ def test_results_rows_are_one_line_tall(app_db):
     assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
-    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (2)')" in tpl
+    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button')" in tpl
 
 
 def test_a_folded_student_says_where_they_are(app_db):
@@ -1541,3 +1541,64 @@ def test_where_an_attempt_is_stands_out(app_db):
         db.session.commit()
     page = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert '<span class="badge badge-warn badge-status">Not started</span>' in page
+
+
+def test_unused_buttons_are_grayed_out_not_missing(app_db):
+    """A button that doesn't apply to an item is there, grayed out, saying why (the teacher's rule,
+    2026-10-10): no hidden placeholders and no missing buttons on rows of the same kind."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    macros = open(os.path.join(here, 'app', 'templates', '_macros.html')).read()
+    assert '{% macro slot(label, why, cls=\'btn btn-secondary btn-sm\') %}<button type="button" class="{{ cls }}" disabled title="{{ why }}">{{ label }}</button>{% endmacro %}' in macros
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert '.slot-empty' not in css
+    app, db = app_db
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, teacher)
+    with app.test_request_context():
+        give(vq, 'sam')
+        db.session.commit()
+    from test_flow import problem_form
+    from app.qgen.models import VProblem
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'Unused', 'What is 3 + 3?', '6', []))
+    vp = VProblem.query.filter_by(title='Unused').one()  # in no one's quiz yet
+    pages = {
+        '/quiz/viewvprob/{}'.format(vp.id): ['disabled title="No one has answered this problem yet">History</button>'],
+        '/quiz/editvprob/{}'.format(vp.id): ['disabled title="No one has answered this problem yet">History</button>'],
+        '/quiz/results/{}'.format(vq.id): ['disabled title="Nothing to grade: not handed in yet">Grade</button>',
+                                           'disabled title="Only one attempt: use its own Archive button">Archive all (1)</button>',
+                                           'disabled title="This quiz has no Paper only questions"'],
+        '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
+        '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
+        '/settings/technical': ['disabled title="Already the default">Reset</button>'],
+        '/userdet': ['disabled title="You can’t delete your own account">Delete</button>',
+                     'title="Teachers write to each other in Teachers’ messages">Message</a>'],
+    }
+    for url, wanted in pages.items():
+        page = teacher.get(url).data.decode()
+        for w in wanted:
+            assert w in page, (url, w)
+    # the same states in the same words everywhere a teacher looks
+    for root, _, files in os.walk(os.path.join(here, 'app')):
+        for f in files:
+            if f.endswith('.html'):
+                text = open(os.path.join(root, f)).read()
+                assert 'Being graded' not in text and '>Not handed in</span>' not in text, f
+
+
+def test_tidy_layouts_at_every_width(app_db):
+    """The rules from the 2026-10-12 sweep of every page at 17 widths: no page scrolls sideways
+    and no group of buttons leaves one alone on a line (checked in a browser; these keep the rules)."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    for rule in ('a.btn[data-back] { display: inline-block; max-width: min(22rem, calc(100vw - 32px)); overflow: hidden; text-overflow: ellipsis;',
+                 '.btn-row.result-archive-all { justify-content: flex-end; }',
+                 '.person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }',
+                 '.history-table thead { display: none; }',
+                 '.keypad { display: grid; grid-template-columns: repeat(4, 1fr); }',
+                 '.pick-table td { overflow-wrap: anywhere; }',
+                 '.btn-row:has(> .btn ~ .btn ~ .btn):not(.result-attempt):not(.result-attempt-buttons):not(.box-links) { display: grid; grid-template-columns: 1fr; }'):
+        assert rule in css, rule
+    tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
+    assert '<div class="btn-row result-attempt result-archive-all">' in tpl  # under the attempts, not beside Retake

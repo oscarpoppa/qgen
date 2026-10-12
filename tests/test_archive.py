@@ -113,7 +113,7 @@ def test_unfinished_and_waiting_attempts_archive_and_show(app_db):
     sam_a = ArchivedAttempt.query.filter_by(student_name='sam').one()
     kim_a = ArchivedAttempt.query.filter_by(student_name='kim').one()
     page = teacher.get('/quiz/archive').data.decode()
-    assert 'Not handed in' in page and 'Being graded' in page
+    assert 'In progress' in page and 'Waiting for grading' in page  # (the same words as everywhere else)
     view = teacher.get('/quiz/archive/{}'.format(sam_a.id)).data.decode()
     assert 'not handed in' in view and 'not graded' in view and '5' in view
     view = teacher.get('/quiz/archive/{}'.format(kim_a.id)).data.decode()

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
-{% from "_macros.html" import back_button, back_home with context %}
+{% from "_macros.html" import back_button, back_home, slot with context %}
 {% from "_macros.html" import avatar with context %}
 
 {% block body_attrs %}{{ watch('profile', note='Your profile has been changed somewhere else since you opened this page.', ask=True) }}{% endblock %}
@@ -19,7 +19,7 @@
     <input type="text" id="nickname" name="nickname" maxlength="{{ current_user.NICKNAME_MAX }}" value="{{ current_user.nickname or '' }}"
            placeholder="Nickname (optional)" autocomplete="nickname" style="flex:1;min-width:180px">
     <button class="btn" title="Use the nickname typed here">Save</button>
-    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1" title="Stop using a nickname. Just your name will show">Remove nickname</button>{% endif %}
+    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1" title="Stop using a nickname. Just your name will show">Remove nickname</button>{% else %}{{ slot('Remove nickname', 'You don’t have a nickname', 'btn btn-secondary') }}{% endif %}
   </form>
 </div>
 

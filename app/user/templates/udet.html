@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_people.html" import people_switch %}
-{% from "_macros.html" import post_button with context %}
+{% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, in_folders with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
@@ -39,11 +39,11 @@
       <div class="btn-row">
         {# their page: quizzes and results, awards #}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="{{ item.shown_name }}'s quizzes, results and awards">Student page</a>
-        {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% endif %}
+        {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Messages with {{ item.shown_name }}">Message</a>{% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message</a>{% endif %}
         <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}" title="Change {{ item.shown_name }}'s name, email or teacher access">Edit</a>
         {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with') }}
-        {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead') }}{% endif %}
-        {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% endif %}
+        {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
+        {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% else %}{{ slot('Delete', 'You can’t delete your own account', 'btn btn-danger btn-sm') }}{% endif %}
       </div>
     </details>
   {% endfor %}
@@ -57,7 +57,7 @@
 <div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
 
-{% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Give a quiz to everyone in {{ fk.name(fk.node.folder) }}">Assign a quiz to this folder</a>{% endif %}{% endset %}
+{% set actions %}{% if fk.node and fk.node.count %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Give a quiz to everyone in {{ fk.name(fk.node.folder) }}">Assign a quiz to this folder</a>{% elif fk.node %}{{ slot('Assign a quiz to this folder', 'No one is in this folder yet', 'btn btn-sm') }}{% endif %}{% endset %}
 {% call folders_page(fk, actions) %}
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>

@@ -1455,11 +1455,6 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 .side-new-badge { flex: 0 0 auto; font-size: var(--fs-xs); padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
 .sub-head .side-new-badge { margin-left: 6px; }
 
-/* rows of buttons line up: a missing button keeps its place (an empty slot its size) */
-.slot-empty { visibility: hidden; pointer-events: none; }
-/* where rows become cards (the same widths as those rules) an empty slot just goes */
-@media (max-width: 640px) { .stack td.actions .slot-empty { display: none; } }
-@container listarea (max-width: 860px) { .stack td.actions .slot-empty { display: none; } }
 /* the Archive: its Quiz column is just a title; where the row of buttons wouldn't fit beside
    the rest (yet the list isn't cards), they make a column instead, all one width */
 .folder-main table.archive-table td[data-label="Quiz"] { min-width: 7rem; }
@@ -1469,7 +1464,6 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
   .archive-table td.actions > :last-child { margin-bottom: 0; }
   .archive-table td.actions .btn { width: 100%; text-align: center; }
 }
-@container page (max-width: 780px) { .stack td.actions .slot-empty { display: none; } }
 /* a row's buttons sit level with the first line of its words */
 td.actions { padding-top: 5px; padding-bottom: 5px; }
 /* "+ Add…" lists all the same width; the problem count stays on one line */
@@ -1778,3 +1772,100 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
   td.actions .btn-stack { flex-direction: column; align-items: flex-end; }
 }
 @media (max-width: 640px) { .stack td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: flex-start; } }
+
+/* ---------- tidy layouts (2026-10-12 sweep of every page at 17 widths) ---------- */
+/* "Archive all" sits under a student's attempts, at the right, in line with each attempt's Archive */
+.btn-row.result-archive-all { justify-content: flex-end; }
+@media (max-width: 640px) { .btn-row.result-archive-all { justify-content: flex-start; } }
+/* a "← back" button named after a long quiz title is cut short ("…"); its tooltip has the whole name */
+a.btn[data-back] { display: inline-block; max-width: min(22rem, calc(100vw - 32px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.page-head .actions { min-width: 0; max-width: 100%; }
+/* a problem's History: where its table won't fit, the long columns wrap and the row's buttons
+   stack, rather than the table scrolling sideways */
+@media (min-width: 641px) { @container page (max-width: 1180px) {
+  .history-table td { white-space: normal; overflow-wrap: anywhere; }
+  .history-table td.actions { width: 1%; min-width: max-content; overflow-wrap: normal; }
+  .history-table td.actions .btn, .history-table td.actions .inline-form { display: block; margin: 0 0 6px; }
+  .history-table td.actions .btn { width: 100%; text-align: center; white-space: nowrap; }
+} }
+/* People: each card's buttons in an even grid (never one left alone on a line) */
+.person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }
+.person-card .btn-row > *, .person-card .btn-row .btn, .person-card .btn-row .inline-form { width: 100%; margin: 0; }
+.person-card .btn-row .btn { text-align: center; }
+/* Problems and Quizzes lists: where a row's buttons can't sit on one line they make an even grid
+   of equal buttons (two by two; five go three and two), never one left alone on a line */
+@container listarea (min-width: 861px) and (max-width: 1080px) {
+  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) { width: calc(2 * 5.6rem + 6px); }
+  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { width: calc(3 * 5.6rem + 12px); }
+  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) > * { display: inline-block; width: 5.6rem; margin: 0 0 6px 0; vertical-align: top; }
+  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; padding-left: 4px; padding-right: 4px; }
+}
+
+/* an attempt's buttons (Grade, Results, Answer key, Archive): on one line beside its date only where
+   the list is wide enough for all four; otherwise under the date, two by two */
+@container listarea (max-width: 1240px) {
+  td.attempts { white-space: normal; }
+  .btn-row.result-attempt { flex-wrap: wrap; }
+  .btn-row.result-attempt-buttons { display: grid; grid-template-columns: repeat(2, max-content); margin-left: 0; padding-left: 0; }
+}
+@container page (max-width: 1240px) {
+  td.attempts { white-space: normal; }
+  .btn-row.result-attempt { flex-wrap: wrap; }
+  .btn-row.result-attempt-buttons { display: grid; grid-template-columns: repeat(2, max-content); margin-left: 0; padding-left: 0; }
+}
+/* a quiz's or student's links (History, View quiz, Edit quiz, Print paper pages...): where they
+   don't fit on one line, two by two, or one under another when there are three */
+@container page (max-width: 900px) {
+  .btn-row.box-links { display: grid; grid-template-columns: repeat(2, max-content); }
+}
+@media (max-width: 480px) {
+  .btn-row.box-links:has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: max-content; display: grid; }
+}
+/* lists shown as cards (phones, narrow lists): a row's buttons in an even grid of equal buttons */
+@media (max-width: 640px) {
+  .stack td.actions:not(:has(.btn-stack)) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
+  .stack td.actions:not(:has(.btn-stack)) > *, .stack td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; }
+}
+@container listarea (max-width: 860px) {
+  .stack td.actions:not(:has(.btn-stack)) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
+  .stack td.actions:not(:has(.btn-stack)) > *, .stack td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; }
+}
+/* a problem's History is a wide table: below about 960px its rows become cards, as on phones */
+@container page (max-width: 960px) {
+  .table-wrap.stack:has(.history-table) { border: 0; box-shadow: none; background: none; }
+  .history-table, .history-table tbody, .history-table tr, .history-table td { display: block; width: 100%; }
+  .history-table thead { display: none; }
+  .history-table tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
+  .history-table td { border: 0; padding: 6px 14px; }
+  .history-table td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
+  .history-table td.actions { display: grid; grid-template-columns: repeat(3, max-content); gap: 6px; width: auto; min-width: 0; }
+  .history-table td.actions .btn, .history-table td.actions .inline-form { margin: 0; width: auto; }
+}
+/* three links: one row of three where there's room, else one under another (never two and one) */
+@container page (max-width: 900px) {
+  .btn-row.box-links:has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: repeat(3, max-content); }
+}
+@media (max-width: 640px) {
+  .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .btn-row.box-links { display: grid; grid-template-columns: max-content !important; }
+  .history-table td.actions { grid-template-columns: max-content; }
+  .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: 1fr; }
+}
+/* the quiz builder's problem list sits in a narrow column: long titles and type names wrap */
+.pick-table td { overflow-wrap: anywhere; }
+.pick-table .badge { white-space: normal; }
+/* phones: a row of three or more buttons goes one under another, full width (never two and one) */
+@media (max-width: 480px) {
+  .btn-row:has(> .btn ~ .btn ~ .btn):not(.result-attempt):not(.result-attempt-buttons):not(.box-links) { display: grid; grid-template-columns: 1fr; }
+  .btn-row:has(> .btn ~ .btn ~ .btn):not(.result-attempt):not(.result-attempt-buttons):not(.box-links) > .btn { width: 100%; margin: 0; text-align: center; }
+}
+/* phones: the math keys under an answer box make an even grid (eight keys: four and four) */
+@media (max-width: 480px) {
+  .keypad { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .keypad .key { width: 100%; }
+  .keypad > :not(.key) { grid-column: 1 / -1; margin-left: 0; }
+}

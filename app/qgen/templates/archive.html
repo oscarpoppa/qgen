@@ -28,8 +28,8 @@
               <td data-label="Quiz"><strong>{{ a.quiz_title }}</strong>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
-                {% elif a.needs_review %}<span class="badge badge-warn">Being graded</span>
-                {% elif a.startdate %}<span class="badge">Not handed in</span>
+                {% elif a.needs_review %}<span class="badge badge-warn badge-status">Waiting for grading</span>
+                {% elif a.startdate %}<span class="badge badge-accent badge-status">In progress</span>
                 {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
               <td data-label="When" class="small when-col">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}

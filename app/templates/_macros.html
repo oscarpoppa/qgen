@@ -69,9 +69,9 @@
   <a class="{{ cls }}" href="{{ target[0] }}" title="Go back to {{ target[1] }}" data-back>← {{ target[1] }}</a>
 {%- endmacro %}
 
-{# an empty place in a row's buttons, the size of the missing button, so the buttons of every
-   row line up (hidden, and gone where rows become cards on a phone) #}
-{% macro slot(label) %}<span class="btn btn-secondary btn-sm slot-empty" aria-hidden="true">{{ label }}</span>{% endmacro %}
+{# a button that doesn't apply to this item: shown, grayed out, with why (rows of the same kind
+   of item always have the same buttons, in the same places; the teacher chose this 2026-10-10) #}
+{% macro slot(label, why, cls='btn btn-secondary btn-sm') %}<button type="button" class="{{ cls }}" disabled title="{{ why }}">{{ label }}</button>{% endmacro %}
 
 {# Back on a page reached from the menu: to the page it was opened from, else Home (Dashboard) #}
 {% macro back_home(cls='btn btn-secondary') %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home', cls) }}{% endmacro %}

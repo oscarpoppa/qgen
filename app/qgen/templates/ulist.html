@@ -18,7 +18,7 @@
           <summary>
             {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <span class="result-box-sum">
-              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">Waiting for grading</span>{% endif %}
+              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
               {% if g.combined is not none %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
               {% elif latest.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
               {% elif latest.status == 'new' %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
@@ -70,7 +70,7 @@
     <div class="box-body">
     {% if not single %}<div class="btn-row box-links">
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Open a page with just {{ item.shown_name }}'s quizzes and awards">Student page</a>
-      {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% endif %}
+      {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message</a>{% endif %}
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></div>{% endif %}
     {% if item.cquizzes and single %}
       {# one student: each quiz is a box that folds to its name, attempts and score #}
@@ -137,7 +137,7 @@
   {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
   <div class="actions">{% if single %}{{ back_button(url_for('user.people'), 'People') }}{% endif %}
     {% if single %}
-      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
+      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% else %}<a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
       <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
     {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}" title="See the same results arranged quiz by quiz">Results by quiz</a>{% endif %}
     <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}" title="{{ 'Choose a quiz to give ' ~ ulst[0].shown_name if single else 'Choose a quiz and give it to students' }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>

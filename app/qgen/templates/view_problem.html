@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button with context %}
+{% from "_macros.html" import back_button, slot with context %}
 {% from "_subjects.html" import subject_labels with context %}
 {% block body_attrs %}{{ watch('problem:%d' % vp.id, note='This problem has been changed since you opened it.', button='Reload', ask=True) }}{% endblock %}
 {% block content %}
@@ -9,7 +9,7 @@
     {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
     <a class="btn" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="Draw three new versions">New examples</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Change this problem's question, values and answer">Edit</a>
-    {% if vp.cproblems %}<a class="btn btn-secondary" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="Every answer students have given to this problem, in every quiz it's been in">History</a>{% endif %}
+    {% if vp.cproblems %}<a class="btn btn-secondary" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="Every answer students have given to this problem, in every quiz it's been in">History</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}
   </div>
 </div>
 <p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.
