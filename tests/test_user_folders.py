@@ -48,10 +48,10 @@ def test_make_folders_and_put_people_in_them(app_db):
         'Put sam in "Math club".'
     assert in_folders('sam') == ['7th grade', 'Math club']
     assert sorted(people(teach)) == ['kim', 'teach'] and people(teach, g7) == ['sam'] and people(teach, club) == ['sam']
-    # All: each folder a box (sam is in both), then Uncategorized as a box
-    assert sorted(people(teach, 'all')) == ['kim', 'sam', 'sam', 'teach']
-    page = without_all_box(teach.get('/userdet?folder=all').data.decode())
-    assert page.count('</svg> 7th grade</a>') == 2 and 'aria-label="Take sam out of Math club"' in page
+    # All: one list, everyone once (sam is in both folders: two chips on one card)
+    assert sorted(people(teach, 'all')) == ['kim', 'sam', 'teach']
+    page = teach.get('/userdet?folder=all').data.decode()
+    assert 'title="Open the folder “7th grade”">' in page and 'aria-label="Take sam out of Math club"' in page
     # dragging from one folder to another moves them (their other folders stay)
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
         'Moved sam to "8th grade".'
@@ -60,8 +60,13 @@ def test_make_folders_and_put_people_in_them(app_db):
     teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
     assert in_folders('sam') == ['8th grade']
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
-    assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': 'all'}, headers=FETCH).get_json()['message'] == \
-        'Took sam out of every folder.'
+    # from the All list onto Uncategorized: refused, as on the Problems and Quizzes pages (which
+    # folder it came out of isn't known; the ✕ on a folder takes them out of that one)
+    out = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': 'all'}, headers=FETCH).get_json()
+    assert 'Drag them out of a folder' in out['error']
+    assert in_folders('sam') == ['8th grade', 'Math club']
+    teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
+    teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': folder('8th grade')})
     assert in_folders('sam') == []
     # the ✕ beside a folder
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})

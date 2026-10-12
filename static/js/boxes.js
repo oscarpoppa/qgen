@@ -120,12 +120,15 @@
     var sel = btn.dataset.levelOf;
     return sel ? document.querySelector(sel) : btn.closest('.level');
   }
-  function folds(level) {
+  //btn: a pair with data-level-fixed also opens and folds the boxes the page keeps as drawn
+  //(data-fixed: Assign's folders of people), without remembering them
+  function folds(level, btn) {
     if (!level) return [];
+    var fixedToo = btn && 'levelFixed' in btn.dataset;
     return Array.prototype.filter.call(level.querySelectorAll(FOLDS), function (d) {
       //hidden by a filter: left alone (folders shown as a row of buttons count too: Expand all
       //shows them all open, static/js/foldertabs.js)
-      return !d.hasAttribute('data-fixed') && !d.closest('[hidden]');
+      return (fixedToo || !d.hasAttribute('data-fixed')) && !d.closest('[hidden]');
     });
   }
   document.addEventListener('click', function (e) {
@@ -136,14 +139,14 @@
     var head = btn.closest('summary');
     if (head) {
       e.preventDefault();
-      if (want && head.parentElement.matches(BOX)) {
+      if (want && head.parentElement.tagName === 'DETAILS') {
         head.parentElement.open = true;
-        if (keep) memory[idOf(head.parentElement)] = 1;
+        if (keep && head.parentElement.matches(BOX)) memory[idOf(head.parentElement)] = 1;
       }
     }
-    folds(levelOf(btn)).forEach(function (d) {
+    folds(levelOf(btn), btn).forEach(function (d) {
       d.open = want;
-      if (keep) memory[idOf(d)] = want ? 1 : 0;
+      if (keep && !d.hasAttribute('data-fixed')) memory[idOf(d)] = want ? 1 : 0;
     });
     if (keep) save();
   });
@@ -185,7 +188,7 @@
       var shown = [];
       document.querySelectorAll('.level-buttons').forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
-        var set = btn ? folds(levelOf(btn)) : [];
+        var set = btn ? folds(levelOf(btn), btn) : [];
         pair.hidden = set.length < 2;
         if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
         var same = shown.some(function (other) {

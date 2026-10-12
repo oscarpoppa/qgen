@@ -1774,8 +1774,6 @@ html.stretching, html.stretching * { cursor: ew-resize !important; user-select: 
 
 /* ---------- tidy layouts (2026-10-12 sweep of every page at 17 widths) ---------- */
 /* "Archive all" sits under a student's attempts, at the right, in line with each attempt's Archive */
-.btn-row.result-archive-all { justify-content: flex-end; }
-@media (max-width: 640px) { .btn-row.result-archive-all { justify-content: flex-start; } }
 /* a "← back" button named after a long quiz title is cut short ("…"); its tooltip has the whole name */
 a.btn[data-back] { max-width: min(22rem, calc(100vw - 32px)); min-width: 0; }
 a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -1901,7 +1899,6 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 }
 /* "Archive all" acts on every attempt, not the one above it: a line sets it apart and it has its
    own look (tinted, dashed edge), unlike the attempts' own buttons */
-.btn-row.result-archive-all { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
 .btn.btn-all { background: var(--surface-2); border-style: dashed; color: var(--muted); }
 .btn.btn-all:not(:disabled):hover { color: var(--text); }
 /* the fixed Score counted column: a "Just for <long name>" badge wraps rather than running into Retake */
@@ -1923,7 +1920,8 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 .link-tip[hidden] { display: none; }
 @media print { .link-tip { display: none; } }
 /* a row of folder buttons: the open folder's Expand all / Collapse all at the row's right end */
-.folder-tabs .tab-pairs { margin-left: auto; display: inline-flex; }
+.folder-tabs .tab-pairs { display: inline-flex; flex-wrap: wrap; padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--border); }
+.folder-tabs .tab-pairs:not(:has(.tab-pair:not([hidden]))) { display: none; }
 .folder-tabs .tab-pair[hidden] { display: none; }
 
 /* Assign: who gets the quiz, at the top, one chip per student (✕ leaves them out); the student
@@ -1962,17 +1960,14 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
   .sub-head > .head-pair { flex: 1 1 100%; min-width: 0; justify-content: flex-start; }
   .sub-head > .head-pair .level-buttons, .sub-head > .head-pair .head-tools { flex-wrap: wrap; }
 }
-/* the Dashboard's rows: a long quiz name is cut short with "…" (its tooltip has the whole name),
-   so a row stays on one line */
-@media (min-width: 641px) {
-  .dash-list > li:not(:has(.dash-pin-text)) { flex-wrap: nowrap; }  /* (a pinned message keeps its details on a line below) */
-  .dash-list > li:not(:has(.dash-pin-text)) > * { flex: 0 0 auto; }
-  .dash-list > li > span:has(> a.name-link:not(.person)), .dash-list > li:not(:has(.dash-pin-text)) > span.muted {
-    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dash-list > li > span:has(> a.name-link:not(.person)) { min-width: 6ch; }
-}
-/* the Dashboard: a box fills the first gap it fits (no hole beside a short box) */
-.dash-grid.masonry-on { grid-auto-flow: row dense; }
+/* the Dashboard's rows: the student | the quiz (its whole name, wrapping if need be) with its
+   state and time under it | the row's button. The rows share these columns (subgrid), so names,
+   quizzes and buttons line up from row to row */
+.dash-list:has(> li > .dash-what) { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 12px; }
+.dash-list > li:has(> .dash-what) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
+.dash-list > li > .dash-what { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; min-width: 0; }
+.dash-list > li > .dash-what > .dash-quiz { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+.dash-list > li:has(> .dash-what) > .dash-go { margin-left: 0; }
 /* phones: a Results box's heading buttons in an even grid (four go two by two, three side by side),
    never one left alone on a line */
 @media (max-width: 640px) {
@@ -1989,3 +1984,17 @@ select.add-select { width: 1.9rem !important; height: 1.9rem; min-height: 0; min
   appearance: none; -webkit-appearance: none; background-image: none; border-radius: 999px; font-weight: 700; cursor: pointer; }
 select.add-select option { text-align: left; font-weight: 400; }
 .move-form:has(> .add-select) { display: inline-flex; vertical-align: middle; margin: 0 0 4px; }
+/* the All view's folder buttons (folderfilter.js): a row for the folders inside the chosen one
+   sits just under it, indented; the chosen folder's own buttons at the end of its row */
+.folder-filter-rows { display: grid; gap: 6px; margin: 0 0 12px; }
+.folder-filter-rows .folder-tabs { margin: 0; }
+.folder-tabs-inner { margin-left: 18px !important; border-style: dotted; }
+.folder-filter-tools-now { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--border); }
+.folder-tab:disabled { opacity: .55; cursor: not-allowed; }
+.folder-filter table[hidden], .folder-filter-empty[hidden] { display: none; }
+.folder-filter-list { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; margin: 0 0 4px 2px; }
+/* a folder button with nothing in it: faded, still a place to drop or to look in */
+.folder-tab.is-empty { opacity: .6; }
+.folder-tab.is-empty[aria-expanded="true"] { opacity: 1; }
+/* phones: a heading's lone button (a quiz's own page: Print) takes the whole line */
+@media (max-width: 640px) { .subject-box > summary .box-actions:has(> :only-child) { grid-template-columns: minmax(0, 1fr); } }

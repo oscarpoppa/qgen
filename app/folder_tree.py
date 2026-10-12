@@ -141,6 +141,19 @@ def indent(depth):
     return '   ' * max(depth - 1, 0)
 
 
+def filter_tree(root, name, page, key_prefix):
+    """The folders for an All view's folder buttons (static/js/folderfilter.js): one list of
+    everything, and each button shows just what's in that folder (and the folders inside it).
+    [{'id', 'name', 'count', 'keys' (the data-box of each thing in it), 'url' (its own page),
+    'children'}]; things in no folder are worked out by the page (Uncategorized)."""
+    def one(node):
+        f = node['folder']
+        return {'id': f.id, 'name': name(f), 'count': node['count'], 'url': page(f.id),
+                'keys': sorted(key_prefix + str(k) for k in node['everyone']),
+                'children': [one(c) for c in node['folders']]}
+    return [one(c) for c in root['folders']]
+
+
 def kit(view, node, root, flat, nodes, page, **words):
     """What _folders.html needs to draw a page's folders. page(view) -> the page's address
     for 'main', 'all' or a folder's id. words: create_url, rename_url(id), delete_url(id),
@@ -166,4 +179,6 @@ def kit(view, node, root, flat, nodes, page, **words):
     }
     out['main_count'] = root['count']
     out.update(words)
+    #the All view's folder buttons (_folders.html all_boxes)
+    out['filter_tree'] = lambda key_prefix: filter_tree(root, out['name'], page, key_prefix)
     return out

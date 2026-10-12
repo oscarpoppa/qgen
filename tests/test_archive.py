@@ -2,7 +2,7 @@
 looked at, restored, or deleted for good."""
 from datetime import datetime
 
-from test_flow import app_db, login, problem_form, without_all_box  # noqa: F401  (fixture)
+from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
 
 
 def setup_quiz(app, teacher, *qtypes):
@@ -176,7 +176,7 @@ def test_deleting_a_student_keeps_their_results(app_db):
     assert db.session.get(User, sam_id) is None and CQuiz.query.count() == 0
     rows = ArchivedAttempt.query.order_by(ArchivedAttempt.original_id).all()
     assert [(r.student_name, r.reason) for r in rows] == [('sam', 'student deleted')] * 2
-    page = without_all_box(teacher.get('/quiz/archive').data.decode())
+    page = teacher.get('/quiz/archive').data.decode()
     # both attempts stay in sam's folder (it keeps its name), each marked as a deleted account
     assert page.count('account deleted') == 2 and '100%' in page and 'Not started' in page
     from test_subjects import side_counts

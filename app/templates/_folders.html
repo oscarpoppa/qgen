@@ -198,18 +198,23 @@
    in no folder as a box of its own, in the folder list's order, so Expand all / Collapse all opens and folds them all.
    loose: how many are in no folder. The caller draws a node's things, like sub_box's:
    {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Uncategorized, n is fk.root) #}
-{% macro all_boxes(fk, loose, every=none) %}
+{% macro all_boxes(fk, loose, every=none, key_prefix='') %}
   {% set draw = caller %}
-  {# first, "All": every one of them in one list (each once), the folder button that's open to
-     begin with; then the folders. Its copies get their own ids (all_copy). #}
   {% if every is not none %}
-  <details class="box sub-box all-box" data-sub="every" data-list>
-    <summary class="sub-head">{{ box_label('folders', fk.all_label, count_of(every|length, fk.unit, fk.units), 'h3') }}</summary>
-    <div class="sub-body level" id="folder-body-every">
-      {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length})|all_copy }}
+  {# the All view: everything in one list, each once; above it a row of folder buttons ("All"
+     first, then the folders, then Uncategorized) that show just what's in that folder (and the
+     folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
+  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
+       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-remember="{{ request.endpoint }}"{% if not fk.readonly %} data-droppable{% endif %}>
+    <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
+    {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
+    {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
+    <div class="folder-filter-list">
+      {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
-  </details>
-  {% endif %}
+  </div>
+  {% else %}
   {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
   {% if loose %}
   <details class="box sub-box" data-sub="none" data-list>
@@ -220,6 +225,7 @@
       {{ draw(fk.root) }}
     </div>
   </details>
+  {% endif %}
   {% endif %}
 {% endmacro %}
 
@@ -249,7 +255,7 @@
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     {# a small "+" beside the chips: it opens the list of folders #}
-    <select name="to" class="move-select add-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in another folder too">
+    <select name="to" class="move-select add-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in {{ 'another folder too' if mine else 'a folder' }}">
       <option value="">+</option>
       {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
     </select>

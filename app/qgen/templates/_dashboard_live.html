@@ -41,8 +41,8 @@
       {% for cq in queue %}
         <li>{{ person_link(cq.taker) }}
           {# just the quiz's name: Grade opens this hand-in #}
-          <span>{{ quiz_link(cq.vquiz) }}</span>
-          <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span>
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
+          <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span></span>
           <span class="btn-row dash-go"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">Grade</a></span></li>
       {% endfor %}
       </ul>
@@ -84,9 +84,9 @@
       {% for cq in handins %}
         <li>{{ person_link(cq.taker) }}
           {# just the quiz's name: the Results button opens this hand-in itself #}
-          <span>{{ quiz_link(cq.vquiz) }}</span>
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
-          <span class="muted small">{{ when(cq.compdate) }}</span>
+          <span class="muted small">{{ when(cq.compdate) }}</span></span>
           <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a></span></li>
       {% endfor %}
       </ul>
@@ -95,8 +95,8 @@
     {% endif %}
     </div>
   </details>
-  {# last, one column wide: it goes into whichever column is shorter (the grid packs boxes into
-     the gaps, masonry.js + .dash-grid dense), so no hole is left beside a short box #}
+  {# last, one column wide: it comes in under the shorter column's last box (masonry.js), so no
+     hole is left beside a short box; the boxes keep their order, for the keyboard too #}
   <details class="box card dash-card" id="dash-out" data-box="out" open>
     <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
       {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn't handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
@@ -107,11 +107,11 @@
       <ul class="dash-list">
       {% for o in out %}
         <li>{{ person_link(o.cq.taker) }}
-          <span>{{ quiz_link(o.cq.vquiz) }}</span>
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(o.cq.vquiz) }}</span>
           {% if o.state == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
-          <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span>
+          <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span></span>
           {# this student's own copy of the quiz (their questions and answers so far); the name opens their student page #}
           <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Assigned</a></span></li>
       {% endfor %}

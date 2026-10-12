@@ -80,16 +80,6 @@ def when_filter(d, style='day'):
         return '{:%b} {}, {}'.format(d, d.day, clock)
     return '{:%a %b} {}, {}'.format(d, d.day, clock)
 
-@app.template_filter('all_copy')
-def all_copy(html):
-    """Markup drawn a second time, in a folder page's "All" box: its ids (and what points at them:
-    labels, aria-controls, data-level-of) get an "all-" in front, so no id is on the page twice."""
-    import re
-    from markupsafe import Markup
-    html = re.sub(r'(\s)(id|for|aria-controls)="(?!all-)', r'\1\2="all-', str(html))
-    html = re.sub(r'data-level-of="#(?!all-)', 'data-level-of="#all-', html)
-    return Markup(html)
-
 @app.template_filter('groupby_month')
 def groupby_month(attempts, attr='archived_at'):
     """Archived attempts by the month they were archived, in the order given (newest first):

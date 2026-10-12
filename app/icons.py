@@ -85,7 +85,7 @@ def icon_or(value):
 
 
 #the ones page scripts draw themselves (calendar.js, folders.js, helper.js, scan_review.js)
-FOR_SCRIPTS = ('calendar', 'folder', 'bulb', 'picture')
+FOR_SCRIPTS = ('calendar', 'folder', 'folders', 'tray', 'sparkle', 'pencil', 'bulb', 'picture')
 
 
 def icon_script():

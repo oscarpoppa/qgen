@@ -555,6 +555,9 @@ def move_user_or_folder():
             name = db.session.get(UserFolder, int(request.form.get('folder'))).name
             message = 'Moved "{}" to {}.'.format(name, '"{}"'.format(target.name) if target else 'the top level')
         elif to in (None, '', 'top', 'main'):
+            #(from the All list, like the Problems and Quizzes pages: which folder isn't known)
+            if here is None:
+                return _group_done('Drag them out of a folder to take them out (or use the ✕ on the folder).', error=True)
             person, f = groups.take_out(request.form.get('user'), here)
             message = ('Took {} out of "{}".'.format(person.shown_name, f.name) if f
                        else 'Took {} out of every folder.'.format(person.shown_name))

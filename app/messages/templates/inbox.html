@@ -110,18 +110,18 @@
 {% if shown %}
   <div class="table-wrap stack list-scroll">
     <table>
-      <thead><tr><th>Student</th><th>Latest</th><th></th></tr></thead>
+      <thead><tr><th>Student</th><th>Latest</th></tr></thead>
       <tbody>
       {% for r in shown %}
         <tr>
-          <td data-label="Student">{{ person_link(r.student, 28) }}
+          {# on Messages the name opens the conversation (their student page is a link at its top) #}
+          <td data-label="Student"><a class="name-link person" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" data-tip="Read and answer {{ r.student.shown_name }}’s messages">{{ avatar(r.student, 28) }}<strong>{{ r.student.shown_name }}</strong></a>
             {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
           <td data-label="Latest">
             {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.shown_name ~ ': ' }}{{ r.last.body }}</div>
               <div class="small muted">{{ r.last.created|when }}</div>
             {% else %}<span class="muted small">No messages yet</span>{% endif %}
           </td>
-          <td class="actions"><a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" title="Read and answer {{ r.student.shown_name }}'s messages">Open</a></td>
         </tr>
       {% endfor %}
       </tbody>

@@ -747,8 +747,19 @@ def list_user(uid):
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet (like My quizzes' own)
     working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
+    #the folder buttons over their one list of quizzes (static/js/folderfilter.js): New and In
+    #progress first, then the Quizzes page's folders that have some of theirs in them
+    from app import folder_tree
+    def keys(gs):
+        return sorted('q:{}'.format(g['vquiz'].id) for g in gs)
+    def some(nodes):
+        return [dict(n, children=some(n['children'])) for n in nodes if n['count']]
+    quiz_filter = [{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [], 'url': None},
+                   {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None}]
+    if quiz_tree:
+        quiz_filter += some(folder_tree.filter_tree(quiz_tree, lambda f: f.title, lambda fid: None, 'q:'))
     return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s student page".format(ulst.shown_name),
-                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working)
+                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter)
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
 @qgen_bp.route('/quiz/results', methods=['GET'])

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, person_link, quiz_name, box_label, count_of, expand_collapse, slot with context %}
+{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, expand_collapse, slot with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
@@ -15,8 +15,7 @@
   {% for vquiz_id in seen %}
     {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
     <details class="box card grading-group" data-list>
-      <summary class="dash-head">{{ box_label('note', quiz_name(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}
-        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vquiz_id) }}" title="This quiz's history: everyone's attempts and scores">History</a></span></summary>
+      <summary class="dash-head">{{ box_label('note', quiz_link(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}</summary>
       <div class="table-wrap stack">
         <table>
           <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>

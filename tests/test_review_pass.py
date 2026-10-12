@@ -198,6 +198,15 @@ def test_my_quizzes_badge_stays_until_the_quiz_is_handed_in(app_db):
 
 # ---------------------------------------------------------------- finding your way
 
+def student_filter(page):
+    """A student page's folder buttons (folderfilter.js data): [(name, [vquiz ids], children)]."""
+    import json
+    raw = page.split('<script type="application/json" class="folder-filter-tree">')[1].split('</script>')[0]
+    def one(n):
+        return (n['name'], sorted(int(k[2:]) for k in n['keys']), [one(c) for c in n['children']])
+    return [one(n) for n in json.loads(raw)]
+
+
 def test_menu_marks_where_you_are(app_db):
     app, db = app_db
     teach = login(app, 'teach')
@@ -529,7 +538,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     page = teach.get('/dashboard').data.decode()
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
-    assert '>“Week 1”</a></span>' in box and 'data-tip="Open “Week 1”’s history' in box  # the name opens its history; the button their copy
+    assert '>Week 1</a></span>' in box and 'data-tip="Open the history of “Week 1”' in box  # the name opens its history; the button their copy
     assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Assigned</a>' in box
     assert '>Student page</a>' not in box  # sam's name is the way to their page
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
@@ -553,18 +562,19 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
-    # Math holds A and (in Fractions) B; C is in no folder; a folder with none of sam's quizzes isn't shown
-    # (the folders before Uncategorized, as in every folder list)
-    assert page.index('data-folder-box="{}"'.format(math.id)) < page.index('data-folder-box="none"')
-    math_box = page[page.index('data-folder-box="{}"'.format(math.id)):page.index('data-folder-box="none"')]
-    assert '>A</span>' in math_box and 'data-folder-box="{}"'.format(frac.id) in math_box and '>B</span>' in math_box
-    empty = VQGroup.query.filter_by(title='Empty one').one()
-    assert '>C</span>' in page[page.index('data-folder-box="none"'):] and '>C</span>' not in math_box
-    assert 'data-folder-box="{}"'.format(empty.id) not in page
-    # no quiz folders at all: the quizzes are listed as before
+    # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
+    # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder
+    # with none of sam's quizzes isn't a button
+    for q in (a, b, c):
+        assert page.count('data-fkey="q:{}"'.format(q.id)) == 1
+    tree = student_filter(page)
+    assert [t[0] for t in tree] == ['New', 'In progress', 'Math']
+    assert tree[2][1] == sorted([a.id, b.id]) and tree[2][2] == [('Fractions', [b.id], [])]
+    assert all(c.id not in t[1] for t in tree[2:])
+    # no quiz folders at all: just the automatic New and In progress
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
-    assert not re.search(r'data-folder-box="(?!new"|started")', page) and '>C</span>' in page  # only the automatic New and In progress boxes
+    assert [t[0] for t in student_filter(page)] == ['New', 'In progress'] and 'data-fkey="q:{}"'.format(c.id) in page
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):
@@ -893,13 +903,10 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page  # its folder too
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
-    # the teacher's student page: a New box with the same quiz and a badge
+    # the teacher's student page: a New folder button with the same quiz, and In progress beside it
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    box = page.split('data-folder-box="new"')[1].split('        </div>\n      </details>')[0]
-    assert '1 new</span>' in box and 'Fresh' in box and 'Begun' not in box and 'Done' not in box
-    # and an In progress box beside it, like My quizzes' own
-    box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
-    assert str(ico('pencil')) in box and 'In progress' in box and '1 in progress</span>' in box and 'Begun' in box and 'Fresh' not in box and 'Done' not in box
+    tree = dict((t[0], t[1]) for t in student_filter(page))
+    assert tree['New'] == [fresh.id] and tree['In progress'] == [begun.id]
     # started: no longer new, no badge
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
@@ -908,9 +915,8 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 in progress</span>' in mine
     assert 'No new quizzes right now. {}'.format(ico('party')) in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'nothing new</span>' in page
-    box = page.split('data-folder-box="started"')[1].split('        </div>\n      </details>')[0]
-    assert '2 in progress</span>' in box and 'Fresh' in box and 'Begun' in box
+    tree = dict((t[0], t[1]) for t in student_filter(page))
+    assert tree['New'] == [] and tree['In progress'] == sorted([fresh.id, begun.id])
 
 
 def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
@@ -1012,7 +1018,7 @@ def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db
     S.submit(cq, {1: '4'})
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert 'href="/quiz/results/{}" data-tip="Open “Handed”’s history: everyone’s attempts and scores">“Handed”</a>'.format(vq.id) in row
+    assert 'href="/quiz/results/{}" data-tip="Open the history of “Handed”: everyone’s attempts and scores">Handed</a>'.format(vq.id) in row
     assert 'href="/quiz/listuser/{}" data-tip="Open sam’s student page"'.format(ids('sam')) in row and '>Student page</a>' not in row
 
 
@@ -1026,7 +1032,7 @@ def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(a
     db.session.commit()
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert '>“Essay week”</a>' in row and 'href="/quiz/results/{}"'.format(vq.id) in row and '>Student page</a>' not in row
+    assert '>Essay week</a>' in row and 'href="/quiz/results/{}"'.format(vq.id) in row and '>Student page</a>' not in row
 
 
 def test_an_archive_folder_can_be_deleted_for_good(app_db):
@@ -1233,7 +1239,8 @@ def test_folder_lists_have_one_order(app_db):
     assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3].startswith('Due within') \
         and names[4] == 'Uncategorized', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert page.index('data-folder-box="new"') < page.index('data-folder-box="started"')
+    names = [t[0] for t in student_filter(page)]
+    assert names.index('New') < names.index('In progress')
     # the folder menus too: All, the folders, Uncategorized
     from app.qgen import services as S
     with app.test_request_context():
@@ -1261,7 +1268,8 @@ def test_one_set_of_sizes_and_accessible_controls():
 def test_list_items_have_only_buttons(app_db):
     """On every list, an item's actions are buttons: no text link in a row, a Dashboard line or
     a box's heading, and no "More" menus. The one exception: a student's or quiz's name can be
-    a name link (to their student page or its history, with a tooltip), never in a heading."""
+    a name link (to their student page, its history or their messages, with a tooltip), also on a
+    box's heading, but never on a folder's heading (it becomes a folder button)."""
     import re
     from app.qgen import services as S
     app, db = app_db
@@ -1280,8 +1288,10 @@ def test_list_items_have_only_buttons(app_db):
             links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link)\b', a)]
             assert not links, (url, links, item[:300])
             names = re.findall(r'<a class="name-link[^"]*" href="([^"]+)" data-tip="([^"]+)"', item)
-            assert all(re.match(r'/quiz/(listuser|results)/\d+$', h) and tip.startswith('Open ') for h, tip in names), (url, names)
-            if item.startswith('<summary'):
+            assert all(re.match(r'/(quiz/(listuser|results)|messages)/\d+$', h) and tip.startswith(('Open ', 'Read ')) for h, tip in names), (url, names)
+            # a name can be a link on a box's heading (a click there opens the link, the box
+            # stays), but not on a folder's heading: that becomes a folder button
+            if item.startswith('<summary class="sub-head"'):
                 assert 'name-link' not in item, (url, item[:300])
         assert 'row-menu' not in main and 'person-link' not in main, url
 
@@ -1599,7 +1609,6 @@ def test_tidy_layouts_at_every_width(app_db):
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     for rule in ('a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }',
-                 '.btn-row.result-archive-all { justify-content: flex-end; }',
                  '.person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }',
                  '.history-table thead { display: none; }',
                  '.keypad { display: grid; grid-template-columns: repeat(4, 1fr); }',
@@ -1607,7 +1616,7 @@ def test_tidy_layouts_at_every_width(app_db):
                  '.btn-row:has(> .btn ~ .btn ~ .btn):not(.result-attempt):not(.result-attempt-buttons):not(.box-links) { display: grid; grid-template-columns: 1fr; }'):
         assert rule in css, rule
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
-    assert '<div class="btn-row result-attempt result-archive-all">' in tpl  # under the attempts, not beside Retake
+    assert 'result-archive-all' not in tpl and '{% if archive_all %}{{ archive_all_button(g, student) }}{% endif %}' in tpl  # beside Retake, no row of its own
 
 
 def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
@@ -1657,14 +1666,16 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert '.result-box > .table-wrap > table > thead th:nth-child(2) { width: 16rem; }' in css
     assert '.result-attempt-buttons .attempt-open { min-width: 5.5rem; text-align: center; }' in css
     assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
-    # "Archive all" acts on every attempt: set apart by a line, with its own look
+    # "Archive all" acts on every attempt: its own look, on the quiz's heading line
     assert 'class="btn btn-secondary btn-sm btn-all" disabled title="Only one attempt' in page
-    assert '.btn-row.result-archive-all { border-top: 1px solid var(--border);' in css
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
     # with two attempts it's the real button, with the same look
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<button class="btn btn-secondary btn-sm btn-all" title="Move every one of sam' in page and '>Archive all (2)</button>' in page
+    # (a button on the heading sending a form kept outside the heading: no form inside a summary)
+    form_id = 'archive-all-{}-{}'.format(ids('sam'), vq.id)
+    assert '<button class="btn btn-secondary btn-sm btn-all" form="{}" title="Move every one of sam'.format(form_id) in page and '>Archive all (2)</button>' in page
+    assert 'id="{}" class="inline-form" hidden'.format(form_id) in page
 
 
 def test_assign_says_who_gets_the_quiz(app_db):
@@ -1703,8 +1714,9 @@ def test_a_folders_own_things_have_a_divider_and_their_own_expand_collapse():
 def test_set_wide_controls_sit_on_the_heading_line(app_db):
     """Controls for a whole box go on its heading line, not a row of their own: a folder's
     Expand all / Collapse all / Open this folder (folder pages), a student-page quiz's
-    "Archive all", Results by quiz's History / View / Edit / Print, and Results by student's
-    Student page / Message / Assign. And never two Expand/Collapse pairs for the same boxes."""
+    "Archive all", Results by quiz's View / Edit / Print, and Results by student's Message /
+    Assign; the quiz's or student's name on the heading is the link to its history or student
+    page. And never two Expand/Collapse pairs for the same boxes."""
     import os, re
     app, db = app_db
     teach = login(app, 'teach')
@@ -1713,17 +1725,19 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     box = page[page.index('data-quiz-box='):]
     head = box[:box.index('</summary>')]
-    assert '>History</a>' in head and '>Archive all (2)</button>' in head
-    assert 'result-archive-all' not in box[:box.index('</details>')]
+    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head and '>History</a>' not in head and '>Archive all (2)</button>' in head
+    assert '<form' not in head and 'result-archive-all' not in box[:box.index('</details>')]
     page = teach.get('/quiz/results').data.decode()
     head = page[page.index('id="quiz-{}"'.format(vq.id)):]
     head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and '>View quiz</a>' in head and '>Edit quiz</a>' in head
+    assert '<span class="box-actions">' in head and '>View quiz</a>' in head and '>Edit quiz</a>' in head and '>History</a>' not in head
+    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head
     assert 'box-links' not in page[page.index('<main'):]
     page = teach.get('/quiz/listuser').data.decode()
     head = page[page.index('id="student-{}"'.format(ids('sam'))):]
     head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and '>Student page</a>' in head and '>Assign a quiz</a>' in head
+    assert '<span class="box-actions">' in head and '>Student page</a>' not in head and '>Assign a quiz</a>' in head
+    assert 'class="name-link" href="/quiz/listuser/{}"'.format(ids('sam')) in head
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()
@@ -1740,20 +1754,30 @@ def test_grading_tables_line_their_buttons_up():
 
 
 def test_folder_pages_open_on_all(app_db):
-    """A folder page's All view starts with an "All" box (the first folder button, open to begin
-    with): every item in one list, each once, its copies' ids prefixed so none is on the page twice."""
-    import re
+    """A folder page's All view is one list, each thing once (no copies: no id twice), with the
+    folder buttons above it (static/js/folderfilter.js): All first, then the folders with the keys
+    of what's in each (sub-folders included), then Uncategorized worked out by the page."""
+    import json, re
+    from app.qgen.models import VQGroup, VQuiz
     app, db = app_db
     teach = login(app, 'teach')
-    teach.post('/quiz/vqgroups', data={'name': 'Week 1'})
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Week 1'})
+    week = VQGroup.query.filter_by(title='Week 1').one()
+    teach.post('/quiz/subjects/quizzes/new', data={'name': 'Day 2', 'parent': week.id})
+    day = VQGroup.query.filter_by(title='Day 2').one()
+    make_quiz(app, teach, 'Filed one')
     make_quiz(app, teach, 'Loose one')
-    for url in ('/quiz/listvq?folder=all', '/quiz/results?folder=all', '/userdet?folder=all', '/quiz/listuser?folder=all'):
+    filed = VQuiz.query.filter_by(title='Filed one').one()
+    teach.post('/quiz/subjects/quizzes/file', data={'subject': day.id, 'items': [filed.id]})
+    page = teach.get('/quiz/listvq?folder=all').data.decode()
+    assert 'data-folder-filter data-prefix="quiz:"' in page and 'class="box sub-box' not in page
+    assert page.count('data-box="quiz:{}"'.format(filed.id)) == 1  # once, though it's in a folder
+    tree = json.loads(re.search(r'<script type="application/json" class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
+    assert [(n['name'], n['keys']) for n in tree] == [('Week 1', ['quiz:{}'.format(filed.id)])]
+    assert [(n['name'], n['keys']) for n in tree[0]['children']] == [('Day 2', ['quiz:{}'.format(filed.id)])]
+    ids = re.findall(r'\sid="([^"]+)"', page)
+    assert len(ids) == len(set(ids))
+    for url in ('/quiz/results?folder=all', '/userdet?folder=all', '/quiz/listuser?folder=all', '/quiz/archive?folder=all', '/quiz/listvp?folder=all'):
         page = teach.get(url).data.decode()
-        if 'class="box sub-box all-box"' not in page:
-            continue  # (no folders on this page in the test data: no All box needed)
-        assert page.index('data-sub="every"') < page.index('data-sub="none"'), url
         ids = re.findall(r'\sid="([^"]+)"', page)
         assert len(ids) == len(set(ids)), (url, [i for i in ids if ids.count(i) > 1][:3])
-    from app import all_copy
-    out = str(all_copy('<details id="quiz-3"><button data-level-of="#quiz-3 > .x"></button><label for="u-1"></label><b data-id="7"></b></details>'))
-    assert 'id="all-quiz-3"' in out and 'data-level-of="#all-quiz-3 > .x"' in out and 'for="all-u-1"' in out and 'data-id="7"' in out

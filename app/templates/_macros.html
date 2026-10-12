@@ -104,12 +104,17 @@
   {%- else %}<span class="muted">someone</span>{% endif -%}
 {%- endmacro %}
 
-{# a quiz's title in a teacher's row, as a link to its History (everyone's attempts and scores);
-   plain when the quiz is gone #}
+{# a quiz's title in a teacher's row or a box heading, as a link to its History (everyone's
+   attempts and scores); plain (in quotes) when the quiz is gone #}
 {% macro quiz_link(vq, title=none, strong=false) -%}
   {%- set t = title or (vq.title if vq else '') -%}
-  {%- if vq -%}<a class="name-link" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" data-tip="Open “{{ t }}”’s history: everyone’s attempts and scores">{% if strong %}<strong>“{{ t }}”</strong>{% else %}“{{ t }}”{% endif %}</a>
+  {%- if vq -%}<a class="name-link" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" data-tip="Open the history of “{{ t }}”: everyone’s attempts and scores">{% if strong %}<strong>{{ t }}</strong>{% else %}{{ t }}{% endif %}</a>
   {%- else %}“{{ t }}”{% endif -%}
+{%- endmacro %}
+
+{# a student's name as a link to their student page, no picture (a box heading's title) #}
+{% macro student_link(u) -%}
+  <a class="name-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student page">{{ u.shown_name }}</a>
 {%- endmacro %}
 
 {# a quiz's title in a teacher's list, plain (its "History" button goes beside it) #}

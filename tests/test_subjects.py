@@ -119,8 +119,8 @@ def test_problems_page_lists_by_folder(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'items': [probs['Angles'].id]})
     db.session.expire_all()
     assert [p.title for p in alg.vproblems] == ['Area']
-    # a folder that's gone shows All problems
-    assert shown(teacher, 'problems', 999) == [] and sorted(set(everything(teacher, 'problems'))) == ['Add', 'Angles', 'Area']
+    # a folder that's gone shows All problems: one list, each once (the folder buttons narrow it)
+    assert sorted(shown(teacher, 'problems', 999)) == ['Add', 'Angles', 'Area'] and sorted(everything(teacher, 'problems')) == ['Add', 'Angles', 'Area']
 
 
 def test_quizzes_page_lists_by_folder(app_db):
@@ -134,10 +134,12 @@ def test_quizzes_page_lists_by_folder(app_db):
     p2 = VQGroup.query.one()
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [VQuiz.query.filter_by(title='Q2').one().id]})
     assert shown(teacher, 'quizzes', p2.id) == ['Q2'] and shown(teacher, 'quizzes', 'main') == ['Q1']
-    # All quizzes: each folder a box, then Uncategorized as a box, for Expand all / Collapse all
-    assert shown(teacher, 'quizzes') == [] and everything(teacher, 'quizzes') == ['Q2', 'Q1']  # Uncategorized last, like the folder list
+    # All quizzes: one list, each once, newest first; folder buttons (folderfilter.js) narrow it,
+    # and take drops like the folder list
+    assert shown(teacher, 'quizzes') == ['Q2', 'Q1'] and everything(teacher, 'quizzes') == ['Q2', 'Q1']
     page = teacher.get('/quiz/listvq?folder=all').data.decode()
-    assert 'data-sub="{}"'.format(p2.id) in page and 'data-sub="none"' in page and 'data-drop="top"' in page
+    q2 = VQuiz.query.filter_by(title='Q2').one()
+    assert '"keys": ["quiz:{}"]'.format(q2.id) in page and '"name": "Period 2"' in page and 'data-droppable' in page
 
 
 def test_one_at_a_time_and_dragging(app_db):
