@@ -1455,7 +1455,9 @@ def test_results_rows_are_one_line_tall(app_db):
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     app, db = app_db
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert 'td.actions .btn-stack { flex-direction: row; justify-content: flex-end; align-items: center; }' in css
+    assert 'td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; }' in css
+    # an attempt's own line never wraps where the list is wide: the row's buttons stack instead
+    assert '@media (min-width: 641px) { .btn-row.result-attempt-buttons { flex-wrap: nowrap; } }' in css
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
     assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (2)')" in tpl

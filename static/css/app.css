@@ -1480,7 +1480,11 @@ td.person-folders { max-width: 10.5rem; }
 .stack .btn-stack { align-items: flex-start; }
 /* a results row's buttons side by side when there's room, so each student is one line
    tall, not three; a narrow list stacks them again */
-td.actions .btn-stack { flex-direction: row; justify-content: flex-end; align-items: center; }
+td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+/* ...but an attempt's own line (date, score, its buttons) comes first: it never wraps where the
+   list is wide, and the row's buttons above make way by stacking (their column shrinks first) */
+@media (min-width: 641px) { .btn-row.result-attempt-buttons { flex-wrap: nowrap; } }
+@container listarea (max-width: 1080px) { .btn-row.result-attempt-buttons { flex-wrap: wrap; } }
 @container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }
 @media (max-width: 640px) { .stack td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; } }
 details.problem-list > summary { white-space: nowrap; }
