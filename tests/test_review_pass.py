@@ -1470,8 +1470,16 @@ def test_a_folded_student_says_where_they_are(app_db):
     sam = page[page.index('id="student-{}"'.format(ids('sam'))):]
     head = sam[:sam.index('</summary>')]
     assert '1 done · avg 100%' in head and '1 not started' in head and 'to grade' not in head
+    # colored like every other score: green from 70%, amber from 50%, red below
+    assert 'class="badge badge-ok" title="Attempts handed in and graded' in head
+    with app.test_request_context():
+        S.submit(give(vq, 'kim'), {1: '5'})
+        db.session.commit()
+    page = teacher.get('/quiz/listuser').data.decode()
     kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert 'student-sums' not in kim[:kim.index('</summary>')]  # nothing given to kim: nothing to say
+    assert 'class="badge badge-bad" title="Attempts handed in and graded, and their average score">1 done · avg 0%' in kim[:kim.index('</summary>')]
+    emma = page[page.index('id="student-{}"'.format(ids('teach'))):]
+    assert 'student-sums' not in emma[:emma.index('</summary>')]  # nothing given: nothing to say
 
 
 def test_uncategorized_everywhere(app_db):

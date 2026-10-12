@@ -60,7 +60,7 @@
       {% set sum_going = item.cquizzes|selectattr('status', 'equalto', 'started')|list|length %}
       {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
       {% if not single and item.cquizzes %}<span class="student-sums">
-        {% if sum_done %}<span class="badge badge-ok" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % ((sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length)) }}%</span>{% endif %}
+        {% if sum_done %}{% set sum_avg = (sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length) %}<span class="badge {{ 'badge-ok' if sum_avg >= 70 else 'badge-warn' if sum_avg >= 50 else 'badge-bad' }}" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
         {% if sum_waiting %}<span class="badge badge-warn" title="Attempts waiting for you to grade written answers">{{ sum_waiting }} to grade</span>{% endif %}
         {% if sum_going %}<span class="badge badge-accent" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
         {% if sum_fresh %}<span class="badge" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}
