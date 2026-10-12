@@ -230,14 +230,14 @@
 {% endmacro %}
 
 {# one folder's page: like the All view, everything in it (and in the folders inside it) in one
-   list, each once, with folder buttons over it ("All in “X”", its folders, then "“X” itself"; a
-   folder with no folders inside it has just its own button, so every folder page looks alike).
+   list, each once, with folder buttons over it ("All in “X”", its folders, then "Uncategorized",
+   grayed out when there are no folders inside it), laid out like every other level.
    The caller draws the list: {% call(n) folder_items(fk, key_prefix) %} #}
 {% macro folder_items(fk, key_prefix) %}
   {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
   {% set name = fk.name(fk.node.folder) %}
-  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ ('All in “' ~ name ~ '”') if fk.node.folders else ('“' ~ name ~ '”') }}"
-       data-main-label="“{{ name }}” itself" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All in “{{ name }}”"
+       data-main-label="Uncategorized" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
        data-remember="{{ request.endpoint }}:{{ fk.view }}"{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
     {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
@@ -250,7 +250,7 @@
 
 {# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
-  <p class="card empty small">{% if fk.node %}Nothing in this folder{{ ' itself' if has_folders }} yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
+  <p class="card empty small">{% if fk.node %}Nothing {{ 'uncategorized ' if has_folders }}in this folder yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
   {% elif fk.view == 'main' %}Everything is in a folder. Pick a folder, or {{ fk.all_label }}.{% else %}Nothing here yet.{% endif %}</p>
 {% endmacro %}
 

@@ -18,10 +18,10 @@ This covers Problems, Quizzes, People (Accounts and Results), Results by quiz, t
 - **Top:** the page title, with the page's Expand all / Collapse all at the right.
 - **Folder buttons:** a row on a dashed band.
   - The order is always: **All** (chosen to begin with), the automatic ones (New, In progress), the folders, then **Uncategorized**.
-  - A folder with folders inside it adds a second row: “All in “X”” first (chosen while the list shows everything in X), then its folders.
+  - **Every level has the same layout.** Choosing a folder adds a row under it laid out like the top one: **All in “X”** (chosen while the list shows everything in X), its folders, then **Uncategorized** (what's in X but in none of its folders; grayed out when X has no folders inside). This repeats at every depth, and a folder's own page uses it too.
   - The open tab and its panel share a light accent tint and outline; closed tabs are dimmed; the open tab in the second row is filled solid.
   - A folder's own page shows the same tabs; a folder with no folders inside it has just its own tab.
-  - The chosen folder's own buttons sit right after its button: Expand all / Collapse all, then Open this folder, then any folder action such as "Assign a quiz to this folder".
+  - The chosen tab's buttons sit at the end of its row, at every level, All included: Expand all / Collapse all, then Open this folder (real folders only), then any folder action such as "Assign a quiz to this folder". The page heading's own pair steps aside for them.
 - **One list:** each thing appears once, and the folder buttons narrow it.
 - **Empty folders:** faded but still clickable, in the tabs and in the folder list (which shows 0). A folder with nothing in it says "Nothing in “X” yet."
 - **Folder options:** a pop-over that floats over the page and closes on a click elsewhere or Esc.

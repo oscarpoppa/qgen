@@ -132,7 +132,7 @@
   {% if not shown and (showing or fk.view in ('new', 'started', 'soon')) %}
     <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
   {% elif not shown %}
-    <p class="card empty small">{% if fk.node %}No quizzes in this folder{{ ' itself' if fk.node.folders }}. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+    <p class="card empty small">{% if fk.node %}No {{ 'uncategorized ' if fk.node.folders }}quizzes in this folder. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
 {% endcall %}
 {% endif %}

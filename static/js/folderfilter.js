@@ -2,8 +2,9 @@
  * thing once, and a row of folder buttons above it narrows the list to one folder (with the
  * folders inside it). "All" is first and chosen to begin with; then the folders, then
  * Uncategorized (what's in no folder; grayed out when everything is in one). Choosing a folder
- * that has folders inside it shows a second row: "All in “X”" (chosen while everything in X is
- * shown), then the folders inside it. The chosen folder's own buttons
+ * shows a second row laid out like the top one: "All in “X”" (chosen while everything in X is
+ * shown), the folders inside it, then "Uncategorized" (what's in none of them; grayed out when X
+ * has no folders inside). Every level, All included, has Expand all / Collapse all at its end. The chosen folder's own buttons
  * ("Open this folder", "Assign a quiz to this folder") sit at the end of its row. The page starts on
  * All; the choice is kept only across reloads from the page itself. A folder button takes a drag like the folder
  * list does (data-drop). Works with the name filter: each hides with its own flag (filter.js). */
@@ -65,11 +66,23 @@
     var chosen = 'all', fromHere = false;
     try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
     try { if (fromHere) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
-    if (chosen !== 'all' && chosen !== 'none' && !byId[chosen]) chosen = 'all';
+    //(a folder's own things, outside the folders inside it: 'self:<id>')
+    function base() { return chosen.indexOf('self:') === 0 ? chosen.slice(5) : chosen; }
+    function isFolder(id) { return /^\d+$/.test(id) && !!byId[id]; }
+    if (chosen !== 'all' && chosen !== 'none' && !byId[base()]) chosen = 'all';
+    if (chosen.indexOf('self:') === 0 && !isFolder(base())) chosen = 'all';
     if (chosen === 'none' && (!loose || 'noMain' in box.dataset)) chosen = 'all';
+    //what's in a folder itself: in it, and in none of the folders inside it
+    function own(n) {
+      var out = {};
+      Object.keys(n.keySet).forEach(function (k) {
+        if (!n.children.some(function (c) { return c.keySet[k]; })) out[k] = 1;
+      });
+      return out;
+    }
 
     function path() {  // the chosen folder and the folders it's in, from the top
-      var out = [], id = chosen;
+      var out = [], id = base();
       while (id && byId[id]) { out.unshift(String(id)); id = parentOf[id]; }
       return out;
     }
@@ -78,7 +91,7 @@
       span.className = 'folder-filter-tools-now';
       //Expand all / Collapse all for what this folder shows (boxes.js shows them with two or
       //more boxes, and puts these first: the page's own pair steps aside meanwhile)
-      var label = id === null ? (box.dataset.mainLabel || 'Uncategorized') : byId[id].name;
+      var label = id === 'all' ? (box.dataset.allLabel || 'All') : id === null ? (box.dataset.mainLabel || 'Uncategorized') : byId[id].name;
       var pair = document.createElement('span');
       pair.className = 'level-buttons';
       [['open', 'Expand all', 'Open every one in \u201c'], ['close', 'Collapse all', 'Fold every one in \u201c']].forEach(function (b) {
@@ -96,8 +109,8 @@
       span.appendChild(pair);
       var t = box.querySelector('template.folder-filter-tools[data-for="' + id + '"]');
       if (t) span.appendChild(t.content.cloneNode(true));
-      var n = byId[id], url = n ? n.url : box.dataset.mainUrl;
-      if (!url) return span;
+      var n = byId[id], url = n ? n.url : id === null ? box.dataset.mainUrl : '';
+      if (!url || !isFolder(String(id)) && id !== null) return span;
       var open = document.createElement('a');
       open.className = 'btn btn-secondary btn-xs';
       open.href = url;
@@ -121,16 +134,15 @@
       row.appendChild(label);
       row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
       tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
-      if (!('noMain' in box.dataset)) {  // (a folder with no folders inside it: just its own button)
-        var none = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
-        if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
-        row.appendChild(none);
-      }
+      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? items().length : loose, 'tray');
+      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
+      else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
+      row.appendChild(none);
       rows.appendChild(row);
       //a row for the folders inside each chosen folder
       p.forEach(function (id) {
         var n = byId[id];
-        if (!n.children.length) return;
+        if (!isFolder(id)) return;  // (New, In progress: not folders)
         var sub = document.createElement('div');
         sub.className = 'folder-tabs folder-tabs-inner';
         sub.setAttribute('role', 'group');
@@ -142,23 +154,31 @@
         whole.title = 'Show everything in “' + n.name + '” and the folders inside it';
         sub.appendChild(whole);
         n.children.forEach(function (c) { sub.appendChild(button(String(c.id), c.name, c.count, 'folder')); });
+        //last, what's in the folder itself and in none of the folders inside it (like Uncategorized
+        //at the top); grayed out when there are no folders inside, since it's the same as All in
+        var mine = Object.keys(own(n)).length;
+        var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
+        self.classList.add('folder-tab-self');
+        self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
+        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+        else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
+        sub.appendChild(self);
         rows.appendChild(sub);
       });
       //which buttons are chosen: the folder and the ones it's in
       rows.querySelectorAll('.folder-tab').forEach(function (b) {
         var on = b.dataset.folder === chosen || (!b.classList.contains('folder-tab-all') && p.indexOf(b.dataset.folder) !== -1);
+        if (b.classList.contains('folder-tab-self')) on = b.dataset.folder === chosen;
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
         b.setAttribute('aria-expanded', on ? 'true' : 'false');
       });
-      //the chosen folder's own buttons at the end of the last row
-      if (chosen !== 'all') {
-        var t = tools(chosen === 'none' ? null : chosen);
-        if (t.childNodes.length) rows.lastElementChild.appendChild(t);
-      }
+      //the chosen folder's own buttons at the end of the last row (All's too: every level has them)
+      var t = tools(chosen === 'none' ? null : base());
+      if (t.childNodes.length) rows.lastElementChild.appendChild(t);
     }
 
     function apply() {
-      var keep = chosen === 'all' ? null : chosen === 'none' ? null : byId[chosen].keySet;
+      var keep = chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
       items().forEach(function (el) {
         var k = keyOf(el), hide = chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
         window.qgenHideRow ? window.qgenHideRow(el, 'folder', hide) : (el.hidden = hide);
@@ -173,7 +193,8 @@
       }
       note.hidden = shown || chosen === 'all';
       list.hidden = !shown && chosen !== 'all';  // (no empty frame above the note)
-      note.textContent = chosen === 'none' ? 'Everything is in a folder.' : 'Nothing in \u201c' + (byId[chosen] ? byId[chosen].name : '') + '\u201d yet.';
+      var nm = byId[base()] ? byId[base()].name : '';
+      note.textContent = chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
       //empty tables' headings and the counts follow
       list.querySelectorAll('table').forEach(function (t) {
         var rowsIn = t.querySelectorAll('tbody tr[data-box]');
@@ -187,7 +208,7 @@
       var b = e.target.closest('.folder-tab');
       if (!b || b.disabled) return;
       var id = b.dataset.folder;
-      if (b.classList.contains('folder-tab-all')) { choose(id); return; }
+      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self')) { choose(id); return; }
       //pressing the chosen folder again goes back up a level (or to All)
       if (id === chosen) id = byId[id] && parentOf[id] ? parentOf[id] : 'all';
       choose(id);
@@ -204,7 +225,7 @@
       document.querySelectorAll('.side-row a[href]').forEach(function (a) {
         var id = sideFor(a);
         if (id === null) return;
-        var on = id === chosen;
+        var on = id === base();
         a.closest('.side-row').classList.toggle('current', on);
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
@@ -222,7 +243,7 @@
     function retitle() {
       if (!heading || box.dataset.allUrl === '') return;  // (a folder's own page keeps its name and path)
       if (chosen === 'all') { heading.innerHTML = headingWas; return; }
-      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : byId[chosen].name;
+      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Uncategorized' : byId[chosen].name;
     }
     function choose(id) {
       chosen = id;

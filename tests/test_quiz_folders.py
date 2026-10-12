@@ -85,7 +85,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': algebra})
     assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == ['Week 1']  # in Algebra's box
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
-    assert '+ New folder inside' in page and 'No quizzes in this folder itself' in page
+    assert '+ New folder inside' in page and 'No uncategorized quizzes in this folder' in page
     assert '<details class="box sub-box" data-sub="{}" data-list>'.format(algebra) in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
     assert '<a href="/mypage?folder={}">Math</a>'.format(math) in no_titles(page)  # Math › Algebra

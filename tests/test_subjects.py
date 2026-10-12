@@ -195,7 +195,7 @@ def test_folders_inside_folders(app_db):
     # Math counts what's in Algebra too; one list of both, with a folder button for Algebra (and
     # "Math itself"); the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert '"name": "Algebra"' in page and 'data-main-label="“Math” itself"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
+    assert '"name": "Algebra"' in page and 'data-main-label="Uncategorized"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
     assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     # never inside itself
     FETCH = {'X-Requested-With': 'fetch'}
