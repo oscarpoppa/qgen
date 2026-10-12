@@ -10,6 +10,8 @@
   --accent: #2f5bd3;
   --accent-text: #ffffff;
   --accent-soft: #e6ecfb;
+  --tab-open: color-mix(in srgb, var(--accent) 9%, var(--surface));   /* an open folder tab and its panel */
+  --tab-edge: color-mix(in srgb, var(--accent) 55%, var(--border));
   --ok: #1d7a46;
   --ok-soft: #e3f4ea;
   --bad: #b3261e;
@@ -50,6 +52,7 @@
     --accent: #7c9cf5;
     --accent-text: #0f1320;
     --accent-soft: #232c45;
+    --tab-open: color-mix(in srgb, var(--accent) 14%, var(--surface));
     --ok: #5cc98b;
     --ok-soft: #173325;
     --bad: #f08a80;
@@ -2032,20 +2035,30 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
   padding: 0 0 0 4px; gap: 4px; align-items: flex-end; flex-wrap: wrap; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tabs-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab { border: 1px solid var(--border); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
-  background: var(--surface-2); margin-bottom: -1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
-.folder-filter-rows > .folder-tabs:first-child > .folder-tab:hover { background: var(--surface); }
-.folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] { background: var(--surface); border-color: var(--border);
-  border-top: 3px solid var(--accent); padding-top: 5px; position: relative; z-index: 1; box-shadow: none; }
+  background: var(--bg); color: var(--muted); margin-bottom: -1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab svg.ico { color: var(--muted); }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab:hover { background: var(--surface-2); color: var(--text); }
+/* the open tab: tinted like its panel, outlined in the accent color, with a thick top edge */
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] { background: var(--tab-open); color: var(--text); border-color: var(--tab-edge);
+  border-top: 4px solid var(--accent); padding-top: 4px; position: relative; z-index: 1; box-shadow: none; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding: 0 4px 4px 0; }
-/* the panel: the chosen folder's own folders (a smaller row of tabs), then the list */
-.folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--border); border-top: 0; border-bottom: 0; border-radius: 0;
-  background: var(--surface); padding: 10px 12px 0; gap: 4px; align-items: flex-end; }
+/* the panel: the chosen folder's own folders (a smaller row of tabs on a line), then the list */
+.folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; border-radius: 0;
+  background: var(--tab-open); padding: 10px 12px 0; gap: 4px; align-items: flex-end;
+  box-shadow: inset 0 -1px 0 var(--tab-edge); }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab { min-height: 32px; padding: 4px 10px; border-radius: var(--r) var(--r) 0 0; border: 1px solid var(--border);
-  border-bottom: 0; background: var(--surface-2); box-shadow: none; font-size: var(--fs-sm); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  border-bottom: 0; background: var(--surface); color: var(--muted); box-shadow: none; font-size: var(--fs-sm); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab:hover { color: var(--text); border-color: var(--tab-edge); }
+/* an open inner tab is filled in solid, so it never mixes with the row above */
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent-text); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] .box-count { background: color-mix(in srgb, var(--accent-text) 18%, transparent); color: var(--accent-text); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tabs-label { align-self: center; padding-bottom: 6px; }
 .folder-filter-rows > .folder-tabs-inner > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding-bottom: 6px; }
-.folder-filter .folder-filter-list, .folder-filter .folder-filter-empty { margin: 0; border: 1px solid var(--border); border-top: 0;
-  border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--surface); padding: 12px; }
+.folder-filter .folder-filter-list, .folder-filter .folder-filter-empty { margin: 0; border: 1px solid var(--tab-edge); border-top: 0;
+  border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--tab-open); padding: 12px; }
 .folder-filter .folder-filter-list > .table-wrap { margin: 0; }
 /* phones: the tabs stay in one row that scrolls sideways inside itself (the page never does) */
 @media (max-width: 640px) {
