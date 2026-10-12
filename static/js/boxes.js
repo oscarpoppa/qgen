@@ -152,7 +152,7 @@
   });
   //every folder box holding boxes of its own (sub-folders, quizzes, attempts) gets its own
   //Expand all / Collapse all pair, on its heading line at the right (taking no room of its own);
-  //it shows only where there are two or more boxes inside (below)
+  //grayed out where there's nothing inside to open or fold (below)
   var pairs = 0;
   function addFolderPairs() {
     document.querySelectorAll('details.sub-box').forEach(function (d) {
@@ -195,7 +195,13 @@
       pairs.forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
         var set = btn ? folds(levelOf(btn), btn) : [];
-        pair.hidden = set.length < 2;
+        //always there; grayed out (with why) when there's nothing in it to open or fold
+        pair.hidden = !btn;
+        pair.querySelectorAll('[data-level]').forEach(function (b) {
+          if (!('title0' in b.dataset)) b.dataset.title0 = b.title || '';
+          b.disabled = !set.length;
+          b.title = set.length ? b.dataset.title0 : 'Nothing here opens or folds';
+        });
         if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
         var same = shown.some(function (other) {
           return other.length === set.length && other.every(function (d, i) { return d === set[i]; });

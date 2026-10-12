@@ -164,6 +164,7 @@
         list.parentElement.insertBefore(note, list.nextSibling);
       }
       note.hidden = shown || chosen === 'all';
+      list.hidden = !shown && chosen !== 'all';  // (no empty frame above the note)
       note.textContent = chosen === 'none' ? 'Everything is in a folder.' : 'Nothing in \u201c' + (byId[chosen] ? byId[chosen].name : '') + '\u201d yet.';
       //empty tables' headings and the counts follow
       list.querySelectorAll('table').forEach(function (t) {

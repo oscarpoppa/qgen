@@ -959,10 +959,10 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     assert page.index('{} New</a>'.format(ico('sparkle'))) < page.index('{} In progress</a>'.format(ico('pencil')))
     take_page(sam, cq.id)
     page = sam.get('/mypage?folder=started').data.decode()
-    assert 'In progress: quizzes you’ve started and not handed in' in page and 'Settings quiz' in page
+    assert 'In progress: quizzes you’ve started, or handed in and not graded yet' in page and 'Settings quiz' in page
     assert 'Nothing in progress' not in page
     row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
-    assert 'class="badge badge-accent side-new-badge" title="1 attempt started and not handed in">1 in progress</span>' in row[:row.index('</li>')]
+    assert 'class="badge badge-accent side-new-badge" title="1 attempt started, or handed in and not graded yet">1 in progress</span>' in row[:row.index('</li>')]
     # remembered like any folder: back to My quizzes shows it again
     assert 'In progress: quizzes' in sam.get('/mypage').data.decode()
     S.submit(cq, {1: '4'})

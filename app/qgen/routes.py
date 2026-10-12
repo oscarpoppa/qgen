@@ -746,7 +746,8 @@ def list_user(uid):
     groups = attempts_by_quiz(ulst.cquizzes)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet (like My quizzes' own)
-    working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
+    #(an attempt waiting for grading counts as in progress too)
+    working = [g for g in groups if any(a.status in ('started', 'review') for a in g['attempts'])]
     #the folder buttons over their one list of quizzes (static/js/folderfilter.js): New and In
     #progress first, then the Quizzes page's folders that have some of theirs in them
     from app import folder_tree

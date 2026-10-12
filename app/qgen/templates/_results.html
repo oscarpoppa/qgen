@@ -23,7 +23,7 @@
                   <div class="btn-row result-attempt">
                     <span class="nowrap">{{ cq.when_label }}</span>
                     {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}<span class="badge badge-warn badge-status">Waiting for grading</span>
+                    {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
                     {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
                     <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this attempt">Grade</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}

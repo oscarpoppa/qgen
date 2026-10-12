@@ -28,7 +28,7 @@
               <td data-label="Quiz">{{ quiz_link(a.vquiz, a.quiz_title, strong=true) }}{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
-                {% elif a.needs_review %}<span class="badge badge-warn badge-status">Waiting for grading</span>
+                {% elif a.needs_review %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                 {% elif a.startdate %}<span class="badge badge-accent badge-status">In progress</span>
                 {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}

@@ -74,34 +74,35 @@ def mypage():
         view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new', 'started', 'soon'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
-    #and "In progress": started and not handed in yet (also each in its own folder)
-    working = [g for g in groups if any(a.status == 'started' for a in g['attempts'])]
+    #and "In progress": started and not handed in yet, or handed in and waiting to be graded
+    #(also each in its own folder)
+    working = [g for g in groups if any(a.status in ('started', 'review') for a in g['attempts'])]
     #and "Due within N days": closing soon (due_ids, above)
     due = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
     days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     #their badges count tries (a quiz given twice and not started is 2 new)
     tries = {'new': sum(1 for g in groups for a in g['attempts'] if a.status == 'new'),
-             'started': sum(1 for g in groups for a in g['attempts'] if a.status == 'started'),
+             'started': sum(1 for g in groups for a in g['attempts'] if a.status in ('started', 'review')),
              'due': sum(1 for g in groups for a in g['attempts'] if a.id in due_ids)}
     def n_tries(n):
         return '{} {}'.format(n, 'attempt' if n == 1 else 'attempts')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
              else working if view == 'started' else due if view == 'soon' else root['groups'])
     if showing:
-        wanted = {cq.id for cq in waiting if
-                  (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status == 'started')
-                  or (showing == 'soon' and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
+        wanted = {cq.id for cq in current_user.cquizzes if
+                  (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status in ('started', 'review'))
+                  or (showing == 'soon' and cq.status in ('new', 'started') and cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon())}
         shown = [g for g in groups if any(a.id in wanted for a in g['attempts'])]
         heading, nothing = {
             'todo': ('To do: quizzes you haven’t started', 'You have no quizzes waiting to be started.'),
-            'started': ('Started: quizzes you haven’t handed in', 'You have no quizzes started and not handed in.'),
+            'started': ('In progress: quizzes you’ve started, or handed in and not graded yet', 'Nothing in progress right now.'),
             'soon': ('Due within {}'.format(within), 'Nothing is due within {}.'.format(within)),
         }[showing]
     elif view == 'new':
         heading, nothing = 'New: quizzes you haven’t started', 'No new quizzes right now.'
     elif view == 'started':
-        heading, nothing = 'In progress: quizzes you’ve started and not handed in', 'Nothing in progress right now.'
+        heading, nothing = 'In progress: quizzes you’ve started, or handed in and not graded yet', 'Nothing in progress right now.'
     elif view == 'soon':
         heading, nothing = 'Due within {}: hand these in soon'.format(within), 'Nothing is due within {}.'.format(within)
     else:
@@ -121,7 +122,7 @@ def mypage():
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
                     {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': len(working),
                      'badge': '{} in progress'.format(tries['started']), 'badge_class': 'badge-accent',
-                     'badge_title': '{} started and not handed in'.format(n_tries(tries['started']))},
+                     'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))},
                     {'key': 'soon', 'icon': 'alarm', 'label': 'Due within ' + within, 'count': len(due), 'badge': '{} due'.format(tries['due']), 'badge_class': 'badge-bad',
                      'badge_title': '{} to hand in within {}'.format(n_tries(tries['due']), within)}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
@@ -272,7 +273,7 @@ def home():
                     key=lambda cq: cq.compdate, reverse=True)[:RECENT_MAX]
     return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon, recent=recent, recent_days=RECENT_DAYS,
                            todo=sum(1 for cq in waiting if cq.status == 'new'),
-                           started=sum(1 for cq in waiting if cq.status == 'started'),
+                           started=sum(1 for cq in current_user.cquizzes if cq.status in ('started', 'review')),
                            awards=have, to_earn=awards.still_to_earn(current_user, have))
 
 # route to user logout action

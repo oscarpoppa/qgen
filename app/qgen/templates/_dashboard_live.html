@@ -85,7 +85,7 @@
         <li>{{ person_link(cq.taker) }}
           {# just the quiz's name: the Results button opens this hand-in itself #}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
-          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
+          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span></span>
           <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a></span></li>
       {% endfor %}

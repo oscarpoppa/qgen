@@ -117,7 +117,7 @@ def test_unfinished_and_waiting_attempts_archive_and_show(app_db):
     view = teacher.get('/quiz/archive/{}'.format(sam_a.id)).data.decode()
     assert 'not handed in' in view and 'not graded' in view and '5' in view
     view = teacher.get('/quiz/archive/{}'.format(kim_a.id)).data.decode()
-    assert 'being graded' in view and 'Light.' in view
+    assert 'in progress' in view and 'Light.' in view  # (waiting for grading counts as in progress)
     # restored, kim's is waiting for grading again
     teacher.post('/quiz/archive/{}/restore'.format(kim_a.id))
     assert teacher.get('/messages/poll').get_json()['review'] == 1

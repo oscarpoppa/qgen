@@ -227,7 +227,7 @@ def tree(user, groups, due_ids=()):
         #tries that need the student, here and in the folders inside (the numbers on the folder,
         #and on every folder it's in): a quiz given twice and not started counts 2
         tests = {'new': lambda a: a.status == 'new',
-                 'started': lambda a: a.status == 'started',
+                 'started': lambda a: a.status in ('started', 'review'),  # waiting for grading counts as in progress
                  'due': lambda a: a.id in due_ids}
         for kind, test in tests.items():
             node[kind + '_here'] = sum(1 for g in node['groups'] for a in g['attempts'] if test(a))

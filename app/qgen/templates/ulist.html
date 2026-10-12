@@ -13,15 +13,15 @@
 {# one quiz on a student page: its attempts and the score that counts #}
 {% macro result_box(g, item) %}
         {% set latest = g.latest %}
-        {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'equalto', 'started')|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
+        {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
         <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}" data-fkey="q:{{ g.vquiz.id }}">
           <summary>
             {{ box_label('note', quiz_link(g.vquiz), count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <span class="result-box-sum">
-              {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
               {# where the latest attempt stands comes first (a retake not started yet says so, not the
-                 old score); the score that counts is then in the box, under "Score counted" #}
-              {% if latest.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
+                 old score); the score that counts is then in the box, under "Score counted". Waiting
+                 for grading counts as in progress. #}
+              {% if latest.status == 'started' or g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-accent badge-status">In progress</span>
               {% elif latest.status == 'new' %}<span class="badge badge-warn badge-status">Not started</span>
               {% elif g.combined is not none %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% endif %}
               {{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}
@@ -49,13 +49,12 @@
          in progress, not started #}
       {# done: quizzes with a score that counts (one per quiz, retakes counted by its rule, as in the box) #}
       {% set sum_done = attempts_by_quiz(item.cquizzes)|map(attribute='combined')|reject('none')|list %}
-      {% set sum_waiting = item.cquizzes|selectattr('status', 'equalto', 'review')|list|length %}
-      {% set sum_going = item.cquizzes|selectattr('status', 'equalto', 'started')|list|length %}
+      {# in progress: started, or handed in and waiting for grading #}
+      {% set sum_going = item.cquizzes|selectattr('status', 'in', ['started', 'review'])|list|length %}
       {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
       {% if not single and item.cquizzes %}<span class="student-sums">
         {% if sum_done %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) %}<span class="badge {{ score_class(sum_avg) }}" title="Quizzes with a score that counts, and the average of those scores">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
-        {% if sum_waiting %}<span class="badge badge-warn" title="Attempts waiting for you to grade written answers">{{ sum_waiting }} to grade</span>{% endif %}
-        {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
+        {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet, or handed in and waiting for grading">{{ sum_going }} in progress</span>{% endif %}
         {% if sum_fresh %}<span class="badge badge-warn badge-status" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}
       </span>{% endif %}
       {# a student's own buttons on their heading line (no row of their own) #}

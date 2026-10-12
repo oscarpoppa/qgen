@@ -5,7 +5,7 @@
     {% if cq.score is not none %}
     <div class="score" aria-label="Score {{ '%.0f' % cq.score }} percent">{{ '%.0f' % cq.score }}%<small>score</small></div>
     {% else %}
-    <div class="score" aria-label="No score yet">–<small>{{ 'being graded' if cq.needs_review else 'not handed in' }}</small></div>
+    <div class="score" aria-label="No score yet">–<small>{{ 'in progress' if cq.needs_review else 'not handed in' }}</small></div>
     {% endif %}
     <div>
       <h2 style="margin:0">{{ cq.vquiz.title }}</h2>

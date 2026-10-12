@@ -776,8 +776,8 @@ def test_home_counter_views_say_what_they_show(app_db):
     page = sam.get('/mypage?show=todo').data.decode()
     assert '<h2 id="folder-title" class="folder-title">To do: quizzes you haven’t started</h2>' in page
     page = sam.get('/mypage?show=started').data.decode()
-    assert '>Started: quizzes you haven’t handed in</h2>' in page
-    assert 'You have no quizzes started and not handed in. {}'.format(ico('party')) in page
+    assert '>In progress: quizzes you’ve started, or handed in and not graded yet</h2>' in page
+    assert 'Nothing in progress right now. {}'.format(ico('party')) in page
     page = sam.get('/mypage?show=soon').data.decode()
     with app.app_context():
         from app import tuning
