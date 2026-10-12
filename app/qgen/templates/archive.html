@@ -25,7 +25,7 @@
               {# the row folds to who, which quiz, the result, its folder and buttons; open, it shows when
                  it was taken and archived too (Expand all / Collapse all, remembered) #}
               <td data-label="Student"><details class="box row-fold" data-box="attempt-row:{{ a.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
-                  data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{{ a.student_name }}</span></summary></details>
+                  data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{% if a.student_id and not (blocker and 'account was deleted' in blocker) %}<a class="name-link" href="{{ url_for('qgen.list_user', uid=a.student_id) }}" data-tip="Open {{ a.student_name }}’s student page">{{ a.student_name }}</a>{% else %}{{ a.student_name }}{% endif %}</span></summary></details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
               <td data-label="Quiz">{{ quiz_link(a.vquiz, a.quiz_title, strong=true) }}{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result">
@@ -66,7 +66,7 @@
 
 {% call folders_page(fk) %}
   <div class="folder-tools-bar">
-    {% if total > 5 %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box') }}{% endif %}
+    {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box') }}{% endif %}
     {% if total %}
     <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -85,7 +85,7 @@
   </div>
   <div id="folder-items">
     {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
-    {% elif fk.node and fk.node.folders %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
+    {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
     {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
     {% elif not total %}<div class="card empty"><span class="big">{{ icon('archive') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>

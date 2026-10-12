@@ -46,8 +46,9 @@
     {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
     <details class="box card quiz-card {{ edge }}" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
       <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
-        {# how many tries are in this box #}
-        {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts'), 'h2', g.vquiz.title) }}
+        {# how many attempts are in this box (one not started yet isn't an attempt: "New" says so) #}
+        {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}
+        {{ box_label('note', g.vquiz.title, count_of(tried, 'attempt', 'attempts') if tried else none, 'h2', g.vquiz.title) }}
         {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
@@ -120,7 +121,7 @@
 
 {% if groups or fk.root.folders %}
 {% call folders_page(fk) %}
-  {% if groups|length > 5 %}{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.quiz-card', boxes='details.sub-box') }}{% endif %}
+  {% if groups %}{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.quiz-card', boxes='details.sub-box') }}{% endif %}
   {# and between the heading (and Find a quiz) and the quizzes #}
   <hr class="section-rule list-rule">
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>

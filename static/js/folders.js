@@ -135,8 +135,8 @@
     ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
     return Object.keys(ids).length;
   }
-  //nothing checked: the bar just says what to do (its list and buttons show once something is
-  //checked, so the bar takes one line instead of three)
+  //nothing checked: the bar says what to do, and its list and button are grayed out, with the
+  //reason in their tooltips
   function syncBar() {
     if (!fileForm) return;
     var n = counted(), sel = fileForm.querySelector('select');
@@ -145,8 +145,12 @@
       fileCount.textContent = n ? n + ' checked:' : (fileCount.dataset.hint || '0 checked');
       fileCount.classList.remove('error');
     }
-    if (sel) sel.disabled = !n;
-    fileForm.querySelectorAll('button').forEach(function (b) { b.disabled = !n || (sel && sel.value === ''); });
+    if (sel) { sel.disabled = !n; if (!n) sel.title = 'Check something below first'; else sel.removeAttribute('title'); }
+    fileForm.querySelectorAll('button').forEach(function (b) {
+      b.disabled = !n || (sel && sel.value === '');
+      if (!b.dataset.titleWas) b.dataset.titleWas = b.title || '';
+      b.title = !n ? 'Check something below first' : b.disabled ? 'Choose a folder first' : b.dataset.titleWas;
+    });
   }
   ticks.forEach(function (t) {
     t.addEventListener('change', function () {

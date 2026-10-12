@@ -65,7 +65,7 @@
     try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
     try { if (fromHere) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
     if (chosen !== 'all' && chosen !== 'none' && !byId[chosen]) chosen = 'all';
-    if (chosen === 'none' && !loose) chosen = 'all';
+    if (chosen === 'none' && (!loose || 'noMain' in box.dataset)) chosen = 'all';
 
     function path() {  // the chosen folder and the folders it's in, from the top
       var out = [], id = chosen;
@@ -120,9 +120,11 @@
       row.appendChild(label);
       row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
       tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
-      var none = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
-      if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
-      row.appendChild(none);
+      if (!('noMain' in box.dataset)) {  // (a folder with no folders inside it: just its own button)
+        var none = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
+        if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
+        row.appendChild(none);
+      }
       rows.appendChild(row);
       //a row for the folders inside each chosen folder
       p.forEach(function (id) {

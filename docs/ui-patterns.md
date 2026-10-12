@@ -14,13 +14,16 @@ This covers Problems, Quizzes, People (Accounts and Results), Results by quiz, t
   - Its own Expand all / Collapse all at the top shows or hides the folders inside folders.
   - New folder, and a short help line.
   - On All views, a click in the folder list chooses that folder in place.
+  - Every folder page starts on All when you come to it. It keeps the chosen folder only when a button on the page reloads it.
 - **Top:** the page title, with the page's Expand all / Collapse all at the right.
 - **Folder buttons:** a row on a dashed band.
   - The order is always: **All** (chosen to begin with), the automatic ones (New, In progress), the folders, then **Uncategorized**.
   - A folder with folders inside it adds a second row for them.
+  - The open tab and its panel share a light accent tint and outline; closed tabs are dimmed; the open tab in the second row is filled solid.
+  - A folder's own page shows the same tabs; a folder with no folders inside it has just its own tab.
   - The chosen folder's own buttons sit right after its button: Expand all / Collapse all, then Open this folder, then any folder action such as "Assign a quiz to this folder".
 - **One list:** each thing appears once, and the folder buttons narrow it.
-- **Empty folders:** faded but still clickable. A folder with nothing in it says "Nothing in “X” yet."
+- **Empty folders:** faded but still clickable, in the tabs and in the folder list (which shows 0). A folder with nothing in it says "Nothing in “X” yet."
 - **Folder options:** a pop-over that floats over the page and closes on a click elsewhere or Esc.
 
 ## 3. Things that live in folders fold
@@ -86,6 +89,8 @@ This covers Problems, Quizzes, People (Accounts and Results), Results by quiz, t
 - Button groups make even grids, never one button alone on a line.
 - Labels wrap instead of being cut off.
 - Words that matter only on wide screens can drop off (`.wide-only`).
+- A page heading's buttons make an even grid of two; a lone last one spans both.
+- The folder tabs scroll sideways inside their strip, whose right edge fades out to show there are more.
 
 ## 12. Changes
 - Whenever a change removes or hides a control or behavior, say so to the site owner: what, where, and what replaces it.

@@ -1119,7 +1119,8 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .file-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
 .file-bar select { width: auto; max-width: 14rem; }
 .file-count.error { color: var(--bad); }
-.file-bar-idle select, .file-bar-idle button { display: none; }
+/* nothing checked: the list and button are grayed out (never hidden) */
+.file-bar-idle select, .file-bar-idle button { cursor: not-allowed; }
 th.tick-col, td.tick-col { width: 36px; }
 .subject-label { font-weight: 500; font-size: var(--fs-xs); margin-left: 2px; vertical-align: middle; }
 .subject-checks { border: 0; padding: 0; margin: 12px 0; }
@@ -2066,3 +2067,71 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
   .folder-filter-rows > .folder-tabs:first-child > .folder-tab { flex: 0 0 auto; }
   .folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { flex: 0 0 auto; }
 }
+
+/* ---- UI-pattern review fixes (docs/ui-patterns.md) ---- */
+/* a folded row is one line: the arrow stays beside a long name, which wraps beside it */
+details.row-fold > summary { flex-wrap: nowrap; align-items: baseline; }
+details.row-fold > summary > .fold { align-self: center; }
+details.row-fold > summary > .drag-item, details.row-fold > summary > .name-link { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+/* People cards: the name is cut short with "…" (the full name is in the tooltip), so Assign
+   never drops onto a line of its own and the cards stay the same height */
+.person-card > summary .person { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.person-card > summary .person .box-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-card > summary > .box-end { flex: 0 0 auto; }
+/* (a badge, such as Teacher, goes on a second line under the name; Assign stays on the first) */
+.person-card > summary > .badge { order: 3; flex: 0 0 auto; margin-left: 74px; }
+.person-card > summary:has(> .badge)::after { content: ''; order: 2; flex: 1 0 100%; height: 0; }
+/* a filter bar's count sits right after its controls, on every page */
+.pick-count { margin-left: 0; }
+/* the folder list: an empty folder is faded, like its folder tab */
+.side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: .6; }
+/* the Dashboard: Results and Assigned take turns in one place, so they're one width; long quiz
+   names are cut short with "…" (the full name is in the tooltip) */
+.dash-list .dash-go .btn { min-width: 6.5rem; justify-content: center; text-align: center; }
+.dash-list > li > .dash-what > .dash-quiz { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+@media (max-width: 640px) {
+  /* phones: a Dashboard row stacks: who, then what, then its button */
+  .dash-list:has(> li > .dash-what) { grid-template-columns: minmax(0, 1fr); }
+  .dash-list > li:has(> .dash-what) > .dash-go { justify-self: start; }
+  /* phones: a page heading's buttons make an even grid of two (a lone last one spans both),
+     and Expand all / Collapse all take a row of their own */
+  .page-head .actions, .title-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-left: 0; }
+  .page-head .actions > *, .title-actions > * { flex: 1 1 calc(50% - 4px); min-width: 0; margin: 0; justify-content: center; text-align: center; }
+  .page-head .actions > .level-buttons, .title-actions > .level-buttons { flex-basis: 100%; display: flex; gap: 8px; }
+  .page-head .actions > .level-buttons > .btn, .title-actions > .level-buttons > .btn { flex: 1 1 0; }
+  .title-actions > details.folder-tools > summary { width: 100%; justify-content: center; }
+  /* phones: the folder tabs scroll sideways in their strip; its right edge fades out, so it's
+     plain that there are more (the last tab can scroll clear of the fade) */
+  .folder-filter-rows > .folder-tabs:first-child { padding-right: 40px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+  .page-head .actions .btn, .title-actions .btn { white-space: normal; }
+  /* Assign: Students' Expand all / Collapse all go on a line of their own */
+  summary.pick-wrap-head { flex-wrap: wrap; }
+  summary.pick-wrap-head .head-pair { flex: 1 1 100%; display: flex; justify-content: flex-end; margin-left: 0; }
+}
+/* lists as cards: two buttons a row, and a lone third one spans both (never past the edge) */
+@media (max-width: 640px) {
+  .stack td.actions:not(:has(.btn-stack)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stack td.actions:not(:has(.btn-stack)) > :nth-child(3):last-child { grid-column: 1 / -1; }
+  .stack td.actions .btn { white-space: normal; }
+  /* student Home: the three counters stay in one row (their numbers are short) */
+  .home-counters { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+}
+@container listarea (max-width: 860px) {
+  .stack td.actions:not(:has(.btn-stack)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stack td.actions:not(:has(.btn-stack)) > :nth-child(3):last-child { grid-column: 1 / -1; }
+}
+@container page (max-width: 520px) { .home-counters { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } }
+/* Home's awards: room between the awards and "Still to earn" */
+.dash-card > .home-sub { margin-top: 14px; padding-top: 4px; border-top: 1px solid var(--border); }
+/* My quizzes: a folded quiz card is one row: its badges and button stay beside the title, which
+   wraps in its own column when it's long */
+.grid.quiz-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
+details.quiz-card:not([open]) > summary { flex-wrap: nowrap; }
+details.quiz-card:not([open]) > summary .box-title { min-width: 5rem; flex: 1 1 auto; overflow-wrap: anywhere; }
+details.quiz-card:not([open]) > summary > :not(.box-title) { flex: 0 0 auto; }
+details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
+/* lists as cards: a folded row's name needs no "Title" / "Quiz" / "Student" caption above it */
+@media (max-width: 640px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
+@container listarea (max-width: 860px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
+@container page (max-width: 780px) { .stack td:has(> details.row-fold)::before { display: none !important; } }

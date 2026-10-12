@@ -61,7 +61,7 @@
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# came with students already checked: the list folds away (open it to change who) #}
     <details class="pick-wrap"{% if not chosen or form.users.errors %} open{% endif %}>
-    <summary class="label pick-wrap-head"><span class="fold" aria-hidden="true"></span>Students <span class="muted small pick-wrap-note">{{ 'change who gets it' if chosen else '' }}</span>
+    <summary class="label pick-wrap-head"><span class="fold" aria-hidden="true"></span>Students <span class="muted small pick-wrap-note wide-only">{{ 'change who gets it' if chosen else '' }}</span>
       {# every folder of people open or folded at once (shown with two or more: static/js/boxes.js) #}
       <span class="head-pair"><span class="level-buttons">
         <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#pick-people .pick-groups" data-level-fixed aria-label="Expand all the folders of students" title="Open every folder of students">Expand all</button>

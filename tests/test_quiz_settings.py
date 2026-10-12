@@ -539,11 +539,15 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
-    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
+    # one not started yet isn't an attempt ("New" says so)
+    assert 'class="badge box-count">' not in sam.get('/mypage').data.decode().split('class="box card quiz-card')[1].split('</summary>')[0]
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
+    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
+    with app.test_request_context():
+        S.submit(CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first(), {1: '4'})
     assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()
 
 

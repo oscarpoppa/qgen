@@ -3,12 +3,11 @@
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>
+<div class="page-head"><h1>{{ title }}</h1>{% if waiting %}<span class="badge box-count">{{ waiting|length }} waiting, oldest first</span>{% endif %}
   <div class="actions">{% if waiting %}<a class="btn" href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Grade the oldest</a>{% else %}{{ slot('Grade the oldest', 'Nothing is waiting for grading', 'btn') }}{% endif %}
     {{ expand_collapse('#grading-groups', 'quizzes') }}</div></div>
 {% if waiting %}
   {# grouped by quiz (the quiz waiting longest first), oldest hand-in first inside #}
-  <p class="muted small">{{ waiting|length }} waiting, oldest first.</p>
   {% set seen = [] %}
   {% for cq in waiting %}{% if cq.vquiz_id not in seen %}{% set _ = seen.append(cq.vquiz_id) %}{% endif %}{% endfor %}
   <div id="grading-groups">

@@ -61,7 +61,7 @@ def test_take_grade_and_print(app_db):
     assert 'window.print()' in page
     assert 'href="/quiz/results/{}"'.format(vq.id) in no_titles(page)
     # and from the quiz's results later
-    assert '</svg> Print paper pages' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert '</svg> Print<span class="wide-only"> paper pages</span>' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     # students can't open it
     s = login(app, 'sam')
     assert s.get('/quiz/print/{}'.format(vq.id)).status_code == 302

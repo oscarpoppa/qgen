@@ -24,9 +24,9 @@
         <span class="fold" aria-hidden="true"></span>
         {# checked people can be given a quiz together (the bar above the list) #}
         <input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}">
-        <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong></span>
-        {% if item.is_admin %}<span class="badge badge-accent">Teacher</span>{% endif %}
-        {% if item.online %}<span class="badge badge-ok" title="A page is open (checked every {{ tuning.get('poll_seconds') }} seconds)">online now</span>{% endif %}
+        {# online now: a green dot after the name (the words are under "Last seen" when it's open) #}
+        <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span>
+        {% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}
         <span class="box-end"><a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Give {{ item.shown_name }} a quiz">Assign</a></span>
       </summary>
       <dl class="person-facts small">
@@ -64,10 +64,10 @@
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
     </form>
-    {% if ulst|length > 5 %}{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box') }}{% endif %}
+    {% if ulst %}{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box') }}{% endif %}
     <div id="folder-items">
       {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
-      {% elif fk.node and fk.node.folders %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
+      {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
       {{ people_table(shown, fk.node.folder if fk.node else none) }}{% endif %}
     </div>
     {% if not shown %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}

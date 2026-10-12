@@ -16,7 +16,8 @@
         {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
         <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}" data-fkey="q:{{ g.vquiz.id }}">
           <summary>
-            {{ box_label('note', quiz_link(g.vquiz), count_of(g.attempts|length, 'attempt', 'attempts')) }}
+            {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}{# (one not started yet isn't an attempt) #}
+            {{ box_label('note', quiz_link(g.vquiz), count_of(tried, 'attempt', 'attempts') if tried else none) }}
             <span class="result-box-sum">
               {# where the latest attempt stands comes first (a retake not started yet says so, not the
                  old score); the score that counts is then in the box, under "Score counted". Waiting
@@ -129,7 +130,7 @@
   {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
-    {% elif fk.node and fk.node.folders %}{% call(n) folder_items(fk, 'student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% else %}
+    {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% else %}
     {% for item in shown %}{{ student_box(item) }}{% endfor %}{% endif %}
   </div>
   {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}
