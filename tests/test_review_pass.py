@@ -1640,3 +1640,7 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert 'class="btn btn-secondary btn-sm btn-all" disabled title="Only one attempt' in page
     assert '.btn-row.result-archive-all { border-top: 1px solid var(--border);' in css
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
+    # with two attempts it's the real button, with the same look
+    give(vq, 'sam')
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert '<button class="btn btn-secondary btn-sm btn-all" title="Move every one of sam' in page and '>Archive all (2)</button>' in page

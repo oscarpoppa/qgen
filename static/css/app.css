@@ -1901,3 +1901,7 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .btn-row.result-archive-all { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
 .btn.btn-all { background: var(--surface-2); border-style: dashed; color: var(--muted); }
 .btn.btn-all:not(:disabled):hover { color: var(--text); }
+/* the fixed Score counted column: a "Just for <long name>" badge wraps rather than running into Retake */
+.result-box td[data-label="Score counted"] .badge { white-space: normal; overflow-wrap: anywhere; }
+/* grayed out, "Archive all" fades like every other grayed-out button (not muted text faded again) */
+.btn.btn-all:disabled { color: var(--text); }
