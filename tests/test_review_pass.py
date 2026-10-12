@@ -1444,6 +1444,7 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     # as it's the same conversation; a pop-up switching to another conversation asks first
     assert "nav.nav, details.menu, .floating-menu" in js and "!(q === 'messages' && busyTyping())" in js
     assert "if (typing && typing.view === view) {" in js and "if (t) t.value = typing.text;" in js
+    assert "if (k in typing.checks) i.checked = typing.checks[k];" in js  # its "Send to" / "Pin it" choices too
     assert "if (!view || !busyTyping() || view === drawnView) { go(!!view); return; }" in js
 
 

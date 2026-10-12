@@ -109,7 +109,14 @@
   function load(p, markSeen) {
     var body = pane(p).querySelector('.dock-body');
     var view = p === 'messages' ? stored('qgen-dock-view') : null;
-    var typing = p === 'messages' && busyTyping() ? { view: drawnView, text: pane(p).querySelector('textarea').value } : null;
+    var typing = null;
+    if (p === 'messages' && busyTyping()) {
+      //the reply and its form's choices ("Send to" teachers, "Pin it")
+      typing = { view: drawnView, text: pane(p).querySelector('textarea').value, checks: {} };
+      body.querySelectorAll('input[type=checkbox][name], input[type=radio][name]').forEach(function (i) {
+        typing.checks[i.name + '=' + i.value] = i.checked;
+      });
+    }
     return fetch(paneUrl(p, markSeen), { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) {
@@ -120,6 +127,10 @@
           if (typing && typing.view === view) {
             var t = body.querySelector('textarea');
             if (t) t.value = typing.text;
+            body.querySelectorAll('input[type=checkbox][name], input[type=radio][name]').forEach(function (i) {
+              var k = i.name + '=' + i.value;
+              if (k in typing.checks) i.checked = typing.checks[k];
+            });
           }
           drawnView = view;
         }
