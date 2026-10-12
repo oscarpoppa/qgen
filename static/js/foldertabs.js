@@ -24,8 +24,18 @@
     boxesIn(row).forEach(function (d) {
       var b = d.qgenTab;
       b.hidden = d.hidden;  // a folder the page hid (e.g. nothing in it for this search)
+      if (d.qgenPair) d.qgenPair.hidden = !(d.open && !searching && !d.hidden);
       b.setAttribute('aria-expanded', d.open && !searching ? 'true' : 'false');
     });
+  }
+  //the row's right end: the open folder's Expand all / Collapse all
+  function pairsOf(row) {
+    if (!row.qgenPairs) {
+      row.qgenPairs = document.createElement('span');
+      row.qgenPairs.className = 'tab-pairs';
+      row.appendChild(row.qgenPairs);
+    }
+    return row.qgenPairs;
   }
   //one open at a time: keep the given one (or the first open one), close the others
   function only(row, keep) {
@@ -87,9 +97,17 @@
         b.type = 'button';
         b.className = 'folder-tab';
         b.setAttribute('aria-controls', box.id);
-        //the heading's icon, name, count and badges (a heading can't go in a button: its text instead)
-        Array.prototype.forEach.call(head.childNodes, function (c) {
+        //the heading's icon, name, count and badges (a heading can't go in a button: its text instead);
+        //its Expand all / Collapse all (boxes.js) goes to the end of the row, shown while it's open
+        Array.prototype.slice.call(head.childNodes).forEach(function (c) {
           if (c.nodeType === 1 && c.classList.contains('fold')) return;
+          if (c.nodeType === 1 && c.classList.contains('head-pair')) {
+            c.classList.add('tab-pair');
+            c.hidden = !box.open;
+            box.qgenPair = c;
+            pairsOf(row).appendChild(c);
+            return;
+          }
           var copy = c.cloneNode(true);
           if (copy.nodeType === 1 && /^H\d$/.test(copy.tagName)) {
             var span = document.createElement('span');
@@ -109,7 +127,7 @@
           box.open = opening;
         });
         box.qgenTab = b;
-        row.appendChild(b);  // in the boxes' order
+        row.insertBefore(b, row.qgenPairs || null);  // in the boxes' order, before the pairs
         box.addEventListener('toggle', function () {
           if (box.open && !row.classList.contains('tabs-off')) only(row, box);
           sync(row);

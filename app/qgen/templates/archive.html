@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note, move_menu with context %}
-{% from "_macros.html" import box_label, count_of %}
+{% from "_macros.html" import box_label, count_of, quiz_link with context %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -25,7 +25,7 @@
               <td data-label="Student"><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{{ a.student_name }}</span>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
-              <td data-label="Quiz"><strong>{{ a.quiz_title }}</strong>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
+              <td data-label="Quiz">{{ quiz_link(a.vquiz, a.quiz_title, strong=true) }}{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
                 {% elif a.needs_review %}<span class="badge badge-warn badge-status">Waiting for grading</span>

@@ -953,7 +953,6 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .quiz-card > summary[data-drag] { touch-action: auto; }
 .folder-dragging, .folder-dragging * { cursor: grabbing !important; user-select: none; }
 /* one student's page: each quiz folds to its name, attempts and the score that counts */
-.quiz-box-bar { justify-content: flex-end; margin-bottom: 8px; }
 .result-box { padding: 10px 14px; margin-bottom: 10px; }
 .result-box > summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; cursor: pointer; }
 .result-box > summary::-webkit-details-marker { display: none; }
@@ -1876,8 +1875,11 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 }
 .history-table td .nowrap { white-space: nowrap; }
 /* a folder's own Expand all / Collapse all (added by boxes.js where the page has none) */
-.sub-tools.folder-pair { justify-content: flex-end; margin-bottom: 8px; }
-.sub-tools.folder-pair[hidden] { display: none; }
+/* a folder's own Expand all / Collapse all, on its heading line at the right (boxes.js) */
+.head-pair { margin-left: auto; flex: 0 0 auto; display: inline-flex; }
+.head-pair .level-buttons { display: inline-flex; gap: 6px; }
+.head-pair .level-buttons[hidden] { display: none; }
+@media (max-width: 640px) { .sub-head:has(> .head-pair > .level-buttons:not([hidden])) { flex-wrap: wrap; row-gap: 6px; } }
 
 /* a student page: every quiz box's table has the same columns (the score column and the Retake
    column a set width, the attempts column the rest), so the buttons of quiz boxes at one folder
@@ -1905,3 +1907,20 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .result-box td[data-label="Score counted"] .badge { white-space: normal; overflow-wrap: anywhere; }
 /* grayed out, "Archive all" fades like every other grayed-out button (not muted text faded again) */
 .btn.btn-all:disabled { color: var(--text); }
+
+/* names as links (a student -> their student page, a quiz -> its history), in place of a button:
+   the text's own color with a dotted underline; the accent color and a solid line on hover */
+a.name-link { color: inherit; text-decoration: underline dotted; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decoration-style: solid; text-decoration-color: currentColor; }
+/* its tooltip, always just above it (tips.js) */
+.link-tip {
+  position: fixed; z-index: 1000; width: max-content; max-width: min(320px, calc(100vw - 24px));
+  padding: 5px 9px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); box-shadow: 0 6px 18px rgba(16, 24, 40, .18);
+  font-size: var(--fs-xs); line-height: 1.35; pointer-events: none;
+}
+.link-tip[hidden] { display: none; }
+@media print { .link-tip { display: none; } }
+/* a row of folder buttons: the open folder's Expand all / Collapse all at the row's right end */
+.folder-tabs .tab-pairs { margin-left: auto; display: inline-flex; }
+.folder-tabs .tab-pair[hidden] { display: none; }

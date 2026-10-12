@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, box_label, count_of, avatar, filter_bar, expand_collapse, slot with context %}
+{% from "_macros.html" import back_button, box_label, count_of, avatar, person_link, filter_bar, expand_collapse, slot with context %}
 {# One problem's History: every handed-in answer to it, in whatever quiz it was in, by quiz
    (like a quiz's Results, for a problem). #}
 {% block body_attrs %}{{ watch('problemresults:%d' % vp.id) }}{% endblock %}
@@ -47,7 +47,7 @@
           {% for r in rows %}
             {% set it = r.item %}
             <tr data-name="{{ (r.student.username if r.student else '')|lower }} {{ ((r.student.nickname or '') if r.student else '')|lower }}">
-              <td data-label="Student">{% if r.student %}<span class="person nowrap">{{ avatar(r.student, 24) }}{{ r.student.shown_name }}</span>{% else %}<span class="muted">(deleted)</span>{% endif %}</td>
+              <td data-label="Student" class="nowrap">{% if r.student %}{{ person_link(r.student, strong=false) }}{% else %}<span class="muted">(deleted)</span>{% endif %}</td>
               <td data-label="Handed in" class="nowrap">{{ r.cq.compdate|when if r.cq.compdate else '' }}</td>
               <td data-label="Their question"><div class="clamp" onclick="this.classList.toggle('open')" title="Click to show all">{{ it.text }}</div></td>
               <td data-label="Their answer">{% if it.paper %}<span class="muted">Done on paper</span>{% else %}<div class="clamp" onclick="this.classList.toggle('open')">{{ it.submitted or '(no answer)' }}</div>{% endif %}</td>
@@ -55,8 +55,7 @@
               <td data-label="Score">{% if it.credit is none %}{% if r.cq.needs_review %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% else %}<span class="badge">Not graded</span>{% endif %}
                 {% else %}<span class="badge {{ 'badge-ok' if it.credit == 1 else 'badge-bad' if not it.credit else 'badge-warn' }}">{{ '%.0f' % (it.credit * 100) }}%</span>{% endif %}</td>
               <td class="actions">{% if it.credit is none and r.cq.needs_review %}<a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=r.cq.id) }}" title="Grade this attempt">Grade</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if it.credit is not none else 'Not waiting for grading', 'btn btn-sm') }}{% endif %}
-                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=r.cq.id) }}" title="This attempt's answers next to the correct ones, question by question">Answer key</a>
-                {% if r.student %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=r.student.id) }}" title="Open {{ r.student.shown_name }}'s student page: quizzes, results and folders">Student page</a>{% else %}{{ slot('Student page', 'This student’s account was deleted') }}{% endif %}</td>
+                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=r.cq.id) }}" title="This attempt's answers next to the correct ones, question by question">Answer key</a></td>
             </tr>
           {% endfor %}
           </tbody>

@@ -1,5 +1,5 @@
 {# messages in one conversation (or, with `everyone`, from all students); `me_teacher` says which side is "you" #}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, person_link with context %}
 <ol class="thread" aria-label="Messages">
   {% for m in items %}
     {# in the all-messages view an announcement to several students is shown once #}
@@ -54,7 +54,7 @@
       <div class="msg-meta small">
         {% if m.kind == 'announcement' %}<span class="badge badge-accent">Announcement</span>
         {% elif m.kind == 'notice' %}<span class="badge">Notice</span>{% endif %}
-        <strong>{% if m.from_teacher %}{{ (m.sender.shown_name if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% else %}{{ m.student.shown_name }}{% endif %}</strong>
+        <strong>{% if m.from_teacher %}{{ (m.sender.shown_name if m.sender else 'Teacher') if m.kind != 'notice' else '' }}{% elif current_user.is_admin %}{{ person_link(m.student, 0, strong=false) }}{% else %}{{ m.student.shown_name }}{% endif %}</strong>
         {% if not m.from_teacher and not m.to_all %}
           {# a student's message to chosen teachers: the teacher reads "to you only" #}
           <span class="badge" title="Only {{ m.recipients|map(attribute='shown_name')|join(', ') }} can see this">

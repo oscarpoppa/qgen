@@ -116,6 +116,15 @@
     var btn = e.target.closest && e.target.closest('[data-level]');
     if (!btn) return;
     var want = btn.dataset.level === 'open', keep = !btn.closest('[data-keep-open]');
+    //a pair on a box's heading line: the click doesn't fold the box, and Expand all opens it too
+    var head = btn.closest('summary');
+    if (head) {
+      e.preventDefault();
+      if (want && head.parentElement.matches(BOX)) {
+        head.parentElement.open = true;
+        if (keep) memory[idOf(head.parentElement)] = 1;
+      }
+    }
     folds(levelOf(btn)).forEach(function (d) {
       d.open = want;
       if (keep) memory[idOf(d)] = want ? 1 : 0;
@@ -123,8 +132,9 @@
     if (keep) save();
   });
   //every folder box holding boxes of its own (sub-folders, quizzes, attempts) gets its own
-  //Expand all / Collapse all pair, at the top of what's in it, like the folder pages' folders;
+  //Expand all / Collapse all pair, on its heading line at the right (taking no room of its own);
   //it shows only where there are two or more boxes inside (below)
+  var pairs = 0;
   function addFolderPairs() {
     document.querySelectorAll('details.sub-box').forEach(function (d) {
       var body = d.querySelector(':scope > summary + *');
@@ -136,16 +146,18 @@
       if (own) return;
       var t = d.querySelector(':scope > summary .box-title');
       var name = t ? '“' + t.textContent.trim() + '”' : 'this folder';
-      body.classList.add('level');
-      var bar = document.createElement('div');
-      bar.className = 'sub-tools folder-pair';
+      var head = d.querySelector(':scope > summary');
+      if (!body.id) body.id = 'folder-body-' + (++pairs);
+      var bar = document.createElement('span');
+      bar.className = 'head-pair';
       bar.innerHTML = '<span class="level-buttons">'
         + '<button type="button" class="btn btn-secondary btn-xs" data-level="open"></button>'
         + '<button type="button" class="btn btn-secondary btn-xs" data-level="close"></button></span>';
       var open = bar.querySelector('[data-level=open]'), close = bar.querySelector('[data-level=close]');
+      open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;
       open.textContent = 'Expand all'; open.setAttribute('aria-label', 'Expand all in ' + name); open.title = 'Open every box in ' + name;
       close.textContent = 'Collapse all'; close.setAttribute('aria-label', 'Collapse all in ' + name); close.title = 'Fold every box in ' + name + ' down to its heading';
-      body.insertBefore(bar, body.firstChild);
+      head.appendChild(bar);
     });
   }
   function showLevelButtons() {
@@ -155,8 +167,6 @@
       document.querySelectorAll('.level-buttons').forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
         pair.hidden = !btn || folds(levelOf(btn)).length < 2;
-        //(an added pair's bar goes too when its pair has nothing to do)
-        if (pair.parentElement.classList.contains('folder-pair')) pair.parentElement.hidden = pair.hidden;
       });
     }, 0);
   }

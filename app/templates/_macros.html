@@ -95,6 +95,23 @@
   {%- else %}<span class="muted">someone</span>{% endif -%}
 {%- endmacro %}
 
+{# a person's name in a teacher's row, as a link to their student page (in place of a "Student page"
+   button, to save room). Not in a box heading (a click there folds the box) or a checkbox label.
+   Its tooltip (data-tip, tips.js) shows above it. size 0: no picture, just the name. #}
+{% macro person_link(u, size=24, strong=true) -%}
+  {%- if u -%}
+  <a class="name-link person" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student page">{% if size %}{{ avatar(u, size) }}{% endif %}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
+  {%- else %}<span class="muted">someone</span>{% endif -%}
+{%- endmacro %}
+
+{# a quiz's title in a teacher's row, as a link to its History (everyone's attempts and scores);
+   plain when the quiz is gone #}
+{% macro quiz_link(vq, title=none, strong=false) -%}
+  {%- set t = title or (vq.title if vq else '') -%}
+  {%- if vq -%}<a class="name-link" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" data-tip="Open “{{ t }}”’s history: everyone’s attempts and scores">{% if strong %}<strong>“{{ t }}”</strong>{% else %}“{{ t }}”{% endif %}</a>
+  {%- else %}“{{ t }}”{% endif -%}
+{%- endmacro %}
+
 {# a quiz's title in a teacher's list, plain (its "History" button goes beside it) #}
 {% macro quiz_name(vq) -%}
   “{{ vq.title }}”

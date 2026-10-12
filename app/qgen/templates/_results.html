@@ -2,9 +2,7 @@
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
 {% from "_macros.html" import post_button, slot with context %}
-{# history / student_page: also a History button (Results by student) or a Student page button
-   (Results by quiz) for the row, since the quiz or student named in it is plain text #}
-{% macro result_cells(g, student, rules, history=false, student_page=false) %}
+{% macro result_cells(g, student, rules) %}
               <td data-label="Attempts" class="attempts">
                 {% for cq in g.attempts %}
                   <div class="btn-row result-attempt">
@@ -27,7 +25,10 @@
                 <div class="btn-row result-attempt result-archive-all">{% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', 'Move all ' ~ g.attempts|length ~ ' of ' ~ (student.shown_name)|string ~ '’s attempts at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore them there.', tip='Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') }}{% else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all') }}{% endif %}</div>
               </td>
               <td data-label="Score counted">
-                {% if g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}
+                {# while the latest attempt is not started or in progress, a dash (as in its heading, which
+                   says so); the earlier attempts' score is in the dash's tooltip #}
+                {% if g.latest.status in ('new', 'started') %}<span class="muted"{% if g.combined is not none %} title="Earlier attempts: {{ '%.0f' % g.combined }}%. The score shows here once the latest attempt is handed in."{% endif %}>—</span>
+                {% elif g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}
                 {% if g.attempts|length > 1 or g.overridden %}
                 <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="small" style="margin-top:4px">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -41,8 +42,6 @@
                 {% endif %}
               </td>
               <td class="actions"><div class="btn-stack">
-                {% if history %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="This quiz's history: everyone's attempts and scores">History</a>{% endif %}
-                {% if student_page %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}'s student page: quizzes, results and folders">Student page</a>{% endif %}
                 {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new attempt at this quiz, with new values') }}{% else %}{{ slot('Retake', 'A new attempt can be given once the latest one is handed in and graded') }}{% endif %}
               </div></td>
 {% endmacro %}

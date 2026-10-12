@@ -93,3 +93,45 @@
   window.addEventListener('scroll', function () { if (open) place(open); }, true);
   window.addEventListener('resize', function () { if (open) place(open); });
 })();
+
+/* Link tooltips: a link with data-tip (a name that opens a student's page or a quiz's history)
+ * shows its tip just above it while hovered or focused. One shared tip; it never covers the link. */
+(function () {
+  var tip = null, on = null;
+  function make() {
+    tip = document.createElement('div');
+    tip.className = 'link-tip';
+    tip.id = 'link-tip';
+    tip.setAttribute('role', 'tooltip');
+    tip.hidden = true;
+    document.body.appendChild(tip);
+  }
+  function show(a) {
+    if (!tip) make();
+    on = a;
+    tip.textContent = a.getAttribute('data-tip');
+    tip.hidden = false;
+    a.setAttribute('aria-describedby', 'link-tip');
+    var r = a.getBoundingClientRect(), margin = 8;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = Math.min(Math.max(margin, r.left + r.width / 2 - w / 2), window.innerWidth - w - margin);
+    tip.style.left = Math.max(margin, left) + 'px';
+    tip.style.top = Math.max(margin, r.top - h - 6) + 'px';
+  }
+  function hide() {
+    if (on) on.removeAttribute('aria-describedby');
+    on = null;
+    if (tip) tip.hidden = true;
+  }
+  function linkOf(t) { return t && t.closest ? t.closest('a[data-tip]') : null; }
+  document.addEventListener('mouseover', function (e) { var a = linkOf(e.target); if (a && a !== on) show(a); });
+  document.addEventListener('mouseout', function (e) {
+    var a = linkOf(e.target);
+    if (a && a === on && !a.contains(e.relatedTarget)) hide();
+  });
+  document.addEventListener('focusin', function (e) { var a = linkOf(e.target); if (a) show(a); });
+  document.addEventListener('focusout', function (e) { if (linkOf(e.target) === on) hide(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('pagehide', hide);
+})();

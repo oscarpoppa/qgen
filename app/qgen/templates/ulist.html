@@ -3,7 +3,7 @@
 {% from "_people.html" import people_switch %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
-{% from "_macros.html" import avatar, box_label, count_of with context %}
+{% from "_macros.html" import avatar, box_label, count_of, quiz_link with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_awards.html" import award_list %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note with context %}
@@ -19,9 +19,11 @@
             {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn badge-status">Waiting for grading</span>{% endif %}
-              {% if g.combined is not none %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
-              {% elif latest.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
-              {% elif latest.status == 'new' %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
+              {# where the latest attempt stands comes first (a retake not started yet says so, not the
+                 old score); the score that counts is then in the box, under "Score counted" #}
+              {% if latest.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
+              {% elif latest.status == 'new' %}<span class="badge badge-warn badge-status">Not started</span>
+              {% elif g.combined is not none %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% endif %}
               <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's attempts and scores on this quiz">History</a>
             </span>
           </summary>
@@ -66,6 +68,10 @@
         {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
         {% if sum_fresh %}<span class="badge badge-warn badge-status" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}
       </span>{% endif %}
+      {# one student: Expand all / Collapse all of their folders and quizzes, on the heading line #}
+      {% if item.cquizzes and single %}<span class="head-pair"><span class="level-buttons">
+        <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes" title="Open all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
+        <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Fold all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></span>{% endif %}
     </summary>
     <div class="box-body">
     {% if not single %}<div class="btn-row box-links">
@@ -73,10 +79,6 @@
       {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message</a>{% endif %}
       <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></div>{% endif %}
     {% if item.cquizzes and single %}
-      {# one student: each quiz is a box that folds to its name, attempts and score #}
-      <div class="btn-row small quiz-box-bar"><span class="level-buttons">
-        <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes" title="Open all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
-        <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Fold all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></div>
       {# automatic: quizzes given to them and not started yet (each also in its folder below) #}
       <details class="box sub-box new-folder-box" data-folder-box="new" data-list>
         <summary class="sub-head">{{ box_label('sparkle', 'New', none, 'h3') }}
@@ -115,8 +117,8 @@
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Quiz"><strong>{{ g.vquiz.title }}</strong></td>
-              {{ result_cells(g, item, rules, history=true) }}
+              <td data-label="Quiz">{{ quiz_link(g.vquiz, strong=true) }}</td>
+              {{ result_cells(g, item, rules) }}
             </tr>
           {% endfor %}
           </tbody>

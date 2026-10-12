@@ -529,9 +529,9 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     page = teach.get('/dashboard').data.decode()
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
-    assert '<span>“Week 1”</span>' in box  # the name is plain; the button opens their copy
+    assert '>“Week 1”</a></span>' in box and 'data-tip="Open “Week 1”’s history' in box  # the name opens its history; the button their copy
     assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Assigned</a>' in box
-    assert '/quiz/results/{}'.format(vq.id) not in box
+    assert '>Student page</a>' not in box  # sam's name is the way to their page
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
 
@@ -1003,7 +1003,7 @@ def test_a_teacher_deletes_a_problem_or_quiz_folder_and_its_contents(app_db):
     assert db.session.get(VQuiz, spare.id) is None and db.session.get(VQuiz, used.id).removed_at is not None
 
 
-def test_dashboard_recent_hand_ins_name_the_quiz_without_a_link(app_db):
+def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     from app.qgen import services as S
@@ -1012,10 +1012,11 @@ def test_dashboard_recent_hand_ins_name_the_quiz_without_a_link(app_db):
     S.submit(cq, {1: '4'})
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert '<span>“Handed”</span>' in row and "This quiz's results" not in row
+    assert 'href="/quiz/results/{}" data-tip="Open “Handed”’s history: everyone’s attempts and scores">“Handed”</a>'.format(vq.id) in row
+    assert 'href="/quiz/listuser/{}" data-tip="Open sam’s student page"'.format(ids('sam')) in row and '>Student page</a>' not in row
 
 
-def test_dashboard_waiting_for_grading_names_the_quiz_without_a_link(app_db):
+def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     from app.qgen.models import CQuiz
@@ -1025,7 +1026,7 @@ def test_dashboard_waiting_for_grading_names_the_quiz_without_a_link(app_db):
     db.session.commit()
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert '<span>“Essay week”</span>' in row and "This quiz's results" not in row
+    assert '>“Essay week”</a>' in row and 'href="/quiz/results/{}"'.format(vq.id) in row and '>Student page</a>' not in row
 
 
 def test_an_archive_folder_can_be_deleted_for_good(app_db):
@@ -1258,8 +1259,9 @@ def test_one_set_of_sizes_and_accessible_controls():
 
 
 def test_list_items_have_only_buttons(app_db):
-    """On every list, an item's name is plain text and its actions are buttons: no text link
-    in a row, a Dashboard line or a box's heading, and no "More" menus."""
+    """On every list, an item's actions are buttons: no text link in a row, a Dashboard line or
+    a box's heading, and no "More" menus. The one exception: a student's or quiz's name can be
+    a name link (to their student page or its history, with a tooltip), never in a heading."""
     import re
     from app.qgen import services as S
     app, db = app_db
@@ -1275,8 +1277,12 @@ def test_list_items_have_only_buttons(app_db):
         items = re.findall(r'<tr[ >].*?</tr>|<li>.*?</li>|<summary[ >].*?</summary>', main, re.S)
         for item in items:
             # (the folder list down the side is where to go, not an item: its entries are links)
-            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link)\b', a)]
+            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link)\b', a)]
             assert not links, (url, links, item[:300])
+            names = re.findall(r'<a class="name-link[^"]*" href="([^"]+)" data-tip="([^"]+)"', item)
+            assert all(re.match(r'/quiz/(listuser|results)/\d+$', h) and tip.startswith('Open ') for h, tip in names), (url, names)
+            if item.startswith('<summary'):
+                assert 'name-link' not in item, (url, item[:300])
         assert 'row-menu' not in main and 'person-link' not in main, url
 
 
@@ -1604,17 +1610,32 @@ def test_tidy_layouts_at_every_width(app_db):
     assert '<div class="btn-row result-attempt result-archive-all">' in tpl  # under the attempts, not beside Retake
 
 
-def test_every_folder_with_boxes_inside_has_its_own_expand_collapse():
+def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     """A folder box holding boxes of its own (sub-folders, quizzes, attempts) gets Expand all /
-    Collapse all for what's inside it, on every page: boxes.js adds the pair where the page drew
-    none (it shows only with two or more boxes inside)."""
+    Collapse all for what's inside it, on its heading line (boxes.js adds the pair where the page
+    drew none; it shows only with two or more boxes inside). A click there doesn't fold the box,
+    and Expand all opens it too. In a row of folder buttons the open folder's pair sits at the
+    row's right end (foldertabs.js). The student box's own pair is on its heading too."""
     import os
+    app, db = app_db
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     assert "document.querySelectorAll('details.sub-box').forEach(function (d) {" in js
     assert "return p.closest('details.sub-box') === d;" in js  # a folder that already has one keeps it
-    assert "body.classList.add('level');" in js and "bar.className = 'sub-tools folder-pair';" in js
-    assert "if (pair.parentElement.classList.contains('folder-pair')) pair.parentElement.hidden = pair.hidden;" in js
+    assert "bar.className = 'head-pair';" in js and "head.appendChild(bar);" in js
+    assert "open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;" in js
+    assert "var head = btn.closest('summary');" in js and "e.preventDefault();" in js and "head.parentElement.open = true;" in js
+    tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
+    assert "c.classList.contains('head-pair')" in tabs and "pairsOf(row).appendChild(c);" in tabs
+    assert "if (d.qgenPair) d.qgenPair.hidden = !(d.open && !searching && !d.hidden);" in tabs
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach)
+    give(vq, 'sam')
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    head = page[page.index('id="student-{}"'.format(ids('sam'))):]
+    head = head[:head.index('</summary>')]
+    assert '<span class="head-pair"><span class="level-buttons">' in head and 'data-level="open"' in head
+    assert 'quiz-box-bar' not in page
 
 
 def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):

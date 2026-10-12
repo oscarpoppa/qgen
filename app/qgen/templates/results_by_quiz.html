@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import avatar, box_label, count_of, slot with context %}
+{% from "_macros.html" import avatar, person_link, box_label, count_of, slot with context %}
 {% from "_results.html" import result_cells with context %}
 {% from "_folders.html" import folders_page, sub_box, all_boxes, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
@@ -33,8 +33,8 @@
           <tbody>
           {% for student, g in q.rows %}
             <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
-              <td data-label="Student"><span class="person nowrap">{{ avatar(student, 24) }}{{ student.shown_name }}</span></td>
-              {{ result_cells(g, student, rules, student_page=true) }}
+              <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
+              {{ result_cells(g, student, rules) }}
             </tr>
           {% endfor %}
           </tbody>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, quiz_name, box_label, count_of, expand_collapse, slot with context %}
+{% from "_macros.html" import person_name, person_link, quiz_name, box_label, count_of, expand_collapse, slot with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 
 {% block content %}
@@ -24,11 +24,10 @@
           {% for cq in rows %}
             {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
             <tr>
-              <td data-label="Student">{{ person_name(cq.taker) }}</td>
+              <td data-label="Student">{{ person_link(cq.taker) }}</td>
               <td data-label="Handed in">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
               <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
-              <td class="actions"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">Grade</a>
-                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Open {{ cq.taker.shown_name if cq.taker else 'the student' }}'s student page: quizzes, results and folders">Student page</a></td>
+              <td class="actions"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">Grade</a></td>
             </tr>
           {% endfor %}
           </tbody>
