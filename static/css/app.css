@@ -883,8 +883,13 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .folder-title-row .folder-title { align-self: center; }
 .folder-tools > summary { list-style: none; }
 .folder-tools > summary::-webkit-details-marker { display: none; }
-.folder-tools-box { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; padding: 12px; border: 1px solid var(--border);
-  border-radius: var(--r-lg); background: var(--surface); }
+/* Folder options pops up over the page (nothing below it moves); a click anywhere else or Esc
+   closes it (static/js/folders.js) */
+.folder-tools { position: relative; }
+.folder-tools-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--border);
+  border-radius: var(--r-lg); background: var(--surface); position: absolute; right: 0; top: calc(100% + 6px); z-index: 300;
+  width: max-content; min-width: 18rem; max-width: min(26rem, calc(100vw - 32px)); box-shadow: 0 12px 32px rgba(16, 24, 40, .28); }
+.folder-tools[open] > summary { border-color: var(--accent); background: var(--accent-soft); }
 /* each level's Expand all / Collapse all (just what's directly in it) */
 .level-row { display: flex; justify-content: flex-end; margin: -4px 0 10px; }
 .level-buttons { display: inline-flex; gap: 6px; flex-wrap: wrap; }

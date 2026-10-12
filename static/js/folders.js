@@ -284,4 +284,19 @@
   }, true);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (pending || dragging)) stop(); });
   window.addEventListener('blur', stop);
+
+  //Folder options floats over the page: a click outside it, or Esc, closes it
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('details.folder-tools[open]').forEach(function (d) {
+      if (!d.contains(e.target) && !e.target.closest('dialog')) d.open = false;
+    });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('details.folder-tools[open]').forEach(function (d) {
+      d.open = false;
+      var s = d.querySelector('summary');
+      if (s) s.focus();
+    });
+  });
 })();
