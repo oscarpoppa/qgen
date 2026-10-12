@@ -18,7 +18,7 @@ AI_MODELS = [('claude-opus-5', 'Claude Opus 5 (the one used so far)'),
              ('claude-opus-5-5', 'Claude Opus 5.5 (newer, a little cheaper)'),
              ('claude-sonnet-5-5', 'Claude Sonnet 5.5 (faster, about half the price)')]
 
-GROUPS = [('online', 'Online & refresh'), ('quizzes', 'Quizzes & messages'),
+GROUPS = [('online', 'Online & refresh'), ('quizzes', 'Quizzes & messages'), ('scores', 'Score colors'),
           ('ai', 'AI helper'), ('security', 'Sign-in & security')]
 
 
@@ -57,6 +57,12 @@ TUNABLES = [
        'characters', 20000, 1000, 200000),
     _t('max_message', 'quizzes', 'Longest message', 'The most characters one message can have.',
        'characters', 2000, 200, 20000),
+    _t('score_green', 'scores', 'Green from',
+       'A score at least this high shows green, on every page (Dashboard, results, Home, My quizzes...).',
+       '%', 70, 1, 100),
+    _t('score_amber', 'scores', 'Amber from',
+       'A score at least this high (and below green) shows amber; anything lower shows red.',
+       '%', 50, 0, 100),
     _t('ai_hourly', 'ai', 'Requests per teacher per hour',
        'How many times each teacher can use the AI helper in an hour.', 'requests', 30, 1, 500),
     _t('ai_model', 'ai', 'Claude model', 'Which Claude model the AI helper uses.', 'choice', 'claude-opus-5',
@@ -173,7 +179,19 @@ def validate(form):
             errors['online_window'] = ('The online window must be at least twice the check-in time ({} seconds), '
                                        'or people on the site would keep dropping off between check-ins.'
                                        .format(chosen['poll_seconds']))
+    if 'score_green' in chosen and 'score_amber' in chosen and chosen['score_amber'] > chosen['score_green']:
+        errors['score_amber'] = 'Amber has to start at or below green ({}%).'.format(chosen['score_green'])
     return chosen, errors
+
+
+def score_class(score):
+    """The badge class for a score in percent: green, amber or red (Score colors). Should
+    amber be left above green (one of them put back to its default), green wins."""
+    if score is None:
+        return ''
+    green = get('score_green')
+    amber = min(get('score_amber'), green)
+    return 'badge-ok' if score >= green else 'badge-warn' if score >= amber else 'badge-bad'
 
 
 def save(chosen, by):

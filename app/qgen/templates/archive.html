@@ -27,7 +27,7 @@
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
               <td data-label="Quiz"><strong>{{ a.quiz_title }}</strong>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result">
-                {% if a.completed and a.score is not none %}<span class="badge {{ 'badge-ok' if a.score >= 70 else 'badge-warn' if a.score >= 50 else 'badge-bad' }}">{{ '%.0f' % a.score }}%</span>
+                {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
                 {% elif a.needs_review %}<span class="badge badge-warn">Being graded</span>
                 {% elif a.startdate %}<span class="badge">Not handed in</span>
                 {% else %}<span class="badge">Not started</span>{% endif %}</td>

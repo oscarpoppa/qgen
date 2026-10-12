@@ -59,6 +59,8 @@ from app.qgen.models import CQuiz, Setting, attempts_by_quiz
 #the site's drawn icons (app/icons.py), in every template and macro
 from app import icons as _icons
 app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_script=_icons.icon_script)
+from app import tuning as _tuning  # noqa: E402
+app.jinja_env.globals.update(score_class=_tuning.score_class)
 
 @app.template_filter('when')
 def when_filter(d, style='day'):

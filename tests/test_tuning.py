@@ -231,3 +231,42 @@ def test_security_settings_take_effect(app_db):
     set_values(token_days=7)
     row, _ = ApiToken.issue(db.session.get(User, ids('teach')), 'test')
     assert timedelta(days=6, hours=23) < row.expires_at - datetime.now() <= timedelta(days=7)
+
+
+def test_score_colors_are_a_setting(app_db):
+    """Which score shows green, amber or red is set under Score colors (70% and 50% as
+    before), and every score badge on the site follows it."""
+    app, db = app_db
+    from app import tuning
+    from app.qgen import services as S
+    from test_dashboard import make_quiz, give
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    assert (tuning.get('score_green'), tuning.get('score_amber')) == (70, 50)
+    with app.test_request_context():
+        assert [tuning.score_class(x) for x in (100, 70, 69, 50, 49, 0)] == \
+            ['badge-ok', 'badge-ok', 'badge-warn', 'badge-warn', 'badge-bad', 'badge-bad']
+    page = teacher.get(PAGE).data.decode()
+    assert 'Score colors' in page and 'Green from' in page and 'Default: 70%' in page
+    # amber can't start above green: nothing is saved
+    r = teacher.post(PAGE, data=form(score_green=60, score_amber=80))
+    assert r.status_code == 400 and 'Amber has to start at or below green (60%).' in r.data.decode()
+    assert tuning.get('score_green') == 70
+    # sam's 100% shows green, and still does with green (and amber) from 100%; 99% is then red
+    vq = make_quiz(app, teacher)
+    with app.test_request_context():
+        S.submit(give(vq, 'sam'), {1: '4'})
+        db.session.commit()
+    home = sam.get('/home').data.decode()
+    assert 'badge badge-ok">100%' in home
+    teacher.post(PAGE, data=form(score_green=100, score_amber=100))
+    assert 'badge badge-ok">100%' in sam.get('/home').data.decode()
+    with app.test_request_context():
+        assert tuning.score_class(99) == 'badge-bad'
+    # one of them put back to its default, leaving amber above green: green wins
+    set_values(score_green=60, score_amber=60)
+    from app.user.models import User
+    tuning.reset(db.session.get(User, ids('teach')), 'score_green')
+    set_values(score_amber=90)
+    with app.test_request_context():
+        assert tuning.get('score_green') == 70 and tuning.get('score_amber') == 90
+        assert tuning.score_class(75) == 'badge-ok' and tuning.score_class(60) == 'badge-bad'

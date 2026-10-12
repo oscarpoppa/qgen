@@ -20,7 +20,7 @@
   <div class="card problem-summary">
     <div class="btn-row">
       <span class="badge">{{ count_of(summary.tries, 'answer', 'answers') }} from {{ count_of(summary.students, 'student', 'students') }}</span>
-      {% if summary.average is not none %}<span class="badge {{ 'badge-ok' if summary.average >= 70 else 'badge-warn' if summary.average >= 50 else 'badge-bad' }}" title="The average score on this problem, of the answers graded">Average {{ '%.0f' % summary.average }}%</span>{% endif %}
+      {% if summary.average is not none %}<span class="badge {{ score_class(summary.average) }}" title="The average score on this problem, of the answers graded">Average {{ '%.0f' % summary.average }}%</span>{% endif %}
       <span class="badge badge-ok" title="Answers that got full credit">{{ summary.right }} fully right</span>
       {% if summary.waiting %}<span class="badge badge-warn">{{ summary.waiting }} waiting for grading</span>
         <a class="btn btn-sm" href="{{ url_for('qgen.review_list') }}" title="Answers you still need to grade (on Grading)">Grading</a>{% endif %}

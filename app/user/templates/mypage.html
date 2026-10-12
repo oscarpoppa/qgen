@@ -106,7 +106,7 @@
   <ul class="dash-list">
   {% for cq in finished %}
     <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
-      {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ 'badge-ok' if cq.score >= 70 else 'badge-warn' if cq.score >= 50 else 'badge-bad' }}">{{ '%.0f' % cq.score }}%</span>
+      {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
       {% else %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>{% endif %}
       <span class="small muted">{{ cq.compdate|when }}</span>
       <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'See how you did on' if cq.status == 'completed' else 'See what you handed in for' }} “{{ cq.vquiz.title }}”">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>

@@ -5,6 +5,7 @@
 
 {% macro amount(t, value) -%}
   {%- if t.unit == 'choice' -%}{{ (t.choices|selectattr(0, 'equalto', value)|map(attribute=1)|first) or value }}
+  {%- elif t.unit == '%' -%}{{ value }}%
   {%- else -%}{{ '{:,}'.format(value) }} {{ t.unit if value != 1 else t.unit[:-1] }}{%- endif -%}
 {%- endmacro %}
 

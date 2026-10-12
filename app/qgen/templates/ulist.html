@@ -19,7 +19,7 @@
             {{ box_label('note', g.vquiz.title, count_of(g.attempts|length, 'attempt', 'attempts')) }}
             <span class="result-box-sum">
               {% if g.attempts|selectattr('status', 'equalto', 'review')|list %}<span class="badge badge-warn">Waiting for grading</span>{% endif %}
-              {% if g.combined is not none %}<span class="badge {{ 'badge-ok' if g.combined >= 70 else 'badge-warn' if g.combined >= 50 else 'badge-bad' }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
+              {% if g.combined is not none %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>
               {% elif latest.status == 'started' %}<span class="badge badge-accent">In progress</span>
               {% elif latest.status == 'new' %}<span class="badge">Not started</span>{% endif %}
               <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=g.vquiz.id) }}" title="Everyone's attempts and scores on this quiz">History</a>
@@ -60,7 +60,7 @@
       {% set sum_going = item.cquizzes|selectattr('status', 'equalto', 'started')|list|length %}
       {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
       {% if not single and item.cquizzes %}<span class="student-sums">
-        {% if sum_done %}{% set sum_avg = (sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length) %}<span class="badge {{ 'badge-ok' if sum_avg >= 70 else 'badge-warn' if sum_avg >= 50 else 'badge-bad' }}" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
+        {% if sum_done %}{% set sum_avg = (sum_done|map(attribute='score')|map('default', 0, true)|map('float')|sum) / (sum_done|length) %}<span class="badge {{ score_class(sum_avg) }}" title="Attempts handed in and graded, and their average score">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}
         {% if sum_waiting %}<span class="badge badge-warn" title="Attempts waiting for you to grade written answers">{{ sum_waiting }} to grade</span>{% endif %}
         {% if sum_going %}<span class="badge badge-accent" title="Attempts started and not handed in yet">{{ sum_going }} in progress</span>{% endif %}
         {% if sum_fresh %}<span class="badge" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}
