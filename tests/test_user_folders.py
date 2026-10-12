@@ -188,7 +188,7 @@ def test_assigning_from_the_users_page(app_db):
     assert '<form method="get" action="/quiz/assign" id="assign-people"' in page
     assert 'href="/quiz/assign?users={}">Assign</a>'.format(ids('kim')) in no_titles(page)
     assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in no_titles(page)
-    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(p2) in no_titles(page)  # the box inside
+    assert 'href="/quiz/assign?folder={}">Assign a quiz<span class="wide-only"> to this folder</span></a>'.format(p2) in no_titles(page)  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
     opened = lambda page: re.findall(r'<details class="box pick-group" data-fixed data-group="(\w+)" open>', page)
     # a folder: everyone in it (and in the folders inside it), checked, with the folder open

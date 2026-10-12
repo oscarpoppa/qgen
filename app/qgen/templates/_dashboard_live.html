@@ -95,8 +95,9 @@
     {% endif %}
     </div>
   </details>
-  {# full width, so last: in the middle it left a hole beside the shorter box above it #}
-  <details class="box card dash-card dash-wide" id="dash-out" data-box="out" open>
+  {# last, one column wide: it goes into whichever column is shorter (the grid packs boxes into
+     the gaps, masonry.js + .dash-grid dense), so no hole is left beside a short box #}
+  <details class="box card dash-card" id="dash-out" data-box="out" open>
     <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
       {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn't handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">

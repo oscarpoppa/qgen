@@ -238,8 +238,9 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
-    <select name="to" class="move-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in another folder too">
-      <option value="">+ Add…</option>
+    {# a small "+" beside the chips: it opens the list of folders #}
+    <select name="to" class="move-select add-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in another folder too">
+      <option value="">+</option>
       {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
     </select>
     <noscript><button class="btn btn-secondary btn-xs" title="Put it in the folder you picked">Add</button></noscript>

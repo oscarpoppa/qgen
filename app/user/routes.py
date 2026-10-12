@@ -462,11 +462,13 @@ def userdet():
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
         add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
         unit='person', units='people', all_label='Everyone', all_count=len(ulst), name=lambda f: f.name,
-        placeholder='e.g. 7th grade', add_words='+ Add…', drag_what='a person',
+        placeholder='e.g. 7th grade', add_words='+', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
-        box_tools=lambda n: Markup('<a class="btn btn-xs" href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz to this folder</a> ').format(
+        #a plain button (blue is for the page's own action); grayed out in an empty folder;
+        #"to this folder" drops off on phones
+        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs" href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz<span class="wide-only"> to this folder</span></a> ').format(
             url_for('qgen.assign', folder=n['folder'].id), n['folder'].name)
-        if n['count'] else '',
+        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs" disabled title="Nobody in “{}” yet">Assign a quiz<span class="wide-only"> to this folder</span></button> ').format(n['folder'].name),
         fold_key='qgen-folded-user-folders')
     return render_template('udet.html', ulst=ulst, title='People', fk=fk, shown=shown, folders_of=folders_of)
 

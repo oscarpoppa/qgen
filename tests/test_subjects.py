@@ -373,7 +373,7 @@ def test_they_are_called_folders_on_screen(app_db):
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
     assert 'Folder &#34;Algebra&#34; made.' in r.data.decode() or 'Folder "Algebra" made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Put in folder' in page and 'Take out of folder' in page and '<option value="">+ Add…</option>' in page
+    assert 'Put in folder' in page and 'Take out of folder' in page and '<option value="">+</option>' in page
     from app.qgen.models import VPGroup
     page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
     assert 'Remove the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page

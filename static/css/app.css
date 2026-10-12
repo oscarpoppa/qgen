@@ -964,7 +964,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .result-box-sum { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
 @media (prefers-reduced-motion: reduce) { .result-box .fold { transition: none; } }
 /* Users page: the folders someone is in, each with a ✕ to take them out */
-.person-folders { min-width: 160px; }
+.person-folders { min-width: 170px; }
 .folder-chip { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px 4px 0; padding: 1px 4px 1px 8px; border: 1px solid var(--border);
   border-radius: 999px; background: var(--surface-2); font-size: var(--fs-sm); white-space: nowrap; }
 .folder-chip a { color: var(--text); text-decoration: none; }
@@ -1952,3 +1952,40 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
   .grading-group > .table-wrap > table > thead th:nth-child(3) { width: 10rem; }
   .grading-group > .table-wrap > table > thead th:nth-child(4) { width: 6.5rem; }
 }
+
+/* ---------- layout review 2026-10-12 ---------- */
+/* words that drop off a button on phones ("Assign a quiz to this folder" -> "Assign a quiz") */
+@media (max-width: 640px) { .wide-only { display: none; } }
+/* a folder heading's buttons on a phone: a line of their own under the name, wrapping inside the
+   box rather than pushing the page wider */
+@media (max-width: 640px) {
+  .sub-head > .head-pair { flex: 1 1 100%; min-width: 0; justify-content: flex-start; }
+  .sub-head > .head-pair .level-buttons, .sub-head > .head-pair .head-tools { flex-wrap: wrap; }
+}
+/* the Dashboard's rows: a long quiz name is cut short with "…" (its tooltip has the whole name),
+   so a row stays on one line */
+@media (min-width: 641px) {
+  .dash-list > li:not(:has(.dash-pin-text)) { flex-wrap: nowrap; }  /* (a pinned message keeps its details on a line below) */
+  .dash-list > li:not(:has(.dash-pin-text)) > * { flex: 0 0 auto; }
+  .dash-list > li > span:has(> a.name-link:not(.person)), .dash-list > li:not(:has(.dash-pin-text)) > span.muted {
+    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dash-list > li > span:has(> a.name-link:not(.person)) { min-width: 6ch; }
+}
+/* the Dashboard: a box fills the first gap it fits (no hole beside a short box) */
+.dash-grid.masonry-on { grid-auto-flow: row dense; }
+/* phones: a Results box's heading buttons in an even grid (four go two by two, three side by side),
+   never one left alone on a line */
+@media (max-width: 640px) {
+  .subject-box > summary .box-actions { flex: 1 1 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .subject-box > summary .box-actions:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .subject-box > summary .box-actions > .btn { width: 100%; margin: 0; text-align: center; padding-left: 4px; padding-right: 4px;
+    white-space: normal; line-height: 1.2; font-size: var(--fs-sm); display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+  /* a student page's quiz heading: its badge and buttons on one tidy line under the name, a little smaller */
+  .result-box > summary .result-box-sum { flex: 1 1 100%; margin-left: 0; flex-wrap: wrap; }
+  .result-box > summary .result-box-sum .btn { padding-left: 10px; padding-right: 10px; font-size: var(--fs-sm); }
+}
+/* a thing's folders: its chips, then a small "+" that opens the list of folders to add it to */
+select.add-select { width: 1.9rem !important; height: 1.9rem; min-height: 0; min-width: 0 !important; padding: 0 !important; text-align: center; text-align-last: center;
+  appearance: none; -webkit-appearance: none; background-image: none; border-radius: 999px; font-weight: 700; cursor: pointer; }
+select.add-select option { text-align: left; font-weight: 400; }
+.move-form:has(> .add-select) { display: inline-flex; vertical-align: middle; margin: 0 0 4px; }
