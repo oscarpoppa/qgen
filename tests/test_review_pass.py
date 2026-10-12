@@ -1256,7 +1256,9 @@ def test_one_set_of_sizes_and_accessible_controls():
     body = css[css.index('  --shadow:'):]
     sizes = set(re.findall(r'\bfont(?:-size)?\s*:\s*[^;}]*?(\d*\.?\d+rem)', body))
     assert not sizes, sizes  # every rem size is a --fs-* token
-    corners = set(re.findall(r'radius\s*:\s*([^;}]*)', body)) - {'var(--r-sm)', 'var(--r)', 'var(--r-lg)', '50%', '999px', '0', '0 var(--r) var(--r) 0'}
+    ok = {'var(--r-sm)', 'var(--r)', 'var(--r-lg)', '50%', '999px', '0'}
+    # (a value per corner is fine when each is one of the set: a file-folder tab's top corners)
+    corners = {c for c in re.findall(r'radius\s*:\s*([^;}]*)', body) if not all(part in ok for part in c.strip().split())}
     assert not corners, corners
     assert 'uppercase' not in css
     assert '--field-border: #7d8695' in css and '--new-edge: #b08300' in css
