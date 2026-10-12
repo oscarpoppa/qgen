@@ -2,7 +2,8 @@
  * thing once, and a row of folder buttons above it narrows the list to one folder (with the
  * folders inside it). "All" is first and chosen to begin with; then the folders, then
  * Uncategorized (what's in no folder; grayed out when everything is in one). Choosing a folder
- * that has folders inside it shows a second row with those. The chosen folder's own buttons
+ * that has folders inside it shows a second row: "All in “X”" (chosen while everything in X is
+ * shown), then the folders inside it. The chosen folder's own buttons
  * ("Open this folder", "Assign a quiz to this folder") sit at the end of its row. The page starts on
  * All; the choice is kept only across reloads from the page itself. A folder button takes a drag like the folder
  * list does (data-drop). Works with the name filter: each hides with its own flag (filter.js). */
@@ -134,16 +135,18 @@
         sub.className = 'folder-tabs folder-tabs-inner';
         sub.setAttribute('role', 'group');
         sub.setAttribute('aria-label', 'Folders in ' + n.name);
-        var l = document.createElement('span');
-        l.className = 'folder-tabs-label';
-        l.textContent = 'In “' + n.name + '”';
-        sub.appendChild(l);
+        //first, the folder itself ("All in “X”"): chosen while the list shows everything in it, so
+        //the list never looks like it belongs to the folder beside it
+        var whole = button(String(n.id), 'All in “' + n.name + '”', n.count, 'folders');
+        whole.classList.add('folder-tab-all');
+        whole.title = 'Show everything in “' + n.name + '” and the folders inside it';
+        sub.appendChild(whole);
         n.children.forEach(function (c) { sub.appendChild(button(String(c.id), c.name, c.count, 'folder')); });
         rows.appendChild(sub);
       });
       //which buttons are chosen: the folder and the ones it's in
       rows.querySelectorAll('.folder-tab').forEach(function (b) {
-        var on = b.dataset.folder === chosen || p.indexOf(b.dataset.folder) !== -1;
+        var on = b.dataset.folder === chosen || (!b.classList.contains('folder-tab-all') && p.indexOf(b.dataset.folder) !== -1);
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
         b.setAttribute('aria-expanded', on ? 'true' : 'false');
       });
@@ -184,6 +187,7 @@
       var b = e.target.closest('.folder-tab');
       if (!b || b.disabled) return;
       var id = b.dataset.folder;
+      if (b.classList.contains('folder-tab-all')) { choose(id); return; }
       //pressing the chosen folder again goes back up a level (or to All)
       if (id === chosen) id = byId[id] && parentOf[id] ? parentOf[id] : 'all';
       choose(id);

@@ -18,7 +18,7 @@ This covers Problems, Quizzes, People (Accounts and Results), Results by quiz, t
 - **Top:** the page title, with the page's Expand all / Collapse all at the right.
 - **Folder buttons:** a row on a dashed band.
   - The order is always: **All** (chosen to begin with), the automatic ones (New, In progress), the folders, then **Uncategorized**.
-  - A folder with folders inside it adds a second row for them.
+  - A folder with folders inside it adds a second row: “All in “X”” first (chosen while the list shows everything in X), then its folders.
   - The open tab and its panel share a light accent tint and outline; closed tabs are dimmed; the open tab in the second row is filled solid.
   - A folder's own page shows the same tabs; a folder with no folders inside it has just its own tab.
   - The chosen folder's own buttons sit right after its button: Expand all / Collapse all, then Open this folder, then any folder action such as "Assign a quiz to this folder".
