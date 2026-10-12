@@ -1729,3 +1729,11 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()
     assert 'if (same) pair.hidden = true;' in js  # a pair for the same boxes as one before it is left out
     assert "setTimeout(function () { if (d.open !== was) d.open = was; }, 0);" in js  # heading buttons don't fold the box
+
+
+def test_grading_tables_line_their_buttons_up():
+    """Grading: every quiz's table has the same column widths, so Grade buttons line up."""
+    import os
+    css = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'css', 'app.css')).read()
+    assert '.grading-group > .table-wrap > table { table-layout: fixed; width: 100%; }' in css
+    assert '.grading-group > .table-wrap > table > thead th:nth-child(4) { width: 6.5rem; }' in css

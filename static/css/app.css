@@ -1945,3 +1945,10 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 .subject-box > summary .box-actions { flex-wrap: wrap; justify-content: flex-end; }
 @container page (max-width: 900px) { .subject-box > summary:has(> .box-actions) { flex-wrap: wrap; row-gap: 6px; } }
 @container listarea (max-width: 900px) { .subject-box > summary:has(> .box-actions) { flex-wrap: wrap; row-gap: 6px; } }
+/* Grading: every quiz's table has the same columns, so the Grade buttons line up box to box */
+@media (min-width: 641px) {
+  .grading-group > .table-wrap > table { table-layout: fixed; width: 100%; }
+  .grading-group > .table-wrap > table > thead th:nth-child(2) { width: 11rem; }
+  .grading-group > .table-wrap > table > thead th:nth-child(3) { width: 10rem; }
+  .grading-group > .table-wrap > table > thead th:nth-child(4) { width: 6.5rem; }
+}
