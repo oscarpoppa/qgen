@@ -13,8 +13,9 @@ def folder(name):
     return UserFolder.query.filter_by(name=name).one().id
 
 
-def people(c, view=None):
-    """The names in the Users page's tables (each table row once per listing)."""
+def people(c, view='main'):
+    """The names in the Users page's tables (each table row once per listing); the people in
+    no folder to begin with (the page itself starts on everyone)."""
     page = without_all_box(c.get('/userdet' + ('?folder={}'.format(view) if view is not None else '')).data.decode())
     return re.findall(r'data-name="([^"]+)"\s+title="Drag onto a folder', page)
 

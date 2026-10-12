@@ -3,8 +3,8 @@
  * folders inside it). "All" is first and chosen to begin with; then the folders, then
  * Uncategorized (what's in no folder; grayed out when everything is in one). Choosing a folder
  * that has folders inside it shows a second row with those. The chosen folder's own buttons
- * ("Open this folder", "Assign a quiz to this folder") sit at the end of its row. The choice is
- * remembered for the page while the tab is open. A folder button takes a drag like the folder
+ * ("Open this folder", "Assign a quiz to this folder") sit at the end of its row. The page starts on
+ * All; the choice is kept only across reloads from the page itself. A folder button takes a drag like the folder
  * list does (data-drop). Works with the name filter: each hides with its own flag (filter.js). */
 (function () {
   var uid = 0;
@@ -59,8 +59,11 @@
       return b;
     }
 
-    var chosen = 'all';
-    try { chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
+    //the page starts on All; only coming back to it from itself (a button here that reloads it,
+    //e.g. a move or a drop) keeps the folder that was chosen
+    var chosen = 'all', fromHere = false;
+    try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
+    try { if (fromHere) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
     if (chosen !== 'all' && chosen !== 'none' && !byId[chosen]) chosen = 'all';
     if (chosen === 'none' && !loose) chosen = 'all';
 

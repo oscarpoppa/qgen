@@ -62,16 +62,16 @@ def mypage():
     due_ids = {cq.id for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()}
     root, all_folders = folders.tree(current_user, groups, due_ids)
     nodes, home = folders.index(root)
-    #which part the side list has chosen: the quizzes in no folder (a quiz is in one place
-    #only), 'all' (every quiz, each saying its folder), or a folder's id; a folder that's
-    #gone (or isn't theirs) shows the quizzes in no folder
+    #which part the side list has chosen: 'all' (the default: every quiz, each saying its folder),
+    #the quizzes in no folder (a quiz is in one place only), or a folder's id; a folder that's
+    #gone (or isn't theirs) shows them all
     from app import folder_tree
     #from Home's counters (?show=todo, started or soon): only those quizzes, from every folder
     showing = request.args.get('show') if request.args.get('show') in SHOW_ONLY else None
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main', extra=('new', 'started', 'soon'))
+        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all', extra=('new', 'started', 'soon'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet, or handed in and waiting to be graded
@@ -452,8 +452,8 @@ def userdet():
     from app import folder_tree
     ulst = User.query.order_by(User.username).all()
     root, flat, nodes, folders_of = groups.tree(ulst)
-    #the people in no folder (the default), 'all', or a folder's id (a gone folder: in no folder)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='main')
+    #everyone (the default), the people in no folder ('main'), or a folder's id (a gone folder: everyone)
+    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['people'] if node else ulst if view == 'all' else root['people']
     fk = folder_tree.kit(
         view, node, root, flat, nodes,

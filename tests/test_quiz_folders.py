@@ -44,7 +44,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage?folder=main').data.decode()
     assert 'aria-current="page">{} Uncategorized'.format(ico('tray')) in page
-    assert cards(sam, 'none') == ['Week 2']  # an old address: the main list
+    assert sorted(cards(sam, 'none')) == ['Week 1', 'Week 2']  # an old address: All
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
     assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and '</svg> Unit 1</a></p>' in all_page

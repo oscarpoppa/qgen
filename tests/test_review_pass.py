@@ -629,9 +629,9 @@ def test_taking_a_quiz_away_updates_everything(app_db):
     assert ArchivedAttempt.query.count() == 3
 
 
-# ---------------------------------------------------------------- pages remember where you were
+# ---------------------------------------------------------------- folder pages start on All
 
-def test_folder_pages_remember_the_folder_you_were_in(app_db):
+def test_folder_pages_start_on_all(app_db):
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
     from app.qgen.models import QuizFolder
@@ -643,26 +643,21 @@ def test_folder_pages_remember_the_folder_you_were_in(app_db):
 
     def shown(page):
         return re.search(r'data-view="(\w+)"', page).group(1)
-    # the first time: the page's own default (quizzes in no folder)
-    assert shown(sam.get('/mypage').data.decode()) == 'main'
-    # open the folder, go Home, come back from the menu: still in the folder
-    sam.get('/mypage?folder={}'.format(folder.id))
-    sam.get('/home')
-    page = sam.get('/mypage').data.decode()
-    assert shown(page) == str(folder.id) and '>A</h2>' in page and '>B</h2>' not in page
-    # the side list's links say which folder, so "Uncategorized" and "All" can be picked again
-    assert 'href="/mypage?folder=main"' in page and 'href="/mypage?folder=all"' in page
-    sam.get('/mypage?folder=all')
     assert shown(sam.get('/mypage').data.decode()) == 'all'
-    # a folder that's gone: the default again
-    sam.get('/mypage?folder={}'.format(folder.id))
+    # open the folder, go Home, come back from the menu: All again
+    page = sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
+    assert shown(page) == str(folder.id) and '>A</h2>' in page and '>B</h2>' not in page
+    sam.get('/home')
+    assert shown(sam.get('/mypage').data.decode()) == 'all'
+    # the side list's links say which folder, so "Uncategorized" and "All" can be picked
+    assert 'href="/mypage?folder=main"' in page and 'href="/mypage?folder=all"' in page
+    # a folder that's gone: All
     sam.post('/mypage/folders/{}/delete'.format(folder.id))
-    assert shown(sam.get('/mypage').data.decode()) == 'main'
-    # each page remembers its own; another person's choice is theirs
+    assert shown(sam.get('/mypage?folder={}'.format(folder.id)).data.decode()) == 'all'
+    # the teacher's folder pages too
     teach.get('/quiz/listvq?folder=main')
-    assert shown(teach.get('/quiz/listvq').data.decode()) == 'main'
-    assert shown(teach.get('/quiz/archive').data.decode()) == 'all'
-    assert shown(login(app, 'teach').get('/quiz/listvq').data.decode()) == 'all'
+    for url in ('/quiz/listvq', '/quiz/listvp', '/quiz/archive', '/quiz/listuser', '/userdet'):
+        assert shown(teach.get(url).data.decode()) == 'all', url
 
 
 def test_editors_can_start_over(app_db):
@@ -729,10 +724,9 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
     assert titles('soon') == ['Soon']
-    # it doesn't change the folder My quizzes remembers
-    sam.get('/mypage?folder=main')
+    # afterward My quizzes starts on All as always
     sam.get('/mypage?show=todo')
-    assert 'data-view="main"' in sam.get('/mypage').data.decode()
+    assert 'data-view="all"' in sam.get('/mypage').data.decode()
 
 
 # ---------------------------------------------------------------- a Back button on every page

@@ -113,12 +113,13 @@ def path(nodes, node):
     return out
 
 
-def view_of(choice, nodes, default='main', remember=True, extra=()):
+def view_of(choice, nodes, default='main', remember=False, extra=()):
     """What a page shows for ?folder=: 'main' (in no folder), 'all', or a folder's id (as
     text), with that folder's node (None for main and all). A folder that's gone: default.
 
-    The choice is remembered for the page (by its endpoint, in the login session), so coming
-    back to the page without ?folder= (from the menu, Home...) shows the same folder again."""
+    Folder pages start on All every time (the site owner's choice, 2026-10-12): with
+    remember=True a page would instead reopen the last folder chosen (by its endpoint, in the
+    login session) when it's opened without ?folder=."""
     from flask import has_request_context, request, session
     key = request.endpoint if remember and has_request_context() else None
     if choice is None and key:

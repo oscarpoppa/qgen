@@ -963,8 +963,8 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     assert 'Nothing in progress' not in page
     row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
     assert 'class="badge badge-accent side-new-badge" title="1 attempt started, or handed in and not graded yet">1 in progress</span>' in row[:row.index('</li>')]
-    # remembered like any folder: back to My quizzes shows it again
-    assert 'In progress: quizzes' in sam.get('/mypage').data.decode()
+    # back to My quizzes from the menu starts on All again
+    assert 'data-view="all"' in sam.get('/mypage').data.decode()
     S.submit(cq, {1: '4'})
     assert 'Nothing in progress right now.' in sam.get('/mypage?folder=started').data.decode()
 
