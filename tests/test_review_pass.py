@@ -1602,3 +1602,16 @@ def test_tidy_layouts_at_every_width(app_db):
         assert rule in css, rule
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
     assert '<div class="btn-row result-attempt result-archive-all">' in tpl  # under the attempts, not beside Retake
+
+
+def test_every_folder_with_boxes_inside_has_its_own_expand_collapse():
+    """A folder box holding boxes of its own (sub-folders, quizzes, attempts) gets Expand all /
+    Collapse all for what's inside it, on every page: boxes.js adds the pair where the page drew
+    none (it shows only with two or more boxes inside)."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
+    assert "document.querySelectorAll('details.sub-box').forEach(function (d) {" in js
+    assert "return p.closest('details.sub-box') === d;" in js  # a folder that already has one keeps it
+    assert "body.classList.add('level');" in js and "bar.className = 'sub-tools folder-pair';" in js
+    assert "if (pair.parentElement.classList.contains('folder-pair')) pair.parentElement.hidden = pair.hidden;" in js

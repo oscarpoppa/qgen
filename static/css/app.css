@@ -1875,3 +1875,6 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
   .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(3)):not(:has(> :nth-child(4))) { grid-template-columns: repeat(3, 1fr); }
 }
 .history-table td .nowrap { white-space: nowrap; }
+/* a folder's own Expand all / Collapse all (added by boxes.js where the page has none) */
+.sub-tools.folder-pair { justify-content: flex-end; margin-bottom: 8px; }
+.sub-tools.folder-pair[hidden] { display: none; }

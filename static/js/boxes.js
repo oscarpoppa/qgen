@@ -122,12 +122,41 @@
     });
     if (keep) save();
   });
+  //every folder box holding boxes of its own (sub-folders, quizzes, attempts) gets its own
+  //Expand all / Collapse all pair, at the top of what's in it, like the folder pages' folders;
+  //it shows only where there are two or more boxes inside (below)
+  function addFolderPairs() {
+    document.querySelectorAll('details.sub-box').forEach(function (d) {
+      var body = d.querySelector(':scope > summary + *');
+      if (!body || body.qgenPair) return;
+      var own = Array.prototype.some.call(body.querySelectorAll('.level-buttons'), function (p) {
+        return p.closest('details.sub-box') === d;
+      });
+      body.qgenPair = true;
+      if (own) return;
+      var t = d.querySelector(':scope > summary .box-title');
+      var name = t ? '“' + t.textContent.trim() + '”' : 'this folder';
+      body.classList.add('level');
+      var bar = document.createElement('div');
+      bar.className = 'sub-tools folder-pair';
+      bar.innerHTML = '<span class="level-buttons">'
+        + '<button type="button" class="btn btn-secondary btn-xs" data-level="open"></button>'
+        + '<button type="button" class="btn btn-secondary btn-xs" data-level="close"></button></span>';
+      var open = bar.querySelector('[data-level=open]'), close = bar.querySelector('[data-level=close]');
+      open.textContent = 'Expand all'; open.setAttribute('aria-label', 'Expand all in ' + name); open.title = 'Open every box in ' + name;
+      close.textContent = 'Collapse all'; close.setAttribute('aria-label', 'Collapse all in ' + name); close.title = 'Fold every box in ' + name + ' down to its heading';
+      body.insertBefore(bar, body.firstChild);
+    });
+  }
   function showLevelButtons() {
+    addFolderPairs();
     clearTimeout(showLevelButtons._t);
     showLevelButtons._t = setTimeout(function () {
       document.querySelectorAll('.level-buttons').forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
         pair.hidden = !btn || folds(levelOf(btn)).length < 2;
+        //(an added pair's bar goes too when its pair has nothing to do)
+        if (pair.parentElement.classList.contains('folder-pair')) pair.parentElement.hidden = pair.hidden;
       });
     }, 0);
   }
