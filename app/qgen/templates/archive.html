@@ -30,7 +30,7 @@
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
                 {% elif a.needs_review %}<span class="badge badge-warn">Being graded</span>
                 {% elif a.startdate %}<span class="badge">Not handed in</span>
-                {% else %}<span class="badge">Not started</span>{% endif %}</td>
+                {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
               <td data-label="When" class="small when-col">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
                 <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>

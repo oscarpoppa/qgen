@@ -352,6 +352,9 @@ legend { font-weight: 700; padding: 0 6px; }
 .badge-bad { background: var(--bad-soft); color: var(--bad); }
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
 .badge-accent { background: var(--accent-soft); color: var(--accent); }
+/* where an attempt is ("Not started", "In progress"): outlined in its own color so it stands out
+   among the plain badges beside it */
+.badge-status { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 60%, transparent); font-weight: 700; }
 .count { background: var(--bad); color: var(--on-bad); border-radius: 999px; font-size: var(--fs-xs); padding: 2px 7px; font-weight: 700; }
 
 /* ---------- tables ---------- */

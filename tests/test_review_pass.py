@@ -1518,3 +1518,26 @@ def test_uncategorized_everywhere(app_db):
         for f in files:
             if f.endswith(('.html', '.py')):
                 assert 'not in a folder' not in open(os.path.join(root, f)).read().lower(), f
+
+
+def test_where_an_attempt_is_stands_out(app_db):
+    """"Not started" (gold) and "In progress" (blue) are outlined in their own color wherever an
+    attempt's state is shown, so they stand out among the plain badges beside them."""
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
+    assert '.badge-status { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 60%, transparent); font-weight: 700; }' in css
+    for root, _, files in os.walk(os.path.join(here, 'app')):
+        for f in files:
+            if f.endswith('.html'):
+                text = open(os.path.join(root, f)).read()
+                assert '<span class="badge">Not started</span>' not in text, f
+                assert '<span class="badge badge-accent">In progress</span>' not in text, f
+    app, db = app_db
+    teacher = login(app, 'teach')
+    vq = make_quiz(app, teacher)
+    with app.test_request_context():
+        give(vq, 'sam')
+        db.session.commit()
+    page = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert '<span class="badge badge-warn badge-status">Not started</span>' in page

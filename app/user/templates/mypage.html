@@ -30,7 +30,7 @@
 {% macro status(cq, counted=false) %}
   {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if counted else '' }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
   {% elif cq.status == 'review' %}<span class="badge badge-warn" title="Your teacher is checking your written answers">Teacher is checking</span>
-  {% elif cq.status == 'started' %}<span class="badge badge-accent">In progress</span>
+  {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
   {# assigned and not opened yet: new to the student #}
   {% else %}<span class="badge badge-warn">New</span>{% endif %}
 {% endmacro %}
@@ -52,7 +52,7 @@
         {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
         {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
         {# started and not handed in yet; due soon (when, on hover): like New, open or folded #}
-        {% if g.attempts|selectattr('status', 'equalto', 'started')|list %}<span class="badge badge-accent quiz-new">In progress</span>{% endif %}
+        {% if g.attempts|selectattr('status', 'equalto', 'started')|list %}<span class="badge badge-accent badge-status quiz-new">In progress</span>{% endif %}
         {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
         {% if due_cq %}<span class="badge badge-bad quiz-new" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span>
