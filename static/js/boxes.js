@@ -186,7 +186,13 @@
       //never two pairs for the same boxes: a pair that would open or fold exactly what one
       //shown before it (further out) does is left out
       var shown = [];
-      document.querySelectorAll('.level-buttons').forEach(function (pair) {
+      //a folder's own pair (data-level-prefer: the folder chosen in a row of folder buttons) comes
+      //first, so it's the one kept when the page's pair would do the same
+      var pairs = Array.prototype.slice.call(document.querySelectorAll('.level-buttons'));
+      pairs.sort(function (a, b) {
+        return (b.querySelector('[data-level-prefer]') ? 1 : 0) - (a.querySelector('[data-level-prefer]') ? 1 : 0);
+      });
+      pairs.forEach(function (pair) {
         var btn = pair.querySelector('[data-level]');
         var set = btn ? folds(levelOf(btn), btn) : [];
         pair.hidden = set.length < 2;

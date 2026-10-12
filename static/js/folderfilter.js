@@ -7,6 +7,7 @@
  * remembered for the page while the tab is open. A folder button takes a drag like the folder
  * list does (data-drop). Works with the name filter: each hides with its own flag (filter.js). */
 (function () {
+  var uid = 0;
   function setUp(box) {
     if (box.qgenFolderFilter) return;
     box.qgenFolderFilter = true;
@@ -33,6 +34,7 @@
     var loose = items().filter(function (el) { return !inSome[keyOf(el)]; }).length;
     function count(n) { return n + ' ' + (n === 1 ? unit : units); }
 
+    if (!list.id) list.id = 'folder-list-' + (++uid);
     var rows = document.createElement('div');
     rows.className = 'folder-filter-rows';
     box.insertBefore(rows, list);
@@ -70,6 +72,24 @@
     function tools(id) {
       var span = document.createElement('span');
       span.className = 'folder-filter-tools-now';
+      //Expand all / Collapse all for what this folder shows (boxes.js shows them with two or
+      //more boxes, and puts these first: the page's own pair steps aside meanwhile)
+      var label = id === null ? (box.dataset.mainLabel || 'Uncategorized') : byId[id].name;
+      var pair = document.createElement('span');
+      pair.className = 'level-buttons';
+      [['open', 'Expand all', 'Open every one in \u201c'], ['close', 'Collapse all', 'Fold every one in \u201c']].forEach(function (b) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-secondary btn-xs';
+        btn.dataset.level = b[0];
+        btn.dataset.levelOf = '#' + list.id;
+        btn.dataset.levelPrefer = '';
+        btn.textContent = b[1];
+        btn.setAttribute('aria-label', b[1] + ' in ' + label);
+        btn.title = b[2] + label + '\u201d';
+        pair.appendChild(btn);
+      });
+      span.appendChild(pair);
       var t = box.querySelector('template.folder-filter-tools[data-for="' + id + '"]');
       if (t) span.appendChild(t.content.cloneNode(true));
       var n = byId[id], url = n ? n.url : box.dataset.mainUrl;

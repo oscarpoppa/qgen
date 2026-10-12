@@ -172,7 +172,9 @@
         r.hidden = !ok;
         if (ok) shown++;
       });
-      d.hidden = rows.length ? !shown : !(named && st === 'all');
+      //(its own flag: a folder button's choice stays, static/js/folderfilter.js)
+      var hide = rows.length ? !shown : !(named && st === 'all');
+      if (window.qgenHideRow) window.qgenHideRow(d, 'text', hide); else d.hidden = hide;
       if (active && !d.hidden) d.open = true;
       else if (!active) restore(d);
     });
