@@ -194,7 +194,16 @@
       //the chosen folder's own buttons at the end of the last row (All's too: every level has them)
       //(on a phone the rows scroll sideways, so they'd be out of sight: a line of their own under them)
       var t = tools(chosen === 'none' ? null : base());
-      if (t.childNodes.length) {
+      //a card that picks from the list (data-tools-home: its filter bar) keeps them at the end of
+      //that bar's line, the same in every such card (Assign's Quiz and Students, the quiz builder)
+      var home = box.dataset.toolsHome ? document.querySelector(box.dataset.toolsHome) : null;
+      if (home) { home.querySelectorAll('.folder-filter-tools-here').forEach(function (old) { old.remove(); }); }
+      if (t.childNodes.length && home) {
+        var spot = document.createElement('span');
+        spot.className = 'folder-filter-tools-here';
+        spot.appendChild(t);
+        home.appendChild(spot);
+      } else if (t.childNodes.length) {
         if (narrow && narrow.matches) {
           var line = document.createElement('div');
           line.className = 'folder-tools-line';

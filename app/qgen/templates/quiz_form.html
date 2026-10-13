@@ -80,13 +80,13 @@
       <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span></div>
       {% if has_problems %}
         <div class="builder-filters">
-          {{ filter_bar('#all-problems', 'problem', 'problems') }}
+          {{ filter_bar('#all-problems', 'problem', 'problems', id='problem-filter-bar') }}
         </div>
         <p class="muted small">Pick a folder to see its problems, and check problems from as many folders as you like; they all go in this quiz.</p>
         {# every problem once, with the folder tabs over the list, as on every folder page: All
            problems, the folders, Uncategorized; a tab says how many in it are checked #}
         <div class="folder-filter" id="problem-picker" data-folder-filter data-prefix="p:" data-key-attr="fkey"
-             data-all-label="All problems" data-main-label="Uncategorized" data-unit="problem" data-units="problems" data-remember="quiz-builder">
+             data-all-label="All problems" data-main-label="Uncategorized" data-unit="problem" data-units="problems" data-remember="quiz-builder" data-tools-home="#problem-filter-bar">
           <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
           <div id="all-problems" class="folder-filter-list">{{ problem_rows(all_problems, 'all') }}</div>
         </div>

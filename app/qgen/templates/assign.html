@@ -21,7 +21,7 @@
     <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='li', id='quiz-filter-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
-         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes">
+         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar">
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
         <ul class="choice-list pick-list quiz-pick-list" role="radiogroup" aria-label="{{ form.vquiz.label.text }}">
@@ -49,14 +49,14 @@
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# always open, like the Quiz card beside it #}
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
-    <div class="btn-row small pick-bar">
+    <div class="btn-row small pick-bar" id="people-pick-bar">
       <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button></span>
       <button type="button" class="btn btn-secondary btn-sm pick-all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
       <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
     </div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
-         data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people">
+         data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
       <div class="folder-filter-list">
         <ul class="choice-list pick-list">
