@@ -80,9 +80,14 @@ window.qgenHideRow = function (row, key, hide) {
           none = document.createElement('p');
           none.className = 'card empty small filter-none-auto';
           none.hidden = true;
-          root.parentElement.insertBefore(none, root.nextSibling);
+          //inside the list (it goes with it), unless the list itself hides when empty (folder tabs)
+          if (root.matches('.folder-filter-list')) root.parentElement.insertBefore(none, root.nextSibling);
+          else root.appendChild(none);
         }
-        none.hidden = !(active && shown === 0);
+        //(not when a folder tab already says it's empty)
+        var box = root.closest('.folder-filter') || root.querySelector('.folder-filter');
+        var said = box && box.querySelector('.folder-filter-empty:not([hidden])');
+        none.hidden = !(active && shown === 0) || !!said;
         if (!none.hidden) {
           none.textContent = (q ? 'Nothing matches \u201c' + input.value.trim() + '\u201d. ' : 'Nothing matches. ');
           var again = document.createElement('button');

@@ -223,12 +223,18 @@
     var folderEmpty = false, filtering = false;
     function tidy() {
       list.querySelectorAll('table').forEach(function (t) {
-        var rowsIn = t.querySelectorAll('tbody tr[data-box]');
+        var rowsIn = t.querySelectorAll('tbody tr[data-box], tbody tr[data-fkey]');
         if (rowsIn.length) t.hidden = Array.prototype.every.call(rowsIn, function (r) { return r.hidden; });
       });
       list.hidden = folderEmpty || (filtering && !items().some(function (el) { return !el.hidden; }));
     }
-    document.addEventListener('qgen-filtered', function (e) { filtering = !!(e.detail && e.detail.active); tidy(); });
+    document.addEventListener('qgen-filtered', function (e) {
+      //(only the filter over this list: Messages has another, for the message's students)
+      var bar = e.target.closest && e.target.closest('[data-filter-bar]'), over = bar && document.querySelector(bar.dataset.filter);
+      if (!over || !(over.contains(list) || box.contains(over))) return;
+      filtering = !!(e.detail && e.detail.active);
+      tidy();
+    });
 
     rows.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');

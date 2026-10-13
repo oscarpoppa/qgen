@@ -2152,7 +2152,7 @@ td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 24px
 /* Results by quiz: a long title is cut short with "…" (full title in its tooltip), so the quiz's
    buttons stay on its heading line */
 @media (min-width: 641px) {
-  details.quiz-result > summary { flex-wrap: nowrap; }
+  details.quiz-result > summary, details.subject-box.quiz-result > summary:has(> .box-actions) { flex-wrap: nowrap; }
   details.quiz-result > summary .box-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   details.quiz-result > summary > :not(.box-title):not(.fold) { flex: 0 0 auto; }
   details.quiz-result > summary > .box-actions { margin-left: auto; }

@@ -221,6 +221,8 @@
     });
   }
   picker.addEventListener('change', mark);
+  //(the tabs are drawn again when the window crosses the phone width)
+  if (window.matchMedia) { var mq = window.matchMedia('(max-width: 640px)'); if (mq.addEventListener) mq.addEventListener('change', function () { setTimeout(mark, 0); }); }
   picker.addEventListener('click', function (e) { if (e.target.closest('.folder-tab')) setTimeout(mark, 0); });
   document.getElementById('all-problems').addEventListener('qgen-ticks-changed', mark);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(mark, 0); });
