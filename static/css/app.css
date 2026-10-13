@@ -811,6 +811,7 @@ dialog.ask {
   border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; max-width: min(420px, calc(100vw - 32px));
   background: var(--surface); color: var(--text); box-shadow: 0 16px 48px rgba(16, 24, 40, .3);
 }
+dialog.ask.ask-many { max-width: min(560px, calc(100vw - 32px)); }  /* (three answers fit on one line) */
 dialog.ask::backdrop { background: rgba(10, 14, 22, .45); }
 dialog.ask p { margin: 0 0 16px; font-size: var(--fs-md); }
 dialog.ask .btn-row { justify-content: flex-end; }
@@ -867,7 +868,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .side-fold, .side-fold-space { flex: 0 0 18px; width: 18px; height: 22px; }
 .side-fold { border: 0; background: none; padding: 0; cursor: pointer; position: relative; }
 .side-fold:disabled { cursor: default; opacity: .4; }  /* a folder you're inside: stays open */
-.side-fold::before { content: ""; position: absolute; left: 6px; top: 6px; border-style: solid; border-width: 5px 0 5px 7px;
+.side-fold::before { content: ""; position: absolute; left: 6px; top: calc(50% - 5px); border-style: solid; border-width: 5px 0 5px 7px;
   border-color: transparent transparent transparent var(--muted); transform: rotate(90deg); transition: transform .15s; }
 .side-fold[aria-expanded="false"]::before { transform: none; }
 .folder-side .new-folder { margin-top: 10px; padding: 0 4px; }

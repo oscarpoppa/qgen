@@ -202,9 +202,11 @@ def test_deleting_a_quiz_or_problem_an_archived_attempt_uses(app_db):
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
     a = ArchivedAttempt.query.one()
     # the delete questions warn
-    assert '1 archived attempt uses this quiz; after deleting it it can still be viewed but not restored.' in \
-        teacher.get('/quiz/listvq').data.decode()
+    # (a quiz's Delete puts it in Removed quizzes; deleting it for good there warns)
     teacher.post('/quiz/delvq/{}'.format(vq.id))
+    assert '1 archived attempt uses this quiz; after deleting it it can still be viewed but not restored.' in \
+        teacher.get('/quiz/removed').data.decode()
+    teacher.post('/quiz/removed/{}/delete'.format(vq.id))
     db.session.expire_all()
     assert db.session.get(VQuiz, vq.id) is None
     assert '1 archived attempt uses this problem' in teacher.get('/quiz/listvp').data.decode()
@@ -346,7 +348,7 @@ def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
     sam_f = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     kim_f = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
     page, _ = archive_view(teacher, sam_f.id)
-    assert 'Folder options' in page and 'Remove the folder “sam”? Nothing in it is deleted' in page
+    assert 'Folder options' in page and 'Delete the folder “sam”? Nothing in it is deleted' in page
 
     # your own folder, and moving attempts into it
     teacher.post('/quiz/archive/folders/new', data={'name': '2025-26'})

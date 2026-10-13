@@ -365,7 +365,9 @@ def del_vquiz(vqid):
 @pw_check
 @admin_only
 def removed_vquizzes():
-    return render_template('removed_quizzes.html', title='Removed quizzes', quizzes=S.removed_quizzes())
+    #(the warning the quiz's Delete gave before there was a trash bin: archived attempts use it)
+    return render_template('removed_quizzes.html', title='Removed quizzes', quizzes=S.removed_quizzes(),
+                           archived=S.archived_counts()[0], archive_warning=S.archive_warning)
 
 
 @qgen_bp.route('/quiz/removed/<int:vqid>/delete', methods=['POST'])
@@ -1117,11 +1119,13 @@ def rename_subject(kind, sid):
 @admin_only
 @post_form_only
 def delete_subject(kind, sid):
+    from app import takeout
     subject = subject_or_404(kind, sid)
     name, parent = subject.title, subject.parent_id
+    said = takeout.folder_delete_plan(kind, subject)  # (what moves where, named in the message)
     S.delete_subject(subject, kind)
     current_app.logger.info('{} deleted {} folder ({}) "{}"'.format(current_user.username, kind, sid, name))
-    return _subject_done(kind, 'Folder "{}" removed; the {} in it moved up a level.'.format(name, kind),
+    return _subject_done(kind, said(),
                          show=(parent or 'all') if request.form.get('view') == str(sid) else None)
 
 #route to delete a folder, the folders inside it and what's in them (S.purge_plan: what's
@@ -1232,7 +1236,8 @@ def take_out_of_folder(kind):
     items = request.form.getlist('items')
     if not items:
         return done('Check at least one first.', error=True)
-    return takeout.handle(kind, items, request.form.get('folder'), done)
+    #just=1 (a row's Remove, which asked which folder): only that folder, not the ones inside it
+    return takeout.handle(kind, items, request.form.get('folder'), done, one_folder=bool(request.form.get('just')))
 
 #route to put the checked problems (or quizzes) in a folder, or take them out of it
 @qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
@@ -1252,9 +1257,9 @@ def file_subject(kind):
     if not items:
         return _subject_done(kind, 'Check at least one first.', error=True)
     if not add:
-        #out of the folder and the folders inside it; left in no folder: deleted, asked first
+        #out of the folder chosen; left in no folder: delete it or Uncategorized, asked first
         from app import takeout
-        return takeout.handle(kind, items, subject.id, lambda m, error=False: _subject_done(kind, m, error=error))
+        return takeout.handle(kind, items, subject.id, lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True)
     count = S.file_items(kind, items, subject, add=add)
     return _subject_done(kind, '{} {} {} "{}".'.format(count, _item_word(kind, count), 'put in' if add else 'taken out of', subject.title))
 

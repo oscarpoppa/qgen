@@ -165,7 +165,7 @@ def purge_plan(kind, subject):
         elif item.removed_at:
             continue  # already off the Quizzes page
         else:
-            plan['remove' if item.cquizzes else 'delete'].append(item)
+            plan['remove'].append(item)  # (a quiz's Delete puts it in Removed quizzes, the trash bin)
     return plan
 
 
@@ -557,20 +557,15 @@ def vquiz_delete_blocker(vq):
 
 
 def delete_vquiz(vq):
-    """Take a quiz off the Quizzes page. Never assigned: deleted for good. Assigned: removed
-    (students keep their copies and scores, the results stay, and it can be brought back).
-    Returns 'deleted' or 'removed'. Refused while someone is taking it."""
+    """A quiz's Delete: it goes to Removed quizzes, the trash bin the owner keeps (students keep
+    their copies and scores, the results stay); from there it can be restored or deleted for
+    good (delete_removed_vquiz). Returns 'removed'. Refused while someone is taking it."""
     blocker = vquiz_delete_blocker(vq)
     if blocker:
         raise ServiceError(blocker)
-    if vq.cquizzes:
-        vq.removed_at = datetime.now()
-        db.session.commit()
-        return 'removed'
-    _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
-    db.session.delete(vq)
+    vq.removed_at = datetime.now()
     db.session.commit()
-    return 'deleted'
+    return 'removed'
 
 
 def delete_removed_vquiz(vq, by=None):

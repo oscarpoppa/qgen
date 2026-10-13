@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, take_out_button with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -48,11 +48,9 @@
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="See one student's version of {{ item.title }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Change this quiz's questions and settings">Edit</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="Every student's attempts and scores on {{ item.title }}">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
-            {{ take_out_button('quizzes', item.id, '“' ~ item.title ~ '”', here) }}
-            {# assigned: removed (students keep it, it can be restored); never assigned: deleted #}
-            {% if item.removed_at %}
-            {% elif item.cquizzes %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Remove', 'btn btn-danger btn-sm', 'Remove “' ~ (item.title)|string ~ '” from Quizzes? Students keep their copies and scores, and its results stay. You can restore it from Removed quizzes.', tip='Take it off Quizzes; students keep their copies and scores') }}
-            {% else %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the quiz “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'quiz'), tip='Delete this quiz for good (it was never assigned)') }}{% endif %}
+            {{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}
+            {# Delete: to Removed quizzes, the trash bin (restore it there, or delete it for good) #}
+            {% if not item.removed_at %}{{ post_button(url_for('qgen.del_vquiz', vqid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete “' ~ (item.title)|string ~ '”? It goes to Removed quizzes, where you can restore it or delete it for good. Students keep their copies and scores, and its results stay.', tip='Put this quiz in Removed quizzes (asks first)') }}{% endif %}
           </td>
         </tr>
       {% endfor %}

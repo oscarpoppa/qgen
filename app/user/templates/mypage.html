@@ -128,10 +128,10 @@
     {% if showing or fk.view == 'main' %}{{ quiz_cards(shown, fk.view) }}
     {% elif fk.node %}
       {# a folder's own page: what's in it (and in the folders inside it) in one list, with the
-         same tabs as every level: All in “X”, its folders, Uncategorized #}
+         same tabs as every level: All, its folders, Unsorted #}
       {% set name = fk.node.folder.name %}
-      <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="All in “{{ name }}”"
-           data-main-label="Uncategorized" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
+      <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="All"
+           data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
            data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         <div class="folder-filter-list">{{ quiz_cards(shown, fk.view) }}</div>

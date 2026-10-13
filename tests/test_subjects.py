@@ -185,7 +185,7 @@ def test_one_at_a_time_and_dragging(app_db):
     qid = q.id
     teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': qid, 'folder': spring.id, 'confirm': 'delete'})
     db.session.expire_all()
-    assert db.session.get(VQuiz, qid) is None  # never assigned: deleted for good
+    assert db.session.get(VQuiz, qid).removed_at is not None  # deleted: in Removed quizzes, the trash bin
     # a quiz that's gone
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': 999, 'to': fall.id}, headers=FETCH)
     assert res.status_code == 400 and 'doesn\'t exist' in res.get_json()['error']
@@ -208,7 +208,7 @@ def test_folders_inside_folders(app_db):
     # Math counts what's in Algebra too; one list of both, with a folder button for Algebra (and
     # "Math itself"); the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert '"name": "Algebra"' in page and 'data-main-label="Uncategorized"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
+    assert '"name": "Algebra"' in page and 'data-main-label="Unsorted"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
     assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     # never inside itself
     FETCH = {'X-Requested-With': 'fetch'}
@@ -408,7 +408,7 @@ def test_they_are_called_folders_on_screen(app_db):
     assert 'Put in folder' in page and 'Take out of folder' in page and '<option value="">+</option>' in page
     from app.qgen.models import VPGroup
     page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
-    assert 'Remove the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page
+    assert 'Delete the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'algebra'}, follow_redirects=True)
     assert 'There&#39;s already a folder called' in r.data.decode()
     form = teacher.get('/quiz/makevprob').data.decode()

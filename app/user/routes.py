@@ -539,13 +539,15 @@ def rename_user_folder(folder_id):
 def delete_user_folder(folder_id):
     from . import groups
     from .models import UserFolder
+    from app import takeout
     f = db.session.get(UserFolder, folder_id)
     parent = f.parent_id if f is not None else None
+    said = takeout.folder_delete_plan('people', f) if f is not None else None  # (who moves where)
     try:
-        name = groups.remove(folder_id)
+        groups.remove(folder_id)
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Folder "{}" removed; everyone in it moved up a level.'.format(name),
+    return _group_done(said(),
                        show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
 
 
@@ -582,6 +584,31 @@ def move_user_or_folder():
         return _group_done(str(exc), error=True)
     return _group_done(message, moved='folder:{}'.format(request.form.get('folder')) if request.form.get('folder')
                        else 'user:{}'.format(request.form.get('user')))
+
+
+#route for People's checked bar: put everyone checked in the folder chosen, or take them out of
+#it (the same as the Problems and Quizzes pages' bar; out of their only folder: asked first)
+@user_bp.route('/users/folders/file', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def file_people():
+    from . import groups
+    from app import takeout
+    people, folder = request.form.getlist('items'), request.form.get('folder')
+    if not people:
+        return _group_done('Check at least one first.', error=True)
+    if request.form.get('action') == 'remove':
+        return takeout.handle('people', people, folder, lambda m, error=False: _group_done(m, error=error), one_folder=True)
+    try:
+        names = []
+        for uid in dict.fromkeys(people):
+            person, f = groups.add(uid, folder)
+            names.append(person.shown_name)
+    except groups.GroupError as exc:
+        return _group_done(str(exc), error=True)
+    return _group_done('Put {} in “{}”.'.format(', '.join(names), f.name))
 
 
 #a person's "Add to folder" list (they stay in their other folders) and a folder's ✕

@@ -219,7 +219,7 @@
       .then(function (res) {
         //out of its only folder: delete it or put it in Uncategorized? (app/takeout.py)
         if (res.confirm && window.qgenChoose) {
-          window.qgenChoose(res.confirm, window.qgenTakeOutChoices).then(function (choice) { if (choice) move(d, to, choice); });
+          window.qgenChoose(res.confirm, window.qgenTakeOutChoices(res.can_delete)).then(function (choice) { if (choice) move(d, to, choice); });
           return;
         }
         if (res.ok) {

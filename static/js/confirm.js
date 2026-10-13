@@ -52,14 +52,18 @@
   };
 
   /* qgenChoose(question, choices): the same question box with several answers, each
-   * {value, label, title, danger}, and Cancel last (with the focus). Resolves to the value
+   * {value, label, title, danger, disabled: why it can't be chosen}, and Cancel last (with the focus). Resolves to the value
    * chosen, or null for Cancel or Esc. */
   var many = null;
   window.qgenChoose = function (question, choices) {
-    if (!window.HTMLDialogElement) return Promise.resolve(window.confirm(question) ? choices[0].value : null);
+    //(no dialog in this browser: OK means the first choice that isn't a danger, never a delete)
+    if (!window.HTMLDialogElement) {
+      var safe = choices.filter(function (c) { return !c.danger && !c.disabled; })[0];
+      return Promise.resolve(safe && window.confirm(question + '\n\nOK: ' + safe.label) ? safe.value : null);
+    }
     if (!many) {
       many = document.createElement('dialog');
-      many.className = 'ask';
+      many.className = 'ask ask-many';
       many.setAttribute('aria-labelledby', 'choose-text');
       many.innerHTML = '<p id="choose-text"></p><div class="btn-row"></div>';
       document.body.appendChild(many);
@@ -73,9 +77,11 @@
       choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {
         var b = document.createElement('button');
         b.type = 'button';
-        b.className = 'btn' + (c.value === null ? ' btn-secondary' : c.danger ? ' btn-danger' : '');
+        //(only a dangerous answer is filled in: the others are plain, like Cancel)
+        b.className = 'btn' + (c.danger ? ' btn-danger' : ' btn-secondary');
         b.textContent = c.label;
         if (c.title) b.title = c.title;
+        if (c.disabled) { b.disabled = true; b.title = c.disabled; }  // (grayed, with why)
         b.addEventListener('click', function () { done(c.value); });
         row.appendChild(b);
       });

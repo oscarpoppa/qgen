@@ -27,7 +27,8 @@
           {% set n = vq.cquizzes|length %}
           {{ post_button(url_for('qgen.delete_removed_vquiz', vqid=vq.id), 'Delete for good', 'btn btn-danger btn-sm',
                'Delete the quiz “' ~ (vq.title)|string ~ '” for good? This can’t be undone.'
-               ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Archive, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '. Its scores leave Results and awards.' if n else ''),
+               ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Archive, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '. Its scores leave Results and awards.' if n else '')
+               ~ archive_warning(archived.get(vq.id, 0), 'quiz'),
                tip='Delete this quiz permanently; it can’t be undone (attempts go to the Archive)') }}
         </td>
       </tr>

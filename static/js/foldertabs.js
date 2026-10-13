@@ -53,7 +53,7 @@
   }
 
   //where the folders end and this folder's own things begin: a heading over them ("Problems in
-  //“Arithmetic”: Uncategorized"), when there are any after the folders
+  //“Arithmetic”: Unsorted"), when there are any after the folders
   function itemsHead(row, group) {
     var last = group[group.length - 1], next = last.nextElementSibling;
     while (next && (next.hidden || next.matches('script, input[type=hidden]'))) next = next.nextElementSibling;
@@ -71,7 +71,7 @@
     var head = document.createElement('div'), h = document.createElement('h3');
     head.className = 'folder-items-head';
     h.className = 'folder-items-title';
-    h.textContent = units.charAt(0).toUpperCase() + units.slice(1) + (name ? ' in \u201c' + name + '\u201d: Uncategorized' : ' here');
+    h.textContent = units.charAt(0).toUpperCase() + units.slice(1) + (name ? ' in \u201c' + name + '\u201d: Unsorted' : ' here');
     head.appendChild(h);
     //Expand all / Collapse all for just these things (not the folders above): boxes.js
     var what = h.textContent.charAt(0).toLowerCase() + h.textContent.slice(1);

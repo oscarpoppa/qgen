@@ -123,9 +123,16 @@ def question(kind, folder, p):
     if kind == 'people':
         q += ' Deleting an account sends its quiz attempts to the Archive.'
     elif kind == 'quizzes':
-        q += ' A quiz that was assigned goes to Removed quizzes instead, where you can restore it.'
+        q += ' A deleted quiz goes to Removed quizzes, where you can restore it.'
+    elif p['delete']:
+        #(the same warning as the problem's own Delete)
+        from app.qgen import services as S
+        archived = S.archived_counts()[1]
+        for item in p['delete']:
+            q += S.archive_warning(archived.get(item.id, 0), 'problem')
     for item, why in p['blocked']:
-        q += ' {} can’t be deleted ({}), so it would go in Uncategorized.'.format(item_name(kind, item), why.rstrip('.'))
+        q += ' {} can’t be deleted ({}), so {} would go in Uncategorized.'.format(
+            item_name(kind, item), why.rstrip('.'), 'they' if kind == 'people' else 'it')
     return q
 
 
@@ -168,8 +175,11 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
                     'they’re' if kind == 'people' else 'it’s'))
     db.session.commit()
     if confirm == 'delete':
+        from flask import current_app
         for item in p['delete']:
             name = item_name(kind, item)
+            current_app.logger.info('{} deleted {} {} (taken out of its only folder, “{}”)'.format(
+                by.username if by is not None else '?', kind, name, where))
             if kind == 'people':
                 from app.user.accounts import delete_account
                 delete_account(item, by)
@@ -178,9 +188,10 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
                 S.delete_problem(item)
                 done.append('Deleted problem {}.'.format(name))
             else:
-                how = S.delete_vquiz(item)
-                done.append('Removed quiz {} (restore it from Removed quizzes).'.format(name) if how == 'removed'
-                            else 'Deleted quiz {}.'.format(name))
+                #(out of the folder too, so restoring it doesn't put it back there)
+                _take_out(kind, item, ids)
+                S.delete_vquiz(item)
+                done.append('Deleted quiz {}: it’s in Removed quizzes, where you can restore it.'.format(name))
     return ' '.join(done) or 'Nothing to take out.'
 
 
@@ -196,14 +207,60 @@ def handle(kind, item_ids, folder_id, done, one_folder=False):
         folder = get_folder(kind, folder_id)
         p = plan(kind, item_ids, folder, current_user, one_folder)
         q = question(kind, folder, p)
+        can_delete = bool(p['delete'])  # (when nothing left can be deleted, "Delete for good" is grayed)
         if request.form.get('check'):
-            return jsonify(ok=True, question=q)
+            return jsonify(ok=True, question=q, can_delete=can_delete)
         confirm = request.form.get('confirm')
         if q and confirm not in ('delete', 'uncategorized') and fetch:
-            return jsonify(ok=False, confirm=q), 409
-        message = run(kind, item_ids, folder, by=current_user, confirm=confirm, one_folder=one_folder)
+            return jsonify(ok=False, confirm=q, can_delete=can_delete), 409
+        try:
+            message = run(kind, item_ids, folder, by=current_user, confirm=confirm, one_folder=one_folder)
+        except Exception as exc:  # e.g. someone started the quiz meanwhile (S.ServiceError)
+            from app import db as _db
+            _db.session.rollback()
+            if exc.__class__.__name__ not in ('ServiceError', 'GroupError'):
+                raise
+            return done(str(exc), error=True)
     except TakeOutError as exc:
         if request.form.get('check'):
             return jsonify(ok=False, error=str(exc)), 400
         return done(str(exc), error=True)
     return done(message)
+
+
+def folder_delete_plan(kind, folder):
+    """Before a folder is deleted (its contents move up a level): what will go where, for the
+    message afterward. Returns a function that gives the message once it's done."""
+    cls = _folder_cls(kind)
+    parent = db.session.get(cls, folder.parent_id) if folder.parent_id else None
+    inner = [folder_name(kind, f) for f in cls.query.filter_by(parent_id=folder.id).all()]
+    if kind == 'people':
+        from app.user.models import UserFolderMember, User
+        ids = [m.user_id for m in UserFolderMember.query.filter_by(folder_id=folder.id)]
+        items = User.query.filter(User.id.in_(ids)).all() if ids else []
+    else:
+        from app.qgen import services as S
+        items = list(getattr(folder, S.subject_kind(kind)[3]))
+    alone = [i for i in items if _folders_of(kind, i) == {folder.id}]  # in no other folder
+    name = folder_name(kind, folder)
+    names = lambda xs: ', '.join(item_name(kind, i) for i in sorted(xs, key=lambda i: item_name(kind, i).lower()))
+
+    def message():
+        out = ['Deleted the folder “{}”.'.format(name)]
+        if parent is not None:
+            if items:
+                out.append('Moved to “{}” (its Unsorted): {}.'.format(folder_name(kind, parent), names(items)))
+            if inner:
+                out.append('Its folders {} are now inside “{}”.'.format(', '.join('“{}”'.format(n) for n in inner), folder_name(kind, parent)))
+        else:
+            if alone:
+                out.append('Moved to Uncategorized: {}.'.format(names(alone)))
+            rest = [i for i in items if i not in alone]
+            if rest:
+                out.append('Still in their other folders: {}.'.format(names(rest)))
+            if inner:
+                out.append('Its folders {} are now at the top level.'.format(', '.join('“{}”'.format(n) for n in inner)))
+        if not items and not inner:
+            out.append('It was empty.')
+        return ' '.join(out)
+    return message

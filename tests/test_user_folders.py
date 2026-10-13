@@ -275,11 +275,14 @@ def test_taking_people_out_of_their_only_folder(app_db):
         teach.post('/users/folders/add', data={'user': ids(who), 'to': g8})
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
     page = teach.get('/userdet?folder=all').data.decode()
-    assert 'form="takeout-people"' in page and '>Take out of folder</button>' in page and page.count('>Take out</button>') >= 2
-    res = teach.post('/folders/people/takeout', data={'items': [ids('sam'), ids('kim')], 'folder': g8}, headers=FETCH)
+    # the bar: the same folder menu, Put in folder and Take out of folder as Problems and Quizzes;
+    # each card: Remove (it asks which folder when they're in several)
+    assert 'form="people-file"' in page and '>Take out of folder</button>' in page and '>Put in folder</button>' in page
+    assert page.count('>Remove</button>') >= 2
+    res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
     assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed
-    res = teach.post('/folders/people/takeout', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'confirm': 'delete'}, headers=FETCH)
+    res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove', 'confirm': 'delete'}, headers=FETCH)
     assert res.get_json()['message'] == 'Took sam out of “8th grade”; they’re still in “Math club”. Deleted kim’s account.'
     assert User.query.filter_by(username='kim').count() == 0 and in_folders('sam') == ['Math club']
     # never your own account: you go in Uncategorized instead

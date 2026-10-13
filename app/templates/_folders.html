@@ -6,7 +6,7 @@
      {% call folders_page(fk, actions) %} ...what's in the folder being looked at... {% endcall %}
 
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
-{% from "_macros.html" import box_label, count_of %}
+{% from "_macros.html" import box_label, count_of, slot %}
 
 {# what in a folder needs the student (My quizzes): new, started and due soon, here and in the
    folders inside (here=true: here only, for Uncategorized), as small colored circles with how many tries, in the
@@ -122,52 +122,7 @@
         <div class="title-actions">
           {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
           {{ actions }}
-          {% if not fk.readonly %}<details class="folder-tools">
-            <summary class="btn btn-secondary btn-sm" title="Rename, move or remove this folder">Folder options</summary>
-            <div class="folder-tools-box">
-              <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <input type="text" name="name" value="{{ fk.name(fk.node.folder) }}" maxlength="{{ fk.max_name }}" required aria-label="Folder name">
-                <button class="btn btn-secondary btn-xs" title="Save the new name you typed for this folder">Rename</button>
-              </form>
-              {% set skip = fk.inside(fk.node) %}
-              <form method="post" action="{{ fk.move_url }}" class="move-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <input type="hidden" name="folder" value="{{ f.id }}">
-                <label class="small muted">Move to
-                  <select name="to" class="move-select" aria-label="Move {{ fk.name(fk.node.folder) }} to another folder" title="Pick a folder to move “{{ fk.name(fk.node.folder) }}” into; it moves right away">
-                    <option value="top"{% if not f.parent_id %} selected{% endif %}>Not inside another folder</option>
-                    {% for g, depth in fk.flat if g.id not in skip %}
-                      <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(g) }}</option>
-                    {% endfor %}
-                  </select></label>
-                <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
-              </form>
-              {% if fk.node.depth < fk.max_depth %}{{ new_folder(fk, f) }}{% endif %}
-              <form method="post" action="{{ fk.delete_url(f.id) }}" class="folder-form"
-                    data-confirm="Remove the folder “{{ fk.name(fk.node.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if fk.node.folders }} in it move up a level." data-confirm-ok="Remove folder">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <button class="btn btn-secondary btn-xs" title="Remove just the folder; what's in it moves up a level">Remove folder</button>
-              </form>
-              {% set blocked = fk.purge_blocked(fk.node) if fk.purge_url and fk.purge_blocked else none %}
-              {% if blocked %}
-              {# not yet (My quizzes: a quiz in it still to do): the button says why it can't #}
-              <button type="button" class="btn btn-danger btn-xs" disabled title="{{ blocked }}">Delete folder and everything in it</button>
-              <p class="small muted purge-note">{{ blocked }}</p>
-              {% elif fk.purge_url %}
-              {# the folder and what's in it go (the warning says exactly what happens) #}
-              <form method="post" action="{{ fk.purge_url(f.id) }}" class="folder-form"
-                    data-confirm="{{ fk.purge_question(fk.node) }}" data-confirm-ok="Delete everything">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <button class="btn btn-danger btn-xs" title="Delete this folder and all that's in it for good; it can't be undone">Delete folder and everything in it</button>
-              </form>
-              {% endif %}
-            </div>
-          </details>{% endif %}
+          {{ folder_options(fk, fk.node) }}
         </div>
       {% else %}
         <h2 id="folder-title" class="folder-title">{{ fk.title or (fk.all_label if fk.view == 'all' else fk.main_label) }}</h2>
@@ -212,7 +167,7 @@
        data-remember="{{ request.endpoint }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
-    {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
+    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n) }}</template>{% endfor %}
     <div class="folder-filter-list">
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
@@ -233,17 +188,17 @@
 {% endmacro %}
 
 {# one folder's page: like the All view, everything in it (and in the folders inside it) in one
-   list, each once, with folder buttons over it ("All in “X”", its folders, then "Uncategorized",
+   list, each once, with folder buttons over it ("All", its folders, then "Unsorted",
    grayed out when there are no folders inside it), laid out like every other level.
    The caller draws the list: {% call(n) folder_items(fk, key_prefix) %} #}
 {% macro folder_items(fk, key_prefix) %}
   {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
   {% set name = fk.name(fk.node.folder) %}
-  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All in “{{ name }}”"
-       data-main-label="Uncategorized" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All"
+       data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
        data-remember="{{ request.endpoint }}:{{ fk.view }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
-    {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
+    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n) }}</template>{% endfor %}
     <div class="folder-filter-list">
       {# (no folder of their own here: a drag from this list puts a copy in, as from All) #}
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
@@ -325,15 +280,73 @@
   </form>
 {% endmacro %}
 
-{# "Take out" on a card or row: out of the folder it's shown in (the folder tab chosen, or the
-   folder box it's in: here), and the folders inside it. Says where it's still in; out of its
-   only folder it asks: delete for good, or put in Uncategorized (static/js/takeout.js,
-   app/takeout.py). Grayed while no folder is shown. #}
-{% macro take_out_button(kind, ident, label, here=none) %}
-  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-takeout-shown{% if here %} data-here="{{ here.id }}"{% endif %}>
+{# "Remove" on a card or row: takes it out of a folder. In several folders, it asks which one;
+   the reply says which folders it's still in; out of its only folder it asks: delete for good,
+   or put it in Uncategorized (static/js/takeout.js, app/takeout.py). Grayed when it's in no
+   folder. folders: the folders it's in. #}
+{% macro remove_button(kind, ident, label, folders) %}
+  {% if folders %}
+  {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
+  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-takeout-pick
+        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
-    <input type="hidden" name="items" value="{{ ident }}">
-    <button class="btn btn-secondary btn-sm" title="Take {{ label }} out of this folder (if it’s in no other, you’re asked first)">Take out</button>
+    <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
+    <input type="hidden" name="folder" value="{{ folders[0].id }}">
+    <button class="btn btn-secondary btn-sm" title="Take {{ label }} out of a folder{{ ' (asks which)' if folders|length > 1 }}">Remove</button>
   </form>
+  {% else %}{{ slot('Remove', 'It’s not in any folder') }}{% endif %}
 {% endmacro %}
+
+{# Folder options for one folder (n: its node): rename, move, a new folder inside, delete the
+   folder (what's in it moves up into its parent's Unsorted, or Uncategorized at the top), and
+   delete it with everything in it. On a folder's own page and on every open folder tab. #}
+{% macro folder_options(fk, n) %}{% if not fk.readonly %}
+  {% set f = n.folder %}
+          <details class="folder-tools">
+            <summary class="btn btn-secondary btn-sm" title="Rename, move or remove this folder">Folder options</summary>
+            <div class="folder-tools-box">
+              <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="{{ fk.view }}">
+                <input type="text" name="name" value="{{ fk.name(n.folder) }}" maxlength="{{ fk.max_name }}" required aria-label="Folder name">
+                <button class="btn btn-secondary btn-xs" title="Save the new name you typed for this folder">Rename</button>
+              </form>
+              {% set skip = fk.inside(n) %}
+              <form method="post" action="{{ fk.move_url }}" class="move-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="{{ fk.view }}">
+                <input type="hidden" name="folder" value="{{ f.id }}">
+                <label class="small muted">Move to
+                  <select name="to" class="move-select" aria-label="Move {{ fk.name(n.folder) }} to another folder" title="Pick a folder to move “{{ fk.name(n.folder) }}” into; it moves right away">
+                    <option value="top"{% if not f.parent_id %} selected{% endif %}>Not inside another folder</option>
+                    {% for g, depth in fk.flat if g.id not in skip %}
+                      <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(g) }}</option>
+                    {% endfor %}
+                  </select></label>
+                <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
+              </form>
+              {% if n.depth < fk.max_depth %}{{ new_folder(fk, f) }}{% endif %}
+              <form method="post" action="{{ fk.delete_url(f.id) }}" class="folder-form"
+                    data-confirm="Delete the folder “{{ fk.name(n.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if n.folders }} in it move up {{ 'into “' ~ fk.name(fk.nodes[f.parent_id].folder) ~ '” (its Unsorted)' if f.parent_id and f.parent_id in fk.nodes else 'to Uncategorized' }}." data-confirm-ok="Delete folder">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="{{ fk.view }}">
+                <button class="btn btn-secondary btn-xs" title="Delete just the folder; what's in it moves up a level">Delete folder</button>
+              </form>
+              {% set blocked = fk.purge_blocked(n) if fk.purge_url and fk.purge_blocked else none %}
+              {% if blocked %}
+              {# not yet (My quizzes: a quiz in it still to do): the button says why it can't #}
+              <button type="button" class="btn btn-danger btn-xs" disabled title="{{ blocked }}">Delete folder and everything in it</button>
+              <p class="small muted purge-note">{{ blocked }}</p>
+              {% elif fk.purge_url %}
+              {# the folder and what's in it go (the warning says exactly what happens) #}
+              <form method="post" action="{{ fk.purge_url(f.id) }}" class="folder-form"
+                    data-confirm="{{ fk.purge_question(n) }}" data-confirm-ok="Delete everything">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="view" value="{{ fk.view }}">
+                <button class="btn btn-danger btn-xs" title="Delete this folder and all that's in it for good; it can't be undone">Delete folder and everything in it</button>
+              </form>
+              {% endif %}
+            </div>
+          </details>
+{% endif %}{% endmacro %}

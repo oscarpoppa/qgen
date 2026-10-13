@@ -408,7 +408,7 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
         for name in files:
             if name.endswith('.html'):
                 text = open(os.path.join(folder, name)).read()
-                for old in ('Unsorted', 'Main list', 'Top level', 'No folder'):
+                for old in ('Main list', 'Top level', 'No folder'):  # ("Unsorted" is the owner's word inside a folder, 2026-10-13)
                     assert old not in text, (name, old)
     # each page remembers its own folders (Messages no longer shares the Users page's)
     keys = [who.get(url).data.decode().split('data-fold-key="')[1].split('"')[0] for url, who in pages.items()]
@@ -807,7 +807,7 @@ def test_removing_an_assigned_quiz_keeps_everything_for_students(app_db):
     # never assigned: deleted for good, as before
     other = make_quiz(app, teach, 'Unused')
     teach.post('/quiz/delvq/{}'.format(other.id))
-    assert db.session.get(VQuiz, other.id) is None
+    assert db.session.get(VQuiz, other.id).removed_at is not None  # (never assigned too: into the trash bin)
 
 
 def test_a_quiz_cant_be_removed_while_someone_is_taking_it(app_db):
@@ -998,10 +998,11 @@ def test_a_teacher_deletes_a_problem_or_quiz_folder_and_its_contents(app_db):
     term = VQGroup.query.one()
     teach.post('/quiz/subjects/quizzes/file', data={'subject': term.id, 'items': [used.id, spare.id], 'action': 'add'})
     page = teach.get('/quiz/listvq?folder={}'.format(term.id)).data.decode()
-    assert '1 quiz is deleted for good.' in page and '1 quiz is taken off the Quizzes page; students keep their copies' in page
+    # (every quiz goes to Removed quizzes, the trash bin)
+    assert '2 quizzes are taken off the Quizzes page; students keep their copies' in page
     r = teach.post('/quiz/subjects/quizzes/{}/purge'.format(term.id), follow_redirects=True).data.decode()
-    assert '1 quiz deleted. 1 quiz removed (students keep their copies).' in r
-    assert db.session.get(VQuiz, spare.id) is None and db.session.get(VQuiz, used.id).removed_at is not None
+    assert '2 quizzes removed (students keep their copies).' in r
+    assert db.session.get(VQuiz, spare.id).removed_at is not None and db.session.get(VQuiz, used.id).removed_at is not None
 
 
 def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db):
@@ -1307,7 +1308,7 @@ def test_folders_on_top_and_their_contents_below(app_db):
     assert "'qgen-filtered'" in js and 'tabs-off' in js and "data-drop" in js
     # where the folders end and the folder's own things begin (the user, 2026-10-09): the row
     # is labeled "Folders", and a heading ("Problems in “Arithmetic” itself") comes after it
-    assert "folder-tabs-label" in js and "folder-items-head" in js and ": Uncategorized'" in js
+    assert "folder-tabs-label" in js and "folder-items-head" in js and ": Unsorted'" in js
     assert 'data-units="' in teach.get('/userdet').data.decode()
     boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     # folders wait to be picked, except the first in a top-level row, while nothing about that row

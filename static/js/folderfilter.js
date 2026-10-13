@@ -2,7 +2,7 @@
  * thing once, and a row of folder buttons above it narrows the list to one folder (with the
  * folders inside it). "All" is first and chosen to begin with; then the folders, then
  * Uncategorized (what's in no folder; grayed out when everything is in one). Choosing a folder
- * shows a second row laid out like the top one: "All in “X”" (chosen while everything in X is
+ * shows a second row laid out like the top one: "All" (chosen while everything in X is
  * shown), the folders inside it, then "Uncategorized" (what's in none of them; grayed out when X
  * has no folders inside). Every level, All included, has Expand all / Collapse all at its end. The chosen folder's own buttons
  * ("Open this folder", "Assign a quiz to this folder") sit at the end of its row. The page starts on
@@ -162,10 +162,10 @@
             //what's in a folder but in none of the folders inside it, as on its tab rows; grayed
             //(and 0) when there are no folders inside, since it's the same as the folder itself
             if (isFolder(String(n.id))) {
-              var self = button('self:' + n.id, 'Uncategorized', n.children.length ? Object.keys(own(n)).length : 0, 'tray');
+              var self = button('self:' + n.id, 'Unsorted', n.children.length ? Object.keys(own(n)).length : 0, 'tray');
               self.classList.add('folder-tab-self');
-              self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-              if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+              self.setAttribute('aria-label', 'Unsorted in “' + n.name + '”');
+              if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All'; }
               else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
               self.style.paddingLeft = (10 + (depth + 1) * 16) + 'px';
               col.appendChild(self);
@@ -209,7 +209,7 @@
           sub.setAttribute('aria-label', 'Folders in ' + n.name);
           //first, the folder itself ("All in “X”"): chosen while the list shows everything in it, so
           //the list never looks like it belongs to the folder beside it
-          var whole = button(String(n.id), 'All in “' + n.name + '”', n.count, 'folders');
+          var whole = button(String(n.id), 'All', n.count, 'folders');
           whole.classList.add('folder-tab-all');
           whole.title = 'Show everything in “' + n.name + '” and the folders inside it';
           sub.appendChild(whole);
@@ -218,10 +218,10 @@
           //at the top); grayed out when there are no folders inside, since it's the same as All in
           //(no folders inside: nothing is "left over", so it counts 0, not everything in the folder)
           var mine = n.children.length ? Object.keys(own(n)).length : 0;
-          var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
+          var self = button('self:' + n.id, 'Unsorted', mine, 'tray');
           self.classList.add('folder-tab-self');
-          self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-          if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+          self.setAttribute('aria-label', 'Unsorted in “' + n.name + '”');
+          if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All'; }
           else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
           sub.appendChild(self);
           rows.appendChild(sub);
@@ -330,7 +330,7 @@
     function markSide() {
       //(phones: the folded folder list's line names what's open)
       var now = document.querySelector('.folder-side-now');
-      if (now && 'urlTab' in box.dataset) now.textContent = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Uncategorized' : byId[chosen] ? byId[chosen].name : now.textContent;
+      if (now && 'urlTab' in box.dataset) now.textContent = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen] ? byId[chosen].name : now.textContent;
       document.querySelectorAll('.side-row a[href]').forEach(function (a) {
         var id = sideFor(a);
         if (id === null) return;
@@ -355,7 +355,7 @@
     function retitle() {
       if (!heading || box.dataset.allUrl === '') return;  // (a folder's own page keeps its name and path)
       if (chosen === 'all') { if (headingWas) heading.innerHTML = headingWas; else heading.textContent = box.dataset.allLabel || 'All'; return; }
-      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Uncategorized' : byId[chosen].name;
+      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen].name;
     }
     function choose(id) {
       chosen = id;
