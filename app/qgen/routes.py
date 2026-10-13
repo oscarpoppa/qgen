@@ -67,7 +67,10 @@ def save_subjects(kind, item):
 
 
 def subject_page_data(kind, item=None, rel=None, error=None):
-    return {'subject_kind': kind, 'all_subjects': S.subject_tree(kind, items=[])[1],
+    #the folders with how many are in each (the same counts as the folder lists)
+    _root, flat, nodes = S.subject_tree(kind)
+    return {'subject_kind': kind, 'all_subjects': flat,
+            'subject_counts': {g.id: nodes[g.id]['count'] for g, _d in flat},
             'ticked_subjects': ticked_subjects(item, rel) if rel else set(),
             'subject_error': error, 'new_item': item is None or item.id is None,
             'unsorted_ticked': bool(request.form.get('unsorted')) if request.method == 'POST' else False,
@@ -436,7 +439,8 @@ def assign():
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
     #a link for one quiz opens on All, so that quiz is in the list
     choice = 'all' if request.args.get('vq', '').isdigit() else S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
-    if request.method == 'GET' and request.args.get('vq', '').isdigit():
+    #(one that's been removed isn't in the list: then the first quiz, as with no link)
+    if request.method == 'GET' and request.args.get('vq', '').isdigit() and int(request.args['vq']) in {q.id for q in quizzes}:
         form.vquiz.data = int(request.args['vq'])
     if form.validate_on_submit():
         vquiz = db.get_or_404(VQuiz, form.vquiz.data)
@@ -459,9 +463,8 @@ def assign():
             #pages done on paper: straight to printing a copy for each of them
             return redirect(url_for('qgen.print_paper', vqid=vquiz.id, users=[cq.taker.id for cq in created], next=then))
         return redirect(then)
-    #the quizzes to pick from: one list (A to Z) with the Quizzes page's folders as tabs over it,
-    #like the students beside it and every folder page (static/js/folderfilter.js); ?subject=
-    #opens on that folder's tab
+    #the quizzes to pick from: one list (A to Z) with the Quizzes page's folders down its side,
+    #like the students beside it (static/js/folderfilter.js); ?subject= opens on that folder
     from app import folder_tree
     quiz_root = S.subject_tree('quizzes', items=quizzes)[0]
     quiz_tree = folder_tree.filter_tree(quiz_root, lambda f: f.title, lambda fid: None, 'quiz:')

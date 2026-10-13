@@ -556,9 +556,30 @@ def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db)
     filter bar (data-tools-home); When, with the Assign button, after the Quiz card."""
     app, db = app_db
     teacher = login(app, 'teach')
-    make_problems(teacher, 'Add')
+    probs = make_problems(teacher, 'Add')
+    teacher.post('/quiz/makevquiz', data={'title': 'Q1', 'vplist': str(probs['Add'].id)})
     page = teacher.get('/quiz/assign').data.decode()
     assert page.count('data-style="list"') == 2
     assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
     assert page.index('id="pick-quiz"') < page.index('id="pick-people"') < page.index('class="card assign-when"') < page.index('class="assign-go"')
     assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()
+
+
+def test_assign_with_no_quizzes_says_so_and_a_removed_quizs_link_picks_the_first(app_db):
+    app, db = app_db
+    from datetime import datetime
+    from app.qgen.models import VQuiz
+    teacher = login(app, 'teach')
+    page = teacher.get('/quiz/assign').data.decode()
+    quiz = page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
+    assert 'No quizzes yet.' in quiz and '/quiz/makevquiz' in quiz and 'folder-filter' not in quiz
+    probs = make_problems(teacher, 'Add')
+    for title in ('A quiz', 'B quiz'):
+        teacher.post('/quiz/makevquiz', data={'title': title, 'vplist': str(probs['Add'].id)})
+    a, b = VQuiz.query.filter_by(title='A quiz').one(), VQuiz.query.filter_by(title='B quiz').one()
+    b.removed_at = datetime.now()
+    db.session.commit()
+    # a link to a removed quiz: it isn't offered, so the first quiz is checked, as with no link
+    page = teacher.get('/quiz/assign?vq={}'.format(b.id)).data.decode()
+    assert 'value="{}" id="vquiz-{}" checked'.format(a.id, a.id) in page
+    assert 'vquiz-{}'.format(b.id) not in page

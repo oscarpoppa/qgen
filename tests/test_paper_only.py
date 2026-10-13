@@ -144,6 +144,9 @@ def test_quiz_without_paper_redirects_as_before(app_db):
 def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
+    teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}]))
+    from app.qgen.models import VProblem
+    teacher.post('/quiz/makevquiz', data={'title': 'Q1', 'vplist': str(VProblem.query.first().id)})
     page = teacher.get('/quiz/assign').data.decode()
     quiz = page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
     # the Quiz card is laid out like the Students card: its name, the filter bar (filter, Clear,

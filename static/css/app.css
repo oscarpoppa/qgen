@@ -768,7 +768,8 @@ button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 .notice-clear { margin-left: auto; }
 .notice-x { background: none; border: 0; color: var(--muted); min-height: 0; padding: 2px 6px; font-size: var(--fs-sm); }
 .notice-x:hover { color: var(--bad); background: var(--bad-soft); filter: none; }
-.notice-clear-all { text-align: right; margin: -4px 0 6px; }
+.notice-clear-all, .thread-clear-all { text-align: right; margin: -4px 0 6px; }
+.thread-clear-all { margin-top: 4px; }
 
 /* the ✕ that deletes a message, in its top-right corner (like notices) */
 .msg { position: relative; }
@@ -1121,15 +1122,17 @@ th.tick-col, td.tick-col { width: 36px; }
 .subject-checks { border: 0; padding: 0; margin: 12px 0; }
 .subject-checks legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 /* the Folder question: the folders as a nested list, like the side folder list on picking cards */
-.subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto;
+.subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; width: 100%; max-width: 300px; box-sizing: border-box;
   border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
 .subject-check-list:empty { display: none; }
 .subject-check { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 34px; padding: 4px 10px; margin: 0;
-  border-radius: var(--r); font-weight: 500; cursor: pointer; overflow-wrap: anywhere; }
+  border-radius: var(--r); font-weight: 500; cursor: pointer; }
 .subject-check:hover { background: var(--surface); }
 .subject-check:has(input:checked) { background: var(--accent-soft); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
 .subject-check:has(input:checked) svg.ico { color: var(--accent); }
 .subject-check input { flex: 0 0 auto; margin: 0; }
+.subject-check .box-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subject-check .box-count { flex: 0 0 auto; color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
 .builder-filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
 .archived-banner .btn-row form { margin: 0; }
 @media (max-width: 640px) {
@@ -2252,6 +2255,8 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-filter[data-style="list"] { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 12px; align-items: start; }
 .folder-filter[data-style="list"] > .folder-filter-rows { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
 .folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
+/* beside the folder list (no tabs above), the list and its "Nothing in … yet." note are closed boxes */
+.folder-filter[data-style="list"] > .folder-filter-list, .folder-filter[data-style="list"] > .folder-filter-empty { border-top: 1px solid var(--tab-edge); border-radius: var(--r-lg); }
 .folder-side-list { display: flex; flex-direction: column; gap: 2px; }
 .folder-side-list > .folder-tab { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 6px 10px; border: 0; border-radius: var(--r);
   background: none; color: var(--text); text-align: left; font-weight: 500; min-height: 34px; }

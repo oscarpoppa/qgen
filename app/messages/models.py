@@ -56,6 +56,8 @@ class MessageTo(db.Model):
 #teacher has seen it, and cleared=True that they removed the notice from their own
 #Notices panel. So every teacher gets every alert, whatever the others have read.
 #(seen_by_teacher above still says whether any teacher has seen it.)
+#cleared=True on a conversation message (anyone's, the student's too): that person
+#cleared it from their own view with "Clear" (everyone else still sees it).
 class MessageRead(db.Model):
     __tablename__ = 'message_read'
     message_id = db.Column(db.Integer, db.ForeignKey('message.id', ondelete='CASCADE'), primary_key=True)
@@ -109,7 +111,8 @@ def seen_by(teacher_id):
 
 
 def cleared_by(teacher_id):
-    """Condition: this teacher has cleared the notice from their Notices panel."""
+    """Condition: this person has cleared the notice from their Notices panel (or the
+    conversation message from their own view)."""
     return db.exists().where(MessageRead.message_id == Message.id, MessageRead.user_id == teacher_id,
                              MessageRead.cleared.is_(True))
 
@@ -178,6 +181,8 @@ class StaffMessageRead(db.Model):
     __tablename__ = 'staff_message_read'
     message_id = db.Column(db.Integer, db.ForeignKey('staff_message.id', ondelete='CASCADE'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)
+    #they cleared it from their own view with "Clear" (the other teachers still see it)
+    cleared = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
 
 def staff_for(teacher_id):
@@ -188,6 +193,12 @@ def staff_for(teacher_id):
 
 def staff_seen_by(teacher_id):
     return db.exists().where(StaffMessageRead.message_id == StaffMessage.id, StaffMessageRead.user_id == teacher_id)
+
+
+def staff_cleared_by(teacher_id):
+    """Condition: this teacher cleared the teachers' message from their own view."""
+    return db.exists().where(StaffMessageRead.message_id == StaffMessage.id, StaffMessageRead.user_id == teacher_id,
+                             StaffMessageRead.cleared.is_(True))
 
 
 def unread_staff(teacher_id):

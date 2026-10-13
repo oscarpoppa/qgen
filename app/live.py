@@ -251,7 +251,8 @@ def _conversation(student_id, now):
         .with_entities(db.func.count(Message.id), db.func.max(Message.id),
                        db.func.sum(db.case((Message.pinned.is_(True), Message.id), else_=0)),
                        db.func.sum(db.case((Message.hidden_for_student.is_(True), Message.id), else_=0))).one()
-    return tuple(thread), unread_messages_for_teacher(current_user.id), _students_named()
+    from app.messages.services import cleared_state
+    return tuple(thread), unread_messages_for_teacher(current_user.id), _students_named(), cleared_state(current_user)
 
 
 def _assign(now):

@@ -17,7 +17,8 @@
   <input type="hidden" name="subjects_shown" value="1">
   <div class="subject-check-list">
     {% for g, depth in all_subjects %}
-      <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.4 }}em"{% endif %}><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} {{ g.title }}</label>
+      {% set n = (subject_counts or {}).get(g.id) %}
+      <label class="subject-check"{% if depth > 1 %} style="margin-left:{{ (depth - 1) * 1.2 }}em"{% endif %} title="{{ g.title }}"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} <span class="box-title">{{ g.title }}</span>{% if n is not none %}<span class="box-count" title="{{ count_of(n, noun, kind) }}">{{ n }}</span>{% endif %}</label>
     {% endfor %}
   </div>
   <div class="subject-new-inline">

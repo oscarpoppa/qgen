@@ -163,6 +163,8 @@ def thread(student_id, limit=None, teacher=None):
                              db.or_(NOT_NOTICE, Message.from_teacher.is_(True)), VISIBLE_TO_STUDENT)
     if teacher is not None:  # a teacher reading it: only what they may see
         q = q.filter(for_teacher(teacher.id))
+    #less what the one reading cleared from their view
+    q = q.filter(~cleared_by(teacher.id if teacher is not None else student_id))
     return _oldest_first(q, limit)
 
 
@@ -172,12 +174,12 @@ def conversation(student_id, limit=None, for_student=False, unread=None, teacher
     ones: the student sees those once, in the pinned box at the top. With a limit,
     anything unread (the condition `unread`) is included even if older. teacher: the
     teacher looking (only what they may see); only: a student's view of the
-    conversation with that one teacher."""
+    conversation with that one teacher. What the one looking cleared from their view is left out."""
     q = Message.query.filter(Message.student_id == student_id, NOT_NOTICE)
     if for_student:
-        q = q.filter(VISIBLE_TO_STUDENT, Message.pinned.is_(False))
+        q = q.filter(VISIBLE_TO_STUDENT, Message.pinned.is_(False), ~cleared_by(student_id))
     if teacher is not None:
-        q = q.filter(for_teacher(teacher.id))
+        q = q.filter(for_teacher(teacher.id), ~cleared_by(teacher.id))
     if only is not None:
         q = q.filter(with_teacher(only))
     return _oldest_first(q, limit, unread)
@@ -189,7 +191,7 @@ def everyone(limit=60, unread=None, teacher=None):
     `.copies` saying how many students got it."""
     q = Message.query.filter(NOT_NOTICE)
     if teacher is not None:
-        q = q.filter(for_teacher(teacher.id))
+        q = q.filter(for_teacher(teacher.id), ~cleared_by(teacher.id))
     items = _oldest_first(q, limit * 4, unread)
     out, seen = [], set()
     for m in items:
@@ -323,7 +325,7 @@ def inbox(teacher):
     """Every student's conversation for teachers: unread first, then most recent."""
     rows = []
     for s in User.query.filter_by(is_admin=False).order_by(User.username).all():
-        last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE, for_teacher(teacher.id)) \
+        last = Message.query.filter(Message.student_id == s.id, NOT_NOTICE, for_teacher(teacher.id), ~cleared_by(teacher.id)) \
             .order_by(Message.created.desc(), Message.id.desc()).first()
         unread = unread_from(teacher, s.id)
         rows.append({'student': s, 'last': last, 'unread': unread})
@@ -430,6 +432,91 @@ def _delete_if_all_cleared(ids):
         db.session.commit()
 
 
+# ---------------------------------------------------------------- clearing a conversation
+
+def clear_thread(user, view):
+    """"Clear": take every message in the conversation this person is looking at out of
+    their own view (it's still there for everyone else); pinned messages stay. view is
+    what their Messages panel shows: for a teacher 'all' (every student), a student's id,
+    'teachers' or 't<id>' (another teacher); for a student 'all' (all their teachers) or a
+    teacher's id. What's cleared counts as read. Returns how many were cleared."""
+    if user.is_admin and (view == 'teachers' or (isinstance(view, str) and view[:1] == 't')):
+        return _clear_staff(user, staff_choice(user, view))
+    q = Message.query.filter(NOT_NOTICE, Message.pinned.is_(False), ~cleared_by(user.id))
+    if user.is_admin:
+        q = q.filter(for_teacher(user.id))
+        if view not in (None, '', 'all'):
+            try:
+                student = db.session.get(User, int(view))
+            except (TypeError, ValueError):
+                student = None
+            if student is None or student.is_admin:
+                raise MessageError('Please choose one of the students.')
+            q = q.filter(Message.student_id == student.id)
+    else:
+        teacher = teacher_choice(view)
+        q = q.filter(Message.student_id == user.id, VISIBLE_TO_STUDENT)
+        if teacher is not None:
+            q = q.filter(with_teacher(teacher))
+    ids = [r[0] for r in q.with_entities(Message.id)]
+    if not ids:
+        return 0
+    if user.is_admin:
+        _mark_for_teacher(user, ids, cleared=True)
+        return len(ids)
+    for attempt in (1, 2):
+        have = {r.message_id: r for r in MessageRead.query.filter(MessageRead.user_id == user.id,
+                                                                  MessageRead.message_id.in_(ids))}
+        for i in ids:
+            if i in have:
+                have[i].cleared = True
+            else:
+                db.session.add(MessageRead(message_id=i, user_id=user.id, cleared=True))
+        try:
+            Message.query.filter(Message.id.in_(ids), Message.from_teacher.is_(True), Message.seen_by_student.is_(False)) \
+                .update({'seen_by_student': True}, synchronize_session=False)
+            db.session.commit()
+            return len(ids)
+        except IntegrityError:
+            db.session.rollback()  # their other tab got there first; look again
+            if attempt == 2:
+                raise
+
+
+def _clear_staff(me, other):
+    """The same for the teachers' messages (all of them, or with one other teacher)."""
+    from .models import StaffMessage, StaffMessageRead, staff_cleared_by
+    ids = [r[0] for r in _staff_query(me, other).filter(~staff_cleared_by(me.id)).with_entities(StaffMessage.id)]
+    if not ids:
+        return 0
+    for attempt in (1, 2):
+        have = {r.message_id: r for r in StaffMessageRead.query.filter(StaffMessageRead.user_id == me.id,
+                                                                       StaffMessageRead.message_id.in_(ids))}
+        for i in ids:
+            if i in have:
+                have[i].cleared = True
+            else:
+                db.session.add(StaffMessageRead(message_id=i, user_id=me.id, cleared=True))
+        try:
+            db.session.commit()
+            return len(ids)
+        except IntegrityError:
+            db.session.rollback()
+            if attempt == 2:
+                raise
+
+
+def cleared_state(user):
+    """Changes when this person clears something (so their other open pages catch up)."""
+    q = MessageRead.query.filter(MessageRead.user_id == user.id, MessageRead.cleared.is_(True))
+    state = '{}'.format(q.count())
+    if user.is_admin:
+        from .models import StaffMessageRead
+        state += '.{}'.format(StaffMessageRead.query.filter(StaffMessageRead.user_id == user.id,
+                                                            StaffMessageRead.cleared.is_(True)).count())
+    return state
+
+
 # ---------------------------------------------------------------- between teachers
 
 def other_teachers(me):
@@ -483,7 +570,15 @@ def send_to_teachers(me, body, to):
 def teachers_thread(me, other=None, limit=50):
     """What this teacher can see of the teachers' messages, oldest first (the newest
     `limit`): everything (other None), or just between them and one other teacher (what
-    either wrote to all teachers or to the other)."""
+    either wrote to all teachers or to the other). Less what they cleared from their view."""
+    from .models import StaffMessage, staff_cleared_by
+    rows = _staff_query(me, other).filter(~staff_cleared_by(me.id)) \
+        .order_by(StaffMessage.created.desc(), StaffMessage.id.desc()).limit(limit).all()
+    return rows[::-1]
+
+
+def _staff_query(me, other=None):
+    """The teachers' messages this teacher can see: all of them, or with one other teacher."""
     from .models import StaffMessage, StaffMessageTo, staff_for
     q = StaffMessage.query.filter(staff_for(me.id))
     if other is not None:
@@ -491,8 +586,7 @@ def teachers_thread(me, other=None, limit=50):
                                      db.exists().where(StaffMessageTo.message_id == StaffMessage.id, StaffMessageTo.user_id == uid))
         q = q.filter(db.or_(db.and_(StaffMessage.sender_id == me.id, to_them(other.id)),
                             db.and_(StaffMessage.sender_id == other.id, to_them(me.id))))
-    rows = q.order_by(StaffMessage.created.desc(), StaffMessage.id.desc()).limit(limit).all()
-    return rows[::-1]
+    return q
 
 
 def staff_unseen_ids(me, items):

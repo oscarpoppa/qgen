@@ -15,10 +15,14 @@
   {{ form.hidden_tag() }}
   {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
   {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}
-  {# the quiz: one list with the Quizzes page's folders as tabs over it (static/js/folderfilter.js),
-     laid out like the students beside it: All quizzes, the folders, Uncategorized #}
+  {# the quiz: one list with the Quizzes page's folders down its side (static/js/folderfilter.js,
+     data-style="list"), laid out like the students beside it: All quizzes, the folders, Uncategorized #}
   <div class="card field pick-quiz{% if form.vquiz.errors %} has-error{% endif %}" id="pick-quiz">
     <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
+    {% if not quizzes %}
+    {# (the same words as the Quizzes page with none) #}
+    <p class="card empty small">No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</p>
+    {% else %}
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='li', id='quiz-filter-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
          data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
@@ -32,9 +36,10 @@
         </ul>
       </div>
     </div>
+    {% endif %}
     {% for e in form.vquiz.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
-  {# the people: one checklist, with the People folders as tabs over it (like every folder page,
+  {# the people: one checklist, with the People folders down its side (data-style="list",
      static/js/folderfilter.js): All people, the folders, Uncategorized #}
   <div class="card pick-people-card">
     {# who gets it, first and in plain sight: the students checked on the People page (or below),
@@ -67,7 +72,7 @@
         </ul>
       </div>
     </div>
-    <div class="help">Only the people checked get the quiz. “Check all shown” checks everyone in the list (pick a folder's tab first to check just them). Each student gets a different random version of the quiz.</div>
+    <div class="help">Only the people checked get the quiz. “Check all shown” checks everyone in the list (pick a folder first to check just them). Each student gets a different random version of the quiz.</div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   </div>
@@ -93,6 +98,24 @@
 
 {% block scripts %}
 <script>
+/* the Quiz card: the quiz that's checked is always one on screen. When a folder or the filter
+ * hides it, the first quiz shown is checked instead (none if nothing is shown), so Assign
+ * never gives out a quiz the teacher can't see. */
+(function () {
+  var card = document.getElementById('pick-quiz');
+  if (!card) return;
+  function inSight(r) { return !r.closest('[hidden]'); }
+  function keep() {
+    var radios = Array.prototype.slice.call(card.querySelectorAll('input[name="vquiz"]'));
+    var on = radios.filter(function (r) { return r.checked; })[0];
+    if (on && inSight(on)) return;
+    if (on) on.checked = false;
+    var first = radios.filter(inSight)[0];
+    if (first) first.checked = true;
+  }
+  card.addEventListener('qgen-shown', keep);
+  keep();
+})();
 /* Students: one checklist under folder tabs (static/js/folderfilter.js). "Check all shown"
  * checks (or, when they all are, unchecks) everyone the list shows: the tab chosen, and the
  * names that match the filter box. "Assignee" at the top lists who's checked. */

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import avatar, back_button with context %}
+{% from "_clear_thread.html" import clear_thread with context %}
 {% block body_attrs %}{{ watch('conversation:%d' % student.id) }}{% endblock %}
 
 {% block content %}
@@ -19,6 +20,7 @@
   </div>
 </div>
 <div class="card">
+  {{ clear_thread(student.id, items, panel=false) }}
   {% if older %}<p class="small" style="text-align:center"><a href="{{ url_for('messages.conversation', student_id=student.id, show=show_more) }}" title="Also show messages from further back">Show older messages</a></p>{% endif %}
   {% set me_teacher = true %}{% include "_thread.html" %}
   <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>

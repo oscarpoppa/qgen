@@ -1,5 +1,6 @@
 {# the messages side panel for a student: pinned announcements, the conversation with all
    the teachers or one of them (picked at the top, like the teachers' panel), a box to write #}
+{% from "_clear_thread.html" import clear_thread with context %}
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=teacher.id if teacher else 'all') }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
   {% if teachers %}
@@ -12,6 +13,7 @@
       </select>
     </form>
   {% endif %}
+  {{ clear_thread(teacher.id if teacher else 'all', items) }}
   {% if unread_ids %}<div class="card-head"><span class="badge badge-warn">{{ unread_ids|length }} new</span></div>{% endif %}
   {% if pinned %}
     {# kept at the top until the teacher unpins it; it's shown only here, not also in the conversation below #}

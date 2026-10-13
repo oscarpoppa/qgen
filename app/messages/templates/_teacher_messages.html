@@ -1,5 +1,6 @@
 {# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
 {# what's shown: 'all' (every student), a student's id, 'teachers' (every teacher) or 't<id>' (one teacher) #}
+{% from "_clear_thread.html" import clear_thread with context %}
 {% set current = ('t' ~ other.id if other else 'teachers') if teachers_view else (student.id if student else 'all') %}
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=current) }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
@@ -20,6 +21,7 @@
       </select>
     </form>
   {% endif %}
+  {% if teachers_view or rows %}{{ clear_thread(current, items) }}{% endif %}
   {% if teachers_view %}
     {# between teachers: students never see any of this #}
     <div class="thread-scroll">{% set show_with = not other %}{% include "_staff_thread.html" %}</div>

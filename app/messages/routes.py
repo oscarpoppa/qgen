@@ -242,6 +242,25 @@ def clear_notices(notice_id=None):
     return redirect(back_to(home_url()))
 
 
+#route for "Clear": take the conversation shown (view: what the Messages panel shows, see
+#M.clear_thread) out of your own view; everyone else still sees it, and pinned ones stay
+@messages_bp.route('/messages/clear', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def clear_thread():
+    try:
+        count = M.clear_thread(current_user, request.form.get('view', 'all'))
+    except M.MessageError as exc:
+        if wants_json():
+            return jsonify(ok=False, error=str(exc)), 404
+        flash(str(exc), 'error')
+        return redirect(back_to(home_url()))
+    if wants_json():
+        return jsonify(ok=True, cleared=count)
+    return redirect(back_to(home_url()))
+
+
 # ---------------------------------------------------------------- students
 
 #route for a student to reply to the teachers (shown on the student's home page)
@@ -461,7 +480,7 @@ def review_waiting():
 
 def messages_state():
     """Changes whenever what this person's Messages panel shows changes: a message
-    written or deleted, pinned or unpinned, or removed from a student's view. Open
+    written or deleted, pinned or unpinned, removed from a student's view, or cleared. Open
     panels reload when it changes, so a pin shows on every screen without a reload."""
     q = Message.query.filter(NOT_NOTICE)
     if current_user.is_admin:
@@ -474,6 +493,8 @@ def messages_state():
         db.func.count(Message.id), db.func.max(Message.id),
         db.func.sum(db.case((Message.pinned.is_(True), Message.id), else_=0)),
         db.func.sum(db.case((Message.hidden_for_student.is_(True), Message.id), else_=0))).one())
+    #what this person cleared from their own view
+    state += ':' + M.cleared_state(current_user)
     if not current_user.is_admin:
         #a student's panel lists the teachers, online ones marked
         state += ':' + ','.join(str(t.id) for t in M.teachers_for_student() if t.online)

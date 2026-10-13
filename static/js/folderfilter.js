@@ -156,12 +156,14 @@
             b.style.paddingLeft = (10 + depth * 16) + 'px';
             col.appendChild(b);
             walk(n.children, depth + 1);
-            //a folder with folders inside: what's in it but in none of them, as on its tab rows
-            if (isFolder(String(n.id)) && n.children.length) {
-              var self = button('self:' + n.id, 'Uncategorized', Object.keys(own(n)).length, 'tray');
+            //what's in a folder but in none of the folders inside it, as on its tab rows; grayed
+            //(and 0) when there are no folders inside, since it's the same as the folder itself
+            if (isFolder(String(n.id))) {
+              var self = button('self:' + n.id, 'Uncategorized', n.children.length ? Object.keys(own(n)).length : 0, 'tray');
               self.classList.add('folder-tab-self');
               self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-              self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
+              if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+              else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
               self.style.paddingLeft = (10 + (depth + 1) * 16) + 'px';
               col.appendChild(self);
             }
@@ -295,6 +297,8 @@
         if (rowsIn.length) t.hidden = Array.prototype.every.call(rowsIn, function (r) { return r.hidden; });
       });
       list.hidden = folderEmpty || (filtering && !items().some(function (el) { return !el.hidden; }));
+      //what's shown changed (a folder chosen, a filter typed): e.g. Assign keeps its chosen quiz in sight
+      box.dispatchEvent(new CustomEvent('qgen-shown', { bubbles: true }));
     }
     document.addEventListener('qgen-filtered', function (e) {
       //(only the filter over this list: Messages has another, for the message's students)
