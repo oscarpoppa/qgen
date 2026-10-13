@@ -67,12 +67,21 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert 'Drag them out of a folder' in out['error']
     assert in_folders('sam') == ['8th grade', 'Math club']
     teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
-    teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': folder('8th grade')})
-    assert in_folders('sam') == []
+    # out of their only folder: that deletes their account, so it's asked first (not done here)
+    res = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': folder('8th grade')}, headers=FETCH)
+    assert res.status_code == 409 and 'Do you want me to permanently delete them or put them in Uncategorized?' in res.get_json()['confirm']
+    assert in_folders('sam') == ['8th grade']
     # the ✕ beside a folder
+    # the ✕ beside a folder: the message says where they still are; out of their only folder,
+    # asked first, then (as chosen) in Uncategorized
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
+    teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g8})
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g7}, headers=FETCH).get_json()['message'] == \
-        'Took kim out of "7th grade".'
+        'Took kim out of “7th grade”; they’re still in “8th grade”.'
+    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
+    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8, 'confirm': 'uncategorized'},
+                      headers=FETCH).get_json()['message'] == 'Took kim out of “8th grade”; they’re now in Uncategorized.'
+    assert in_folders('kim') == []
     # names; renaming
     assert teach.post('/users/folders', data={'name': ' '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
     assert teach.post('/users/folders/{}/rename'.format(g7), data={'name': 'Grade 7'}, headers=FETCH).get_json()['ok']
@@ -81,7 +90,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert sam.get('/userdet').status_code == 302
     assert sam.post('/users/folders', data={'name': 'mine'}).status_code == 302
     assert sam.post('/users/folders/add', data={'user': ids('sam'), 'to': g8}).status_code == 302
-    assert in_folders('sam') == [] and 'Grade 7' not in sam.get('/mypage').data.decode()
+    assert in_folders('sam') == ['8th grade'] and 'Grade 7' not in sam.get('/mypage').data.decode()
     # shared: another teacher sees the same folders
     from app.user.models import User
     t2 = User(username='t2', is_admin=True)
@@ -250,3 +259,30 @@ def test_users_page_leads_to_each_student_page(app_db):
     # the name itself is plain text, not a link: only buttons act on a person
     assert '<strong class="box-title">sam</strong>' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page
+
+
+def test_taking_people_out_of_their_only_folder(app_db):
+    """People: a card's Take out and the checked bar's "Take out of folder" (the same route as
+    Problems and Quizzes): where they're still in; out of their only folder, asked first, then
+    their account deleted (attempts kept in the Archive) or they go in Uncategorized."""
+    app, db = app_db
+    from app.user.models import User
+    teach = login(app, 'teach')
+    for name in ('8th grade', 'Math club'):
+        teach.post('/users/folders', data={'name': name})
+    g8, club = folder('8th grade'), folder('Math club')
+    for who in ('sam', 'kim'):
+        teach.post('/users/folders/add', data={'user': ids(who), 'to': g8})
+    teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
+    page = teach.get('/userdet?folder=all').data.decode()
+    assert 'form="takeout-people"' in page and '>Take out of folder</button>' in page and page.count('>Take out</button>') >= 2
+    res = teach.post('/folders/people/takeout', data={'items': [ids('sam'), ids('kim')], 'folder': g8}, headers=FETCH)
+    assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
+    assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed
+    res = teach.post('/folders/people/takeout', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'confirm': 'delete'}, headers=FETCH)
+    assert res.get_json()['message'] == 'Took sam out of “8th grade”; they’re still in “Math club”. Deleted kim’s account.'
+    assert User.query.filter_by(username='kim').count() == 0 and in_folders('sam') == ['Math club']
+    # never your own account: you go in Uncategorized instead
+    teach.post('/users/folders/add', data={'user': ids('teach'), 'to': club})
+    q = teach.post('/folders/people/takeout', data={'items': [ids('teach')], 'folder': club, 'check': '1'}, headers=FETCH).get_json()['question']
+    assert 'can’t be deleted (You can’t delete your own account)' in q

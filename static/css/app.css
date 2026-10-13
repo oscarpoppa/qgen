@@ -2097,7 +2097,9 @@ details.row-fold > summary > .fold { align-self: center; }
 details.row-fold > summary > .drag-item, details.row-fold > summary > .name-link { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 /* People cards: the name is cut short with "…" (the full name is in the tooltip), so Assign
    never drops onto a line of its own and the cards stay the same height */
-.person-card > summary .person { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
+/* the name keeps its room (at least 11rem): when the buttons don't fit beside it, they go to the next line */
+.person-card > summary .person { flex: 1 1 0; min-width: min(100%, 11rem); display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.person-card > summary .box-end { margin-left: auto; }
 .person-card > summary .person .box-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .person-card > summary > .box-end { flex: 0 0 auto; }
 /* (a badge, such as Teacher, goes on a second line under the name; Assign stays on the first) */

@@ -4,7 +4,7 @@
 {% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
 <div class="folder-tools-bar">
   {% if total %}{{ filter_bar('#folder-items', 'problem' if kind == 'problems' else 'quiz', noun, url=true, boxes='details.sub-box, details.subject-box') }}{% endif %}
-  <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar">
+  <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar" data-takeout="remove">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
     {% if all_subjects %}

@@ -205,17 +205,23 @@
   }
 
   var token = document.querySelector('meta[name="csrf-token"]');
-  function move(d, to) {
+  function move(d, to, confirm) {
     var data = new FormData();
     data.append('csrf_token', token ? token.content : '');
     data.append(d.kind, d.id);
     data.append('to', to);
     data.append('view', view);
-    data.append('from', d.home);  // the folder it was dragged out of ("top": the main list)
+    data.append('from', d.home);  // the folder it was dragged out of ("top": the main list; "": a copy)
+    if (confirm) data.append('confirm', confirm);
     fetch(layout.dataset.moveUrl, { method: 'POST', body: data, credentials: 'same-origin',
                                     headers: { 'X-Requested-With': 'fetch' } })
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .then(function (res) {
+        //out of its only folder: delete it or put it in Uncategorized? (app/takeout.py)
+        if (res.confirm && window.qgenChoose) {
+          window.qgenChoose(res.confirm, window.qgenTakeOutChoices).then(function (choice) { if (choice) move(d, to, choice); });
+          return;
+        }
         if (res.ok) {
           try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, box: d.kind + ':' + d.id })); } catch (e) {}
           if (window.qgenNotePlace) window.qgenNotePlace();  // back to the same place after the reload
@@ -255,7 +261,9 @@
       if (e.button !== 0 || e.pointerType === 'touch') return;
       if (e.target.closest('button, input, select, textarea')) return;  // its own controls still work
       var kind = h.dataset.drag;
-      pending = { kind: kind, id: h.dataset.id, home: h.dataset.home, label: h.dataset.name,
+      //dragged out of the folder shown (a folder tab, or the folder box it's in): a move
+      var shown = kind === 'folder' ? null : (window.qgenShownFolder && window.qgenShownFolder(h));
+      pending = { kind: kind, id: h.dataset.id, home: shown || h.dataset.home, label: h.dataset.name,
                   el: h.closest('[data-box]') || h, x: e.clientX, y: e.clientY };
       e.preventDefault();  // no text selection while dragging; a click still goes through
     });
@@ -284,6 +292,8 @@
     swallowClick = true;
     setTimeout(function () { swallowClick = false; }, 0);
     stop();
+    //Ctrl (or ⌘) held: a copy, it stays where it was too
+    if (t && d.kind !== 'folder' && (e.ctrlKey || e.metaKey) && t.dataset.drop !== 'top') d.home = '';
     if (t) move(d, t.dataset.drop);
   });
   document.addEventListener('click', function (e) {

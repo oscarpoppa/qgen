@@ -51,6 +51,40 @@
     });
   };
 
+  /* qgenChoose(question, choices): the same question box with several answers, each
+   * {value, label, title, danger}, and Cancel last (with the focus). Resolves to the value
+   * chosen, or null for Cancel or Esc. */
+  var many = null;
+  window.qgenChoose = function (question, choices) {
+    if (!window.HTMLDialogElement) return Promise.resolve(window.confirm(question) ? choices[0].value : null);
+    if (!many) {
+      many = document.createElement('dialog');
+      many.className = 'ask';
+      many.setAttribute('aria-labelledby', 'choose-text');
+      many.innerHTML = '<p id="choose-text"></p><div class="btn-row"></div>';
+      document.body.appendChild(many);
+    }
+    many.querySelector('#choose-text').textContent = question;
+    var row = many.querySelector('.btn-row');
+    row.textContent = '';
+    return new Promise(function (resolve) {
+      function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(v); }
+      function esc(e) { e.preventDefault(); done(null); }
+      choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn' + (c.value === null ? ' btn-secondary' : c.danger ? ' btn-danger' : '');
+        b.textContent = c.label;
+        if (c.title) b.title = c.title;
+        b.addEventListener('click', function () { done(c.value); });
+        row.appendChild(b);
+      });
+      many.addEventListener('cancel', esc);
+      many.showModal();
+      row.lastChild.focus();
+    });
+  };
+
   //"Start over" / "Undo changes" on the problem and quiz editors: after asking, the page
   //opens again as it was (data-start-over: its address)
   document.addEventListener('click', function (e) {

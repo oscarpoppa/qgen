@@ -1177,8 +1177,8 @@ def move_subject(kind):
         if to in (None, '', 'top', 'main'):
             if here is None:
                 return _subject_done(kind, 'Drag it out of a folder to take it out.', error=True)
-            item = S.file_one(kind, item_id, here, add=False)
-            return _subject_done(kind, 'Took "{}" out of "{}".'.format(item.title, here.title), moved='{}:{}'.format(what, item.id))
+            from app import takeout
+            return takeout.handle(kind, [item_id], here.id, lambda m, error=False: _subject_done(kind, m, error=error))
         target = subject_or_404(kind, to)
         item = S.file_one(kind, item_id, target, moving_from=here)
         return _subject_done(kind, ('Moved "{}" to "{}".' if here else 'Put "{}" in "{}".').format(item.title, target.title),
@@ -1207,13 +1207,32 @@ def add_to_subject(kind):
 @admin_only
 @post_form_only
 def remove_from_subject(kind):
+    #(just that folder; something left in no folder is deleted, asked first: app/takeout.py)
+    from app import takeout
     what = 'problem' if kind == 'problems' else 'quiz'
-    folder = subject_or_404(kind, request.form.get('folder'))
-    try:
-        item = S.file_one(kind, request.form.get(what), folder, add=False)
-    except S.ServiceError as exc:
-        return _subject_done(kind, str(exc), error=True)
-    return _subject_done(kind, 'Took "{}" out of "{}".'.format(item.title, folder.title))
+    return takeout.handle(kind, [request.form.get(what)], request.form.get('folder'),
+                          lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True)
+
+#route for a "Take out" button on a card or row, and People's checked bar: out of the folder
+#shown (and the folders inside it); something left in no folder is deleted, asked first
+@qgen_bp.route('/folders/<kind>/takeout', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def take_out_of_folder(kind):
+    from app import takeout
+    if kind not in takeout.KINDS:
+        abort(404)
+    if kind == 'people':
+        from app.user.routes import _group_done
+        done = lambda m, error=False: _group_done(m, error=error)
+    else:
+        done = lambda m, error=False: _subject_done(kind, m, error=error)
+    items = request.form.getlist('items')
+    if not items:
+        return done('Check at least one first.', error=True)
+    return takeout.handle(kind, items, request.form.get('folder'), done)
 
 #route to put the checked problems (or quizzes) in a folder, or take them out of it
 @qgen_bp.route('/quiz/subjects/<kind>/file', methods=['POST'])
@@ -1232,6 +1251,10 @@ def file_subject(kind):
         return _subject_done(kind, 'Choose a folder first.', error=True)
     if not items:
         return _subject_done(kind, 'Check at least one first.', error=True)
+    if not add:
+        #out of the folder and the folders inside it; left in no folder: deleted, asked first
+        from app import takeout
+        return takeout.handle(kind, items, subject.id, lambda m, error=False: _subject_done(kind, m, error=error))
     count = S.file_items(kind, items, subject, add=add)
     return _subject_done(kind, '{} {} {} "{}".'.format(count, _item_word(kind, count), 'put in' if add else 'taken out of', subject.title))
 

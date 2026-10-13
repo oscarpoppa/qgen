@@ -261,7 +261,7 @@
    "+ Add…" list. what: the form field naming it (user, quiz, problem) #}
 {% macro in_folders(fk, what, ident, label, mine) %}
   {% for f in mine %}
-    <form method="post" action="{{ fk.remove_url }}" class="folder-chip">
+    <form method="post" action="{{ fk.remove_url }}" class="folder-chip" data-takeout>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="{{ fk.view }}">
       <input type="hidden" name="{{ what }}" value="{{ ident }}"><input type="hidden" name="folder" value="{{ f.id }}">
@@ -322,5 +322,18 @@
       <option value="top"{% if not here %} disabled{% endif %}>{{ fk.main_label }}{{ ' (here now)' if not here }}</option>
     </select>
     <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
+  </form>
+{% endmacro %}
+
+{# "Take out" on a card or row: out of the folder it's shown in (the folder tab chosen, or the
+   folder box it's in: here), and the folders inside it. Says where it's still in; out of its
+   only folder it asks: delete for good, or put in Uncategorized (static/js/takeout.js,
+   app/takeout.py). Grayed while no folder is shown. #}
+{% macro take_out_button(kind, ident, label, here=none) %}
+  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-takeout-shown{% if here %} data-here="{{ here.id }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
+    <input type="hidden" name="items" value="{{ ident }}">
+    <button class="btn btn-secondary btn-sm" title="Take {{ label }} out of this folder (if it’s in no other, you’re asked first)">Take out</button>
   </form>
 {% endmacro %}

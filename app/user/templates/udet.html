@@ -3,7 +3,7 @@
 {% from "_people.html" import people_switch %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, take_out_button with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -27,7 +27,7 @@
         {# online now: a green dot after the name (the words are under "Last seen" when it's open) #}
         <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span>
         {% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}
-        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></span>
+        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a>{{ take_out_button('people', item.id, item.shown_name, here) }}</span>
       </summary>
       <dl class="person-facts small">
         <dt>Folders</dt><dd class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</dd>
@@ -62,7 +62,13 @@
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
+      {# the same "Take out of folder" as on the Problems and Quizzes pages' bar: out of the folder shown #}
+      <button form="takeout-people" class="btn btn-secondary btn-sm" title="Take everyone checked out of this folder (anyone in no other folder: you’re asked first)">Take out of folder</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
+    </form>
+    <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind='people') }}" id="takeout-people" data-takeout data-takeout-shown
+          data-takeout-items="input.pick-person:checked"{% if fk.node %} data-here="{{ fk.node.folder.id }}"{% endif %} hidden>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="view" value="{{ fk.view }}">
     </form>
     {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}</div>{% endif %}
     <div id="folder-items">

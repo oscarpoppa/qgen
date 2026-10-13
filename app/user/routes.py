@@ -401,15 +401,9 @@ def deluser(uid):
     if current_user == usr:
         flash("I can't let you do that, {}".format(current_user.shown_name))
         return redirect(url_for('user.userdet'))
-    from . import avatars
-    from app.qgen import services as S
     #their quiz attempts are kept in the archive
-    S.archive_student(usr, by=current_user)
-    avatars.remove(usr, commit=False)
-    from app.qgen.scan import remove_user_jobs
-    remove_user_jobs(usr)  # their unfinished workbook scans
-    usrquery.delete()
-    db.session.commit()
+    from .accounts import delete_account
+    delete_account(usr, by=current_user)
     flash('User {} has been deleted'.format(usrname))
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
     #back to the Users page they were on (its folder), not to the deleted person's pages
@@ -577,9 +571,9 @@ def move_user_or_folder():
             #(from the All list, like the Problems and Quizzes pages: which folder isn't known)
             if here is None:
                 return _group_done('Drag them out of a folder to take them out (or use the ✕ on the folder).', error=True)
-            person, f = groups.take_out(request.form.get('user'), here)
-            message = ('Took {} out of "{}".'.format(person.shown_name, f.name) if f
-                       else 'Took {} out of every folder.'.format(person.shown_name))
+            #left in no folder: deleted, asked first (app/takeout.py)
+            from app import takeout
+            return takeout.handle('people', [request.form.get('user')], here, lambda m, error=False: _group_done(m, error=error))
         else:
             person, f = groups.add(request.form.get('user'), to, moving_from=here)
             message = 'Moved {} to "{}".'.format(person.shown_name, f.name) if here else \
@@ -611,13 +605,10 @@ def add_to_user_folder():
 @admin_only
 @post_form_only
 def remove_from_user_folder():
-    from . import groups
-    try:
-        person, f = groups.take_out(request.form.get('user'), request.form.get('folder'))
-    except groups.GroupError as exc:
-        return _group_done(str(exc), error=True)
-    return _group_done('Took {} out of "{}".'.format(person.shown_name, f.name) if f else
-                       'Took {} out of every folder.'.format(person.shown_name))
+    #just that folder; left in no folder: deleted, asked first (app/takeout.py)
+    from app import takeout
+    return takeout.handle('people', [request.form.get('user')], request.form.get('folder'),
+                          lambda m, error=False: _group_done(m, error=error), one_folder=True)
 
 # route to site-wide settings: name, logo, and the class code students need to sign up
 @user_bp.route('/settings', methods=['GET', 'POST'])

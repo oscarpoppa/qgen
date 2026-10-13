@@ -223,8 +223,12 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
         current.append(subject)
     elif not add and subject in current:
         current.remove(subject)
-    if moving_from is not None and moving_from is not subject and moving_from in current:
-        current.remove(moving_from)
+    if moving_from is not None and moving_from is not subject:
+        #out of the folder it was dragged from, and the folders inside it (not the one it's going to)
+        from app import takeout
+        here = takeout.subtree(kind, moving_from) - {subject.id}
+        for g in [g for g in current if g.id in here]:
+            current.remove(g)
     try:
         db.session.commit()
     except IntegrityError:

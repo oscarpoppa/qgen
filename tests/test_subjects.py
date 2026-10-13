@@ -107,9 +107,17 @@ def test_problems_page_lists_by_folder(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert side_counts(page) == {'All problems': 3, 'Uncategorized': 0, 'Algebra': 2, 'Geometry': 2}
     assert 'Expand all' in page and 'Collapse all' in page and 'Put in folder' in page
-    # taken out of a folder: in no folder if it's in no other
+    # taken out of a folder: it stays in its others; out of its only folder it's deleted, but
+    # only once the teacher agrees (the page asks first: check=1 gives the question)
+    teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Area'].id], 'action': 'remove'})
+    assert shown(teacher, 'problems', alg.id) == ['Add'] and shown(teacher, 'problems', geo.id) == ['Angles', 'Area']
+    q = teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove', 'check': '1'},
+                     headers={'X-Requested-With': 'fetch'}).get_json()
+    assert q['question'].startswith('“Add” is only in “Algebra”. Do you want me to permanently delete it or put it in Uncategorized?')
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove'})
-    assert shown(teacher, 'problems', alg.id) == ['Area'] and shown(teacher, 'problems', 'main') == ['Add']
+    assert shown(teacher, 'problems', alg.id) == ['Add']  # not asked: nothing happened
+    teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id], 'action': 'remove', 'confirm': 'uncategorized'})
+    assert shown(teacher, 'problems', alg.id) == [] and shown(teacher, 'problems', 'main') == ['Add']
     # an empty folder says so
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Calculus'})
     calc = VPGroup.query.filter_by(title='Calculus').one()
@@ -118,7 +126,7 @@ def test_problems_page_lists_by_folder(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id})
     teacher.post('/quiz/subjects/problems/file', data={'items': [probs['Angles'].id]})
     db.session.expire_all()
-    assert [p.title for p in alg.vproblems] == ['Area']
+    assert [p.title for p in alg.vproblems] == []  # (Area and Add were taken out, above)
     # a folder that's gone shows All problems: one list, each once (the folder buttons narrow it)
     assert sorted(shown(teacher, 'problems', 999)) == ['Add', 'Angles', 'Area'] and sorted(everything(teacher, 'problems')) == ['Add', 'Angles', 'Area']
 
@@ -169,10 +177,15 @@ def test_one_at_a_time_and_dragging(app_db):
     teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': 'top', 'from': fall.id}, headers=FETCH)
     db.session.expire_all()
     assert [g.title for g in q.vqgroups] == ['Spring']
-    # a chip's ✕
-    teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': spring.id})
+    # a chip's ✕ on its only folder: deleted, but only once the teacher agrees
+    res = teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': spring.id}, headers=FETCH)
+    assert res.status_code == 409 and 'only in “Spring”' in res.get_json()['confirm']
     db.session.expire_all()
-    assert q.vqgroups == []
+    assert [g.title for g in q.vqgroups] == ['Spring']
+    qid = q.id
+    teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': qid, 'folder': spring.id, 'confirm': 'delete'})
+    db.session.expire_all()
+    assert db.session.get(VQuiz, qid) is None  # never assigned: deleted for good
     # a quiz that's gone
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': 999, 'to': fall.id}, headers=FETCH)
     assert res.status_code == 400 and 'doesn\'t exist' in res.get_json()['error']
@@ -600,3 +613,38 @@ def test_the_folder_question_folds_like_the_folder_lists(app_db):
     assert q.count('class="side-fold"') == 1 and 'aria-label="Show or hide the folders in Math"' in q
     assert 'data-side-level="open"' in q and 'data-side-level="close"' in q and 'js/folder_checks.js' in q
     assert 'data-depth="2" data-folder="{}"'.format(VPGroup.query.filter_by(title='Algebra').one().id) in q
+
+
+
+def test_out_of_its_only_folder_asks_delete_or_uncategorized(app_db):
+    """Every folder page: taking something out says where it's still in; out of its only folder
+    it's asked first, and then deleted for good (or put in Uncategorized), as chosen."""
+    app, db = app_db
+    from app.qgen.models import VPGroup, VProblem
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add', 'Area')
+    for name in ('Algebra', 'Geometry'):
+        teacher.post('/quiz/subjects/problems/new', data={'name': name})
+    alg, geo = VPGroup.query.filter_by(title='Algebra').one(), VPGroup.query.filter_by(title='Geometry').one()
+    teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id, probs['Area'].id]})
+    teacher.post('/quiz/subjects/problems/file', data={'subject': geo.id, 'items': [probs['Area'].id]})
+    FETCH = {'X-Requested-With': 'fetch'}
+    # a card's Take out (the new route for every kind): Area stays in Geometry, and says so
+    res = teacher.post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': alg.id}, headers=FETCH).get_json()
+    assert res['message'] == 'Took “Area” out of “Algebra”; it’s still in “Geometry”.'
+    # Add is only in Algebra: asked, nothing changes until the teacher chooses
+    res = teacher.post('/folders/problems/takeout', data={'items': [probs['Add'].id], 'folder': alg.id}, headers=FETCH)
+    assert res.status_code == 409 and res.get_json()['confirm'] == \
+        '“Add” is only in “Algebra”. Do you want me to permanently delete it or put it in Uncategorized?'
+    assert VProblem.query.filter_by(title='Add').count() == 1
+    res = teacher.post('/folders/problems/takeout', data={'items': [probs['Add'].id], 'folder': alg.id, 'confirm': 'delete'}, headers=FETCH)
+    assert res.get_json()['message'] == 'Deleted problem “Add”.' and VProblem.query.filter_by(title='Add').count() == 0
+    # a problem a quiz uses can't be deleted: it's said, and it goes in Uncategorized
+    teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(probs['Area'].id)})
+    q = teacher.post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id, 'check': '1'}, headers=FETCH).get_json()
+    assert 'can’t be deleted (Problem "Area" is used by these quizzes: "Q")' in q['question']
+    teacher.post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id, 'confirm': 'delete'})
+    db.session.expire_all()
+    assert VProblem.query.filter_by(title='Area').one().vpgroups == []
+    # students can't
+    assert login(app, 'sam').post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id}).status_code == 302

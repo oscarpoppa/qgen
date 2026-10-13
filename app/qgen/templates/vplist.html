@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, take_out_button with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
@@ -40,6 +40,7 @@
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="See three students' versions of {{ item.title or 'Untitled' }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Change this problem's question, values and answer">Edit</a>
             {% if item.cproblems %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">History</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {{ take_out_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', here) }}
             {{ post_button(url_for('qgen.del_vprob', vpid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete the problem “' ~ (item.title)|string ~ '”?' ~ archive_warning(archived.get(item.id, 0), 'problem'), tip='Delete this problem for good') }}
           </td>
         </tr>

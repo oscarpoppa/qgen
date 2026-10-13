@@ -265,6 +265,7 @@
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
     function apply() {
+      box.dataset.shown = chosen;  // (what's shown, for scripts: takeout.js's "the folder shown")
       var keep = chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
       items().forEach(function (el) {
         var k = keyOf(el), hide = chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
