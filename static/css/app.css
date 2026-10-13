@@ -2203,3 +2203,21 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
   .staff-grid > nav { grid-column: 1 / -1; }
   .staff-grid > form { position: sticky; top: calc(var(--topbar-h) + 12px); }
 }
+/* a box for a short number (a time limit): not stretched across a wide form */
+.field-short { max-width: 16rem; }
+/* helpers on the right (docs/ui-patterns.md principle 11): an editor's right-hand column can
+   hold the Helper and other cards that inform (the quiz builder's "Questions in this quiz");
+   it stays in view while the form scrolls, and scrolls itself when it's long */
+.editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); }
+.editor > .side-col { position: sticky; top: calc(var(--topbar-h) + 15px); max-height: calc(100vh - var(--topbar-h) - 33px);
+  overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.editor > .side-col > .card { margin: 0; }
+.editor > .side-col > .helper { position: static; max-height: none; overflow: visible; }
+@media (max-width: 960px) {
+  .editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr); }
+  .editor > .side-col { position: static; max-height: none; overflow: visible; order: -1; }
+}
+@container page (max-width: 900px) {
+  .editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr); }
+  .editor > .side-col { position: static; max-height: none; overflow: visible; order: -1; }
+}

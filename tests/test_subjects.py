@@ -501,3 +501,39 @@ def test_an_archive_folder_action_keeps_the_open_tab(app_db):
     r = teacher.post('/quiz/archive/folders/new', data={'name': 'Old', 'view': 'all'},
                      headers={'Referer': 'http://localhost/quiz/archive?tab=none'})
     assert 'tab=none' in r.headers['Location']
+
+
+def test_with_no_folders_uncategorized_counts_nothing(app_db):
+    """No folders yet: Uncategorized has nothing to sort, so the folder list shows it grayed at 0
+    (everything is under All), not the same count as All."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    make_problems(teacher, 'Add', 'Area')
+    page = teacher.get('/quiz/listvp').data.decode()
+    at = page.index('title="There are no folders yet."')
+    row = page[page.rindex('<li>', 0, at):page.index('</div></li>', at)]
+    assert 'is-empty' in row and '>0</span>' in row
+    # with a folder, it counts what's in no folder again
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'There are no folders yet' not in page
+
+
+def test_each_folder_page_keeps_its_own_filter_and_tab_in_the_address(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    make_problems(teacher, *['P{}'.format(i) for i in range(7)])
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert page.count('data-url-filter') == 1 and 'data-url-tab' in page
+
+
+def test_a_student_page_keeps_its_folder_tab_in_the_address(app_db):
+    app, db = app_db
+    from test_dashboard import make_quiz, give
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    give(make_quiz(app, teacher), 'sam')
+    sam = User.query.filter_by(username='sam').one()
+    page = teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    assert 'data-remember="student-page" data-url-tab' in page and 'data-url-filter' in page

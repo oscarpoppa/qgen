@@ -1187,7 +1187,7 @@ def test_pages_come_back_as_they_were_left(app_db):
     trail = open(os.path.join(root, 'static', 'js', 'trail.js')).read()
     keep = open(os.path.join(root, 'static', 'js', 'keep.js')).read()
     assert "setAttribute('data-came-back'" in trail and "hasAttribute('data-came-back')" in keep
-    assert "addEventListener('pagehide'" in keep and 'qgenRun' in keep
+    assert "addEventListener('pagehide'" in keep and "dispatchEvent(new Event('input'" in keep
 
 
 def test_score_counted_stays_on_the_page_behind_nginx(app_db):

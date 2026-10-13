@@ -86,7 +86,7 @@
     function isFolder(id) { return /^\d+$/.test(id) && !!byId[id]; }
     if (chosen !== 'all' && chosen !== 'none' && !byId[base()]) chosen = 'all';
     if (chosen.indexOf('self:') === 0 && !isFolder(base())) chosen = 'all';
-    if (chosen === 'none' && (!loose || 'noMain' in box.dataset)) chosen = 'all';
+    if (chosen === 'none' && (!loose || 'noMain' in box.dataset || !tree.some(function (n) { return isFolder(String(n.id)); }))) chosen = 'all';
     //what's in a folder itself: in it, and in none of the folders inside it
     function own(n) {
       var out = {};
@@ -149,8 +149,11 @@
       row.appendChild(label);
       row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
       tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
-      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? 0 : loose, 'tray');
-      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside: everything is under ' + (box.dataset.allLabel || 'All'); }
+      //(no folders at all, only New / In progress: nothing to sort yet, so it counts 0)
+      var noFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
+      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset || noFolders ? 0 : loose, 'tray');
+      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
+      else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
       else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
       row.appendChild(none);
       rows.appendChild(row);
@@ -176,7 +179,7 @@
         var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
         self.classList.add('folder-tab-self');
         self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”: everything in it is under All in “' + n.name + '”'; }
+        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
         else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
         sub.appendChild(self);
         rows.appendChild(sub);
@@ -269,6 +272,9 @@
       return null;
     }
     function markSide() {
+      //(phones: the folded folder list's line names what's open)
+      var now = document.querySelector('.folder-side-now');
+      if (now && 'urlTab' in box.dataset) now.textContent = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Uncategorized' : byId[chosen] ? byId[chosen].name : now.textContent;
       document.querySelectorAll('.side-row a[href]').forEach(function (a) {
         var id = sideFor(a);
         if (id === null) return;

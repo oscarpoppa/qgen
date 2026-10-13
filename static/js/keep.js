@@ -53,7 +53,8 @@
       if (typeof k === 'number' && k < s.options.length && s.selectedIndex !== k) { s.selectedIndex = k; changed = true; }
     });
     if (was.words && input.value !== was.words) { input.value = was.words; changed = true; }
-    if (changed && bar.qgenRun) bar.qgenRun();
+    //(as if typed: the list narrows, and filter.js writes the words into the address)
+    if (changed) input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   boxes().forEach(function (b) {
     if (b.key in left.open && !b.box.hidden) b.box.open = !!left.open[b.key];

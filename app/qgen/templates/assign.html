@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{# reading and forms: lines no wider than is comfortable #}
 {# the page's whole width: the quiz and dates on the left, the students (in columns) on the right #}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
@@ -72,7 +71,7 @@
       {{ field(form.opens_at) }}
       {{ field(form.closes_at) }}
     </div>
-    <div style="max-width:240px">
+    <div class="field-short">
       {{ field(form.time_limit, 'Starts when the student opens the quiz.', attrs={'min': 1, 'placeholder': 'no limit'}) }}
       {# filled in by the page: the most the limit can be with both times set #}
       <div class="help" id="limit-window" hidden></div>

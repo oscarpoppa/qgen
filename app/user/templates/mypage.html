@@ -121,7 +121,7 @@
 
 {% if groups or fk.root.folders %}
 {% call folders_page(fk) %}
-  {% if groups %}{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.quiz-card', boxes='details.sub-box') }}{% endif %}
+  {% if groups %}{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.quiz-card', boxes='details.sub-box', url=true) }}{% endif %}
   {# and between the heading (and Find a quiz) and the quizzes #}
   <hr class="section-rule list-rule">
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>

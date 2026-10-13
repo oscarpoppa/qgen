@@ -135,8 +135,9 @@
    as one thing; boxes: its folder boxes (open where there's a match); one/many: what they're
    called. compact: just the box (inside a small box). Put more in the bar with a call block
    (a results page's "Show"). Hidden until its script runs. #}
-{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none) -%}
-<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %} hidden>
+{# url: the page's own bar, which keeps its words (?q=) and Show choice (?state=) in the address (filter.js) #}
+{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false) -%}
+<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
   {# the box and Clear stay side by side (only the box gets narrower on a small screen) #}
   <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter {{ many }} by name" title="Type part of a name to show only the {{ many }} that match">
   {%- if not compact %}<button type="button" class="btn btn-secondary btn-sm" data-filter-clear title="Show all the {{ many }} again">Clear</button>{% endif %}</span>

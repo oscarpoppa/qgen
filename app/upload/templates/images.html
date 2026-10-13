@@ -10,7 +10,7 @@
   <div class="actions">{{ back_home() }}<a class="btn" href="{{ url_for('upload.upload') }}" title="Add new pictures to use in problems">Upload pictures</a></div>
 </div>
 {% if imgs %}
-  {% if imgs|length > 5 %}{{ filter_bar('#image-list', 'picture', 'pictures', items='.thumb') }}{% endif %}
+  {% if imgs|length > 5 %}{{ filter_bar('#image-list', 'picture', 'pictures', items='.thumb', url=true) }}{% endif %}
   <div class="thumbs" id="image-list">
   {% for pair in imgs %}
     <div class="thumb" data-name="{{ pair[1]|lower }}">
