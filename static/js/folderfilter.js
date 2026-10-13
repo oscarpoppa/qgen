@@ -184,8 +184,8 @@
         var k = keyOf(el), hide = chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
         window.qgenHideRow ? window.qgenHideRow(el, 'folder', hide) : (el.hidden = hide);
       });
-      //a folder with nothing in it says so
-      var shown = items().some(function (el) { return !el.hidden; });
+      //a folder with nothing in it says so (what the name filter hides still counts as in it)
+      var shown = items().some(function (el) { return (el.dataset.hiddenBy || '').split(' ').indexOf('folder') === -1; });
       var note = box.querySelector('.folder-filter-empty');
       if (!note) {
         note = document.createElement('p');
@@ -197,14 +197,19 @@
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)
       note.textContent = byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
-      //empty tables' headings and the counts follow
+      tidy();
+      document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
+      if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
+    }
+
+    //a table whose rows are all hidden (by a tab or the name filter) goes, heading and all
+    function tidy() {
       list.querySelectorAll('table').forEach(function (t) {
         var rowsIn = t.querySelectorAll('tbody tr[data-box]');
         if (rowsIn.length) t.hidden = Array.prototype.every.call(rowsIn, function (r) { return r.hidden; });
       });
-      document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
-      if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
     }
+    document.addEventListener('qgen-filtered', tidy);
 
     rows.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');
@@ -220,7 +225,7 @@
     function sideFor(a) {
       if (same(a, box.dataset.allUrl)) return 'all';
       if (same(a, box.dataset.mainUrl)) return loose ? 'none' : null;
-      for (var id in byId) if (/^\d+$/.test(id) && same(a, byId[id].url)) return id;
+      for (var id in byId) if (byId[id].url && same(a, byId[id].url)) return id;  // (folders, and New / In progress)
       return null;
     }
     function markSide() {
@@ -241,10 +246,13 @@
       choose(id);
     });
     //the page's heading names what's shown: the folder chosen (the All label to begin with)
-    var heading = document.getElementById('folder-title'), headingWas = heading ? heading.innerHTML : '';
+    //(opened on another tab, e.g. My quizzes' New from Home: the server's heading is that tab's,
+    //so All gets the All label)
+    var heading = document.getElementById('folder-title'), startedOnAll = !box.dataset.start || box.dataset.start === 'all';
+    var headingWas = heading && startedOnAll ? heading.innerHTML : '';
     function retitle() {
       if (!heading || box.dataset.allUrl === '') return;  // (a folder's own page keeps its name and path)
-      if (chosen === 'all') { heading.innerHTML = headingWas; return; }
+      if (chosen === 'all') { if (headingWas) heading.innerHTML = headingWas; else heading.textContent = box.dataset.allLabel || 'All'; return; }
       heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Uncategorized' : byId[chosen].name;
     }
     function choose(id) {

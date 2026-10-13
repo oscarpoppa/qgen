@@ -908,3 +908,15 @@ def test_pinning_is_a_small_pin_beside_the_x(app_db):
     assert 'class="msg-pin is-pinned" aria-pressed="true"' in page
     # students see no pin button, only the pinned mark
     assert 'class="msg-pin' not in login(app, 'sam').get('/messages/panel').data.decode()
+
+
+def test_messages_folder_list_counts_unread(app_db):
+    """Messages uses the shared folder list (2026-10-12): the All students row still shows how
+    many messages wait unread in all, as a dot like a folder's."""
+    app, db = app_db
+    teacher, sam = login(app, 'teach'), login(app, 'sam')
+    sam.post('/messages/reply', data={'body': 'help please'})
+    page = teacher.get('/messages').data.decode()
+    side = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
+    all_row = side.split('All students')[1].split('</li>')[0]
+    assert 'side-dot dot-unread' in all_row and 'aria-label="1 unread"' in all_row

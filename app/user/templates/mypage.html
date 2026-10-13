@@ -143,7 +143,7 @@
       <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="{{ fk.all_label }}"
            data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}"
            data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}" data-droppable
-           data-start="{{ 'none' if fk.view == 'main' else fk.view }}">
+           {% if fk.view != 'all' %}data-start="{{ 'none' if fk.view == 'main' else fk.view }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         <div class="folder-filter-list">{{ quiz_cards(groups, 'all') }}</div>
       </div>

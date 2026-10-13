@@ -85,6 +85,7 @@
         <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} {{ fk.all_label }}</a>
+          {% if fk.all_flags %}{{ flag_badges(fk, fk.all_flags) }}{% endif %}
           <span class="side-count muted small">{{ fk.all_count or 0 }}</span></div></li>
         {% for av in fk.auto_views %}
           {# automatic (each quiz also stays in its own folder): a badge while there's something

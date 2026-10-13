@@ -92,6 +92,8 @@
     last.parentElement.insertBefore(head, next);
   }
 
+  //(the one-list folder tabs of folderfilter.js have the same class; they're not ours)
+  function ours(row) { return !row.closest('.folder-filter-rows'); }
   function setUp(scope) {
     (scope || document).querySelectorAll(TABBED).forEach(function (d) {
       if (d.qgenRow) return;
@@ -166,6 +168,7 @@
     //inside a folder shown expanded, a row whose folders are all open was expanded too (a row
     //of one folder can't tell by itself)
     document.querySelectorAll('.folder-tabs:not(.tabs-off)').forEach(function (row) {
+      if (!ours(row)) return;
       var up = row.parentElement.closest('details.tab-box');
       var boxes = boxesIn(row);
       if (up && up.qgenRow && up.qgenRow.qgenExpanded && boxes.length && boxes.every(function (d) { return d.open; })) {
@@ -187,7 +190,7 @@
   }
   document.addEventListener('qgen-filtered', function (e) {
     var on = !!(e.detail && e.detail.active);
-    document.querySelectorAll('.folder-tabs').forEach(function (row) { row.qgenSearching = on; aside(row); });
+    document.querySelectorAll('.folder-tabs').forEach(function (row) { if (ours(row)) { row.qgenSearching = on; aside(row); } });
     if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
   });
 
@@ -199,7 +202,7 @@
     if (!btn || 'levelItems' in btn.dataset) return;  // (a folder's own things only: no folder rows)
     var level = btn.dataset.levelOf ? document.querySelector(btn.dataset.levelOf) : btn.closest('.level');
     if (!level) return;
-    var rows = Array.prototype.slice.call(level.querySelectorAll('.folder-tabs'));
+    var rows = Array.prototype.slice.call(level.querySelectorAll('.folder-tabs')).filter(ours);
     if (!rows.length) return;
     if (btn.dataset.level === 'open') {
       rows.forEach(function (row) { row.qgenExpanded = true; aside(row); });
@@ -216,5 +219,5 @@
   //parts drawn later
   if (window.MutationObserver) new MutationObserver(function () { clearTimeout(setUp._t); setUp._t = setTimeout(function () { setUp(document); }, 50); })
     .observe(document.querySelector('main') || document.body, { childList: true, subtree: true });
-  window.qgenFolderTabs = { refresh: function () { document.querySelectorAll('.folder-tabs').forEach(sync); } };
+  window.qgenFolderTabs = { refresh: function () { document.querySelectorAll('.folder-tabs').forEach(function (row) { if (ours(row)) sync(row); }); } };
 })();

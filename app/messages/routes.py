@@ -44,6 +44,7 @@ def inbox():
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('messages.inbox', folder=v),
         unit='student', units='students', all_label='All students', all_count=len(rows), name=lambda f: f.name,
+        all_flags={'unread': sum(unread.values())},
         hint=Markup('Folders are made in <a href="{}" title="Make folders and put students in them in People’s Accounts view">People</a>.').format(url_for('user.userdet')),
         fold_key='qgen-folded-message-folders')
     return render_template('inbox.html', rows=rows, shown=shown, pinned=M.pinned_announcements(), fk=fk,

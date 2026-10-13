@@ -186,6 +186,7 @@ def kit(view, node, root, flat, nodes, page, **words):
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: 'folder', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
+        'all_flags': None,  # dots on the All row, like a folder's ({'unread': n} on Messages)
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)
         #automatic entries in the side list after Uncategorized (My quizzes: New, In progress):
         #[{'key', 'icon', 'label', 'count', 'badge' (text for a badge while count, or None: a plain count)}]
