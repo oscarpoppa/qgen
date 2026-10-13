@@ -53,6 +53,7 @@
       var c = document.createElement('span');
       c.className = 'badge box-count';
       c.textContent = count(n);
+      c.dataset.n = n;
       b.appendChild(name);
       b.appendChild(c);
       if (!n && id !== 'all') b.classList.add('is-empty');
@@ -138,56 +139,87 @@
     function draw() {
       rows.textContent = '';
       var p = path();
-      //the top row: All, the folders, Uncategorized
-      var row = document.createElement('div');
-      row.className = 'folder-tabs';
-      row.setAttribute('role', 'group');
-      row.setAttribute('aria-label', 'Folders');
-      var label = document.createElement('span');
-      label.className = 'folder-tabs-label';
-      label.textContent = 'Folders';
-      row.appendChild(label);
-      row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
-      tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
-      //(no folders at all, only New / In progress: nothing to sort yet, so it counts 0)
-      var noFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
-      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset || noFolders ? 0 : loose, 'tray');
-      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
-      else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
-      else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
-      row.appendChild(none);
-      rows.appendChild(row);
-      //a row for the folders inside each chosen folder
-      p.forEach(function (id) {
-        var n = byId[id];
-        if (!isFolder(id)) return;  // (New, In progress: not folders)
-        var sub = document.createElement('div');
-        sub.className = 'folder-tabs folder-tabs-inner';
-        sub.setAttribute('role', 'group');
-        sub.setAttribute('aria-label', 'Folders in ' + n.name);
-        //first, the folder itself ("All in “X”"): chosen while the list shows everything in it, so
-        //the list never looks like it belongs to the folder beside it
-        var whole = button(String(n.id), 'All in “' + n.name + '”', n.count, 'folders');
-        whole.classList.add('folder-tab-all');
-        whole.title = 'Show everything in “' + n.name + '” and the folders inside it';
-        sub.appendChild(whole);
-        n.children.forEach(function (c) { sub.appendChild(button(String(c.id), c.name, c.count, 'folder')); });
-        //last, what's in the folder itself and in none of the folders inside it (like Uncategorized
-        //at the top); grayed out when there are no folders inside, since it's the same as All in
-        //(no folders inside: nothing is "left over", so it counts 0, not everything in the folder)
-        var mine = n.children.length ? Object.keys(own(n)).length : 0;
-        var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
-        self.classList.add('folder-tab-self');
-        self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
-        else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
-        sub.appendChild(self);
-        rows.appendChild(sub);
-      });
+      //(experiment, data-style="list": the folders as a list down the side of the card, like the
+      //folder list on a folder page, instead of rows of tabs)
+      if (box.dataset.style === 'list') {
+        rows.classList.add('folder-filter-side');
+        var col = document.createElement('div');
+        col.className = 'folder-side-list';
+        col.setAttribute('role', 'group');
+        col.setAttribute('aria-label', 'Folders');
+        var allBtn = button('all', box.dataset.allLabel || 'All', items().length, 'folders');
+        allBtn.classList.add('folder-tab-all');
+        col.appendChild(allBtn);
+        (function walk(nodes, depth) {
+          nodes.forEach(function (n) {
+            var b = button(String(n.id), n.name, n.count, n.icon || 'folder');
+            b.style.paddingLeft = (10 + depth * 16) + 'px';
+            col.appendChild(b);
+            walk(n.children, depth + 1);
+          });
+        })(tree, 1);
+        var noneFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
+        var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', noneFolders ? 0 : loose, 'tray');
+        noneBtn.style.paddingLeft = '26px';
+        if (noneFolders) { noneBtn.disabled = true; noneBtn.title = 'There are no folders yet.'; }
+        else if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
+        col.appendChild(noneBtn);
+        //(numbers only, like the folder list on a folder page)
+        col.querySelectorAll('.box-count').forEach(function (c) { c.textContent = c.dataset.n; c.title = count(+c.dataset.n); });
+        rows.appendChild(col);
+      } else {
+        //the top row: All, the folders, Uncategorized
+        var row = document.createElement('div');
+        row.className = 'folder-tabs';
+        row.setAttribute('role', 'group');
+        row.setAttribute('aria-label', 'Folders');
+        var label = document.createElement('span');
+        label.className = 'folder-tabs-label';
+        label.textContent = 'Folders';
+        row.appendChild(label);
+        row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
+        tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
+        //(no folders at all, only New / In progress: nothing to sort yet, so it counts 0)
+        var noFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
+        var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset || noFolders ? 0 : loose, 'tray');
+        if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
+        else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
+        else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
+        row.appendChild(none);
+        rows.appendChild(row);
+        //a row for the folders inside each chosen folder
+        p.forEach(function (id) {
+          var n = byId[id];
+          if (!isFolder(id)) return;  // (New, In progress: not folders)
+          var sub = document.createElement('div');
+          sub.className = 'folder-tabs folder-tabs-inner';
+          sub.setAttribute('role', 'group');
+          sub.setAttribute('aria-label', 'Folders in ' + n.name);
+          //first, the folder itself ("All in “X”"): chosen while the list shows everything in it, so
+          //the list never looks like it belongs to the folder beside it
+          var whole = button(String(n.id), 'All in “' + n.name + '”', n.count, 'folders');
+          whole.classList.add('folder-tab-all');
+          whole.title = 'Show everything in “' + n.name + '” and the folders inside it';
+          sub.appendChild(whole);
+          n.children.forEach(function (c) { sub.appendChild(button(String(c.id), c.name, c.count, 'folder')); });
+          //last, what's in the folder itself and in none of the folders inside it (like Uncategorized
+          //at the top); grayed out when there are no folders inside, since it's the same as All in
+          //(no folders inside: nothing is "left over", so it counts 0, not everything in the folder)
+          var mine = n.children.length ? Object.keys(own(n)).length : 0;
+          var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
+          self.classList.add('folder-tab-self');
+          self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
+          if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+          else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
+          sub.appendChild(self);
+          rows.appendChild(sub);
+        });
+      }
       //which buttons are chosen: the folder and the ones it's in
       rows.querySelectorAll('.folder-tab').forEach(function (b) {
         var on = b.dataset.folder === chosen || (!b.classList.contains('folder-tab-all') && p.indexOf(b.dataset.folder) !== -1);
         if (b.classList.contains('folder-tab-self')) on = b.dataset.folder === chosen;
+        if (box.dataset.style === 'list') on = b.dataset.folder === chosen;  // (a list: just the one chosen)
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
         b.setAttribute('aria-expanded', on ? 'true' : 'false');
       });
@@ -267,7 +299,7 @@
       var b = e.target.closest('.folder-tab');
       if (!b || b.disabled) return;
       var id = b.dataset.folder;
-      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self')) { choose(id); return; }
+      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self') || box.dataset.style === 'list') { choose(id); return; }
       //pressing the chosen folder again goes back up a level (or to All)
       if (id === chosen) id = byId[id] && parentOf[id] ? parentOf[id] : 'all';
       choose(id);

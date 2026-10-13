@@ -21,7 +21,7 @@
     <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='li', id='quiz-filter-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
-         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar">
+         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
         <ul class="choice-list pick-list quiz-pick-list" role="radiogroup" aria-label="{{ form.vquiz.label.text }}">
@@ -56,7 +56,7 @@
       <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
     </div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
-         data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar">
+         data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
       <div class="folder-filter-list">
         <ul class="choice-list pick-list">

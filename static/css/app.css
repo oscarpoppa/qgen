@@ -2235,3 +2235,21 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 /* a picking card's Expand all / Collapse all: at the right end of its filter bar's line */
 .folder-filter-tools-here { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
 .filter-bar:has(> .folder-filter-tools-here), .pick-bar:has(> .folder-filter-tools-here) { display: flex; flex-wrap: wrap; width: 100%; }
+/* experiment: a picking card's folders as a list down its side (data-style="list"), like the
+   folder list on a folder page, instead of tabs */
+.folder-filter[data-style="list"] { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 12px; align-items: start; }
+.folder-filter[data-style="list"] > .folder-filter-rows { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
+.folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
+.folder-side-list { display: flex; flex-direction: column; gap: 2px; }
+.folder-side-list > .folder-tab { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 6px 10px; border: 0; border-radius: var(--r);
+  background: none; color: var(--text); text-align: left; font-weight: 500; min-height: 34px; }
+.folder-side-list > .folder-tab:hover { background: var(--surface); filter: none; }
+.folder-side-list > .folder-tab .box-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-side-list > .folder-tab .box-count { background: none; padding: 0; color: var(--muted); font-size: var(--fs-sm); }
+.folder-side-list > .folder-tab[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+.folder-side-list > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
+.folder-side-list > .folder-tab:disabled { opacity: .55; cursor: default; }
+@media (max-width: 640px) { .folder-filter[data-style="list"] { grid-template-columns: minmax(0, 1fr); } }
+.folder-side-list > .folder-tab { box-sizing: border-box; max-width: 100%; min-width: 0; overflow: hidden; flex: 0 0 auto; }
+.folder-filter[data-style="list"] > .folder-filter-rows { min-width: 0; overflow: hidden; }
+.folder-filter-side > .folder-side-list { min-width: 0; width: 100%; flex: 1 1 auto; }
