@@ -458,29 +458,21 @@ def assign():
     quiz_subjects = {q.id: sorted({a for g in q.vqgroups for a in above.get(g.id, [g.id])}) for q in quizzes}
     #a quiz really chosen (from a link, or sent back after a form error) is kept on show
     quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
-    #the people to choose from, in the Users page's folders; from the Users page, some come
-    #already checked (?users=..., or everyone in ?folder=), with their folder open
+    #the people to choose from: one checklist with the People folders as tabs over it, like every
+    #folder page (static/js/folderfilter.js); from People, some come already checked (?users=...,
+    #or everyone in ?folder=, which opens on that folder's tab)
     from app.user import groups
+    from app import folder_tree
     people = User.query.order_by(User.username).all()
     root, _, nodes, folders_of = groups.tree(people)
-    chosen, open_groups = set(form.users.data or []), set()
+    chosen, start = set(form.users.data or []), 'all'
     if request.method == 'GET':
         chosen = {int(u) for u in request.args.getlist('users') if u.isdigit()} & {u.id for u in people}
         folder = request.args.get('folder', '')
-        def show(f):  # open a folder and the ones it's in
-            while f is not None:
-                open_groups.add(f.id)
-                f = nodes[f.parent_id]['folder'] if f.parent_id in nodes else None
         if folder.isdigit() and int(folder) in nodes:
             chosen |= nodes[int(folder)]['everyone']
-            show(nodes[int(folder)]['folder'])
-        else:
-            #people named one by one: open where each of them is
-            for uid in chosen:
-                for f in folders_of.get(uid, []):
-                    show(f)
-                if uid not in folders_of:
-                    open_groups.add('none' if root['folders'] else 'all')
+            start = folder
+    pick_tree = folder_tree.filter_tree(root, lambda f: f.name, lambda fid: None, 'user:')
     #the page they came from, when it's one to go back to (the Assign page itself isn't)
     from app.nav import back
     target = request.form.get('next') if request.method == 'POST' else None
@@ -488,7 +480,7 @@ def assign():
     came_from = came_from if came_from and came_from[0] and came_from[1] else None
     return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from, choices=S.subject_choices('quizzes'),
                            choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen,
-                           people=people, root=root, chosen=chosen, open_groups=open_groups)
+                           people=people, root=root, chosen=chosen, pick_tree=pick_tree, pick_start=start)
 
 
 def paper_problems(vquiz):

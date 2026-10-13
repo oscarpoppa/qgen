@@ -1,22 +1,33 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import avatar, person_link, back_home with context %}
+{% from "_folders.html" import folders_page, all_boxes, folder_items with context %}
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
-{# a Users page folder in the list down the side (folders are made and filled on the Users
-   page); shows its students' conversations, and how many messages wait unread in it #}
-{% macro side_folder(n) %}
-  {% set f = n.folder %}
-  <li class="side-item" data-folder="{{ f.id }}">
-    <div class="side-row{{ ' current' if view == f.id|string }}">
-      {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ f.name }}" title="Show or hide the folders inside"></button>
-      {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-      <a href="{{ url_for('messages.inbox', folder=f.id) }}" class="side-link" title="Show the conversations of the students in {{ f.name }}"{% if view == f.id|string %} aria-current="page"{% endif %}>
-        {{ icon('folder') }} <span class="side-name">{{ f.name }}</span></a>
-      {% if n.unread %}<span class="count" aria-label="{{ n.unread }} unread">{{ n.unread }}</span>{% endif %}
-    </div>
-    {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(child) }}{% endfor %}</ul>{% endif %}
-  </li>
+{# students' conversations, newest first: a row each (the name opens the conversation) #}
+{% macro conversations(people) %}
+  {% set ids = people|map(attribute='id')|list %}
+  {% if ids %}
+  <div class="table-wrap stack">
+    <table>
+      <thead><tr><th>Student</th><th>Latest</th></tr></thead>
+      <tbody>
+      {% for r in rows if r.student.id in ids %}
+        <tr data-box="student:{{ r.student.id }}" data-name="{{ r.student.shown_name|lower }}">
+          {# on Messages the name opens the conversation (their student page is a link at its top) #}
+          <td data-label="Student"><a class="name-link person" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" data-tip="Read and answer {{ r.student.shown_name }}’s messages">{{ avatar(r.student, 28) }}<strong>{{ r.student.shown_name }}</strong></a>
+            {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
+          <td data-label="Latest">
+            {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.shown_name ~ ': ' }}{{ r.last.body }}</div>
+              <div class="small muted">{{ r.last.created|when }}</div>
+            {% else %}<span class="muted small">No messages yet</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 {% endmacro %}
 
 {% block content %}
@@ -83,55 +94,14 @@
   </div>
 {% endif %}
 
-<div class="folders-layout" data-view="{{ view }}" data-path="{{ path|map(attribute='id')|list|tojson|forceescape }}"
-     data-fold-key="qgen-folded-message-folders">
-  <details class="folder-side" open>
-    <summary class="folder-side-head"><span class="small muted">Folders</span>
-      <span class="folder-side-now">{{ node.folder.name if node else 'Uncategorized' if view == 'main' else 'All students' }}</span></summary>
-    <nav aria-label="Folders">
-      <ul class="side-list side-top">
-        <li><div class="side-row{{ ' current' if view == 'all' }}">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('messages.inbox', folder='all') }}" class="side-link" title="Show every student's conversation"{% if view == 'all' %} aria-current="page"{% endif %}>{{ icon('users') }} All students</a>
-          {% set total = rows|sum(attribute='unread') %}{% if total %}<span class="count" aria-label="{{ total }} unread">{{ total }}</span>{% endif %}</div></li>
-        {% if root.folders %}
-        {% for child in root.folders %}{{ side_folder(child) }}{% endfor %}
-        <li><div class="side-row{{ ' current' if view == 'main' }}">
-          <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('messages.inbox', folder='main') }}" class="side-link" title="Show the students who aren't in any folder"{% if view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Uncategorized</a>
-          {% if root.unread %}<span class="count" aria-label="{{ root.unread }} unread">{{ root.unread }}</span>{% endif %}</div></li>
-        {% endif %}
-      </ul>
-      <p class="muted small side-hint">Folders are made in <a href="{{ url_for('user.userdet') }}" title="Make folders and put students in them in People's Accounts view">People</a>.</p>
-    </nav>
-  </details>
-  <section class="folder-main" aria-labelledby="folder-title">
-    <h2 id="folder-title" class="folder-title">{% for p in path[:-1] %}<a href="{{ url_for('messages.inbox', folder=p.id) }}" title="Show the conversations in {{ p.name }}">{{ p.name }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{% if node %}{{ icon('folder') }} {{ node.folder.name }}{% elif view == 'main' %}Uncategorized{% else %}All students{% endif %}</h2>
-{% if shown %}
-  <div class="table-wrap stack list-scroll">
-    <table>
-      <thead><tr><th>Student</th><th>Latest</th></tr></thead>
-      <tbody>
-      {% for r in shown %}
-        <tr>
-          {# on Messages the name opens the conversation (their student page is a link at its top) #}
-          <td data-label="Student"><a class="name-link person" href="{{ url_for('messages.conversation', student_id=r.student.id) }}" data-tip="Read and answer {{ r.student.shown_name }}’s messages">{{ avatar(r.student, 28) }}<strong>{{ r.student.shown_name }}</strong></a>
-            {% if r.unread %}<span class="count" aria-label="{{ r.unread }} unread">{{ r.unread }}</span>{% endif %}</td>
-          <td data-label="Latest">
-            {% if r.last %}<div class="clamp small">{{ '' if r.last.from_teacher else r.student.shown_name ~ ': ' }}{{ r.last.body }}</div>
-              <div class="small muted">{{ r.last.created|when }}</div>
-            {% else %}<span class="muted small">No messages yet</span>{% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+{% call folders_page(fk) %}
+  <div id="folder-items">
+  {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{{ conversations(n.people) }}{% endcall %}
+  {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'student:') %}{{ conversations(n.people) }}{% endcall %}
+  {% elif shown %}{{ conversations(shown) }}
+  {% else %}<div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>{% endif %}
   </div>
-{% else %}
-  <div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>
-{% endif %}
-  </section>
-</div>
+{% endcall %}
 {% endblock %}
 
 {% block scripts %}

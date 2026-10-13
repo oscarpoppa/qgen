@@ -1,3 +1,4 @@
+from markupsafe import Markup
 from flask import render_template, redirect, url_for, request, flash, jsonify, abort, current_app
 from app.nav import back_to
 from flask_login import current_user, login_required
@@ -32,19 +33,22 @@ def inbox():
     from app import folder_tree
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     unread = {r['student'].id: r['unread'] for r in rows}
+    #(the folder list's dots: unread messages in a folder, or in the folders inside it)
     for n in nodes.values():
         n['unread'] = sum(unread.get(i, 0) for i in n['everyone'])
     in_none = {u.id for u in root['people']}
-    root['unread'] = sum(unread.get(i, 0) for i in in_none)
-    shown = [r for r in rows if r['student'].id in node['everyone']] if node else \
-        [r for r in rows if r['student'].id in in_none] if view == 'main' else rows
-    path, up = [], node['folder'] if node else None
-    while up is not None:
-        path.insert(0, up)
-        up = nodes[up.parent_id]['folder'] if up.parent_id in nodes else None
-    return render_template('inbox.html', rows=rows, shown=shown, pinned=M.pinned_announcements(),
-                           staff_unread=unread_staff(current_user.id), title='Messages', root=root, node=node, view=view,
-                           path=path, user_folders=groups.picker(), students={r['student'].id for r in rows})
+    root['unread_here'] = sum(unread.get(i, 0) for i in in_none)
+    shown = node['people'] if node else root['people'] if view == 'main' else [r['student'] for r in rows]
+    #the same folder page as every other (_folders.html): folder list, heading, folder tabs
+    fk = folder_tree.kit(
+        view, node, root, flat, nodes, readonly=True,
+        page=lambda v: url_for('messages.inbox', folder=v),
+        unit='student', units='students', all_label='All students', all_count=len(rows), name=lambda f: f.name,
+        hint=Markup('Folders are made in <a href="{}" title="Make folders and put students in them in People’s Accounts view">People</a>.').format(url_for('user.userdet')),
+        fold_key='qgen-folded-message-folders')
+    return render_template('inbox.html', rows=rows, shown=shown, pinned=M.pinned_announcements(), fk=fk,
+                           staff_unread=unread_staff(current_user.id), title='Messages',
+                           user_folders=groups.picker(), students={r['student'].id for r in rows})
 
 #route to one student's conversation, as a teacher
 #how many of a conversation's messages its page shows at first (and adds with "Show older")

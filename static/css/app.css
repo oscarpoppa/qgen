@@ -307,21 +307,11 @@ legend { font-weight: 700; padding: 0 6px; }
 .pick-bar-users { position: sticky; top: calc(var(--topbar-h) + 7px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
   padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--r-lg); background: var(--accent-soft); }
 .pick-users-count { font-weight: 600; margin-right: auto; }
-.pick-groups { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 6px; }
-.pick-group { border-radius: var(--r); }
-.pick-group .pick-group { margin-left: 18px; }
-.pick-group > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; list-style: none; border-radius: var(--r); }
-.pick-group > summary::-webkit-details-marker { display: none; }
-.pick-group > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
-.pick-group[open] > summary::before { transform: rotate(90deg); }
-.pick-group > summary:hover { background: var(--accent-soft); }
-.pick-group > summary .pick-all { margin-left: auto; }
 .pick-of { white-space: nowrap; }
 .pick-name { font-weight: 600; }
 .pick-list { margin: 4px 0 8px 26px; gap: 4px; }
 .pick-list li { padding: 6px 10px; }
 .pick-list label { display: flex; align-items: center; gap: 8px; }
-@media (prefers-reduced-motion: reduce) { .pick-group > summary::before { transition: none; } }
 .choice-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .choice-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
@@ -1667,6 +1657,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .side-dot.dot-new { background: var(--warn); }
 .side-dot.dot-started { background: var(--accent); }
 .side-dot.dot-due { background: var(--bad); }
+.side-dot.dot-unread { background: var(--bad); }
 .sub-head .side-flags { margin-left: 6px; }
 
 /* Paper only pages printed for each student (print_paper.html): one per sheet, name on top */
@@ -2135,3 +2126,5 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 @media (max-width: 640px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
 @container listarea (max-width: 860px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
 @container page (max-width: 780px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
+/* Assign: the one checklist of students under the folder tabs scrolls when it's long */
+.pick-people .folder-filter-list > .pick-list { max-height: 420px; overflow: auto; margin: 0; }

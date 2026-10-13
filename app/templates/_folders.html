@@ -14,14 +14,14 @@
 {% macro flag_badges(fk, n, here=false) -%}
   {%- set sfx = '_here' if here else '' -%}
   {%- set shown = [] -%}
-  {%- for kind, cls in (('due', 'badge-bad'), ('started', 'badge-accent'), ('new', 'badge-warn')) -%}
+  {%- for kind, cls in (('unread', 'badge-bad'), ('due', 'badge-bad'), ('started', 'badge-accent'), ('new', 'badge-warn')) -%}
     {%- set k = n[kind ~ sfx] if (n is mapping and (kind ~ sfx) in n) else 0 -%}
     {%- if k -%}{%- set _ = shown.append((k, cls, kind)) -%}{%- endif -%}
   {%- endfor -%}
   {%- if shown -%}<span class="side-flags">
     {%- for k, cls, kind in shown -%}
       {%- set tries = 'attempt' if k == 1 else 'attempts' -%}
-      {%- set words = k ~ ' ' ~ (('new ' ~ tries) if kind == 'new' else (tries ~ ' in progress') if kind == 'started' else (tries ~ ' due soon')) -%}
+      {%- set words = (k ~ ' unread') if kind == 'unread' else k ~ ' ' ~ (('new ' ~ tries) if kind == 'new' else (tries ~ ' in progress') if kind == 'started' else (tries ~ ' due soon')) -%}
       <span class="side-dot dot-{{ kind }}" title="{{ words }}" role="img" aria-label="{{ words }}">{{ k }}</span>
     {%- endfor -%}</span>{%- endif -%}
 {%- endmacro %}

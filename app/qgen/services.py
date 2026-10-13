@@ -325,7 +325,7 @@ def subject_choices(kind):
     it's in; counted with the folders inside it), then Uncategorized."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     _root, flat, counted = subject_tree(kind)
-    out = [('all', 'All', item_cls.query.count())]
+    out = [('all', 'All ' + kind, item_cls.query.count())]  # "All quizzes", like the tabs
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
     out.append(('none', 'Uncategorized', item_cls.query.filter(~getattr(item_cls, rel).any()).count()))

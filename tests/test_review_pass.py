@@ -1238,7 +1238,7 @@ def test_folder_lists_have_one_order(app_db):
     # the folder menus too: All, the folders, Uncategorized
     from app.qgen import services as S
     with app.test_request_context():
-        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All', 'Fall', 'Uncategorized']
+        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All quizzes', 'Fall', 'Uncategorized']
 
 
 def test_one_set_of_sizes_and_accessible_controls():
