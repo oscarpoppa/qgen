@@ -1058,8 +1058,9 @@ def _subject_done(kind, message, error=False, show=None, moved=None):
     #the same view it was sent from, All included (not the page's remembered one)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     #the same folder tab, when it's the same view (not one the action switched to)
-    if show == str(request.form.get('view') or 'all') and kept_tab():
-        values['tab'] = kept_tab()
+    tab = kept_tab()
+    if tab and show == str(request.form.get('view') or 'all'):
+        values['tab'] = tab
     if moved and not error:
         values['moved'] = moved
     return subject_list(kind, **values)
@@ -1329,8 +1330,9 @@ def _archive_done(message, error=False, show=None, moved=None):
     show = str(request.form.get('view') or 'all') if show is None else str(show)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     #the same folder tab, when it's the same view (not one the action switched to)
-    if show == str(request.form.get('view') or 'all') and kept_tab():
-        values['tab'] = kept_tab()
+    tab = kept_tab()
+    if tab and show == str(request.form.get('view') or 'all'):
+        values['tab'] = tab
     if moved and not error:
         values['moved'] = moved
     return redirect(url_for('qgen.archive', **values))

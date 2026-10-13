@@ -165,8 +165,9 @@ def _folder_done(message, error=False, show=None, moved=None):
         show = request.form.get('view') or 'main'
     values = {'folder': show}
     #the same folder tab, when it's the same view (not one the action switched to)
-    if str(show) == str(request.form.get('view') or 'main') and kept_tab():
-        values['tab'] = kept_tab()
+    tab = kept_tab()
+    if tab and str(show) == str(request.form.get('view') or 'main'):
+        values['tab'] = tab
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.mypage', **values))
@@ -499,8 +500,9 @@ def _group_done(message, error=False, show=None, moved=None):
     show = str(show)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
     #the same folder tab, when it's the same view (not one the action switched to)
-    if str(show) == str(request.form.get('view') or 'main') and kept_tab():
-        values['tab'] = kept_tab()
+    tab = kept_tab()
+    if tab and str(show) == str(request.form.get('view') or 'main'):
+        values['tab'] = tab
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.userdet', **values))

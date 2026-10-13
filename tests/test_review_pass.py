@@ -756,9 +756,9 @@ def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
     form = {'title': vq.title, 'vplist': vq.vpid_lst}
     r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/viewvquiz/{}'.format(vq.id)))
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/viewvquiz/{}'.format(vq.id))
-    # back to the list: the list with the quiz lit up
+    # back to the list: the list as it was left (its view kept), with the quiz lit up
     r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data=dict(form, next='/quiz/listvq?folder=all'))
-    assert r.headers['Location'].endswith('/quiz/listvq?show={}'.format(vq.id))
+    assert r.headers['Location'].endswith('/quiz/listvq?folder=all&show={}'.format(vq.id))
 
 
 def test_home_counter_views_say_what_they_show(app_db):

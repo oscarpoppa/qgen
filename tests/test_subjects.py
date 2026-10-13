@@ -450,7 +450,11 @@ def test_coming_back_to_a_folder_page_keeps_the_folder_tab_open(app_db):
     # Save in the editor opened from the Math tab: back to the list on that tab, the problem lit up
     form = problem_form('numeric', 'Add', 'What is 3 + 3?', '6', [], next='/quiz/listvp?tab={}'.format(math.id))
     r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
-    assert r.status_code == 302 and r.headers['Location'] == '/quiz/listvp?show={}&tab={}'.format(probs['Add'].id, math.id)
+    assert r.status_code == 302 and r.headers['Location'] == '/quiz/listvp?tab={}&show={}'.format(math.id, probs['Add'].id)
+    # ...and the list's filter words and an old highlight: the words stay, the old highlight goes
+    form['next'] = '/quiz/listvp?tab={}&q=add&show=999'.format(math.id)
+    r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
+    assert r.headers['Location'] == '/quiz/listvp?tab={}&q=add&show={}'.format(math.id, probs['Add'].id)
     # opened with no tab (or from somewhere else): the list as before
     form['next'] = ''
     r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
@@ -461,3 +465,39 @@ def test_coming_back_to_a_folder_page_keeps_the_folder_tab_open(app_db):
     # ...but not when the action opens another view
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Third', 'view': 'all'}, headers={'Referer': 'http://localhost/quiz/listvp'})
     assert 'tab=' not in r.headers['Location']
+
+
+def test_deleting_or_making_something_comes_back_to_the_list_as_it_was(app_db):
+    """Delete (back_to_list): the list it was done on, its tab and filter kept, its one-time
+    highlights (?show=, ?moved=) dropped; from anywhere else (or another site), the plain list.
+    A new problem always comes back to the list, on the tab it was started from."""
+    app, db = app_db
+    from app.qgen.models import VPGroup
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add', 'Area', 'Sum')
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.one()
+    page = 'http://localhost/quiz/listvp?tab={}&q=a&show=7&moved=3'.format(math.id)
+    r = teacher.post('/quiz/delvp/{}'.format(probs['Add'].id), headers={'Referer': page})
+    assert r.headers['Location'] == '/quiz/listvp?tab={}&q=a'.format(math.id)
+    r = teacher.post('/quiz/delvp/{}'.format(probs['Area'].id), headers={'Referer': 'https://elsewhere.example/quiz/listvp?tab=1'})
+    assert r.headers['Location'] == '/quiz/listvp'
+    r = teacher.post('/quiz/delvp/{}'.format(probs['Sum'].id), headers={'Referer': 'http://localhost/dashboard'})
+    assert r.headers['Location'] == '/quiz/listvp'
+    # a new problem started from the Math tab comes back there; started from the Dashboard, to the list
+    from app.qgen.models import VProblem
+    form = problem_form('numeric', 'New one', 'What is 1 + 1?', '2', [], next='/quiz/listvp?tab={}'.format(math.id))
+    r = teacher.post('/quiz/makevprob', data=form)
+    new = VProblem.query.filter_by(title='New one').one()
+    assert r.headers['Location'] == '/quiz/listvp?tab={}&show={}'.format(math.id, new.id)
+    form = problem_form('numeric', 'Another', 'What is 2 + 2?', '4', [], next='/dashboard')
+    r = teacher.post('/quiz/makevprob', data=form)
+    assert r.headers['Location'].startswith('/quiz/listvp?show=')
+
+
+def test_an_archive_folder_action_keeps_the_open_tab(app_db):
+    app, db = app_db
+    teacher = login(app, 'teach')
+    r = teacher.post('/quiz/archive/folders/new', data={'name': 'Old', 'view': 'all'},
+                     headers={'Referer': 'http://localhost/quiz/archive?tab=none'})
+    assert 'tab=none' in r.headers['Location']

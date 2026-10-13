@@ -518,7 +518,7 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 /* the words beside the picture wrap inside the bubble; never wider than it (a message on the right
    would otherwise run off the panel's left edge, where it can't be scrolled to) */
 .msg-with-avatar { max-width: 100%; min-width: 0; }
-.msg-with-avatar > :not(.avatar) { min-width: 0; flex: 1 1 auto; }
+.msg-with-avatar > :not(.avatar) { min-width: 0; }
 .msg-actions .msg-act { white-space: normal; overflow-wrap: anywhere; text-align: left; }
 
 .inline-form { display: inline; margin: 0; }
@@ -2163,6 +2163,12 @@ td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 24px
   details.quiz-result > summary > :not(.box-title):not(.fold) { flex: 0 0 auto; }
   details.quiz-result > summary > .box-actions { margin-left: auto; }
 }
+@media (min-width: 641px) {
+  .subject-boxes > details.quiz-result > summary { flex-wrap: nowrap; }
+  .subject-boxes > details.quiz-result > summary .box-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subject-boxes > details.quiz-result > summary > :not(.box-title):not(.fold) { flex: 0 0 auto; }
+  .subject-boxes > details.quiz-result > summary > .box-actions { margin-left: auto; }
+}
 /* while every row of a list is folded, the columns only an open row fills go, headings too */
 table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-fold[open])) td.row-more { display: none; }
 /* phone row cards: the checkbox on the title's line, the "+" beside the folder chips */
@@ -2181,17 +2187,18 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
 /* Assign: the quiz, who gets it and the dates on the left; the students on the right, their
    names in columns */
-@media (min-width: 1001px) {
-  .assign-form { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.5fr); gap: 0 28px; align-items: start; grid-auto-flow: dense; }
+@container page (min-width: 960px) {
+  .assign-form { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.5fr); grid-template-rows: repeat(4, auto) 1fr; gap: 0 28px; align-items: start; grid-auto-flow: dense; }
   .assign-form > * { grid-column: 1; }
-  .assign-form > .pick-people { grid-column: 2; grid-row: 1 / span 8; margin: 0; }
+  /* (spare height when the student list is the taller column goes below the Assign button) */
+  .assign-form > .pick-people { grid-column: 2; grid-row: 1 / span 5; margin: 0; }
   .pick-people .folder-filter-list > .pick-list { max-height: min(70vh, 720px); }
 }
 .assign-go { margin-top: 4px; }
 .pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }
 .pick-people .pick-list > li { margin: 0; min-width: 0; }
 /* Teachers' messages: the conversation, with the box to write in beside it */
-@media (min-width: 1001px) {
+@container page (min-width: 960px) {
   .staff-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 0 16px; align-items: start; }
   .staff-grid > nav { grid-column: 1 / -1; }
   .staff-grid > form { position: sticky; top: calc(var(--topbar-h) + 12px); }

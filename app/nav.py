@@ -3,7 +3,7 @@
 Only addresses on this site are followed. A `next=` in a link, or the page the browser
 says it came from (Referer), could otherwise send someone to another website straight
 after signing in or after pressing a button (an "open redirect")."""
-from urllib.parse import urlsplit, parse_qs, urlunsplit
+from urllib.parse import urlsplit, parse_qs, parse_qsl, urlencode, urlunsplit
 
 from flask import request
 
@@ -51,13 +51,25 @@ def next_arg(fallback=None):
     return safe_next(request.values.get('next'), fallback)
 
 
+#lit up once, on arrival (what was just saved or moved): not carried back to the page again
+_ONCE = ('show', 'moved')
+
+
+def _without_once(path, **extra):
+    """path with its ?show= / ?moved= dropped (and extra set), the rest of its address kept."""
+    parts = urlsplit(path)
+    q = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k not in _ONCE and k not in extra]
+    q += [(k, str(v)) for k, v in extra.items()]
+    return urlunsplit(('', '', parts.path, urlencode(q), parts.fragment))
+
+
 def back_to_list(list_endpoint):
     """After an action on something in a list (delete, restore...): back to that list as it was
-    (the page it was done on, with its folder tab), else the list from the start."""
+    (the page it was done on: its folder tab, filter and Show choice), else the list from the start."""
     from flask import url_for
     path = safe_next(request.referrer)
     if path and _match(path)[0] == list_endpoint:
-        return path
+        return _without_once(path)
     return url_for(list_endpoint)
 
 
@@ -71,8 +83,9 @@ def back_after_save(list_endpoint, item_id, new=False):
         if new:  # (something new: shown in its list, wherever the editor was opened from)
             return url_for(list_endpoint, show=item_id)
         return target
-    tab = parse_qs(urlsplit(target).query).get('tab', [None])[0] if target else None
-    return url_for(list_endpoint, show=item_id, **({'tab': tab} if tab else {}))
+    if target:  # the list as it was left (tab, filter, Show), with what was saved lit up
+        return _without_once(target, show=item_id)
+    return url_for(list_endpoint, show=item_id)
 
 
 def kept_tab():

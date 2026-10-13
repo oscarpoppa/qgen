@@ -21,7 +21,7 @@
     function keyOf(el) { return el.dataset[attr]; }
     var units = box.dataset.units || 'things', unit = box.dataset.unit || 'thing';
     var memKey = 'qgen-folder-filter:' + (box.dataset.remember || location.pathname);
-    var byId = {}, parentOf = {};
+    var byId = Object.create(null), parentOf = Object.create(null);  // (no inherited names: ?tab=constructor is just unknown)
     (function index(nodes, parent) {
       nodes.forEach(function (n) { byId[n.id] = n; parentOf[n.id] = parent === null ? null : String(parent); n.keySet = {}; n.keys.forEach(function (k) { n.keySet[k] = 1; }); index(n.children, n.id); });
     })(tree, null);
@@ -306,6 +306,10 @@
     }
     draw();
     apply();
+    //what was just saved (?show=, lit up) is in another folder than the tab kept in the address:
+    //open All, so it's in sight
+    var saved = list.querySelector('[data-show]');
+    if (saved && chosen !== 'all' && (saved.hidden || saved.closest('[hidden]'))) { choose('all'); saved.scrollIntoView({ block: 'center' }); }
     markSide();
     retitle();
   }

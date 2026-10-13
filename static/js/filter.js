@@ -117,7 +117,11 @@ window.qgenHideRow = function (row, key, hide) {
     //the page's own filter bar (one on the page, not in a form) keeps what's typed (?q=) and
     //its Show choice (?state=) in the address, like the folder tabs (folderfilter.js): coming
     //back from an editor or an action finds the list narrowed just as it was left
-    var inAddress = !bar.closest('form') && document.querySelectorAll('[data-filter-bar]').length === 1 && window.history && history.replaceState;
+    //(the page's own bar: the one over its folder list, else the only one that isn't in a form
+    //or inside one box, like a long class's box on Results by quiz)
+    var own = Array.prototype.filter.call(document.querySelectorAll('[data-filter-bar]'), function (b) { return !b.closest('form, details, .box'); });
+    var main = document.querySelector('[data-filter-bar][data-filter="#folder-items"]') || (own.length === 1 ? own[0] : null);
+    var inAddress = bar === main && !!(window.history && history.replaceState);
     var choice = bar.querySelector('select');
     if (inAddress) {
       var asked = new URLSearchParams(location.search);
