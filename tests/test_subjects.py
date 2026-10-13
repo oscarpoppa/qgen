@@ -232,9 +232,13 @@ def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': alg.id, 'items': [VQuiz.query.one().id]})
     page = teacher.get('/quiz/assign').data.decode()
     import json, re
-    mapping = json.loads(re.search(r'id="quiz-subjects">([^<]*)</script>', page).group(1))
-    assert sorted(mapping[str(VQuiz.query.one().id)]) == sorted([math.id, alg.id])
-    assert '\u00a0\u00a0\u00a0Algebra (1)' in page and 'Uncategorized (0)' in page
+    # the Quiz card's folder tabs: the quiz is under Math, and under Algebra inside it
+    quiz = page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', quiz, re.S).group(1))
+    key = 'quiz:{}'.format(VQuiz.query.one().id)
+    assert tree[0]['id'] == math.id and key in tree[0]['keys']
+    assert tree[0]['children'][0]['id'] == alg.id and key in tree[0]['children'][0]['keys']
+    assert 'type="radio" name="vquiz" value="{}"'.format(VQuiz.query.one().id) in quiz
 
 
 def test_new_items_can_be_given_a_subject(app_db):
@@ -326,12 +330,19 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     p2 = VQGroup.query.one()
     q1, q2 = (VQuiz.query.filter_by(title=t).one() for t in ('Q1', 'Q2'))
     teacher.post('/quiz/subjects/quizzes/file', data={'subject': p2.id, 'items': [q2.id]})
-    page = teacher.get('/quiz/assign').data.decode()
-    assert 'id="assign-subject"' in page and '<option value="all" selected>' in page
-    assert '"{}": [{}]'.format(q2.id, p2.id) in page and '"{}": []'.format(q1.id) in page
-    assert '<option value="{}" selected>'.format(p2.id) in teacher.get('/quiz/assign?subject={}'.format(p2.id)).data.decode()
-    page = teacher.get('/quiz/assign?vq={}'.format(q1.id)).data.decode()
-    assert '<option value="all" selected>' in page and '<option selected value="{}">Q1</option>'.format(q1.id) in page
+    import json, re
+    def quiz_card(url):
+        page = teacher.get(url).data.decode()
+        return page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
+    # Assign's Quiz card: folder tabs over the quizzes, starting on All quizzes
+    card = quiz_card('/quiz/assign')
+    assert 'data-start="all"' in card
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', card, re.S).group(1))
+    assert tree[0]['id'] == p2.id and tree[0]['keys'] == ['quiz:{}'.format(q2.id)]  # Q1 is in no folder
+    # ?subject= opens on that folder's tab; a link for one quiz opens on All with it picked
+    assert 'data-start="{}"'.format(p2.id) in quiz_card('/quiz/assign?subject={}'.format(p2.id))
+    card = quiz_card('/quiz/assign?vq={}'.format(q1.id))
+    assert 'data-start="all"' in card and 'value="{}" id="vquiz-{}" checked'.format(q1.id, q1.id) in card
     sam_id = User.query.filter_by(username='sam').one().id
     teacher.post('/quiz/assign', data={'vquiz': q1.id, 'users': [sam_id]})
     assert len(q1.cquizzes) == 1

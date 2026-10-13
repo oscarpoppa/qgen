@@ -459,17 +459,20 @@ def assign():
             #pages done on paper: straight to printing a copy for each of them
             return redirect(url_for('qgen.print_paper', vqid=vquiz.id, users=[cq.taker.id for cq in created], next=then))
         return redirect(then)
-    #for the Subject menu, which narrows the Quiz menu in the page
-    #a quiz in "Algebra › Linear equations" is also under "Algebra"
-    above = S.subject_ancestors('quizzes')
-    quiz_subjects = {q.id: sorted({a for g in q.vqgroups for a in above.get(g.id, [g.id])}) for q in quizzes}
-    #a quiz really chosen (from a link, or sent back after a form error) is kept on show
-    quiz_chosen = request.method == 'POST' or request.args.get('vq', '').isdigit()
+    #the quizzes to pick from: one list (A to Z) with the Quizzes page's folders as tabs over it,
+    #like the students beside it and every folder page (static/js/folderfilter.js); ?subject=
+    #opens on that folder's tab
+    from app import folder_tree
+    quiz_root = S.subject_tree('quizzes', items=quizzes)[0]
+    quiz_tree = folder_tree.filter_tree(quiz_root, lambda f: f.title, lambda fid: None, 'quiz:')
+    quiz_start = choice
+    #nothing picked yet: the first quiz, as the menu had it
+    if form.vquiz.data is None and quizzes:
+        form.vquiz.data = quizzes[0].id
     #the people to choose from: one checklist with the People folders as tabs over it, like every
     #folder page (static/js/folderfilter.js); from People, some come already checked (?users=...,
     #or everyone in ?folder=, which opens on that folder's tab)
     from app.user import groups
-    from app import folder_tree
     people = User.query.order_by(User.username).all()
     root, _, nodes, folders_of = groups.tree(people)
     chosen, start = set(form.users.data or []), 'all'
@@ -485,8 +488,8 @@ def assign():
     target = request.form.get('next') if request.method == 'POST' else None
     came_from = back(None, None) if not target else (safe_next(target), place_name(safe_next(target)))
     came_from = came_from if came_from and came_from[0] and came_from[1] else None
-    return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from, choices=S.subject_choices('quizzes'),
-                           choice=choice, quiz_subjects=quiz_subjects, quiz_chosen=quiz_chosen,
+    return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from,
+                           quizzes=quizzes, quiz_tree=quiz_tree, quiz_start=quiz_start,
                            people=people, root=root, chosen=chosen, pick_tree=pick_tree, pick_start=start)
 
 

@@ -145,7 +145,10 @@ def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/quiz/assign').data.decode()
-    quiz = page[page.index('for="vquiz"'):page.index('id="vquiz"')]
-    # under the Quiz label, before its menu: the same bar as Students (filter, count, Clear)
-    assert 'id="quiz-filter-bar"' in quiz and 'class="btn-row small pick-bar filter-bar"' in quiz
+    quiz = page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
+    # the Quiz card is laid out like the Students card: its name, the filter bar (filter, Clear,
+    # count), the folder tabs, then the list (one round button per quiz); no Folder menu
+    assert quiz.index('Quiz</span>') < quiz.index('id="quiz-filter-bar"') < quiz.index('data-folder-filter') < quiz.index('quiz-pick-list')
+    assert 'class="btn-row small pick-bar filter-bar"' in quiz
     assert 'placeholder="Filter by name…"' in quiz and 'data-filter-clear' in quiz and 'data-filter-count' in quiz
+    assert 'id="assign-subject"' not in page and '<select id="vquiz"' not in page

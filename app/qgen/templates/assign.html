@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{# the page's whole width: the quiz and dates on the left, the students (in columns) on the right #}
+{# the page's whole width: the Quiz and Students cards side by side, then who gets it, when, and Assign #}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field %}
@@ -11,38 +11,44 @@
 <div class="page-head"><h1>{{ title }}</h1>
   <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back title="Go back to {{ came_from[1] }} without assigning"><span class="back-label">← {{ came_from[1] }}</span></a>{% else %}{{ back_home() }}{% endif %}</div></div>
 
-<form method="post" class="card assign-form" data-fresh-page novalidate>
+<form method="post" class="assign-form" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
   {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
   {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}
-  {# who gets it, first and in plain sight: the students checked on the People page (or below),
-     each with a ✕ to leave them out; kept up to date as people are checked below #}
-  <div class="field recipients" id="recipients">
-    <span class="label">Gets the quiz</span>
-    <div class="recipient-list" aria-live="polite">
-      {% for u in people if u.id in chosen %}<span class="person-chip" data-user="{{ u.id }}">{{ u.shown_name }}<button type="button" class="chip-x" aria-label="Leave {{ u.shown_name }} out" title="Leave {{ u.shown_name }} out">✕</button></span>
-      {% else %}<span class="muted small recipient-none">Nobody yet: check the students below.</span>{% endfor %}
+  {# the quiz: one list with the Quizzes page's folders as tabs over it (static/js/folderfilter.js),
+     laid out like the students beside it: All quizzes, the folders, Uncategorized #}
+  <div class="card field pick-quiz{% if form.vquiz.errors %} has-error{% endif %}" id="pick-quiz">
+    <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
+    {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='li', id='quiz-filter-bar') }}
+    <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes">
+      <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
+      <div class="folder-filter-list">
+        <ul class="choice-list pick-list quiz-pick-list" role="radiogroup" aria-label="{{ form.vquiz.label.text }}">
+          {% for q in quizzes %}
+            <li data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"><input type="radio" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if form.vquiz.data == q.id %} checked{% endif %}>
+              <label for="vquiz-{{ q.id }}">{{ q.title }}</label></li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
+    {% for e in form.vquiz.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
-  {# narrows the Quiz menu (needs the page's script, so it starts hidden) #}
-  <div class="field" id="assign-subject-field" hidden{% if quiz_chosen %} data-keep-quiz{% endif %}>
-    <label class="label" for="assign-subject">Folder</label>
-    <select id="assign-subject">
-      {% for value, label, count in choices %}
-        <option value="{{ value }}"{% if value == choice %} selected{% endif %}>{{ label }} ({{ count }})</option>
-      {% endfor %}
-    </select>
-  </div>
-  <script type="application/json" id="quiz-subjects">{{ quiz_subjects|tojson }}</script>
-  {# a box under the Quiz label narrows the menu by name (within the folder chosen above) #}
-  {% set quiz_filter %}{{ filter_bar('#vquiz', 'quiz', 'quizzes', items='option', id='quiz-filter-bar') }}{% endset %}
-  {{ field(form.vquiz, above=quiz_filter) }}
   {# the people: one checklist, with the People folders as tabs over it (like every folder page,
      static/js/folderfilter.js): All people, the folders, Uncategorized #}
+  <div class="card pick-people-card">
+    {# who gets it, first and in plain sight: the students checked on the People page (or below),
+       each with a ✕ to leave them out; kept up to date as people are checked below #}
+    <div class="field recipients" id="recipients">
+      <span class="label">Assignee</span>
+      <div class="recipient-list" aria-live="polite">
+        {% for u in people if u.id in chosen %}<span class="person-chip" data-user="{{ u.id }}">{{ u.shown_name }}<button type="button" class="chip-x" aria-label="Leave {{ u.shown_name }} out" title="Leave {{ u.shown_name }} out">✕</button></span>
+        {% else %}<span class="muted small recipient-none">Nobody yet: check the students below.</span>{% endfor %}
+      </div>
+    </div>
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
-    {# came with students already checked: the list folds away (open it to change who) #}
-    <details class="pick-wrap"{% if not chosen or form.users.errors %} open{% endif %}>
-    <summary class="label pick-wrap-head"><span class="fold" aria-hidden="true"></span>Students <span class="muted small pick-wrap-note wide-only">{{ 'change who gets it' if chosen else '' }}</span></summary>
+    {# always open, like the Quiz card beside it #}
+    <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
     <div class="btn-row small pick-bar">
       <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button></span>
@@ -62,9 +68,11 @@
       </div>
     </div>
     <div class="help">Only the people checked get the quiz. “Check all shown” checks everyone in the list (pick a folder's tab first to check just them). Each student gets a different random version of the quiz.</div>
-    </details>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
+  </div>
+  {# when, and the Assign button: below the two cards, across both #}
+  <div class="card assign-when">
   <fieldset>
     <legend>When (optional)</legend>
     <div class="form-row dates">
@@ -79,52 +87,15 @@
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
   </fieldset>
   <div class="assign-go">{{ form.submit(class='btn', title='Give the quiz to the checked students') }}</div>
+  </div>
 </form>
 {% endblock %}
 
 {% block scripts %}
 <script>
-/* The Folder menu and the filter box under "Quiz" rebuild the Quiz menu with that folder's
- * quizzes whose names match (hiding options doesn't work in Safari). A quiz already chosen
- * that isn't in the folder (e.g. after a form error) switches the menu to All rather than
- * quietly changing the quiz. */
-(function () {
-  var subject = document.getElementById('assign-subject');
-  var quiz = document.getElementById('vquiz');
-  if (!subject || !quiz) return;
-  var bySubject = JSON.parse(document.getElementById('quiz-subjects').textContent);
-  var all = Array.prototype.map.call(quiz.options, function (o) { return { value: o.value, text: o.text }; });
-  function fits(id, v) {
-    var subs = (bySubject[id] || []).map(String);
-    return v === 'all' || (v === 'none' ? subs.length === 0 : subs.indexOf(v) !== -1);
-  }
-  var bar = document.getElementById('quiz-filter-bar'), filter = bar && bar.querySelector('input[type=search]');
-  function rebuild() {
-    var v = subject.value, keep = quiz.value, words = filter ? filter.value.trim().toLowerCase() : '';
-    quiz.innerHTML = '';
-    all.forEach(function (o) {
-      if (fits(o.value, v) && (!words || o.text.toLowerCase().indexOf(words) !== -1))
-        quiz.add(new Option(o.text, o.value, false, o.value === keep));
-    });
-    if (!quiz.options.length) {
-      var none = new Option(words ? 'No quizzes here match “' + filter.value.trim() + '”' : 'No quizzes in this folder', '');
-      none.disabled = true;
-      quiz.add(none);
-      none.selected = true;
-    }
-    return Array.prototype.filter.call(quiz.options, function (o) { return o.value; }).length;
-  }
-  var field = document.getElementById('assign-subject-field');
-  if ('keepQuiz' in field.dataset && quiz.value && !fits(quiz.value, subject.value)) subject.value = 'all';
-  //the filter bar (static/js/filter.js, which runs after this) narrows the menu this way
-  if (bar) bar.qgenFilter = rebuild;
-  subject.addEventListener('change', function () { if (bar && bar.qgenRun) bar.qgenRun(); else rebuild(); });
-  field.hidden = false;
-  rebuild();
-})();
 /* Students: one checklist under folder tabs (static/js/folderfilter.js). "Check all shown"
  * checks (or, when they all are, unchecks) everyone the list shows: the tab chosen, and the
- * names that match the filter box. "Gets the quiz" at the top lists who's checked. */
+ * names that match the filter box. "Assignee" at the top lists who's checked. */
 (function () {
   var box = document.getElementById('pick-people');
   if (!box) return;
@@ -138,7 +109,7 @@
     all.disabled = !s.length;
     var picked = people.filter(function (i) { return i.checked; });
     count.textContent = picked.length + ' chosen';
-    //"Gets the quiz" at the top: who's checked, each with a ✕
+    //"Assignee" at the top: who's checked, each with a ✕
     var list = document.querySelector('#recipients .recipient-list');
     if (!list) return;
     list.textContent = '';
@@ -157,8 +128,6 @@
       none.className = 'muted small recipient-none';
       none.textContent = 'Nobody yet: check the students below.';
       list.appendChild(none);
-      var wrap = box.querySelector('.pick-wrap');
-      if (wrap) wrap.open = true;
     }
   }
   document.getElementById('recipients').addEventListener('click', function (e) {

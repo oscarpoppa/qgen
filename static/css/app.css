@@ -287,7 +287,7 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
 .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .check label { font-weight: 500; margin: 0; }
 
-fieldset { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; margin: 0 0 18px; }
+fieldset { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; margin: 0 0 18px; min-width: 0; }  /* (a fieldset otherwise grows to fit what's in it, wider than a phone) */
 legend { font-weight: 700; padding: 0 6px; }
 
 .form-row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
@@ -571,7 +571,7 @@ input[type=datetime-local], input[type=date], input[type=time] {
 .cal-foot { margin-top: 10px; justify-content: flex-end; }
 /* enhanced fields use our calendar button, not the browser's own icon */
 input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
-.form-row.dates { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.form-row.dates { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 
 /* student home: quizzes on the left, messages in a column on the right */
 
@@ -2189,15 +2189,22 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .card-grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }  /* (a last card alone takes the row) */
 .form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 24px; align-items: start; }
 .form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
-/* Assign: the quiz, who gets it and the dates on the left; the students on the right, their
-   names in columns */
+/* Assign: the Quiz card and the Students card side by side, alike (a filter bar, folder tabs,
+   then the list), and the dates and Assign button in a card across both, below */
+.assign-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.assign-form > .card { margin: 0; }
 @container page (min-width: 960px) {
-  .assign-form { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.5fr); grid-template-rows: repeat(4, auto) 1fr; gap: 0 28px; align-items: start; grid-auto-flow: dense; }
-  .assign-form > * { grid-column: 1; }
-  /* (spare height when the student list is the taller column goes below the Assign button) */
-  .assign-form > .pick-people { grid-column: 2; grid-row: 1 / span 5; margin: 0; }
-  .pick-people .folder-filter-list > .pick-list { max-height: min(70vh, 720px); }
+  .assign-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }  /* the Quiz and Students cards share the width equally */
+  .assign-form > .assign-when { grid-column: 1 / -1; }
+  .pick-people .folder-filter-list > .pick-list { max-height: min(60vh, 560px); }
 }
+.pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 6px 8px; }
+.pick-quiz .quiz-pick-list > li { margin: 0; min-width: 0; }
+.pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
+.pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
+.assign-when > .assign-go { margin-top: 12px; }
+.assign-when .dates { max-width: 760px; }
 .assign-go { margin-top: 4px; }
 .pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }
 .pick-people .pick-list > li { margin: 0; min-width: 0; }

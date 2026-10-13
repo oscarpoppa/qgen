@@ -143,6 +143,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     # (static/js/folderfilter.js): 7th grade holds Period 2, which holds sam
     import json
     page = teach.get('/quiz/assign').data.decode()
+    page = page[page.index('id="pick-people"'):]  # (the Students card; the Quiz card is beside it)
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
     assert [(t['id'], [c['id'] for c in t['children']]) for t in tree] == [(g7, [p2])]
     assert tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
@@ -198,7 +199,7 @@ def test_assigning_from_the_users_page(app_db):
     assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in no_titles(page)
     assert 'href="/quiz/assign?folder={}">Assign a quiz<span class="wide-only"> to this folder</span></a>'.format(p2) in no_titles(page)  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
-    start = lambda page: re.search(r'data-start="(\w+)"', page).group(1)
+    start = lambda page: re.search(r'data-start="(\w+)"', page[page.index('id="pick-people"'):]).group(1)
     # a folder: everyone in it (and in the folders inside it), checked, opening on its tab
     page = teach.get('/quiz/assign?folder={}'.format(g7)).data.decode()
     assert checked(page) == sorted([ids('sam'), ids('kim')]) and start(page) == str(g7)
