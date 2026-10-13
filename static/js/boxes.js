@@ -185,7 +185,7 @@
     showLevelButtons._t = setTimeout(function () {
       //never two pairs for the same boxes: a pair that would open or fold exactly what one
       //shown before it (further out) does is left out
-      var shown = [];
+      var shown = [], emptyShown = [];
       //a folder's own pair (data-level-prefer: the folder chosen in a row of folder buttons) comes
       //first, so it's the one kept when the page's pair would do the same
       var pairs = Array.prototype.slice.call(document.querySelectorAll('.level-buttons'));
@@ -203,6 +203,15 @@
           b.title = set.length ? b.dataset.title0 : 'Nothing here opens or folds';
         });
         if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
+        //a grayed pair (nothing to fold) is a copy only of one for the same list (a list's heading
+        //and its tab row, one inside the other); separate lists each keep theirs, like Assign's
+        //Quiz and Students cards side by side
+        if (!set.length) {
+          var lv = btn && levelOf(btn);
+          var dup = lv && lv.nodeType === 1 && emptyShown.some(function (o) { return o === lv || o.contains(lv) || lv.contains(o); });
+          if (dup) pair.hidden = true; else if (lv && lv.nodeType === 1) emptyShown.push(lv);
+          return;
+        }
         var same = shown.some(function (other) {
           return other.length === set.length && other.every(function (d, i) { return d === set[i]; });
         });
