@@ -8,7 +8,8 @@
 {% block content %}
 <div class="page-head"><h1>My profile</h1>
   <div class="actions">{{ back_home() }}</div></div>
-<div class="card" style="max-width:640px">
+<div class="card-grid">
+<div class="card">
   <div class="card-head"><h2>Nickname</h2></div>
   <p class="muted small">If you like to be called something else, put it here. It shows next to your name everywhere,
     {% if current_user.nickname %}like this: <strong>{{ current_user.shown_name }}</strong>{% else %}for example <strong>{{ current_user.username }} (Sunny)</strong> if you chose “Sunny”{% endif %}.
@@ -23,7 +24,7 @@
   </form>
 </div>
 
-<div class="card" style="max-width:640px">
+<div class="card">
   <div class="card-head"><h2>Picture</h2></div>
   <div class="btn-row" style="align-items:center;gap:16px">
     <span id="my-avatar">{{ avatar(current_user, 96) }}</span>
@@ -46,7 +47,7 @@
 </div>
 
 {% if current_user.is_admin %}
-<div class="card" style="max-width:640px">
+<div class="card">
   <div class="card-head"><h2>Apps</h2></div>
   <p class="muted small">Apps sign in with a personal access token. Each lasts 90 days; revoke one to sign that app out.
     Apps can also get a token themselves by signing in with your username and password.
@@ -86,6 +87,7 @@
   {% else %}<p class="muted small">No tokens yet.</p>{% endif %}
 </div>
 {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}

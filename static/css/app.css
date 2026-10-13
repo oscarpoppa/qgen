@@ -515,6 +515,11 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .person { display: inline-flex; align-items: center; gap: 8px; }
 .msg-with-avatar { display: flex; gap: 8px; align-items: flex-start; }
 .msg-mine.msg-with-avatar { flex-direction: row-reverse; }
+/* the words beside the picture wrap inside the bubble; never wider than it (a message on the right
+   would otherwise run off the panel's left edge, where it can't be scrolled to) */
+.msg-with-avatar { max-width: 100%; min-width: 0; }
+.msg-with-avatar > :not(.avatar) { min-width: 0; flex: 1 1 auto; }
+.msg-actions .msg-act { white-space: normal; overflow-wrap: anywhere; text-align: left; }
 
 .inline-form { display: inline; margin: 0; }
 /* Results by student: on wider screens each attempt (date, score, its buttons) stays on
@@ -632,7 +637,7 @@ th .tip-wrap { margin-left: 4px; }
 
 /* ---------- side panels: notices and messages, on every page ---------- */
 
-:root { --dock-w: 360px; --topbar-h: 57px; }
+:root { --dock-w: clamp(360px, 26vw, 480px); --topbar-h: 57px; }  /* wider on wide screens */
 .dock-buttons { display: flex; gap: 6px; margin-left: auto; order: 2; }
 .dock-btn {
   position: relative; background: var(--surface); color: var(--text); border: 1px solid var(--border);
@@ -2115,11 +2120,11 @@ details.row-fold > summary > .drag-item, details.row-fold > summary > .name-link
 @container page (max-width: 520px) { .home-counters { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } }
 /* Home's awards: room between the awards and "Still to earn" */
 .dash-card > .home-sub { margin-top: 14px; padding-top: 4px; border-top: 1px solid var(--border); }
-/* My quizzes: a folded quiz card is one row: its badges and button stay beside the title, which
-   wraps in its own column when it's long */
+/* My quizzes: a folded quiz card is one row when it fits; in a narrow card its badges, button and
+   Move menu go on a second line (right-aligned) rather than running into each other */
 .grid.quiz-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
-details.quiz-card:not([open]) > summary { flex-wrap: nowrap; }
-details.quiz-card:not([open]) > summary .box-title { min-width: 5rem; flex: 1 1 auto; overflow-wrap: anywhere; }
+details.quiz-card:not([open]) > summary { flex-wrap: wrap; row-gap: 8px; }
+details.quiz-card:not([open]) > summary .box-title { min-width: min(100%, 11rem); flex: 1 1 auto; overflow-wrap: anywhere; }
 details.quiz-card:not([open]) > summary > :not(.box-title) { flex: 0 0 auto; }
 details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 /* lists as cards: a folded row's name needs no "Title" / "Quiz" / "Student" caption above it */
@@ -2150,8 +2155,9 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 .chip-x { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
 td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 24px; height: 24px; }
 /* Results by quiz: a long title is cut short with "…" (full title in its tooltip), so the quiz's
-   buttons stay on its heading line */
-@media (min-width: 641px) {
+   buttons stay on its heading line, while the list is wide enough for both; narrower, the
+   buttons go on a line of their own (the title is never squeezed to a few letters) */
+@container listarea (min-width: 861px) {
   details.quiz-result > summary, details.subject-box.quiz-result > summary:has(> .box-actions) { flex-wrap: nowrap; }
   details.quiz-result > summary .box-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   details.quiz-result > summary > :not(.box-title):not(.fold) { flex: 0 0 auto; }
@@ -2166,4 +2172,27 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
   .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
   .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
   .person-folders, .person-folders .move-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+}
+/* use the room: on a wide screen, cards and form parts sit side by side instead of one narrow
+   column with empty space beside it (docs/ui-patterns.md, principle 9) */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 0 16px; align-items: start; }
+.card-grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }  /* (a last card alone takes the row) */
+.form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 24px; align-items: start; }
+.form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
+/* Assign: the quiz, who gets it and the dates on the left; the students on the right, their
+   names in columns */
+@media (min-width: 1001px) {
+  .assign-form { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.5fr); gap: 0 28px; align-items: start; grid-auto-flow: dense; }
+  .assign-form > * { grid-column: 1; }
+  .assign-form > .pick-people { grid-column: 2; grid-row: 1 / span 8; margin: 0; }
+  .pick-people .folder-filter-list > .pick-list { max-height: min(70vh, 720px); }
+}
+.assign-go { margin-top: 4px; }
+.pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }
+.pick-people .pick-list > li { margin: 0; min-width: 0; }
+/* Teachers' messages: the conversation, with the box to write in beside it */
+@media (min-width: 1001px) {
+  .staff-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 0 16px; align-items: start; }
+  .staff-grid > nav { grid-column: 1 / -1; }
+  .staff-grid > form { position: sticky; top: calc(var(--topbar-h) + 12px); }
 }

@@ -2,7 +2,7 @@ from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
 from flask import flash, render_template, redirect, url_for, request, current_app, session, abort
-from app.nav import back_to, safe_next, next_arg
+from app.nav import back_to, safe_next, next_arg, kept_tab
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from markupsafe import Markup
@@ -164,6 +164,9 @@ def _folder_done(message, error=False, show=None, moved=None):
     if show is None:
         show = request.form.get('view') or 'main'
     values = {'folder': show}
+    #the same folder tab, when it's the same view (not one the action switched to)
+    if str(show) == str(request.form.get('view') or 'main') and kept_tab():
+        values['tab'] = kept_tab()
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.mypage', **values))
@@ -495,6 +498,9 @@ def _group_done(message, error=False, show=None, moved=None):
         show = request.form.get('view') or 'main'
     show = str(show)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
+    #the same folder tab, when it's the same view (not one the action switched to)
+    if str(show) == str(request.form.get('view') or 'main') and kept_tab():
+        values['tab'] = kept_tab()
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
     return redirect(url_for('user.userdet', **values))

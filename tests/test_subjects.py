@@ -433,3 +433,31 @@ def test_folders_four_deep_show_on_folder_pages_and_in_the_quiz_editor(app_db):
         assert node['id'] == g.id and 'p:{}'.format(probs['P4'].id) in node['keys']
         node = node['children'][0] if node['children'] else None
     assert html.count('class="pick" value="{}"'.format(probs['P4'].id)) == 1
+
+
+def test_coming_back_to_a_folder_page_keeps_the_folder_tab_open(app_db):
+    """The open folder tab (?tab=, folderfilter.js) survives an edit and Save, and a folder action
+    done on that page; a fresh visit (the menus' links) has no tab and starts on All."""
+    app, db = app_db
+    from app.qgen.models import VPGroup
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add')
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.one()
+    listed = 'http://localhost/quiz/listvp?tab={}'.format(math.id)
+    # every folder page's own list keeps its tab in the address
+    assert 'data-url-tab' in teacher.get('/quiz/listvp').data.decode()
+    # Save in the editor opened from the Math tab: back to the list on that tab, the problem lit up
+    form = problem_form('numeric', 'Add', 'What is 3 + 3?', '6', [], next='/quiz/listvp?tab={}'.format(math.id))
+    r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
+    assert r.status_code == 302 and r.headers['Location'] == '/quiz/listvp?show={}&tab={}'.format(probs['Add'].id, math.id)
+    # opened with no tab (or from somewhere else): the list as before
+    form['next'] = ''
+    r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
+    assert r.headers['Location'] == '/quiz/listvp?show={}'.format(probs['Add'].id)
+    # a folder action from the page (a new folder) comes back to the same tab
+    r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Other', 'view': 'all'}, headers={'Referer': listed})
+    assert 'tab={}'.format(math.id) in r.headers['Location']
+    # ...but not when the action opens another view
+    r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Third', 'view': 'all'}, headers={'Referer': 'http://localhost/quiz/listvp'})
+    assert 'tab=' not in r.headers['Location']

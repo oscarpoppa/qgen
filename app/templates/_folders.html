@@ -207,7 +207,7 @@
      folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
        data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
-       data-remember="{{ request.endpoint }}"{% if not fk.readonly %} data-droppable{% endif %}>
+       data-remember="{{ request.endpoint }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
     {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
@@ -239,7 +239,7 @@
   {% set name = fk.name(fk.node.folder) %}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All in “{{ name }}”"
        data-main-label="Uncategorized" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
-       data-remember="{{ request.endpoint }}:{{ fk.view }}"{% if not fk.readonly %} data-droppable{% endif %}>
+       data-remember="{{ request.endpoint }}:{{ fk.view }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
     {% if fk.box_tools %}{% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) }}</template>{% endfor %}{% endif %}
     <div class="folder-filter-list">

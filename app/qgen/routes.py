@@ -10,7 +10,7 @@ from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
-from app.nav import back_to, safe_next, next_arg, place_name, back_after_save
+from app.nav import back_to, safe_next, next_arg, place_name, back_after_save, kept_tab, back_to_list
 from markupsafe import Markup
 from app.jsoncsrf import json_csrf_ok, post_form_only
 from flask_login import current_user, login_required
@@ -105,7 +105,7 @@ def mkvprob():
             save_subjects('problems', nuprob)
             flash('Saved problem "{}".'.format(nuprob.title), 'success')
             current_app.logger.info('{} created VProblem: ({}) "{}"'.format(current_user.username, nuprob.id, nuprob.title))
-            return redirect(url_for('qgen.list_vprobs', show=nuprob.id))
+            return redirect(back_after_save('qgen.list_vprobs', nuprob.id, new=True))
     elif request.method == 'GET' and not form.values.entries:
         form.values.append_entry()
     return problem_page(form, None, errors, 'New problem', subject_error)
@@ -221,10 +221,10 @@ def del_vprob(vpid):
         S.delete_problem(vp)
     except S.ServiceError as exc:
         flash('Not deleted. {}'.format(exc), 'error')
-        return redirect(url_for('qgen.list_vprobs'))
+        return redirect(back_to_list('qgen.list_vprobs'))
     flash('Deleted problem "{}".'.format(title), 'success')
     current_app.logger.info("{} deleted VProblem: ({}) '{}'".format(current_user.username, vpid, title))
-    return redirect(url_for('qgen.list_vprobs'))
+    return redirect(back_to_list('qgen.list_vprobs'))
 
 
 # ---------------------------------------------------------------- quizzes
@@ -266,7 +266,7 @@ def mkvquiz():
             count = layout.question_count(layout.parse(nq.vpid_lst))
             flash('Created quiz "{}": each student gets {} question{}.'.format(nq.title, count, '' if count == 1 else 's'), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
-            return redirect(url_for('qgen.list_vquizzes', show=nq.id))
+            return redirect(back_after_save('qgen.list_vquizzes', nq.id, new=True))
     return quiz_page(form, 'New quiz', subject_error=subject_error)
 
 #route to view a quiz as one student would get it, without editing or assigning
@@ -352,7 +352,7 @@ def del_vquiz(vqid):
         flash('Deleted quiz “{}”.'.format(title), 'success')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
     current_app.logger.info("{} {} VQuiz: ({}) '{}'".format(current_user.username, done, vqid, title))
-    return redirect(url_for('qgen.list_vquizzes'))
+    return redirect(back_to_list('qgen.list_vquizzes'))
 
 
 #route to the quizzes taken off the Quizzes page: bring one back, or delete it for good once
@@ -1057,6 +1057,9 @@ def _subject_done(kind, message, error=False, show=None, moved=None):
     show = str(request.form.get('view') or 'all') if show is None else str(show)
     #the same view it was sent from, All included (not the page's remembered one)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
+    #the same folder tab, when it's the same view (not one the action switched to)
+    if show == str(request.form.get('view') or 'all') and kept_tab():
+        values['tab'] = kept_tab()
     if moved and not error:
         values['moved'] = moved
     return subject_list(kind, **values)
@@ -1325,6 +1328,9 @@ def _archive_done(message, error=False, show=None, moved=None):
     flash(message, 'error' if error else 'success')
     show = str(request.form.get('view') or 'all') if show is None else str(show)
     values = {'folder': show} if show.isdigit() or show in ('main', 'all') else {}
+    #the same folder tab, when it's the same view (not one the action switched to)
+    if show == str(request.form.get('view') or 'all') and kept_tab():
+        values['tab'] = kept_tab()
     if moved and not error:
         values['moved'] = moved
     return redirect(url_for('qgen.archive', **values))
@@ -1502,7 +1508,7 @@ def purge_archived(aid):
     S.purge_archived(a)
     flash('Deleted {}\'s attempt at "{}" for good.'.format(name, title), 'success')
     current_app.logger.info('{} purged archived CQuiz ({}) of {} "{}"'.format(current_user.username, original, name, title))
-    return redirect(url_for('qgen.archive'))
+    return redirect(back_to_list('qgen.archive'))
 
 
 # ---------------------------------------------------------------- the Dashboard

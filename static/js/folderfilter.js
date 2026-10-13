@@ -67,6 +67,20 @@
     var chosen = box.dataset.start || 'all', fromHere = false;
     try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
     try { if (fromHere && !box.dataset.start) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
+    //a folder page's own list (data-url-tab) keeps its chosen tab in the address (?tab=), so
+    //coming back to it (Save in an editor, a Move, a Delete, the browser's Back) opens the same
+    //folder; the menus' links have no ?tab=, so a fresh visit still starts on All
+    var urlTab = 'urlTab' in box.dataset ? new URLSearchParams(location.search).get('tab') : null;
+    if (urlTab) chosen = urlTab;
+    function keepInAddress() {
+      if (!('urlTab' in box.dataset) || !window.history || !history.replaceState) return;
+      var q = new URLSearchParams(location.search);
+      if (chosen === 'all') q.delete('tab'); else q.set('tab', chosen);
+      q.delete('show'); q.delete('moved');  // (lit up once, on arrival)
+      var s = q.toString();
+      history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash);
+      document.dispatchEvent(new CustomEvent('qgen-address'));  // the Back trail keeps the new address
+    }
     //(a folder's own things, outside the folders inside it: 'self:<id>')
     function base() { return chosen.indexOf('self:') === 0 ? chosen.slice(5) : chosen; }
     function isFolder(id) { return /^\d+$/.test(id) && !!byId[id]; }
@@ -135,8 +149,8 @@
       row.appendChild(label);
       row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
       tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
-      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? items().length : loose, 'tray');
-      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
+      var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? 0 : loose, 'tray');
+      if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside: everything is under ' + (box.dataset.allLabel || 'All'); }
       else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
       row.appendChild(none);
       rows.appendChild(row);
@@ -157,11 +171,12 @@
         n.children.forEach(function (c) { sub.appendChild(button(String(c.id), c.name, c.count, 'folder')); });
         //last, what's in the folder itself and in none of the folders inside it (like Uncategorized
         //at the top); grayed out when there are no folders inside, since it's the same as All in
-        var mine = Object.keys(own(n)).length;
+        //(no folders inside: nothing is "left over", so it counts 0, not everything in the folder)
+        var mine = n.children.length ? Object.keys(own(n)).length : 0;
         var self = button('self:' + n.id, 'Uncategorized', mine, 'tray');
         self.classList.add('folder-tab-self');
         self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
-        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All in “' + n.name + '”'; }
+        if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”: everything in it is under All in “' + n.name + '”'; }
         else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
         sub.appendChild(self);
         rows.appendChild(sub);
@@ -283,6 +298,7 @@
     function choose(id) {
       chosen = id;
       try { sessionStorage.setItem(memKey, chosen); } catch (err) {}
+      keepInAddress();
       draw();
       apply();
       markSide();

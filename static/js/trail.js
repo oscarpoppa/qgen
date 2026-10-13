@@ -44,6 +44,12 @@
   }
   if (trail.length > MAX) trail = trail.slice(trail.length - MAX);
   write(KEY, trail);
+  //(a folder tab chosen: the page's address changes without loading, folderfilter.js)
+  document.addEventListener('qgen-address', function () {
+    var t = read(KEY, []);
+    for (var i = t.length - 1; i >= 0; i--) if (t[i].k === here.k) { t[i].p = location.pathname + location.search; break; }
+    write(KEY, t);
+  });
 
   var before = trail.length > 1 ? trail[trail.length - 2] : null;
   if (!before) return;  // opened on its own (a new tab): the server's choice stays

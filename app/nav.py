@@ -3,7 +3,7 @@
 Only addresses on this site are followed. A `next=` in a link, or the page the browser
 says it came from (Referer), could otherwise send someone to another website straight
 after signing in or after pressing a button (an "open redirect")."""
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, parse_qs, urlunsplit
 
 from flask import request
 
@@ -51,14 +51,35 @@ def next_arg(fallback=None):
     return safe_next(request.values.get('next'), fallback)
 
 
-def back_after_save(list_endpoint, item_id):
+def back_to_list(list_endpoint):
+    """After an action on something in a list (delete, restore...): back to that list as it was
+    (the page it was done on, with its folder tab), else the list from the start."""
+    from flask import url_for
+    path = safe_next(request.referrer)
+    if path and _match(path)[0] == list_endpoint:
+        return path
+    return url_for(list_endpoint)
+
+
+def back_after_save(list_endpoint, item_id, new=False):
     """After saving in an editor: back to the page it was opened from (the form's next), and
-    when that's the list (or there's none), the list with what was saved lit up (?show=)."""
+    when that's the list (or there's none), the list with what was saved lit up (?show=), on
+    the folder tab that was open there (?tab=)."""
     from flask import url_for
     target = next_arg()
     if target and _match(target)[0] != list_endpoint:
+        if new:  # (something new: shown in its list, wherever the editor was opened from)
+            return url_for(list_endpoint, show=item_id)
         return target
-    return url_for(list_endpoint, show=item_id)
+    tab = parse_qs(urlsplit(target).query).get('tab', [None])[0] if target else None
+    return url_for(list_endpoint, show=item_id, **({'tab': tab} if tab else {}))
+
+
+def kept_tab():
+    """The folder tab (?tab=, static/js/folderfilter.js) open on the page an action was sent
+    from, so going back there opens the same folder; None when there was none."""
+    path = safe_next(request.referrer)
+    return parse_qs(urlsplit(path).query).get('tab', [None])[0] if path else None
 
 
 #pages a Back button can name, by endpoint: a name, or a function of the page's arguments

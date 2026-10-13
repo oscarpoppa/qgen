@@ -16,3 +16,7 @@ static/*
 
 # workbook pages being scanned (private)
 instance/
+
+# design notes and check scripts for Claude and the reviewers (local only)
+docs/
+tools/

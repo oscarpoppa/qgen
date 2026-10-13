@@ -8,6 +8,7 @@
  *    "Show" choice) sets bar.qgenFilter = function (words) { ...; return how many show }
  *  - a select in the bar (the results pages' "Show") filters again when it changes
  *  - Enter in the box never sends a form
+ *  - the page's one filter bar keeps its words (?q=) and Show choice (?state=) in the address
  * A thing can be hidden by more than one filter (the typed words, the quiz builder's Folder
  * menu): each sets its own flag with qgenHideRow(row, 'name', true/false), and it shows only
  * when nothing hides it. */
@@ -113,6 +114,27 @@ window.qgenHideRow = function (row, key, hide) {
     });
     bar.qgenRun = run;  // for a page that changes the list itself (the quiz builder's Folder menu)
     bar.hidden = false;
+    //the page's own filter bar (one on the page, not in a form) keeps what's typed (?q=) and
+    //its Show choice (?state=) in the address, like the folder tabs (folderfilter.js): coming
+    //back from an editor or an action finds the list narrowed just as it was left
+    var inAddress = !bar.closest('form') && document.querySelectorAll('[data-filter-bar]').length === 1 && window.history && history.replaceState;
+    var choice = bar.querySelector('select');
+    if (inAddress) {
+      var asked = new URLSearchParams(location.search);
+      if (asked.get('q')) input.value = asked.get('q');
+      if (choice && asked.get('state') && Array.prototype.some.call(choice.options, function (o) { return o.value === asked.get('state'); })) choice.value = asked.get('state');
+      var remember = function () {
+        var q = new URLSearchParams(location.search);
+        if (input.value.trim()) q.set('q', input.value.trim()); else q.delete('q');
+        if (choice && choice.selectedIndex > 0) q.set('state', choice.value); else q.delete('state');
+        var s = q.toString();
+        history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash);
+        document.dispatchEvent(new CustomEvent('qgen-address'));  // the Back trail keeps it (trail.js)
+      };
+      input.addEventListener('input', remember);
+      if (choice) choice.addEventListener('change', remember);
+      if (clear) clear.addEventListener('click', remember);
+    }
     run();
   }
   document.querySelectorAll('[data-filter-bar]').forEach(setUp);

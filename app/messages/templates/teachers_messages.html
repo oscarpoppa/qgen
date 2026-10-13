@@ -10,7 +10,7 @@
 {% if not staff.teachers %}
   <div class="card"><p class="muted">There are no other teachers yet. Once another teacher has an account, you can write to them here.</p></div>
 {% else %}
-<div style="max-width:760px">
+<div class="staff-grid">
     {# who: every teacher, or just between you and one of them #}
     <nav class="card btn-row small" aria-label="Which teachers">
       <a class="btn btn-sm {{ 'btn-secondary' if other }}" href="{{ url_for('messages.teachers_page') }}" title="Show the messages with every teacher"{% if not other %} aria-current="page"{% endif %}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</a>
