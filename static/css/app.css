@@ -2128,3 +2128,10 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 @container page (max-width: 780px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
 /* Assign: the one checklist of students under the folder tabs scrolls when it's long */
 .pick-people .folder-filter-list > .pick-list { max-height: 420px; overflow: auto; margin: 0; }
+/* a practice copy (QGEN_SANDBOX=1): a striped bar across the top of every page, so it's never
+   mistaken for the real site */
+.sandbox-bar { display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 4px 12px; font-size: var(--fs-sm); color: #1c1300; text-align: center;
+  background: repeating-linear-gradient(-45deg, #f5c400, #f5c400 14px, #ffd84d 14px, #ffd84d 28px); }
+.sandbox-bar svg.ico { color: #1c1300; }
+@media print { .sandbox-bar { display: none; } }

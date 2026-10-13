@@ -28,6 +28,8 @@ migrate = Migrate(app, db)
 #instant updates (app/push.py): only when the server is started for them
 import os as _os
 app.config.setdefault('PUSH', _os.environ.get('QGEN_PUSH') == '1')
+#a practice copy (QGEN_SANDBOX=1): every page says so in a bar across the top, and in its tab
+app.config.setdefault('SANDBOX', _os.environ.get('QGEN_SANDBOX') == '1')
 from app import push
 push.init(app)
 login = LoginManager(app)

@@ -218,3 +218,17 @@ def test_quiz_and_problem_pictures_are_scaled_to_fit(app_db):
     assert 'max-height: min(360px, 50vh)' in rule and 'max-width: min(100%, 520px)' in rule
     assert 'width: auto' in rule and 'height: auto' in rule and 'object-fit: contain' in rule
     assert '.question .qimg' not in css  # one rule for all of them
+
+
+def test_a_sandbox_says_so_on_every_page(app_db):
+    """QGEN_SANDBOX=1 (the practice copy): a bar across the top of every page and "SANDBOX"
+    in the tab's name, so it's never mistaken for the real site (2026-10-12). Off: neither."""
+    app, db = app_db
+    page = app.test_client().get('/login').data.decode()
+    assert 'sandbox-bar' not in page and '<title>SANDBOX' not in page
+    app.config['SANDBOX'] = True
+    try:
+        page = app.test_client().get('/login').data.decode()
+        assert 'class="sandbox-bar"' in page and '<title>SANDBOX · ' in page
+    finally:
+        app.config['SANDBOX'] = False
