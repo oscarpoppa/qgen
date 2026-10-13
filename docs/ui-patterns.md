@@ -20,7 +20,7 @@ This is the one design pattern for the whole site, agreed with the site owner in
 5. **Line things up.**
    - Boxes at one level share column widths.
    - Buttons that take turns in one place have one width.
-6. **Say what changed.** Whenever a change removes, hides or moves a control or behavior, tell the site owner: what, where, and what replaces it.
+6. **Ask before removing.** Never remove, hide or replace a control, behavior or piece of on-screen information without asking the site owner first: what, where, and what replaces it. Wait for a yes, then report it again once it's done.
 
 ## 2. Page anatomy
 
