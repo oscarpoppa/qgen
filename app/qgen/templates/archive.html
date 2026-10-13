@@ -15,7 +15,7 @@
       <summary>{{ box_label('calendar', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table">
-          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th>When</th><th>Folder</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th>Result</th><th class="row-more">When</th><th>Folder</th><th></th></tr></thead>
           <tbody>
           {% for a in month['items'] %}
             {% set blocker = blockers.get(a.id) %}

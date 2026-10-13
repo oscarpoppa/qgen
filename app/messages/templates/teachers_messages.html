@@ -4,7 +4,7 @@
 {% block body_attrs %}{{ watch('messages') }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1>Messages between teachers</h1>
+<div class="page-head"><h1>Teachers’ messages</h1>
   <div class="actions">{{ back_button(url_for('messages.inbox'), 'Messages') }}</div></div>
 
 {% if not staff.teachers %}

@@ -39,7 +39,7 @@
       <button class="btn" title="{{ 'Send this to the teachers you checked' if staff.teachers|length > 1 else 'Send this to ' ~ to_whom }}">Send</button>
       <p class="muted small" style="margin:4px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>
     </form>
-    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}" title="Open the full page of messages between teachers">Messages between teachers, as a page</a></p>
+    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}" title="Open the full page of messages between teachers">Teachers’ messages, as a page</a></p>
   {% elif rows %}
     {% if everyone %}
       <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>

@@ -305,11 +305,16 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
     teacher.post('/quiz/subjects/problems/file', data={'subject': geo.id, 'items': [probs['Add'].id, probs['Area'].id]})
     builder = teacher.get('/quiz/makevquiz').data.decode()
-    # each problem in each of its containers, with its own checkbox (same value, different id)
+    # every problem once, with the folders as tabs over the list (static/js/folderfilter.js):
+    # Add is in Algebra and Geometry, Area in Geometry only
+    import json, re
     assert 'Rename' not in builder
-    assert 'id="pick-{}-{}"'.format(alg.id, probs['Add'].id) in builder
-    assert 'id="pick-{}-{}"'.format(geo.id, probs['Add'].id) in builder
-    assert builder.count('class="pick" value="{}"'.format(probs['Add'].id)) == 2
+    assert builder.count('class="pick" value="{}"'.format(probs['Add'].id)) == 1
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', builder, re.S).group(1))
+    keys = {t['name']: t['keys'] for t in tree}
+    assert keys == {'Algebra': ['p:{}'.format(probs['Add'].id)],
+                    'Geometry': sorted(['p:{}'.format(probs['Add'].id), 'p:{}'.format(probs['Area'].id)])}
+    assert 'data-all-label="All problems"' in builder and 'data-fkey="p:{}"'.format(probs['Area'].id) in builder
     # a quiz made from problems in two subjects
     teacher.post('/quiz/makevquiz', data={'title': 'Mixed', 'vplist': '[{}, {}]'.format(probs['Add'].id, probs['Area'].id)})
     assert sorted(p.title for p in VQuiz.query.one().vproblems) == ['Add', 'Area']
@@ -420,9 +425,11 @@ def test_folders_four_deep_show_on_folder_pages_and_in_the_quiz_editor(app_db):
     builder = teacher.get('/quiz/makevquiz')
     assert builder.status_code == 200
     html = builder.data.decode()
+    # nested tabs: L4 inside L3, inside L2, inside L1, each holding P4
+    import json, re
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', html, re.S).group(1))
+    node = tree[0]
     for g in chain:
-        assert '<details class="box sub-box" data-sub="{}" data-list>'.format(g.id) in html
-    # nested: L4's box is inside L3's, inside L2's, inside L1's
-    starts = [html.index('data-sub="{}"'.format(g.id)) for g in chain]
-    assert starts == sorted(starts) and html.index('class="box-title">L4</h3>') < html.index('</details>', starts[3])
+        assert node['id'] == g.id and 'p:{}'.format(probs['P4'].id) in node['keys']
+        node = node['children'][0] if node['children'] else None
     assert html.count('class="pick" value="{}"'.format(probs['P4'].id)) == 1

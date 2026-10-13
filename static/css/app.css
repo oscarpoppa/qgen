@@ -2135,3 +2135,35 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
   background: repeating-linear-gradient(-45deg, #f5c400, #f5c400 14px, #ffd84d 14px, #ffd84d 28px); }
 .sandbox-bar svg.ico { color: #1c1300; }
 @media print { .sandbox-bar { display: none; } }
+/* ---- user-critic review fixes, before going live (2026-10-12) ---- */
+/* a phone: the chosen tab's buttons on a line of their own under the tabs */
+.folder-filter-rows > .folder-tools-line { display: flex; justify-content: flex-end; padding: 6px 4px; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; background: var(--tab-open); }
+.folder-filter-rows > .folder-tools-line .folder-filter-tools-now { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+/* an empty folder: its icon and count fade, its name stays readable (4.5:1) */
+.folder-tab.is-empty { opacity: 1; }
+.folder-tab.is-empty svg.ico, .folder-tab.is-empty .box-count { opacity: .55; }
+.folder-tab.is-empty .box-title { color: var(--muted); }
+.side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: 1; }
+.side-row.is-empty:not(.current) .side-link { color: var(--muted); }
+.side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }
+/* things to click are at least 24px across (WCAG 2.5.8) */
+.chip-x { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 24px; height: 24px; }
+/* Results by quiz: a long title is cut short with "…" (full title in its tooltip), so the quiz's
+   buttons stay on its heading line */
+@media (min-width: 641px) {
+  details.quiz-result > summary { flex-wrap: nowrap; }
+  details.quiz-result > summary .box-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  details.quiz-result > summary > :not(.box-title):not(.fold) { flex: 0 0 auto; }
+  details.quiz-result > summary > .box-actions { margin-left: auto; }
+}
+/* while every row of a list is folded, the columns only an open row fills go, headings too */
+table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-fold[open])) td.row-more { display: none; }
+/* phone row cards: the checkbox on the title's line, the "+" beside the folder chips */
+@media (max-width: 640px) {
+  .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; }
+  .stack tr:has(> td.tick-col) > td { grid-column: 2; }
+  .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
+  .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
+  .person-folders, .person-folders .move-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+}

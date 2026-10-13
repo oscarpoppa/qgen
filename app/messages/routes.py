@@ -170,7 +170,7 @@ def teachers_page():
     choice = request.args.get('with') or 'teachers'
     view = teachers_view(M.inbox(current_user), staff_picker(current_user),
                          choice if choice == 'teachers' else 't' + choice.lstrip('t'))
-    return render_template('teachers_messages.html', title='Messages between teachers', **view)
+    return render_template('teachers_messages.html', title='Teachers’ messages', **view)
 
 #route to pin or unpin a message (and every copy sent with it)
 @messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])
@@ -373,7 +373,7 @@ def staff_picker(me):
 
 
 def teachers_view(rows, staff, choice, mark_seen=True):
-    """Messages between teachers in the side panel: all of them ('teachers'), or with one
+    """Teachers’ messages in the side panel: all of them ('teachers'), or with one
     other teacher ('t<id>'), and a box to write to the teachers checked under it."""
     try:
         other = M.staff_choice(current_user, choice)

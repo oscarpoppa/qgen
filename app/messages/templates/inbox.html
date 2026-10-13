@@ -34,7 +34,7 @@
 <div class="page-head"><h1>Messages</h1>
   {# back where you came from (the side panel's link is on every page), else the Dashboard #}
   <div class="actions">{{ back_home() }}
-    <a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Talk with other teachers; students never see these">Messages between teachers{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
+    <a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Talk with other teachers; students never see these">Teachers’ messages{% if staff_unread %} <span class="count">{{ staff_unread }}</span>{% endif %}</a></div></div>
 
 <form method="post" action="{{ url_for('messages.send') }}" class="card" id="compose" novalidate data-students="{{ rows|length }}"
       data-confirm="Are you sure you want to send this to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}?" data-confirm-ok="Send to everyone">
@@ -95,11 +95,12 @@
 {% endif %}
 
 {% call folders_page(fk) %}
+  {% if rows %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'student', 'students', items='tr[data-box]') }}</div>{% endif %}
   <div id="folder-items">
   {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{{ conversations(n.people) }}{% endcall %}
   {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'student:') %}{{ conversations(n.people) }}{% endcall %}
   {% elif shown %}{{ conversations(shown) }}
-  {% else %}<div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'No students in this folder.' }}</div>{% endif %}
+  {% else %}<div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'Nothing in “' ~ fk.node.folder.name ~ '” yet.' if fk.node else 'Everything is in a folder.' }}</div>{% endif %}
   </div>
 {% endcall %}
 {% endblock %}

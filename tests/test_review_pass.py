@@ -1172,7 +1172,7 @@ def test_standard_wording_and_history_buttons(app_db):
         assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get(url).data.decode()), url
     # the teachers' messages page: one name, and Back to Messages
     page = no_titles(teach.get('/messages/teachers').data.decode())
-    assert 'Messages between teachers' in page and '← Messages</span></a>' in page and 'Messages with' not in page
+    assert 'Teachers’ messages' in page and '← Messages</span></a>' in page and 'Messages with' not in page
 
 
 def test_pages_come_back_as_they_were_left(app_db):

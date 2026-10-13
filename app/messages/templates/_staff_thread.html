@@ -1,7 +1,7 @@
 {# messages between teachers (all of them, or between "you" and one other teacher); `items`
    are StaffMessages, oldest first. Your own are on the right and can be deleted. #}
 {% from "_macros.html" import avatar with context %}
-<ol class="thread" aria-label="Messages between teachers">
+<ol class="thread" aria-label="Teachers’ messages">
   {% for m in items %}
     {% set mine = m.sender_id == current_user.id %}
     <li class="msg-with-avatar {{ 'msg-mine' if mine else '' }}">

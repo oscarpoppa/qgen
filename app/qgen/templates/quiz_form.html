@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button, slot with context %}
 {% from "_macros.html" import field, check, image_drop %}
-{% from "_subjects.html" import subject_checks, subject_labels, pick_folder_box with context %}
+{% from "_subjects.html" import subject_checks, subject_labels with context %}
 {% from "_macros.html" import box_label, count_of %}
 
 {# editing: another tab's changes are offered, never reloaded under the typing #}
@@ -14,7 +14,7 @@
     <tbody>
     {% for p in items %}
       {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
-      <tr data-item="{{ p.id }}" data-name="{{ (p.title or 'untitled')|lower }}">
+      <tr data-item="{{ p.id }}" data-fkey="p:{{ p.id }}" data-name="{{ (p.title or 'untitled')|lower }}">
         <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}" aria-label="Include “{{ p.title or 'Untitled' }}”"></td>
         <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
           <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
@@ -81,20 +81,15 @@
       <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span></div>
       {% if has_problems %}
         <div class="builder-filters">
-          <span class="level-buttons">
-          <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="#all-problems" aria-label="Expand all problem folders" title="Open every problem folder">Expand all</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="#all-problems" aria-label="Collapse all problem folders" title="Close every problem folder">Collapse all</button></span>
-          {{ filter_bar('#all-problems', 'problem', 'problems', boxes='details.sub-box, details.subject-box') }}
+          {{ filter_bar('#all-problems', 'problem', 'problems') }}
         </div>
-        <p class="muted small">Open any folders and check problems from as many of them as you like; they all go in this quiz.</p>
-        <div id="all-problems" class="subject-boxes builder-boxes">
-          {% for n in problem_root.folders %}{% call(items, key) pick_folder_box(n) %}{{ problem_rows(items, key) }}{% endcall %}{% endfor %}
-          {% if problem_root['items'] %}
-          <details class="box sub-box" data-box="unsorted" data-list>
-            <summary class="sub-head">{{ box_label('tray', 'Uncategorized', count_of(problem_root['items']|length, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
-            <div class="sub-body">{{ problem_rows(problem_root['items'], 'u') }}</div>
-          </details>
-          {% endif %}
+        <p class="muted small">Pick a folder to see its problems, and check problems from as many folders as you like; they all go in this quiz.</p>
+        {# every problem once, with the folder tabs over the list, as on every folder page: All
+           problems, the folders, Uncategorized; a tab says how many in it are checked #}
+        <div class="folder-filter" id="problem-picker" data-folder-filter data-prefix="p:" data-key-attr="fkey"
+             data-all-label="All problems" data-main-label="Uncategorized" data-unit="problem" data-units="problems" data-remember="quiz-builder">
+          <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
+          <div id="all-problems" class="folder-filter-list">{{ problem_rows(all_problems, 'all') }}</div>
         </div>
       {% else %}
         <div class="card empty small">No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Leave this page and write a new problem">Create one first</a>.</div>

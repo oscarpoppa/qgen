@@ -14,7 +14,7 @@
 {% macro result_box(g, item) %}
         {% set latest = g.latest %}
         {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
-        <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}" data-fkey="q:{{ g.vquiz.id }}">
+        <details class="box card result-box {{ edge }}" data-list data-quiz-box="{{ item.id }}-{{ g.vquiz.id }}" data-fkey="q:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}">
           <summary>
             {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}{# (one not started yet isn't an attempt) #}
             {{ box_label('note', quiz_link(g.vquiz), count_of(tried, 'attempt', 'attempts') if tried else none) }}
@@ -69,6 +69,7 @@
     </summary>
     <div class="box-body">
     {% if item.cquizzes and single %}
+      {{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='details.result-box') }}
       {# their quizzes in one list, each once; above it the folder buttons (static/js/folderfilter.js):
          All, New, In progress, then the Quizzes page's folders, then Uncategorized #}
       <div class="folder-filter" data-folder-filter data-prefix="q:" data-key-attr="fkey" data-all-label="All quizzes"

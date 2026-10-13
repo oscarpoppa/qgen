@@ -178,3 +178,51 @@
   render();
 })();
 
+
+/* The problem picker's folder tabs (static/js/folderfilter.js) say how many of their problems
+ * are checked ("2 checked"), as the folder boxes did: kept up to date as boxes are checked and
+ * when the tabs are redrawn (a tab chosen). */
+(function () {
+  var picker = document.getElementById('problem-picker');
+  if (!picker) return;
+  var data = picker.querySelector('.folder-filter-tree');
+  var tree = data ? JSON.parse(data.textContent) : [];
+  var byId = {}, inSome = {};
+  (function index(nodes) {
+    nodes.forEach(function (n) { byId[String(n.id)] = n; n.keys.forEach(function (k) { inSome[k] = 1; }); index(n.children); });
+  })(tree);
+  function checked() {
+    var on = {};
+    picker.querySelectorAll('input.pick:checked').forEach(function (b) { on['p:' + b.value] = 1; });
+    return on;
+  }
+  function countFor(id, on) {
+    var keys = Object.keys(on);
+    if (id === 'all') return keys.length;
+    if (id === 'none') return keys.filter(function (k) { return !inSome[k]; }).length;
+    var self = id.indexOf('self:') === 0, n = byId[self ? id.slice(5) : id];
+    if (!n) return 0;
+    return keys.filter(function (k) {
+      if (n.keys.indexOf(k) === -1) return false;
+      return !self || !n.children.some(function (c) { return c.keys.indexOf(k) !== -1; });
+    }).length;
+  }
+  function mark() {
+    var on = checked();
+    picker.querySelectorAll('.folder-tab').forEach(function (tab) {
+      var n = countFor(tab.dataset.folder, on), badge = tab.querySelector('.tab-ticked');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge badge-accent tab-ticked';
+        tab.appendChild(badge);
+      }
+      badge.hidden = !n;
+      badge.textContent = n + ' checked';
+    });
+  }
+  picker.addEventListener('change', mark);
+  picker.addEventListener('click', function (e) { if (e.target.closest('.folder-tab')) setTimeout(mark, 0); });
+  document.getElementById('all-problems').addEventListener('qgen-ticks-changed', mark);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(mark, 0); });
+  else setTimeout(mark, 0);
+})();

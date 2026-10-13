@@ -27,6 +27,7 @@ window.qgenHideRow = function (row, key, hide) {
     var root = bar.dataset.filter ? document.querySelector(bar.dataset.filter) : null;
     var one = bar.dataset.one || 'match', many = bar.dataset.many || 'matches';
     var before = null;  // which folder boxes were open before filtering
+    var none = null;  // the "Nothing matches" note
     var touched = false;  // nothing is shown or hidden until someone filters
 
     function things() { return root ? Array.prototype.slice.call(root.querySelectorAll(bar.dataset.items || 'tbody tr')) : []; }
@@ -73,6 +74,26 @@ window.qgenHideRow = function (row, key, hide) {
         });
       }
       if (count) count.textContent = shown + ' ' + (shown === 1 ? one : many);
+      //nothing matches: say so, with a way back (a page with its own note keeps it: the results pages)
+      if (typeof bar.qgenFilter !== 'function' && root) {
+        if (!none) {
+          none = document.createElement('p');
+          none.className = 'card empty small filter-none-auto';
+          none.hidden = true;
+          root.parentElement.insertBefore(none, root.nextSibling);
+        }
+        none.hidden = !(active && shown === 0);
+        if (!none.hidden) {
+          none.textContent = (q ? 'Nothing matches \u201c' + input.value.trim() + '\u201d. ' : 'Nothing matches. ');
+          var again = document.createElement('button');
+          again.type = 'button';
+          again.className = 'btn btn-link btn-sm';
+          again.textContent = 'Clear the filter';
+          again.title = 'Show all the ' + many + ' again';
+          again.addEventListener('click', function () { if (clear) clear.click(); else { input.value = ''; run(); } });
+          none.appendChild(again);
+        }
+      }
       input.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true, detail: { active: active } }));
     }
 

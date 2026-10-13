@@ -136,7 +136,7 @@
                 <input type="hidden" name="folder" value="{{ f.id }}">
                 <label class="small muted">Move to
                   <select name="to" class="move-select" aria-label="Move {{ fk.name(fk.node.folder) }} to another folder" title="Pick a folder to move “{{ fk.name(fk.node.folder) }}” into; it moves right away">
-                    <option value="top"{% if not f.parent_id %} selected{% endif %}>The top (in no folder)</option>
+                    <option value="top"{% if not f.parent_id %} selected{% endif %}>Not inside another folder</option>
                     {% for g, depth in fk.flat if g.id not in skip %}
                       <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(g) }}</option>
                     {% endfor %}
@@ -190,7 +190,7 @@
     <div class="sub-body level" id="folder-body-{{ f.id }}">
       {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
       {{ draw(n) }}
-      {% if not n.count %}<p class="muted small">Empty.</p>{% endif %}
+      {% if not n.count %}<p class="muted small">Nothing in “{{ fk.name(n.folder) }}” yet.</p>{% endif %}
     </div>
   </details>
 {% endmacro %}

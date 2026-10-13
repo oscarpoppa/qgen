@@ -1,22 +1,8 @@
 {# Folders (called subjects in the code): the teacher's own containers for sorting problems and quizzes.
-   Use: {% from "_subjects.html" import pick_folder_box, subject_labels, subject_checks with context %} #}
+   Use: {% from "_subjects.html" import subject_labels, subject_checks with context %} #}
 {% from "_macros.html" import tip, box_label, count_of %}
 
 {% set subjects_help %}<p>Folders are your own containers for sorting, e.g. “Algebra” or “Period 2”, and can hold folders. Each problem or quiz can be in several folders; one that isn't in any is listed under <b>Uncategorized</b>.</p><p>They only help you find things. They're not the “2 of these 6” groups inside a quiz, and students never see them.</p>{% endset %}
-
-{# the quiz editor's problem folders: the same folder boxes as the folder pages, folders
-   inside folders, each with its own problems; the caller draws a folder's rows:
-   {% call(items, key) pick_folder_box(n) %}...{% endcall %} (key: the folder's id) #}
-{% macro pick_folder_box(n) %}
-{% set rows = caller %}
-<details class="box sub-box" data-sub="{{ n.folder.id }}" data-list>
-  <summary class="sub-head">{{ box_label('folder', n.name, count_of(n.count, 'problem', 'problems'), 'h3') }}<span class="badge badge-accent box-ticked" hidden></span></summary>
-  <div class="sub-body">
-    {% for c in n.folders %}{% call(items, key) pick_folder_box(c) %}{{ rows(items, key) }}{% endcall %}{% endfor %}
-    {% if n['items'] %}{{ rows(n['items'], n.folder.id) }}{% elif not n.folders %}<p class="muted small">Empty.</p>{% endif %}
-  </div>
-</details>
-{% endmacro %}
 
 {# small labels after an item's title #}
 {% macro subject_labels(groups) %}

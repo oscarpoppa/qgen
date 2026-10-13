@@ -10,7 +10,7 @@
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th>{% if fk %}<th>Folders</th>{% endif %}<th>Problems</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Problems</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -44,7 +44,7 @@
             </ol></details>
           </td>
           <td class="actions">
-            {% if not item.removed_at %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}" title="Give {{ item.title }} to students">Assign</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
+            {% if not item.removed_at %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', vq=item.id) }}" title="Give {{ item.title }} to students">Assign</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="See one student's version of {{ item.title }}">View</a>
             <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Change this quiz's questions and settings">Edit</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="Every student's attempts and scores on {{ item.title }}">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}

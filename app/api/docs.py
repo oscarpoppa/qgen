@@ -67,7 +67,7 @@ ENDPOINTS = [
     ('GET', '/messages/{student_id}', 'teacher', "One student's conversation (reading marks it seen).", None),
     ('POST', '/messages', 'teacher', "Send to 'all', one student id, or a list; optionally pinned.", {'to': 'all', 'body': 'No class Friday.', 'pin': True}),
     ('PUT', '/messages/pin/{message_id}', 'teacher', 'Pin or unpin (with every copy sent together).', {'pinned': False}),
-    ('GET', '/messages/teachers', 'teacher', "Messages between teachers you can see (?with= a teacher's id: just with them), and the other teachers with unread counts. Reading marks them seen; students never see these.", None),
+    ('GET', '/messages/teachers', 'teacher', "Teachers’ messages you can see (?with= a teacher's id: just with them), and the other teachers with unread counts. Reading marks them seen; students never see these.", None),
     ('POST', '/messages/teachers', 'teacher', "Write to every other teacher ('all') or chosen ones (an id or a list; only they see it).", {'to': 'all', 'body': 'Staff meeting at 3.'}),
     ('DELETE', '/messages/teachers/{message_id}', 'teacher', 'Remove a message you wrote to teachers (for everyone).', None),
 

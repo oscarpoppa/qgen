@@ -174,9 +174,24 @@
         b.setAttribute('aria-expanded', on ? 'true' : 'false');
       });
       //the chosen folder's own buttons at the end of the last row (All's too: every level has them)
+      //(on a phone the rows scroll sideways, so they'd be out of sight: a line of their own under them)
       var t = tools(chosen === 'none' ? null : base());
-      if (t.childNodes.length) rows.lastElementChild.appendChild(t);
+      if (t.childNodes.length) {
+        if (narrow && narrow.matches) {
+          var line = document.createElement('div');
+          line.className = 'folder-tools-line';
+          line.appendChild(t);
+          rows.appendChild(line);
+        } else rows.lastElementChild.appendChild(t);
+      }
+      //the chosen tabs in view (a phone's strip may be scrolled past them)
+      rows.querySelectorAll('.folder-tab[aria-pressed="true"]').forEach(function (b) {
+        var strip = b.parentElement;
+        if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, b.offsetLeft - strip.offsetLeft - 24);
+      });
     }
+    var narrow = window.matchMedia ? window.matchMedia('(max-width: 640px)') : null;
+    if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
     function apply() {
       var keep = chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
@@ -193,7 +208,8 @@
         list.parentElement.insertBefore(note, list.nextSibling);
       }
       note.hidden = shown || chosen === 'all';
-      list.hidden = !shown && chosen !== 'all';  // (no empty frame above the note)
+      folderEmpty = !shown && chosen !== 'all';
+      list.hidden = folderEmpty;  // (no empty frame above the note)
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)
       note.textContent = byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
@@ -202,14 +218,17 @@
       if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
     }
 
-    //a table whose rows are all hidden (by a tab or the name filter) goes, heading and all
+    //a table whose rows are all hidden (by a tab or the name filter) goes, heading and all; while
+    //a filter matches nothing here, the empty frame goes too (the filter bar says so)
+    var folderEmpty = false, filtering = false;
     function tidy() {
       list.querySelectorAll('table').forEach(function (t) {
         var rowsIn = t.querySelectorAll('tbody tr[data-box]');
         if (rowsIn.length) t.hidden = Array.prototype.every.call(rowsIn, function (r) { return r.hidden; });
       });
+      list.hidden = folderEmpty || (filtering && !items().some(function (el) { return !el.hidden; }));
     }
-    document.addEventListener('qgen-filtered', tidy);
+    document.addEventListener('qgen-filtered', function (e) { filtering = !!(e.detail && e.detail.active); tidy(); });
 
     rows.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');

@@ -27,7 +27,7 @@
         {# online now: a green dot after the name (the words are under "Last seen" when it's open) #}
         <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span>
         {% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}
-        <span class="box-end"><a class="btn btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Give {{ item.shown_name }} a quiz">Assign</a></span>
+        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></span>
       </summary>
       <dl class="person-facts small">
         <dt>Folders</dt><dd class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</dd>

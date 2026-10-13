@@ -230,7 +230,14 @@ def del_vprob(vpid):
 # ---------------------------------------------------------------- quizzes
 
 def quiz_page(form, title, vq=None, subject_error=None):
-    return render_template('quiz_form.html', form=form, title=title, problem_root=S.subject_tree('problems')[0],
+    #the problems to pick from: one list, each once (newest first), with the Problems page's
+    #folders as tabs over it (static/js/folderfilter.js), like every folder page
+    from app import folder_tree
+    root = S.subject_tree('problems')[0]
+    problem_tree = folder_tree.filter_tree(root, lambda f: f.title, lambda fid: None, 'p:')
+    all_problems = sorted(folder_tree.subtree(root), key=lambda p: p.id, reverse=True)
+    return render_template('quiz_form.html', form=form, title=title, problem_root=root,
+                           problem_tree=problem_tree, all_problems=all_problems,
                            has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
                            retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],
