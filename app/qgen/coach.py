@@ -79,9 +79,12 @@ def problem_hints(qtype_key, question, answer, options):
     if uses_complex(options) and 'i' not in known:
         known.append('i')
 
-    #errors, with a one-click fix for names that aren't defined yet
+    #errors, with a one-click fix for names that aren't defined yet. The Choices box counts only
+    #for a type that has one: after switching from Pick one to another type it's hidden but
+    #keeps its old text, which mustn't raise errors nobody can see
+    choices = (options.get('choices') or '') if qt.uses_choices else ''
     missing = set()
-    for text, label in [(question, 'question'), (answer, 'answer'), (options.get('choices') or '', 'choices')]:
+    for text, label in [(question, 'question'), (answer, 'answer'), (choices, 'choices')]:
         for inner in F.PLACEHOLDER_PATT.findall(text):
             try:
                 used = F.names_in(F.parse_expr(inner))
@@ -113,7 +116,7 @@ def problem_hints(qtype_key, question, answer, options):
             hints.append(hint('error', err))
 
     #values that are defined but never shown or used
-    texts = [question, answer, options.get('choices') or '']
+    texts = [question, answer, choices]
     used = _names_used(texts)
     if qt.key == 'numeric' and '[' not in answer:
         used |= _formula_names(answer)

@@ -187,3 +187,15 @@ def test_numbered_picks_without_how_many_say_what_to_do():
     if hints is not None:
         text = ' '.join(h['text'] for h in hints)
         assert 'Put 3 in "how many" for ns' in text and 'Add a value named ns1' not in str(hints)
+
+
+def test_the_helper_ignores_a_hidden_choices_box():
+    """A problem switched from Pick one to Short text keeps its old Choices text (hidden on the
+    form, 2026-10-12): a name there that's no longer a value raises no error the teacher can't
+    see. The same text on Pick one still does."""
+    from app.qgen import coach
+    values = [{'name': 'country=capital', 'kind': 'list', 'items': 'France = Paris, Japan = Tokyo'}]
+    opts = {'values': values, 'choices': '*[capitol]\nLondon'}
+    words = lambda hints: ' '.join(h['text'] for h in hints)
+    assert 'capitol' not in words(coach.problem_hints('text', 'What is the capital of [country]?', '[capital]', opts))
+    assert '"capitol" isn\'t in your values table' in words(coach.problem_hints('choice_one', 'What is the capital of [country]?', '', opts))
