@@ -82,6 +82,9 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     qtype = db.Column(db.String(32), default='numeric', nullable=False, server_default='numeric')
     #JSON: values table, choices and type settings
     options_json = db.Column('options', db.Text)
+    #taken off the Problems page by its Remove (Delete for good) while a quiz still uses it or
+    #students answered it: kept for those, out of sight everywhere else
+    removed_at = db.Column(db.DateTime, nullable=True)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)

@@ -185,7 +185,7 @@ def test_one_at_a_time_and_dragging(app_db):
     qid = q.id
     teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': qid, 'folder': spring.id, 'confirm': 'delete'})
     db.session.expire_all()
-    assert db.session.get(VQuiz, qid).removed_at is not None  # deleted: in Removed quizzes, the trash bin
+    assert db.session.get(VQuiz, qid) is None  # never taken: deleted for good
     # a quiz that's gone
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': 999, 'to': fall.id}, headers=FETCH)
     assert res.status_code == 400 and 'doesn\'t exist' in res.get_json()['error']
@@ -639,13 +639,14 @@ def test_out_of_its_only_folder_asks_delete_or_uncategorized(app_db):
     assert VProblem.query.filter_by(title='Add').count() == 1
     res = teacher.post('/folders/problems/takeout', data={'items': [probs['Add'].id], 'folder': alg.id, 'confirm': 'delete'}, headers=FETCH)
     assert res.get_json()['message'] == 'Deleted problem “Add”.' and VProblem.query.filter_by(title='Add').count() == 0
-    # a problem a quiz uses can't be deleted: it's said, and it goes in Uncategorized
+    # a problem a quiz uses: Delete for good keeps it for the quiz, quietly off the Problems page
     teacher.post('/quiz/makevquiz', data={'title': 'Q', 'vplist': str(probs['Area'].id)})
-    q = teacher.post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id, 'check': '1'}, headers=FETCH).get_json()
-    assert 'can’t be deleted (Problem "Area" is used by these quizzes: "Q")' in q['question']
     teacher.post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id, 'confirm': 'delete'})
     db.session.expire_all()
-    assert VProblem.query.filter_by(title='Area').one().vpgroups == []
+    area = VProblem.query.filter_by(title='Area').one()
+    assert area.removed_at is not None and area.vpgroups == [] and '>Area<' not in teacher.get('/quiz/listvp').data.decode()
+    from app.qgen.models import VQuiz
+    assert 'Area' in teacher.get('/quiz/editvquiz/{}'.format(VQuiz.query.filter_by(title='Q').one().id)).data.decode()  # the quiz keeps it
     # students can't
     assert login(app, 'sam').post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id}).status_code == 302
 

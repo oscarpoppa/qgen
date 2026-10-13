@@ -202,11 +202,10 @@ def test_deleting_a_quiz_or_problem_an_archived_attempt_uses(app_db):
     teacher.post('/quiz/delcq/{}'.format(CQuiz.query.one().id))
     a = ArchivedAttempt.query.one()
     # the delete questions warn
-    # (a quiz's Delete puts it in Removed quizzes; deleting it for good there warns)
-    teacher.post('/quiz/delvq/{}'.format(vq.id))
+    # (the Remove question says it; no student has it now, so Delete for good deletes it)
     assert '1 archived attempt uses this quiz; after deleting it it can still be viewed but not restored.' in \
-        teacher.get('/quiz/removed').data.decode()
-    teacher.post('/quiz/removed/{}/delete'.format(vq.id))
+        teacher.get('/quiz/listvq').data.decode()
+    teacher.post('/quiz/delvq/{}'.format(vq.id))
     db.session.expire_all()
     assert db.session.get(VQuiz, vq.id) is None
     assert '1 archived attempt uses this problem' in teacher.get('/quiz/listvp').data.decode()

@@ -41,9 +41,41 @@
     i.value = value;
   }
 
+  //a card's or row's Remove: one question, clearly: take it out of one of its folders (each answer
+  //says where it ends up), or delete it for good
+  function removeOne(form) {
+    var ids = JSON.parse(form.dataset.folders || '[]'), names = JSON.parse(form.dataset.names || '[]');
+    var label = form.dataset.label, q = 'What do you want to do with ' + label + '? ';
+    q += ids.length ? 'It’s in ' + names.map(function (n) { return '“' + n + '”'; }).join(', ') + '.' : 'It isn’t in any folder.';
+    if (form.dataset.deleteNote) q += ' ' + form.dataset.deleteNote;
+    var choices = ids.map(function (id, i) {
+      var others = names.filter(function (n, j) { return j !== i; });
+      return { value: 'out:' + id, label: 'Take out of “' + names[i] + '”',
+               title: others.length ? 'It stays in ' + others.map(function (n) { return '“' + n + '”'; }).join(', ') : 'It goes to Uncategorized' };
+    });
+    choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true,
+                   title: 'Delete it; this can’t be undone', disabled: form.dataset.noDelete || null });
+    window.qgenChoose(q, choices).then(function (answer) {
+      if (!answer) return;
+      if (answer === 'delete') {
+        var del = document.createElement('form');
+        del.method = 'post'; del.action = form.dataset.deleteUrl; del.hidden = true;
+        var t = form.querySelector('input[name=csrf_token]').cloneNode();
+        del.appendChild(t);
+        document.body.appendChild(del);
+        del.submit();
+        return;
+      }
+      //out of that folder; out of its last one it goes to Uncategorized, as its answer said
+      form.querySelector('input[name=folder]').value = answer.slice(4);
+      form.submit();
+    });
+  }
+
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form.matches || !form.matches('form[data-takeout]')) return;
+    if ('removeOne' in form.dataset) { e.preventDefault(); e.stopImmediatePropagation(); removeOne(form); return; }
     var sub = e.submitter;
     //(both of the bar's buttons) the checked bar: everyone checked (data-takeout-items: which check boxes)
     if (form.dataset.takeoutItems) {

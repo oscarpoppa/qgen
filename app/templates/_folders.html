@@ -282,22 +282,24 @@
   </form>
 {% endmacro %}
 
-{# "Remove" on a card or row: takes it out of a folder. In several folders, it asks which one;
-   the reply says which folders it's still in; out of its only folder it asks: delete for good,
-   or put it in Uncategorized (static/js/takeout.js, app/takeout.py). Grayed when it's in no
-   folder. folders: the folders it's in. #}
-{% macro remove_button(kind, ident, label, folders) %}
-  {% if folders %}
+{# "Remove" on a card or row: the one button that asks clearly what to do (the owner, 2026-10-13):
+   "What do you want to do with X?" Take it out of one of its folders (each answer says where it
+   ends up: still in its other folders, or Uncategorized), or delete it for good (what can't go,
+   because something still uses it, is quietly kept for that and taken off the page). folders:
+   the folders it's in; delete_url / delete_label: its own delete; no_delete: why it can't be
+   deleted (grayed with that reason); delete_note: what deleting it means (said in the question).
+   static/js/takeout.js #}
+{% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='') %}
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
-  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-takeout-pick
-        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}">
+  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one
+        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}"
+        data-delete-url="{{ delete_url }}" data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
     <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
-    <input type="hidden" name="folder" value="{{ folders[0].id }}">
-    <button class="btn btn-secondary btn-sm" title="Take {{ label }} out of a folder{{ ' (asks which)' if folders|length > 1 }}">Remove</button>
+    <input type="hidden" name="folder" value="{{ folders[0].id if folders else '' }}"><input type="hidden" name="confirm" value="uncategorized">
+    <button class="btn btn-danger btn-sm" title="Take {{ label }} out of a folder, or delete it (asks which)">Remove</button>
   </form>
-  {% else %}{{ slot('Remove', 'It’s not in any folder') }}{% endif %}
 {% endmacro %}
 
 {# Folder options for one folder (n: its node): rename, move, a new folder inside, delete the

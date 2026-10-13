@@ -220,12 +220,10 @@ def list_vprob(vpid):
 def del_vprob(vpid):
     vp = VProblem.query.filter_by(id=vpid).first_or_404('No VProblem with id {}'.format(vpid))
     title = vp.title
-    try:
-        S.delete_problem(vp)
-    except S.ServiceError as exc:
-        flash('Not deleted. {}'.format(exc), 'error')
-        return redirect(back_to_list('qgen.list_vprobs'))
-    flash('Deleted problem "{}".'.format(title), 'success')
+    #(one a quiz uses, or students answered, is kept for those and quietly taken off the page)
+    how = S.delete_problem(vp)
+    flash('Deleted problem “{}”.'.format(title) if how == 'deleted' else
+          'Deleted problem “{}” from Problems; the quizzes that use it keep it.'.format(title), 'success')
     current_app.logger.info("{} deleted VProblem: ({}) '{}'".format(current_user.username, vpid, title))
     return redirect(back_to_list('qgen.list_vprobs'))
 
@@ -236,12 +234,17 @@ def quiz_page(form, title, vq=None, subject_error=None):
     #the problems to pick from: one list, each once (newest first), with the Problems page's
     #folders as tabs over it (static/js/folderfilter.js), like every folder page
     from app import folder_tree
-    root = S.subject_tree('problems')[0]
+    #(a problem taken off the Problems page that this quiz still uses stays in its list, so
+    #saving the quiz keeps it)
+    items = S.in_use('problems').order_by(VProblem.id.desc()).all()
+    if vq is not None:
+        items += [p for p in vq.vproblems if p.removed_at is not None]
+    root = S.subject_tree('problems', items=items)[0]
     problem_tree = folder_tree.filter_tree(root, lambda f: f.title, lambda fid: None, 'p:')
     all_problems = sorted(folder_tree.subtree(root), key=lambda p: p.id, reverse=True)
     return render_template('quiz_form.html', form=form, title=title, problem_root=root,
                            problem_tree=problem_tree, all_problems=all_problems,
-                           has_problems=VProblem.query.count() > 0, qtypes=REGISTRY, vq=vq,
+                           has_problems=bool(all_problems), qtypes=REGISTRY, vq=vq,
                            ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
                            retake_overrides=S.retake_overrides(vq) if vq is not None and vq.id else [],
                            rules=RETAKE_RULES, **subject_page_data('quizzes', vq, 'vqgroups', subject_error))
@@ -1231,6 +1234,8 @@ def take_out_of_folder(kind):
     if kind == 'people':
         from app.user.routes import _group_done
         done = lambda m, error=False: _group_done(m, error=error)
+    elif kind == 'archive':
+        done = lambda m, error=False: _archive_done(m, error=error)
     else:
         done = lambda m, error=False: _subject_done(kind, m, error=error)
     items = request.form.getlist('items')

@@ -127,7 +127,7 @@ def site_glance(now):
                              db.func.coalesce(db.func.sum(AICall.output_tokens), 0)).filter(AICall.created >= month).one()
     return {'students': _students().count(),
             'teachers': User.query.filter(User.is_admin.is_(True)).count(),
-            'problems': VProblem.query.count(),
+            'problems': VProblem.query.filter(VProblem.removed_at.is_(None)).count(),
             'quizzes': VQuiz.query.filter(VQuiz.removed_at.is_(None)).count(),
             'archived': ArchivedAttempt.query.count(),
             'signup_open': bool(Setting.get('class_code')),

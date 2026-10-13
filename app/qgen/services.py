@@ -165,7 +165,7 @@ def purge_plan(kind, subject):
         elif item.removed_at:
             continue  # already off the Quizzes page
         else:
-            plan['remove'].append(item)  # (a quiz's Delete puts it in Removed quizzes, the trash bin)
+            plan['remove' if item.cquizzes else 'delete'].append(item)
     return plan
 
 
@@ -237,9 +237,10 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
 
 
 def in_use(kind):
-    """The problems, or the quizzes not removed (the ones the Quizzes page and Assign offer)."""
+    """The problems or quizzes not removed (the ones the Problems and Quizzes pages, the quiz
+    builder and Assign offer)."""
     item_cls = subject_kind(kind)[1]
-    return item_cls.query.filter(VQuiz.removed_at.is_(None)) if kind == 'quizzes' else item_cls.query
+    return item_cls.query.filter(item_cls.removed_at.is_(None))
 
 
 def removed_quizzes():
@@ -329,10 +330,10 @@ def subject_choices(kind):
     it's in; counted with the folders inside it), then Uncategorized."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     _root, flat, counted = subject_tree(kind)
-    out = [('all', 'All ' + kind, item_cls.query.count())]  # "All quizzes", like the tabs
+    out = [('all', 'All ' + kind, in_use(kind).count())]  # "All quizzes", like the tabs
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
-    out.append(('none', 'Uncategorized', item_cls.query.filter(~getattr(item_cls, rel).any()).count()))
+    out.append(('none', 'Uncategorized', in_use(kind).filter(~getattr(item_cls, rel).any()).count()))
     return out
 
 
@@ -410,11 +411,16 @@ def problem_delete_blocker(vp):
 
 
 def delete_problem(vp):
-    blocker = problem_delete_blocker(vp)
-    if blocker:
-        raise ServiceError(blocker)
+    """A problem's Delete for good. While a quiz uses it or students answered it, it can't go:
+    it's kept for those, quietly taken off the Problems page and the quiz builder's list (the
+    owner, 2026-10-13). Returns 'deleted' or 'removed'."""
+    if problem_delete_blocker(vp):
+        vp.removed_at = datetime.now()
+        db.session.commit()
+        return 'removed'
     db.session.delete(vp)
     db.session.commit()
+    return 'deleted'
 
 
 def _old_markup(vp):
@@ -557,15 +563,21 @@ def vquiz_delete_blocker(vq):
 
 
 def delete_vquiz(vq):
-    """A quiz's Delete: it goes to Removed quizzes, the trash bin the owner keeps (students keep
-    their copies and scores, the results stay); from there it can be restored or deleted for
-    good (delete_removed_vquiz). Returns 'removed'. Refused while someone is taking it."""
+    """A quiz's Delete for good. Never taken: deleted. Once students have it, it can't go: it's
+    taken off the Quizzes page into Removed quizzes (students keep their copies and scores, the
+    results stay; it can be restored there or deleted for good). Returns 'deleted' or
+    'removed'. Refused while someone is taking it."""
     blocker = vquiz_delete_blocker(vq)
     if blocker:
         raise ServiceError(blocker)
-    vq.removed_at = datetime.now()
+    if vq.cquizzes:
+        vq.removed_at = datetime.now()
+        db.session.commit()
+        return 'removed'
+    _forget_notices(['/quiz/listvq/{}'.format(vq.id)])
+    db.session.delete(vq)
     db.session.commit()
-    return 'removed'
+    return 'deleted'
 
 
 def delete_removed_vquiz(vq, by=None):

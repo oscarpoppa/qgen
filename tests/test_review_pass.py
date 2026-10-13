@@ -807,7 +807,7 @@ def test_removing_an_assigned_quiz_keeps_everything_for_students(app_db):
     # never assigned: deleted for good, as before
     other = make_quiz(app, teach, 'Unused')
     teach.post('/quiz/delvq/{}'.format(other.id))
-    assert db.session.get(VQuiz, other.id).removed_at is not None  # (never assigned too: into the trash bin)
+    assert db.session.get(VQuiz, other.id) is None  # (never taken: deleted for good)
 
 
 def test_a_quiz_cant_be_removed_while_someone_is_taking_it(app_db):
@@ -998,11 +998,10 @@ def test_a_teacher_deletes_a_problem_or_quiz_folder_and_its_contents(app_db):
     term = VQGroup.query.one()
     teach.post('/quiz/subjects/quizzes/file', data={'subject': term.id, 'items': [used.id, spare.id], 'action': 'add'})
     page = teach.get('/quiz/listvq?folder={}'.format(term.id)).data.decode()
-    # (every quiz goes to Removed quizzes, the trash bin)
-    assert '2 quizzes are taken off the Quizzes page; students keep their copies' in page
+    assert '1 quiz is deleted for good.' in page and '1 quiz is taken off the Quizzes page; students keep their copies' in page
     r = teach.post('/quiz/subjects/quizzes/{}/purge'.format(term.id), follow_redirects=True).data.decode()
-    assert '2 quizzes removed (students keep their copies).' in r
-    assert db.session.get(VQuiz, spare.id).removed_at is not None and db.session.get(VQuiz, used.id).removed_at is not None
+    assert '1 quiz deleted. 1 quiz removed (students keep their copies).' in r
+    assert db.session.get(VQuiz, spare.id) is None and db.session.get(VQuiz, used.id).removed_at is not None
 
 
 def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db):
@@ -1584,7 +1583,7 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
-        '/userdet': ['disabled title="You can’t delete your own account">Delete</button>',
+        '/userdet': ['data-no-delete="You can’t delete your own account"',
                      'title="Teachers write to each other in Teachers’ messages">Message</a>'],
     }
     for url, wanted in pages.items():

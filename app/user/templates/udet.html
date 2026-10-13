@@ -27,7 +27,8 @@
         {# online now: a green dot after the name (the words are under "Last seen" when it's open) #}
         <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span>
         {% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}
-        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a>{{ remove_button('people', item.id, item.shown_name, mine) }}</span>
+        <span class="box-end"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a>{{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete account', 'You can’t delete your own account' if item == current_user else none,
+                 ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')) }}</span>
       </summary>
       <dl class="person-facts small">
         <dt>Folders</dt><dd class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</dd>
@@ -43,7 +44,7 @@
         <a class="btn btn-secondary btn-sm" href="{{ url_for('user.eduser', uid=item.id) }}" title="Change {{ item.shown_name }}'s name, email or teacher access">Edit</a>
         {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with') }}
         {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
-        {% if item != current_user %}{{ post_button(url_for('user.deluser', uid=item.id), 'Delete', 'btn btn-danger btn-sm', 'Delete ' ~ (item.shown_name)|string ~ '? ' ~ ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')|string, tip='Delete ' ~ (item.shown_name)|string ~ '’s account (asks first)') }}{% else %}{{ slot('Delete', 'You can’t delete your own account', 'btn btn-danger btn-sm') }}{% endif %}
+        {# (Delete is the card's Remove: it asks whether to take them out of a folder or delete the account) #}
       </div>
     </details>
   {% endfor %}

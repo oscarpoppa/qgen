@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
@@ -46,9 +46,9 @@
                         data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put this attempt back; {{ a.student_name }} will see it on My quizzes again">Restore</button></form>
                 {% endif %}
-                <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
-                      data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" title="Delete this attempt permanently; it can't be undone">Delete for good</button></form>
+                {# one Remove, as on every folder page: take it out of its folder, or delete it for good #}
+                {{ remove_button('archive', a.id, a.student_name ~ '’s attempt at “' ~ a.quiz_title ~ '”', [fk.nodes[a.folder_id].folder] if a.folder_id in fk.nodes else [],
+                                 url_for('qgen.purge_archived', aid=a.id), delete_note='Deleting it can’t be undone.') }}
               </td>
             </tr>
           {% endfor %}

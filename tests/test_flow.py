@@ -332,7 +332,8 @@ def test_deleting_people_and_problems_keeps_records_consistent(app_db):
     q.vproblems = []
     db.session.commit()
     r = teacher.post('/quiz/delvp/{}'.format(vp_id), follow_redirects=True)
-    assert b'student answer' in r.data and db.session.get(VProblem, vp_id) is not None
+    #(students answered it: kept for their records, quietly taken off the Problems page)
+    assert 'Deleted problem'.encode() in r.data and db.session.get(VProblem, vp_id).removed_at is not None
 
     # deleting a student removes their quizzes and answers
     teacher.post('/deluser/{}'.format(sam_id))

@@ -295,7 +295,10 @@ def test_problem_checks_and_protection(app_db):
     r = t.post('/problems/preview', json={'type': 'numeric', 'question': '[a] + 1', 'answer': 'a + 1', 'options': {'values': [A]}})
     assert len(r.get_json()['samples']) == 3
     qid, pids = make_quiz(t)
-    assert t.delete('/problems/{}'.format(pids[0])).status_code == 409
+    # a problem a quiz uses: kept for the quiz, quietly taken off the Problems page (the owner, 2026-10-13)
+    assert t.delete('/problems/{}'.format(pids[0])).status_code == 204
+    from app.qgen.models import VProblem
+    assert VProblem.query.get(pids[0]).removed_at is not None
     got = t.get('/problems/{}'.format(pids[0])).get_json()
     assert got['answer'] == 'a + b' and got['options']['values'][0]['name'] == 'a'
     upd = dict(title='Add v2', question='[a] + [b] + 1 = ?', answer='a + b + 1', type='numeric', options={'values': [A, B]})

@@ -10,7 +10,7 @@ uses it or students answered it), a quiz is deleted (or, once assigned, goes to 
 """
 from app import db
 
-KINDS = ('problems', 'quizzes', 'people')
+KINDS = ('problems', 'quizzes', 'people', 'archive')
 
 
 class TakeOutError(ValueError):
@@ -18,6 +18,9 @@ class TakeOutError(ValueError):
 
 
 def _folder_cls(kind):
+    if kind == 'archive':
+        from app.qgen.models import ArchiveFolder
+        return ArchiveFolder
     if kind == 'people':
         from app.user.models import UserFolder
         return UserFolder
@@ -51,7 +54,9 @@ def subtree(kind, folder):
 
 
 def _item(kind, item_id):
-    if kind == 'people':
+    if kind == 'archive':
+        from app.qgen.models import ArchivedAttempt as cls
+    elif kind == 'people':
         from app.user.models import User
         cls = User
     else:
@@ -62,16 +67,20 @@ def _item(kind, item_id):
     except (TypeError, ValueError):
         item = None
     if item is None:
-        raise TakeOutError('That {} doesn\'t exist any more.'.format({'problems': 'problem', 'quizzes': 'quiz', 'people': 'person'}[kind]))
+        raise TakeOutError('That {} doesn\'t exist any more.'.format({'problems': 'problem', 'quizzes': 'quiz', 'people': 'person', 'archive': 'attempt'}[kind]))
     return item
 
 
 def item_name(kind, item):
+    if kind == 'archive':
+        return '{}’s “{}”'.format(item.student_name, item.quiz_title)
     return item.shown_name if kind == 'people' else '“{}”'.format(item.title or 'Untitled')
 
 
 def _folders_of(kind, item):
     """The ids of the folders the item is in."""
+    if kind == 'archive':
+        return {item.folder_id} if item.folder_id else set()
     if kind == 'people':
         from app.user.models import UserFolderMember
         return {m.folder_id for m in UserFolderMember.query.filter_by(user_id=item.id)}
@@ -82,10 +91,12 @@ def _folders_of(kind, item):
 def _blocker(kind, item, by):
     """Why it can't be deleted, or None."""
     from app.qgen import services as S
+    if kind == 'archive':
+        return None
     if kind == 'people':
         return 'You can’t delete your own account.' if by is not None and item.id == by.id else None
     if kind == 'problems':
-        return S.problem_delete_blocker(item)
+        return None  # (one a quiz uses is kept, quietly off the Problems page: S.delete_problem)
     return S.vquiz_delete_blocker(item)
 
 
@@ -123,9 +134,9 @@ def question(kind, folder, p):
     if kind == 'people':
         q += ' Deleting an account sends its quiz attempts to the Archive.'
     elif kind == 'quizzes':
-        q += ' A deleted quiz goes to Removed quizzes, where you can restore it.'
+        q += ' A quiz students have taken goes to Removed quizzes instead, where you can restore it.'
     elif p['delete']:
-        #(the same warning as the problem's own Delete)
+        #(the same warning as the problem's own Delete for good)
         from app.qgen import services as S
         archived = S.archived_counts()[1]
         for item in p['delete']:
@@ -144,6 +155,10 @@ def _still_in(kind, item, ids):
 
 def _take_out(kind, item, ids):
     from app.qgen import services as S
+    if kind == 'archive':
+        if item.folder_id in ids:
+            item.folder_id = None
+        return
     if kind == 'people':
         from app.user.models import UserFolderMember
         UserFolderMember.query.filter(UserFolderMember.user_id == item.id,
@@ -184,14 +199,19 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
                 from app.user.accounts import delete_account
                 delete_account(item, by)
                 done.append('Deleted {}’s account.'.format(name))
+            elif kind == 'archive':
+                S.purge_archived(item)  # (the Archive's own Delete for good)
+                done.append('Deleted {} for good.'.format(name))
             elif kind == 'problems':
+                _take_out(kind, item, ids)
                 S.delete_problem(item)
                 done.append('Deleted problem {}.'.format(name))
             else:
                 #(out of the folder too, so restoring it doesn't put it back there)
                 _take_out(kind, item, ids)
-                S.delete_vquiz(item)
-                done.append('Deleted quiz {}: it’s in Removed quizzes, where you can restore it.'.format(name))
+                how = S.delete_vquiz(item)
+                done.append('Deleted quiz {}.'.format(name) if how == 'deleted' else
+                            'Deleted quiz {} from Quizzes; students who took it keep it (restore it from Removed quizzes).'.format(name))
     return ' '.join(done) or 'Nothing to take out.'
 
 

@@ -97,7 +97,7 @@ def problem_input(data):
 @api_bp.route('/problems', methods=['GET'])
 @teacher
 def list_problems():
-    return jsonify(problems=[problem_json(p) for p in VProblem.query.order_by(VProblem.id.desc()).all()])
+    return jsonify(problems=[problem_json(p) for p in VProblem.query.filter(VProblem.removed_at.is_(None)).order_by(VProblem.id.desc()).all()])
 
 
 @api_bp.route('/problems', methods=['POST'])
