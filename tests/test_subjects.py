@@ -548,3 +548,17 @@ def test_a_student_page_keeps_its_folder_tab_in_the_address(app_db):
     sam = User.query.filter_by(username='sam').one()
     page = teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
     assert 'data-remember="student-page" data-url-tab' in page and 'data-url-filter' in page
+
+
+def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db):
+    """Assign's Quiz and Students cards, the quiz builder's Problems and a student's page: the
+    folders as a list down the card's side (data-style="list"), Expand all / Collapse all on the
+    filter bar (data-tools-home); When, with the Assign button, after the Quiz card."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    make_problems(teacher, 'Add')
+    page = teacher.get('/quiz/assign').data.decode()
+    assert page.count('data-style="list"') == 2
+    assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
+    assert page.index('id="pick-quiz"') < page.index('id="pick-people"') < page.index('class="card assign-when"') < page.index('class="assign-go"')
+    assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()

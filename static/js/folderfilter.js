@@ -156,6 +156,15 @@
             b.style.paddingLeft = (10 + depth * 16) + 'px';
             col.appendChild(b);
             walk(n.children, depth + 1);
+            //a folder with folders inside: what's in it but in none of them, as on its tab rows
+            if (isFolder(String(n.id)) && n.children.length) {
+              var self = button('self:' + n.id, 'Uncategorized', Object.keys(own(n)).length, 'tray');
+              self.classList.add('folder-tab-self');
+              self.setAttribute('aria-label', 'Uncategorized in “' + n.name + '”');
+              self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
+              self.style.paddingLeft = (10 + (depth + 1) * 16) + 'px';
+              col.appendChild(self);
+            }
           });
         })(tree, 1);
         var noneFolders = !tree.some(function (n) { return isFolder(String(n.id)); });

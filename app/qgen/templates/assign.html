@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{# the page's whole width: the Quiz and Students cards side by side, then who gets it, when, and Assign #}
+{# the page's whole width: the Quiz card, with When and Assign under it, beside the Students card #}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field %}
@@ -71,7 +71,7 @@
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   </div>
-  {# when, and the Assign button: below the two cards, across both #}
+  {# when, and the Assign button: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">
   <fieldset>
     <legend>When (optional)</legend>

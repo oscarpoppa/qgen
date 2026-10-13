@@ -2195,7 +2195,11 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .assign-form > .card { margin: 0; }
 @container page (min-width: 960px) {
   .assign-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }  /* the Quiz and Students cards share the width equally */
-  .assign-form > .assign-when { grid-column: 1 / -1; }
+  /* the dates and the Assign button under the Quiz card, so Assign is near what's picked;
+     the Students card takes the right column's full height */
+  .assign-form > .pick-quiz { grid-column: 1; grid-row: 1; }
+  .assign-form > .assign-when { grid-column: 1; grid-row: 2; }
+  .assign-form > .pick-people-card { grid-column: 2; grid-row: 1 / span 2; }
   .pick-people .folder-filter-list > .pick-list { max-height: min(60vh, 560px); }
 }
 .pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
