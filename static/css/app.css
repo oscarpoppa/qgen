@@ -2148,6 +2148,10 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 .folder-tab.is-empty { opacity: 1; }
 .folder-tab.is-empty svg.ico, .folder-tab.is-empty .box-count { opacity: .55; }
 .folder-tab.is-empty .box-title { color: var(--muted); }
+/* ...but the open tab is never faded: its words must read on its own color (the solid blue of an
+   open inner tab) */
+.folder-tab.is-empty[aria-pressed="true"] svg.ico, .folder-tab.is-empty[aria-pressed="true"] .box-count { opacity: 1; }
+.folder-tab.is-empty[aria-pressed="true"] .box-title { color: inherit; }
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: 1; }
 .side-row.is-empty:not(.current) .side-link { color: var(--muted); }
 .side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }
