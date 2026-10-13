@@ -1129,10 +1129,16 @@ th.tick-col, td.tick-col { width: 36px; }
 .subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; width: fit-content; min-width: 170px; max-width: min(100%, 320px); box-sizing: border-box;
   border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
 .subject-check-list:empty { display: none; }
-.subject-check { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 34px; padding: 4px 10px; margin: 0;
+/* a row: the fold arrow (or its space), then the check box, icon, name and count */
+.subject-row { display: flex; align-items: center; gap: 2px; min-width: 0; border-radius: var(--r); padding-left: 0; }
+.subject-row[hidden] { display: none; }
+.subject-row:has(input:checked) { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.subject-row > .side-fold, .subject-row > .side-fold-space { margin-left: 4px; }
+.subject-levels { margin: 0 0 6px; }
+.subject-check { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 34px; padding: 4px 10px 4px 4px; margin: 0;
   border-radius: var(--r); font-weight: 500; cursor: pointer; }
 .subject-check:hover { background: var(--surface); }
-.subject-check:has(input:checked) { background: var(--accent-soft); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+.subject-check:has(input:checked) { font-weight: 700; }
 .subject-check:has(input:checked) svg.ico { color: var(--accent); }
 .subject-check input { flex: 0 0 auto; margin: 0; }
 .subject-check .box-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
