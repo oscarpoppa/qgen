@@ -377,7 +377,7 @@ def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
 
     # removing a folder: what's in it moves up a level (here, to the top: uncategorized)
     r = teacher.post('/quiz/archive/folders/{}/delete'.format(year.id), follow_redirects=True)
-    assert b'moved up a level' in r.data
+    assert 'Deleted the folder “{}”.'.format(year.name).encode() in r.data  # (and it says what moved where)
     db.session.expire_all()
     assert db.session.get(ArchiveFolder, year.id) is None and db.session.get(ArchiveFolder, kim_f.id).parent_id is None
     assert ArchivedAttempt.query.filter_by(folder_id=None).count() == 1

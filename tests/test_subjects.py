@@ -648,3 +648,26 @@ def test_out_of_its_only_folder_asks_delete_or_uncategorized(app_db):
     assert VProblem.query.filter_by(title='Area').one().vpgroups == []
     # students can't
     assert login(app, 'sam').post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id}).status_code == 302
+
+
+def test_deleting_a_folder_says_what_moved_where(app_db):
+    """Deleting a folder (its things move up a level): the message names them and where they went."""
+    app, db = app_db
+    from app.qgen.models import VPGroup
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add', 'Area')
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.filter_by(title='Math').one()
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra', 'parent': math.id})
+    alg = VPGroup.query.filter_by(title='Algebra').one()
+    teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
+    teacher.post('/quiz/subjects/problems/file', data={'subject': math.id, 'items': [probs['Area'].id]})
+    r = teacher.post('/quiz/subjects/problems/{}/delete'.format(alg.id), follow_redirects=True).data.decode()
+    assert 'Deleted the folder “Algebra”. Moved to “Math” (its Unsorted): “Add”.' in r
+    r = teacher.post('/quiz/subjects/problems/{}/delete'.format(math.id), follow_redirects=True).data.decode()
+    assert 'Deleted the folder “Math”. Moved to Uncategorized: “Add”, “Area”.' in r
+    # the delete question says where things go, and the folder tabs carry the Folder options
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Science'})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'Delete the folder “Science”? Nothing in it is deleted: the problems in it move up to Uncategorized.' in page
+    assert 'class="folder-filter-tools"' in page and 'Folder options' in page

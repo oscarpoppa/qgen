@@ -125,8 +125,10 @@
           {{ folder_options(fk, fk.node) }}
         </div>
       {% else %}
-        <h2 id="folder-title" class="folder-title">{{ fk.title or (fk.all_label if fk.view == 'all' else fk.main_label) }}</h2>
-        <div class="title-actions">{{ level_buttons(fk.title or (fk.all_label if fk.view == 'all' else fk.main_label), 'btn-sm') }}{{ actions }}</div>
+        {# the page's own name ("People", "Quizzes"): the folder shown is the tab that's open (the owner, 2026-10-13) #}
+        {% set page_name = fk.title or ((title or fk.units|capitalize) if fk.view == 'all' else fk.main_label) %}
+        <h2 id="folder-title" class="folder-title">{{ page_name }}</h2>
+        <div class="title-actions">{{ level_buttons(page_name, 'btn-sm') }}{{ actions }}</div>
       {% endif %}
     </div>
     {{ caller() }}

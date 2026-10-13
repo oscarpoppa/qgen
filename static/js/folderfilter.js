@@ -352,8 +352,11 @@
     //so All gets the All label)
     var heading = document.getElementById('folder-title'), startedOnAll = !box.dataset.start || box.dataset.start === 'all';
     var headingWas = heading && startedOnAll ? heading.innerHTML : '';
+    //(the owner, 2026-10-13: the heading over the tabs is the page's own name, "People" or
+    //"Quizzes", whatever tab is open: the open tab says which folder is shown; only a page whose
+    //list has no tabs of its own still names the folder)
     function retitle() {
-      if (!heading || box.dataset.allUrl === '') return;  // (a folder's own page keeps its name and path)
+      if (!heading || box.dataset.allUrl === '' || 'urlTab' in box.dataset) return;  // (a folder's own page keeps its name and path)
       if (chosen === 'all') { if (headingWas) heading.innerHTML = headingWas; else heading.textContent = box.dataset.allLabel || 'All'; return; }
       heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen].name;
     }

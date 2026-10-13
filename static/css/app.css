@@ -2071,14 +2071,17 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 /* the panel: the chosen folder's own folders (a smaller row of tabs on a line), then the list */
 .folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; border-radius: 0;
   background: var(--tab-open); padding: 10px 12px 0; gap: 4px; align-items: flex-end;
-  box-shadow: inset 0 -1px 0 var(--tab-edge); }
+  box-shadow: inset 0 -1px 0 var(--tab-edge); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.folder-filter-rows > .folder-tabs-inner > * { flex: 0 0 auto; }
+/* (like the top row, the owner 2026-10-13: the line under each row of a folder's folders runs under
+   its closed tabs, which stop just above it; the open one sits over it, joined to what it shows) */
 .folder-filter-rows > .folder-tabs-inner > .folder-tab { min-height: 32px; padding: 4px 10px; border-radius: var(--r) var(--r) 0 0; border: 1px solid var(--border);
-  border-bottom: 0; background: var(--surface); color: var(--muted); box-shadow: none; font-size: var(--fs-sm); }
+  border-bottom: 0; background: var(--surface); color: var(--muted); box-shadow: none; font-size: var(--fs-sm); margin-bottom: 1px; }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab:hover { color: var(--text); border-color: var(--tab-edge); }
-/* an open inner tab is filled in solid, so it never mixes with the row above */
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent-text); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] .box-count { background: color-mix(in srgb, var(--accent-text) 18%, transparent); color: var(--accent-text); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--tab-open); border-color: var(--tab-edge); border-top: 3px solid var(--accent);
+  color: var(--text); font-weight: 700; margin-bottom: 0; padding-bottom: 5px; position: relative; z-index: 1; }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
 .folder-filter-rows > .folder-tabs-inner > .folder-tabs-label { align-self: center; padding-bottom: 6px; }
 .folder-filter-rows > .folder-tabs-inner > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding-bottom: 6px; }
 .folder-filter .folder-filter-list, .folder-filter .folder-filter-empty { margin: 0; border: 1px solid var(--tab-edge); border-top: 0;

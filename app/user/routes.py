@@ -206,14 +206,21 @@ def rename_folder(folder_id):
 @post_form_only
 def delete_folder(folder_id):
     from app.qgen import folders
-    from app.qgen.models import QuizFolder
+    from app.qgen.models import QuizFolder, QuizPlacement, VQuiz
+    from app import takeout
     f = db.session.get(QuizFolder, folder_id)
-    parent = f.parent_id if f is not None and f.owner_id == current_user.id else None
+    mine = f is not None and f.owner_id == current_user.id
+    parent = f.parent_id if mine else None
+    #(what moves where, for the message: the quizzes and folders in it go up a level)
+    up = db.session.get(QuizFolder, parent).name if parent else None
+    quizzes = sorted('“{}”'.format(q.title) for q in VQuiz.query.join(QuizPlacement, QuizPlacement.vquiz_id == VQuiz.id)
+                     .filter(QuizPlacement.owner_id == current_user.id, QuizPlacement.folder_id == folder_id)) if mine else []
+    inner = sorted(g.name for g in QuizFolder.query.filter_by(owner_id=current_user.id, parent_id=folder_id)) if mine else []
     try:
         name = folders.delete_folder(current_user, folder_id)
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
+    return _folder_done(takeout.moved_up_message(name, up, quizzes, inner),
                         show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
 
 

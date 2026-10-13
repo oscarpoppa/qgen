@@ -1436,11 +1436,17 @@ def rename_archive_folder(fid):
 @admin_only
 @post_form_only
 def delete_archive_folder(fid):
+    from app import takeout
+    from app.qgen.models import ArchiveFolder, ArchivedAttempt
     folder = archive_folder_or_404(fid)
     name, parent = folder.name, folder.parent_id
+    #(what moves where, for the message: the attempts and folders in it go up a level)
+    up = db.session.get(ArchiveFolder, parent).name if parent else None
+    tries = sorted('{}’s “{}”'.format(a.student_name, a.quiz_title) for a in ArchivedAttempt.query.filter_by(folder_id=fid))
+    inner = sorted(g.name for g in ArchiveFolder.query.filter_by(parent_id=fid, removed=False))
     S.delete_archive_folder(folder)
     current_app.logger.info('{} deleted archive folder ({}) "{}"'.format(current_user.username, fid, name))
-    return _archive_done('Folder "{}" removed; what was in it moved up a level.'.format(name),
+    return _archive_done(takeout.moved_up_message(name, up, tries, inner),
                          show=(parent or 'all') if request.form.get('view') == str(fid) else None)
 
 #route to delete an Archive folder with the folders and archived attempts in it, for good

@@ -776,8 +776,8 @@ def test_home_counter_views_say_what_they_show(app_db):
         days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     assert '>Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. {}'.format(within, ico('party')) in page
-    # the ordinary page keeps its own heading
-    assert 'class="folder-title">All quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
+    # the ordinary page's heading is the page's own name (the open tab says which folder)
+    assert 'class="folder-title">My quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
 
 
 # ---------------------------------------------------------------- removing a quiz, taking one away

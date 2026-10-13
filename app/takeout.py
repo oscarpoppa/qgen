@@ -264,3 +264,18 @@ def folder_delete_plan(kind, folder):
             out.append('It was empty.')
         return ' '.join(out)
     return message
+
+
+def moved_up_message(name, parent, items, inner, top='Uncategorized'):
+    """After deleting a folder whose things are each in one place (My quizzes, the Archive):
+    what moved where. parent: the name of the folder they moved into (None: the top level,
+    called `top`); items, inner: the names of the things and folders that were in it."""
+    out = ['Deleted the folder “{}”.'.format(name)]
+    if items:
+        out.append('Moved to {}: {}.'.format('“{}” (its Unsorted)'.format(parent) if parent else top, ', '.join(items)))
+    if inner:
+        out.append('Its folders {} are now {}.'.format(', '.join('“{}”'.format(n) for n in inner),
+                                                        'inside “{}”'.format(parent) if parent else 'at the top level'))
+    if not items and not inner:
+        out.append('It was empty.')
+    return ' '.join(out)
