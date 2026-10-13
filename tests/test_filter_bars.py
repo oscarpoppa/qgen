@@ -19,8 +19,6 @@ def test_every_search_box_is_the_standard_bar():
             for box in re.findall(r'<input[^>]*type="search"[^>]*>', text):
                 if f == '_macros.html':
                     continue  # the bar itself
-                if f == 'assign.html' and 'aria-label="Filter students"' in box:
-                    continue  # Assign's Students: the model, with its own "chosen" count
                 odd.append('{}: {}'.format(os.path.relpath(path, TEMPLATES), box[:80]))
             for word in ('placeholder="Search', 'placeholder="Find', 'placeholder="Filter…"', 'Filter users…'):
                 assert word not in text, '{} still says {}'.format(path, word)

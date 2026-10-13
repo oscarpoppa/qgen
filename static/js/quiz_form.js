@@ -202,6 +202,7 @@
     if (id === 'none') return keys.filter(function (k) { return !inSome[k]; }).length;
     var self = id.indexOf('self:') === 0, n = byId[self ? id.slice(5) : id];
     if (!n) return 0;
+    if (self && !n.children.length) return 0;  // (a grayed Uncategorized counts nothing, so has nothing checked)
     return keys.filter(function (k) {
       if (n.keys.indexOf(k) === -1) return false;
       return !self || !n.children.some(function (c) { return c.keys.indexOf(k) !== -1; });
@@ -216,7 +217,7 @@
         badge.className = 'badge badge-accent tab-ticked';
         tab.appendChild(badge);
       }
-      badge.hidden = !n;
+      badge.hidden = !n || tab.disabled;
       badge.textContent = n + ' checked';
     });
   }

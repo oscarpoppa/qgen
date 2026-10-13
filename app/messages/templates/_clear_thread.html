@@ -1,15 +1,19 @@
-{# "Clear all": takes the conversation shown out of your own view (asks first); everyone
-   else still sees it and pinned messages stay. view: what's shown ('all', a student's or
+{# "Clear all": takes the conversation shown out of your own view (asks first); the others
+   in it still see it and pinned messages stay. who: those others, by name ("emma"; for an All
+   view "Your students", "The other teachers", "Your teachers"). view: what's shown ('all', a student's or
    teacher's id, 'teachers', 't<id>'); items: the messages shown (with nothing but pinned ones
    there's nothing to clear, and the button is grayed with the reason). In a side panel (dock-form) it's done without leaving
    the page, and the panel comes back empty, still showing the same conversation. #}
-{% macro clear_thread(view, items, panel=true) %}
+{% macro clear_thread(view, items, who, panel=true) %}
 {% set any = items|rejectattr('pinned')|list %}
+{# an "All" view clears every conversation in it, and the question says so #}
+{% set every = view|string in ('all', 'teachers') %}
 <form method="post" action="{{ url_for('messages.clear_thread') }}" class="{{ 'dock-form ' if panel }}thread-clear-all"
-      data-confirm="Clear this conversation from your view? Everyone else still sees it, and pinned messages stay. This can't be undone." data-confirm-ok="Clear all">
+      data-confirm="{{ 'Clear your view of every conversation here? ' ~ who ~ ' still see them, and pinned messages stay. This can’t be undone.' if every else 'Clear this conversation from your view? ' ~ who ~ ' still sees it, and pinned messages stay. This can’t be undone.' }}" data-confirm-ok="Clear all">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="view" value="{{ view }}">
-  {% if any %}<button class="btn-link small" title="Take every message in this conversation out of your view (asks first). Everyone else still sees them.">Clear all</button>
-  {% else %}<button class="btn-link small" disabled title="There's nothing to clear here.">Clear all</button>{% endif %}
+  {% if any %}<button class="btn-link small" title="{{ 'Take every message in these conversations out of your view (asks first). ' ~ who ~ ' still see them' if every else 'Take every message in this conversation out of your view (asks first). ' ~ who ~ ' still sees them' }}">Clear all</button>
+  {% elif items %}<button class="btn-link small" disabled title="Only pinned messages are left; they stay">Clear all</button>
+  {% else %}<button class="btn-link small" disabled title="There’s nothing to clear here">Clear all</button>{% endif %}
 </form>
 {% endmacro %}

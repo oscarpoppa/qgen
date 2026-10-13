@@ -13,7 +13,7 @@
       </select>
     </form>
   {% endif %}
-  {{ clear_thread(teacher.id if teacher else 'all', items) }}
+  {{ clear_thread(teacher.id if teacher else 'all', items, teacher.shown_name if teacher else 'Your teachers') }}
   {% if unread_ids %}<div class="card-head"><span class="badge badge-warn">{{ unread_ids|length }} new</span></div>{% endif %}
   {% if pinned %}
     {# kept at the top until the teacher unpins it; it's shown only here, not also in the conversation below #}

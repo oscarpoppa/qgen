@@ -457,7 +457,13 @@ def clear_thread(user, view):
         teacher = teacher_choice(view)
         q = q.filter(Message.student_id == user.id, VISIBLE_TO_STUDENT)
         if teacher is not None:
-            q = q.filter(with_teacher(teacher))
+            #the conversation with one teacher: what they wrote, and what the student sent to them
+            #alone (what went to other teachers too stays, in every view)
+            only_them = db.and_(Message.to_all.is_(False),
+                                db.exists().where(MessageTo.message_id == Message.id, MessageTo.user_id == teacher.id),
+                                ~db.exists().where(MessageTo.message_id == Message.id, MessageTo.user_id != teacher.id))
+            q = q.filter(db.or_(db.and_(Message.from_teacher.is_(True), Message.sender_id == teacher.id),
+                                db.and_(Message.from_teacher.is_(False), only_them)))
     ids = [r[0] for r in q.with_entities(Message.id)]
     if not ids:
         return 0
@@ -508,12 +514,13 @@ def _clear_staff(me, other):
 
 def cleared_state(user):
     """Changes when this person clears something (so their other open pages catch up)."""
+    #(how many and which: a count alone could come back to the same number)
     q = MessageRead.query.filter(MessageRead.user_id == user.id, MessageRead.cleared.is_(True))
-    state = '{}'.format(q.count())
+    state = '{}.{}'.format(*q.with_entities(db.func.count(), db.func.sum(MessageRead.message_id)).one())
     if user.is_admin:
         from .models import StaffMessageRead
-        state += '.{}'.format(StaffMessageRead.query.filter(StaffMessageRead.user_id == user.id,
-                                                            StaffMessageRead.cleared.is_(True)).count())
+        q = StaffMessageRead.query.filter(StaffMessageRead.user_id == user.id, StaffMessageRead.cleared.is_(True))
+        state += '.{}.{}'.format(*q.with_entities(db.func.count(), db.func.sum(StaffMessageRead.message_id)).one())
     return state
 
 

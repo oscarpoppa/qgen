@@ -54,12 +54,12 @@
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# always open, like the Quiz card beside it #}
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
-    <div class="btn-row small pick-bar" id="people-pick-bar">
-      <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter students">
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button></span>
+    {# the same filter bar as the Quiz card's (filter, Clear, how many shown), with the checking buttons #}
+    {% call filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='li', id='people-pick-bar') %}
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
       <button type="button" class="btn btn-secondary btn-sm pick-all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
-      <span class="pick-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
-    </div>
+      <span class="chosen-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
+    {% endcall %}
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
@@ -98,15 +98,19 @@
 
 {% block scripts %}
 <script>
-/* the Quiz card: the quiz that's checked is always one on screen. When a folder or the filter
- * hides it, the first quiz shown is checked instead (none if nothing is shown), so Assign
- * never gives out a quiz the teacher can't see. */
+/* the Quiz card: the quiz that's checked is always one on screen, so Assign never gives out a
+ * quiz the teacher can't see. While a folder or the filter hides the teacher's choice, the first
+ * quiz shown is checked (none if nothing is shown); once their choice is in sight again, it's
+ * checked again. */
 (function () {
   var card = document.getElementById('pick-quiz');
   if (!card) return;
+  var radios = Array.prototype.slice.call(card.querySelectorAll('input[name="vquiz"]'));
+  var chosen = radios.filter(function (r) { return r.checked; })[0] || null;
+  radios.forEach(function (r) { r.addEventListener('change', function () { if (r.checked) chosen = r; }); });
   function inSight(r) { return !r.closest('[hidden]'); }
   function keep() {
-    var radios = Array.prototype.slice.call(card.querySelectorAll('input[name="vquiz"]'));
+    if (chosen && inSight(chosen)) { chosen.checked = true; return; }
     var on = radios.filter(function (r) { return r.checked; })[0];
     if (on && inSight(on)) return;
     if (on) on.checked = false;
@@ -116,14 +120,14 @@
   card.addEventListener('qgen-shown', keep);
   keep();
 })();
-/* Students: one checklist under folder tabs (static/js/folderfilter.js). "Check all shown"
+/* Students: one checklist beside its folder list (static/js/folderfilter.js). "Check all shown"
  * checks (or, when they all are, unchecks) everyone the list shows: the tab chosen, and the
  * names that match the filter box. "Assignee" at the top lists who's checked. */
 (function () {
   var box = document.getElementById('pick-people');
   if (!box) return;
   var people = Array.prototype.slice.call(box.querySelectorAll('input[data-user]'));
-  var count = box.querySelector('.pick-count'), all = box.querySelector('.pick-all');
+  var count = box.querySelector('.chosen-count'), all = box.querySelector('.pick-all');
   function shown() { return people.filter(function (i) { var li = i.closest('li'); return !li.hidden && !li.closest('[hidden]'); }); }
   function refresh() {
     var s = shown(), every = s.length > 0 && s.every(function (i) { return i.checked; });
@@ -169,15 +173,9 @@
     people.forEach(function (i) { i.checked = false; });
     refresh();
   });
-  box.querySelector('.filter-list').addEventListener('input', function () {
-    var q = this.value.trim().toLowerCase();
-    people.forEach(function (i) {
-      var li = i.closest('li'), hide = !!q && li.textContent.toLowerCase().indexOf(q) === -1;
-      window.qgenHideRow ? window.qgenHideRow(li, 'name', hide) : (li.hidden = hide);
-    });
-    refresh();
-  });
-  //a folder tab chosen: what "Check all shown" means changes
+  //what's shown changed (a folder chosen, a name filtered): what "Check all shown" means changes
+  box.addEventListener('qgen-shown', refresh);
+  box.addEventListener('qgen-filtered', function () { setTimeout(refresh, 0); });
   box.addEventListener('click', function (e) { if (e.target.closest('.folder-tab')) setTimeout(refresh, 0); });
   refresh();
 })();

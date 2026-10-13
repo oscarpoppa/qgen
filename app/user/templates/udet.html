@@ -64,7 +64,7 @@
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
     </form>
-    {% if ulst %}{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}{% endif %}
+    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}</div>{% endif %}
     <div id="folder-items">
       {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
       {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}

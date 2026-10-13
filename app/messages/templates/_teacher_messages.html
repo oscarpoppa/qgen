@@ -21,7 +21,9 @@
       </select>
     </form>
   {% endif %}
-  {% if teachers_view or rows %}{{ clear_thread(current, items) }}{% endif %}
+  {% set clear_who = (other.shown_name if other else 'The other teachers') if teachers_view else (student.shown_name if student else 'Your students') %}
+  {# one student: Clear all goes on the "← All messages" line below; otherwise on its own, at the top #}
+  {% if teachers_view or not student %}{{ clear_thread(current, items or [], clear_who) }}{% endif %}
   {% if teachers_view %}
     {# between teachers: students never see any of this #}
     <div class="thread-scroll">{% set show_with = not other %}{% include "_staff_thread.html" %}</div>
@@ -59,6 +61,7 @@
     {% else %}
       <div class="btn-row convo-bar">
         <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student's messages together">← All messages</button>
+        {{ clear_thread(current, items or [], clear_who) }}
         {% if waiting %}
           {# one student: go to that conversation; several: to all messages, where the new ones are marked #}
           {% if waiting|length == 1 %}

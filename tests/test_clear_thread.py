@@ -35,7 +35,11 @@ def test_a_teacher_clears_one_students_conversation_for_themselves_only(app_db):
     # nothing left to clear: the button is grayed, and clearing again does nothing
     clear(teach, ids('sam'))
     assert clear(teach, ids('sam')).get_json()['cleared'] == 0
-    assert 'disabled title="There\'s nothing to clear here."' in teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
+    #(the pinned announcement is still there)
+    assert 'disabled title="Only pinned messages are left; they stay"' in teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
+    assert 'disabled title="There’s nothing to clear here"' in teach.get('/messages/panel?student=t{}'.format(ids('lee'))).data.decode()
+    assert 'Clear your view of every conversation here? Your students still see them' in teach.get('/messages/panel?student=all').data.decode()
+    assert 'from your view? sam still sees it' in teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
 
 
 def test_clearing_all_messages_counts_them_read(app_db):
@@ -65,14 +69,15 @@ def test_a_student_clears_their_view(app_db):
     sam.post('/messages/reply', data={'body': 'My question'})
     assert sam.get('/messages/poll').get_json()['unread'] == 3
     # just the conversation with one teacher
-    # (what Sam sent to all the teachers is part of that conversation too)
+    # (what Sam sent to all the teachers stays: it's in the other conversations too)
+    sam.post('/messages/reply', data={'body': 'Just to Lee', 'to': str(ids('lee')), 'to_checked': '1'})
     assert clear(sam, ids('lee')).get_json()['cleared'] == 2
     panel = sam.get('/messages/panel?student=all').data.decode()
-    assert 'From lee' not in panel and 'My question' not in panel and 'From teach' in panel
+    assert 'From lee' not in panel and 'Just to Lee' not in panel and 'My question' in panel and 'From teach' in panel
     # then everything: the pinned message stays, cleared ones count as read
     clear(sam, 'all')
     panel = sam.get('/messages/panel?student=all').data.decode()
-    assert 'From teach' not in panel and 'Stays pinned' in panel
+    assert 'From teach' not in panel and 'My question' not in panel and 'Stays pinned' in panel
     assert sam.get('/messages/poll').get_json()['unread'] == 0
     # the teachers still see all of it
     convo = teach.get('/messages/{}'.format(ids('sam'))).data.decode()

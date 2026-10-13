@@ -770,6 +770,10 @@ button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 .notice-x:hover { color: var(--bad); background: var(--bad-soft); filter: none; }
 .notice-clear-all, .thread-clear-all { text-align: right; margin: -4px 0 6px; }
 .thread-clear-all { margin-top: 4px; }
+.thread-top { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
+.thread-top > .thread-clear-all { margin: 0 0 0 auto; }
+nav.btn-row > .thread-clear-all { margin: 0 0 0 auto; align-self: center; }
+.convo-bar > .thread-clear-all { margin: 0 0 0 auto; order: 9; }
 
 /* the ✕ that deletes a message, in its top-right corner (like notices) */
 .msg { position: relative; }
@@ -1122,7 +1126,7 @@ th.tick-col, td.tick-col { width: 36px; }
 .subject-checks { border: 0; padding: 0; margin: 12px 0; }
 .subject-checks legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 /* the Folder question: the folders as a nested list, like the side folder list on picking cards */
-.subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; width: 100%; max-width: 300px; box-sizing: border-box;
+.subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; width: fit-content; min-width: 170px; max-width: min(100%, 320px); box-sizing: border-box;
   border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
 .subject-check-list:empty { display: none; }
 .subject-check { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 34px; padding: 4px 10px; margin: 0;
@@ -1342,7 +1346,7 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 
 /* the Problems and Quizzes pages: search and the bar for checked rows, kept in view */
 .folder-tools-bar { position: sticky; top: var(--topbar-h, 56px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
-  gap: 8px 16px; padding: 8px 0; margin-bottom: 8px; background: var(--bg); }
+  gap: 8px 16px; padding: 8px 0 10px; margin-bottom: 14px; background: var(--bg); border-bottom: 1px solid var(--border); }
 .folder-tools-bar .file-bar { margin: 0; }
 .drag-item { cursor: grab; }
 details.problem-list > summary { cursor: pointer; color: var(--muted); }
@@ -2039,16 +2043,21 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
    same color, no line between), and the panel holds what's in that folder: the row of its own
    folders (smaller tabs) and the list. */
 .folder-filter-rows { gap: 0; margin: 0; }
-.folder-filter-rows > .folder-tabs:first-child { background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
-  padding: 0 0 0 4px; gap: 4px; align-items: flex-end; flex-wrap: wrap; }
+/* (the line under the tabs is the open folder's top edge, the same color as its sides, so the
+   open folder has a border all the way around; the open tab sits over it, joined to its folder.
+   One row, never wrapped: when the tabs don't fit, the row scrolls sideways inside itself) */
+.folder-filter-rows > .folder-tabs:first-child { background: none; border: 0; border-radius: 0; box-shadow: inset 0 -1px 0 var(--tab-edge);
+  padding: 0 0 0 4px; gap: 4px; align-items: flex-end; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.folder-filter-rows > .folder-tabs:first-child > * { flex: 0 0 auto; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tabs-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab { border: 1px solid var(--border); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
-  background: var(--bg); color: var(--muted); margin-bottom: -1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
+  background: var(--bg); color: var(--muted); margin-bottom: 1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab svg.ico { color: var(--muted); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab:hover { background: var(--surface-2); color: var(--text); }
 /* the open tab: tinted like its panel, outlined in the accent color, with a thick top edge */
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] { background: var(--tab-open); color: var(--text); border-color: var(--tab-edge);
-  border-top: 4px solid var(--accent); padding-top: 4px; position: relative; z-index: 1; box-shadow: none; }
+  border-top: 4px solid var(--accent); padding-top: 4px; position: relative; z-index: 1; box-shadow: none;
+  margin-bottom: 0; padding-bottom: 8px; }  /* (only the open tab covers the line, joining its folder: the closed ones stop above it) */
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding: 0 4px 4px 0; }
@@ -2200,7 +2209,7 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .card-grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }  /* (a last card alone takes the row) */
 .form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 24px; align-items: start; }
 .form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
-/* Assign: the Quiz card and the Students card side by side, alike (a filter bar, folder tabs,
+/* Assign: the Quiz card and the Students card side by side, alike (a filter bar, a folder list,
    then the list), and the dates and Assign button in a card across both, below */
 .assign-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .assign-form > .card { margin: 0; }
@@ -2252,7 +2261,10 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .filter-bar:has(> .folder-filter-tools-here), .pick-bar:has(> .folder-filter-tools-here) { display: flex; flex-wrap: wrap; width: 100%; }
 /* experiment: a picking card's folders as a list down its side (data-style="list"), like the
    folder list on a folder page, instead of tabs */
-.folder-filter[data-style="list"] { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 12px; align-items: start; }
+/* the folder column is as wide as its names need (up to 320px), never narrower than 170px */
+.folder-filter[data-style="list"] { display: grid; grid-template-columns: fit-content(320px) minmax(0, 1fr); gap: 12px; align-items: start; }
+.folder-filter[data-style="list"] > .folder-filter-rows { min-width: 170px; }
+.folder-side-list > .folder-tab .tab-ticked { flex: 0 0 auto; font-size: 11px; padding: 1px 6px; }
 .folder-filter[data-style="list"] > .folder-filter-rows { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
 .folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
 /* beside the folder list (no tabs above), the list and its "Nothing in … yet." note are closed boxes */
@@ -2268,5 +2280,5 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-side-list > .folder-tab:disabled { opacity: .55; cursor: default; }
 @media (max-width: 640px) { .folder-filter[data-style="list"] { grid-template-columns: minmax(0, 1fr); } }
 .folder-side-list > .folder-tab { box-sizing: border-box; max-width: 100%; min-width: 0; overflow: hidden; flex: 0 0 auto; }
-.folder-filter[data-style="list"] > .folder-filter-rows { min-width: 0; overflow: hidden; }
+.folder-filter[data-style="list"] > .folder-filter-rows { overflow: hidden; }
 .folder-filter-side > .folder-side-list { min-width: 0; width: 100%; flex: 1 1 auto; }

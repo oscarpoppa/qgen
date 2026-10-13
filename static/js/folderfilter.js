@@ -52,7 +52,9 @@
       name.textContent = label;
       var c = document.createElement('span');
       c.className = 'badge box-count';
-      c.textContent = count(n);
+      //(a plain number, so the tabs fit on one line; the words are in its tooltip)
+      c.textContent = n;
+      c.title = count(n);
       c.dataset.n = n;
       b.appendChild(name);
       b.appendChild(c);
@@ -113,7 +115,8 @@
       [['open', 'Expand all', 'Open every one in \u201c'], ['close', 'Collapse all', 'Fold every one in \u201c']].forEach(function (b) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn btn-secondary btn-xs';
+        //(on a card's filter bar, as tall as the bar's Clear: btn-sm)
+        btn.className = 'btn btn-secondary ' + (box.dataset.toolsHome ? 'btn-sm' : 'btn-xs');
         btn.dataset.level = b[0];
         btn.dataset.levelOf = '#' + list.id;
         btn.dataset.levelPrefer = '';
@@ -175,8 +178,6 @@
         if (noneFolders) { noneBtn.disabled = true; noneBtn.title = 'There are no folders yet.'; }
         else if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
         col.appendChild(noneBtn);
-        //(numbers only, like the folder list on a folder page)
-        col.querySelectorAll('.box-count').forEach(function (c) { c.textContent = c.dataset.n; c.title = count(+c.dataset.n); });
         rows.appendChild(col);
       } else {
         //the top row: All, the folders, Uncategorized
