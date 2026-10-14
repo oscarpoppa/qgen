@@ -2345,4 +2345,4 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 /* ...and its row of inner tabs shows no tabs at all (nothing in it to sort through; its folders,
    all empty, are still in the side list); the row keeps its buttons (Folder options...)
    (the owner, 2026-10-14) */
-.folder-filter-rows > .folder-tabs-empty > .folder-tab { display: none; }
+.folder-filter-rows > .folder-tabs-empty > .folder-tab, .folder-filter-rows > .folder-tabs-plain > .folder-tab { display: none; }

@@ -271,6 +271,8 @@
         else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
         else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
         row.appendChild(none);
+        //(a folder's own page with no folders inside: no tabs, just its things, as above)
+        if (box.dataset.allUrl === '' && noFolders) row.classList.add('folder-tabs-plain');
         host.appendChild(row);
         //a row for the folders inside each chosen folder
         p.forEach(function (id) {
@@ -300,6 +302,9 @@
           //(an empty folder: its row of tabs is grayed, the chosen one too, so nothing in it catches
           //the eye; the folder's own tab above still shows where you are: the owner, 2026-10-14)
           if (!n.count) sub.classList.add('folder-tabs-empty');
+          //(no folders inside it: All and Unsorted would be the same as what's shown, so no tabs,
+          //just its things: the owner, 2026-10-14)
+          if (!n.children.length) sub.classList.add('folder-tabs-plain');
           host.appendChild(sub);
         });
       }
