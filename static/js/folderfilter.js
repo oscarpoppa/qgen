@@ -360,6 +360,8 @@
       }
       note.hidden = shown || chosen === 'all';
       folderEmpty = !shown && chosen !== 'all';
+      //(an empty folder: its open panel turns gray, not the open folder's blue: the owner, 2026-10-14)
+      box.classList.toggle('folder-open-empty', !items().some(function (el) { return (el.dataset.hiddenBy || '').split(' ').indexOf('folder') === -1; }));
       list.hidden = folderEmpty;  // (no empty frame above the note)
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)

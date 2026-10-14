@@ -2333,3 +2333,12 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
   .folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-row: auto; }
   .folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs, .folder-filter[data-style="list"][data-tabs] > .folder-filter-list { grid-column: 1; grid-row: auto; }
 }
+
+/* an empty folder open: its tab and panel turn a quiet gray instead of the open folder's blue,
+   and the picked inner tab's blue line goes gray too, so nothing there catches the eye
+   (static/js/folderfilter.js .folder-open-empty; the owner, 2026-10-14) */
+.folder-filter.folder-open-empty { --tab-open: color-mix(in srgb, var(--muted) 8%, var(--surface));
+  --tab-edge: color-mix(in srgb, var(--muted) 40%, var(--border)); }
+.folder-filter.folder-open-empty .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { border-top-color: var(--muted); }
+.folder-filter.folder-open-empty .folder-filter-empty { color: var(--muted); }
+.folder-filter.folder-open-empty .folder-tabs-inner .box-count { color: var(--muted); }
