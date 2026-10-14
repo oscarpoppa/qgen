@@ -223,7 +223,7 @@
       <input type="hidden" name="view" value="{{ fk.view }}">
       <input type="hidden" name="{{ what }}" value="{{ ident }}"><input type="hidden" name="folder" value="{{ f.id }}">
       <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">{{ icon('folder') }} {{ fk.name(f) }}</a>
-      <button class="chip-x" aria-label="Take {{ label }} out of {{ fk.name(f) }}" title="Take {{ label }} out of {{ fk.name(f) }} (it stays in its other folders)">✕</button>
+      <button class="chip-x" aria-label="Take {{ label }} out of {{ fk.name(f) }}" title="Take {{ label }} out of {{ fk.name(f) }} (in no other folder: you’re asked first)">✕</button>
     </form>
   {% endfor %}
   {% set have = mine|map(attribute='id')|list %}

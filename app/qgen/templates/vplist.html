@@ -17,7 +17,7 @@
           {# the row folds to its title (and folders and buttons); open, it shows its kind, question
              and answer too. Folded to begin with; Expand all / Collapse all and the page remember it #}
           <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
-              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
+              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
             <div class="small muted">
               <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
               {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}

@@ -20,7 +20,7 @@
           {# the row folds to its title (and folders and buttons); open, it shows its settings and its
              problems too. Folded to begin with; Expand all / Collapse all and the page remember it #}
           <td data-label="Quiz"><details class="box row-fold" data-box="quiz-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
-              data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to put it there"{% endif %}>{{ item.title }}</strong></summary>
+              data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title }}</strong></summary>
             <div class="small muted">{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student
               · {% if item.calculator_allowed %}calculator OK{% else %}no calculator{% endif %}
               {% if item.shuffle_order %}· order shuffled{% endif %}
