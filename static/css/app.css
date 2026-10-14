@@ -1779,17 +1779,24 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 #pictures-card.paper-page .image-row > .field + .field { display: none; }
 #pictures-card.paper-page .image-row { border: 0; padding: 0; box-shadow: none; background: none; }
 
-/* a box that can be pulled wider by its side edge, over its neighbors (static/js/stretch.js) */
-[data-stretch] { position: relative; }
-[data-stretch].is-stretched { z-index: 20; box-shadow: 0 6px 24px rgba(0, 0, 0, .28); }
-.stretch-edge { position: absolute; top: 12px; bottom: 12px; right: -7px; width: 14px; cursor: ew-resize; touch-action: none;
-  display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); z-index: 2; }
-.stretch-edge.on-left { right: auto; left: -7px; }
-.stretch-edge span { display: block; width: 5px; height: 56px; border-radius: var(--r-sm); background: var(--border); transition: background .15s, height .15s; }
-.stretch-edge:hover span, .stretch-edge:focus-visible span, html.stretching .stretch-edge span { background: var(--accent); height: 80px; }
-.stretch-edge:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-html.stretching, html.stretching * { cursor: ew-resize !important; user-select: none; }
-@media print { .stretch-edge { display: none; } [data-stretch] { width: auto !important; margin-left: 0 !important; } }
+/* a card that stretches both ways by its corner and floats over its neighbors instead of pushing
+   them (static/js/elastic.js; the Dashboard's cards, Home's awards: the owner, 2026-10-14) */
+[data-elastic] { position: relative; }
+[data-elastic].is-floating { z-index: 20; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); }
+[data-elastic]:not(.is-floating) { z-index: auto !important; }  /* (the last stretched one on top: elastic.js) */
+.elastic-corner { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none;
+  display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; border-radius: var(--r-sm); z-index: 2; }
+.elastic-corner.on-left { right: auto; left: 2px; cursor: nesw-resize; justify-content: flex-start; }
+.elastic-corner.tall-only, .elastic-corner.tall-only.on-left { cursor: ns-resize; }
+html.elastic-sizing-v, html.elastic-sizing-v * { cursor: ns-resize !important; user-select: none; }
+/* (two short diagonal lines, the usual "drag to size" corner) */
+.elastic-corner span { display: block; width: 12px; height: 12px; opacity: .7;
+  background: linear-gradient(135deg, transparent 0 45%, var(--muted) 45% 52%, transparent 52% 70%, var(--muted) 70% 77%, transparent 77%); }
+.elastic-corner.on-left span { transform: scaleX(-1); }
+.elastic-corner:hover, .elastic-corner:focus-visible, html.elastic-sizing .elastic-corner { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.elastic-corner:hover span, .elastic-corner:focus-visible span { opacity: 1; background: linear-gradient(135deg, transparent 0 45%, var(--accent) 45% 52%, transparent 52% 70%, var(--accent) 70% 77%, transparent 77%); }
+html.elastic-sizing, html.elastic-sizing * { cursor: nwse-resize !important; user-select: none; }
+@media print { .elastic-corner { display: none; } [data-elastic] { width: auto !important; margin-left: 0 !important; margin-bottom: 0 !important; } }
 .alerts.alerts-float { transition: opacity .3s; }
 .alerts.alerts-float.alerts-leaving { opacity: 0; }
 

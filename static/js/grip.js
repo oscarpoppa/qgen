@@ -83,6 +83,8 @@
     //double-click: back to the usual height
     bar.addEventListener('dblclick', function () { el.style.maxHeight = ''; store(key, null); show(); });
     el._gripShow = show;
+    el._gripSet = function (h, keep) { set(h, keep); };  // (a card's corner sizes it too: elastic.js)
+    el._gripReset = function () { el.style.maxHeight = ''; store(key, null); show(); };
     //its room changes without the window changing (a side panel opening, rows becoming cards)
     if (window.ResizeObserver) new ResizeObserver(function () { show(); }).observe(el);
     show();

@@ -1,6 +1,6 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
 {% from "_macros.html" import avatar, person_name, person_link, quiz_link, box_label, count_of with context %}
-<details class="box card dash-card" id="dash-right-now" data-box="now" open>
+<details class="box card dash-card" id="dash-right-now" data-elastic="now" data-elastic-dir="v" data-box="now" open>
   <summary class="dash-head">{{ box_label('online', 'Right now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
     {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}

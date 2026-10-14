@@ -11,7 +11,7 @@
 <div class="dash-grid">
   {% include "_dashboard_now.html" %}
   {# numbers to look at now and then: starts folded (opening it is remembered) #}
-  <details class="box card dash-card" data-box="glance">
+  <details class="box card dash-card" data-elastic="glance" data-elastic-dir="v" data-box="glance">
     <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
     <div class="dash-glance">
@@ -32,7 +32,7 @@
     </p>
     </div>
   </details>
-  <details class="box card dash-card" data-box="queue" open>
+  <details class="box card dash-card" data-elastic="queue" data-elastic-dir="v" data-box="queue" open>
     <summary class="dash-head">{{ box_label('pencil', 'Waiting for grading', count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
     {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}" title="Open Grading to see every attempt waiting, oldest first">All {{ waiting }} in Grading →</a></p>{% endif %}
@@ -52,7 +52,7 @@
     </div>
   </details>
   {# what's pinned to the top of students' messages, and whether they've read it #}
-  <details class="box card dash-card" data-box="pinned" open>
+  <details class="box card dash-card" data-elastic="pinned" data-elastic-dir="v" data-box="pinned" open>
     <summary class="dash-head">{{ box_label('pin', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}" title="Open Messages to send, pin or unpin messages">Messages →</a></p>
@@ -75,7 +75,7 @@
     {% endif %}
     </div>
   </details>
-  <details class="box card dash-card" data-box="handins" open>
+  <details class="box card dash-card" data-elastic="handins" data-elastic-dir="v" data-box="handins" open>
     <summary class="dash-head">{{ box_label('tray', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
     <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
@@ -97,7 +97,7 @@
   </details>
   {# last, one column wide: it comes in under the shorter column's last box (masonry.js), so no
      hole is left beside a short box; the boxes keep their order, for the keyboard too #}
-  <details class="box card dash-card" id="dash-out" data-box="out" open>
+  <details class="box card dash-card" id="dash-out" data-elastic="out" data-elastic-dir="v" data-box="out" open>
     <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
       {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn't handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">

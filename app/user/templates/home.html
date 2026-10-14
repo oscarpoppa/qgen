@@ -26,7 +26,7 @@
 
 <div class="dash-grid" id="home-boxes">
   {# each box folds away (remembered in this browser), like the Dashboard's #}
-  <details class="box card dash-card" id="waiting" data-box="waiting" open>
+  <details class="box card dash-card" id="waiting" data-elastic="waiting" data-elastic-dir="v" data-box="waiting" open>
     <summary class="dash-head">{{ box_label('hourglass', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     {% if waiting %}
       <ul class="dash-list">
@@ -43,7 +43,7 @@
     {% endif %}
   </details>
 
-  <details class="box card dash-card" data-box="recent" open>
+  <details class="box card dash-card" data-elastic="recent" data-elastic-dir="v" data-box="recent" open>
     <summary class="dash-head">{{ box_label('checkbox', 'Recently completed', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
       <a href="{{ url_for('user.mypage', folder='all') }}" title="See every quiz you've had, old and new">All my quizzes →</a></p>
@@ -62,8 +62,9 @@
     {% endif %}
   </details>
 
-  {# can be pulled wider by its side edge, over the box beside it (static/js/stretch.js) #}
-  <details class="box card dash-card" data-box="awards" data-stretch="awards" open>
+  {# stretches both ways by its corner, over the boxes around it; the other two only taller
+     (static/js/elastic.js; the owner, 2026-10-14) #}
+  <details class="box card dash-card" data-elastic="awards" data-box="awards" open>
     <summary class="dash-head">{{ box_label('trophy', 'Your awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
     {% if awards %}
       {{ award_list(awards) }}
@@ -82,5 +83,5 @@
 
 
 {% block scripts %}
-<script src="{{ asset('js/stretch.js') }}"></script>
+<script src="{{ asset('js/elastic.js') }}"></script>
 {% endblock %}
