@@ -152,7 +152,7 @@
     if (pin) {
       var on = !root.classList.contains('dock-pinned');
       root.classList.toggle('dock-pinned', on);
-      store('qgen-dock-pinned', on ? '1' : null);
+      store('qgen-dock-pinned', on ? '1' : '0');  // (pinned unless unpinned: base.html)
       //pinning keeps what's open now
       PANES.forEach(function (q) { store('qgen-dock-' + q, on && isOpen(q) ? 'open' : null); });
       syncButtons();

@@ -86,7 +86,7 @@
           <span>{{ m.body }} <span class="small muted">· {{ m.created|when('short') }}{% if m.kind != 'announcement' %} · to {{ person_link(m.student, 0, strong=false) if m.student else 'someone' }}{% endif %}</span></span>
           <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
-            <button class="btn btn-secondary btn-sm" title="Stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">Unpin</button>
+            <button class="icon-link" title="Unpin: stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
           </form>
         </li>
       {% endfor %}

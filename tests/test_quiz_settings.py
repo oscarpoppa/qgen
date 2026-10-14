@@ -82,7 +82,7 @@ def test_open_and_close_window(app_db):
     assert 'name="Number1"' not in page  # no questions
     home = sam.get('/mypage').data.decode()
     assert "You can't start this yet. It opens" in home and 'disabled' in home
-    assert '>Start</a>' not in home  # no way in
+    assert 'Start</span></a>' not in home  # no way in
     # handing in or saving answers early is refused too
     sam.post('/quiz/take/{}'.format(cq.id), data={'Number1': '4'})
     assert sam.post('/quiz/take/{}/save'.format(cq.id), data={'Number1': '4'}).status_code == 409
@@ -495,14 +495,14 @@ def test_attempt_rows_use_the_small_results_button(app_db):
     with app.test_request_context():
         S.submit(cq, {1: '4'})
     # one attempt: the same one-line row, with the same small button
-    assert 'btn btn-secondary btn-xs" href="/quiz/take/{}">Results</a>'.format(cq.id) in no_titles(sam.get('/mypage').data.decode())
+    assert 'class="icon-link" href="/quiz/take/{}">'.format(cq.id) in no_titles(sam.get('/mypage').data.decode())  # (the eye: owner 2026-10-14)
     with app.test_request_context():
         again = S.retake(cq)
         S.submit(again, {1: '4'})
     home = sam.get('/mypage').data.decode()
     # several attempts: one line each, ending in a small "Results" button
-    assert home.count('class="attempt-row"') == 2 and home.count('btn-xs" href="/quiz/take/') == 2
-    assert '>Results</a>' in home and '>View results</a>' not in home
+    assert home.count('class="attempt-row"') == 2 and home.count('class="icon-link" href="/quiz/take/') == 2
+    assert 'View</span></a>' in home and '>View results</a>' not in home
 
 
 def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
@@ -989,7 +989,7 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
     card = page[page.index('data-quiz="{}"'.format(vq.id)):]
     card = card[:card.index('</summary>')]
-    assert '>Start</a>' in card  # its heading offers the try still waiting
+    assert 'Start</span></a>' in card  # its heading offers the try still waiting
     results = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'data-state="out"' in results
     student_page = teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()
@@ -997,5 +997,5 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     S.submit(older, {1: '4'})  # all handed in: nothing to start, and a retake can be given again
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
     card = page[page.index('data-quiz="{}"'.format(vq.id)):]
-    assert '>Start</a>' not in card[:card.index('</summary>')]
+    assert 'Start</span></a>' not in card[:card.index('</summary>')]
     assert 'Give sam another attempt' in teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()

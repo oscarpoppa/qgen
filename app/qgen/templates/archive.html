@@ -38,13 +38,13 @@
                 <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               <td data-label="Folder">{{ move_menu(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
               <td class="actions">
-                <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archived', aid=a.id) }}" title="See {{ a.student_name }}'s answers and score as they were when archived">View</a>
+                <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when archived">{{ icon_label('lc-eye', 'View') }}</a>
                 {% if blocker %}
-                  <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ blocker }}">Restore</button>
+                  <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Restore: {{ blocker }}">{{ icon_label('lc-restore', 'Restore') }}</button>
                 {% else %}
                   <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
                         data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put this attempt back; {{ a.student_name }} will see it on My quizzes again">Restore</button></form>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put this attempt back; {{ a.student_name }} will see it on My quizzes again">{{ icon_label('lc-restore', 'Restore') }}</button></form>
                 {% endif %}
                 {# one Remove, as on every folder page: take it out of its folder, or delete it for good #}
                 {{ remove_button('archive', a.id, a.student_name ~ '’s attempt at “' ~ a.quiz_title ~ '”', [fk.nodes[a.folder_id].folder] if a.folder_id in fk.nodes else [],

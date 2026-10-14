@@ -60,12 +60,13 @@
       </span>{% endif %}
       {# a student's own buttons on their heading line (no row of their own) #}
       {% if not single %}<span class="box-actions">
-      {% if not item.is_admin %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Write to {{ item.shown_name }} in Messages">Message</a>{% else %}<a class="btn btn-secondary btn-sm" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message</a>{% endif %}
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.assign', users=item.id) }}" title="Choose a quiz to give {{ item.shown_name }}">Assign a quiz</a></span>{% endif %}
+      {# (icons, in the same order as on the People cards: the paper plane, then the speech bubble: the owner, 2026-10-14) #}
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
+      {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }} in Messages">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}</span>{% endif %}
       {# one student: Expand all / Collapse all of their folders and quizzes, on the heading line #}
       {% if item.cquizzes and single %}<span class="head-pair"><span class="level-buttons">
-        <button type="button" class="btn btn-secondary btn-xs" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes" title="Open all of {{ item.shown_name }}'s folders and quizzes">Expand all</button>
-        <button type="button" class="btn btn-secondary btn-xs" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Fold all of {{ item.shown_name }}'s folders and quizzes">Collapse all</button></span></span>{% endif %}
+        <button type="button" class="btn btn-secondary btn-xs btn-icon" data-level="open" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Expand all of {{ item.shown_name }}'s folders and quizzes" title="Expand all: Open all of {{ item.shown_name }}'s folders and quizzes">{{ icon_label('lc-expand', 'Expand all') }}</button>
+        <button type="button" class="btn btn-secondary btn-xs btn-icon" data-level="close" data-level-of="#student-{{ item.id }} > .box-body" aria-label="Collapse all of {{ item.shown_name }}'s folders and quizzes" title="Collapse all: Fold all of {{ item.shown_name }}'s folders and quizzes">{{ icon_label('lc-collapse', 'Collapse all') }}</button></span></span>{% endif %}
     </summary>
     <div class="box-body">
     {% if item.cquizzes and single %}

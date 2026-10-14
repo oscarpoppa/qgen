@@ -195,7 +195,7 @@ def test_problem_history(app_db):
     assert 'href="/quiz/problem-results/{}"'.format(vp.id) in page
     page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
     sensible(page, 'problem history')
-    assert '<h1>Problem history: Capital</h1>' in page and '>History</a>' in teacher.get('/quiz/listvp').data.decode()
+    assert '<h1>Problem history: Capital</h1>' in page and 'History</span></a>' in teacher.get('/quiz/listvp').data.decode()  # (an icon button: its words for screen readers)
     assert 'data-level="open" data-level-of="#problem-results"' in page  # Expand all / Collapse all over its quizzes
     assert '<h1>Quiz history: Geo 1</h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
     home = login(app, 'sam').get('/home').data.decode()

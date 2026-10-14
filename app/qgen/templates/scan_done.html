@@ -19,9 +19,9 @@
           <td data-label="Quiz">{{ q.title }}</td>
           <td data-label="Questions">{{ q.vproblems|length }}</td>
           <td class="btn-row">
-            <a class="btn btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="See “{{ q.title }}” as a student would">View</a>
-            <a class="btn btn-sm btn-secondary" href="{{ url_for('qgen.edvquiz', vqid=q.id) }}" title="Change “{{ q.title }}”: its problems and settings">Edit</a>
-            <a class="btn btn-sm btn-secondary" href="{{ url_for('qgen.assign', vq=q.id) }}" title="Give “{{ q.title }}” to students">Assign</a>
+            <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="View: See “{{ q.title }}” as a student would">{{ icon_label('lc-eye', 'View') }}</a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=q.id) }}" title="Edit: Change “{{ q.title }}”: its problems and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=q.id) }}" title="Assign: Give “{{ q.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>
           </td>
         </tr>
       {% endfor %}

@@ -38,9 +38,9 @@
             {% else %}
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
             <div class="btn-row" style="margin-top:8px">
-              <button type="button" class="btn btn-sm btn-ok hl-btn" data-kind="right" title="Highlight the selected words (or the whole answer) as right; optional, the score is the Credit box">Mark right</button>
-              <button type="button" class="btn btn-sm btn-danger hl-btn" data-kind="wrong" title="Highlight the selected words (or the whole answer) as wrong; optional, the score is the Credit box">Mark wrong</button>
-              <button type="button" class="btn btn-sm btn-secondary hl-clear" title="Remove every right and wrong highlight from this answer">Clear highlights</button>
+              <button type="button" class="btn btn-sm btn-ok btn-icon hl-btn" data-kind="right" title="Mark right: highlight the selected words (or the whole answer) as right; optional, the score is the Credit box">{{ icon_label('lc-check', 'Mark right') }}</button>
+              <button type="button" class="btn btn-sm btn-danger btn-icon hl-btn" data-kind="wrong" title="Mark wrong: highlight the selected words (or the whole answer) as wrong; optional, the score is the Credit box">{{ icon_label('lc-x', 'Mark wrong') }}</button>
+              <button type="button" class="btn btn-sm btn-secondary btn-icon hl-clear" title="Clear highlights: remove every right and wrong highlight from this answer">{{ icon_label('lc-eraser', 'Clear highlights') }}</button>
             </div>
             {% endif %}
           </div>

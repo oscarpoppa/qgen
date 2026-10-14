@@ -61,8 +61,8 @@
    the boxes of the things in them). size: btn-sm beside a title, btn-xs inside a folder box #}
 {% macro level_buttons(label, size='btn-xs', of=none) %}
   <span class="level-buttons">
-    <button type="button" class="btn btn-secondary {{ size }}" data-level="open"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Expand all in {{ label }}" title="Open every box in {{ label }}">Expand all</button>
-    <button type="button" class="btn btn-secondary {{ size }}" data-level="close"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Collapse all in {{ label }}" title="Fold every box in {{ label }} down to its heading">Collapse all</button>
+    <button type="button" class="btn btn-secondary {{ size }} btn-icon" data-level="open"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Expand all in {{ label }}" title="Expand all: Open every box in {{ label }}">{{ icon_label('lc-expand', 'Expand all') }}</button>
+    <button type="button" class="btn btn-secondary {{ size }} btn-icon" data-level="close"{% if of %} data-level-of="{{ of }}"{% endif %} aria-label="Collapse all in {{ label }}" title="Collapse all: Fold every box in {{ label }} down to its heading">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
   </span>
 {% endmacro %}
 
@@ -77,8 +77,8 @@
     <nav aria-label="Folders">
       {# shown (static/js/folders.js) when some folder has folders inside it #}
       <div class="btn-row small side-levels" hidden>
-        <button type="button" class="btn btn-secondary btn-xs" data-side-level="open" title="Show the folders inside every folder in this list">Expand all</button>
-        <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder (the one you're in stays in view)">Collapse all</button>
+        <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="open" title="Expand all: Show the folders inside every folder in this list">{{ icon_label('lc-expand', 'Expand all') }}</button>
+        <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder (the one you're in stays in view)">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
       </div>
       <ul class="side-list side-top">
         {# one order on every page: All, the automatic ones (My quizzes), the folders, then Uncategorized #}
@@ -121,6 +121,8 @@
           {% for p in fk.path[:-1] %}<a href="{{ fk.page(p.id) }}" title="Go up to the folder “{{ fk.name(p) }}”">{{ fk.name(p) }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ draw_icon(fk.folder_icon(f)) }} {{ fk.name(fk.node.folder) }}</h2>
         <div class="title-actions">
           {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
+          {# (no tabs on this page: Up goes here, beside the pair; with tabs it's on their row) #}
+          {{ folder_up(fk, 'btn-sm') }}
           {{ actions }}
           {{ folder_options(fk, fk.node) }}
         </div>
@@ -151,7 +153,7 @@
     {# the folder's own controls on its heading line (no row of their own) #}
     <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}
       <span class="head-pair">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}
-        <span class="head-tools">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs" href="{{ fk.page(f.id) }}" title="Go into “{{ fk.name(n.folder) }}” to see just what's in it">Open this folder</a></span></span></summary>
+        <span class="head-tools">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs btn-icon" href="{{ fk.page(f.id) }}" title="Open this folder: Go into “{{ fk.name(n.folder) }}” to see just what's in it">{{ icon_label('lc-folder-open', 'Open this folder') }}</a></span></span></summary>
     <div class="sub-body level" id="folder-body-{{ f.id }}">
       {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
       {{ draw(n) }}
@@ -176,6 +178,9 @@
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
     {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n, 'btn-xs') }}</template>{% endfor %}
+    {# (All and Uncategorized: their own buttons, e.g. People's "Assign a quiz to everyone") #}
+    {% if fk.all_tools %}<template class="folder-filter-tools" data-for="all">{{ fk.all_tools(fk.root) }}</template>{% endif %}
+    {% if fk.main_tools %}<template class="folder-filter-tools" data-for="null">{{ fk.main_tools(fk.root) }}</template>{% endif %}
     <div class="folder-filter-list">
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
@@ -186,7 +191,7 @@
   <details class="box sub-box" data-sub="none" data-list>
     <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('tray', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}
       <span class="head-pair">{{ level_buttons(fk.main_label, of='#folder-body-none') }}
-        <span class="head-tools"><a class="btn btn-secondary btn-xs" href="{{ fk.page('main') }}" title="See just what's in no folder">Open this folder</a></span></span></summary>
+        <span class="head-tools"><a class="btn btn-secondary btn-xs btn-icon" href="{{ fk.page('main') }}" title="Open this folder: See just what's in no folder">{{ icon_label('lc-folder-open', 'Open this folder') }}</a></span></span></summary>
     <div class="sub-body level" id="folder-body-none">
       {{ draw(fk.root) }}
     </div>
@@ -207,12 +212,19 @@
        data-remember="{{ request.endpoint }}:{{ fk.view }}" data-url-tab data-name="{{ name }}"{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
     {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n, 'btn-xs') }}</template>{% endfor %}
+    <template class="folder-filter-tools" data-for="all">{{ folder_up(fk) }}</template>
     <div class="folder-filter-list">
       {# (no folder of their own here: a drag from this list puts a copy in, as from All) #}
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
   </div>
 {% endmacro %}
+
+{# a folder's own page: up to the folder it's in (or All), beside Expand all / Collapse all
+   (the owner, 2026-10-14) #}
+{% macro folder_up(fk, size='btn-xs') %}{% if fk.node %}{% set up = fk.path[-2] if fk.path|length > 1 else none %}
+  <a class="btn btn-secondary {{ size }} btn-icon folder-up" href="{{ fk.page(up.id) if up else fk.page('all') }}" title="Up: back to “{{ fk.name(up) if up else fk.all_label }}”">{{ icon_label('lc-folder-up', 'Up') }}</a>
+{% endif %}{% endmacro %}
 
 {# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
@@ -228,7 +240,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="{{ fk.view }}">
       <input type="hidden" name="{{ what }}" value="{{ ident }}"><input type="hidden" name="folder" value="{{ f.id }}">
-      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">{{ icon('folder') }} {{ fk.name(f) }}</a>
+      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">{{ icon('folder') }} <span class="chip-name">{{ fk.name(f) }}</span></a>
       <button class="chip-x" aria-label="Take {{ label }} out of {{ fk.name(f) }}" title="Take {{ label }} out of {{ fk.name(f) }} (in no other folder: you’re asked first)">✕</button>
     </form>
   {% endfor %}
@@ -300,14 +312,17 @@
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
   {# (the folder each one is inside, if any: taken out, it goes back up there) #}
   {% set ups = [] %}{% for f in folders %}{% set _ = ups.append(fk.name(fk.nodes[f.parent_id].folder) if f.parent_id and f.parent_id in fk.nodes else '') %}{% endfor %}
+  {# (each one's folders above it, nearest first: in another folder inside that outer one, it
+     stays there instead of going back up, app/takeout.py plan()) #}
+  {% set chains = [] %}{% for f in folders %}{% set ns = namespace(id=f.parent_id, ch=[]) %}{% for _ in range(16) %}{% if ns.id and ns.id in fk.nodes %}{% set _ = ns.ch.append(ns.id) %}{% set ns.id = fk.nodes[ns.id].folder.parent_id %}{% endif %}{% endfor %}{% set _ = chains.append(ns.ch) %}{% endfor %}
   <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one data-kind="{{ kind }}"
-        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}" data-ups="{{ ups|tojson|forceescape }}"
+        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}" data-ups="{{ ups|tojson|forceescape }}" data-chains="{{ chains|tojson|forceescape }}"
         data-delete-url="{{ delete_url }}" data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
     <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
     <input type="hidden" name="folder" value="{{ folders[0].id if folders else '' }}"><input type="hidden" name="confirm" value="uncategorized">
-    <button class="btn btn-danger btn-sm" title="{{ ('Take ' ~ label ~ ' out of a folder, or delete ' ~ ('them' if kind == 'people' else 'it') ~ ' (asks which)') if folders else ('Delete ' ~ label ~ '; you’re asked first') }}">Remove</button>
+    <button class="btn btn-danger btn-sm btn-icon" title="Remove: {{ ('Take ' ~ label ~ ' out of a folder, or delete ' ~ ('them' if kind == 'people' else 'it') ~ ' (asks which)') if folders else ('Delete ' ~ label ~ '; you’re asked first') }}">{{ icon_label('lc-trash', 'Remove') }}</button>
   </form>{% endif %}
 {% endmacro %}
 
@@ -317,7 +332,7 @@
 {% macro folder_options(fk, n, size='btn-sm') %}{% if not fk.readonly %}
   {% set f = n.folder %}
           <details class="folder-tools">
-            <summary class="btn btn-secondary {{ size }}" title="Rename, move or remove this folder">Folder options</summary>
+            <summary class="btn btn-secondary {{ size }} btn-icon" title="Folder options: Rename, move or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
             <div class="folder-tools-box">
               <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -835,7 +835,9 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
 .quiz-card[open] .fold, .person-card[open] > summary .fold { transform: rotate(90deg); }
 .quiz-card .quiz-sum { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
-.quiz-card[open] .quiz-sum { display: none; }
+/* open: the folded summary (score, state) goes, but Start / Continue stays on the heading (the
+   rows inside leave it out, so it's never twice and never missing: the owner, 2026-10-14) */
+.quiz-card[open] .quiz-sum > :not(a):not(button) { display: none; }
 .quiz-card:not([open]) { padding-top: 14px; padding-bottom: 14px; }
 @media (prefers-reduced-motion: reduce) { .quiz-card .fold, .person-card .fold { transition: none; } }
 /* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
@@ -870,7 +872,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .side-link > .side-name { min-width: 0; }
 .side-count { flex: 0 0 auto; padding-right: 6px; }
 .side-fold, .side-fold-space { flex: 0 0 18px; width: 18px; height: 22px; }
-.side-fold { border: 0; background: none; padding: 0; cursor: pointer; position: relative; }
+.side-fold { border: 0; background: none; padding: 0; cursor: pointer; position: relative; min-height: 0 !important; }  /* (not a button's 40px: every row the same height) */
 .side-fold:disabled { cursor: default; opacity: .4; }  /* a folder you're inside: stays open */
 .side-fold::before { content: ""; position: absolute; left: 6px; top: calc(50% - 5px); border-style: solid; border-width: 5px 0 5px 7px;
   border-color: transparent transparent transparent var(--muted); transform: rotate(90deg); transition: transform .15s; }
@@ -982,6 +984,11 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-radius: 999px; background: var(--surface-2); font-size: var(--fs-sm); white-space: nowrap; }
 .folder-chip a { color: var(--text); text-decoration: none; }
 .folder-chip a:hover { text-decoration: underline; }
+/* (a long folder name is cut short with "…", like the folder tabs; its full name is in the
+   tooltip, so the chips stay side by side: the owner, 2026-10-14) */
+.folder-chip { max-width: 100%; min-width: 0; }
+.folder-chip a { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.folder-chip .chip-name { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: var(--fs-xs); line-height: 1.4; border-radius: 999px; }
 .chip-x:hover { color: var(--bad); }
 .person-folders .move-form { margin-top: 2px; }
@@ -1372,6 +1379,9 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 /* (how many are shown, under the folder page's heading: "3 quizzes") */
 .folder-count { margin: 0; font-size: var(--fs-sm); }
 .filter-bar > .folder-count { flex: 1 0 100%; }
+/* (the filter bar and the checked bar side by side: their heading lines level, and their boxes,
+   menu and buttons level; the count right on the filter box) */
+.folder-tools-bar .filter-bar { margin: 0; row-gap: 4px; }
 .drag-item { cursor: grab; }
 details.problem-list > summary { cursor: pointer; color: var(--muted); }
 details.problem-list[open] > summary { margin-bottom: 4px; }
@@ -1782,7 +1792,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 /* a card that stretches both ways by its corner and floats over its neighbors instead of pushing
    them (static/js/elastic.js; the Dashboard's cards, Home's awards: the owner, 2026-10-14) */
 [data-elastic] { position: relative; }
-[data-elastic].is-floating { z-index: 20; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); }
+[data-elastic].is-floating { z-index: 5; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); }
 [data-elastic]:not(.is-floating) { z-index: auto !important; }  /* (the last stretched one on top: elastic.js) */
 .elastic-corner { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none;
   display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; border-radius: var(--r-sm); z-index: 2; }
@@ -1819,7 +1829,8 @@ html.elastic-sizing-v, html.elastic-sizing-v * { cursor: ns-resize !important; u
 .elastic-corner:hover, .elastic-corner:focus-visible, html.elastic-sizing .elastic-corner { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .elastic-corner:hover span, .elastic-corner:focus-visible span { opacity: 1; background: linear-gradient(135deg, transparent 0 45%, var(--accent) 45% 52%, transparent 52% 70%, var(--accent) 70% 77%, transparent 77%); }
 html.elastic-sizing, html.elastic-sizing * { cursor: nwse-resize !important; user-select: none; }
-@media print { .elastic-corner { display: none; } [data-elastic] { width: auto !important; margin-left: 0 !important; margin-bottom: 0 !important; } }
+@media print { .elastic-corner { display: none; } [data-elastic] { width: auto !important; margin-left: 0 !important; margin-bottom: 0 !important;
+  min-height: 0 !important; box-shadow: none !important; z-index: auto !important; } }
 .alerts.alerts-float { transition: opacity .3s; }
 .alerts.alerts-float.alerts-leaving { opacity: 0; }
 
@@ -2037,8 +2048,8 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 /* the Dashboard's rows: the student | the quiz (its whole name, wrapping if need be) with its
    state and time under it | the row's button. The rows share these columns (subgrid), so names,
    quizzes and buttons line up from row to row */
-.dash-list:has(> li > .dash-what) { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 12px; }
-.dash-list > li:has(> .dash-what) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
+.dash-list:has(> li > .dash-what) { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 24px; }  /* (room between the name, the quiz and the eye: the owner, 2026-10-14) */
+.dash-list > li:has(> .dash-what) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; column-gap: 24px; }
 .dash-list > li > .dash-what { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; min-width: 0; }
 .dash-list > li > .dash-what > .dash-quiz { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
 .dash-list > li:has(> .dash-what) > .dash-go { margin-left: 0; }
@@ -2126,7 +2137,7 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
   border-bottom: 0; background: var(--surface); color: var(--muted); box-shadow: none; font-size: var(--fs-sm); margin-bottom: 1px; }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab:hover { color: var(--text); border-color: var(--tab-edge); }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--tab-open); border-color: var(--tab-edge); border-top: 3px solid var(--accent);
-  color: var(--text); font-weight: 700; margin-bottom: 0; padding-bottom: 5px; position: relative; z-index: 1; }
+  color: var(--text); font-weight: 600; margin-bottom: 0; padding-bottom: 5px; position: relative; z-index: 1; }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
 .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
 .folder-filter-rows > .folder-tabs-inner > .folder-tabs-label { align-self: center; padding-bottom: 6px; }
@@ -2162,7 +2173,7 @@ details.row-fold > summary > .drag-item, details.row-fold > summary > .name-link
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: .6; }
 /* the Dashboard: Results and Assigned take turns in one place, so they're one width; long quiz
    names are cut short with "…" (the full name is in the tooltip) */
-.dash-list .dash-go .btn { min-width: 6.5rem; justify-content: center; text-align: center; }
+.dash-list .dash-go .btn:not(.btn-icon) { min-width: 6.5rem; justify-content: center; text-align: center; }
 .dash-list > li > .dash-what > .dash-quiz { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 @media (max-width: 640px) {
   /* phones: a Dashboard row stacks: who, then what, then its button */
@@ -2380,3 +2391,42 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
    no All or Unsorted: the owner, 2026-10-14) */
 .folder-filter-rows > .folder-tabs-empty > .folder-tab-all, .folder-filter-rows > .folder-tabs-empty > .folder-tab-self,
 .folder-filter-rows > .folder-tabs-plain > .folder-tab { display: none; }
+/* icon buttons (row and card buttons, the folder tools: the owner, 2026-10-14): just the
+   drawing, no button around it (no border, no fill: "an icon" always means this, the owner);
+   its words in the tooltip and for screen readers (icon_label() in app/icons.py,
+   window.qgenIconButton in scripts). Remove keeps its red; grayed when it doesn't apply. */
+.btn.btn-icon, .btn.btn-icon.btn-secondary, .btn.btn-icon.btn-danger, summary.btn.btn-icon {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0;
+  width: 34px; height: 34px; min-width: 0; min-height: 0; padding: 0;
+  border: 0; background: none; box-shadow: none; color: var(--accent); }
+.btn.btn-icon.btn-xs { width: 30px; height: 30px; }
+.btn.btn-icon svg.ico { width: 20px; height: 20px; flex: none; }
+.btn.btn-icon.btn-xs svg.ico { width: 18px; height: 18px; }
+.btn.btn-icon:hover:not(:disabled) { background: var(--accent-soft); filter: none; }
+.btn.btn-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.btn-icon:disabled, .btn.btn-icon[aria-disabled="true"] { background: none; color: var(--muted); opacity: .5; }
+.btn.btn-danger.btn-icon, .btn.btn-danger.btn-icon svg.ico { color: var(--bad); }
+.btn.btn-danger.btn-icon:hover:not(:disabled) { background: color-mix(in srgb, var(--bad) 12%, transparent); }
+@media (pointer: coarse) { .btn.btn-icon { width: 44px; height: 44px; } }
+/* a folder's own page: Up shows once, on the tab row when there is one (folder_up in _folders.html) */
+.folder-main:has(.folder-filter[data-url-tab]) .title-actions .folder-up { display: none; }
+
+/* a pinned message: a "Pinned" badge and a colored edge (the owner, 2026-10-14) */
+.msg.msg-is-pinned { border-left: 4px solid var(--warn); }
+.badge.badge-pinned { display: inline-flex; align-items: center; gap: 3px; background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--text); }
+.badge.badge-pinned svg.ico { width: 12px; height: 12px; }
+
+/* just an icon, no button around it (the eye that opens a student's copy of a quiz: the owner,
+   2026-10-14); its words in the tooltip and for screen readers */
+a.icon-link, button.icon-link { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--r);
+  color: var(--accent); text-decoration: none; }
+a.icon-link svg.ico, button.icon-link svg.ico { width: 22px; height: 22px; }
+button.icon-link { border: 0; background: none; padding: 0; cursor: pointer; min-height: 0; }
+a.icon-link:hover, button.icon-link:hover { background: var(--accent-soft); }
+a.icon-link:focus-visible, button.icon-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) { a.icon-link, button.icon-link { width: 44px; height: 44px; } }
+.result-attempt-buttons a.icon-link.attempt-open { min-width: 0; }
+
+/* (the grading marks: right in green, wrong in red, like their highlights) */
+.btn.btn-ok.btn-icon, .btn.btn-ok.btn-icon svg.ico { color: var(--ok); }
+.btn.btn-ok.btn-icon:hover:not(:disabled) { background: color-mix(in srgb, var(--ok) 14%, transparent); }

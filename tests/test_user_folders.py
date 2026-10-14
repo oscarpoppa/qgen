@@ -204,9 +204,10 @@ def test_assigning_from_the_users_page(app_db):
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
     assert 'name="users" value="{}" form="assign-people"'.format(ids('kim')) in page
     assert '<form method="get" action="/quiz/assign" id="assign-people"' in page
-    assert 'href="/quiz/assign?users={}">Assign a quiz</a>'.format(ids('kim')) in no_titles(page)
-    assert 'href="/quiz/assign?folder={}">Assign a quiz to this folder</a>'.format(g7) in no_titles(page)
-    assert 'href="/quiz/assign?folder={}">Assign a quiz<span class="wide-only"> to this folder</span></a>'.format(p2) in no_titles(page)  # the box inside
+    assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'Assign a quiz</span></a>' in page  # (the paper plane: owner 2026-10-14)
+    #(paper planes, the words for screen readers: owner 2026-10-14)
+    assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'Assign a quiz to this folder</span></a>' in page
+    assert 'href="/quiz/assign?folder={}"><svg'.format(p2) in no_titles(page)  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
     start = lambda page: re.search(r'data-start="(\w+)"', page[page.index('id="pick-people"'):]).group(1)
     # a folder: everyone in it (and in the folders inside it), checked, opening on its tab
@@ -254,8 +255,9 @@ def test_users_page_leads_to_each_student_page(app_db):
     teach = login(app, 'teach')
     page = teach.get('/userdet?folder=all').data.decode()
     sam = ids('sam')
-    assert 'href="/quiz/listuser/{}" title="sam&#39;s quizzes, results and awards">Student page</a>'.format(sam) in page \
-        or 'href="/quiz/listuser/{}" title="sam\'s quizzes, results and awards">Student page</a>'.format(sam) in page
+    #(the person icon: owner 2026-10-14)
+    assert ('href="/quiz/listuser/{}" title="Student page: sam&#39;s quizzes, results and awards">'.format(sam) in page
+            or 'href="/quiz/listuser/{}" title="Student page: sam\'s quizzes, results and awards">'.format(sam) in page) and 'Student page</span></a>' in page
     # the name itself is plain text, not a link: only buttons act on a person
     assert '<strong class="box-title">sam</strong>' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page
@@ -278,7 +280,7 @@ def test_taking_people_out_of_their_only_folder(app_db):
     # the bar: the same folder menu, Put in folder and Take out of folder as Problems and Quizzes;
     # each card: Remove (it asks which folder when they're in several)
     assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Put in folder</button>' in page
-    assert page.count('>Remove</button>') >= 2
+    assert page.count('Remove</span></button>') >= 2  # (icon buttons: their words for screen readers)
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
     assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed

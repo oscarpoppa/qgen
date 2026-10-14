@@ -19,8 +19,8 @@
   {# Expand all / Collapse all at the top of the list, as in every folder list (static/js/folder_checks.js
      shows them; grayed, with why, when no folder has folders inside) #}
   {% if all_subjects %}<div class="btn-row small side-levels subject-levels" hidden>
-    <button type="button" class="btn btn-secondary btn-xs" data-side-level="open" title="Show the folders inside every folder in this list">Expand all</button>
-    <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder">Collapse all</button>
+    <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="open" title="Expand all: Show the folders inside every folder in this list">{{ icon_label('lc-expand', 'Expand all') }}</button>
+    <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
   </div>{% endif %}
     {% for g, depth in all_subjects %}
       {# a folder with folders inside has the fold arrow of the folder lists #}

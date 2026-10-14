@@ -38,9 +38,9 @@
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
   <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving"><span class="back-label">← {{ came[1] }}</span></a>
     {% if vq and vq.id %}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="See one student's version of the saved quiz">View</a>
-      {% if vq.cquizzes %}<a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's attempts and scores on {{ vq.title }}">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}
-      {% if not vq.removed_at %}<a class="btn btn-secondary" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Give {{ vq.title }} to students">Assign</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
+      <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student's version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a>
+      {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}
+      {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"

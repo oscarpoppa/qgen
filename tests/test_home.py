@@ -37,7 +37,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     # waiting: due soonest first, each with its button
     waiting = page.split('class="box-title">Waiting for you</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
-    assert '>Continue</a>' in page and page.count('>Start</a>') == 2
+    assert 'Continue</span></a>' in page and page.count('Start</span></a>') == 2  # (the play triangle: owner 2026-10-14)
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in no_titles(page)  # in the menu for students
     # the boxes fold away (remembered in the browser)
     assert 'data-box="waiting" open>' in page and 'data-elastic="awards" data-box="awards" open>' in page
@@ -130,7 +130,7 @@ def test_recently_completed(app_db):
     page = sam.get('/home').data.decode()
     part = page.split('class="box-title">Recently completed</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
-    assert 'title="Handed in; your teacher is checking your written answers">In progress</span>' in part and '>85%</span>' in part and '>View</a>' in part and '>Results</a>' in part
+    assert 'title="Handed in; your teacher is checking your written answers">In progress</span>' in part and '>85%</span>' in part and part.count('View</span></a>') == 2  # (the eye for both: owner 2026-10-14)
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))

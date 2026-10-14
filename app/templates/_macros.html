@@ -71,7 +71,7 @@
 
 {# a button that doesn't apply to this item: shown, grayed out, with why (rows of the same kind
    of item always have the same buttons, in the same places; the teacher chose this 2026-10-10) #}
-{% macro slot(label, why, cls='btn btn-secondary btn-sm') %}<button type="button" class="{{ cls }}" disabled title="{{ why }}">{{ label }}</button>{% endmacro %}
+{% macro slot(label, why, cls='btn btn-secondary btn-sm', icon=none) %}{% if icon or label in button_icons %}<button type="button" class="{{ cls }} btn-icon" disabled title="{{ label }}: {{ why }}">{{ icon_label(icon or button_icons[label], label) }}</button>{% else %}<button type="button" class="{{ cls }}" disabled title="{{ why }}">{{ label }}</button>{% endif %}{% endmacro %}
 
 {# Back on a page reached from the menu: to the page it was opened from, else Home (Dashboard) #}
 {% macro back_home(cls='btn btn-secondary') %}{{ back_button(home_url(), 'Dashboard' if current_user.is_admin else 'Home', cls) }}{% endmacro %}
@@ -126,8 +126,8 @@
    boxes, in words). Shown only when there are two or more to fold (static/js/boxes.js). #}
 {% macro expand_collapse(target, what) -%}
 <span class="level-buttons">
-  <button type="button" class="btn btn-secondary btn-sm" data-level="open" data-level-of="{{ target }}" aria-label="Expand all {{ what }}" title="Open every one of the {{ what }}">Expand all</button>
-  <button type="button" class="btn btn-secondary btn-sm" data-level="close" data-level-of="{{ target }}" aria-label="Collapse all {{ what }}" title="Fold every one of the {{ what }} down to its heading">Collapse all</button></span>
+  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="open" data-level-of="{{ target }}" aria-label="Expand all {{ what }}" title="Expand all: Open every one of the {{ what }}">{{ icon_label('lc-expand', 'Expand all') }}</button>
+  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="close" data-level-of="{{ target }}" aria-label="Collapse all {{ what }}" title="Collapse all: Fold every one of the {{ what }} down to its heading">{{ icon_label('lc-collapse', 'Collapse all') }}</button></span>
 {%- endmacro %}
 
 {# The filter bar, the same on every page (static/js/filter.js): a "Filter by name…" box, how
@@ -146,9 +146,12 @@
 </div>
 {%- endmacro %}
 
-{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none) %}
+{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none, icon=none) %}
   <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="{{ cls }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ label }}</button>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {#- (icon: a bare icon button, its words in the tooltip and for screen readers) -#}
+    {%- if icon %}<button class="{{ cls }} btn-icon" title="{{ label }}{% if tip %}: {{ tip }}{% endif %}">{{ icon_label(icon, label) }}</button>
+    {%- else %}<button class="{{ cls }}"{% if tip %} title="{{ tip }}"{% endif %}>{{ label }}</button>{% endif %}
   </form>
 {% endmacro %}
 

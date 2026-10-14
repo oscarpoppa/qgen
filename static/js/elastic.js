@@ -15,9 +15,12 @@
   function store(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
   function stored(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function narrow() { return window.innerWidth <= NARROW; }
-  //the card last stretched or opened lies on top of the others
-  var top = 20;
-  function raise(card) { card.style.zIndex = String(++top); }
+  //the card last stretched or opened lies on top of the others, but always under the top bar,
+  //the side panels and pop-overs (z-index 5 and 6; the top bar is 10)
+  function raise(card) {
+    document.querySelectorAll('[data-elastic]').forEach(function (c) { c.style.zIndex = ''; });
+    card.style.zIndex = '6';
+  }
   //Expand all / Collapse all (and a window resize): the cards are laid out afresh, each in its
   //natural place, pushing as usual, instead of all floating over one another; each then keeps
   //its new room (the owner, 2026-10-14)
@@ -25,6 +28,7 @@
   function relay() {
     fresh = Date.now() + 600;
     document.querySelectorAll('[data-elastic]').forEach(function (c) { if (c._elasticFloat) c._elasticFloat(); });
+    if (window.qgenRelayout) window.qgenRelayout();
   }
   document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('[data-level]')) relay();
@@ -56,7 +60,7 @@
       handles.push(h);
       return h;
     }
-    handle('elastic-bar', 'y', tallOnly ? 'Drag down to make this card taller, over the cards below' : 'Drag down to make this card taller, over the cards below',
+    handle('elastic-bar', 'y', 'Drag down to make this card taller, over the cards below',
            'Make this card taller or shorter (drag, or the up and down arrow keys)');
     if (!tallOnly) {
       handle('elastic-side', 'x', 'Drag sideways to make this card wider, over the cards beside it', 'Make this card wider or narrower (drag, or the left and right arrow keys)');
@@ -114,6 +118,10 @@
     card._baseH = card.getBoundingClientRect().height;
     widen(extra, false);
     if (tall) heighten(tall, false);
+    //(a size kept from before is laid out as it opens, pushing the others like Expand all does,
+    //so nothing is covered when the page opens; only what grows from here on floats)
+    rest = null; card.style.marginBottom = ''; float();
+    if (window.qgenRelayout) window.qgenRelayout();
     if (window.ResizeObserver) new ResizeObserver(function () { float(); }).observe(card);
     card._elasticFloat = float;
     card.addEventListener('toggle', function () { if (card.open) raise(card); });
@@ -179,7 +187,13 @@
     var timer;
     window.addEventListener('resize', function () {
       clearTimeout(timer);
-      timer = setTimeout(function () { if (!card.isConnected) return; var want = parseFloat(stored(key)) || 0; rest = null; card.style.marginBottom = ''; widen(want, false); }, 150);
+      timer = setTimeout(function () {
+        if (!card.isConnected) return;
+        var want = parseFloat(stored(key)) || 0;
+        rest = null; card.style.marginBottom = '';
+        heighten(tall, false);  // (a phone: no extra height; back on a computer: as it was)
+        widen(want, false);
+      }, 150);
     });
   }
 

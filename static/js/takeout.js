@@ -49,11 +49,15 @@
     var It = person ? 'They’re' : 'It’s', it = person ? 'them' : 'it';
     q += ids.length ? It + ' in ' + names.map(function (n) { return '“' + n + '”'; }).join(', ') + '.' : (person ? 'They aren’t' : 'It isn’t') + ' in any folder.';
     if (form.dataset.deleteNote) q += ' ' + form.dataset.deleteNote;
-    var ups = JSON.parse(form.dataset.ups || '[]');
+    var ups = JSON.parse(form.dataset.ups || '[]'), chains = JSON.parse(form.dataset.chains || '[]');
+    var q2 = function (n) { return '“' + n + '”'; };
     var choices = ids.map(function (id, i) {
-      var others = names.filter(function (n, j) { return j !== i; }), up = ups[i];
-      var title = up ? (person ? 'They go back into “' : 'It goes back into “') + up + '” (its Unsorted)' :
-                  others.length ? (person ? 'They stay in ' : 'It stays in ') + others.map(function (n) { return '“' + n + '”'; }).join(', ') :
+      var others = names.filter(function (n, j) { return j !== i; }), up = ups[i], outer = (chains[i] || [])[0];
+      //(also in that outer folder, or another folder inside it: it stays there, it doesn't go back up)
+      var near = up && ids.some(function (other, j) { return j !== i && (other === outer || (chains[j] || []).indexOf(outer) !== -1); });
+      var title = up && !near ? (person ? 'They go back into “' : 'It goes back into “') + up + '” (its Unsorted)' +
+                    (others.length ? ' and stay' + (person ? '' : 's') + ' in ' + others.map(q2).join(', ') : '') :
+                  others.length ? (person ? 'They stay in ' : 'It stays in ') + others.map(q2).join(', ') :
                   (person ? 'They go to Uncategorized' : 'It goes to Uncategorized');
       return { value: 'out:' + id, label: 'Take out of “' + names[i] + '”', title: title };
     });

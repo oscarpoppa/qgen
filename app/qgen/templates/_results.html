@@ -8,9 +8,9 @@
 {% set tip = 'Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive' %}
 {%- if g.attempts|length > 1 -%}
   {#- on a box's heading line the button sends a form kept outside the heading (archive_all_form) -#}
-  {%- if form_id %}<button class="btn btn-secondary btn-sm btn-all" form="{{ form_id }}" title="{{ tip }}">Archive all ({{ g.attempts|length }})</button>
-  {%- else %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', question, tip=tip) }}{% endif %}
-{%- else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all') }}{% endif %}
+  {%- if form_id %}<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{{ form_id }}" title="Archive all ({{ g.attempts|length }}): {{ tip }}">{{ icon_label('lc-archive-all', 'Archive all (' ~ g.attempts|length ~ ')') }}</button>
+  {%- else %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ g.attempts|length ~ ')', 'btn btn-secondary btn-sm btn-all', question, tip=tip, icon='lc-archive-all') }}{% endif %}
+{%- else %}{{ slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all', icon='lc-archive-all') }}{% endif %}
 {%- endmacro %}
 {# the form an "Archive all" on a heading line sends (a form can't sit inside a heading) #}
 {% macro archive_all_form(g, student, form_id) -%}
@@ -26,11 +26,11 @@
                     {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
                     {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
-                    <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ student.shown_name }}'s written answers for this attempt">Grade</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}
-                    {% if cq.status in ('completed', 'review') %}<a class="btn btn-secondary btn-sm attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s answers and score for this attempt">Results</a>
-                    {% else %}<a class="btn btn-secondary btn-sm attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ student.shown_name }}'s copy of this quiz, as it is now">Assigned</a>{% endif %}
-                    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ student.shown_name }}'s questions next to the correct answers">Answer key</a>
-                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)') }}</span>
+                    <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ student.shown_name }}'s written answers for this attempt">{{ icon_label('lc-grade', 'Grade') }}</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}
+                    {% if cq.status in ('completed', 'review') %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s answers and score for this attempt">{{ icon_label('lc-eye', 'View') }}</a>
+                    {% else %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s copy of this quiz, as it is now">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}
+                    <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="Answer key: {{ student.shown_name }}'s questions next to the correct answers">{{ icon_label('lc-answer-key', 'Answer key') }}</a>
+                    {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)', icon='lc-archive') }}</span>
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at|when }}</div>{% endif %}
                 {% endfor %}
@@ -53,7 +53,7 @@
                 {% endif %}
               </td>
               <td class="actions"><div class="btn-stack">
-                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new attempt at this quiz, with new values') }}{% else %}{{ slot('Retake', 'A new attempt can be given once the latest one is handed in and graded') }}{% endif %}
+                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new attempt at this quiz, with new values', icon='lc-retake') }}{% else %}{{ slot('Retake', 'A new attempt can be given once the latest one is handed in and graded') }}{% endif %}
                 {# all of this student's attempts to the Archive at once, beside Retake (no row of its own;
                    a student page's quiz box has it on its heading line instead: archive_all=false) #}
                 {% if archive_all %}{{ archive_all_button(g, student) }}{% endif %}

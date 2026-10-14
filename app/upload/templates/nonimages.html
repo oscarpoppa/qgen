@@ -17,7 +17,7 @@
         <tr>
           <td data-label="File">{{ file }}</td>
           <td class="actions">
-            <a class="btn btn-secondary btn-sm" href="{{ url_for('static', filename=file) }}" target="_blank" rel="noopener" title="Open {{ file }} in a new tab">View</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=file) }}" target="_blank" rel="noopener" title="View: Open {{ file }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
             {{ post_button(url_for('upload.delnonimg', fname=file), 'Delete', 'btn btn-danger btn-sm', 'Delete “' ~ (file)|string ~ '”?', tip='Delete “' ~ (file)|string ~ '” for good (asks first)') }}
           </td>
         </tr>

@@ -202,10 +202,13 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
     ids, where = p['ids'], folder_name(kind, folder)
     done = []
     for item in p['up']:
+        #(the folders it's in elsewhere, besides the outer one it goes back to: named too)
+        also = _still_in(kind, item, ids | subtree(kind, p['parent']))
         _take_out(kind, item, ids)
         _put_in(kind, item, p['parent'])
-        done.append('Took {} out of “{}”; {} now in “{}” (its Unsorted).'.format(item_name(kind, item), where,
-                    'they’re' if kind == 'people' else 'it’s', folder_name(kind, p['parent'])))
+        done.append('Took {} out of “{}”; {} now in “{}” (its Unsorted){}.'.format(item_name(kind, item), where,
+                    'they’re' if kind == 'people' else 'it’s', folder_name(kind, p['parent']),
+                    ' and still in {}'.format(also) if also else ''))
     for item in p['out']:
         done.append('Took {} out of “{}”; {} still in {}.'.format(item_name(kind, item), where,
                     'they’re' if kind == 'people' else 'it’s', _still_in(kind, item, ids)))

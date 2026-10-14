@@ -6,7 +6,7 @@
     {% set grouped = everyone is defined and everyone and m.copies is defined and m.copies > 1 %}
     <li class="msg-with-avatar {{ 'msg-mine' if m.from_teacher == me_teacher else '' }}">
     {% if m.kind != 'notice' %}{{ avatar(m.sender if m.from_teacher else m.student, 28) }}{% endif %}
-    <div class="msg {{ 'msg-teacher' if m.from_teacher else 'msg-student' }} {{ 'msg-mine' if m.from_teacher == me_teacher else '' }} msg-{{ m.kind }} {{ 'msg-new' if unread_ids is defined and m.id in unread_ids else '' }}">
+    <div class="msg {{ 'msg-teacher' if m.from_teacher else 'msg-student' }} {{ 'msg-mine' if m.from_teacher == me_teacher else '' }} msg-{{ m.kind }} {{ 'msg-new' if unread_ids is defined and m.id in unread_ids else '' }}{{ ' msg-is-pinned' if m.pinned }}">
       {% if m.kind != 'notice' %}
         {% if grouped %}
           {# shown once for everyone who got it: the ✕ removes every copy #}
@@ -48,7 +48,7 @@
         {% set pin_words = ('Unpin (now at the top of ' ~ m.student.shown_name ~ '’s messages)') if m.pinned else ('Pin to the top of ' ~ m.student.shown_name ~ '’s messages') %}
         <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="msg-pin-wrap dock-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
-          <button class="msg-pin{{ ' is-pinned' if m.pinned }}" aria-pressed="{{ 'true' if m.pinned else 'false' }}" aria-label="{{ pin_words }}" title="{{ pin_words }}">{{ icon('pin') }}</button>
+          <button class="msg-pin{{ ' is-pinned' if m.pinned }}" aria-pressed="{{ 'true' if m.pinned else 'false' }}" aria-label="{{ pin_words }}" title="{{ pin_words }}">{{ icon('lc-pin-off') if m.pinned else icon('pin') }}</button>
         </form>
       {% endif %}
       <div class="msg-meta small">
@@ -65,7 +65,8 @@
         {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
         <span class="muted">{{ m.created|when }}</span>
-        {% if m.pinned and not can_pin %}<span title="Pinned" aria-label="pinned">{{ icon('pin') }}</span>{% endif %}
+        {# (pinned: said plainly, for everyone, beside its other badges: the owner, 2026-10-14) #}
+        {% if m.pinned %}<span class="badge badge-pinned" title="Pinned to the top of {{ 'their' if me_teacher else 'your' }} messages">{{ icon('pin') }} Pinned</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}" title="Go to the page this message is about">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>

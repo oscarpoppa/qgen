@@ -58,8 +58,15 @@
       c.dataset.n = n;
       b.appendChild(name);
       b.appendChild(c);
-      if (!n && id !== 'all') b.classList.add('is-empty');
       b.title = 'Show ' + (id === 'all' ? 'everything' : 'what’s in “' + label + '”');
+      //(nothing in it: grayed; and with no folders inside either, it doesn't open (the folder list
+      //still opens it, for its Folder options); one holding only empty folders opens, to show
+      //them: the owner, 2026-10-14)
+      if (!n && id !== 'all') {
+        b.classList.add('is-empty');
+        var kids = byId[id] && byId[id].children;
+        if (!(kids && kids.length)) { b.disabled = true; b.title = 'Nothing in “' + label + '” yet'; }
+      }
       if ('droppable' in box.dataset && id !== 'all' && (id === 'none' || /^\d+$/.test(id))) b.dataset.drop = id === 'none' ? 'top' : id;
       return b;
     }
@@ -120,9 +127,9 @@
         btn.dataset.level = b[0];
         btn.dataset.levelOf = '#' + list.id;
         btn.dataset.levelPrefer = '';
-        btn.textContent = b[1];
+        //(an icon button: its words in the tooltip and for screen readers)
+        window.qgenIconButton(btn, b[0] === 'open' ? 'lc-expand' : 'lc-collapse', b[1], b[2] + label + '\u201d');
         btn.setAttribute('aria-label', b[1] + ' in ' + label);
-        btn.title = b[2] + label + '\u201d';
         pair.appendChild(btn);
       });
       span.appendChild(pair);
@@ -133,8 +140,7 @@
       var open = document.createElement('a');
       open.className = 'btn btn-secondary btn-xs';
       open.href = url;
-      open.textContent = 'Open this folder';
-      open.title = n ? 'Go into “' + n.name + '” to see just what’s in it' : 'See just what’s in no folder';
+      window.qgenIconButton(open, 'lc-folder-open', 'Open this folder', n ? 'Go into “' + n.name + '” to see just what’s in it' : 'See just what’s in no folder');
       span.appendChild(open);
       return span;
     }
@@ -168,7 +174,7 @@
          ['close', 'Collapse all', 'Hide the folders inside every folder (the one picked stays in view)']].forEach(function (l) {
           var lb = document.createElement('button');
           lb.type = 'button'; lb.className = 'btn btn-secondary btn-xs'; lb.dataset.sideLevel = l[0];
-          lb.textContent = l[1]; lb.title = l[2];
+          window.qgenIconButton(lb, l[0] === 'open' ? 'lc-expand' : 'lc-collapse', l[1], l[2]);
           levels.appendChild(lb);
         });
         col.appendChild(levels);
@@ -238,7 +244,7 @@
             saveFold(); drawFolds();
           });
         });
-        if (!folds.length) levels.querySelectorAll('button').forEach(function (lb) { lb.disabled = true; lb.title = 'No folder here has folders inside it'; });
+        if (!folds.length) levels.querySelectorAll('button').forEach(function (lb) { lb.disabled = true; lb.title = lb.textContent.trim() + ': No folder here has folders inside it'; });
         else levels.addEventListener('click', function (e) {
           var lb = e.target.closest('[data-side-level]');
           if (!lb) return;
@@ -334,12 +340,22 @@
         home.appendChild(spot);
       } else if (t.childNodes.length) {
         var where = box.dataset.style === 'list' ? tabsBox() : rows;
-        if (narrow && narrow.matches) {
+        var row = where.lastElementChild;
+        //(a folder with no folders inside has no tabs of its own: no empty row for it; its buttons
+        //go at the end of the row above, like every other folder's: the owner, 2026-10-14)
+        if (row.classList.contains('folder-tabs-plain') && row.previousElementSibling) {
+          row.style.display = 'none';
+          row = row.previousElementSibling;
+        }
+        if (!(narrow && narrow.matches)) row.appendChild(t);
+        //(a phone, or a row of tabs too long for its width, which scrolls sideways: the buttons
+        //go on a line of their own under it, so they're never scrolled out of sight)
+        if ((narrow && narrow.matches) || row.scrollWidth > row.clientWidth + 1) {
           var line = document.createElement('div');
           line.className = 'folder-tools-line';
           line.appendChild(t);
           where.appendChild(line);
-        } else where.lastElementChild.appendChild(t);
+        }
       }
       //the chosen tabs in view (a phone's strip may be scrolled past them)
       box.querySelectorAll('.folder-filter-rows .folder-tab[aria-pressed="true"]').forEach(function (b) {
@@ -461,12 +477,29 @@
         return;
       }
       if (chosen === 'none' && !inner) { heading.textContent = box.dataset.mainLabel || 'Uncategorized'; return; }
-      var names = path().map(function (id) { return byId[id].name; });
-      if (chosen.indexOf('self:') === 0 || chosen === 'none') names.push(inner ? (box.dataset.mainLabel || 'Unsorted') : 'Unsorted');
+      //(My quizzes' New and In progress aren't folders: opened on one, the server's heading says
+      //what it shows, "New: quizzes you haven't started"; chosen afterward, the tab's name)
+      if (!inner && !isFolder(base())) {
+        if (chosen === box.dataset.start && headingOwn) heading.innerHTML = headingOwn;
+        else heading.textContent = byId[chosen] ? byId[chosen].name : heading.textContent;
+        return;
+      }
+      //(built like a folder's own page's heading, _folders.html: the folders it's in as links up,
+      //then its icon and its name)
+      var steps = path().map(function (id) { return { name: byId[id].name, url: byId[id].url }; });
+      if (chosen.indexOf('self:') === 0 || chosen === 'none') steps.push({ name: inner ? (box.dataset.mainLabel || 'Unsorted') : 'Unsorted', tray: true });
       heading.innerHTML = inner ? headingOwn : '';
-      names.forEach(function (n, i) {
+      steps.forEach(function (st, i) {
+        var last = i === steps.length - 1;
         if (inner || i) heading.insertAdjacentHTML('beforeend', ' <span class="muted" aria-hidden="true">\u203a</span> ');
-        heading.appendChild(document.createTextNode(n));
+        if (!last && st.url && !inner) {
+          var a = document.createElement('a');
+          a.href = st.url; a.textContent = st.name; a.title = 'Go up to the folder \u201c' + st.name + '\u201d';
+          heading.appendChild(a);
+          return;
+        }
+        if (last && !inner && window.qgenIcon) heading.insertAdjacentHTML('beforeend', window.qgenIcon(st.tray ? 'tray' : 'folder') + ' ');
+        heading.appendChild(document.createTextNode(st.name));
       });
     }
     function choose(id) {

@@ -84,7 +84,7 @@ def test_chosen_students_and_pinning_on_the_web(app_db):
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday!', 'pin': '1'})
     home = login(app, 'kim').get('/messages/panel').data.decode()
     assert 'pinned-list' in home and 'Test Friday!' in home
-    assert teacher.get('/messages').data.decode().count('Unpin') == 2
+    assert teacher.get('/messages').data.decode().count('Unpin</span></button>') == 2  # (icon buttons: owner 2026-10-14)
     batch_msg = Message.query.filter_by(body='Test Friday!').first()
     teacher.post('/messages/pin/{}'.format(batch_msg.id), data={'pinned': '0'})
     assert Message.query.filter_by(body='Test Friday!', pinned=True).count() == 0

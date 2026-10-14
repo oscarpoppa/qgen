@@ -185,6 +185,8 @@ def kit(view, node, root, flat, nodes, page, **words):
         'main_label': 'Uncategorized',
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: 'folder', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,
+        #the same buttons for the All and Uncategorized tabs (a function of the root node)
+        'all_tools': None, 'main_tools': None,
         'add_words': 'Move to…', 'placeholder': 'Folder name',
         'all_flags': None,  # dots on the All row, like a folder's ({'unread': n} on Messages)
         'title': None,  # a heading of its own instead of "All …" (My quizzes from a Home counter)

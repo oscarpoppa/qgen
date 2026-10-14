@@ -83,9 +83,8 @@
       btn.className = 'btn btn-secondary btn-xs';
       btn.dataset.level = b[0];
       btn.dataset.levelItems = '';
-      btn.textContent = b[1];
+      window.qgenIconButton(btn, b[0] === 'open' ? 'lc-expand' : 'lc-collapse', b[1], b[2] + what);
       btn.setAttribute('aria-label', b[1] + ' ' + what);
-      btn.title = b[2] + what;
       pair.appendChild(btn);
     });
     head.appendChild(pair);

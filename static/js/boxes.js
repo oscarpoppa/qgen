@@ -174,8 +174,8 @@
         + '<button type="button" class="btn btn-secondary btn-xs" data-level="close"></button></span>';
       var open = bar.querySelector('[data-level=open]'), close = bar.querySelector('[data-level=close]');
       open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;
-      open.textContent = 'Expand all'; open.setAttribute('aria-label', 'Expand all in ' + name); open.title = 'Open every box in ' + name;
-      close.textContent = 'Collapse all'; close.setAttribute('aria-label', 'Collapse all in ' + name); close.title = 'Fold every box in ' + name + ' down to its heading';
+      window.qgenIconButton(open, 'lc-expand', 'Expand all', 'Open every box in ' + name); open.setAttribute('aria-label', 'Expand all in ' + name);
+      window.qgenIconButton(close, 'lc-collapse', 'Collapse all', 'Fold every box in ' + name + ' down to its heading'); close.setAttribute('aria-label', 'Collapse all in ' + name);
       head.appendChild(bar);
     });
   }
@@ -200,7 +200,7 @@
         pair.querySelectorAll('[data-level]').forEach(function (b) {
           if (!('title0' in b.dataset)) b.dataset.title0 = b.title || '';
           b.disabled = !set.length;
-          b.title = set.length ? b.dataset.title0 : 'Nothing here opens or folds';
+          b.title = set.length ? b.dataset.title0 : (b.classList.contains('btn-icon') ? b.textContent.trim() + ': ' : '') + 'Nothing here opens or folds';
         });
         if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
         //a grayed pair (nothing to fold) is a copy only of one for the same list (a list's heading

@@ -685,3 +685,27 @@ def test_deleting_a_folder_says_what_moved_where(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert 'Delete the folder “Science”? Nothing in it is deleted: the problems in it move up to Uncategorized.' in page
     assert 'class="folder-filter-tools"' in page and 'Folder options' in page
+
+
+def test_back_up_to_the_outer_folder_says_where_else_it_is(app_db):
+    """Out of a folder inside another, it goes back to the outer one (its Unsorted), and the
+    message also names the other folders it's still in (the owner, 2026-10-14)."""
+    app, db = app_db
+    from app.qgen.models import VPGroup
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add')
+    for name in ('Outer', 'Top'):
+        teacher.post('/quiz/subjects/problems/new', data={'name': name})
+    outer = VPGroup.query.filter_by(title='Outer').one()
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Inner', 'parent': outer.id})
+    inner, top = VPGroup.query.filter_by(title='Inner').one(), VPGroup.query.filter_by(title='Top').one()
+    for g in (inner, top):
+        teacher.post('/quiz/subjects/problems/file', data={'subject': g.id, 'items': [probs['Add'].id]})
+    res = teacher.post('/folders/problems/takeout', data={'items': [probs['Add'].id], 'folder': inner.id, 'just': '1'},
+                       headers={'X-Requested-With': 'fetch'}).get_json()
+    assert res['message'] == 'Took “Add” out of “Inner”; it’s now in “Outer” (its Unsorted) and still in “Top”.'
+    db.session.expire_all()
+    assert sorted(g.title for g in db.session.get(type(probs['Add']), probs['Add'].id).vpgroups) == ['Outer', 'Top']
+    # the Remove button's question knows each folder's outer folders, for its hover words
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'data-chains=' in page

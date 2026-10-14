@@ -6,6 +6,7 @@ from app.nav import back_to, safe_next, next_arg, kept_tab
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
 from markupsafe import Markup
+from app.icons import icon_label
 from wtforms_sqlalchemy.orm import model_form
 from functools import wraps
 from secrets import token_urlsafe
@@ -482,11 +483,27 @@ def userdet():
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         #a plain button (blue is for the page's own action); grayed out in an empty folder;
         #"to this folder" drops off on phones
-        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs" href="{}" title="Assign a quiz to everyone in “{}”">Assign a quiz<span class="wide-only"> to this folder</span></a> ').format(
-            url_for('qgen.assign', folder=n['folder'].id), n['folder'].name)
-        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs" disabled title="Nobody in “{}” yet">Assign a quiz<span class="wide-only"> to this folder</span></button> ').format(n['folder'].name),
-        fold_key='qgen-folded-user-folders')
+        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to everyone in “{}”">{}</a> ').format(
+            url_for('qgen.assign', folder=n['folder'].id), n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder'))
+        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="Assign a quiz: nobody in “{}” yet">{}</button> ').format(
+            n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder')),
+        fold_key='qgen-folded-user-folders',
+        #All people: every student; Uncategorized: the people in no folder (the owner, 2026-10-14:
+        #every folder tab can assign a quiz to everyone in it)
+        all_tools=lambda r: _assign_all_button([u for u in ulst if not u.is_admin], 'Assign a quiz to everyone',
+                                               'Assign a quiz to every student', 'Assign a quiz: there are no students yet'),
+        main_tools=lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
+                                                'Assign a quiz to everyone in Uncategorized (in no folder)', 'Assign a quiz: nobody is in Uncategorized'))
     return render_template('udet.html', ulst=ulst, title='People', fk=fk, shown=shown, folders_of=folders_of)
+
+
+def _assign_all_button(people, label, title, empty):
+    # People's All and Uncategorized tabs: Assign with those people checked (grayed when there are none)
+    #(the paper plane, like every Assign: the owner, 2026-10-14)
+    if not people:
+        return Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="{}">{}</button> ').format(empty, icon_label('lc-send', label))
+    return Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="{}">{}</a> ').format(
+        url_for('qgen.assign', users=[u.id for u in people]), title, icon_label('lc-send', label))
 
 
 def _group_done(message, error=False, show=None, moved=None):

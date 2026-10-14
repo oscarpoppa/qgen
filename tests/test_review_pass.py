@@ -539,7 +539,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
     assert '>Week 1</a></span>' in box and 'data-tip="Open the history of “Week 1”' in box  # the name opens its history; the button their copy
-    assert 'href="/quiz/take/{}" title="See sam'.format(cq.id) in box and 's copy of this quiz">Assigned</a>' in box
+    assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'View</span></a>' in box
     assert '>Student page</a>' not in box  # sam's name is the way to their page
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
@@ -1161,12 +1161,14 @@ def test_standard_wording_and_history_buttons(app_db):
     # History only once there's some: not on a quiz or problem nobody has taken
     from app.qgen.models import VProblem
     vp = VProblem.query.first()
-    assert '>History</a>' not in no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
-    assert '>History</a>' not in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    assert 'History</span></a>' not in no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
+    assert 'History</span></a>' not in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
     give(VQuiz.query.one(), 'sam')
     page = no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
-    assert 'href="/quiz/results/{}">History</a>'.format(vq.id) in page
-    assert 'href="/quiz/problem-results/{}">History</a>'.format(vp.id) in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    #(icon buttons: the drawing, then the words for screen readers)
+    assert 'href="/quiz/results/{}"><svg'.format(vq.id) in page and 'History</span></a>' in page
+    vp_page = no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    assert 'href="/quiz/problem-results/{}"><svg'.format(vp.id) in vp_page and 'History</span></a>' in vp_page
     # unchecking everyone says so (Clear is the filter box's)
     for url in ('/userdet', '/quiz/assign'):
         assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get(url).data.decode()), url
@@ -1281,7 +1283,7 @@ def test_list_items_have_only_buttons(app_db):
         items = re.findall(r'<tr[ >].*?</tr>|<li>.*?</li>|<summary[ >].*?</summary>', main, re.S)
         for item in items:
             # (the folder list down the side is where to go, not an item: its entries are links)
-            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link)\b', a)]
+            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link|icon-link)\b', a)]  # (icon-link: a bare icon, the owner 2026-10-14)
             assert not links, (url, links, item[:300])
             names = re.findall(r'<a class="name-link[^"]*" href="([^"]+)" data-tip="([^"]+)"', item)
             assert all(re.match(r'/(quiz/(listuser|results)|messages)/\d+$', h) and tip.startswith(('Open ', 'Read ')) for h, tip in names), (url, names)
@@ -1441,8 +1443,8 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     app, db = app_db
     page = login(app, 'teach').get('/dashboard').data.decode()
     assert page.count('class="dock-pin"') == 2 and 'aria-pressed="false"' in page
-    start = page[page.index('/* the side panels start closed'):page.index('})();', page.index('/* the side panels start closed'))]
-    assert "localStorage.getItem('qgen-dock-pinned') === '1'" in start and 'roomy' not in start
+    start = page[page.index('/* the side panels are pinned unless'):page.index('})();', page.index('/* the side panels are pinned unless'))]
+    assert "localStorage.getItem('qgen-dock-pinned') !== '0'" in start and 'roomy' not in start  # (pinned unless unpinned: owner 2026-10-14)
     assert "if (pinned && wide) {" in start  # only pinned panels open by themselves
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert 'html:not(.dock-pinned) .dock { z-index: 30;' in css
@@ -1475,7 +1477,7 @@ def test_results_rows_are_one_line_tall(app_db):
     assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
-    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all')" in tpl
+    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all', icon='lc-archive-all')" in tpl
 
 
 def test_a_folded_student_says_where_they_are(app_db):
@@ -1561,7 +1563,8 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
     import os
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     macros = open(os.path.join(here, 'app', 'templates', '_macros.html')).read()
-    assert '{% macro slot(label, why, cls=\'btn btn-secondary btn-sm\') %}<button type="button" class="{{ cls }}" disabled title="{{ why }}">{{ label }}</button>{% endmacro %}' in macros
+    assert "{% macro slot(label, why, cls='btn btn-secondary btn-sm', icon=none) %}" in macros and 'disabled title="{{ why }}">{{ label }}</button>' in macros
+    assert 'disabled title="{{ label }}: {{ why }}">{{ icon_label(icon or button_icons[label], label) }}</button>' in macros  # (an icon button's stand-in)
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.slot-empty' not in css
     app, db = app_db
@@ -1575,16 +1578,16 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'Unused', 'What is 3 + 3?', '6', []))
     vp = VProblem.query.filter_by(title='Unused').one()  # in no one's quiz yet
     pages = {
-        '/quiz/viewvprob/{}'.format(vp.id): ['disabled title="No one has answered this problem yet">History</button>'],
-        '/quiz/editvprob/{}'.format(vp.id): ['disabled title="No one has answered this problem yet">History</button>'],
-        '/quiz/results/{}'.format(vq.id): ['disabled title="Nothing to grade: not handed in yet">Grade</button>',
-                                           'disabled title="Only one attempt: use its own Archive button">Archive all (1)</button>',
+        '/quiz/viewvprob/{}'.format(vp.id): ['disabled title="History: No one has answered this problem yet">'],
+        '/quiz/editvprob/{}'.format(vp.id): ['disabled title="History: No one has answered this problem yet">'],
+        '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
+                                           'disabled title="Archive all (1): Only one attempt: use its own Archive button">',
                                            'disabled title="This quiz has no Paper only questions"'],
         '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
-        '/userdet': ['disabled title="You can’t delete your own account, and you’re in no folder">Remove</button>',
-                     'title="Teachers write to each other in Teachers’ messages">Message</a>'],
+        '/userdet': ['disabled title="Remove: You can’t delete your own account, and you’re in no folder">',
+                     'title="Message: teachers write to each other in Teachers’ messages">'],
     }
     for url, wanted in pages.items():
         page = teacher.get(url).data.decode()
@@ -1654,7 +1657,7 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     vq = make_quiz(app, teach)
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'class="btn btn-secondary btn-sm attempt-open"' in page and '>Assigned</a>' in page
+    assert 'class="icon-link attempt-open"' in page and 'View</span></a>' in page
     assert '<thead><tr><th>Attempts</th><th>Score counted</th><th></th></tr></thead>' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
@@ -1663,14 +1666,14 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert '.result-attempt-buttons .attempt-open { min-width: 5.5rem; text-align: center; }' in css
     assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
     # "Archive all" acts on every attempt: its own look, on the quiz's heading line
-    assert 'class="btn btn-secondary btn-sm btn-all" disabled title="Only one attempt' in page
+    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" disabled title="Archive all (1): Only one attempt' in page
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
     # with two attempts it's the real button, with the same look
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     # (a button on the heading sending a form kept outside the heading: no form inside a summary)
     form_id = 'archive-all-{}-{}'.format(ids('sam'), vq.id)
-    assert '<button class="btn btn-secondary btn-sm btn-all" form="{}" title="Move every one of sam'.format(form_id) in page and '>Archive all (2)</button>' in page
+    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Archive all (2): Move every one of sam'.format(form_id) in page and 'Archive all (2)</span></button>' in page
     assert 'id="{}" class="inline-form" hidden'.format(form_id) in page
 
 
@@ -1723,18 +1726,18 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     box = page[page.index('data-quiz-box='):]
     head = box[:box.index('</summary>')]
-    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head and '>History</a>' not in head and '>Archive all (2)</button>' in head
+    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head and 'History</span></a>' not in head and 'Archive all (2)</span></button>' in head
     assert '<form' not in head and 'result-archive-all' not in box[:box.index('</details>')]
     page = teach.get('/quiz/results').data.decode()
     head = page[page.index('id="quiz-{}"'.format(vq.id)):]
     head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and '>View quiz</a>' in head and '>Edit quiz</a>' in head and '>History</a>' not in head
+    assert '<span class="box-actions">' in head and 'View quiz</span></a>' in head and 'Edit quiz</span></a>' in head and 'History</span></a>' not in head
     assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head
     assert 'box-links' not in page[page.index('<main'):]
     page = teach.get('/quiz/listuser').data.decode()
     head = page[page.index('id="student-{}"'.format(ids('sam'))):]
     head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and '>Student page</a>' not in head and '>Assign a quiz</a>' in head
+    assert '<span class="box-actions">' in head and '>Student page</a>' not in head and 'Assign a quiz</span></a>' in head and 'Message</span></a>' in head  # (icons: owner 2026-10-14)
     assert 'class="name-link" href="/quiz/listuser/{}"'.format(ids('sam')) in head
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders

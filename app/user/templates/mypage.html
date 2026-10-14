@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, move_mini, folder_options with context %}
+{% from "_folders.html" import folders_page, sub_box, all_boxes, move_mini, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -11,18 +11,19 @@
 {% macro action(cq, compact=false) %}
   {% set size = 'btn-xs' if compact else 'btn-sm' %}
   {% if cq.status == 'completed' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See how you did on this attempt">Results</a>
+    <a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: how you did on this attempt">{{ icon_label('lc-eye', 'View') }}</a>
   {% elif cq.status == 'review' %}
-    <a class="btn btn-secondary {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See what you handed in. Your teacher is still checking it">View</a>
+    <a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: what you handed in (your teacher is still checking it)">{{ icon_label('lc-eye', 'View') }}</a>
   {% elif cq.not_open_yet() %}
     {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
     {% set opens = cq.opens_at|when %}
-    <button type="button" class="btn btn-secondary {{ size }}" disabled title="You can't start this yet. It opens {{ opens }}.">{{ icon('lock') }} Start</button>
+    {# (Start and Continue: the play triangle, the owner 2026-10-14) #}
+    <button type="button" class="btn btn-secondary {{ size }} btn-icon" disabled title="Start: you can't start this yet. It opens {{ opens }}.">{{ icon_label('lc-play', 'Start') }}</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
-    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Keep working on this quiz">Continue</a>
+    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>
   {% else %}
-    <a class="btn {{ size }}" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start this quiz">Start</a>
+    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: start this quiz">{{ icon_label('lc-play', 'Start') }}</a>
   {% endif %}
 {% endmacro %}
 
@@ -111,7 +112,7 @@
       {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
       {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">In progress</span>{% endif %}
       <span class="small muted">{{ cq.compdate|when }}</span>
-      <a class="btn btn-secondary btn-sm dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'See how you did on' if cq.status == 'completed' else 'See what you handed in for' }} “{{ cq.vquiz.title }}”">{{ 'Results' if cq.status == 'completed' else 'View' }}</a></li>
+      <a class="icon-link dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></li>
   {% endfor %}
   </ul>
 </section>
@@ -132,10 +133,11 @@
       {% set name = fk.node.folder.name %}
       <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="All"
            data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
-           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable>
+           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable{% if fk.node.folders %} data-name="{{ name }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
         {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
+        <template class="folder-filter-tools" data-for="all">{{ folder_up(fk) }}</template>
         <div class="folder-filter-list">{{ quiz_cards(shown, fk.view) }}</div>
       </div>
     {% elif groups %}
@@ -155,7 +157,8 @@
   </div>
   {% if showing and not shown %}
     <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
-  {% elif not shown and (fk.node or fk.view == 'main') %}
+  {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
+  {% elif not shown and ((fk.node and not fk.node.folders) or fk.view == 'main') %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
 {% endcall %}

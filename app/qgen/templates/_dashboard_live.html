@@ -43,7 +43,7 @@
           {# just the quiz's name: Grade opens this hand-in #}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span></span>
-          <span class="btn-row dash-go"><a class="btn btn-sm" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">Grade</a></span></li>
+          <span class="btn-row dash-go"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">{{ icon_label('lc-grade', 'Grade') }}</a></span></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -64,7 +64,7 @@
           <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
                 data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in their messages, just not at the top." data-confirm-ok="Unpin">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
-            <button class="btn btn-secondary btn-sm" title="Take this message off the top of students' messages (it isn't deleted)">Unpin</button>
+            <button class="icon-link" title="Unpin: take this message off the top of students' messages (it isn't deleted)">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
           </form>
           <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].shown_name }}{% else %}<span title="{{ p.to|map(attribute='shown_name')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
             · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.shown_name }}{% endif %}</span></li>
@@ -83,11 +83,11 @@
       <ul class="dash-list">
       {% for cq in handins %}
         <li>{{ person_link(cq.taker) }}
-          {# just the quiz's name: the Results button opens this hand-in itself #}
+          {# just the quiz's name: the eye opens this hand-in itself #}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span></span>
-          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s answers and score for this attempt">Results</a></span></li>
+          <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ cq.taker.shown_name if cq.taker else 'the student' }}’s answers and score on “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></span></li>
       {% endfor %}
       </ul>
     {% else %}
@@ -113,7 +113,7 @@
           {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span></span>
           {# this student's own copy of the quiz (their questions and answers so far); the name opens their student page #}
-          <span class="btn-row dash-go"><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="See {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}'s copy of this quiz">Assigned</a></span></li>
+          <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="View: {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}’s copy of “{{ o.cq.vquiz.title }}”, as it is now">{{ icon_label('lc-eye', 'View') }}</a></span></li>
       {% endfor %}
       </ul>
     {% else %}

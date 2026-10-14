@@ -20,9 +20,9 @@
         <td data-label="Copies" class="small">{{ vq.cquizzes|length }} {{ 'attempt' if vq.cquizzes|length == 1 else 'attempts' }}</td>
         <td class="actions">
           <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=vq.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put “{{ vq.title }}” back on the Quizzes page and Assign">Restore</button></form>
-          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="Every student's attempts and scores on “{{ vq.title }}”">History</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
-          <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Look at “{{ vq.title }}” and its problems">View</a>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ vq.title }}” back on the Quizzes page and Assign">{{ icon_label('lc-restore', 'Restore') }}</button></form>
+          {% if vq.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on “{{ vq.title }}”">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
+          <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: Look at “{{ vq.title }}” and its problems">{{ icon_label('lc-eye', 'View') }}</a>
           {# for good: students' tries go to the Archive first (still readable there) #}
           {% set n = vq.cquizzes|length %}
           {{ post_button(url_for('qgen.delete_removed_vquiz', vqid=vq.id), 'Delete for good', 'btn btn-danger btn-sm',
