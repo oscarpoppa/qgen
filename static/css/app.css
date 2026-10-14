@@ -2202,7 +2202,7 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 .folder-tab.is-empty[aria-pressed="true"] svg.ico, .folder-tab.is-empty[aria-pressed="true"] .box-count { opacity: 1; }
 .folder-tab.is-empty[aria-pressed="true"] .box-title { color: inherit; }
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: 1; }
-.side-row.is-empty:not(.current) .side-link { color: var(--muted); }
+.side-row.is-empty:not(.current) .side-link { color: var(--muted); font-weight: 500; }  /* (gray, a little heavier: the owner, 2026-10-14) */
 .side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }
 /* things to click are at least 24px across (WCAG 2.5.8) */
 .chip-x { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
@@ -2312,7 +2312,7 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-side-list > .side-row > .folder-tab .box-title { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: inherit; font-size: inherit; line-height: inherit; }
 .folder-side-list > .side-row > .folder-tab .box-count { flex: 0 0 auto; background: none; padding: 0 2px 0 0; line-height: 1.3; min-height: 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 400; }
 .folder-side-list > .side-row > .folder-tab:disabled { cursor: default; }
-.folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab { color: var(--muted); }
+.folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab { color: var(--muted); font-weight: 500; }
 .folder-side-list > .side-row > .folder-tab .tab-ticked { flex: 0 0 auto; font-size: 11px; padding: 1px 6px; }
 @media (max-width: 640px) { .folder-filter[data-style="list"] { grid-template-columns: minmax(0, 1fr); } }
 .folder-filter[data-style="list"] > .folder-filter-side { overflow: hidden; }
