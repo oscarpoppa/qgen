@@ -125,12 +125,18 @@
           {{ folder_options(fk, fk.node) }}
         </div>
       {% else %}
-        {# the page's own name ("People", "Quizzes"): the folder shown is the tab that's open (the owner, 2026-10-13) #}
-        {% set page_name = fk.title or title or fk.units|capitalize %}
-        <h2 id="folder-title" class="folder-title">{{ page_name }}</h2>
+        {# the folder shown ("All quizzes", "Uncategorized"; a tab or the side list changes it,
+           static/js/folderfilter.js) (the owner, 2026-10-14) #}
+        {# (All: the page's own name, "People" or "Quizzes", the one exception: the owner, 2026-10-14) #}
+        {% set own_name = title or fk.units|capitalize %}
+        {% set page_name = fk.title or (fk.main_label if fk.view == 'main' else own_name) %}
+        <h2 id="folder-title" class="folder-title" data-page-name="{{ own_name }}">{{ page_name }}</h2>
         <div class="title-actions">{{ level_buttons(page_name, 'btn-sm') }}{{ actions }}</div>
       {% endif %}
     </div>
+    {# how many are shown ("3 quizzes"): the filter bar's count, put at the top of the bar, right
+       over the filter (static/js/filter.js) #}
+    <p class="folder-count muted" id="folder-count" aria-live="polite" hidden></p>
     {{ caller() }}
   </section>
 </div>

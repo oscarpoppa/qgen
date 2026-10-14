@@ -429,13 +429,29 @@
     //so All gets the All label)
     var heading = document.getElementById('folder-title'), startedOnAll = !box.dataset.start || box.dataset.start === 'all';
     var headingWas = heading && startedOnAll ? heading.innerHTML : '';
-    //(the owner, 2026-10-13: the heading over the tabs is the page's own name, "People" or
-    //"Quizzes", whatever tab is open: the open tab says which folder is shown; only a page whose
-    //list has no tabs of its own still names the folder)
+    //(the owner, 2026-10-14: the heading names the folder chosen, by its tab or the side list,
+    //with its whole path from the top: "Science › physics"; "Uncategorized"; a folder's own
+    //Unsorted: "Science › Unsorted"; All: the page's own name, "People" or "Quizzes". On a
+    //folder's own page the path starts with its own (the server's heading).)
+    var headingOwn = heading ? heading.innerHTML : '';
     function retitle() {
-      if (!heading || box.dataset.allUrl === '' || 'urlTab' in box.dataset) return;  // (a folder's own page keeps its name and path)
-      if (chosen === 'all') { if (headingWas) heading.innerHTML = headingWas; else heading.textContent = box.dataset.allLabel || 'All'; return; }
-      heading.textContent = chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen].name;
+      if (!heading) return;
+      var inner = box.dataset.allUrl === '';  // (a folder's own page: its inner tabs)
+      if (chosen === 'all') {
+        if (inner) heading.innerHTML = headingOwn;
+        else if (heading.dataset.pageName) heading.textContent = heading.dataset.pageName;
+        else if (headingWas) heading.innerHTML = headingWas;
+        else heading.textContent = box.dataset.allLabel || 'All';
+        return;
+      }
+      if (chosen === 'none' && !inner) { heading.textContent = box.dataset.mainLabel || 'Uncategorized'; return; }
+      var names = path().map(function (id) { return byId[id].name; });
+      if (chosen.indexOf('self:') === 0 || chosen === 'none') names.push(inner ? (box.dataset.mainLabel || 'Unsorted') : 'Unsorted');
+      heading.innerHTML = inner ? headingOwn : '';
+      names.forEach(function (n, i) {
+        if (inner || i) heading.insertAdjacentHTML('beforeend', ' <span class="muted" aria-hidden="true">\u203a</span> ');
+        heading.appendChild(document.createTextNode(n));
+      });
     }
     function choose(id) {
       chosen = id;

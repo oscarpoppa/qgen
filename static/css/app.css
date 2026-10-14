@@ -864,6 +864,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .side-link { flex: 1 1 auto; min-width: 0; padding: 5px 4px; color: var(--text); text-decoration: none;
   overflow-wrap: anywhere; line-height: 1.3; }
 .side-link:hover { text-decoration: underline; }
+/* (a long name wraps under itself, not under its icon) */
+.side-link { display: flex; align-items: flex-start; gap: 4px; }
+.side-link > svg.ico { flex: none; margin-top: .1em; }
+.side-link > .side-name { min-width: 0; }
 .side-count { flex: 0 0 auto; padding-right: 6px; }
 .side-fold, .side-fold-space { flex: 0 0 18px; width: 18px; height: 22px; }
 .side-fold { border: 0; background: none; padding: 0; cursor: pointer; position: relative; }
@@ -1358,7 +1362,16 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 /* (the bar's line, "Check … to put them in a folder …" / "2 checked", is a heading over its
    controls; the whole group sits at the right, level with the search) */
 .folder-tools-bar { align-items: flex-end; }
-.folder-tools-bar .file-bar > .file-count, .folder-tools-bar .file-bar > span.muted { flex: 1 0 100%; text-align: right; }
+.folder-tools-bar .file-bar > .file-count, .folder-tools-bar .file-bar > span.muted { flex: 1 0 100%; text-align: left; }
+/* (a grid, so the line over the controls is as wide as they are and starts where they start) */
+@media (min-width: 761px) {
+  .folder-tools-bar .file-bar { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 8px; align-items: center; }
+  .folder-tools-bar .file-bar > .file-count, .folder-tools-bar .file-bar > span.muted { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) { .folder-tools-bar .file-bar { margin-left: 0; justify-content: flex-start; } }
+/* (how many are shown, under the folder page's heading: "3 quizzes") */
+.folder-count { margin: 0; font-size: var(--fs-sm); }
+.filter-bar > .folder-count { flex: 1 0 100%; }
 .drag-item { cursor: grab; }
 details.problem-list > summary { cursor: pointer; color: var(--muted); }
 details.problem-list[open] > summary { margin-bottom: 4px; }

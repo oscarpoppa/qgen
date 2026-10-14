@@ -25,6 +25,10 @@ window.qgenHideRow = function (row, key, hide) {
     if (!input || bar.dataset.ready) return;
     bar.dataset.ready = '1';
     var count = bar.querySelector('[data-filter-count]'), clear = bar.querySelector('[data-filter-clear]');
+    //a folder page's list: the count goes under the page's heading instead (_folders.html)
+    var under = bar.dataset.filter === '#folder-items' && document.getElementById('folder-count');
+    //(at the top of the bar, right over the filter, level with the checked bar's line)
+    if (under) { if (count) count.remove(); count = under; under.hidden = false; bar.insertBefore(under, bar.firstChild); }
     var root = bar.dataset.filter ? document.querySelector(bar.dataset.filter) : null;
     var one = bar.dataset.one || 'match', many = bar.dataset.many || 'matches';
     var before = null;  // which folder boxes were open before filtering

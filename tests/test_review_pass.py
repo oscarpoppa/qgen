@@ -766,7 +766,7 @@ def test_home_counter_views_say_what_they_show(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     give(make_quiz(app, teach, 'New one'), 'sam')
     page = sam.get('/mypage?show=todo').data.decode()
-    assert '<h2 id="folder-title" class="folder-title">To do: quizzes you haven’t started</h2>' in page
+    assert '<h2 id="folder-title" class="folder-title" data-page-name="My quizzes">To do: quizzes you haven’t started</h2>' in page
     page = sam.get('/mypage?show=started').data.decode()
     assert '>In progress: quizzes you’ve started, or handed in and not graded yet</h2>' in page
     assert 'Nothing in progress right now. {}'.format(ico('party')) in page
@@ -776,8 +776,8 @@ def test_home_counter_views_say_what_they_show(app_db):
         days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     assert '>Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. {}'.format(within, ico('party')) in page
-    # the ordinary page's heading is the page's own name (the open tab says which folder)
-    assert 'class="folder-title">My quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
+    # All: the page's own name (a folder chosen: its name, static/js/folderfilter.js; the owner, 2026-10-14)
+    assert 'class="folder-title" data-page-name="My quizzes">My quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
 
 
 # ---------------------------------------------------------------- removing a quiz, taking one away
