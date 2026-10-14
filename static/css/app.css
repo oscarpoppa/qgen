@@ -1787,7 +1787,30 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .elastic-corner { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none;
   display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; border-radius: var(--r-sm); z-index: 2; }
 .elastic-corner.on-left { right: auto; left: 2px; cursor: nesw-resize; justify-content: flex-start; }
-.elastic-corner.tall-only, .elastic-corner.tall-only.on-left { cursor: ns-resize; }
+/* (a pull bar along the bottom, like a list's grip bar; it does the list's job too, so the lists
+   inside have none of their own) */
+.elastic-bar { position: absolute; left: 12px; right: 12px; bottom: 0; height: 14px; cursor: ns-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); z-index: 2; }
+.elastic-bar span { display: block; width: 56px; height: 5px; border-radius: var(--r-sm); background: var(--border); transition: background .15s, width .15s; }
+.elastic-bar:hover, html.elastic-sizing-v .elastic-bar { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.elastic-bar:hover span, .elastic-bar:focus-visible span, html.elastic-sizing-v .elastic-bar span { background: var(--accent); width: 80px; }
+.elastic-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details[data-elastic]:not([open]) > .elastic-bar { display: none; }
+[data-elastic] .grip-bar { display: none !important; }
+/* (a card that also gets wider: the bottom bar leaves the corner room; a pull bar on the growing side) */
+[data-elastic]:not([data-elastic-dir="v"]) > .elastic-bar { right: 30px; }
+[data-elastic]:not([data-elastic-dir="v"]) > .elastic-bar.on-left { right: 12px; left: 30px; }
+.elastic-side { position: absolute; top: 12px; bottom: 30px; right: 0; width: 14px; cursor: ew-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); z-index: 2; }
+.elastic-side.on-left { right: auto; left: 0; }
+.elastic-side span { display: block; width: 5px; height: 56px; border-radius: var(--r-sm); background: var(--border); transition: background .15s, height .15s; }
+.elastic-side:hover, html.elastic-sizing-h .elastic-side { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.elastic-side:hover span, .elastic-side:focus-visible span, html.elastic-sizing-h .elastic-side span { background: var(--accent); height: 80px; }
+.elastic-side:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details[data-elastic]:not([open]) > .elastic-side, details[data-elastic]:not([open]) > .elastic-corner { display: none; }
+html.elastic-sizing-h, html.elastic-sizing-h * { cursor: ew-resize !important; user-select: none; }
+@media print { .elastic-side { display: none; } }
+@media print { .elastic-bar { display: none; } }
 html.elastic-sizing-v, html.elastic-sizing-v * { cursor: ns-resize !important; user-select: none; }
 /* (two short diagonal lines, the usual "drag to size" corner) */
 .elastic-corner span { display: block; width: 12px; height: 12px; opacity: .7;
