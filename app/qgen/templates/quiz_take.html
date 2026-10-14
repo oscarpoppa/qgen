@@ -36,6 +36,8 @@
     <div class="progress-bar"><span id="bar"></span></div>
   </div>
 
+  {# someone else's quiz (a teacher looking): every answer shown, none can be changed (the owner, 2026-10-14) #}
+  {% if preview %}<fieldset class="view-only" disabled title="You're viewing {{ cq.taker.shown_name }}'s quiz: only {{ cq.taker.shown_name }} can answer">{% endif %}
   {% for it in items %}
     <section class="card question" data-q="{{ it.num }}"{% if it.qtype == 'paper' %} data-paper{% endif %} aria-labelledby="q{{ it.num }}">
       <input type="hidden" name="{{ it.field.name }}_present" value="1">
@@ -68,6 +70,7 @@
       {% for e in it.field.errors %}<div class="error">{{ e }}</div>{% endfor %}
     </section>
   {% endfor %}
+  {% if preview %}</fieldset>{% endif %}
 
   {% if not preview %}
     <div class="card btn-row">

@@ -2430,3 +2430,9 @@ a.icon-link:focus-visible, button.icon-link:focus-visible { outline: 2px solid v
 /* (the grading marks: right in green, wrong in red, like their highlights) */
 .btn.btn-ok.btn-icon, .btn.btn-ok.btn-icon svg.ico { color: var(--ok); }
 .btn.btn-ok.btn-icon:hover:not(:disabled) { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+
+/* someone else's quiz (a teacher looking): the answers can't be changed, and don't look as if
+   they could (the owner, 2026-10-14) */
+fieldset.view-only { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.view-only :is(input, select, textarea, label, button) { cursor: default; }
+fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover highlight on a choice that can't be picked) */
