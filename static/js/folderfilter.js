@@ -152,29 +152,21 @@
         col.setAttribute('aria-label', 'Folders');
         var allBtn = button('all', box.dataset.allLabel || 'All', items().length, 'folders');
         allBtn.classList.add('folder-tab-all');
+        allBtn.style.paddingLeft = '24px';
         col.appendChild(allBtn);
         (function walk(nodes, depth) {
           nodes.forEach(function (n) {
             var b = button(String(n.id), n.name, n.count, n.icon || 'folder');
-            b.style.paddingLeft = (10 + depth * 16) + 'px';
+            b.style.paddingLeft = (24 + (depth - 1) * 14) + 'px';  // (the side list's indents)
             col.appendChild(b);
             walk(n.children, depth + 1);
-            //what's in a folder but in none of the folders inside it, as on its tab rows; grayed
-            //(and 0) when there are no folders inside, since it's the same as the folder itself
-            if (isFolder(String(n.id))) {
-              var self = button('self:' + n.id, 'Unsorted', n.children.length ? Object.keys(own(n)).length : 0, 'tray');
-              self.classList.add('folder-tab-self');
-              self.setAttribute('aria-label', 'Unsorted in “' + n.name + '”');
-              if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All'; }
-              else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
-              self.style.paddingLeft = (10 + (depth + 1) * 16) + 'px';
-              col.appendChild(self);
-            }
+            //(no "Unsorted" line under a folder: every folder list looks like the side list on the
+            //Problems page, the owner 2026-10-13; Unsorted is the tab inside an open folder)
           });
         })(tree, 1);
         var noneFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
         var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', noneFolders ? 0 : loose, 'tray');
-        noneBtn.style.paddingLeft = '26px';
+        noneBtn.style.paddingLeft = '24px';
         if (noneFolders) { noneBtn.disabled = true; noneBtn.title = 'There are no folders yet.'; }
         else if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
         col.appendChild(noneBtn);

@@ -63,22 +63,26 @@
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>
       <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
-      {# put the checked people in a folder, or take them out of it: the same as the Problems and
-         Quizzes pages' bar (out of their only folder: asked first, static/js/takeout.js) #}
-      {% if fk.flat %}
-      <label class="sr-only" for="people-file-folder">Folder</label>
-      <select id="people-file-folder" name="folder" form="people-file">
-        {% for f, depth in fk.flat %}<option value="{{ f.id }}"{% if fk.node and fk.node.folder.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
-      </select>
-      <button form="people-file" class="btn btn-sm" name="action" value="add" title="Put the checked people in the chosen folder">Put in folder</button>
-      <button form="people-file" class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked people out of the chosen folder">Take out of folder</button>
-      {% endif %}
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
     </form>
-    <form method="post" action="{{ url_for('user.file_people') }}" id="people-file" data-takeout="remove" data-takeout-items="input.pick-person:checked" hidden>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="view" value="{{ fk.view }}">
-    </form>
-    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}</div>{% endif %}
+    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}
+      {# the checked people: in a folder, or out of it; the same bar as the Problems and Quizzes
+         pages' (grayed until someone is checked: static/js/folders.js; out of someone's only
+         folder: asked first, static/js/takeout.js) #}
+      <form method="post" action="{{ url_for('user.file_people') }}" id="file-form" class="file-bar" data-takeout="remove" data-takeout-items="input.pick-person:checked">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="view" value="{{ fk.view }}">
+        {% if fk.flat %}
+          <span class="muted small file-count" aria-live="polite" data-hint="Check people to put them in a folder or take them out.">Check people to put them in a folder or take them out.</span>
+          <label class="sr-only" for="file-subject">Folder</label>
+          <select id="file-subject" name="folder">
+            {% for f, depth in fk.flat %}<option value="{{ f.id }}"{% if fk.node and fk.node.folder.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-sm" name="action" value="add" title="Put the checked people in the chosen folder">Put in folder</button>
+          <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked people out of the chosen folder">Take out of folder</button>
+        {% else %}
+          <span class="muted small">Make a folder first (+ New folder), then check people to put in it.</span>
+        {% endif %}
+      </form></div>{% endif %}
     <div id="folder-items">
       {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
       {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}

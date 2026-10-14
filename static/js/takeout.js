@@ -55,7 +55,7 @@
                       others.map(function (n) { return '“' + n + '”'; }).join(', ') };
     });
     choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true,
-                   title: 'Delete ' + (person ? 'their account' : 'it') + '; this can’t be undone', disabled: form.dataset.noDelete || null });
+                   title: form.dataset.deleteNote || ('Delete ' + (person ? 'their account' : 'it')), disabled: form.dataset.noDelete || null });
     window.qgenChoose(q, choices).then(function (answer) {
       if (!answer) return;
       if (answer === 'delete') {

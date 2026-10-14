@@ -411,7 +411,7 @@ def deluser(uid):
     #their quiz attempts are kept in the archive
     from .accounts import delete_account
     delete_account(usr, by=current_user)
-    flash('User {} has been deleted'.format(usrname))
+    flash('Deleted {}’s account.'.format(usrname), 'success')
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
     #back to the Users page they were on (its folder), not to the deleted person's pages
     users = url_for('user.userdet')

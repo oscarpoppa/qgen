@@ -1583,7 +1583,7 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
-        '/userdet': ['data-no-delete="You can’t delete your own account"',
+        '/userdet': ['disabled title="You can’t delete your own account, and you’re in no folder">Remove</button>',
                      'title="Teachers write to each other in Teachers’ messages">Message</a>'],
     }
     for url, wanted in pages.items():

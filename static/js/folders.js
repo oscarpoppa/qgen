@@ -128,7 +128,8 @@
 
   //checked rows (the bar above the list puts them in a folder): something listed twice
   //(in a folder and a folder inside it) is checked in both; the bar says how many
-  var ticks = Array.prototype.slice.call(document.querySelectorAll('.folder-main input[name="items"]'));
+  //(People's check boxes are the people picked for Assign: the same bar uses them)
+  var ticks = Array.prototype.slice.call(document.querySelectorAll('.folder-main input[name="items"], .folder-main input.pick-person'));
   var fileForm = document.getElementById('file-form'), fileCount = document.querySelector('.file-count');
   function counted() {
     var ids = {};
@@ -263,6 +264,12 @@
       var kind = h.dataset.drag;
       //dragged out of the folder shown (a folder tab, or the folder box it's in): a move
       var shown = kind === 'folder' ? null : (window.qgenShownFolder && window.qgenShownFolder(h));
+      //(from All: something in exactly one folder moves out of that one; in several, it's a copy)
+      if (!shown && kind !== 'folder') {
+        var rm = (h.closest('[data-box]') || h).querySelector('form[data-remove-one]'), fs = [];
+        try { fs = JSON.parse(rm ? rm.dataset.folders : '[]'); } catch (err) {}
+        if (fs.length === 1) shown = String(fs[0]);
+      }
       pending = { kind: kind, id: h.dataset.id, home: shown || h.dataset.home, label: h.dataset.name,
                   el: h.closest('[data-box]') || h, x: e.clientX, y: e.clientY };
       e.preventDefault();  // no text selection while dragging; a click still goes through

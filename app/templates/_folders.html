@@ -290,6 +290,7 @@
    deleted (grayed with that reason); delete_note: what deleting it means (said in the question).
    static/js/takeout.js #}
 {% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='') %}
+  {% if no_delete and not folders %}{{ slot('Remove', no_delete ~ ', and ' ~ ('you’re' if kind == 'people' else 'it’s') ~ ' in no folder', 'btn btn-danger btn-sm') }}{% else %}
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
   <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one data-kind="{{ kind }}"
         data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}"
@@ -298,8 +299,8 @@
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
     <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
     <input type="hidden" name="folder" value="{{ folders[0].id if folders else '' }}"><input type="hidden" name="confirm" value="uncategorized">
-    <button class="btn btn-danger btn-sm" title="Take {{ label }} out of a folder, or delete {{ 'them' if kind == 'people' else 'it' }} (asks which)">Remove</button>
-  </form>
+    <button class="btn btn-danger btn-sm" title="{{ ('Take ' ~ label ~ ' out of a folder, or delete ' ~ ('them' if kind == 'people' else 'it') ~ ' (asks which)') if folders else ('Delete ' ~ label ~ '; you’re asked first') }}">Remove</button>
+  </form>{% endif %}
 {% endmacro %}
 
 {# Folder options for one folder (n: its node): rename, move, a new folder inside, delete the

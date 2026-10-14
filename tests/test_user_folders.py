@@ -277,7 +277,7 @@ def test_taking_people_out_of_their_only_folder(app_db):
     page = teach.get('/userdet?folder=all').data.decode()
     # the bar: the same folder menu, Put in folder and Take out of folder as Problems and Quizzes;
     # each card: Remove (it asks which folder when they're in several)
-    assert 'form="people-file"' in page and '>Take out of folder</button>' in page and '>Put in folder</button>' in page
+    assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Put in folder</button>' in page
     assert page.count('>Remove</button>') >= 2
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
