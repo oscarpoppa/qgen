@@ -28,7 +28,8 @@
 
   function fetchJson(url, data) {
     return fetch(url, { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
-      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); });
+      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+      .catch(function () { return { ok: false }; });  // (no connection: still says so)
   }
 
   //(a field the form already has, e.g. Remove's folder, is set; else one is added for this sending)
@@ -110,7 +111,8 @@
     var data = new FormData(form);
     if (sub && sub.name) data.set(sub.name, sub.value);
     data.set('check', '1');
-    fetchJson(form.action, data).then(function (res) {
+    //(the address itself: the bar's buttons are named "action", which hides form.action)
+    fetchJson(form.getAttribute('action'), data).then(function (res) {
       if (!res.ok) { window.qgenSay(res.error || 'That didn\'t work. Please reload the page and try again.', 'error'); return; }
       var go = function (choice) {
         if (choice) hidden(form, 'confirm', choice);

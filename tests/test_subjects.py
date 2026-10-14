@@ -651,6 +651,19 @@ def test_out_of_its_only_folder_asks_delete_or_uncategorized(app_db):
     assert login(app, 'sam').post('/folders/problems/takeout', data={'items': [probs['Area'].id], 'folder': geo.id}).status_code == 302
 
 
+def test_the_checked_bars_take_out_asks_the_forms_own_address():
+    """The checked bar's buttons are named "action", which hides form.action in the browser:
+    "Take out of folder" asked nowhere and did nothing (Quizzes, Problems, People)."""
+    import os, re
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js = open(os.path.join(here, 'static', 'js', 'takeout.js')).read()
+    assert "fetchJson(form.getAttribute('action')" in js
+    assert not re.search(r'\bform\.action\b(?!")', js.replace('form.action:', '').replace('hides form.action', ''))
+    for t in ('app/qgen/templates/_folder_tools.html', 'app/user/templates/udet.html'):
+        html = open(os.path.join(here, t)).read()
+        assert 'data-takeout="remove"' in html and 'name="action" value="remove"' in html
+
+
 def test_deleting_a_folder_says_what_moved_where(app_db):
     """Deleting a folder (its things move up a level): the message names them and where they went."""
     app, db = app_db
