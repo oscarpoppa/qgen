@@ -2201,6 +2201,11 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
    open inner tab) */
 .folder-tab.is-empty[aria-pressed="true"] svg.ico, .folder-tab.is-empty[aria-pressed="true"] .box-count { opacity: 1; }
 .folder-tab.is-empty[aria-pressed="true"] .box-title { color: inherit; }
+/* ...except in an empty folder's own row of tabs ("All 0", "Unsorted 0"): all of it grayed, the
+   chosen tab too (the owner, 2026-10-14) */
+.folder-tabs-empty > .folder-tab .box-title, .folder-tabs-empty > .folder-tab[aria-pressed="true"] .box-title { color: var(--muted); font-weight: 500; }
+.folder-tabs-empty > .folder-tab svg.ico, .folder-tabs-empty > .folder-tab .box-count,
+.folder-tabs-empty > .folder-tab[aria-pressed="true"] svg.ico, .folder-tabs-empty > .folder-tab[aria-pressed="true"] .box-count { opacity: .55; }
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: 1; }
 .side-row.is-empty:not(.current) .side-link { color: var(--muted); font-weight: 500; }  /* (gray, a little heavier: the owner, 2026-10-14) */
 .side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }

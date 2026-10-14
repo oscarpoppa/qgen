@@ -297,6 +297,9 @@
           if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All'; }
           else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
           sub.appendChild(self);
+          //(an empty folder: its row of tabs is grayed, the chosen one too, so nothing in it catches
+          //the eye; the folder's own tab above still shows where you are: the owner, 2026-10-14)
+          if (!n.count) sub.classList.add('folder-tabs-empty');
           host.appendChild(sub);
         });
       }
