@@ -292,8 +292,10 @@
 {% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='') %}
   {% if no_delete and not folders %}{{ slot('Remove', no_delete ~ ', and ' ~ ('you’re' if kind == 'people' else 'it’s') ~ ' in no folder', 'btn btn-danger btn-sm') }}{% else %}
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
+  {# (the folder each one is inside, if any: taken out, it goes back up there) #}
+  {% set ups = [] %}{% for f in folders %}{% set _ = ups.append(fk.name(fk.nodes[f.parent_id].folder) if f.parent_id and f.parent_id in fk.nodes else '') %}{% endfor %}
   <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one data-kind="{{ kind }}"
-        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}"
+        data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}" data-ups="{{ ups|tojson|forceescape }}"
         data-delete-url="{{ delete_url }}" data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}

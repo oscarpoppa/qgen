@@ -103,22 +103,29 @@ def _blocker(kind, item, by):
 
 def plan(kind, item_ids, folder, by=None, one_folder=False):
     """What taking these out of the folder would do: {'out': items that stay in other folders,
-    'delete': items left in no folder (deleted if confirmed), 'blocked': [(item, why)] left in
-    no folder but can't be deleted}. one_folder: just that folder (a folder chip's ✕), not the
-    folders inside it."""
+    'up': items that go back up into the folder this one is inside (taken out of a folder inside
+    another, a thing stays in that outer one, its Unsorted: the owner 2026-10-13, like deleting a
+    folder), 'delete': items left in no folder (deleted if confirmed), 'blocked': [(item, why)]
+    left in no folder but can't be deleted}. one_folder: just that folder (a folder chip's ✕),
+    not the folders inside it."""
     ids = {folder.id} if one_folder else subtree(kind, folder)
-    out, delete, blocked = [], [], []
+    parent = db.session.get(_folder_cls(kind), folder.parent_id) if folder.parent_id else None
+    near = (subtree(kind, parent) - ids) if parent is not None else set()  # (the outer folder and its others)
+    out, up, delete, blocked = [], [], [], []
     for item_id in dict.fromkeys(item_ids):
         item = _item(kind, item_id)
         mine = _folders_of(kind, item)
         if not mine & ids:
             continue  # not in it: nothing to do
+        if parent is not None and not (mine - ids) & near:
+            up.append(item)  # (back up into the outer folder; it keeps any others too)
+            continue
         if mine - ids:
             out.append(item)
             continue
         why = _blocker(kind, item, by)
         (blocked.append((item, why)) if why else delete.append(item))
-    return {'out': out, 'delete': delete, 'blocked': blocked, 'ids': ids}
+    return {'out': out, 'up': up, 'delete': delete, 'blocked': blocked, 'ids': ids, 'parent': parent}
 
 
 def question(kind, folder, p):
@@ -170,6 +177,20 @@ def _take_out(kind, item, ids):
             rel.remove(g)
 
 
+def _put_in(kind, item, folder):
+    from app.qgen import services as S
+    if kind == 'archive':
+        item.folder_id = folder.id
+    elif kind == 'people':
+        from app.user.models import UserFolderMember
+        if db.session.get(UserFolderMember, (folder.id, item.id)) is None:
+            db.session.add(UserFolderMember(folder_id=folder.id, user_id=item.id))
+    else:
+        rel = getattr(item, S.subject_kind(kind)[2])
+        if folder not in rel:
+            rel.append(folder)
+
+
 def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
     """Take them out. What would be left in no folder: confirm='delete' deletes it (what can't be
     deleted goes in Uncategorized), 'uncategorized' leaves it in no folder; anything else changes
@@ -180,6 +201,11 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
         raise TakeOutError(question(kind, folder, p))
     ids, where = p['ids'], folder_name(kind, folder)
     done = []
+    for item in p['up']:
+        _take_out(kind, item, ids)
+        _put_in(kind, item, p['parent'])
+        done.append('Took {} out of “{}”; {} now in “{}” (its Unsorted).'.format(item_name(kind, item), where,
+                    'they’re' if kind == 'people' else 'it’s', folder_name(kind, p['parent'])))
     for item in p['out']:
         done.append('Took {} out of “{}”; {} still in {}.'.format(item_name(kind, item), where,
                     'they’re' if kind == 'people' else 'it’s', _still_in(kind, item, ids)))

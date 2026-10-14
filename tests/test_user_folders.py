@@ -289,3 +289,26 @@ def test_taking_people_out_of_their_only_folder(app_db):
     teach.post('/users/folders/add', data={'user': ids('teach'), 'to': club})
     q = teach.post('/folders/people/takeout', data={'items': [ids('teach')], 'folder': club, 'check': '1'}, headers=FETCH).get_json()['question']
     assert 'can’t be deleted (You can’t delete your own account)' in q
+
+
+def test_out_of_a_folder_inside_another_goes_back_up(app_db):
+    """The owner's steps (2026-10-13): Ben in 8th grade, dragged into "needs special attention"
+    inside it, then taken out of that: he's back in 8th grade (its Unsorted), not in no folder."""
+    app, db = app_db
+    teach = login(app, 'teach')
+    teach.post('/users/folders', data={'name': '8th grade'})
+    g8 = folder('8th grade')
+    teach.post('/users/folders', data={'name': 'needs special attention', 'parent': g8})
+    special = folder('needs special attention')
+    teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g8})
+    teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
+    assert in_folders('kim') == ['needs special attention']
+    # the ✕ on the folder, the card's Remove (just that folder), and the checked bar: all the same
+    res = teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': special}, headers=FETCH).get_json()
+    assert res['message'] == 'Took kim out of “needs special attention”; they’re now in “8th grade” (its Unsorted).'
+    assert in_folders('kim') == ['8th grade']
+    teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
+    teach.post('/folders/people/takeout', data={'items': [ids('kim')], 'folder': special, 'just': '1', 'confirm': 'uncategorized'})
+    assert in_folders('kim') == ['8th grade']
+    # out of the top folder, with nothing else: still asked (delete or Uncategorized)
+    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
