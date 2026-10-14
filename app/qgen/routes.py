@@ -67,10 +67,8 @@ def save_subjects(kind, item):
 
 
 def subject_page_data(kind, item=None, rel=None, error=None):
-    #the folders with how many are in each (the same counts as the folder lists)
-    _root, flat, nodes = S.subject_tree(kind)
-    return {'subject_kind': kind, 'all_subjects': flat,
-            'subject_counts': {g.id: nodes[g.id]['count'] for g, _d in flat},
+    #(just the folders: picking where to file something needs no counts, the owner 2026-10-13)
+    return {'subject_kind': kind, 'all_subjects': S.subject_tree(kind, items=[])[1],
             'ticked_subjects': ticked_subjects(item, rel) if rel else set(),
             'subject_error': error, 'new_item': item is None or item.id is None,
             'unsorted_ticked': bool(request.form.get('unsorted')) if request.method == 'POST' else False,

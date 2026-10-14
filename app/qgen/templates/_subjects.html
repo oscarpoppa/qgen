@@ -15,21 +15,20 @@
 <fieldset class="subject-checks{{ ' has-error' if error }}" id="subject-question">
   <legend>Folder <span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}</legend>
   <input type="hidden" name="subjects_shown" value="1">
-  {# Expand all / Collapse all for the folders inside folders, as over every folder list
-     (static/js/folder_checks.js shows them; grayed, with why, when no folder has folders inside) #}
+  <div class="subject-check-list" data-fold-key="qgen-folded-folder-checks-{{ kind }}">
+  {# Expand all / Collapse all at the top of the list, as in every folder list (static/js/folder_checks.js
+     shows them; grayed, with why, when no folder has folders inside) #}
   {% if all_subjects %}<div class="btn-row small side-levels subject-levels" hidden>
     <button type="button" class="btn btn-secondary btn-xs" data-side-level="open" title="Show the folders inside every folder in this list">Expand all</button>
     <button type="button" class="btn btn-secondary btn-xs" data-side-level="close" title="Hide the folders inside every folder">Collapse all</button>
   </div>{% endif %}
-  <div class="subject-check-list" data-fold-key="qgen-folded-folder-checks-{{ kind }}">
     {% for g, depth in all_subjects %}
-      {% set n = (subject_counts or {}).get(g.id) %}
       {# a folder with folders inside has the fold arrow of the folder lists #}
       {% set has_inner = not loop.last and all_subjects[loop.index][1] > depth %}
       <div class="subject-row" data-depth="{{ depth }}" data-folder="{{ g.id }}"{% if depth > 1 %} style="padding-left:{{ (depth - 1) * 16 }}px"{% endif %}>
         {% if has_inner %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ g.title }}" title="Show or hide the folders inside"></button>
         {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-        <label class="subject-check" title="{{ g.title }}"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} <span class="box-title">{{ g.title }}</span>{% if n is not none %}<span class="box-count" title="{{ count_of(n, noun, kind) }}">{{ n }}</span>{% endif %}</label>
+        <label class="subject-check" title="{{ g.title }}"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} <span class="box-title">{{ g.title }}</span></label>
       </div>
     {% endfor %}
   </div>

@@ -1129,7 +1129,7 @@ th.tick-col, td.tick-col { width: 36px; }
 /* the Folder question: the folders as a nested list, like the side folder list on picking cards */
 .subject-check-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; width: fit-content; min-width: 170px; max-width: min(100%, 320px); box-sizing: border-box;
   border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-2); padding: 6px; }
-.subject-check-list:empty { display: none; }
+.subject-check-list:not(:has(.subject-row)) { display: none; }
 /* a row: the fold arrow (or its space), then the check box, icon, name and count */
 .subject-row { display: flex; align-items: center; gap: 2px; min-width: 0; border-radius: var(--r); padding-left: 0; }
 .subject-row[hidden] { display: none; }
@@ -2102,7 +2102,7 @@ details.row-fold > summary > .drag-item, details.row-fold > summary > .name-link
 /* People cards: the name is cut short with "…" (the full name is in the tooltip), so Assign
    never drops onto a line of its own and the cards stay the same height */
 /* the name keeps its room (at least 11rem): when the buttons don't fit beside it, they go to the next line */
-.person-card > summary .person { flex: 1 1 0; min-width: min(100%, max-content); display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.person-card > summary .person { flex: 0 0 auto; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .person-card > summary .box-end { margin-left: auto; }
 .person-card > summary .person .box-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .person-card > summary > .box-end { flex: 0 0 auto; }
