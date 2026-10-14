@@ -135,7 +135,7 @@
            data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
-        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id]) }}</template>{% endfor %}
+        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
         <div class="folder-filter-list">{{ quiz_cards(shown, fk.view) }}</div>
       </div>
     {% elif groups %}
@@ -148,7 +148,7 @@
            {% if fk.view != 'all' %}data-start="{{ 'none' if fk.view == 'main' else fk.view }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
-        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id]) }}</template>{% endfor %}
+        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
         <div class="folder-filter-list">{{ quiz_cards(groups, 'all') }}</div>
       </div>
     {% endif %}

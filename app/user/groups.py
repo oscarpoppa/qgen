@@ -136,19 +136,6 @@ def add(user_id, folder_id, moving_from=None):
     return u, f
 
 
-def take_out(user_id, folder_id=None):
-    """Take someone out of one folder, or (no folder) out of every folder: back to the main
-    list. Returns (person, folder or None)."""
-    u = _person(user_id)
-    q = UserFolderMember.query.filter_by(user_id=u.id)
-    f = get(folder_id)
-    if f is not None:
-        q = q.filter_by(folder_id=f.id)
-    q.delete(synchronize_session=False)
-    db.session.commit()
-    return u, f
-
-
 def tree(people):
     """The folders as a tree for the Users page: the main list as {'folder': None, 'folders',
     'people' (in no folder), 'count'}; each folder the same, with its own members in 'people'

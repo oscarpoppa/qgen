@@ -165,7 +165,7 @@ def _quizzes(vqid, now):
 def _problem_rows():
     """What lists of problems show about each (its question, type, picture, calculator)."""
     from app.qgen.models import VProblem
-    return [tuple(r) for r in VProblem.query.with_entities(VProblem.id, VProblem.title, VProblem.raw_prob, VProblem.raw_ansr,
+    return [tuple(r) for r in VProblem.query.with_entities(VProblem.id, VProblem.removed_at, VProblem.title, VProblem.raw_prob, VProblem.raw_ansr,
                                                              VProblem.qtype, VProblem.image, VProblem.calculator_ok).order_by(VProblem.id)]
 
 

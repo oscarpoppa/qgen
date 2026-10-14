@@ -145,6 +145,8 @@ def purge_plan(kind, subject):
     items, seen = [], set()
     for g in tree:
         for item in getattr(g, back):
+            if getattr(item, 'removed_at', None) and kind == 'problems':
+                continue  # (taken off the Problems page: not counted, nothing to do)
             if item.id not in seen:
                 seen.add(item.id)
                 items.append(item)
@@ -416,6 +418,7 @@ def delete_problem(vp):
     owner, 2026-10-13). Returns 'deleted' or 'removed'."""
     if problem_delete_blocker(vp):
         vp.removed_at = datetime.now()
+        vp.vpgroups = []  # (out of sight: in no folder either)
         db.session.commit()
         return 'removed'
     db.session.delete(vp)

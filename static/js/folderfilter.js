@@ -381,3 +381,26 @@
   function all() { document.querySelectorAll('[data-folder-filter]').forEach(setUp); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
 })();
+
+/* Folder options on a folder tab: the tab row scrolls sideways, which would cut its pop-up off at
+ * the row's edge, so there it's placed against the window instead (just under its button), and
+ * follows its button when the page or the row scrolls */
+(function () {
+  function place(d) {
+    var box = d.querySelector('.folder-tools-box');
+    if (!box) return;
+    if (!d.open) { box.style.position = box.style.top = box.style.right = box.style.left = ''; return; }
+    var r = d.querySelector('summary').getBoundingClientRect();
+    box.style.position = 'fixed';
+    box.style.top = (r.bottom + 6) + 'px';
+    box.style.right = Math.max(16, window.innerWidth - r.right) + 'px';
+    box.style.left = 'auto';
+  }
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (d.matches && d.matches('details.folder-tools') && d.closest('.folder-tabs')) place(d);
+  }, true);
+  function again() { document.querySelectorAll('.folder-tabs details.folder-tools[open]').forEach(place); }
+  window.addEventListener('scroll', again, { passive: true, capture: true });
+  window.addEventListener('resize', again);
+})();

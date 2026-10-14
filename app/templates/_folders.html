@@ -126,7 +126,7 @@
         </div>
       {% else %}
         {# the page's own name ("People", "Quizzes"): the folder shown is the tab that's open (the owner, 2026-10-13) #}
-        {% set page_name = fk.title or ((title or fk.units|capitalize) if fk.view == 'all' else fk.main_label) %}
+        {% set page_name = fk.title or title or fk.units|capitalize %}
         <h2 id="folder-title" class="folder-title">{{ page_name }}</h2>
         <div class="title-actions">{{ level_buttons(page_name, 'btn-sm') }}{{ actions }}</div>
       {% endif %}
@@ -169,7 +169,7 @@
        data-remember="{{ request.endpoint }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
-    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n) }}</template>{% endfor %}
+    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n, 'btn-xs') }}</template>{% endfor %}
     <div class="folder-filter-list">
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
@@ -200,7 +200,7 @@
        data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
        data-remember="{{ request.endpoint }}:{{ fk.view }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
-    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n) }}</template>{% endfor %}
+    {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n, 'btn-xs') }}</template>{% endfor %}
     <div class="folder-filter-list">
       {# (no folder of their own here: a drag from this list puts a copy in, as from All) #}
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
@@ -291,24 +291,24 @@
    static/js/takeout.js #}
 {% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='') %}
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
-  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one
+  <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one data-kind="{{ kind }}"
         data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}"
         data-delete-url="{{ delete_url }}" data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
     <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
     <input type="hidden" name="folder" value="{{ folders[0].id if folders else '' }}"><input type="hidden" name="confirm" value="uncategorized">
-    <button class="btn btn-danger btn-sm" title="Take {{ label }} out of a folder, or delete it (asks which)">Remove</button>
+    <button class="btn btn-danger btn-sm" title="Take {{ label }} out of a folder, or delete {{ 'them' if kind == 'people' else 'it' }} (asks which)">Remove</button>
   </form>
 {% endmacro %}
 
 {# Folder options for one folder (n: its node): rename, move, a new folder inside, delete the
    folder (what's in it moves up into its parent's Unsorted, or Uncategorized at the top), and
    delete it with everything in it. On a folder's own page and on every open folder tab. #}
-{% macro folder_options(fk, n) %}{% if not fk.readonly %}
+{% macro folder_options(fk, n, size='btn-sm') %}{% if not fk.readonly %}
   {% set f = n.folder %}
           <details class="folder-tools">
-            <summary class="btn btn-secondary btn-sm" title="Rename, move or remove this folder">Folder options</summary>
+            <summary class="btn btn-secondary {{ size }}" title="Rename, move or remove this folder">Folder options</summary>
             <div class="folder-tools-box">
               <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

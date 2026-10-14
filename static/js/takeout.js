@@ -1,12 +1,10 @@
 /* Taking things out of a folder, the same on every folder page (app/takeout.py): every form
  * marked data-takeout (a folder chip's ✕, "Take out of folder" on the checked bar, a card's
- * "Remove", which first asks which folder when it's in several: data-takeout-pick) first asks
- * the site what would happen (check=1). Something that would be left
+ * the checked bar's "Take out of folder") first asks the site what would happen (check=1); a
+ * row's or card's "Remove" (data-remove-one) asks one question of its own (removeOne). Something that would be left
  * in no folder is never changed without asking: "Do you want me to permanently delete this or
  * put it in Uncategorized?" The answer goes with the form (confirm=delete|uncategorized).
- *
- * data-takeout-shown: the form acts on the folder shown (the folder tab chosen, or the folder
- * box it's in: data-here), filled in when it's sent; grayed while no folder is shown. */
+ */
 (function () {
   //the folder something is shown in: a folder tab's choice ("self:7" is folder 7's own), else
   //the folder box it sits in
@@ -46,15 +44,18 @@
   function removeOne(form) {
     var ids = JSON.parse(form.dataset.folders || '[]'), names = JSON.parse(form.dataset.names || '[]');
     var label = form.dataset.label, q = 'What do you want to do with ' + label + '? ';
-    q += ids.length ? 'It’s in ' + names.map(function (n) { return '“' + n + '”'; }).join(', ') + '.' : 'It isn’t in any folder.';
+    var person = form.dataset.kind === 'people';  // (a person is "they", never "it")
+    var It = person ? 'They’re' : 'It’s', it = person ? 'them' : 'it';
+    q += ids.length ? It + ' in ' + names.map(function (n) { return '“' + n + '”'; }).join(', ') + '.' : (person ? 'They aren’t' : 'It isn’t') + ' in any folder.';
     if (form.dataset.deleteNote) q += ' ' + form.dataset.deleteNote;
     var choices = ids.map(function (id, i) {
       var others = names.filter(function (n, j) { return j !== i; });
       return { value: 'out:' + id, label: 'Take out of “' + names[i] + '”',
-               title: others.length ? 'It stays in ' + others.map(function (n) { return '“' + n + '”'; }).join(', ') : 'It goes to Uncategorized' };
+               title: (person ? (others.length ? 'They stay in ' : 'They go to Uncategorized') : (others.length ? 'It stays in ' : 'It goes to Uncategorized')) +
+                      others.map(function (n) { return '“' + n + '”'; }).join(', ') };
     });
     choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true,
-                   title: 'Delete it; this can’t be undone', disabled: form.dataset.noDelete || null });
+                   title: 'Delete ' + (person ? 'their account' : 'it') + '; this can’t be undone', disabled: form.dataset.noDelete || null });
     window.qgenChoose(q, choices).then(function (answer) {
       if (!answer) return;
       if (answer === 'delete') {
@@ -93,27 +94,12 @@
     e.preventDefault();
     e.stopImmediatePropagation();
     clean(form);
-    if ('takeoutShown' in form.dataset) {
-      var f = window.qgenShownFolder(form);
-      if (!f) return;
-      hidden(form, 'folder', f);
-    }
-    //a card's Remove: in several folders, which one?
-    if ('takeoutPick' in form.dataset) {
-      var ids = JSON.parse(form.dataset.folders || '[]'), names = JSON.parse(form.dataset.names || '[]');
-      if (ids.length > 1) {
-        window.qgenChoose('Remove ' + form.dataset.label + ' from which folder?',
-          ids.map(function (id, i) { return { value: String(id), label: names[i], title: 'Take it out of “' + names[i] + '”' }; }))
-          .then(function (f) { if (f) { hidden(form, 'folder', f); send(form, sub); } });
-        return;
-      }
-    }
     send(form, sub);
   }, true);
 
   //added fields never outlive one sending (a page brought back with the browser's Back button
   //must ask again)
-  function clean(form) { form.querySelectorAll('input[data-added]').forEach(function (i) { if (i.name !== 'items' && (i.name !== 'folder' || !('takeoutShown' in form.dataset || 'takeoutPick' in form.dataset))) i.remove(); }); }
+  function clean(form) { form.querySelectorAll('input[data-added]').forEach(function (i) { if (i.name !== 'items') i.remove(); }); }
   window.addEventListener('pageshow', function () {
     document.querySelectorAll('form[data-takeout]').forEach(function (form) { form.querySelectorAll('input[data-added]').forEach(function (i) { i.remove(); }); });
   });
@@ -134,15 +120,4 @@
     });
   }
 
-  //buttons that act on the folder shown: grayed, with why, while no folder is shown
-  function mark() {
-    document.querySelectorAll('form[data-takeout-shown] button').forEach(function (b) {
-      var f = window.qgenShownFolder(b);
-      b.disabled = !f;
-      if (!b.dataset.tip) b.dataset.tip = b.title;
-      b.title = f ? b.dataset.tip : 'Open a folder to take things out of it';
-    });
-  }
-  document.addEventListener('qgen-shown', mark);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mark); else mark();
 })();

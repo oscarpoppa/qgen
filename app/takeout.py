@@ -5,8 +5,9 @@ the folders inside it, so it no longer shows in that folder, and says which fold
 in. Something that would then be in no folder at all is never changed without asking: "Do you
 want me to permanently delete this or put it in Uncategorized?" (confirm='delete' or
 'uncategorized'). Deleting is done the way that page deletes: an account is deleted (its quiz
-attempts go to the Archive), a problem is deleted (refused, and left where it is, while a quiz
-uses it or students answered it), a quiz is deleted (or, once assigned, goes to Removed quizzes).
+attempts go to the Archive), a problem is deleted (one a quiz uses or students answered is kept
+for those and quietly taken off the Problems page), a quiz is deleted (one students took goes to
+Removed quizzes).
 """
 from app import db
 
@@ -204,8 +205,9 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
                 done.append('Deleted {} for good.'.format(name))
             elif kind == 'problems':
                 _take_out(kind, item, ids)
-                S.delete_problem(item)
-                done.append('Deleted problem {}.'.format(name))
+                how = S.delete_problem(item)
+                done.append('Deleted problem {}.'.format(name) if how == 'deleted' else
+                            'Deleted problem {} from Problems; the quizzes that use it keep it.'.format(name))
             else:
                 #(out of the folder too, so restoring it doesn't put it back there)
                 _take_out(kind, item, ids)
@@ -260,7 +262,7 @@ def folder_delete_plan(kind, folder):
         items = User.query.filter(User.id.in_(ids)).all() if ids else []
     else:
         from app.qgen import services as S
-        items = list(getattr(folder, S.subject_kind(kind)[3]))
+        items = [i for i in getattr(folder, S.subject_kind(kind)[3]) if not i.removed_at]
     alone = [i for i in items if _folders_of(kind, i) == {folder.id}]  # in no other folder
     name = folder_name(kind, folder)
     names = lambda xs: ', '.join(item_name(kind, i) for i in sorted(xs, key=lambda i: item_name(kind, i).lower()))
