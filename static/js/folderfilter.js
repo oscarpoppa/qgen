@@ -139,6 +139,15 @@
       return span;
     }
 
+    var tabs = null;
+    function tabsBox() {
+      if (!tabs) {
+        tabs = document.createElement('div');
+        tabs.className = 'folder-filter-rows folder-filter-tabs';
+        box.insertBefore(tabs, list);
+      }
+      return tabs;
+    }
     function draw() {
       rows.textContent = '';
       var p = path();
@@ -238,7 +247,12 @@
         });
         col.qgenFolds = drawFolds;
         rows.appendChild(col);
-      } else {
+      }
+      //(data-tabs on a list: the folder tabs over the list too, as on a folder page: a student's
+      //page, the owner 2026-10-13)
+      if (box.dataset.style !== 'list' || 'tabs' in box.dataset) {
+        var host = box.dataset.style === 'list' ? tabsBox() : rows;
+        host.textContent = '';
         //the top row: All, the folders, Uncategorized
         var row = document.createElement('div');
         row.className = 'folder-tabs';
@@ -257,7 +271,7 @@
         else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
         else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
         row.appendChild(none);
-        rows.appendChild(row);
+        host.appendChild(row);
         //a row for the folders inside each chosen folder
         p.forEach(function (id) {
           var n = byId[id];
@@ -283,14 +297,14 @@
           if (!n.children.length) { self.disabled = true; self.title = 'There are no folders inside “' + n.name + '”, so this is the same as All'; }
           else self.title = 'Show what’s in “' + n.name + '” and in none of the folders inside it';
           sub.appendChild(self);
-          rows.appendChild(sub);
+          host.appendChild(sub);
         });
       }
       //which buttons are chosen: the folder and the ones it's in
-      rows.querySelectorAll('.folder-tab').forEach(function (b) {
+      box.querySelectorAll('.folder-filter-rows .folder-tab').forEach(function (b) {
         var on = b.dataset.folder === chosen || (!b.classList.contains('folder-tab-all') && p.indexOf(b.dataset.folder) !== -1);
         if (b.classList.contains('folder-tab-self')) on = b.dataset.folder === chosen;
-        if (box.dataset.style === 'list') on = b.dataset.folder === chosen;  // (a list: just the one chosen)
+        if (b.closest('.folder-side-list')) on = b.dataset.folder === chosen;  // (a list: just the one chosen)
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
         b.setAttribute('aria-expanded', on ? 'true' : 'false');
       });
@@ -307,15 +321,16 @@
         spot.appendChild(t);
         home.appendChild(spot);
       } else if (t.childNodes.length) {
+        var where = box.dataset.style === 'list' ? tabsBox() : rows;
         if (narrow && narrow.matches) {
           var line = document.createElement('div');
           line.className = 'folder-tools-line';
           line.appendChild(t);
-          rows.appendChild(line);
-        } else rows.lastElementChild.appendChild(t);
+          where.appendChild(line);
+        } else where.lastElementChild.appendChild(t);
       }
       //the chosen tabs in view (a phone's strip may be scrolled past them)
-      rows.querySelectorAll('.folder-tab[aria-pressed="true"]').forEach(function (b) {
+      box.querySelectorAll('.folder-filter-rows .folder-tab[aria-pressed="true"]').forEach(function (b) {
         var strip = b.parentElement;
         if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, b.offsetLeft - strip.offsetLeft - 24);
       });
@@ -371,11 +386,12 @@
       tidy();
     });
 
-    rows.addEventListener('click', function (e) {
+    //(the folder list down the side, and the tabs over the list: data-tabs)
+    box.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');
-      if (!b || b.disabled) return;
+      if (!b || b.disabled || !b.closest('.folder-filter-rows') || b.closest('.folder-filter-rows').parentElement !== box) return;
       var id = b.dataset.folder;
-      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self') || box.dataset.style === 'list') { choose(id); return; }
+      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self') || b.closest('.folder-side-list')) { choose(id); return; }
       //pressing the chosen folder again goes back up a level (or to All)
       if (id === chosen) id = byId[id] && parentOf[id] ? parentOf[id] : 'all';
       choose(id);

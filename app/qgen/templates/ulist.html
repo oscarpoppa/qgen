@@ -73,7 +73,7 @@
       {# their quizzes in one list, each once; above it the folder buttons (static/js/folderfilter.js):
          All, New, In progress, then the Quizzes page's folders, then Uncategorized #}
       <div class="folder-filter" data-folder-filter data-prefix="q:" data-key-attr="fkey" data-all-label="All quizzes"
-           data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-url-tab data-tools-home="#student-filter-bar" data-style="list">
+           data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-url-tab data-style="list" data-tabs>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         <div class="folder-filter-list">{% for g in attempts_by_quiz(item.cquizzes) %}{{ result_box(g, item) }}{% endfor %}</div>
       </div>

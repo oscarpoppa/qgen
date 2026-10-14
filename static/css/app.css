@@ -2275,8 +2275,8 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
    folder list on a folder page, instead of tabs */
 /* the folder column is as wide as its names need (up to 320px), never narrower than 170px */
 .folder-filter[data-style="list"] { display: grid; grid-template-columns: fit-content(320px) minmax(0, 1fr); gap: 12px; align-items: start; }
-.folder-filter[data-style="list"] > .folder-filter-rows { min-width: 170px; }
-.folder-filter[data-style="list"] > .folder-filter-rows { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: 10px 8px; }
+.folder-filter[data-style="list"] > .folder-filter-side { min-width: 170px; }
+.folder-filter[data-style="list"] > .folder-filter-side { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: 10px 8px; }
 .folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
 /* beside the folder list (no tabs above), the list and its "Nothing in … yet." note are closed boxes */
 .folder-filter[data-style="list"] > .folder-filter-list, .folder-filter[data-style="list"] > .folder-filter-empty { border-top: 1px solid var(--tab-edge); border-radius: var(--r-lg); }
@@ -2298,5 +2298,16 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab { color: var(--muted); }
 .folder-side-list > .side-row > .folder-tab .tab-ticked { flex: 0 0 auto; font-size: 11px; padding: 1px 6px; }
 @media (max-width: 640px) { .folder-filter[data-style="list"] { grid-template-columns: minmax(0, 1fr); } }
-.folder-filter[data-style="list"] > .folder-filter-rows { overflow: hidden; }
+.folder-filter[data-style="list"] > .folder-filter-side { overflow: hidden; }
 .folder-filter-side > .folder-side-list { min-width: 0; width: 100%; flex: 1 1 auto; }
+/* a folder list down the side AND the folder tabs over the list (data-tabs: a student's page),
+   laid out like a folder page: the list on the left, the tabs and what they show on the right */
+.folder-filter[data-style="list"][data-tabs] { grid-template-rows: auto 1fr; row-gap: 0; }
+.folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-column: 1; grid-row: 1 / span 2; }
+.folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs { grid-column: 2; grid-row: 1; min-width: 0; }
+.folder-filter[data-style="list"][data-tabs] > .folder-filter-list,
+.folder-filter[data-style="list"][data-tabs] > .folder-filter-empty { grid-column: 2; grid-row: 2; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+@media (max-width: 640px) {
+  .folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-row: auto; }
+  .folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs, .folder-filter[data-style="list"][data-tabs] > .folder-filter-list { grid-column: 1; grid-row: auto; }
+}
