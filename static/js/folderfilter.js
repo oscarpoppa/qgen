@@ -362,7 +362,40 @@
         var strip = b.parentElement;
         if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, b.offsetLeft - strip.offsetLeft - 24);
       });
+      box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(scrollers);
     }
+
+    //a row of tabs wider than its box: ‹ › at its ends slide it, each only while there's more that
+    //way, with the row fading out under it, so no tab is just cut off at the edge (the owner, 2026-10-14)
+    function scrollers(row) {
+      row.querySelectorAll(':scope > .tab-scroll').forEach(function (b) { b.remove(); });
+      row.classList.remove('tabs-overflow', 'more-left', 'more-right');
+      if (row.scrollWidth <= row.clientWidth + 1) return;
+      row.classList.add('tabs-overflow');
+      [['left', '\u2039', 'Show the folders to the left'], ['right', '\u203a', 'Show more folders to the right']].forEach(function (d) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tab-scroll tab-scroll-' + d[0];
+        b.textContent = d[1];
+        b.title = d[2];
+        b.setAttribute('aria-label', d[2]);
+        b.addEventListener('click', function () {
+          row.scrollBy({ left: (d[0] === 'left' ? -1 : 1) * Math.max(120, row.clientWidth * 0.7), behavior: 'smooth' });
+        });
+        if (d[0] === 'left') row.insertBefore(b, row.firstChild); else row.appendChild(b);
+      });
+      function edges() {
+        row.classList.toggle('more-left', row.scrollLeft > 2);
+        row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+      }
+      if (!row.dataset.scrollWatch) { row.dataset.scrollWatch = '1'; row.addEventListener('scroll', edges, { passive: true }); }
+      row._edges = edges;
+      edges();
+    }
+    window.addEventListener('resize', function () {
+      clearTimeout(scrollers._t);
+      scrollers._t = setTimeout(function () { box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(scrollers); }, 150);
+    });
     var narrow = window.matchMedia ? window.matchMedia('(max-width: 640px)') : null;
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
