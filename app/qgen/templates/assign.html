@@ -76,7 +76,7 @@
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   </div>
-  {# when, and the Assign button: under the Quiz card (the Students card beside both) #}
+  {# when: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">
   <fieldset>
     <legend>When (optional)</legend>
@@ -91,8 +91,9 @@
     </div>
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
   </fieldset>
-  <div class="assign-go">{{ form.submit(class='btn', title='Give the quiz to the checked students') }}</div>
   </div>
+  {# Assign: under the Students card, level with the dates (the owner, 2026-10-14); on a phone, last #}
+  <div class="assign-go">{{ form.submit(class='btn btn-big', title='Give the quiz to the checked students') }}</div>
 </form>
 {% endblock %}
 

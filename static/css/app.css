@@ -2248,12 +2248,13 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .assign-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
 .assign-form > .card { margin: 0; }
 @container page (min-width: 960px) {
-  .assign-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }  /* the Quiz and Students cards share the width equally */
-  /* the dates and the Assign button under the Quiz card, so Assign is near what's picked;
-     the Students card takes the right column's full height */
+  .assign-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr; }  /* the Quiz and Students cards share the width equally; (the last row takes what the dates card needs past the Students card, so Assign sits right under that card) */
+  /* the dates under the Quiz card; the Assign button in the right column, under the Students
+     card and level with the dates (the owner, 2026-10-14) */
   .assign-form > .pick-quiz { grid-column: 1; grid-row: 1; }
-  .assign-form > .assign-when { grid-column: 1; grid-row: 2; }
+  .assign-form > .assign-when { grid-column: 1; grid-row: 2 / span 2; }
   .assign-form > .pick-people-card { grid-column: 2; grid-row: 1 / span 2; }
+  .assign-form > .assign-go { grid-column: 2; grid-row: 3; margin: 0; }
   .pick-people .folder-filter-list > .pick-list { max-height: min(60vh, 560px); }
 }
 .pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
@@ -2261,7 +2262,9 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .pick-quiz .quiz-pick-list > li { margin: 0; min-width: 0; }
 .pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
 .pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
-.assign-when > .assign-go { margin-top: 12px; }
+.assign-form > .assign-go { margin: 0; }
+/* (a bigger button: the page's one main action) */
+.btn.btn-big { font-size: var(--fs-lg); padding: 10px 32px; min-height: 48px; }
 .assign-when .dates { max-width: 760px; }
 .assign-go { margin-top: 4px; }
 .pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }
