@@ -2276,24 +2276,27 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 /* the folder column is as wide as its names need (up to 320px), never narrower than 170px */
 .folder-filter[data-style="list"] { display: grid; grid-template-columns: fit-content(320px) minmax(0, 1fr); gap: 12px; align-items: start; }
 .folder-filter[data-style="list"] > .folder-filter-rows { min-width: 170px; }
-.folder-side-list > .folder-tab .tab-ticked { flex: 0 0 auto; font-size: 11px; padding: 1px 6px; }
 .folder-filter[data-style="list"] > .folder-filter-rows { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: 10px 8px; }
 .folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
 /* beside the folder list (no tabs above), the list and its "Nothing in … yet." note are closed boxes */
 .folder-filter[data-style="list"] > .folder-filter-list, .folder-filter[data-style="list"] > .folder-filter-empty { border-top: 1px solid var(--tab-edge); border-radius: var(--r-lg); }
 .folder-side-list { display: flex; flex-direction: column; gap: 2px; }
-.folder-side-list > .folder-tab { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 5px 6px; border: 0; border-radius: var(--r);
-  background: none; color: var(--text); text-align: left; font-weight: 400; min-height: 31px; }
-.folder-side-list > .folder-tab:hover { background: var(--surface-2); filter: none; }
-.folder-side-list > .folder-tab .box-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: inherit; }
-.folder-side-list > .folder-tab { line-height: 1.3; }
-.folder-side-list > .folder-tab .box-count { background: none; padding: 0; color: var(--muted); font-size: var(--fs-sm); }
-/* (the same look as the side folder list on the Problems page, the owner 2026-10-13: 31px rows,
-   plain text, the chosen one tinted and bold, no bar) */
-.folder-side-list > .folder-tab[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); font-weight: 600; box-shadow: none; }
-.folder-side-list > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
-.folder-side-list > .folder-tab:disabled { opacity: .55; cursor: default; }
+/* a picking card's folder list (and a student's page) is the side folder list on the Problems page,
+   piece for piece (the owner, 2026-10-13): .side-row rows with the fold arrow or its space, then the
+   folder (a button here, a link there): the same size, plain names, the chosen one tinted and bold */
+.folder-side-list > .side-row[hidden] { display: none; }
+.folder-side-list > .side-row:has(> .folder-tab[aria-pressed="true"]) { background: var(--accent-soft); }
+.folder-side-list > .side-row > .folder-tab { flex: 1 1 auto; display: flex; align-items: center; gap: 4px; min-width: 0; margin: 0;
+  padding: 5px 4px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text); text-align: left;
+  font: inherit; font-weight: 400; line-height: 1.3; min-height: 0; cursor: pointer; }
+.folder-side-list > .side-row > .folder-tab:hover { background: none; filter: none; }
+.folder-side-list > .side-row > .folder-tab:hover .box-title { text-decoration: underline; }
+.folder-side-list > .side-row > .folder-tab[aria-pressed="true"] { font-weight: 600; }
+.folder-side-list > .side-row > .folder-tab .box-title { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: inherit; font-size: inherit; line-height: inherit; }
+.folder-side-list > .side-row > .folder-tab .box-count { flex: 0 0 auto; background: none; padding: 0 2px 0 0; line-height: 1.3; min-height: 0; color: var(--muted); font-size: var(--fs-sm); font-weight: 400; }
+.folder-side-list > .side-row > .folder-tab:disabled { cursor: default; }
+.folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab { color: var(--muted); }
+.folder-side-list > .side-row > .folder-tab .tab-ticked { flex: 0 0 auto; font-size: 11px; padding: 1px 6px; }
 @media (max-width: 640px) { .folder-filter[data-style="list"] { grid-template-columns: minmax(0, 1fr); } }
-.folder-side-list > .folder-tab { box-sizing: border-box; max-width: 100%; min-width: 0; overflow: hidden; flex: 0 0 auto; }
 .folder-filter[data-style="list"] > .folder-filter-rows { overflow: hidden; }
 .folder-filter-side > .folder-side-list { min-width: 0; width: 100%; flex: 1 1 auto; }

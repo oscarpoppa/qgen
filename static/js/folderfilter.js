@@ -146,19 +146,55 @@
       //folder list on a folder page, instead of rows of tabs)
       if (box.dataset.style === 'list') {
         rows.classList.add('folder-filter-side');
+        //(the owner, 2026-10-13: the same piece as the folder list on the Problems page: its
+        //Expand all / Collapse all on top, fold arrows on folders with folders inside, the same
+        //rows; a click picks the folder here instead of opening a page)
         var col = document.createElement('div');
         col.className = 'folder-side-list';
         col.setAttribute('role', 'group');
         col.setAttribute('aria-label', 'Folders');
+        var levels = document.createElement('div');
+        levels.className = 'btn-row small side-levels';
+        [['open', 'Expand all', 'Show the folders inside every folder in this list'],
+         ['close', 'Collapse all', 'Hide the folders inside every folder (the one picked stays in view)']].forEach(function (l) {
+          var lb = document.createElement('button');
+          lb.type = 'button'; lb.className = 'btn btn-secondary btn-xs'; lb.dataset.sideLevel = l[0];
+          lb.textContent = l[1]; lb.title = l[2];
+          levels.appendChild(lb);
+        });
+        col.appendChild(levels);
+        var FOLD = 'qgen-folded-' + (box.dataset.remember || 'pick'), folded = {};
+        try { (JSON.parse(localStorage.getItem(FOLD) || '[]') || []).forEach(function (id) { folded[id] = true; }); } catch (err) {}
+        function saveFold() { try { localStorage.setItem(FOLD, JSON.stringify(Object.keys(folded))); } catch (err) {} }
+        var folds = [];
+        function sideRow(btn, depth, node) {
+          var r = document.createElement('div');
+          r.className = 'side-row';
+          r.dataset.depth = depth;
+          if (depth > 1) r.style.paddingLeft = ((depth - 1) * 14) + 'px';  // (the side list's indents)
+          var f;
+          if (node && node.children.length) {
+            f = document.createElement('button');
+            f.type = 'button'; f.className = 'side-fold';
+            f.setAttribute('aria-label', 'Show or hide the folders in ' + node.name);
+            f.title = 'Show or hide the folders inside';
+            folds.push({ row: r, id: String(node.id), btn: f });
+          } else {
+            f = document.createElement('span');
+            f.className = 'side-fold-space'; f.setAttribute('aria-hidden', 'true');
+          }
+          r.appendChild(f);
+          r.appendChild(btn);
+          if (btn.classList.contains('is-empty')) r.classList.add('is-empty');
+          col.appendChild(r);
+          return r;
+        }
         var allBtn = button('all', box.dataset.allLabel || 'All', items().length, 'folders');
         allBtn.classList.add('folder-tab-all');
-        allBtn.style.paddingLeft = '24px';
-        col.appendChild(allBtn);
+        sideRow(allBtn, 1, null);
         (function walk(nodes, depth) {
           nodes.forEach(function (n) {
-            var b = button(String(n.id), n.name, n.count, n.icon || 'folder');
-            b.style.paddingLeft = (24 + (depth - 1) * 14) + 'px';  // (the side list's indents)
-            col.appendChild(b);
+            sideRow(button(String(n.id), n.name, n.count, n.icon || 'folder'), depth, n);
             walk(n.children, depth + 1);
             //(no "Unsorted" line under a folder: every folder list looks like the side list on the
             //Problems page, the owner 2026-10-13; Unsorted is the tab inside an open folder)
@@ -166,10 +202,41 @@
         })(tree, 1);
         var noneFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
         var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', noneFolders ? 0 : loose, 'tray');
-        noneBtn.style.paddingLeft = '24px';
         if (noneFolders) { noneBtn.disabled = true; noneBtn.title = 'There are no folders yet.'; }
         else if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
-        col.appendChild(noneBtn);
+        sideRow(noneBtn, 1, null);
+        //folding: the rows after a folder that are deeper belong to it; the folder picked (and the
+        //folders it's in) always stay open
+        var rowsAll = Array.prototype.slice.call(col.querySelectorAll('.side-row'));
+        function inside(r) {
+          var i = rowsAll.indexOf(r), d = +r.dataset.depth, out = [];
+          for (var j = i + 1; j < rowsAll.length && +rowsAll[j].dataset.depth > d; j++) out.push(rowsAll[j]);
+          return out;
+        }
+        function pickedInside(r) { return inside(r).some(function (x) { return x.querySelector('[aria-pressed="true"]'); }); }
+        function drawFolds() {
+          rowsAll.forEach(function (x) { x.hidden = false; });
+          folds.forEach(function (fo) {
+            var open = !folded[fo.id] || pickedInside(fo.row);
+            fo.btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (!open) inside(fo.row).forEach(function (x) { x.hidden = true; });
+          });
+        }
+        folds.forEach(function (fo) {
+          fo.btn.addEventListener('click', function () {
+            if (fo.btn.getAttribute('aria-expanded') === 'true') { if (pickedInside(fo.row)) return; folded[fo.id] = true; }
+            else delete folded[fo.id];
+            saveFold(); drawFolds();
+          });
+        });
+        if (!folds.length) levels.querySelectorAll('button').forEach(function (lb) { lb.disabled = true; lb.title = 'No folder here has folders inside it'; });
+        else levels.addEventListener('click', function (e) {
+          var lb = e.target.closest('[data-side-level]');
+          if (!lb) return;
+          folds.forEach(function (fo) { if (lb.dataset.sideLevel === 'open') delete folded[fo.id]; else folded[fo.id] = true; });
+          saveFold(); drawFolds();
+        });
+        col.qgenFolds = drawFolds;
         rows.appendChild(col);
       } else {
         //the top row: All, the folders, Uncategorized
@@ -257,7 +324,9 @@
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
     function apply() {
-      box.dataset.shown = chosen;  // (what's shown, for scripts: takeout.js's "the folder shown")
+      box.dataset.shown = chosen;
+      var sideCol = rows.querySelector('.folder-side-list');
+      if (sideCol && sideCol.qgenFolds) sideCol.qgenFolds();  // (the folder picked stays in view)  // (what's shown, for scripts: takeout.js's "the folder shown")
       var keep = chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
       items().forEach(function (el) {
         var k = keyOf(el), hide = chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
