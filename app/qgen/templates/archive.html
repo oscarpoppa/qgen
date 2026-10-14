@@ -24,7 +24,7 @@
               <td class="tick-col"><input type="checkbox" name="items" value="{{ a.id }}" form="file-form" aria-label="Check {{ a.student_name }}’s “{{ a.quiz_title }}”"></td>
               {# the row folds to who, which quiz, the result, its folder and buttons; open, it shows when
                  it was taken and archived too (Expand all / Collapse all, remembered) #}
-              <td data-label="Student"><details class="box row-fold" data-box="attempt-row:{{ a.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
+              <td data-label="Student"><details class="box row-fold" data-box="attempt-row:{{ a.id }}" open><summary><span class="fold" aria-hidden="true"></span><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{% if a.student_id and not (blocker and 'account was deleted' in blocker) %}<a class="name-link" href="{{ url_for('qgen.list_user', uid=a.student_id) }}" data-tip="Open {{ a.student_name }}’s student page">{{ a.student_name }}</a>{% else %}{{ a.student_name }}{% endif %}</span></summary></details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
               <td data-label="Quiz">{{ quiz_link(a.vquiz, a.quiz_title, strong=true) }}{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
