@@ -85,7 +85,7 @@
   </div>
   <div id="folder-items">
     {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
-    {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
     {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
     {% elif not total %}<div class="card empty"><span class="big">{{ icon('archive') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>

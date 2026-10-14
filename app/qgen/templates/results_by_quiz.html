@@ -66,7 +66,7 @@
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.view == 'all' and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=quizzes|map(attribute='vquiz')|list, key_prefix='quiz:') %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}
-    {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'quiz:') %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% else %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% else %}
     {% for q in quizzes %}{{ quiz_box(q) }}{% endfor %}{% endif %}
   </div>
   {% if not quizzes and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}

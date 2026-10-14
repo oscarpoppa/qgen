@@ -85,10 +85,10 @@
       </form></div>{% endif %}
     <div id="folder-items">
       {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
-      {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
+      {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
       {{ people_table(shown, fk.node.folder if fk.node else none) }}{% endif %}
     </div>
-    {% if not shown %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+    {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
 {% endcall %}
 {% endblock %}
 

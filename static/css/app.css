@@ -2342,7 +2342,8 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-filter.folder-open-empty .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { border-top-color: var(--muted); }
 .folder-filter.folder-open-empty .folder-filter-empty { color: var(--muted); }
 .folder-filter.folder-open-empty .folder-tabs-inner .box-count { color: var(--muted); }
-/* ...and its row of inner tabs shows no tabs at all (nothing in it to sort through; its folders,
-   all empty, are still in the side list); the row keeps its buttons (Folder options...)
-   (the owner, 2026-10-14) */
-.folder-filter-rows > .folder-tabs-empty > .folder-tab, .folder-filter-rows > .folder-tabs-plain > .folder-tab { display: none; }
+/* ...and its row of inner tabs keeps its buttons (Folder options...) (the owner, 2026-10-14) */
+/* (an empty folder with folders inside: just those folders' tabs, grayed, like the folder list;
+   no All or Unsorted: the owner, 2026-10-14) */
+.folder-filter-rows > .folder-tabs-empty > .folder-tab-all, .folder-filter-rows > .folder-tabs-empty > .folder-tab-self,
+.folder-filter-rows > .folder-tabs-plain > .folder-tab { display: none; }

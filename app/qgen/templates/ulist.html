@@ -131,7 +131,7 @@
   {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
-    {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% else %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% else %}
     {% for item in shown %}{{ student_box(item) }}{% endfor %}{% endif %}
   </div>
   {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}

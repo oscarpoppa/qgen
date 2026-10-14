@@ -98,7 +98,7 @@
   {% if rows %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'student', 'students', items='tr[data-box]', url=true) }}</div>{% endif %}
   <div id="folder-items">
   {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{{ conversations(n.people) }}{% endcall %}
-  {% elif fk.node and fk.subtree(fk.node) %}{% call(n) folder_items(fk, 'student:') %}{{ conversations(n.people) }}{% endcall %}
+  {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'student:') %}{{ conversations(n.people) }}{% endcall %}
   {% elif shown %}{{ conversations(shown) }}
   {% else %}<div class="card empty"><span class="big">{{ icon('users') }}</span>{{ 'No students yet.' if not rows else 'Nothing in “' ~ fk.node.folder.name ~ '” yet.' if fk.node else 'Everything is in a folder.' }}</div>{% endif %}
   </div>

@@ -262,7 +262,9 @@
         label.className = 'folder-tabs-label';
         label.textContent = 'Folders';
         row.appendChild(label);
-        row.appendChild(button('all', box.dataset.allLabel || 'All', items().length, 'folders'));
+        var allTab = button('all', box.dataset.allLabel || 'All', items().length, 'folders');
+        allTab.classList.add('folder-tab-all');
+        row.appendChild(allTab);
         tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
         //(no folders at all, only New / In progress: nothing to sort yet, so it counts 0)
         var noFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
@@ -273,6 +275,8 @@
         row.appendChild(none);
         //(a folder's own page with no folders inside: no tabs, just its things, as above)
         if (box.dataset.allUrl === '' && noFolders) row.classList.add('folder-tabs-plain');
+        //(a folder's own page, empty: just its folders' tabs, grayed, as in the folder list)
+        else if (box.dataset.allUrl === '' && !items().length) { row.classList.add('folder-tabs-empty'); none.classList.add('folder-tab-self'); }
         host.appendChild(row);
         //a row for the folders inside each chosen folder
         p.forEach(function (id) {
@@ -363,14 +367,16 @@
         note.className = 'card empty small folder-filter-empty';
         list.parentElement.insertBefore(note, list.nextSibling);
       }
-      note.hidden = shown || chosen === 'all';
-      folderEmpty = !shown && chosen !== 'all';
+      //(a folder's own page with nothing in it, only empty folders: All says so too)
+      var bare = chosen === 'all' && !items().length && box.dataset.name !== undefined;
+      note.hidden = shown || (chosen === 'all' && !bare);
+      folderEmpty = !shown && (chosen !== 'all' || bare);
       //(an empty folder: its open panel turns gray, not the open folder's blue: the owner, 2026-10-14)
       box.classList.toggle('folder-open-empty', !items().some(function (el) { return (el.dataset.hiddenBy || '').split(' ').indexOf('folder') === -1; }));
       list.hidden = folderEmpty;  // (no empty frame above the note)
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)
-      note.textContent = byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
+      note.textContent = bare ? 'Nothing in \u201c' + box.dataset.name + '\u201d yet.' : byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
       tidy();
       document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
       if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
