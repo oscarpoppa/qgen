@@ -235,9 +235,11 @@ def test_results_pages_lead_back_to_users(app_db):
     results = no_titles(teach.get('/quiz/listuser?folder=all').data.decode())
     assert '<h1>People</h1>' in results and 'href="/quiz/listuser?folder=all" aria-current="page">Results</a>' in results
     assert teach.get('/people?folder=all').headers['Location'] == '/quiz/listuser?folder=all'  # used last
-    # the menu: one People entry, lit on both views; Results by student isn't in the Quizzes menu
+    # the menu: one People entry, lit on both views; the Quizzes menu has Results by student too,
+    # under Results by quiz (the owner, 2026-10-15)
     assert '>People</a>' in results and 'class="active" aria-current="page">People</a>' in results
-    assert '>Results by student</a>' not in results.split('<main')[0]
+    menu = results.split('<main')[0]
+    assert '>Results by student</a>' in menu and menu.index('>Results by quiz</a>') < menu.index('>Results by student</a>')
     assert '<a class="btn btn-secondary" href="/people" data-back><span class="back-label">← People</span></a>' in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
     # one quiz's history is about the quiz: back to Quizzes (when there's no trail to follow)
