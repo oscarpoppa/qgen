@@ -102,6 +102,9 @@
       if (narrow()) { card.style.marginBottom = ''; card.classList.remove('is-floating'); rest = null; return; }
       card.style.marginBottom = '';
       var h = card.getBoundingClientRect().height;
+      //(hidden, e.g. folded into the Dashboard's strip of chips: it has no room of its own; shown
+      //again, it's laid out afresh, never floating over the card that takes its place)
+      if (!card.offsetParent || h < 1) { rest = null; card.classList.remove('is-floating'); return; }
       if (Date.now() < fresh) rest = null;  // (laid out afresh: see relay())
       if (rest === null || h < rest) rest = h;  // (smaller: the others move up into the room)
       var over = h - rest;
