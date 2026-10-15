@@ -56,7 +56,7 @@
 <div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}
   <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
 
-{% set actions %}{% if fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz: no one is in this folder yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
+{% set actions %}{% if fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
 {% call folders_page(fk, actions) %}
     <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
       <span class="pick-users-count"></span>

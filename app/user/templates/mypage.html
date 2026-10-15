@@ -23,7 +23,7 @@
   {% elif cq.status == 'started' %}
     <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>
   {% else %}
-    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: start this quiz">{{ icon_label('lc-play', 'Start') }}</a>
+    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: begin this quiz">{{ icon_label('lc-play', 'Start') }}</a>
   {% endif %}
 {% endmacro %}
 

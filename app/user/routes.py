@@ -483,17 +483,17 @@ def userdet():
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         #a plain button (blue is for the page's own action); grayed out in an empty folder;
         #"to this folder" drops off on phones
-        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to everyone in “{}”">{}</a> ').format(
+        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to this folder: everyone in “{}”">{}</a> ').format(
             url_for('qgen.assign', folder=n['folder'].id), n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder'))
-        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="Assign a quiz: nobody in “{}” yet">{}</button> ').format(
+        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="Assign a quiz to this folder: nobody in “{}” yet">{}</button> ').format(
             n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder')),
         fold_key='qgen-folded-user-folders',
         #All people: every student; Uncategorized: the people in no folder (the owner, 2026-10-14:
         #every folder tab can assign a quiz to everyone in it)
         all_tools=lambda r: _assign_all_button([u for u in ulst if not u.is_admin], 'Assign a quiz to everyone',
-                                               'Assign a quiz to every student', 'Assign a quiz: there are no students yet'),
+                                               'Assign a quiz to everyone: every student', 'Assign a quiz to everyone: there are no students yet'),
         main_tools=lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
-                                                'Assign a quiz to everyone in Uncategorized (in no folder)', 'Assign a quiz: nobody is in Uncategorized'))
+                                                'Assign a quiz to this folder: everyone in Uncategorized (in no folder)', 'Assign a quiz to this folder: nobody is in Uncategorized'))
     return render_template('udet.html', ulst=ulst, title='People', fk=fk, shown=shown, folders_of=folders_of)
 
 

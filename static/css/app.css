@@ -1520,8 +1520,9 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 td.actions { padding-top: 5px; padding-bottom: 5px; }
 /* "+ Add…" lists all the same width; the problem count stays on one line */
 .person-folders .move-select { width: 9.5rem; min-width: 0; }
-/* the Folders column stays narrow (chips one under another), so a row's buttons fit beside it */
-td.person-folders { max-width: 10.5rem; }
+/* the Folders column: room for the chips side by side and the "+" on their line (the row's buttons
+   are icons now, so they need little room: the owner, 2026-10-14) */
+td.person-folders { max-width: 20rem; min-width: 14rem; }
 /* a results row's own buttons (History or Student page, Retake, Archive all) one under
    another at the right: the row is already as tall as its attempts */
 .btn-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -2420,7 +2421,7 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
    2026-10-14); its words in the tooltip and for screen readers */
 a.icon-link, button.icon-link { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--r);
   color: var(--accent); text-decoration: none; }
-a.icon-link svg.ico, button.icon-link svg.ico { width: 22px; height: 22px; }
+a.icon-link svg.ico, button.icon-link svg.ico { width: 20px; height: 20px; }  /* (the same size as every icon button) */
 button.icon-link { border: 0; background: none; padding: 0; cursor: pointer; min-height: 0; }
 a.icon-link:hover, button.icon-link:hover { background: var(--accent-soft); }
 a.icon-link:focus-visible, button.icon-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

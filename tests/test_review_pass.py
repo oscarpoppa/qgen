@@ -1582,7 +1582,7 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         '/quiz/editvprob/{}'.format(vp.id): ['disabled title="History: No one has answered this problem yet">'],
         '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
                                            'disabled title="Archive all (1): Only one attempt: use its own Archive button">',
-                                           'disabled title="This quiz has no Paper only questions"'],
+                                           'disabled title="Print paper pages: this quiz has no Paper only questions"'],
         '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],

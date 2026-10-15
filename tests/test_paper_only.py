@@ -61,7 +61,7 @@ def test_take_grade_and_print(app_db):
     assert 'window.print()' in page
     assert 'href="/quiz/results/{}"'.format(vq.id) in no_titles(page)
     # and from the quiz's results later
-    assert '</svg> Print<span class="wide-only"> paper pages</span>' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert 'Print paper pages</span></a>' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()  # (the printer icon: owner 2026-10-14)
     # students can't open it
     s = login(app, 'sam')
     assert s.get('/quiz/print/{}'.format(vq.id)).status_code == 302
@@ -138,7 +138,7 @@ def test_quiz_without_paper_redirects_as_before(app_db):
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert r.status_code == 302 and '/quiz/print' not in r.headers['Location']
     page = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert '/quiz/print/' not in page and 'disabled title="This quiz has no Paper only questions"' in page  # grayed out, not missing
+    assert '/quiz/print/' not in page and 'disabled title="Print paper pages: this quiz has no Paper only questions"' in page  # grayed out, not missing
 
 
 def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):

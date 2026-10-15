@@ -347,14 +347,17 @@
           row.style.display = 'none';
           row = row.previousElementSibling;
         }
-        if (!(narrow && narrow.matches)) row.appendChild(t);
-        //(a phone, or a row of tabs too long for its width, which scrolls sideways: the buttons
-        //go on a line of their own under it, so they're never scrolled out of sight)
-        if ((narrow && narrow.matches) || row.scrollWidth > row.clientWidth + 1) {
+        //a phone: the buttons on a line of their own under the tabs; otherwise at the row's end,
+        //unless the row is too long for its width (fitTools, once the page is laid out)
+        if (narrow && narrow.matches) {
           var line = document.createElement('div');
           line.className = 'folder-tools-line';
           line.appendChild(t);
           where.appendChild(line);
+        } else {
+          row.appendChild(t);
+          toolsAt = { t: t, row: row, where: where };
+          setTimeout(fitTools, 0);
         }
       }
       //the chosen tabs in view (a phone's strip may be scrolled past them)
@@ -365,6 +368,34 @@
       box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(scrollers);
     }
 
+    //the folder's buttons at the end of its row of tabs; a row too long for its width (measured
+    //once the page is laid out, and again when it changes size) has them on a line of their own
+    //under it, so they're never scrolled out of sight
+    var toolsAt = null;
+    function fitTools() {
+      if (!toolsAt || (narrow && narrow.matches) || !toolsAt.t.isConnected) return;
+      var t = toolsAt.t, row = toolsAt.row, line = t.parentElement.classList.contains('folder-tools-line') ? t.parentElement : null;
+      if (line) { row.appendChild(t); line.remove(); }
+      if (row.scrollWidth > row.clientWidth + 1) {
+        line = document.createElement('div');
+        line.className = 'folder-tools-line';
+        line.appendChild(t);
+        toolsAt.where.appendChild(line);
+      }
+      scrollers(row);
+    }
+    window.addEventListener('load', function () { fitTools(); });
+    //(the box's width changing without the window's: a side panel opening, the page laying out)
+    if (window.ResizeObserver) {
+      var lastW = 0;
+      new ResizeObserver(function () {
+        var w = box.getBoundingClientRect().width;
+        if (Math.abs(w - lastW) < 1) return;
+        lastW = w;
+        clearTimeout(fitTools._t);
+        fitTools._t = setTimeout(fitTools, 30);
+      }).observe(box);
+    }
     //a row of tabs wider than its box: ‹ › at its ends slide it, each only while there's more that
     //way, with the row fading out under it, so no tab is just cut off at the edge (the owner, 2026-10-14)
     function scrollers(row) {
@@ -394,7 +425,7 @@
     }
     window.addEventListener('resize', function () {
       clearTimeout(scrollers._t);
-      scrollers._t = setTimeout(function () { box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(scrollers); }, 150);
+      scrollers._t = setTimeout(function () { fitTools(); box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(scrollers); }, 150);
     });
     var narrow = window.matchMedia ? window.matchMedia('(max-width: 640px)') : null;
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
