@@ -40,7 +40,7 @@
     {% if vq and vq.id %}
       <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student's version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a>
       {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}
-      {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
+      {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
     {% endif %}
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
@@ -50,8 +50,8 @@
   </div>
 </div>
 
-<div class="editor">
-<form method="post" id="quiz-form" data-fresh-page novalidate>
+<div class="editor quiz-editor">
+<form method="post" id="quiz-form" data-fresh-page data-unsaved novalidate>
   {{ form.hidden_tag() }}
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vquizzes') }}" data-back-next>
@@ -77,12 +77,13 @@
   </div>
 
   <div class="card">
-      <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span></div>
+      <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span>
+        {# or go to the Problems page to check them there, and come back with them (static/js/quiz_pick.js) #}
+        {% if has_problems %}<a class="btn btn-secondary btn-sm" id="pick-on-problems" data-keeps-form href="{{ url_for('qgen.list_vprobs') }}" title="Go to the Problems page, check the problems you want there, then come back here with them (what you've filled in here is kept)">Pick on the Problems page</a>{% endif %}</div>
       {% if has_problems %}
         <div class="builder-filters">
           {{ filter_bar('#all-problems', 'problem', 'problems', id='problem-filter-bar') }}
         </div>
-        <p class="muted small">Pick a folder to see its problems, and check problems from as many folders as you like; they all go in this quiz.</p>
         {# every problem once, with the folders down the side of the list (data-style="list"): All
            problems, the folders, Uncategorized; a tab says how many in it are checked #}
         <div class="folder-filter" id="problem-picker" data-folder-filter data-prefix="p:" data-key-attr="fkey"
@@ -97,10 +98,6 @@
 
   <div class="card">
     {{ image_drop(form.image) }}
-    <div class="btn-row">
-      {{ form.submit(class='btn', title='Save the quiz and go back') }}
-      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
-    </div>
   </div>
 </form>
 {# helpers on the right (docs/ui-patterns.md principle 11): the Helper, then what's in the quiz
@@ -108,7 +105,8 @@
 <div class="side-col">
 {% with form_id='quiz-form', check_url=url_for('qgen.check_vquiz', vq=vq.id if vq else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="card" id="quiz-contents">
-    <div class="card-head"><h2>Questions in this quiz</h2></div>
+    {# (wide and set off, the list of what's in it: always in sight while picking, the owner 2026-10-15) #}
+    <div class="card-head"><h2>Problems in this quiz</h2></div>
     <p class="order-total" id="order-total" aria-live="polite"></p>
     <p class="muted small" id="order-shuffled">Each student gets them in a different order (you chose that above).
       So the order of this list doesn't matter.</p>
@@ -119,18 +117,26 @@
     <details class="box box-mini order-help">
       <summary><span class="fold" aria-hidden="true"></span>Want each student to get only some of these?</summary>
       <p>Put those problems in the same <b>group</b> with the menu under each one, then choose how many each student gets.
-        Every student gets their own random pick.</p>
+        Every student gets his/her own random pick.</p>
       <p>Example: put 5 fraction problems in group A and choose 2. Each student answers 2 of those 5, and the student
         next door probably gets a different 2.</p>
     </details>
     {{ form.vplist(form="quiz-form") }}
     {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
+  {# Save at the bottom of this side, under the Helper and the list, like Assign's button (the owner,
+     2026-10-15; still the form's: form="quiz-form") #}
+  <div class="editor-go">
+    {{ form.submit(class='btn btn-big', title='Save the quiz and go back', form='quiz-form') }}
+    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
+  </div>
 </div>
 </div>
+{% include "_dialog_assign_quizzes.html" %}
 {% endblock %}
 
-{% block scripts %}
+{% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script><script src="{{ asset('js/assign_many.js') }}"></script>
+<script src="{{ asset('js/quiz_pick.js') }}"></script>
 <script src="{{ asset('js/quiz_form.js') }}"></script>
 <script src="{{ asset('js/subjects.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>

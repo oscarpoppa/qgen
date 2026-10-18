@@ -27,8 +27,13 @@ window.qgenHideRow = function (row, key, hide) {
     var count = bar.querySelector('[data-filter-count]'), clear = bar.querySelector('[data-filter-clear]');
     //a folder page's list: the count goes under the page's heading instead (_folders.html)
     var under = bar.dataset.filter === '#folder-items' && document.getElementById('folder-count');
-    //(at the top of the bar, right over the filter, level with the checked bar's line)
-    if (under) { if (count) count.remove(); count = under; under.hidden = false; bar.insertBefore(under, bar.firstChild); }
+    //(beside the folder heading, "Problems  9 problems", not on a line of its own over the filter:
+    //the owner, 2026-10-15)
+    var title = document.getElementById('folder-title');
+    if (under) {
+      if (count) count.remove(); count = under; under.hidden = false;
+      if (title) { under.classList.add('title-count'); title.insertAdjacentElement('afterend', under); } else bar.insertBefore(under, bar.firstChild);
+    }
     var root = bar.dataset.filter ? document.querySelector(bar.dataset.filter) : null;
     var one = bar.dataset.one || 'match', many = bar.dataset.many || 'matches';
     var before = null;  // which folder boxes were open before filtering

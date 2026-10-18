@@ -10,7 +10,7 @@
 {% set tip_qtype %}<p>How students answer, and how it's marked:</p><ul><li><b>Numeric</b>: they type a number. Marked instantly.</li><li><b>Short text</b>: a word or phrase; any answer on your list counts.</li><li><b>Pick one</b>: round buttons, one right choice.</li><li><b>Pick several</b>: checkboxes; they must check exactly the right ones.</li><li><b>True / False</b>: the right answer can depend on the values, like <code>a &gt; b</code>.</li><li><b>Long text</b>: an essay you grade yourself, with partial credit, highlights and comments.</li><li><b>Paper only</b>: drawing, circling or coloring done on a printed page (put the page in the picture section). You score it from the paper; the page prints when you assign the quiz.</li></ul><p>Everything except Long text and Paper only is scored automatically.</p>{% endset %}
 {% set tip_title %}<p>A short name so you can find this problem in your lists and in the quiz builder.</p><p>Students never see it; they see the quiz's title.</p>{% endset %}
 {% set tip_question %}<p>What the student reads. Put a value's name in square brackets and every student sees a randomly picked number or word:</p><p><code>A train goes [speed] mph for [hours] hours.</code></p><p>Math works inside the brackets too: <code>[speed * 2]</code>, <code>[round(a / b, 2)]</code>, <code>[sqrt(n)]</code>.</p><p>Brackets without a value name, like <code>[0, 5]</code>, are shown just as typed.</p><p>The chips under this box insert your value names for you.</p><p><b>Math that looks like math:</b> put it between <code>\(</code> and <code>\)</code>. <code>\( [a]x^2 + [b]x + [c] \)</code> shows as a real formula, with each student's numbers. For Numeric problems, the math buttons above the box write this for you, and the preview under the box shows how it will look.</p>{% endset %}
-{% set tip_values %}<p>Each value is drawn fresh for every student, so students can't copy each other's answers.</p><p>Give each value a <b>name</b>, choose its <b>kind</b>, and fill in the settings. Then use <code>[name]</code> in the question, answer and choices.</p><p><b>Show me 3 examples</b> at the bottom shows you what three different students would get.</p>{% endset %}
+{% set tip_values %}<p>Each value is drawn fresh for every student, so students can't copy each other's answers.</p><p>Give each value a <b>name</b>, choose its <b>kind</b>, and fill in the settings. Then use <code>[name]</code> in the question, answer and choices.</p><p><b>Show me 3 examples</b> beside Save shows you what three different students would get.</p>{% endset %}
 {% set tip_name %}<p>A short word: letters and digits, starting with a letter, no spaces, like <code>speed</code>, <code>a</code>, <code>who</code>, <code>x2</code>.</p><p>Capitals matter: <code>Speed</code> and <code>speed</code> are different names.</p><p>For matched pairs from a list, name both columns: <code>country = capital</code> with items <code>France = Paris, Japan = Tokyo</code>.</p>{% endset %}
 {% set tip_kind %}<ul><li><b>Whole number</b>: from–to, optionally in steps, optionally never zero.</li><li><b>Decimal</b>: from–to, with a number of decimal places (1 if left empty).</li><li><b>Pick from list</b>: one item from your list, or several different ones.</li><li><b>Calculated</b>: worked out from other values, like <code>speed * hours</code>.</li><li><b>Imaginary / Complex</b>: only for complex-number problems.</li></ul>{% endset %}
 {% set tip_settings %}<p>The boxes change with the kind; the gray line under them explains what they do.</p><p><b>not zero</b> skips 0, handy when you divide by the value.</p><p><b>how many</b> (Pick from list): that many different items for each student. Add a number to the name: with the name <code>other</code> and 3, use <code>[other1]</code>, <code>[other2]</code> and <code>[other3]</code>. Each is the same item everywhere you use it; plain <code>[other]</code> is the same as <code>[other1]</code>.</p><p><b>different from</b>: other value names this one must never equal, separated by commas, without brackets, e.g. <code>a, b</code>. Only one of each pair needs it.</p>{% endset %}
@@ -102,7 +102,7 @@
 {{ error_box(errors) }}
 
 <div class="editor">
-<form method="post" id="problem-form" data-fresh-page novalidate>
+<form method="post" id="problem-form" data-fresh-page data-unsaved novalidate>
   {{ form.hidden_tag() }}
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vprobs') }}" data-back-next>
@@ -170,7 +170,7 @@
       {{ field(form.choices, 'Put * in front of each correct choice. Choices can use values too, like [speed * hours + 10].', attrs={'rows': 5, 'placeholder': '*[speed * hours]\n[speed + hours]\n[speed * hours + 10]'}, tip_body=tip_choices, above=choices_bar) }}
       <div class="math-preview" data-source="choices" hidden aria-live="polite"><span class="label">How the choices will look</span><div class="math-preview-body"></div></div>
       <div class="t-choice_many">
-        {{ field(form.combos, 'When different sets of checked choices can each be right. One combination per line, choices separated by commas, written exactly as in the list above. A student is right if what they checked matches any one of them (or the * set).', attrs={'rows': 3, 'placeholder': '[a], [10 - a]\n[b], [10 - b]'}, tip_body=tip_combos) }}
+        {{ field(form.combos, 'When different sets of checked choices can each be right. One combination per line, choices separated by commas, written exactly as in the list above. A student is right if what he/she checked matches any one of them (or the * set).', attrs={'rows': 3, 'placeholder': '[a], [10 - a]\n[b], [10 - b]'}, tip_body=tip_combos) }}
       </div>
       <div class="form-row">
         {{ check(form.shuffle, tip_body=tip_shuffle) }}
@@ -207,7 +207,7 @@
   {# for Paper only, problem_form.js moves this up under the question as "The page to print" #}
   <div class="card" id="pictures-card">
     <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2 data-paper="The page to print">Pictures</h2><span class="muted small" data-paper="needed">optional</span>{{ tip('pictures', tip_pictures) }}</div>
-    <p class="muted small" data-paper="The page students draw or write on (a dot-to-dot, a coloring page…): upload a scan or photo, or choose one already uploaded. It’s printed for each student, with their name on top, when you assign the quiz.">Add one picture, or several: each student is shown one of them at random.</p>
+    <p class="muted small" data-paper="The page students draw or write on (a dot-to-dot, a coloring page…): upload a scan or photo, or choose one already uploaded. It’s printed for each student, with his/her name on top, when you assign the quiz.">Add one picture, or several: each student is shown one of them at random.</p>
     <div id="images-body">
       {% for row in form.images %}{{ image_row(row) }}{% endfor %}
     </div>
@@ -219,17 +219,21 @@
     {# a page done on paper has nothing to work out on screen #}
     <div class="t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay">{{ check(form.calculator_ok, tip_body=tip_calc) }}</div>
     {{ subject_checks('problems', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
-    <p class="muted small">Tip: press <b>Show me 3 examples</b> first to see three students' versions. Saving checks every possible combination of values for problems like dividing by zero.</p>
-    <div class="btn-row">
-      {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.') }}
-      <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
-      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
-    </div>
   </div>
 
   <div id="preview" class="examples" aria-live="polite"></div>
 </form>
+{# the Helper, then Save at the bottom of this side, like Assign's button (the owner, 2026-10-15;
+   still the form's: form="problem-form") #}
+<div class="side-col">
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
+  <div class="editor-go">
+    {{ form.submit(class='btn btn-big', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
+    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
+    {# beside Save (the owner, 2026-10-16); the examples still show under the form #}
+    <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
+  </div>
+</div>
 </div>
 
 <details class="box card help-box" data-closed>
@@ -286,7 +290,7 @@ Answer:   [picture]</pre>
 <template id="image-template">{{ image_row(blank.images[0]) }}</template>
 {% endblock %}
 
-{% block scripts %}
+{% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script>
 <script src="{{ asset('js/problem_form.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>
 {% endblock %}

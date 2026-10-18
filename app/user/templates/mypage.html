@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_macros.html" import avatar, box_label, count_of with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, move_mini, folder_options, folder_up with context %}
+{% from "_macros.html" import avatar, box_label, count_of, back_button with context %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, move_mini, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -36,58 +36,56 @@
   {% else %}<span class="badge badge-warn">New</span>{% endif %}
 {% endmacro %}
 
+{# the quizzes as rows, like the teachers' list pages (the owner, 2026-10-17): each row's
+   name folds open to its questions and every attempt; beside it the score and Start / Continue
+   / View, and Move #}
 {% macro cards(gs) %}
   {% if gs %}
-  <div class="grid quiz-grid">
+  <div class="table-wrap stack">
+  <table class="quiz-rows">
+    <thead><tr><th>Quiz</th><th>Score</th><th></th></tr></thead>
+    <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
-    {# each quiz folds down to its title and score; the page remembers which are folded #}
-    {# each attempt's state ("id:status:score"), so a folded box can flag the teacher's changes #}
+    {# each attempt's state ("id:status:score"), so a folded row can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    {% set edge = 'quiz-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'quiz-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
-    <details class="box card quiz-card {{ edge }}" data-quiz="{{ g.vquiz.id }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}" data-list>
-      <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
-        {# how many attempts are in this box (one not started yet isn't an attempt: "New" says so) #}
-        {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}
-        {{ box_label('note', g.vquiz.title, count_of(tried, 'attempt', 'attempts') if tried else none, 'h2', g.vquiz.title) }}
-        {# a quiz not opened yet: "New" on the box, open or folded, until the student starts it #}
-        {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
-        {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
-        {# started and not handed in yet; due soon (when, on hover): like New, open or folded #}
-        {% if g.attempts|selectattr('status', 'equalto', 'started')|list %}<span class="badge badge-accent badge-status quiz-new">In progress</span>{% endif %}
-        {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
-        {% if due_cq %}<span class="badge badge-bad quiz-new" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
-        <span class="badge badge-warn quiz-flag" hidden></span>
-        {# folded: its score (or state, when nothing's waiting: the badges above say new / in
-           progress), and Start / Continue when a try is waiting (one click from the quiz) #}
-        <span class="quiz-sum">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% endif %}
-          {#- Start / Continue: a child's main button, the regular small size, not the extra small one -#}
-          {%- if g.open and not g.open.not_open_yet() %} {{ action(g.open) }}{% endif %}</span>
-        {# moving it to one of their folders, folded or not (it stays in New, In progress...) #}
-        {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}
-      </summary>
-      {% if here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">{{ icon('folder') }} {{ here.name }}</a></p>{% endif %}
-      {% set ahead = g.open or latest %}
-      <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
-        {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
-        {% if ahead.closes_at and not ahead.completed %} · due {{ ahead.closes_at|when('date') }}{% endif %}</p>
-      {% if g.attempts|length == 1 %}
-        {# one attempt: dated like the rows of a box with several #}
-        {# (the waiting attempt's Start / Continue is on the heading already: not twice) #}
-        <div class="attempt-row"><span class="nowrap">{{ latest.when_label }}</span> {{ status(latest, latest in g.counted) }}{% if not (g.open and latest == g.open and not g.open.not_open_yet()) %} {{ action(latest, compact=true) }}{% endif %}</div>
-      {% else %}
-        {% if g.combined is not none %}
+    {% set edge = 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
+    <tr class="{{ edge }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}">
+      <td data-label="Quiz">
+      <details class="box row-fold quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz-row:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}">
+        <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
+          {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}
+          {{ box_label('note', g.vquiz.title, count_of(tried, 'attempt', 'attempts') if tried else none, 'span', g.vquiz.title) }}
+          {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
+          {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
+          {% if g.attempts|selectattr('status', 'equalto', 'started')|list %}<span class="badge badge-accent badge-status quiz-new">In progress</span>{% endif %}
+          {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
+          {% if due_cq %}<span class="badge badge-bad quiz-new" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
+          <span class="badge badge-warn quiz-flag" hidden></span>
+        </summary>
+        {% if here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">{{ icon('folder') }} {{ here.name }}</a></p>{% endif %}
+        {% set ahead = g.open or latest %}
+        <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
+          {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
+          {% if ahead.closes_at and not ahead.completed %} · due {{ ahead.closes_at|when('date') }}{% endif %}</p>
+        {% if g.attempts|length > 1 and g.combined is not none %}
           <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ student_rules.get(g.rule_key, g.rule)|lower if student_rules is defined else g.rule|lower }})</span></p>
         {% endif %}
-        <ol class="small attempt-list" style="padding-left:1.2em;margin:0 0 8px">
+        <ol class="small attempt-list" style="padding-left:1.2em;margin:0 0 4px">
           {% for cq in g.attempts %}
-            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }}{% if not (g.open and cq == g.open and not g.open.not_open_yet()) %} {{ action(cq, compact=true) }}{% endif %}</li>
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} {{ action(cq, compact=true) }}</li>
           {% endfor %}
         </ol>
-      {% endif %}
-
-    </details>
+      </details></td>
+      {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      {#- Start / Continue when one is waiting (one click from the quiz), else View; then Move -#}
+      <td class="actions"><span class="btn-row quiz-row-actions">{% if g.open %}{{ action(g.open) }}{% else %}{{ action(latest) }}{% endif %}
+        {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}</span></td>
+    </tr>
   {% endfor %}
+    </tbody>
+  </table>
   </div>
   {% endif %}
 {% endmacro %}
@@ -102,38 +100,25 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
 
-{# the last few handed in, whatever folder they're in, newest first #}
-{% if finished %}
-<section class="card latest-finished" aria-labelledby="latest-finished">
-  <h2 id="latest-finished">Just finished</h2>
-  <ul class="dash-list">
-  {% for cq in finished %}
-    <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
-      {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
-      {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">In progress</span>{% endif %}
-      <span class="small muted">{{ cq.compdate|when }}</span>
-      <a class="icon-link dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></li>
-  {% endfor %}
-  </ul>
-</section>
-{# a line between Just finished and the folders #}
-<hr class="section-rule">
-{% endif %}
-
+{# the last few handed in, whatever folder they're in, newest first: a pop-over from its button
+   under the folder list (the owner, 2026-10-17; static/js/popcard.js) #}
+{% set finished_button %}{% if finished %}<button type="button" class="btn btn-secondary btn-sm side-pop-toggle" data-popcard="#finished-pop" aria-expanded="false" title="The quizzes you handed in last">{{ icon('hourglass') }} Just finished ({{ finished|length }})</button>{% endif %}{% endset %}
 {% if groups or fk.root.folders %}
-{% call folders_page(fk) %}
-  {% if groups %}{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.quiz-card', boxes='details.sub-box', url=true) }}{% endif %}
-  {# and between the heading (and Find a quiz) and the quizzes #}
-  <hr class="section-rule list-rule">
+{% call folders_page(fk, under_side=finished_button) %}
+  {# (in the same bar as the other folder pages, so the folder's heading sits in its middle) #}
+  {#- (the way back at the filter row's right end, as on the other list pages; one line under the
+      row, not two: the owner, 2026-10-17) #}
+  {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', url=true) }}
+    <div class="btn-row results-filter-right">{{ back_button(url_for('user.home'), 'Home', 'btn btn-secondary btn-sm') }}</div></div>{% endif %}
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
-    {% if showing or fk.view == 'main' %}{{ quiz_cards(shown, fk.view) }}
+    {% if showing or fk.view == 'main' %}{% call named_box(fk, 'quiz:') %}{{ quiz_cards(shown, fk.view) }}{% endcall %}
     {% elif fk.node %}
       {# a folder's own page: what's in it (and in the folders inside it) in one list, with the
          same tabs as every level: All, its folders, Unsorted #}
       {% set name = fk.node.folder.name %}
       <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="All"
            data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
-           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable{% if fk.node.folders %} data-name="{{ name }}"{% endif %}>
+           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)." data-tab-name="{{ name }}"{% if fk.node.folders %} data-name="{{ name }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
         {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
@@ -146,7 +131,7 @@
          An address's ?folder= opens on that tab. #}
       <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="{{ fk.all_label }}"
            data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}"
-           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}" data-droppable
+           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)."
            {% if fk.view != 'all' %}data-start="{{ 'none' if fk.view == 'main' else fk.view }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
@@ -159,7 +144,7 @@
     <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
   {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
   {% elif not shown and ((fk.node and not fk.node.folders) or fk.view == 'main') %}
-    <p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's “Move to” list (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+    <p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
 {% endcall %}
 {% endif %}
@@ -173,6 +158,23 @@
   {% else %}
   <div class="card empty"><span class="big">{{ icon('books') }}</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}
+{% endif %}
+
+{% if finished %}
+<section class="card pop-card" id="finished-pop" aria-labelledby="finished-pop-head" hidden>
+  <div class="pop-card-top"><h2 id="finished-pop-head" class="pop-card-head">Just finished</h2>
+    <button type="button" class="btn btn-secondary btn-sm btn-icon pop-card-close" title="Close">{{ icon_label('lc-x', 'Close') }}</button></div>
+  <ul class="dash-list">
+  {% for cq in finished %}
+    <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+      {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
+      {#- (handed in and still being graded: "Handed in" here, the owner 2026-10-17) -#}
+      {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">Handed in</span>{% endif %}
+      <span class="small muted">{{ cq.compdate|when }}</span>
+      <a class="icon-link dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></li>
+  {% endfor %}
+  </ul>
+</section>
 {% endif %}
 
 {% endblock %}
@@ -257,4 +259,5 @@
 
 </script>
 <script src="{{ asset('js/folders.js') }}"></script>
+<script src="{{ asset('js/popcard.js') }}"></script>
 {% endblock %}

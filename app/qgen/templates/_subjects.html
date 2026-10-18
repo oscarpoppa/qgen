@@ -15,6 +15,9 @@
 <fieldset class="subject-checks{{ ' has-error' if error }}" id="subject-question">
   <legend>Folder <span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}</legend>
   <input type="hidden" name="subjects_shown" value="1">
+  {# the folder list on the left, and the new folder box with its notes beside it, on the right
+     (under it on a phone) (the owner, 2026-10-16) #}
+  <div class="subject-cols">
   <div class="subject-check-list" data-fold-key="qgen-folded-folder-checks-{{ kind }}">
   {# Expand all / Collapse all at the top of the list, as in every folder list (static/js/folder_checks.js
      shows them; grayed, with why, when no folder has folders inside) #}
@@ -33,11 +36,38 @@
     {% endfor %}
   </div>
   {% if all_subjects %}<script src="{{ asset('js/folder_checks.js') }}"></script>{% endif %}
+  <div class="subject-side">
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
     <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
+  {# where the new folder will be made, said as it's typed: inside the one folder checked, at the
+     top with none (the owner, 2026-10-16) #}
+  <p class="help new-folder-where" id="new-folder-where" aria-live="polite" hidden></p>
+  <script>
+  (function () {
+    var box = document.getElementById('new-subject-inline'), say = document.getElementById('new-folder-where');
+    if (!box || !say) return;
+    var fs = box.closest('fieldset') || document;
+    function update() {
+      var name = box.value.trim().replace(/\s+/g, ' ');
+      var on = Array.prototype.filter.call(fs.querySelectorAll('input[name="subjects"]'), function (b) { return b.checked; });
+      say.hidden = !name;
+      say.classList.toggle('error', on.length > 1);
+      if (!name) return;
+      var where = on.length === 1 ? on[0].closest('label').textContent.trim() : '';
+      say.textContent = on.length === 1 ? 'A new folder “' + name + '” will be made inside “' + where + '”, and this goes in it.'
+        : on.length ? 'To make “' + name + '” inside one of your folders, check just that one (or none, to make it at the top).'
+        : 'A new folder “' + name + '” will be made at the top, and this goes in it.';
+    }
+    box.addEventListener('input', update);
+    fs.addEventListener('change', update);
+    update();
+  })();
+  </script>
   <div class="help">You can check more than one. With none checked, it goes in {{ icon('tray') }} Uncategorized, to file later if you like.</div>
+  </div>
+  </div>
   {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 </fieldset>
 {% endmacro %}

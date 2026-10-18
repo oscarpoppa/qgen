@@ -21,7 +21,7 @@
           <td class="btn-row">
             <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="View: See “{{ q.title }}” as a student would">{{ icon_label('lc-eye', 'View') }}</a>
             <a class="btn btn-sm btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=q.id) }}" title="Edit: Change “{{ q.title }}”: its problems and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
-            <a class="btn btn-sm btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=q.id) }}" title="Assign: Give “{{ q.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=q.id) }}" data-what="“{{ q.title }}”" title="Assign: Give “{{ q.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>
           </td>
         </tr>
       {% endfor %}
@@ -31,4 +31,7 @@
   {% endif %}
   {% if done.pictures %}<p class="small"><a href="{{ url_for('upload.images') }}" title="See the pictures, including the ones from these pages">See the pictures →</a></p>{% endif %}
 </div>
+{% include "_dialog_assign_quizzes.html" %}
 {% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/assign_many.js') }}"></script>{% endblock %}

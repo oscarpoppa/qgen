@@ -24,7 +24,8 @@
   function scrolls(el) { return getComputedStyle(el).overflowY === 'auto'; }
 
   function attach(el, kind) {
-    if (el.dataset.grip) return;
+    //(a panel down to the window's bottom has no drag bar: static/js/fitpanel.js sizes it)
+    if (el.dataset.grip || el.hasAttribute('data-fit-window')) return;
     el.dataset.grip = '1';
     var key = keyOf(el, kind), bar = document.createElement('div');
     bar.className = 'grip-bar';

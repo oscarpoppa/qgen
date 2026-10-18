@@ -1,40 +1,79 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, expand_collapse, slot with context %}
+{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, filter_bar, slot, back_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
+
+{# one quiz's attempts waiting for grading, oldest hand-in first: a box in its folders, like
+   Results by quiz (the owner, 2026-10-17) #}
+{% macro quiz_group(vq) %}
+  {% set rows = by_quiz[vq.id] %}
+  <details class="box card item-box grading-group" data-list data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}">
+    <summary>{{ box_label('note', quiz_link(vq), count_of(rows|length, 'attempt', 'attempts')) }}</summary>
+    <div class="table-wrap stack">
+      <table>
+        <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
+        <tbody>
+        {% for cq in rows %}
+          {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
+          <tr>
+            <td data-label="Student">{{ person_link(cq.taker) }}</td>
+            <td data-label="Handed in" data-sort="{{ cq.compdate.isoformat() if cq.compdate else '' }}">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
+            <td data-label="To grade" data-sort="{{ '%03d' % todo }}">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
+            <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">{{ icon_label('lc-grade', 'Grade') }}</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+{% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>{% if waiting %}<span class="badge box-count">{{ waiting|length }} waiting, oldest first</span>{% endif %}
-  <div class="actions">{% if waiting %}<a class="btn" href="{{ url_for('qgen.review', cqid=waiting[0].id) }}" title="Grade the attempt that has waited longest">Grade the oldest</a>{% else %}{{ slot('Grade the oldest', 'Nothing is waiting for grading', 'btn') }}{% endif %}
-    {{ expand_collapse('#grading-groups', 'quizzes') }}</div></div>
+<div class="page-head"><h1>{{ title }}</h1>{% if waiting %}<span class="badge box-count">{{ waiting|length }} waiting, oldest first</span>{% endif %}</div>
+{#- (no "Grade the oldest" button: the owner, 2026-10-17) #}
 {% if waiting %}
-  {# grouped by quiz (the quiz waiting longest first), oldest hand-in first inside #}
-  {% set seen = [] %}
-  {% for cq in waiting %}{% if cq.vquiz_id not in seen %}{% set _ = seen.append(cq.vquiz_id) %}{% endif %}{% endfor %}
-  <div id="grading-groups">
-  {% for vquiz_id in seen %}
-    {% set rows = waiting|selectattr('vquiz_id', 'equalto', vquiz_id)|list %}
-    <details class="box card grading-group" data-list>
-      <summary class="dash-head">{{ box_label('note', quiz_link(rows[0].vquiz), count_of(rows|length, 'attempt', 'attempts'), 'h2') }}</summary>
-      <div class="table-wrap stack">
-        <table>
-          <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
-          <tbody>
-          {% for cq in rows %}
-            {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
-            <tr>
-              <td data-label="Student">{{ person_link(cq.taker) }}</td>
-              <td data-label="Handed in">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
-              <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
-              <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">{{ icon_label('lc-grade', 'Grade') }}</a></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  {% endfor %}
+{#- the button for the oldest waiting, under the folder list (the owner, 2026-10-17) #}
+{% set oldest_button %}<button type="button" class="btn btn-secondary btn-sm oldest-toggle" aria-controls="grading-oldest" aria-expanded="false" title="Show the {{ [5, waiting|length]|min }} attempts that have waited longest, whatever their quiz">{{ icon('hourglass') }} The {{ [5, waiting|length]|min }} oldest waiting</button>{% endset %}
+{% call folders_page(fk, under_side=oldest_button) %}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.item-box', boxes='details.sub-box', url=true) }}
+    {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
+    <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
+  <div id="folder-items">
+    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=shown, key_prefix='quiz:') %}{% for vq in n['items'] %}{{ quiz_group(vq) }}{% endfor %}{% endcall %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{% for vq in n['items'] %}{{ quiz_group(vq) }}{% endfor %}{% endcall %}{% else %}
+    {% call named_box(fk, 'quiz:') %}{% for vq in shown %}{{ quiz_group(vq) }}{% endfor %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
   </div>
+  {# the five that have waited longest, whatever their quiz, in a card of their own, under the folders (the
+     owner, 2026-10-17) #}
+  {#- a pop-over from its button under the folder list; pinned, it sits here under the folders
+      instead and stays (static/js/grading_oldest.js) #}
+  <section class="card grading-oldest" id="grading-oldest" aria-labelledby="oldest-head" hidden>
+    <div class="grading-oldest-top"><h2 id="oldest-head" class="grading-oldest-head">The {{ [5, waiting|length]|min }} oldest waiting</h2>
+      <span class="btn-row"><button type="button" class="btn btn-secondary btn-sm btn-icon oldest-pin" aria-pressed="false"></button>
+      <button type="button" class="btn btn-secondary btn-sm btn-icon oldest-close" title="Close">{{ icon_label('lc-x', 'Close') }}</button></span></div>
+    <div class="table-wrap stack">
+      <table>
+        <thead><tr><th>Student</th><th>Quiz</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
+        <tbody>
+        {% for cq in waiting[:5] %}
+          {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
+          <tr>
+            <td data-label="Student">{{ person_link(cq.taker) }}</td>
+            <td data-label="Quiz">{{ quiz_link(cq.vquiz) }}</td>
+            <td data-label="Handed in">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
+            <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
+            <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">{{ icon_label('lc-grade', 'Grade') }}</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endcall %}
 {% else %}
   <div class="card empty"><span class="big">{{ icon('checkbox') }}</span>Nothing waiting. Written answers show up here when students hand them in.</div>
 {% endif %}
 {% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/grading_oldest.js') }}"></script>{% endblock %}

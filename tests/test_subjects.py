@@ -422,7 +422,7 @@ def test_the_quiz_builder_says_what_students_get(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/quiz/makevquiz').data.decode()
-    assert '<h2>Questions in this quiz</h2>' in page and 'id="order-total"' in page
+    assert '<h2>Problems in this quiz</h2>' in page and 'id="order-total"' in page
     assert 'Want each student to get only some of these?' in page
     assert 'Order in the quiz' not in page and 'shuffle-note' not in page
 

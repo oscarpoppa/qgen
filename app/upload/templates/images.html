@@ -11,12 +11,13 @@
 </div>
 {% if imgs %}
   {% if imgs|length > 5 %}{{ filter_bar('#image-list', 'picture', 'pictures', items='.thumb', url=true) }}{% endif %}
-  <div class="thumbs" id="image-list">
+  {#- (a panel down to the window's bottom that scrolls inside itself, static/js/fitpanel.js: the owner, 2026-10-17) #}
+  <div class="thumbs" id="image-list" data-fit-window>
   {% for pair in imgs %}
     <div class="thumb" data-name="{{ pair[1]|lower }}">
       <a href="{{ url_for('static', filename=pair[1]) }}" target="_blank" rel="noopener" title="Open {{ pair[1] }} full size in a new tab"><img src="{{ url_for('static', filename=pair[0]) }}" alt="{{ pair[1] }}"></a>
       <div class="name">{{ pair[1] }}</div>
-      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.', tip='Delete “' ~ (pair[1])|string ~ '” for good (asks first)') }}
+      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.', tip='Delete “' ~ (pair[1])|string ~ '” for good (asks first)', icon='lc-trash') }}
     </div>
   {% endfor %}
   </div>

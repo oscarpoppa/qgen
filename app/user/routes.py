@@ -185,7 +185,7 @@ def create_folder():
         f = folders.create_folder(current_user, request.form.get('name'), request.form.get('parent'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder "{}" made.'.format(f.name))  # stay where you were
+    return _folder_done('Folder “{}” made.'.format(f.name))  # stay where you were
 
 
 @user_bp.route('/mypage/folders/<int:folder_id>/rename', methods=['POST'])
@@ -198,7 +198,7 @@ def rename_folder(folder_id):
         f = folders.rename_folder(current_user, folder_id, request.form.get('name'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Folder renamed to "{}".'.format(f.name))
+    return _folder_done('Folder renamed to “{}”.'.format(f.name))
 
 
 @user_bp.route('/mypage/folders/<int:folder_id>/delete', methods=['POST'])
@@ -239,7 +239,7 @@ def purge_folder(folder_id):
         name, count = folders.delete_folder_and_quizzes(current_user, folder_id)
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Deleted the folder "{}"{}.'.format(
+    return _folder_done('Deleted the folder “{}”{}.'.format(
         name, ' and its {} quiz{} (your teacher can give {} back)'.format(count, '' if count == 1 else 'zes', 'it' if count == 1 else 'them') if count else ''),
         show=(parent or 'main') if request.form.get('view') == str(folder_id) else None)
 
@@ -257,16 +257,16 @@ def move_to_folder():
         if request.form.get('folder'):
             target = folders.move_folder(current_user, request.form.get('folder'), to)
             what = db.session.get(QuizFolder, int(request.form.get('folder'))).name
-            where = '"{}"'.format(target.name) if target else 'the top'
+            where = '“{}”'.format(target.name) if target else 'the top'
             moved = 'folder:{}'.format(request.form.get('folder'))
         else:
             target = folders.move_quiz(current_user, request.form.get('quiz'), to)
             what = db.session.get(VQuiz, int(request.form.get('quiz'))).title
-            where = '"{}"'.format(target.name) if target else 'Uncategorized'
+            where = '“{}”'.format(target.name) if target else 'Uncategorized'
             moved = 'quiz:{}'.format(request.form.get('quiz'))
     except folders.FolderError as exc:
         return _folder_done(str(exc), error=True)
-    return _folder_done('Moved "{}" to {}.'.format(what, where), moved=moved)
+    return _folder_done('Moved “{}” to {}.'.format(what, where), moved=moved)
 
 #Home's "Recently completed": how far back, and how many at most
 RECENT_DAYS, RECENT_MAX = 14, 10
@@ -392,7 +392,9 @@ def resetpass(uid):
     usr.set_password(pword)
     usr.pw_man_reset = True
     usr.save()
-    flash('Password reset for {}. Temporary password: {} (it must be changed at the next login)'.format(usr.shown_name, pword))
+    #shown in a dialog with Copy and Done (base.html), not a message that goes away by itself
+    #(the owner, 2026-10-16)
+    flash({'name': usr.shown_name, 'password': pword}, 'temp-password')
     current_app.logger.info('{} issued a manual PW reset for {}'.format(current_user.username, usr.username))
     return redirect(back_to(url_for('user.userdet')))
 
@@ -403,8 +405,11 @@ def resetpass(uid):
 @admin_only
 @post_form_only
 def deluser(uid):
-    usrquery = User.query.filter_by(id=uid)
-    usr = usrquery.first_or_404('No user with id {}'.format(uid))
+    #(archived or not: the Archive's People has Delete for good too)
+    from .accounts import any_person
+    usr = any_person(uid) if str(uid).isdigit() else None
+    if usr is None:
+        abort(404)
     usrname = usr.username
     if current_user == usr:
         flash("I can't let you do that, {}".format(current_user.shown_name))
@@ -418,6 +423,46 @@ def deluser(uid):
     users = url_for('user.userdet')
     back = back_to(users)
     return redirect(back if back.split('?')[0] == users else users)
+
+#the trash can's Move to Archive for a person (the owner, 2026-10-16): they can't log in and
+#leave every list; keep=yes keeps their quiz results and attempts, keep=no deletes them for good
+@user_bp.route('/archiveuser/<int:uid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def archive_user(uid):
+    from .accounts import any_person, archive_account
+    usr = any_person(uid)
+    if usr is None:
+        abort(404)
+    if usr == current_user:
+        flash('You can’t archive your own account.', 'error')
+        return redirect(url_for('user.userdet'))
+    keep = request.form.get('keep') != 'no'
+    archive_account(usr, by=current_user, keep_results=keep)
+    flash(Markup('Moved {} to the <a href="{}">Archive</a>{}. You can restore him/her there.').format(
+        usr.shown_name, url_for('qgen.archive', section='people'),
+        '; his/her quiz results are kept' if keep else '; his/her quiz results were deleted'), 'success')
+    current_app.logger.info('{} archived user {} ({} results)'.format(current_user.username, usr.username, 'kept' if keep else 'deleted'))
+    users = url_for('user.userdet')
+    back = back_to(users)
+    return redirect(back if back.split('?')[0] == users else users)
+
+
+@user_bp.route('/restoreuser/<int:uid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def restore_user(uid):
+    from .accounts import any_person, restore_account
+    usr = any_person(uid)
+    if usr is None:
+        abort(404)
+    restore_account(usr)
+    flash('{} is back; he/she can log in again.'.format(usr.shown_name), 'success')
+    return redirect(url_for('qgen.archive', section='people'))
 
 # route to admin-initiated user editing action
 @user_bp.route('/edituser/<uid>', methods=['POST', 'GET'])
@@ -454,8 +499,11 @@ def eduser(uid):
 @pw_check
 @admin_only
 def people():
-    target = 'qgen.list_users' if session.get('people_view') == 'results' else 'user.userdet'
-    return redirect(url_for(target, **request.args))
+    #Accounts unless ?view=results asks for Results (no longer the one used last: the owner,
+    #2026-10-16)
+    args = request.args.to_dict()
+    target = 'qgen.list_users' if args.pop('view', None) == 'results' else 'user.userdet'
+    return redirect(url_for(target, **args))
 
 
 @user_bp.route('/userdet', methods=['GET'])
@@ -464,16 +512,27 @@ def people():
 @admin_only
 def userdet():
     session['people_view'] = 'accounts'
+    return people_page()
+
+
+def people_page(in_archive=False, **extra):
+    """People's Accounts view; in_archive: the Archive's People, the same page for the people
+    moved to the Archive (Restore and Delete for good on each, the owner 2026-10-16)."""
     from . import groups
     from app import folder_tree
-    ulst = User.query.order_by(User.username).all()
-    root, flat, nodes, folders_of = groups.tree(ulst)
+    if in_archive:
+        from .accounts import archived_people
+        ulst = sorted(archived_people(), key=lambda u: u.username)
+        root, flat, nodes, folders_of = groups.tree(ulst, only={u.id for u in ulst})
+    else:
+        ulst = User.query.order_by(User.username).all()
+        root, flat, nodes, folders_of = groups.tree(ulst)
     #everyone (the default), the people in no folder ('main'), or a folder's id (a gone folder: everyone)
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['people'] if node else ulst if view == 'all' else root['people']
     fk = folder_tree.kit(
         view, node, root, flat, nodes,
-        page=lambda v: url_for('user.userdet', folder=v),
+        page=(lambda v: url_for('qgen.archive', section='people', folder=v)) if in_archive else (lambda v: url_for('user.userdet', folder=v)),
         create_url=url_for('user.create_user_folder'), move_url=url_for('user.move_user_or_folder'),
         rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
@@ -483,18 +542,19 @@ def userdet():
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         #a plain button (blue is for the page's own action); grayed out in an empty folder;
         #"to this folder" drops off on phones
-        box_tools=lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to this folder: everyone in “{}”">{}</a> ').format(
+        box_tools=None if in_archive else lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to this folder: everyone in “{}”">{}</a> ').format(
             url_for('qgen.assign', folder=n['folder'].id), n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder'))
         if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="Assign a quiz to this folder: nobody in “{}” yet">{}</button> ').format(
             n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder')),
         fold_key='qgen-folded-user-folders',
         #All people: every student; Uncategorized: the people in no folder (the owner, 2026-10-14:
         #every folder tab can assign a quiz to everyone in it)
-        all_tools=lambda r: _assign_all_button([u for u in ulst if not u.is_admin], 'Assign a quiz to everyone',
+        all_tools=None if in_archive else lambda r: _assign_all_button([u for u in ulst if not u.is_admin], 'Assign a quiz to everyone',
                                                'Assign a quiz to everyone: every student', 'Assign a quiz to everyone: there are no students yet'),
-        main_tools=lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
+        main_tools=None if in_archive else lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
                                                 'Assign a quiz to this folder: everyone in Uncategorized (in no folder)', 'Assign a quiz to this folder: nobody is in Uncategorized'))
-    return render_template('udet.html', ulst=ulst, title='People', fk=fk, shown=shown, folders_of=folders_of)
+    return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=shown,
+                           folders_of=folders_of, in_archive=in_archive, **extra)
 
 
 def _assign_all_button(people, label, title, empty):
@@ -523,6 +583,9 @@ def _group_done(message, error=False, show=None, moved=None):
         values['tab'] = tab
     if moved and not error:
         values['moved'] = moved  # lit up on the page, like after a drag
+    from app.qgen.routes import from_archive
+    if from_archive():
+        return redirect(url_for('qgen.archive', section='people', **values))
     return redirect(url_for('user.userdet', **values))
 
 
@@ -538,7 +601,7 @@ def create_user_folder():
         f = groups.create(request.form.get('name'), request.form.get('parent'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Folder "{}" made.'.format(f.name))  # stay where you were
+    return _group_done('Folder “{}” made.'.format(f.name))  # stay where you were
 
 
 @user_bp.route('/users/folders/<int:folder_id>/rename', methods=['POST'])
@@ -552,7 +615,7 @@ def rename_user_folder(folder_id):
         f = groups.rename(folder_id, request.form.get('name'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Folder renamed to "{}".'.format(f.name))
+    return _group_done('Folder renamed to “{}”.'.format(f.name))
 
 
 @user_bp.route('/users/folders/<int:folder_id>/delete', methods=['POST'])
@@ -592,7 +655,7 @@ def move_user_or_folder():
         if request.form.get('folder'):
             target = groups.move_folder(request.form.get('folder'), to)
             name = db.session.get(UserFolder, int(request.form.get('folder'))).name
-            message = 'Moved "{}" to {}.'.format(name, '"{}"'.format(target.name) if target else 'the top level')
+            message = 'Moved “{}” to {}.'.format(name, '“{}”'.format(target.name) if target else 'the top level')
         elif to in (None, '', 'top', 'main'):
             #(from the All list, like the Problems and Quizzes pages: which folder isn't known)
             if here is None:
@@ -602,8 +665,8 @@ def move_user_or_folder():
             return takeout.handle('people', [request.form.get('user')], here, lambda m, error=False: _group_done(m, error=error))
         else:
             person, f = groups.add(request.form.get('user'), to, moving_from=here)
-            message = 'Moved {} to "{}".'.format(person.shown_name, f.name) if here else \
-                'Put {} in "{}".'.format(person.shown_name, f.name)
+            message = 'Moved {} to “{}”.'.format(person.shown_name, f.name) if here else \
+                'Put {} in “{}”.'.format(person.shown_name, f.name)
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
     return _group_done(message, moved='folder:{}'.format(request.form.get('folder')) if request.form.get('folder')
@@ -623,16 +686,41 @@ def file_people():
     people, folder = request.form.getlist('items'), request.form.get('folder')
     if not people:
         return _group_done('Check at least one first.', error=True)
+    if request.form.get('action') == 'remove' and folder == 'own':
+        return takeout.handle_each('people', people, lambda m, error=False: _group_done(m, error=error))
     if request.form.get('action') == 'remove':
         return takeout.handle('people', people, folder, lambda m, error=False: _group_done(m, error=error), one_folder=True)
+    #(one folder or several: the Put in folder dialog lets several be checked, the owner 2026-10-15)
+    folders = list(dict.fromkeys(f for f in request.form.getlist('folder') if f))
+    #(moving, the dialog's usual way: into one folder, out of the others, the owner 2026-10-16)
+    if request.form.get('action') == 'move':
+        if len(folders) != 1:
+            return _group_done('Choose one folder to move to.', error=True)
+        try:
+            names = []
+            for uid in dict.fromkeys(people):
+                if request.form.get('from'):
+                    #("Move from “X”", from a card's Remove: out of that folder only)
+                    person, f = groups.add(uid, folders[0], moving_from=request.form.get('from'))
+                else:
+                    person, f = groups.move_to(uid, folders[0])
+                names.append(person.shown_name)
+        except groups.GroupError as exc:
+            return _group_done(str(exc), error=True)
+        return _group_done('Moved {} to “{}”.'.format(', '.join(names), f.name))
     try:
-        names = []
-        for uid in dict.fromkeys(people):
-            person, f = groups.add(uid, folder)
-            names.append(person.shown_name)
+        names, where = [], []
+        for fid in folders:
+            for uid in dict.fromkeys(people):
+                person, f = groups.add(uid, fid)
+                if person.shown_name not in names:
+                    names.append(person.shown_name)
+            where.append('“{}”'.format(f.name))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Put {} in “{}”.'.format(', '.join(names), f.name))
+    if not where:
+        return _group_done('Choose a folder first.', error=True)
+    return _group_done('Put {} in {}.'.format(', '.join(names), ' and '.join(where)))
 
 
 #a person's "Add to folder" list (they stay in their other folders) and a folder's ✕
@@ -647,7 +735,7 @@ def add_to_user_folder():
         person, f = groups.add(request.form.get('user'), request.form.get('to'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Put {} in "{}".'.format(person.shown_name, f.name), moved='user:{}'.format(person.id))
+    return _group_done('Put {} in “{}”.'.format(person.shown_name, f.name), moved='user:{}'.format(person.id))
 
 
 @user_bp.route('/users/folders/remove', methods=['POST'])
@@ -680,7 +768,7 @@ def settings():
         Setting.put('logo', (form.logo.data or '').strip() or None)
         Setting.put('favicon', (form.favicon.data or '').strip() or None)
         Setting.put('class_code', code or None)
-        flash('Settings saved. ' + ('Students can sign up with the class code "{}".'.format(code) if code
+        flash('Settings saved. ' + ('Students can sign up with the class code “{}”.'.format(code) if code
               else 'Sign-up is off until you set a class code.'), 'success')
         current_app.logger.info('{} changed the site settings'.format(current_user.username))
         return redirect(url_for('user.settings'))
@@ -746,7 +834,7 @@ def save_technical_settings():
             flash('All technical settings are back to their defaults.', 'success')
         elif key in tuning.BY_KEY:
             tuning.reset(current_user, key)
-            flash('"{}" is back to its default.'.format(tuning.BY_KEY[key]['label']), 'success')
+            flash('“{}” is back to its default.'.format(tuning.BY_KEY[key]['label']), 'success')
         return redirect(url_for('user.technical_settings'))
     chosen, errors = tuning.validate(request.form)
     if errors:
@@ -797,7 +885,7 @@ def set_nickname():
         return redirect(url_for('user.profile'))
     current_user.nickname = nick
     db.session.commit()
-    flash('Your nickname is now "{}".'.format(nick) if nick else 'Your nickname is gone; your name shows on its own.', 'success')
+    flash('Your nickname is now “{}”.'.format(nick) if nick else 'Your nickname is gone; your name shows on its own.', 'success')
     current_app.logger.info('{} {} their nickname'.format(current_user.username, 'set' if nick else 'cleared'))
     return redirect(url_for('user.profile'))
 
@@ -871,5 +959,5 @@ def revoke_token(token_id):
     else:
         row.revoked = True
         db.session.commit()
-        flash('Token "{}" revoked: apps using it are signed out.'.format(row.name), 'success')
+        flash('Token “{}” revoked: apps using it are signed out.'.format(row.name), 'success')
     return redirect(url_for('user.profile'))

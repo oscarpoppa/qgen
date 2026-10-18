@@ -205,21 +205,34 @@
 
   /* time limit: a quiet reminder, updated once a minute; hands in what's there at the end */
   var left = form.dataset.remaining ? +form.dataset.remaining : null, clock = document.getElementById('timer');
-  var hidden = false, end = left === null ? null : Date.now() + left * 1000;
+  var hidden = false, warned = false, end = left === null ? null : Date.now() + left * 1000;
   if (clock) clock.addEventListener('click', function () { hidden = !hidden; show(); });
   function show() {
     if (end === null || !clock) return;
-    var secs = Math.max(0, Math.round((end - Date.now()) / 1000)), last = secs <= 60;
-    if (hidden && !last) { clock.textContent = 'Show time'; return; }
-    clock.textContent = last ? 'Less than a minute left' : Math.ceil(secs / 60) + ' min left';
+    var secs = Math.max(0, Math.round((end - Date.now()) / 1000)), last = secs <= 60, soon = secs <= 300;
+    //(the last five minutes always show, even if hidden, with a warning once: the owner, 2026-10-16)
+    if (soon && !warned) { warned = true; hidden = false; clock.setAttribute('role', 'alert'); }
+    if (hidden && !soon) { clock.textContent = 'Show time'; return; }
+    clock.textContent = last ? 'Less than a minute left' : timeLeft(secs);
+    clock.classList.toggle('timer-soon', soon && !last);
     clock.classList.toggle('timer-last', last);
+  }
+  //"25 min left", "2 h 10 min left", "3 days left" (never "4320 min left")
+  function timeLeft(secs) {
+    var mins = Math.ceil(secs / 60);
+    if (mins < 120) return mins + ' min left';
+    var hours = Math.floor(mins / 60);
+    if (hours < 48) return hours + ' h ' + (mins % 60 ? (mins % 60) + ' min ' : '') + 'left';
+    var days = Math.floor(hours / 24);
+    return days + ' days left';
   }
   function tick() {
     if (end === null) return;
     var secs = (end - Date.now()) / 1000;
     if (secs <= 0) { submitting = true; HTMLFormElement.prototype.submit.call(form); return; }
     show();
-    setTimeout(tick, secs > 61 ? Math.min(60000, (secs - 60) * 1000) : 1000);
+    //(once a minute; to the second near the five-minute mark and in the last minute)
+    setTimeout(tick, secs > 301 ? Math.min(60000, (secs - 300) * 1000) : secs > 61 ? Math.min(60000, (secs - 60) * 1000) : 1000);
   }
   tick();
   update();

@@ -6,9 +6,9 @@
 {% from "_macros.html" import avatar, box_label, count_of, quiz_link, student_link with context %}
 {% from "_results.html" import result_cells, archive_all_button, archive_all_form with context %}
 {% from "_awards.html" import award_list %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
-{% block main_class %}{% if not single %} container-wide{% endif %}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
 
 {# one quiz on a student page: its attempts and the score that counts #}
 {% macro result_box(g, item) %}
@@ -31,7 +31,7 @@
           {{ archive_all_form(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}
           <div class="table-wrap stack">
             <table>
-              <thead><tr><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
+              <thead><tr><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
               <tbody><tr>{{ result_cells(g, item, rules, archive_all=false) }}</tr></tbody>
             </table>
           </div>
@@ -61,7 +61,7 @@
       {# a student's own buttons on their heading line (no row of their own) #}
       {% if not single %}<span class="box-actions">
       {# (icons, in the same order as on the People cards: the paper plane, then the speech bubble: the owner, 2026-10-14) #}
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" data-what="{{ item.shown_name }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
       {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }} in Messages">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}</span>{% endif %}
       {# one student: Expand all / Collapse all of their folders and quizzes, on the heading line #}
       {% if item.cquizzes and single %}<span class="head-pair"><span class="level-buttons">
@@ -81,7 +81,7 @@
     {% elif item.cquizzes %}
       <div class="table-wrap stack">
         <table>
-          <thead><tr><th>Quiz</th><th>Attempts</th><th>Score counted</th><th></th></tr></thead>
+          <thead><tr><th>Quiz</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
           <tbody>
           {% for g in attempts_by_quiz(item.cquizzes) %}
             <tr data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
@@ -102,19 +102,22 @@
 {# People's two views count as one page for Back buttons (static/js/trail.js) #}
 {% block html_attrs %}{% if not single %} data-trail-key="people"{% endif %}{% endblock %}
 {% block content %}
+{#- (a student page with quizzes: its title and buttons go in the folder layout below instead) #}
+{% set laid_out = single and ulst[0].cquizzes %}
+{% set single_buttons %}{% if single %}{{ back_button(url_for('user.people'), 'People', 'btn btn-secondary btn-sm' if laid_out else 'btn btn-secondary') }}
+      {% if not ulst[0].is_admin %}<a class="btn btn-secondary{{ ' btn-sm' if laid_out }}" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% else %}<a class="btn btn-secondary{{ ' btn-sm' if laid_out }}" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
+      <a class="btn btn-secondary{{ ' btn-sm' if laid_out }}" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
+      <a class="btn{{ ' btn-sm' if laid_out }}" href="{{ url_for('qgen.assign', users=ulst[0].id) }}" data-what="{{ ulst[0].shown_name }}" title="Choose a quiz to give {{ ulst[0].shown_name }}">Assign a quiz to {{ ulst[0].shown_name }}</a>{% endif %}{% endset %}
+{% if not laid_out %}
 <div class="page-head">
   <h1>{{ title }}</h1>{% if not single %}{{ people_switch('results', fk.view) }}{% endif %}
   {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
-  <div class="actions">{% if single %}{{ back_button(url_for('user.people'), 'People') }}{% endif %}
-    {% if single %}
-      {% if not ulst[0].is_admin %}<a class="btn btn-secondary" href="{{ url_for('messages.conversation', student_id=ulst[0].id) }}" title="Open your conversation with {{ ulst[0].shown_name }} in Messages">Message {{ ulst[0].shown_name }}</a>{% else %}<a class="btn btn-secondary" href="{{ url_for('messages.teachers_page') }}" title="Teachers write to each other in Teachers’ messages">Message {{ ulst[0].shown_name }}</a>{% endif %}
-      <a class="btn btn-secondary" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
-    {% else %}<a class="btn btn-secondary" href="{{ url_for('qgen.results_by_quiz') }}" title="See the same results arranged quiz by quiz">Results by quiz</a>{% endif %}
-    <a class="btn" href="{{ url_for('qgen.assign', users=ulst[0].id) if single else url_for('qgen.assign') }}" title="{{ 'Choose a quiz to give ' ~ ulst[0].shown_name if single else 'Choose a quiz and give it to students' }}">Assign a quiz{{ ' to ' ~ ulst[0].shown_name if single }}</a></div>
+  <div class="actions">{{ single_buttons }}</div>
 </div>
+{% endif %}
 
 {# one student: the awards they've earned (they see these on their Home) #}
-{% if single %}
+{% if single and not laid_out %}
 {# folded to begin with (the count shows how many); open or not is remembered in this browser #}
 <details class="box card subject-box student-awards" id="student-awards">
   <summary>{{ box_label('trophy', 'Awards', count_of(awards|length, 'award', 'awards')) }}</summary>
@@ -126,20 +129,53 @@
 
 {% if single %}
 {# one student: their quizzes, always open (the folders and quizzes inside fold) #}
-<div class="student-single">{{ student_box(ulst[0]) }}</div>
+{#- one student's quizzes laid out like the other list pages: the folder list in its own card on
+    the left; the name filter, the folder tabs and the quizzes on the right (no box around them,
+    the owner, 2026-10-17) #}
+{% set item = ulst[0] %}
+{% if item.cquizzes %}
+<div class="student-single student-folders" id="student-{{ item.id }}">
+  <div class="folder-filter" data-folder-filter data-prefix="q:" data-key-attr="fkey" data-all-label="All quizzes"
+       data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-url-tab data-style="list" data-tabs>
+    {#- the title over the folder list, as on the other list pages (the owner, 2026-10-17) #}
+    <div class="page-head student-head"><h1>{{ title }}</h1></div>
+    <div class="folder-tools-bar student-filter">{{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='details.result-box', url=true, id='student-filter-bar') }}
+      <div class="btn-row results-filter-right">{{ single_buttons }}</div></div>
+    {#- Awards: a button under the folder list that opens them as a pop-over (the owner, 2026-10-17) #}
+    <div class="student-awards-spot">
+      <button type="button" class="btn btn-secondary btn-sm awards-toggle" data-popcard="#student-awards-pop" aria-expanded="false" title="See the awards {{ item.shown_name }} has earned">{{ icon('trophy') }} Awards ({{ awards|length }})</button>
+    </div>
+    <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
+    <div class="folder-filter-list">{% for g in attempts_by_quiz(item.cquizzes) %}{{ result_box(g, item) }}{% endfor %}</div>
+  </div>
+</div>
+{% else %}
+<div class="card empty">No quizzes assigned yet.</div>
+{% endif %}
+{% if laid_out %}
+<section class="card pop-card" id="student-awards-pop" aria-labelledby="awards-pop-head" hidden>
+  <div class="pop-card-top"><h2 id="awards-pop-head" class="pop-card-head">{{ item.shown_name }}’s awards</h2>
+    <button type="button" class="btn btn-secondary btn-sm btn-icon pop-card-close" title="Close">{{ icon_label('lc-x', 'Close') }}</button></div>
+  {% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}
+</section>
+{% endif %}
 {% else %}
 {% call folders_page(fk) %}
+  {#- the page's own buttons at the right end of the filter bar, like the Problems page's bar
+      (the owner, 2026-10-16) -#}
+  {% set filter_right %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.results_by_quiz') }}" title="See the same results arranged quiz by quiz">Results by quiz</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
   {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
+    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}
     {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'student:') %}{% for item in n.people %}{{ student_box(item) }}{% endfor %}{% endcall %}{% else %}
-    {% for item in shown %}{{ student_box(item) }}{% endfor %}{% endif %}
+    {% call named_box(fk, 'student:') %}{% for item in shown %}{{ student_box(item) }}{% endfor %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
   </div>
-  {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk) }}{% endif %}
 {% endcall %}
 {% endif %}
+{% include "_dialog_assign_people.html" %}
 {% endblock %}
 
-{% block scripts %}
-{% if single %}<script src="{{ asset('js/subjects.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
+{% block scripts %}<script src="{{ asset('js/assign_people.js') }}"></script>
+{% if single %}<script src="{{ asset('js/subjects.js') }}"></script><script src="{{ asset('js/popcard.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
 {% endblock %}

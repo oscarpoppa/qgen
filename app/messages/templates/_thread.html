@@ -66,7 +66,7 @@
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
         <span class="muted">{{ m.created|when }}</span>
         {# (pinned: said plainly, for everyone, beside its other badges: the owner, 2026-10-14) #}
-        {% if m.pinned %}<span class="badge badge-pinned" title="Pinned to the top of {{ 'their' if me_teacher else 'your' }} messages">{{ icon('pin') }} Pinned</span>{% endif %}
+        {% if m.pinned %}<span class="badge badge-pinned" title="Pinned to the top of {{ 'his/her' if me_teacher else 'your' }} messages">{{ icon('pin') }} Pinned</span>{% endif %}
         {% if unread_ids is defined and m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
       </div>
       <div class="msg-body">{{ m.body }}{% if m.link %} <a href="{{ m.link }}" title="Go to the page this message is about">{{ link_label(m.link, for_student=not current_user.is_admin) }}</a>{% endif %}</div>
@@ -74,7 +74,7 @@
         {# opens the conversation with that student: a reply to what they wrote, or more to what a teacher wrote #}
         <button type="button" class="btn-link small show-student" data-student="{{ m.student_id }}" title="Show just your messages with {{ m.student.shown_name }}">{{ 'Open conversation with ' if m.from_teacher else 'Reply to ' }}{{ m.student.shown_name }}</button>
       {% endif %}
-      {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.shown_name }} removed this from their messages</div>{% endif %}
+      {% if me_teacher and m.hidden_for_student %}<div class="small muted">{{ m.student.shown_name }} removed this from his/her messages</div>{% endif %}
     </div>
     </li>
   {% else %}

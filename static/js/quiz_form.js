@@ -63,7 +63,7 @@
   function renderTotal(used) {
     var n = order.filter(function (o) { return !o.group; }).length;
     Object.keys(used).forEach(function (l) { n += Math.min(picks[l] || 1, used[l]); });
-    total.textContent = order.length ? 'Each student answers ' + n + ' question' + (n === 1 ? '' : 's') + '.' : '';
+    total.textContent = order.length ? 'Each student answers ' + n + ' problem' + (n === 1 ? '' : 's') + '.' : '';
   }
 
   function renderGroups() {
@@ -125,11 +125,15 @@
       name.className = 'order-title';
       name.textContent = (fixed ? (i + 1) + '. ' : '') + title;
       top.appendChild(name);
-      top.appendChild(smallButton('✕ Remove', 'Remove ' + title + ' from the quiz', function () {
+      //(a bare ✕, as every control on a list item is an icon: the owner, 2026-10-16)
+      var rm = smallButton('\u2715', 'Remove \u201c' + title + '\u201d from the quiz', function () {
         order.splice(i, 1);
         if (!order.some(function (o) { return o.id === item.id; })) tick(item.id, false);
         render();
-      }));
+      });
+      rm.className = 'btn btn-secondary btn-sm btn-icon order-remove';
+      if (window.qgenIcon && window.qgenIcon('lc-x')) rm.innerHTML = window.qgenIcon('lc-x');
+      top.appendChild(rm);
       li.appendChild(top);
 
       var bottom = document.createElement('div');

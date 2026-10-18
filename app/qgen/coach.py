@@ -101,18 +101,18 @@ def problem_hints(qtype_key, question, answer, options):
         if picked:
             needs[picked[0]] = max(needs.get(picked[0], 0), picked[1])
     for base, n in sorted(needs.items()):
-        hints.append(hint('error', 'You use [{0}1]… [{0}{1}], but {0} has no "how many" (or too small a one). '
-                                   'Put {1} in "how many" for {0}, so each student gets {1} different items from its list.'.format(base, n)))
+        hints.append(hint('error', 'You use [{0}1]… [{0}{1}], but {0} has no “how many” (or too small a one). '
+                                   'Put {1} in “how many” for {0}, so each student gets {1} different items from its list.'.format(base, n)))
     for name in sorted(missing):
         if F.numbered_pick(name, known):
             continue
         close = get_close_matches(name, known, n=1)
-        text = '"{}" isn\'t in your values table.'.format(name)
+        text = '“{}” isn\'t in your values table.'.format(name)
         if close:
-            text += ' Did you mean "{}"?'.format(close[0])
+            text += ' Did you mean “{}”?'.format(close[0])
         hints.append(hint('error', text, {'type': 'add_value', 'name': name, 'label': 'Add a value named {}'.format(name)}))
     for err in qt.validate(question, answer, options):
-        if not any('"{}"'.format(n) in err for n in missing):
+        if not any('“{}”'.format(n) in err for n in missing):
             hints.append(hint('error', err))
 
     #values that are defined but never shown or used
@@ -139,11 +139,11 @@ def problem_hints(qtype_key, question, answer, options):
             #a column counts as used if it or any of its numbered copies (who1, who2...) appears
             copies = {n for n in numbered if n == part or re.fullmatch(re.escape(part) + r'\d+', n)}
             if part and not copies & used:
-                hints.append(hint('warn', 'You made a value called "{}" but never use it. Put [{}] in the question, or remove it.'.format(part, part)))
+                hints.append(hint('warn', 'You made a value called “{}” but never use it. Put [{}] in the question, or remove it.'.format(part, part)))
         if row.get('kind') == 'whole' and str(row.get('min', '')).strip() and str(row.get('min')) == str(row.get('max')):
-            hints.append(hint('warn', '"{}" goes from {} to {}, so it\'s always the same number.'.format(name, row['min'], row['max'])))
+            hints.append(hint('warn', '“{}” goes from {} to {}, so it\'s always the same number.'.format(name, row['min'], row['max'])))
         if row.get('kind') == 'list' and len([i for i in str(row.get('items') or '').split(',') if i.strip()]) == 1:
-            hints.append(hint('warn', 'The list for "{}" has only one item, so every student gets the same one.'.format(name)))
+            hints.append(hint('warn', 'The list for “{}” has only one item, so every student gets the same one.'.format(name)))
 
     #anti-copying: how many different versions can students get, and can answers be passed along?
     if not [h for h in hints if h['level'] == 'error'] and qt.auto_graded:
@@ -160,7 +160,7 @@ def problem_hints(qtype_key, question, answer, options):
             hints.append(hint('tip', 'The answer is always {}. A comparison like a > b makes it true for some students and false for others.'
                               .format('True' if answer.strip().lower() in F.TRUE_WORDS else 'False')))
     if qt.uses_choices and options.get('shuffle') is False:
-        hints.append(hint('warn', 'Shuffling is off, so every student sees the choices in the same order and "it\'s the second one" can be passed along.'))
+        hints.append(hint('warn', 'Shuffling is off, so every student sees the choices in the same order and “it\'s the second one” can be passed along.'))
 
     #does the wording suggest a different question type?
     low = question.lower()
@@ -222,30 +222,30 @@ def quiz_hints(title, vpids, calculator_ok, existing_titles, problems, lay=None,
     same = [p for p in problems.values() if _same_for_all(p)]
     if vpids and not shuffle_order and same:
         hints.append(hint('warn', 'Question order isn\'t shuffled, and {} {} no random values, so every student has the same '
-                          'answer there and "number 3 is B" is easier to pass along.'.format(
-                              ', '.join('"{}"'.format(p.title) for p in same), 'has' if len(same) == 1 else 'have')))
+                          'answer there and “number 3 is B” is easier to pass along.'.format(
+                              ', '.join('“{}”'.format(p.title) for p in same), 'has' if len(same) == 1 else 'have')))
     if not (title or '').strip():
         hints.append(hint('error', 'Give the quiz a title so students can recognize it.'))
     elif title.strip().lower() in existing_titles:
-        hints.append(hint('warn', 'Another quiz is already called "{}". A different title avoids mix-ups.'.format(title.strip())))
+        hints.append(hint('warn', 'Another quiz is already called “{}”. A different title avoids mix-ups.'.format(title.strip())))
     if not vpids:
-        return hints + [hint('tip', 'Check the problems to include. They\'ll appear under “Questions in this quiz”.')]
+        return hints + [hint('tip', 'Check the problems to include. They\'ll appear under “Problems in this quiz”.')]
     for pid in sorted({p for p in vpids if vpids.count(p) > 1}):
         p = problems.get(pid)
-        hints.append(hint('tip', '"{}" is included {} times. Each copy gets different random values — fine if that\'s what you want.'
+        hints.append(hint('tip', '“{}” is included {} times. Each copy gets different random values — fine if that\'s what you want.'
                           .format(p.title if p else pid, vpids.count(pid))))
     calc = [p for p in problems.values() if p.calculator_ok]
     if calc and not calculator_ok:
         hints.append(hint('tip', 'Students will have a calculator: {} {}.'.format(
-            ', '.join('"{}"'.format(p.title) for p in calc), 'allows one' if len(calc) == 1 else 'allow one')))
+            ', '.join('“{}”'.format(p.title) for p in calc), 'allows one' if len(calc) == 1 else 'allow one')))
     for p in problems.values():
         errors = get_qtype(p.qtype).validate(p.raw_prob, p.raw_ansr, p.options)
         if errors:
-            hints.append(hint('warn', '"{}" has something to fix: {}'.format(p.title, errors[0])))
+            hints.append(hint('warn', '“{}” has something to fix: {}'.format(p.title, errors[0])))
     cplx = [p for p in problems.values() if uses_complex(p.options)]
     if cplx and len(cplx) < len(problems):
         hints.append(hint('tip', 'Only some problems use complex numbers ({}). Fine if intended; the others will never show one.'
-                          .format(', '.join('"{}"'.format(p.title) for p in cplx))))
+                          .format(', '.join('“{}”'.format(p.title) for p in cplx))))
     essays = [p for p in problems.values() if not get_qtype(p.qtype).auto_graded]
     if essays:
         hints.append(hint('tip', 'This quiz has {} written answer{}. Students see their score after you grade {} under Grading.'.format(

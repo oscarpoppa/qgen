@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_archive_sections.html" import archive_switch %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
@@ -20,7 +21,8 @@
               data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
             <div class="small muted">
               <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
-              {% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}
+              {#- (kept on one line, never split after "no": the owner, 2026-10-15) #}
+              <span class="nowrap">{% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}</span>
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div></details>
@@ -38,10 +40,24 @@
           </td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Edit: Change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            {% if in_archive %}
+            {# the Archive's Problems (the owner, 2026-10-16): Restore, History and Delete for good #}
+            <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title or 'Untitled' }}” back on the Problems page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {% if item.cproblems %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
-            {{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id),
+            {% if blockers[item.id] %}{{ slot('Delete for good', blockers[item.id], 'btn btn-danger btn-sm', 'lc-trash') }}
+            {% else %}{{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id),
+                 delete_note=('Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}{% endif %}
+            {% else %}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Edit: Change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            {# a copy, named in a small dialog (static/js/copy.js): the owner, 2026-10-16 #}
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-copy-url="{{ url_for('qgen.copy_item', kind='problems', iid=item.id) }}" data-copy-name="{{ (item.title or 'Untitled') }}" data-copy-kind="problem" title="Copy: Make a new problem from “{{ (item.title or 'Untitled') }}”">{{ icon_label('lc-copy', 'Copy') }}</button>
+            {# put it at the end of a quiz (static/js/quiz_pick.js), the owner 2026-10-15 #}
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-add-quiz="{{ item.id }}" data-what="“{{ item.title or 'Untitled' }}”"{% if not quizzes %} disabled title="Add to a quiz: there are no quizzes yet"{% else %} title="Add to a quiz: Put “{{ item.title or 'Untitled' }}” at the end of one of your quizzes"{% endif %}>{{ icon_label('lc-list-plus', 'Add to a quiz') }}</button>
+            {% if item.cproblems %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id), archive_url=url_for('qgen.archive_vprob', vpid=item.id),
                  delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}
+            {% endif %}
           </td>
         </tr>
       {% endfor %}
@@ -53,24 +69,69 @@
 {% block body_attrs %}{{ watch('problems') }}{% endblock %}
 
 {% block content %}
-<div class="page-head">
+{% if in_archive %}
+<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+<p class="muted page-intro">Problems moved to the Archive: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
+  Quizzes that use one keep it. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.</p>
+{% else %}
+{# (its buttons small, beside the title: the title row only as tall as the title, the owner 2026-10-15) #}
+<div class="page-head title-inline">
   <h1>{{ title }}</h1>
   <div class="actions">
-    <a class="btn" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
+    <a class="btn btn-xs" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-xs" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
 </div>
 
-{% if not total %}
+{% endif %}
+{% if not total and in_archive %}
+  <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No problems in the Archive. A problem’s trash can has Move to Archive.</div>
+{% elif not total %}
   <div class="card empty"><span class="big">{{ icon('note') }}</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
   {% call folders_page(fk) %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
-      {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}
+      {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}
       {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
-      {% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
+      {% call named_box(fk, 'problem:') %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
     </div>
   {% endcall %}
 {% endif %}
+{% if quizzes %}
+{# Add to a quiz: one row's problem (its icon) or the checked ones (the bar's button) #}
+{# laid out and working like the Assign dialogs (the owner, 2026-10-15): what happens in a box, a
+   Quizzes folder to narrow the list, Check all / Uncheck all, any number of quizzes checked #}
+<dialog class="ask ask-many add-quiz assign-many" id="add-quiz-dialog" aria-labelledby="add-quiz-head">
+  <form method="post" action="{{ url_for('qgen.add_to_quiz') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="view" value="{{ fk.view }}">
+    <p id="add-quiz-head"><strong>Add <span data-what></span> to quizzes</strong><br>
+      <span class="muted small">Check the quizzes to add to.</span></p>
+    <div class="assign-defaults small">
+      <strong>What happens:</strong>
+      <ul><li>added at the end of each quiz</li><li>what’s already in a quiz stays as it is</li>
+        <li>a problem already in a quiz isn’t added twice</li><li>quizzes already assigned keep the version they were given</li></ul>
+    </div>
+    {% set add_quizzes, add_folders = quiz_choices() %}
+    <div class="assign-many-tools">
+      <label class="sr-only" for="add-quiz-folder">Show</label>
+      <select id="add-quiz-folder" title="Show only the quizzes in a folder">
+        <option value="">All quizzes</option>
+        {% for g, depth in add_folders %}<option value="{{ g.id }}">{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}{{ g.title }}</option>{% endfor %}
+      </select>
+      <button type="button" class="btn btn-secondary btn-xs" data-quizzes="all" title="Check every quiz shown">Check all</button>
+      <button type="button" class="btn btn-secondary btn-xs" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
+      <span class="muted small" data-quiz-count></span>
+    </div>
+    <ul class="assign-many-people add-quiz-list">
+      {% for q, folders in add_quizzes %}<li data-folders="{{ folders }}"><label><input type="checkbox" name="quiz" value="{{ q.id }}"> {{ q.title }}</label></li>{% endfor %}
+    </ul>
+    <p class="error small" data-quiz-error hidden>Check at least one quiz first.</p>
+    <div data-items></div>
+    {# or a new quiz with them in it (quiz_pick.js fills in which, and the way back) #}
+    <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make a new quiz with {{ 'them' }} instead</a></p>
+    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Add to the end of the checked quizzes">Add</button></div>
+  </form>
+</dialog>
+{% endif %}
 {% endblock %}
-
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script>{% endblock %}

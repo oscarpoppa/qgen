@@ -53,7 +53,7 @@ def earned(user):
             if not _perfect(combined_score(rule, scores[:i])):
                 break
             since = attempts[i - 1]
-        out.append({'kind': 'perfect', 'icon': 'star', 'title': 'Perfect score', 'detail': '100% on "{}"'.format(since.vquiz.title),
+        out.append({'kind': 'perfect', 'icon': 'star', 'title': 'Perfect score', 'detail': '100% on “{}”'.format(since.vquiz.title),
                     'when': since.compdate, 'quiz': since.vquiz})
     #milestones: different quizzes finished
     seen = set()
@@ -82,7 +82,7 @@ def earned(user):
         if prev is not None and c.score - prev >= COMEBACK_POINTS and c.vquiz_id not in came_back:
             came_back.add(c.vquiz_id)
             out.append({'kind': 'comeback', 'icon': 'rocket', 'title': 'Comeback', 'quiz': c.vquiz, 'when': c.compdate,
-                        'detail': 'Up {:.0f} points on "{}" ({:.0f}% → {:.0f}%)'.format(c.score - prev, c.vquiz.title, prev, c.score)})
+                        'detail': 'Up {:.0f} points on “{}” ({:.0f}% → {:.0f}%)'.format(c.score - prev, c.vquiz.title, prev, c.score)})
         before[c.vquiz_id] = c.score
     out.sort(key=lambda a: (a['when'] is not None, a['when'] or 0), reverse=True)
     return out

@@ -8,6 +8,7 @@ ONLINE_WINDOW = timedelta(minutes=2)
 
 @login.user_loader
 def load_user(id):
+    #(an archived account is signed out: the query below leaves it out)
     return db.session.get(User, int(id))
 
 
@@ -31,6 +32,12 @@ class User(UserMixin, db.Model):
     #seconds while it shows), and when it last checked in: the Dashboard's "Taking a quiz"
     on_quiz = db.Column(db.Integer, nullable=True)
     on_quiz_at = db.Column(db.DateTime, nullable=True)
+    #archived (the trash can's Move to Archive, the owner 2026-10-16): can't log in, and left out of
+    #every list of people; restored from the Archive. See archived_filter below.
+    archived_at = db.Column(db.DateTime, nullable=True, index=True)
+    #(the folders they were in, as a JSON list of ids: they leave them while archived and go
+    #back in on Restore)
+    archived_folders = db.Column(db.Text, nullable=True)
 
     @property
     def shown_name(self):
@@ -145,3 +152,20 @@ class UserFolderMember(db.Model):
     __tablename__ = 'user_folder_member'
     folder_id = db.Column(db.Integer, db.ForeignKey('user_folder.id', ondelete='CASCADE'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), primary_key=True, index=True)
+
+
+
+#Archived people are left out of every query for people (People, Assign, Messages, the Dashboard,
+#signing in), unless the query asks for them with .execution_options(include_archived=True) (the
+#Archive's People section, Restore). Their attempts still name them: loading a relationship (an
+#attempt's student) isn't narrowed.
+from sqlalchemy import event as _event
+from sqlalchemy.orm import Session as _Session, with_loader_criteria as _criteria
+
+
+@_event.listens_for(_Session, 'do_orm_execute')
+def _leave_out_archived(state):
+    if (state.is_select and not state.is_column_load and not state.is_relationship_load
+            and not state.execution_options.get('include_archived', False)):
+        state.statement = state.statement.options(
+            _criteria(User, lambda cls: cls.archived_at.is_(None), include_aliases=True))

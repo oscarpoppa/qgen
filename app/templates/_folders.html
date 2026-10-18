@@ -43,18 +43,23 @@
   </li>
 {% endmacro %}
 
-{# a form to make a folder: at the top level, or inside `parent` #}
-{% macro new_folder(fk, parent=none) %}
-  <details class="new-folder">
-    <summary class="btn btn-secondary btn-sm" title="{{ 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' }}">+ New folder{{ ' inside' if parent }}</summary>
-    <form method="post" action="{{ fk.create_url }}" class="folder-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="view" value="{{ fk.view }}">
-      {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
-      <input type="text" name="name" maxlength="{{ fk.max_name }}" required placeholder="{{ fk.placeholder }}" aria-label="New folder's name">
-      <button class="btn btn-sm" title="Make the folder with the name you typed">Make folder</button>
-    </form>
-  </details>
+{# + New folder: a small dialog that asks only for the name (Cancel / Make folder), at the top
+   level or inside `parent` (the owner, 2026-10-16; static/js/folders.js opens it) #}
+{% macro new_folder(fk, parent=none, size='btn-sm') %}
+  <span class="new-folder">
+    <button type="button" class="btn btn-secondary {{ size }}" data-fopt="new" title="{{ 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' }}">+ New folder{{ ' inside' if parent }}</button>
+    <dialog class="ask folder-dialog" data-fopt-dialog="new" aria-label="{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}">
+      <form method="post" action="{{ fk.create_url }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="view" value="{{ fk.view }}">
+        {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
+        <p><strong>{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}</strong></p>
+        <input type="text" name="name" maxlength="{{ fk.max_name }}" required placeholder="{{ fk.placeholder }}" aria-label="New folder's name">
+        <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
+          <button class="btn" title="Make the folder with the name you typed">Make folder</button></div>
+      </form>
+    </dialog>
+  </span>
 {% endmacro %}
 
 {# Expand all / Collapse all for one level: every box in it (folders, folders inside them, and
@@ -68,7 +73,7 @@
 
 {# the page: folder list, then the folder being looked at, with its title row (path, Expand
    / Collapse all, Folder options) and `actions` (the page's own buttons beside the title) #}
-{% macro folders_page(fk, actions='') %}
+{% macro folders_page(fk, actions='', under_side='') %}
 <div class="folders-layout" data-move-url="{{ fk.move_url }}" data-view="{{ fk.view }}"
      data-path="{{ fk.path|map(attribute='id')|list|tojson|forceescape }}" data-fold-key="{{ fk.fold_key }}">
   <details class="folder-side" open>
@@ -93,8 +98,8 @@
           <li><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
-            {% if av.badge and av.count %}<span class="badge {{ av.badge_class or 'badge-warn' }} side-new-badge" title="{{ av.badge_title or av.badge }}">{{ av.badge }}</span>
-            {% else %}<span class="side-count muted small">{{ av.count or 0 }}</span>{% endif %}</div></li>
+            {#- (a count like every other row; what it counts in its tooltip: the owner, 2026-10-17) -#}
+            <span class="side-count muted small"{% if av.badge_title and av.count %} title="{{ av.badge_title }}"{% endif %}>{{ av.count or 0 }}</span></div></li>
         {% endfor %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
@@ -103,13 +108,17 @@
         <li><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if no_folders or not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('main') }}" title="{{ 'There are no folders yet.' if no_folders else 'See the ' ~ fk.units ~ ' that aren\'t in any folder' }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
-          {{ flag_badges(fk, fk.root, true) }}
+          {#- (no folders yet: it counts 0, so no flags either: the owner, 2026-10-17) -#}
+          {% if not no_folders %}{{ flag_badges(fk, fk.root, true) }}{% endif %}
           <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ 0 if no_folders else fk.main_count or 0 }}</span></div></li>
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
-      <p class="muted small side-hint">{{ fk.hint }}
-        {% if fk.flat and not fk.readonly %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>
     </nav>
+    {#- (a page's own piece under the folder list's card, e.g. Grading's oldest waiting button) #}
+    {{ under_side }}
+    {#- (under the folder list's card, not in it: the owner, 2026-10-17) #}
+    <p class="muted small side-hint">{{ fk.hint }}
+      {% if fk.flat and not fk.readonly %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>
   </details>
 
   {# the whole section is one level for Expand all / Collapse all (beside its title) #}
@@ -118,7 +127,8 @@
       {% if fk.node %}
         {% set f = fk.node.folder %}
         <h2 id="folder-title" class="folder-title">
-          {% for p in fk.path[:-1] %}<a href="{{ fk.page(p.id) }}" title="Go up to the folder “{{ fk.name(p) }}”">{{ fk.name(p) }}</a> <span class="muted" aria-hidden="true">›</span> {% endfor %}{{ draw_icon(fk.folder_icon(f)) }} {{ fk.name(fk.node.folder) }}</h2>
+          {#- the open folder's name with its path from the top, "Math › Fractions" (the owner, 2026-10-15) -#}
+          {{- draw_icon(fk.folder_icon(f)) }} {% for pf in fk.path %}{{ fk.name(pf) }}{% if not loop.last %} › {% endif %}{% endfor %}</h2>
         <div class="title-actions">
           {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
           {# (no tabs on this page: Up goes here, beside the pair; with tabs it's on their row) #}
@@ -130,14 +140,14 @@
         {# the folder shown ("All quizzes", "Uncategorized"; a tab or the side list changes it,
            static/js/folderfilter.js) (the owner, 2026-10-14) #}
         {# (All: the page's own name, "People" or "Quizzes", the one exception: the owner, 2026-10-14) #}
-        {% set own_name = title or fk.units|capitalize %}
+        {% set own_name = folder_heading or title or fk.units|capitalize %}
         {% set page_name = fk.title or (fk.main_label if fk.view == 'main' else own_name) %}
         <h2 id="folder-title" class="folder-title" data-page-name="{{ own_name }}">{{ page_name }}</h2>
         <div class="title-actions">{{ level_buttons(page_name, 'btn-sm') }}{{ actions }}</div>
       {% endif %}
     </div>
-    {# how many are shown ("3 quizzes"): the filter bar's count, put at the top of the bar, right
-       over the filter (static/js/filter.js) #}
+    {# how many are shown ("3 quizzes"): the filter bar's count, put beside the heading
+       (static/js/filter.js) #}
     <p class="folder-count muted" id="folder-count" aria-live="polite" hidden></p>
     {{ caller() }}
   </section>
@@ -173,7 +183,7 @@
      first, then the folders, then Uncategorized) that show just what's in that folder (and the
      folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
-       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
        data-remember="{{ request.endpoint }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
@@ -220,6 +230,26 @@
   </div>
 {% endmacro %}
 
+{# every open folder has its tab (the owner, 2026-10-16): a view with no folder tabs of its own
+   (Uncategorized, an empty folder or one with nothing inside, New / In progress, All with no
+   folders yet) shows its one open tab, named, over its list, like a folder's own page.
+   {% call named_box(fk, key_prefix) %} ...the list... {% endcall %} #}
+{% macro named_box(fk, key_prefix) %}
+  {% set auto = (fk.auto_views|selectattr('key', 'equalto', fk.view)|first) if fk.auto_views else none %}
+  {% set label = fk.name(fk.node.folder) if fk.node else auto.label if auto else fk.main_label if fk.view == 'main' else fk.all_label %}
+  {% set ic = fk.folder_icon(fk.node.folder) if fk.node else auto.icon if auto else 'tray' if fk.view == 'main' else 'folders' %}
+  <div class="folder-filter named-box" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ label }}"
+       data-main-label="Unsorted" data-main-url="" data-all-url="" data-no-main data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-remember="{{ request.endpoint }}:{{ fk.view }}:named" data-tab-name="{{ label }}" data-tab-icon="{{ ic }}">
+    <script type="application/json" class="folder-filter-tree">[]</script>
+    {# Up (and the Back beside it, static/js/folderfilter.js): a folder's to the folder it's in;
+       Uncategorized's, New's and All's own page to the All page with its tabs (the owner, 2026-10-16) #}
+    {% if fk.node %}<template class="folder-filter-tools" data-for="all">{{ folder_up(fk) }}</template>
+    {% elif fk.view != 'all' or request.args.get('own') %}<template class="folder-filter-tools" data-for="all"><a class="btn btn-secondary btn-xs btn-icon folder-up" href="{{ fk.page('all') }}" title="Up: back to “{{ fk.all_label }}”">{{ icon_label('lc-folder-up', 'Up') }}</a></template>{% endif %}
+    <div class="folder-filter-list">{{ caller() }}</div>
+  </div>
+{% endmacro %}
+
 {# a folder's own page: up to the folder it's in (or All), beside Expand all / Collapse all
    (the owner, 2026-10-14) #}
 {% macro folder_up(fk, size='btn-xs') %}{% if fk.node %}{% set up = fk.path[-2] if fk.path|length > 1 else none %}
@@ -246,19 +276,18 @@
   {% endfor %}
   {% set have = mine|map(attribute='id')|list %}
   {% set others = fk.flat|rejectattr('0.id', 'in', have)|list %}
+  {#- the two folder icons together, never split over two lines: put it in a folder (grayed when
+      it's in every one) and take it out (the owner, 2026-10-15) #}
+  {% if others or mine %}<span class="folder-icons">
   {% if others %}
-  <form method="post" action="{{ fk.add_url }}" class="move-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="view" value="{{ fk.view }}">
-    <input type="hidden" name="{{ what }}" value="{{ ident }}">
-    {# a small "+" beside the chips: it opens the list of folders #}
-    <select name="to" class="move-select add-select" aria-label="Put {{ label }} in a folder" title="Put {{ label }} in {{ 'another folder too' if mine else 'a folder' }}">
-      <option value="">+</option>
-      {% for f, depth in others %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
-    </select>
-    <noscript><button class="btn btn-secondary btn-xs" title="Put it in the folder you picked">Add</button></noscript>
-  </form>
-  {% elif not mine %}<span class="muted small">none</span>{% endif %}
+  {#- opens the Put in folder dialog for just this one (static/js/filebar.js; the owner,
+      2026-10-15): no drop-down that files it the moment a folder is picked #}
+  <button type="button" class="btn btn-secondary btn-sm btn-icon put-in-one" data-put-in="{{ ident }}" data-label="{{ label }}" data-in="{{ have|join(' ') }}" title="Move to folder: move {{ label }} to a folder (or copy {{ 'him/her' if what == 'user' else 'it' }} there)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button>
+  {% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon add-folder-off" disabled title="Move to folder: {{ label }} is in every folder already">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button>{% endif %}
+  {#- take it out of the folder open now (else its own): it says where it will go first
+      (static/js/filebar.js) #}
+  {% if mine %}<button type="button" class="btn btn-secondary btn-sm btn-icon take-out-one" data-take-out="{{ ident }}" data-label="{{ label }}" title="Take out of folder: take {{ label }} out of the folder open now (it says where {{ 'he/she' if what == 'user' else 'it' }}’ll go first)">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button>{% endif %}
+  </span>{% else %}<span class="muted small">none</span>{% endif %}
 {% endmacro %}
 
 {# for things that are in one place only: a "Move to…" list that moves as soon as a folder
@@ -289,7 +318,10 @@
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
-    <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Move {{ label }} to another folder">
+    {#- a bare folder icon that opens a Move dialog (static/js/folders.js; the owner, 2026-10-15):
+        the list below is only where its choices come from #}
+    <button type="button" class="btn btn-secondary btn-sm btn-icon move-one" data-move-one data-label="{{ label }}" title="Move: put {{ label }} in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button>
+    <select name="to" class="move-select" hidden aria-label="Move {{ label }} to a folder">
       <option value="" selected>Move…</option>
       {% for f, depth in fk.flat %}
         <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
@@ -300,15 +332,14 @@
   </form>
 {% endmacro %}
 
-{# "Remove" on a card or row: the one button that asks clearly what to do (the owner, 2026-10-13):
-   "What do you want to do with X?" Take it out of one of its folders (each answer says where it
-   ends up: still in its other folders, or Uncategorized), or delete it for good (what can't go,
-   because something still uses it, is quietly kept for that and taken off the page). folders:
-   the folders it's in; delete_url / delete_label: its own delete; no_delete: why it can't be
-   deleted (grayed with that reason); delete_note: what deleting it means (said in the question).
-   static/js/takeout.js #}
-{% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='') %}
-  {% if no_delete and not folders %}{{ slot('Remove', no_delete ~ ', and ' ~ ('you’re' if kind == 'people' else 'it’s') ~ ' in no folder', 'btn btn-danger btn-sm') }}{% else %}
+{# The trash can on a card or row: "What do you want to do with X?" (with delete_note, what
+   deleting it means), then Move to Archive (archive_url: kept there, restorable; the owner,
+   2026-10-16), Delete for good, or Cancel. delete_url / delete_label: its own delete; no_delete: why it
+   can't be deleted (grayed with that reason). static/js/takeout.js #}
+{% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='', archive_url=none) %}
+  {#- (the owner, 2026-10-16: the trash can only deletes, asked first; moving is the row's own
+      Move icon. Grayed, with why, when it can't be deleted) #}
+  {% if no_delete %}{{ slot('Delete for good', no_delete, 'btn btn-danger btn-sm', 'lc-trash') }}{% else %}
   {% set names = [] %}{% for f in folders %}{% set _ = names.append(fk.name(f)) %}{% endfor %}
   {# (the folder each one is inside, if any: taken out, it goes back up there) #}
   {% set ups = [] %}{% for f in folders %}{% set _ = ups.append(fk.name(fk.nodes[f.parent_id].folder) if f.parent_id and f.parent_id in fk.nodes else '') %}{% endfor %}
@@ -317,12 +348,12 @@
   {% set chains = [] %}{% for f in folders %}{% set ns = namespace(id=f.parent_id, ch=[]) %}{% for _ in range(16) %}{% if ns.id and ns.id in fk.nodes %}{% set _ = ns.ch.append(ns.id) %}{% set ns.id = fk.nodes[ns.id].folder.parent_id %}{% endif %}{% endfor %}{% set _ = chains.append(ns.ch) %}{% endfor %}
   <form method="post" action="{{ url_for('qgen.take_out_of_folder', kind=kind) }}" class="inline-form" data-takeout data-remove-one data-kind="{{ kind }}"
         data-label="{{ label }}" data-folders="{{ folders|map(attribute='id')|list|tojson|forceescape }}" data-names="{{ names|tojson|forceescape }}" data-ups="{{ ups|tojson|forceescape }}" data-chains="{{ chains|tojson|forceescape }}"
-        data-delete-url="{{ delete_url }}" data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
+        data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-main-label="{{ fk.main_label if fk else 'Uncategorized' }}" data-delete-note="{{ delete_note }}"{% if no_delete %} data-no-delete="{{ no_delete }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if fk %}<input type="hidden" name="view" value="{{ fk.view }}">{% endif %}
     <input type="hidden" name="items" value="{{ ident }}"><input type="hidden" name="just" value="1">
     <input type="hidden" name="folder" value="{{ folders[0].id if folders else '' }}"><input type="hidden" name="confirm" value="uncategorized">
-    <button class="btn btn-danger btn-sm btn-icon" title="Remove: {{ ('Take ' ~ label ~ ' out of a folder, or delete ' ~ ('them' if kind == 'people' else 'it') ~ ' (asks which)') if folders else ('Delete ' ~ label ~ '; you’re asked first') }}">{{ icon_label('lc-trash', 'Remove') }}</button>
+    <button class="btn btn-danger btn-sm btn-icon" title="Delete for good: delete {{ label }}; you’re asked first">{{ icon_label('lc-trash', 'Delete for good') }}</button>
   </form>{% endif %}
 {% endmacro %}
 
@@ -333,28 +364,43 @@
   {% set f = n.folder %}
           <details class="folder-tools">
             <summary class="btn btn-secondary {{ size }} btn-icon" title="Folder options: Rename, move or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
-            <div class="folder-tools-box">
-              <form method="post" action="{{ fk.rename_url(f.id) }}" class="folder-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <input type="text" name="name" value="{{ fk.name(n.folder) }}" maxlength="{{ fk.max_name }}" required aria-label="Folder name">
-                <button class="btn btn-secondary btn-xs" title="Save the new name you typed for this folder">Rename</button>
-              </form>
+            {# a short menu; each choice opens its own small dialog, and the Deletes ask first
+               (the owner, 2026-10-16) #}
+            <div class="folder-tools-box folder-menu">
+              <span class="folder-opt">
+                <button type="button" class="btn btn-secondary btn-xs" data-fopt="rename">Rename</button>
+                <dialog class="ask folder-dialog" data-fopt-dialog="rename" aria-label="Rename “{{ fk.name(n.folder) }}”">
+                  <form method="post" action="{{ fk.rename_url(f.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="view" value="{{ fk.view }}">
+                    <p><strong>Rename “{{ fk.name(n.folder) }}”</strong></p>
+                    <input type="text" name="name" value="{{ fk.name(n.folder) }}" maxlength="{{ fk.max_name }}" required aria-label="Folder name">
+                    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
+                      <button class="btn" title="Save the new name you typed for this folder">Rename</button></div>
+                  </form>
+                </dialog>
+              </span>
               {% set skip = fk.inside(n) %}
-              <form method="post" action="{{ fk.move_url }}" class="move-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="view" value="{{ fk.view }}">
-                <input type="hidden" name="folder" value="{{ f.id }}">
-                <label class="small muted">Move to
-                  <select name="to" class="move-select" aria-label="Move {{ fk.name(n.folder) }} to another folder" title="Pick a folder to move “{{ fk.name(n.folder) }}” into; it moves right away">
-                    <option value="top"{% if not f.parent_id %} selected{% endif %}>Not inside another folder</option>
-                    {% for g, depth in fk.flat if g.id not in skip %}
-                      <option value="{{ g.id }}"{% if f.parent_id == g.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(g) }}</option>
-                    {% endfor %}
-                  </select></label>
-                <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
-              </form>
-              {% if n.depth < fk.max_depth %}{{ new_folder(fk, f) }}{% endif %}
+              <span class="folder-opt">
+                <button type="button" class="btn btn-secondary btn-xs" data-fopt="move">Move to</button>
+                <dialog class="ask ask-many assign-many put-dialog folder-dialog" data-fopt-dialog="move" aria-label="Move “{{ fk.name(n.folder) }}” to another folder">
+                  <form method="post" action="{{ fk.move_url }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="view" value="{{ fk.view }}">
+                    <input type="hidden" name="folder" value="{{ f.id }}">
+                    <p><strong>Move “{{ fk.name(n.folder) }}” to another folder</strong></p>
+                    <ul class="assign-many-people put-list">
+                      <li><label><input type="radio" name="to" value="top"{% if not f.parent_id %} checked{% endif %}> Not inside another folder</label></li>
+                      {% for g, depth in fk.flat if g.id not in skip %}
+                        <li style="padding-left: {{ (depth - 1) * 18 }}px"><label><input type="radio" name="to" value="{{ g.id }}"{% if f.parent_id == g.id %} checked{% endif %}> {{ icon('folder') }} {{ fk.name(g) }}</label></li>
+                      {% endfor %}
+                    </ul>
+                    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
+                      <button class="btn" title="Move it to the folder you picked">Move</button></div>
+                  </form>
+                </dialog>
+              </span>
+              {% if n.depth < fk.max_depth %}{{ new_folder(fk, f, 'btn-xs') }}{% endif %}
               <form method="post" action="{{ fk.delete_url(f.id) }}" class="folder-form"
                     data-confirm="Delete the folder “{{ fk.name(n.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if n.folders }} in it move up {{ 'into “' ~ fk.name(fk.nodes[f.parent_id].folder) ~ '” (its Unsorted)' if f.parent_id and f.parent_id in fk.nodes else 'to Uncategorized' }}." data-confirm-ok="Delete folder">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

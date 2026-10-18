@@ -34,7 +34,7 @@ def clean_answers(cq, answers):
         try:
             number = int(key)
         except (TypeError, ValueError):
-            raise bad_request('"{}" isn\'t a question number.'.format(key))
+            raise bad_request('“{}” isn\'t a question number.'.format(key))
         cp = by_number.get(number)
         if not cp:
             raise bad_request('This quiz has no question {}.'.format(number))

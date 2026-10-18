@@ -1,16 +1,15 @@
 from . import db, error_bp
-from flask import render_template, flash
+from flask import render_template
 
 #handler for 404 error
 @error_bp.app_errorhandler(404)
 def notfound(error):
-    flash(error)
+    #(the page itself says what happened; no raw "404 Not Found: ..." message on top)
     return render_template('404.html', title='Page not found'), 404
 
 #handler for 500 error
 @error_bp.app_errorhandler(500)
 def interr(error):
-    flash(error)
     db.session.rollback()
     return render_template('500.html', title='Something went wrong'), 500
 

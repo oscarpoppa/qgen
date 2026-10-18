@@ -49,7 +49,15 @@
   function measure() {
     var bar = document.querySelector('.topbar');
     if (bar) root.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+    placeDock();
   }
+  //(the panels start where the top bar ends on screen: below the sandbox's yellow line too, at
+  //the top of the page, and right under the bar once it's scrolled away: the owner, 2026-10-15)
+  function placeDock() {
+    var bar = document.querySelector('.topbar');
+    if (bar) root.style.setProperty('--dock-top', Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) + 'px');
+  }
+  window.addEventListener('scroll', placeDock, { passive: true });
 
   function syncButtons() {
     PANES.forEach(function (p) {

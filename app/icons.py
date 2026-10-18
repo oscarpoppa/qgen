@@ -14,10 +14,17 @@ PATHS = {
     #icon buttons (row and card buttons, the folder tools: the owner, 2026-10-14): Lucide's
     #drawings, lucide.dev, ISC license; each button keeps its words for screen readers and in its
     #tooltip (icon_label below)
-    'lc-eye': '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+    #View (named lc-eye from when it was an eye): a magnifier everywhere, the owner 2026-10-15
+    'lc-eye': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     'lc-pencil': '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
     'lc-history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
     'lc-trash': '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+    'lc-list-plus': '<path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 9v6"/><path d="M21 12h-6"/>',
+    'lc-arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    'lc-copy': '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    'lc-folder-plus': '<path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    'lc-folder-minus': '<path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    'lc-folder-input': '<path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-1.73"/><path d="M2 13h10"/><path d="m9 16 3-3-3-3"/>',
     'lc-send': '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     'lc-expand': '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
     'lc-collapse': '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
@@ -115,7 +122,7 @@ def icon_or(value):
 
 
 #the ones page scripts draw themselves (calendar.js, folders.js, helper.js, scan_review.js)
-FOR_SCRIPTS = ('calendar', 'folder', 'folders', 'tray', 'sparkle', 'pencil', 'bulb', 'picture')
+FOR_SCRIPTS = ('calendar', 'folder', 'folders', 'tray', 'sparkle', 'pencil', 'bulb', 'picture', 'user', 'pin')
 #(the icon buttons' drawings: scripts build some of those buttons too)
 FOR_SCRIPTS = FOR_SCRIPTS + tuple(k for k in PATHS if k.startswith('lc-'))
 
@@ -124,9 +131,9 @@ FOR_SCRIPTS = FOR_SCRIPTS + tuple(k for k in PATHS if k.startswith('lc-'))
 BUTTON_ICONS = {'View': 'lc-eye', 'Edit': 'lc-pencil', 'History': 'lc-history', 'Remove': 'lc-trash', 'Assign': 'lc-send',
                 'Expand all': 'lc-expand', 'Collapse all': 'lc-collapse', 'Open this folder': 'lc-folder-open',
                 'Folder options': 'lc-folder-cog', 'Unpin': 'lc-pin-off', 'Message': 'lc-message', 'Start': 'lc-play', 'Continue': 'lc-play',
-                'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Archive': 'lc-archive', 'Retake': 'lc-retake',
+                'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Archive': 'lc-trash', 'Retake': 'lc-retake',
                 'Student page': 'lc-user', 'Reset password': 'lc-key', 'Remove picture': 'lc-image-minus', 'Restore': 'lc-restore',
-                'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil'}
+                'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil', 'Add to a quiz': 'lc-list-plus'}
 
 
 def icon_label(name, label):

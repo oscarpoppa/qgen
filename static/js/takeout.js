@@ -2,8 +2,9 @@
  * marked data-takeout (a folder chip's ✕, "Take out of folder" on the checked bar, a card's
  * the checked bar's "Take out of folder") first asks the site what would happen (check=1); a
  * row's or card's "Remove" (data-remove-one) asks one question of its own (removeOne). Something that would be left
- * in no folder is never changed without asking: "Do you want me to permanently delete this or
- * put it in Uncategorized?" The answer goes with the form (confirm=delete|uncategorized).
+ * in no folder goes to Uncategorized; before anything is done, a dialog says where each will
+ * go ("ava will go to “Alpha”.") with OK and Cancel (the owner, 2026-10-15). Deleting is
+ * only Remove's (removeOne), never taking out.
  */
 (function () {
   //the folder something is shown in: a folder tab's choice ("self:7" is folder 7's own), else
@@ -40,43 +41,34 @@
     i.value = value;
   }
 
-  //a card's or row's Remove: one question, clearly: take it out of one of its folders (each answer
-  //says where it ends up), or delete it for good
+  //a card's or row's trash can: Move to Archive (kept there, and restorable) or Delete for good,
+  //asked first (the owner, 2026-10-16; moving to a folder is the row's own Move icon). A person
+  //moved to the Archive: a second question, keep their quiz results or delete them.
   function removeOne(form) {
-    var ids = JSON.parse(form.dataset.folders || '[]'), names = JSON.parse(form.dataset.names || '[]');
-    var label = form.dataset.label, q = 'What do you want to do with ' + label + '? ';
-    var person = form.dataset.kind === 'people';  // (a person is "they", never "it")
-    var It = person ? 'They’re' : 'It’s', it = person ? 'them' : 'it';
-    q += ids.length ? It + ' in ' + names.map(function (n) { return '“' + n + '”'; }).join(', ') + '.' : (person ? 'They aren’t' : 'It isn’t') + ' in any folder.';
+    var label = form.dataset.label, person = form.dataset.kind === 'people';
+    var archive = form.dataset.archiveUrl;
+    var q = archive ? 'What do you want to do with ' + label + '?' : 'Delete ' + label + ' for good?';
     if (form.dataset.deleteNote) q += ' ' + form.dataset.deleteNote;
-    var ups = JSON.parse(form.dataset.ups || '[]'), chains = JSON.parse(form.dataset.chains || '[]');
-    var q2 = function (n) { return '“' + n + '”'; };
-    var choices = ids.map(function (id, i) {
-      var others = names.filter(function (n, j) { return j !== i; }), up = ups[i], outer = (chains[i] || [])[0];
-      //(also in that outer folder, or another folder inside it: it stays there, it doesn't go back up)
-      var near = up && ids.some(function (other, j) { return j !== i && (other === outer || (chains[j] || []).indexOf(outer) !== -1); });
-      var title = up && !near ? (person ? 'They go back into “' : 'It goes back into “') + up + '” (its Unsorted)' +
-                    (others.length ? ' and stay' + (person ? '' : 's') + ' in ' + others.map(q2).join(', ') : '') :
-                  others.length ? (person ? 'They stay in ' : 'It stays in ') + others.map(q2).join(', ') :
-                  (person ? 'They go to Uncategorized' : 'It goes to Uncategorized');
-      return { value: 'out:' + id, label: 'Take out of “' + names[i] + '”', title: title };
-    });
-    choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true,
-                   title: form.dataset.deleteNote || ('Delete ' + (person ? 'their account' : 'it')), disabled: form.dataset.noDelete || null });
+    var choices = [];
+    if (archive) choices.push({ value: 'archive', label: 'Move to Archive',
+      title: person ? 'He/she can’t log in until you restore him/her from the Archive' : 'Off this page; you can restore it from the Archive' });
+    choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true, title: 'It can’t be undone' });
+    function send(url, extra) {
+      var f = document.createElement('form');
+      f.method = 'post'; f.action = url; f.hidden = true;
+      f.appendChild(form.querySelector('input[name=csrf_token]').cloneNode());
+      Object.keys(extra || {}).forEach(function (k) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = extra[k]; f.appendChild(i); });
+      document.body.appendChild(f);
+      f.submit();
+    }
     window.qgenChoose(q, choices).then(function (answer) {
-      if (!answer) return;
-      if (answer === 'delete') {
-        var del = document.createElement('form');
-        del.method = 'post'; del.action = form.dataset.deleteUrl; del.hidden = true;
-        var t = form.querySelector('input[name=csrf_token]').cloneNode();
-        del.appendChild(t);
-        document.body.appendChild(del);
-        del.submit();
-        return;
-      }
-      //out of that folder; out of its last one it goes to Uncategorized, as its answer said
-      form.querySelector('input[name=folder]').value = answer.slice(4);
-      form.submit();
+      if (answer === 'delete') { send(form.dataset.deleteUrl); return; }
+      if (answer !== 'archive') return;
+      if (!person) { send(archive); return; }
+      window.qgenChoose('Move ' + label + ' to the Archive? He/she won’t be able to log in until you restore him/her. What about his/her quiz results and attempts?', [
+        { value: 'yes', label: 'Keep their results', title: 'His/her attempts and scores stay, and come back with him/her' },
+        { value: 'no', label: 'Delete their results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Archive' }
+      ]).then(function (keep) { if (keep) send(archive, { keep: keep }); });
     });
   }
 
@@ -123,8 +115,11 @@
         if (sub && sub.name) hidden(form, sub.name, sub.value);
         form.submit();  // (no submit event: not asked again; the added fields go with it)
       };
-      if (!res.question) { go(null); return; }
-      window.qgenChoose(res.question, window.qgenTakeOutChoices(res.can_delete)).then(function (choice) { if (choice) go(choice); });
+      //(the owner, 2026-10-15: every take-out says where each will go, up to the folder this one
+      //is in, else Uncategorized, and OK does it; nothing is deleted by taking it out)
+      var said = (res.preview || []).join(' ');
+      if (!said) { go(null); return; }
+      window.qgenAsk(said, 'OK').then(function (yes) { if (yes) go('uncategorized'); });
     });
   }
 

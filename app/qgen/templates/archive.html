@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, remove_button with context %}
+{% from "_archive_sections.html" import archive_switch %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
@@ -28,13 +29,13 @@
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{% if a.student_id and not (blocker and 'account was deleted' in blocker) %}<a class="name-link" href="{{ url_for('qgen.list_user', uid=a.student_id) }}" data-tip="Open {{ a.student_name }}’s student page">{{ a.student_name }}</a>{% else %}{{ a.student_name }}{% endif %}</span></summary></details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
               <td data-label="Quiz">{{ quiz_link(a.vquiz, a.quiz_title, strong=true) }}{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
-              <td data-label="Result">
+              <td data-label="Result" data-sort="{{ '%06.1f' % a.score if a.completed and a.score is not none else '' }}">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
                 {% elif a.needs_review %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                 {% elif a.startdate %}<span class="badge badge-accent badge-status">In progress</span>
                 {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
-              <td data-label="When" class="small when-col row-more">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
+              <td data-label="When" class="small when-col row-more" data-sort="{{ a.archived_at.isoformat() if a.archived_at else '' }}">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
                 <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               <td data-label="Folder">{{ move_menu(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
               <td class="actions">
@@ -43,7 +44,7 @@
                   <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Restore: {{ blocker }}">{{ icon_label('lc-restore', 'Restore') }}</button>
                 {% else %}
                   <form method="post" action="{{ url_for('qgen.restore_archived', aid=a.id) }}" class="inline-form"
-                        data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? They’ll see it on My quizzes again." data-confirm-ok="Restore">
+                        data-confirm="Put {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” back? He/she will see it on My quizzes again." data-confirm-ok="Restore">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put this attempt back; {{ a.student_name }} will see it on My quizzes again">{{ icon_label('lc-restore', 'Restore') }}</button></form>
                 {% endif %}
                 {# one Remove, as on every folder page: take it out of its folder, or delete it for good #}
@@ -60,8 +61,8 @@
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1></div>
-<p class="muted">Attempts you archived, and the quiz results of deleted student accounts. Students don't see any of this.
+<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+<p class="muted page-intro">Attempts you archived, and the quiz results of deleted student accounts. Students don't see any of this.
   You can look at each attempt, put it back, or delete it for good.</p>
 
 {% call folders_page(fk) %}
@@ -84,12 +85,12 @@
     {% endif %}
   </div>
   <div id="folder-items">
-    {% if fk.view == 'all' and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
+    {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% elif not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>{% else %}{% call named_box(fk, 'attempt:') %}
     {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
-    {% elif not total %}<div class="card empty"><span class="big">{{ icon('archive') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
-    {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endif %}
+    {% elif not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
+    {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
   </div>
 {% endcall %}
 {% endblock %}

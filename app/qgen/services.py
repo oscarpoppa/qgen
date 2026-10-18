@@ -49,7 +49,7 @@ SUBJECT_NAME_MAX = 64
 
 def subject_kind(kind):
     if kind not in SUBJECT_KINDS:
-        raise ServiceError('Unknown kind of folder "{}".'.format(kind))
+        raise ServiceError('Unknown kind of folder “{}”.'.format(kind))
     return SUBJECT_KINDS[kind]
 
 
@@ -67,7 +67,7 @@ def _subject_name(kind, name, subject=None):
         raise ServiceError('Folder names can be at most {} characters.'.format(SUBJECT_NAME_MAX))
     for other in subjects(kind):
         if other is not subject and (other.title or '').lower() == name.lower():
-            raise ServiceError('There\'s already a folder called "{}".'.format(other.title))
+            raise ServiceError('There\'s already a folder called “{}”.'.format(other.title))
     return name
 
 
@@ -327,6 +327,25 @@ def file_items(kind, item_ids, subject, add=True):
     return changed
 
 
+def move_items(kind, item_ids, subject):
+    """Move several problems (or quizzes) into one folder: they leave every folder they're in
+    now (the Put in folder dialog without "copy", the owner 2026-10-16). Returns how many
+    changed."""
+    _group_cls, item_cls, rel, _back = subject_kind(kind)
+    ids = _ids(item_ids)
+    changed = 0
+    for item in item_cls.query.filter(item_cls.id.in_(ids)).all() if ids else []:
+        current = getattr(item, rel)
+        if list(current) != [subject]:
+            current[:] = [subject]
+            changed += 1
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+    return changed
+
+
 def subject_choices(kind):
     """The folder menu: [(value, label, count)] for All, each folder (indented under the one
     it's in; counted with the folders inside it), then Uncategorized."""
@@ -383,7 +402,7 @@ def save_problem(vp, qtype, title, question, answer, options, calculator_ok=Fals
         errors = ['Please give the problem a short title.'] + errors
     if vp.id is not None and vp.qtype and qtype != vp.qtype and vp.cproblems:
         #students' answers were given (and are shown and graded) as the old type
-        errors = ['Students have already been given this problem as "{}", so its question type can\'t change. '
+        errors = ['Students have already been given this problem as “{}”, so its question type can\'t change. '
                   'Make a new problem instead (the old one keeps their answers).'.format(get_qtype(vp.qtype).label)] + errors
     if errors:
         return errors
@@ -403,11 +422,11 @@ def save_problem(vp, qtype, title, question, answer, options, calculator_ok=Fals
 def problem_delete_blocker(vp):
     """Why a problem can't be deleted, or None if it can."""
     if vp.vquizzes:
-        return 'Problem "{}" is used by these quizzes: {}.'.format(
-            vp.title, ', '.join('"{}"'.format(q.title) for q in vp.vquizzes))
+        return 'Problem “{}” is used by these quizzes: {}.'.format(
+            vp.title, ', '.join('“{}”'.format(q.title) for q in vp.vquizzes))
     if vp.cproblems:
         #students' answers to it are part of their records
-        return ('Problem "{}" has {} student answer{} on record. You can take it out of quizzes instead; '
+        return ('Problem “{}” has {} student answer{} on record. You can take it out of quizzes instead; '
                 'it just won\'t be used again.'.format(vp.title, len(vp.cproblems), '' if len(vp.cproblems) == 1 else 's'))
     return None
 
@@ -483,7 +502,7 @@ def instantiate_problem(vprob, rng=random):
             return qt.instantiate(vprob.raw_prob, vprob.raw_ansr, vprob.options, rng)
         except FriendlyError:
             if attempt == 49:
-                raise ServiceError('Problem "{}" couldn\'t be set up; please open it and check it.'.format(vprob.title))
+                raise ServiceError('Problem “{}” couldn\'t be set up; please open it and check it.'.format(vprob.title))
 
 
 def preview_problem(qtype, question, answer, options, count=3):
@@ -524,7 +543,7 @@ def save_vquiz(vq, title, problems, author_id=None, **settings):
     if not (title or '').strip():
         errors = ['Please give the quiz a title.'] + errors
     if settings.get('retake_rule') and settings['retake_rule'] not in RETAKE_RULES:
-        errors.append('Unknown retake rule "{}".'.format(settings['retake_rule']))
+        errors.append('Unknown retake rule “{}”.'.format(settings['retake_rule']))
     if errors:
         return errors
     new = vq.id is None
@@ -565,6 +584,60 @@ def vquiz_delete_blocker(vq):
     return None
 
 
+def copy_item(kind, item, title, author):
+    """A copy of a problem or quiz (a row's Copy icon and its dialog, the owner 2026-10-16):
+    everything the same but its title, in the same folders; a quiz has the same problems and
+    settings. Nobody has it yet: no attempts, answers or history come along. Returns the copy."""
+    from sqlalchemy import inspect as sa_inspect
+    cls = type(item)
+    new = cls()
+    for prop in sa_inspect(cls).column_attrs:
+        if prop.key in ('id', 'removed_at', 'create_date', 'author_id'):
+            continue
+        setattr(new, prop.key, getattr(item, prop.key))
+    new.title = (title or '').strip()[:64] or item.title
+    new.author_id = author.id if author is not None else None
+    if kind == 'problems':
+        new.vpgroups = list(item.vpgroups)
+    else:
+        new.vqgroups = list(item.vqgroups)
+        new.vproblems = list(item.vproblems)
+    db.session.add(new)
+    db.session.commit()
+    return new
+
+
+def archive_problem(vp):
+    """The trash can's Move to Archive (the owner, 2026-10-16): off the Problems page and the quiz
+    builder's list, into the Archive's Problems, where it can be restored. Quizzes that use it keep
+    it; it stays in its folders, for when it comes back."""
+    vp.removed_at = datetime.now()
+    db.session.commit()
+
+
+def restore_problem(vp):
+    """An archived problem back on the Problems page, in Uncategorized (out of the folders it
+    was in: the owner, 2026-10-16)."""
+    vp.removed_at = None
+    vp.vpgroups = []
+    db.session.commit()
+
+
+def removed_problems():
+    return VProblem.query.filter(VProblem.removed_at.isnot(None)).order_by(VProblem.removed_at.desc()).all()
+
+
+def archive_vquiz(vq):
+    """The trash can's Move to Archive: off the Quizzes page and Assign, into the Archive's
+    Quizzes (what used to be Removed quizzes), taken or not. Students keep their copies and
+    scores. Refused while someone is taking it."""
+    blocker = vquiz_delete_blocker(vq)
+    if blocker:
+        raise ServiceError(blocker)
+    vq.removed_at = datetime.now()
+    db.session.commit()
+
+
 def delete_vquiz(vq):
     """A quiz's Delete for good. Never taken: deleted. Once students have it, it can't go: it's
     taken off the Quizzes page into Removed quizzes (students keep their copies and scores, the
@@ -601,8 +674,9 @@ def delete_removed_vquiz(vq, by=None):
 
 
 def bring_back_vquiz(vq):
-    """A removed quiz back on the Quizzes page and Assign."""
+    """A removed quiz back on the Quizzes page and Assign, in Uncategorized (the owner, 2026-10-16)."""
     vq.removed_at = None
+    vq.vqgroups = []
     db.session.commit()
 
 
@@ -679,7 +753,7 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         raise
     except Exception as exc:
         db.session.rollback()
-        raise ServiceError('Couldn\'t create "{}" for {}: {}'.format(vquiz.title, assignee.username, exc))
+        raise ServiceError('Couldn\'t create “{}” for {}: {}'.format(vquiz.title, assignee.username, exc))
 
 
 def time_limit_error(opens_at, closes_at, time_limit, now=None):
@@ -721,7 +795,7 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
             failed.append((student, str(exc)))
             continue
         when = ' It opens {}.'.format(_when(cq.opens_at)) if cq.opens_at else ''
-        notify(student.id, 'New quiz: "{}".{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
+        notify(student.id, 'New quiz: “{}”.{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
         created.append(cq)
     if created:
         _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit)
@@ -741,7 +815,7 @@ def _notice_assigned(vquiz, created, by, opens_at, closes_at, time_limit):
         details.append('Due {}.'.format(_when(closes_at)))
     if time_limit:
         details.append('{} minute time limit.'.format(time_limit))
-    body = '{} assigned "{}" to {} student{}: {}.{}'.format(
+    body = '{} assigned “{}” to {} student{}: {}.{}'.format(
         by.username if by else 'A teacher', vquiz.title, len(names), '' if len(names) == 1 else 's', shown,
         (' ' + ' '.join(details)) if details else '')
     #a notice belongs to one person's record, whose picture the panel shows: the student's when
@@ -762,15 +836,15 @@ def retake(cq, by=None):
     """A fresh copy, with new values, of a quiz the student has taken. `by` is the
     teacher giving it: the student and the teachers each get a notice."""
     if not (cq.completed or cq.needs_review):
-        raise ServiceError('{} hasn\'t finished "{}" yet.'.format(cq.taker.shown_name, cq.vquiz.title))
+        raise ServiceError('{} hasn\'t finished “{}” yet.'.format(cq.taker.shown_name, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
     #a quiz to take again comes out of the student's folders, back where they'll see it
     from .models import QuizPlacement
     QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)
-    notify(cq.assignee, 'You can try "{}" again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
+    notify(cq.assignee, 'You can try “{}” again.'.format(cq.vquiz.title), url_for('qgen.qtake', cidx=new.id))
     #for the teachers; "Open" goes to that student's results
-    notify_teachers(cq.assignee, '{} gave {} a retake of "{}".'.format(by.shown_name if by else 'A teacher', cq.taker.shown_name, cq.vquiz.title),
+    notify_teachers(cq.assignee, '{} gave {} a retake of “{}”.'.format(by.shown_name if by else 'A teacher', cq.taker.shown_name, cq.vquiz.title),
                     _link('qgen.list_user', uid=cq.assignee))
     db.session.commit()
     return new
@@ -976,10 +1050,10 @@ def _folder_name(name, folder=None):
     except folder_tree.FolderError as exc:
         raise ServiceError(str(exc))
     if name.lower() == UNSORTED.lower():
-        raise ServiceError('"{}" is kept for attempts that aren\'t in a folder.'.format(UNSORTED))
+        raise ServiceError('“{}” is kept for attempts that aren\'t in a folder.'.format(UNSORTED))
     for other in ArchiveFolder.query.filter_by(removed=False):
         if other is not folder and other.name.lower() == name.lower():
-            raise ServiceError('There\'s already a folder called "{}".'.format(other.name))
+            raise ServiceError('There\'s already a folder called “{}”.'.format(other.name))
     return name
 
 
@@ -1098,7 +1172,7 @@ def restore_blocker(a):
         return 'Restore isn\'t possible: {}\'s account was deleted. You can still view it.'.format(a.student_name)
     vq = db.session.get(VQuiz, a.vquiz_id) if a.vquiz_id else None
     if vq is None:
-        return 'Restore isn\'t possible: the quiz "{}" was deleted. You can still view it.'.format(a.quiz_title)
+        return 'Restore isn\'t possible: the quiz “{}” was deleted. You can still view it.'.format(a.quiz_title)
     data = json.loads(a.data)
     missing = [p['vproblem_id'] for p in data['problems'] if db.session.get(VProblem, p['vproblem_id']) is None]
     if missing:
@@ -1184,7 +1258,7 @@ def retake_overrides(vq):
 def set_retake_rule(cq, rule):
     """How this student's attempts at this quiz combine; None = the quiz's own rule."""
     if rule and rule not in RETAKE_RULES:
-        raise ServiceError('Unknown retake rule "{}".'.format(rule))
+        raise ServiceError('Unknown retake rule “{}”.'.format(rule))
     #the same as the quiz's is no rule of their own: they follow the quiz's
     if rule == cq.vquiz.retake_rule:
         rule = None
@@ -1229,10 +1303,10 @@ def close_expired(now=None):
             result = 'Your teacher will grade the written answers.' if outcome == 'review' \
                 else 'Your score: {:.0f}%.'.format(cq.score or 0)
             if started:
-                text = '"{}" was handed in automatically because {}, with the answers you had saved. {}'.format(
+                text = '“{}” was handed in automatically because {}, with the answers you had saved. {}'.format(
                     cq.vquiz.title, why, result)
             else:
-                text = '"{}" closed before you started it, so it was handed in with no answers. {}'.format(cq.vquiz.title, result)
+                text = '“{}” closed before you started it, so it was handed in with no answers. {}'.format(cq.vquiz.title, result)
             notify(cq.assignee, text, _link('qgen.qtake', cidx=cq.id))
             closed += 1
     db.session.commit()
@@ -1259,7 +1333,7 @@ def announce_opened(now=None, student_id=None):
         if claimed != 1 or attempt_state(cq, now) != 'open' or cq.startdate:
             continue
         closes = ' It closes {}.'.format(_when(cq.closes_at)) if cq.closes_at else ''
-        notify(cq.assignee, '"{}" is open now. You can start it.{}'.format(cq.vquiz.title, closes),
+        notify(cq.assignee, '“{}” is open now. You can start it.{}'.format(cq.vquiz.title, closes),
                _link('qgen.qtake', cidx=cq.id))
         told += 1
     db.session.commit()
@@ -1281,7 +1355,7 @@ def _answers_by_ordinal(cq, answers):
         try:
             ordinal = int(key)
         except (TypeError, ValueError):
-            raise ServiceError('"{}" isn\'t a question number.'.format(key))
+            raise ServiceError('“{}” isn\'t a question number.'.format(key))
         if ordinal not in by_ordinal:
             raise ServiceError('This quiz has no question {}.'.format(ordinal))
         out[ordinal] = value
@@ -1316,11 +1390,11 @@ def submit(cq, answers=None, timed_out=False):
         answers = _answers_by_ordinal(cq, answers)
     who = cq.taker.shown_name if cq.taker else 'A student'
     #what the teachers' notice says happened
-    said = '{} handed in "{}"'.format(who, cq.vquiz.title)
+    said = '{} handed in “{}”'.format(who, cq.vquiz.title)
     if timed_out:
         reason = 'it closed' if cq.closes_at and datetime.now() >= cq.closes_at else 'time ran out'
-        said = ('{}\'s "{}" was handed in automatically ({})' if cq.startdate else
-                '{} never started "{}"; it was handed in automatically ({})').format(who, cq.vquiz.title, reason)
+        said = ('{}\'s “{}” was handed in automatically ({})' if cq.startdate else
+                '{} never started “{}”; it was handed in automatically ({})').format(who, cq.vquiz.title, reason)
     if record_answers(cq, answers):
         cq.needs_review = True
         notify_teachers(cq.assignee, '{}: written answers are waiting for grading.'.format(said),
@@ -1390,7 +1464,7 @@ def grade_essays(cq, grades, finish=False, grader_id=None):
     cq.graded_by = grader_id
     cq.graded_date = datetime.now()
     finalize(cq)
-    notify(cq.assignee, 'Your written answers in "{}" have been graded: {:.0f}%.'.format(cq.vquiz.title, cq.score),
+    notify(cq.assignee, 'Your written answers in “{}” have been graded: {:.0f}%.'.format(cq.vquiz.title, cq.score),
            url_for('qgen.qtake', cidx=cq.id))
     cq.save()
     return []

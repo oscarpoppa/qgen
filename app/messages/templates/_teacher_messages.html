@@ -57,7 +57,7 @@
         <label class="check small"><input type="checkbox" name="pin" value="1"> Pin it to the top of their messages</label>
         <button class="btn" title="Send this to every student as an announcement (asks first)">Send to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}</button>
       </form>
-      <p class="muted small" style="margin:6px 0 0">To answer one student, press <strong>Reply</strong> on a message or pick them above.</p>
+      <p class="muted small" style="margin:6px 0 0">To answer one student, press <strong>Reply</strong> on a message or pick him/her above.</p>
     {% else %}
       <div class="btn-row convo-bar">
         <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student's messages together">← All messages</button>
@@ -84,6 +84,6 @@
     {% endif %}
     <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}" title="Open the full Messages page">Messages page: write to chosen students, see pinned messages</a></p>
   {% else %}
-    <p class="muted small">No students yet. Once students sign up, you can talk with them here.{% if staff.teachers %} To write to another teacher, pick them above.{% endif %}</p>
+    <p class="muted small">No students yet. Once students sign up, you can talk with them here.{% if staff.teachers %} To write to another teacher, pick him/her above.{% endif %}</p>
   {% endif %}
 </section>

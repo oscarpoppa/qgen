@@ -1,0 +1,12 @@
+{# The Archive's sections (the owner, 2026-10-16): Attempts (archived quiz attempts, in folders),
+   and the quizzes, problems and people moved to the Archive by their trash cans, each restorable. #}
+{% macro archive_switch(section, counts) %}
+  <nav class="seg-switch" aria-label="What's in the Archive">
+    {% for key, label, tip in (('attempts', 'Attempts', 'Quiz attempts you archived, and those of deleted accounts'),
+                               ('quizzes', 'Quizzes', 'Quizzes moved to the Archive; restore them to use them again'),
+                               ('problems', 'Problems', 'Problems moved to the Archive; restore them to use them again'),
+                               ('people', 'People', 'People moved to the Archive; they can’t log in until restored')) %}
+      <a href="{{ url_for('qgen.archive', section=key) if key != 'attempts' else url_for('qgen.archive') }}" title="{{ tip }}"{% if section == key %} aria-current="page"{% endif %}>{{ label }} ({{ counts[key] }})</a>
+    {% endfor %}
+  </nav>
+{% endmacro %}

@@ -103,7 +103,7 @@ def parse_expr(expr):
     try:
         tree = ast.parse(normalize_expr(expr), mode='eval')
     except SyntaxError:
-        raise FriendlyError('"{}" isn\'t a formula I can read.'.format(expr))
+        raise FriendlyError('“{}” isn\'t a formula I can read.'.format(expr))
     for node in ast.walk(tree):
         if isinstance(node, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Name, ast.Load)
                       + tuple(_BINOPS) + tuple(_UNARY)):
@@ -114,7 +114,7 @@ def parse_expr(expr):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
                 and node.func.id in FUNCS and not node.keywords:
             continue
-        raise FriendlyError('"{}" can only use numbers, value names, + - * / ^ and '
+        raise FriendlyError('“{}” can only use numbers, value names, + - * / ^ and '
                             'sqrt, abs, round, min, max, pi (and re, im, conj for complex numbers).'.format(expr))
     return tree
 
@@ -160,26 +160,26 @@ def evaluate(expr, env):
         return env[tree.body.id]
     for name in names_in(tree):
         if isinstance(env[name], bool) or not isinstance(env[name], (int, float, complex)):
-            raise FriendlyError('"{}" is a word, so it can\'t be used in math.'.format(name))
+            raise FriendlyError('“{}” is a word, so it can\'t be used in math.'.format(name))
     try:
         result = _eval(tree, env)
     except FriendlyError:
         raise
     except ZeroDivisionError:
-        raise FriendlyError('"{}" divides by zero for some values.'.format(_show(expr)))
+        raise FriendlyError('“{}” divides by zero for some values.'.format(_show(expr)))
     except (ValueError, OverflowError, TypeError):
-        raise FriendlyError('"{}" can\'t be worked out for some values (for example, the square root of a negative number).'.format(_show(expr)))
+        raise FriendlyError('“{}” can\'t be worked out for some values (for example, the square root of a negative number).'.format(_show(expr)))
     if isinstance(result, complex):
         if abs(result.imag) < 1e-12:
             result = result.real
         elif not env.get(COMPLEX):
             #never let an imaginary number into an ordinary problem
-            raise FriendlyError('"{}" gives an imaginary number for some values. If that\'s intended, '
-                                'check "Use complex numbers"; otherwise change the formula or ranges.'.format(_show(expr)))
+            raise FriendlyError('“{}” gives an imaginary number for some values. If that\'s intended, '
+                                'check “Use complex numbers”; otherwise change the formula or ranges.'.format(_show(expr)))
         elif not (math.isfinite(result.real) and math.isfinite(result.imag)):
-            raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
+            raise FriendlyError('“{}” doesn\'t give an ordinary number for some values.'.format(_show(expr)))
     if isinstance(result, float) and not math.isfinite(result):
-        raise FriendlyError('"{}" doesn\'t give an ordinary number for some values.'.format(_show(expr)))
+        raise FriendlyError('“{}” doesn\'t give an ordinary number for some values.'.format(_show(expr)))
     return result
 
 
@@ -220,7 +220,7 @@ def parse_condition(expr):
             raise FriendlyError('The answer should be True, False, or a comparison like "a > b".')
     split(tree.body)
     if isinstance(tree.body, ast.BoolOp) and not isinstance(tree.body.op, ast.And):
-        raise FriendlyError('Only "and" can join comparisons in a true/false answer.')
+        raise FriendlyError('Only “and” can join comparisons in a true/false answer.')
     #each side must itself be plain math
     for left, _, right in parts:
         parse_expr(ast.unparse(left.body))
@@ -279,14 +279,14 @@ def format_num(val):
 def _num(row, key, label, integer=False):
     raw = row.get(key)
     if raw is None or str(raw).strip() == '':
-        raise FriendlyError('Please fill in "{}" for {}.'.format(label, row.get('name') or 'this value'))
+        raise FriendlyError('Please fill in “{}” for {}.'.format(label, row.get('name') or 'this value'))
     try:
         val = float(raw)
     except (TypeError, ValueError):
-        raise FriendlyError('"{}" for {} must be a number.'.format(label, row.get('name')))
+        raise FriendlyError('“{}” for {} must be a number.'.format(label, row.get('name')))
     if integer:
         if val != int(val):
-            raise FriendlyError('"{}" for {} must be a whole number.'.format(label, row.get('name')))
+            raise FriendlyError('“{}” for {} must be a whole number.'.format(label, row.get('name')))
         return int(val)
     return val
 
@@ -322,7 +322,7 @@ def _items(row):
             continue
         parts = [p.strip() for p in item.split('=')] if width > 1 else [item]
         if len(parts) != width:
-            raise FriendlyError('In the list for {}, "{}" should have {} parts separated by "=" (like "France = Paris").'
+            raise FriendlyError('In the list for {}, “{}” should have {} parts separated by “=” (like “France = Paris”).'
                                 .format(row.get('name'), item, width))
         out.append(tuple(_value(p) for p in parts))
     return out
@@ -333,9 +333,9 @@ def _whole_range(row):
     lo, hi = _num(row, 'min', 'from', True), _num(row, 'max', 'to', True)
     step = _num(row, 'step', 'in steps of', True) if str(row.get('step') or '').strip() else 1
     if lo > hi:
-        raise FriendlyError('For {}, "from" ({}) must not be bigger than "to" ({}).'.format(row['name'], lo, hi))
+        raise FriendlyError('For {}, “from” ({}) must not be bigger than “to” ({}).'.format(row['name'], lo, hi))
     if step < 1:
-        raise FriendlyError('For {}, "in steps of" must be 1 or more.'.format(row['name']))
+        raise FriendlyError('For {}, “in steps of” must be 1 or more.'.format(row['name']))
     rng = range(lo, hi + 1, step)
     if row.get('nonzero') and list(rng[:2]) == [0] and len(rng) == 1:
         raise FriendlyError('For {}, there are no numbers to choose from.'.format(row['name']))
@@ -451,7 +451,7 @@ def draw_values(values, rng=None, complex_ok=False):
                for other in (row.get('different_from') or []) if other in env):
             return env
     raise FriendlyError('I couldn\'t find values that are all different after {} attempts. '
-                        'Try wider ranges or fewer "different from" rules.'.format(MAX_TRIES))
+                        'Try wider ranges or fewer “different from” rules.'.format(MAX_TRIES))
 
 
 # ---------------------------------------------------------------- text
@@ -571,10 +571,10 @@ def numbered_pick(name, known):
 def _suggest(name, known):
     picked = numbered_pick(name, known)
     if picked:
-        return (' To use [{0}{1}], put {1} or more in "how many" for {0} (Pick from list): '
+        return (' To use [{0}{1}], put {1} or more in “how many” for {0} (Pick from list): '
                 'then {0}1, {0}2… are different items from its list.'.format(*picked))
     close = get_close_matches(name, known, n=1)
-    return ' Did you mean "{}"?'.format(close[0]) if close else ''
+    return ' Did you mean “{}”?'.format(close[0]) if close else ''
 
 
 def check_text(label, text, known):
@@ -590,7 +590,7 @@ def check_text(label, text, known):
         single = isinstance(tree.body, ast.Name)
         if missing and (single or used & set(known)):
             for name in missing:
-                msg = ('The {} uses "{}", which isn\'t in your values table.{}'
+                msg = ('The {} uses “{}”, which isn\'t in your values table.{}'
                        .format(label, name, _suggest(name, known)))
                 if msg not in errors:
                     errors.append(msg)
@@ -607,14 +607,14 @@ def validate_values(values):
             continue
         bad = [n for n in row_names(row) if not NAME_PATT.match(n)]
         if bad:
-            errors.append('"{}" can\'t be a name: use letters and numbers only, starting with a letter.'
+            errors.append('“{}” can\'t be a name: use letters and numbers only, starting with a letter.'
                           .format(bad[0] or name))
             continue
         for part in row_names(row):
             if part in FUNCS:
-                errors.append('"{}" is already used for math; please pick another name.'.format(part))
+                errors.append('“{}” is already used for math; please pick another name.'.format(part))
             if part in seen:
-                errors.append('The name "{}" is used twice.'.format(part))
+                errors.append('The name “{}” is used twice.'.format(part))
         try:
             seen.extend(pick_names(row))
         except FriendlyError:
@@ -626,7 +626,7 @@ def validate_values(values):
             elif kind == 'decimal':
                 lo, hi = _num(row, 'min', 'from'), _num(row, 'max', 'to')
                 if lo > hi:
-                    raise FriendlyError('For {}, "from" ({}) must not be bigger than "to" ({}).'
+                    raise FriendlyError('For {}, “from” ({}) must not be bigger than “to” ({}).'
                                         .format(name, format_num(lo), format_num(hi)))
                 if not 0 <= _places(row) <= 6:
                     raise FriendlyError('For {}, decimal places must be between 0 and 6.'.format(name))
@@ -655,15 +655,15 @@ def validate_values(values):
         if row.get('kind') == 'calc' and (row.get('formula') or '').strip():
             try:
                 for used in sorted(names_in(parse_expr(row['formula'])) - set(seen)):
-                    errors.append('{} uses "{}", which isn\'t defined.{}'
+                    errors.append('{} uses “{}”, which isn\'t defined.{}'
                                   .format(row.get('name'), used, _suggest(used, seen)))
             except FriendlyError:
                 pass
         for other in row.get('different_from') or []:
             if other not in seen:
-                hint = _suggest(other, seen) or (' "Never the same as" takes the names of other values, like a, b'
+                hint = _suggest(other, seen) or (' “Never the same as” takes the names of other values, like a, b'
                                                  ' (to describe a list for the helper, use the box under the list).' if ' ' in other else '')
-                errors.append('{}: "Never the same as" says "{}", but there\'s no value with that name.{}'
+                errors.append('{}: “Never the same as” says “{}”, but there\'s no value with that name.{}'
                               .format(row.get('name'), other, hint))
     if not errors:
         try:
@@ -741,7 +741,7 @@ def try_draws(values, render, times=300, complex_ok=False):
     envs = every_env(values, complex_ok=complex_ok)
     if envs is not None:
         if not envs and values:
-            raise FriendlyError('No set of values satisfies all the "different from" rules.')
+            raise FriendlyError('No set of values satisfies all the “different from” rules.')
         for env in envs or [start_env(complex_ok)]:
             render(env)
         return

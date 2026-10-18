@@ -72,7 +72,8 @@ def upload():
 @pw_check
 @admin_only
 def images():
-    imgs = [(f,f[2:]) for f in static_files() if f.startswith('T_')]
+    #A to Z by name, whatever case (the owner, 2026-10-17)
+    imgs = sorted(((f, f[2:]) for f in static_files() if f.startswith('T_')), key=lambda pair: pair[1].lower())
     return render_template('images.html', imgs=imgs, title='Pictures')
 
 #admin-only list non-image files on server
@@ -85,7 +86,8 @@ def nonimages():
     timgs = [f for f in allf if f.startswith('T_')]
     imgs = [f[2:] for f in timgs]
     imgs += timgs
-    nonims = [f for f in allf if f not in imgs]
+    #A to Z by name, whatever case, like Pictures (the owner, 2026-10-17)
+    nonims = sorted((f for f in allf if f not in imgs), key=str.lower)
     return render_template('nonimages.html', files=nonims, title='Other files')
 
 #admin-only delete an image from server

@@ -32,7 +32,8 @@ def get(folder_id):
 
 def _person(user_id):
     try:
-        u = db.session.get(User, int(user_id))
+        #(archived people too: the Archive's People has the same folder actions)
+        u = db.session.get(User, int(user_id), execution_options={'include_archived': True})
     except (TypeError, ValueError):
         u = None
     if u is None:
@@ -136,7 +137,28 @@ def add(user_id, folder_id, moving_from=None):
     return u, f
 
 
-def tree(people):
+def move_to(user_id, folder_id):
+    """Move someone into one folder: they leave every other folder they're in (the Put in
+    folder dialog without "copy", the owner 2026-10-16). Returns (person, folder)."""
+    u, f = _person(user_id), get(folder_id)
+    if f is None:
+        raise GroupError('Pick a folder to put them in.')
+    UserFolderMember.query.filter(UserFolderMember.user_id == u.id,
+                                  UserFolderMember.folder_id != f.id).delete(synchronize_session=False)
+    if db.session.get(UserFolderMember, (f.id, u.id)) is None:
+        db.session.add(UserFolderMember(folder_id=f.id, user_id=u.id))
+    db.session.commit()
+    return u, f
+
+
+def _archived_ids():
+    """Everyone moved to the Archive (they stay in their folders, but are left out of them on
+    People, Assign and Messages)."""
+    from .models import User
+    return {u.id for u in User.query.filter(User.archived_at.isnot(None)).execution_options(include_archived=True)}
+
+
+def tree(people, only=None):
     """The folders as a tree for the Users page: the main list as {'folder': None, 'folders',
     'people' (in no folder), 'count'}; each folder the same, with its own members in 'people'
     and 'count' = everyone in it or in folders inside it. Also every folder as (folder, depth)
@@ -144,7 +166,11 @@ def tree(people):
     folders = all_folders()
     by_user = {}
     members = {}
+    #(only: just these people, the Archive's People; else everyone but the archived)
+    away = set() if only is not None else _archived_ids()
     for m in UserFolderMember.query.all():
+        if (only is not None and m.user_id not in only) or m.user_id in away:
+            continue
         members.setdefault(m.folder_id, set()).add(m.user_id)
         by_user.setdefault(m.user_id, []).append(m.folder_id)
     nodes = {f.id: {'folder': f, 'folders': [], 'people': [], 'ids': members.get(f.id, set())} for f in folders}
@@ -194,6 +220,7 @@ def everyone_in(folder_id):
     while todo:
         fid = todo.pop()
         ids |= {m.user_id for m in UserFolderMember.query.filter_by(folder_id=fid)}
+        ids -= _archived_ids()
         todo += [c.id for c in UserFolder.query.filter_by(parent_id=fid)]
     return ids
 

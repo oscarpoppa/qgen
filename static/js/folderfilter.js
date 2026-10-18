@@ -59,6 +59,8 @@
       b.appendChild(name);
       b.appendChild(c);
       b.title = 'Show ' + (id === 'all' ? 'everything' : 'what’s in “' + label + '”');
+      //(a real folder opens its own page on a double-click: said here, the owner 2026-10-16)
+      if (/^\d+$/.test(id) || (byId[id] && byId[id].url)) b.title += ' (double-click: open this folder)';
       //(nothing in it: grayed; and with no folders inside either, it doesn't open (the folder list
       //still opens it, for its Folder options); one holding only empty folders opens, to show
       //them: the owner, 2026-10-14)
@@ -268,12 +270,18 @@
         label.className = 'folder-tabs-label';
         label.textContent = 'Folders';
         row.appendChild(label);
-        var allTab = button('all', box.dataset.allLabel || 'All', items().length, 'folders');
-        allTab.classList.add('folder-tab-all');
-        row.appendChild(allTab);
-        tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
         //(no folders at all, only New / In progress: nothing to sort yet, so it counts 0)
         var noFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
+        //(a folder's own page with no folders inside: its one tab, open, says the folder's name,
+        //just for looks: the list sits under a tab like every other (the owner, 2026-10-15))
+        //(My quizzes gives the name as data-tab-name: its empty folder has its own note)
+        var plain = box.dataset.allUrl === '' && noFolders && (box.dataset.tabName || box.dataset.name);
+        //(data-tab-icon: Uncategorized's tray, New's sparkle...: every open folder has its tab, the owner 2026-10-16)
+        var allTab = button('all', plain || (box.dataset.allLabel || 'All'), items().length, plain ? (box.dataset.tabIcon || 'folder') : 'folders');
+        allTab.classList.add('folder-tab-all');
+        if (plain) { allTab.classList.add('folder-tab-name'); allTab.title = 'Everything in “' + plain + '”'; }
+        row.appendChild(allTab);
+        tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
         var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset || noFolders ? 0 : loose, 'tray');
         if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
         else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
@@ -371,10 +379,57 @@
     //once the page is laid out, and again when it changes size) has them on a line of their own
     //under it, so they're never scrolled out of sight
     var toolsAt = null;
+
+    //tabs wrapped on to several lines: a line under each line of tabs but the last (it has the
+    //open folder's top edge), so no line of tabs floats (the owner, 2026-10-15)
+    function lineRules(row) {
+      row.querySelectorAll(':scope > .tab-line-rule').forEach(function (r) { r.remove(); });
+      if (!row.offsetParent) return;
+      var tabs = Array.prototype.filter.call(row.children, function (c) { return c.classList.contains('folder-tab') && c.offsetParent; });
+      var bottoms = {};
+      tabs.forEach(function (t) { var top = t.offsetTop; bottoms[top] = Math.max(bottoms[top] || 0, top + t.offsetHeight); });
+      var tops = Object.keys(bottoms).map(Number).sort(function (a, b) { return a - b; });
+      tops.slice(0, -1).forEach(function (top) {
+        var r = document.createElement('div');
+        r.className = 'tab-line-rule';
+        r.setAttribute('aria-hidden', 'true');
+        r.style.top = (bottoms[top] - 1) + 'px';
+        row.appendChild(r);
+      });
+    }
+    //tabs wrapped on to several lines: the open tab goes to the bottom line, at its left, right
+    //over its folder (the owner, 2026-10-15); a row that fits keeps its order
+    function pickedLineLast(row) {
+      if (!row) return;
+      row.querySelectorAll(':scope > .tab-break').forEach(function (b) { b.remove(); });
+      var tabs = Array.prototype.filter.call(row.children, function (c) { return c.classList.contains('folder-tab') && c.offsetParent; });
+      var picked = tabs.filter(function (t) { return t.getAttribute('aria-pressed') === 'true'; })[0];
+      if (!picked) return;
+      var tops = tabs.map(function (t) { return t.offsetTop; });
+      var lastTop = Math.max.apply(null, tops), firstTop = Math.min.apply(null, tops);
+      if (lastTop - firstTop < 3) return;  // (one line: as it is)
+      //the bottom line's tabs (without the open one), in order: a break, then the open tab, then them
+      var bottom = tabs.filter(function (t) { return t !== picked && Math.abs(t.offsetTop - lastTop) < 3; });
+      var brk = document.createElement('span');
+      brk.className = 'tab-break';
+      brk.setAttribute('aria-hidden', 'true');
+      if (bottom.length) {
+        row.insertBefore(brk, bottom[0]);
+        row.insertBefore(picked, bottom[0]);
+      } else {
+        var after = tabs[tabs.length - 1].nextSibling;
+        row.insertBefore(brk, after);
+        row.insertBefore(picked, after);
+      }
+      //(the open tab taken from an upper line can let the bottom line's first tab move up: then it
+      //starts the bottom line on its own, which is fine)
+    }
     function fitTools() {
       if (!toolsAt || (narrow && narrow.matches) || !toolsAt.t.isConnected) return;
       var t = toolsAt.t, row = toolsAt.row, line = t.parentElement.classList.contains('folder-tools-line') ? t.parentElement : null;
       if (line) { row.appendChild(t); line.remove(); }
+      box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(pickedLineLast);
+      box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(lineRules);
       if (row.scrollWidth > row.clientWidth + 1) {
         line = document.createElement('div');
         line.className = 'folder-tools-line';
@@ -383,6 +438,28 @@
       }
     }
     window.addEventListener('load', function () { fitTools(); });
+    //the open folder on a list page: as tall as the window has room for, scrolling inside, so
+    //the page itself stays put (the owner, 2026-10-17; not on phones, nor in a picker card or
+    //dialog, nor a folder list inside another's)
+    var scrolls = !box.dataset.toolsHome && (box.dataset.style !== 'list' || 'tabs' in box.dataset) && !box.closest('dialog') &&
+      !(box.parentElement && box.parentElement.closest('.folder-filter-list'));
+    function fitHeight() {
+      if (!scrolls) return;
+      list.classList.remove('folder-scroll');
+      list.style.maxHeight = '';
+      if ((narrow && narrow.matches) || list.hidden) return;
+      var top = list.getBoundingClientRect().top + window.scrollY;
+      //(down to the page's own bottom margin, so the page itself doesn't scroll)
+      var main = box.closest('main'), gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 16 : 16;
+      list.style.maxHeight = Math.max(240, window.innerHeight - top - gap - 1) + 'px';
+      list.classList.add('folder-scroll');
+      //(room for what comes under it on the page, Grading's oldest waiting: the page itself
+      //still doesn't scroll)
+      var over = document.documentElement.scrollHeight - window.innerHeight;
+      if (over > 0) list.style.maxHeight = Math.max(240, parseFloat(list.style.maxHeight) - over) + 'px';
+    }
+    window.addEventListener('load', fitHeight);
+    window.addEventListener('resize', fitHeight);
     //(the box's width changing without the window's: a side panel opening, the page laying out)
     if (window.ResizeObserver) {
       var lastW = 0;
@@ -428,7 +505,10 @@
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)
       note.textContent = bare ? 'Nothing in \u201c' + box.dataset.name + '\u201d yet.' : byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
+      //(how to fill an empty folder, where the page says (My quizzes): the owner, 2026-10-16)
+      if (box.dataset.emptyHint && (bare || /^\d+$/.test(chosen)) && /yet\.$/.test(note.textContent)) note.textContent += ' ' + box.dataset.emptyHint;
       tidy();
+      setTimeout(fitHeight, 0);
       document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
       if (window.qgenBoxes && window.qgenBoxes.levels) window.qgenBoxes.levels();
     }
@@ -454,14 +534,66 @@
     });
 
     //(the folder list down the side, and the tabs over the list: data-tabs)
+    var lastClick = null;
+    //a double-click told by the two presses (the first click redraws the tabs, so the second
+    //click can be lost): the second press on the same spot within 600ms opens the tab pressed
+    //first (the owner, 2026-10-16: All too)
+    var lastDown = null, pendingPick = null, leaving = false;
+    //a tab picked by a click shows as picked at once, but the tabs are redrawn (the open one moved
+    //to the bottom line) only a moment later, after a double-click would have come: a double-click
+    //then opens the folder's own page without the tabs jumping first (the owner, 2026-10-16)
+    function pickSoon(id, tabEl) {
+      clearTimeout(pendingPick);
+      if (tabEl && tabEl.setAttribute) {
+        box.querySelectorAll('.folder-filter-rows .folder-tab[aria-pressed="true"]').forEach(function (o) { if (o.closest('.folder-tabs') === tabEl.closest('.folder-tabs')) o.setAttribute('aria-pressed', 'false'); });
+        tabEl.setAttribute('aria-pressed', 'true');
+      }
+      pendingPick = setTimeout(function () { pendingPick = null; if (!leaving) choose(id); }, 300);
+    }
+    box.addEventListener('pointerdown', function (e) {
+      var rowsHit = e.target.closest('.folder-filter-rows');
+      if (e.button || !rowsHit || rowsHit.parentElement !== box) { lastDown = null; return; }
+      var t = e.target.closest('.folder-tab'), now = Date.now();
+      if (lastDown && now - lastDown.t < 600 && Math.abs(e.clientX - lastDown.x) < 8 && Math.abs(e.clientY - lastDown.y) < 8) {
+        var id0 = lastDown.id;
+        lastDown = null;
+        var url0 = byId[id0] && byId[id0].url ? byId[id0].url : id0 === 'none' ? box.dataset.mainUrl : id0 === 'all' ? (box.dataset.allOwnUrl || box.dataset.allUrl) : '';
+        if (url0) { var to0 = new URL(url0, location.href); if (to0.pathname === location.pathname && to0.search === location.search) url0 = ''; }
+        if (url0) { e.preventDefault(); clearTimeout(pendingPick); leaving = true; rememberBack(url0, id0); location.href = url0; }
+        return;
+      }
+      lastDown = t && !t.disabled ? { id: t.dataset.folder, t: now, x: e.clientX, y: e.clientY } : null;
+    });
     box.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');
+      //(a double-click whose first click moved the tab away, to the bottom line: the second
+      //lands beside it, and still opens the tab first clicked)
+      var rowsHit = e.target.closest('.folder-filter-rows');
+      //(a second click on the same spot within 600ms is a double-click, even when the first one
+      //redrew the tabs and the browser started counting again)
+      var again = lastClick && Date.now() - lastClick.t < 600 && Math.abs(e.clientX - lastClick.x) < 8 && Math.abs(e.clientY - lastClick.y) < 8;
+      if (!b && rowsHit && rowsHit.parentElement === box && again) b = { dataset: { folder: lastClick.id }, classList: { contains: function () { return false; } }, closest: function () { return rowsHit; } };
+      if (leaving) return;
       if (!b || b.disabled || !b.closest('.folder-filter-rows') || b.closest('.folder-filter-rows').parentElement !== box) return;
       var id = b.dataset.folder;
-      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self') || b.closest('.folder-side-list')) { choose(id); return; }
-      //pressing the chosen folder again goes back up a level (or to All)
-      if (id === chosen) id = byId[id] && parentOf[id] ? parentOf[id] : 'all';
-      choose(id);
+      //double-click a folder's tab: go into that folder (its own page, like "Open this folder");
+      //Uncategorized's too (the owner, 2026-10-15). (Counted here, not by dblclick: the first
+      //click can move the tab, to the bottom line, so the second lands on another one.)
+      var now = Date.now(), first = again || (lastClick && e.detail >= 2 && now - lastClick.t < 600) ? lastClick.id : null;
+      lastClick = first ? null : { id: id, t: now, x: e.clientX, y: e.clientY };
+      if (first) {
+        //(the automatic ones too, New and In progress on My quizzes, and All: each opens its own
+        //page, the owner 2026-10-16; never the page that's open already)
+        var url = byId[first] && byId[first].url ? byId[first].url : first === 'none' ? box.dataset.mainUrl : first === 'all' ? (box.dataset.allOwnUrl || box.dataset.allUrl) : '';
+        if (url) { var to = new URL(url, location.href); if (to.pathname === location.pathname && to.search === location.search) url = ''; }
+        if (url) { clearTimeout(pendingPick); leaving = true; rememberBack(url, first); location.href = url; return; }
+      }
+      if (b.closest('.folder-side-list')) { choose(id); return; }
+      if (b.classList.contains('folder-tab-all') || b.classList.contains('folder-tab-self')) { pickSoon(id, b); return; }
+      //pressing the open folder's tab again keeps it open (the owner, 2026-10-15: no going back
+      //up a level by clicking it twice)
+      if (id === chosen) return;
+      pickSoon(id, b);
     });
     //the folder list down the side picks the same folders here, in place (no new page)
     function same(a, url) { if (!url) return false; var u = new URL(url, location.href); return a.pathname === u.pathname && a.search === u.search; }
@@ -480,6 +612,7 @@
         if (id === null) return;
         var on = id === base();
         a.closest('.side-row').classList.toggle('current', on);
+        if (on && window.qgenSideReveal) window.qgenSideReveal(id);
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
     }
@@ -504,38 +637,29 @@
     function retitle() {
       if (!heading) return;
       var inner = box.dataset.allUrl === '';  // (a folder's own page: its inner tabs)
-      if (chosen === 'all') {
-        if (inner) heading.innerHTML = headingOwn;
-        else if (heading.dataset.pageName) heading.textContent = heading.dataset.pageName;
+      //(the owner, 2026-10-15) the open folder's name with its path from the top: "Math › Fractions";
+      //a folder's own things: "Math › Unsorted"; Uncategorized as is; All: the page's name. On a
+      //folder's own page the path starts with that folder's own (the server's heading)
+      function pageName() {
+        if (heading.dataset.pageName) heading.textContent = heading.dataset.pageName;
         else if (headingWas) heading.innerHTML = headingWas;
         else heading.textContent = box.dataset.allLabel || 'All';
-        return;
       }
+      if (chosen === 'all') { if (inner) heading.innerHTML = headingOwn; else pageName(); return; }
       if (chosen === 'none' && !inner) { heading.textContent = box.dataset.mainLabel || 'Uncategorized'; return; }
       //(My quizzes' New and In progress aren't folders: opened on one, the server's heading says
       //what it shows, "New: quizzes you haven't started"; chosen afterward, the tab's name)
-      if (!inner && !isFolder(base())) {
+      if (chosen !== 'none' && !isFolder(base())) {
         if (chosen === box.dataset.start && headingOwn) heading.innerHTML = headingOwn;
         else heading.textContent = byId[chosen] ? byId[chosen].name : heading.textContent;
         return;
       }
-      //(built like a folder's own page's heading, _folders.html: the folders it's in as links up,
-      //then its icon and its name)
-      var steps = path().map(function (id) { return { name: byId[id].name, url: byId[id].url }; });
-      if (chosen.indexOf('self:') === 0 || chosen === 'none') steps.push({ name: inner ? (box.dataset.mainLabel || 'Unsorted') : 'Unsorted', tray: true });
-      heading.innerHTML = inner ? headingOwn : '';
-      steps.forEach(function (st, i) {
-        var last = i === steps.length - 1;
-        if (inner || i) heading.insertAdjacentHTML('beforeend', ' <span class="muted" aria-hidden="true">\u203a</span> ');
-        if (!last && st.url && !inner) {
-          var a = document.createElement('a');
-          a.href = st.url; a.textContent = st.name; a.title = 'Go up to the folder \u201c' + st.name + '\u201d';
-          heading.appendChild(a);
-          return;
-        }
-        if (last && !inner && window.qgenIcon) heading.insertAdjacentHTML('beforeend', window.qgenIcon(st.tray ? 'tray' : 'folder') + ' ');
-        heading.appendChild(document.createTextNode(st.name));
-      });
+      var names = chosen === 'none' ? [] : path().map(function (id) { return byId[id].name; });
+      if (chosen === 'none' || chosen.indexOf('self:') === 0) names.push(box.dataset.mainLabel && inner ? box.dataset.mainLabel : 'Unsorted');
+      var text = names.join(' \u203a ');
+      if (inner) { heading.innerHTML = headingOwn; heading.appendChild(document.createTextNode(' \u203a ' + text)); return; }
+      heading.innerHTML = window.qgenIcon ? window.qgenIcon('folder') + ' ' : '';
+      heading.appendChild(document.createTextNode(text));
     }
     function choose(id) {
       chosen = id;
@@ -580,4 +704,50 @@
   function again() { document.querySelectorAll('.folder-tabs details.folder-tools[open]').forEach(place); }
   window.addEventListener('scroll', again, { passive: true, capture: true });
   window.addEventListener('resize', again);
+})();
+
+/* the folder's heading (and its buttons) goes in the middle of the bar under it, between the
+   filter and the checked bar, where there's room (the owner, 2026-10-15) */
+(function () {
+  var head = document.querySelector('.folder-main > .folder-title-row');
+  var bar = document.querySelector('.folder-main .folder-tools-bar');
+  if (!head || !bar) return;
+  var filter = bar.querySelector('.filter-bar');
+  head.classList.add('in-tools-bar');
+  if (filter && filter.parentElement === bar) bar.insertBefore(head, filter.nextSibling);
+  else bar.insertBefore(head, bar.firstChild);
+})();
+
+/* A folder's own page opened from a folder page (a tab double-clicked, an "Open this folder"
+   icon): a Back icon beside its Up goes back to the page and tab it was opened from (the owner,
+   2026-10-15). Kept for this browser tab (sessionStorage) while that folder's page is open. */
+var BACK_KEY = 'qgen-folder-back';
+function folderOf(url) { try { var u = new URL(url, location.href); return u.pathname + '?folder=' + (u.searchParams.get('folder') || ''); } catch (e) { return ''; } }
+function rememberBack(url, id) {
+  //(what was showing, as its heading said: "Math › Fractions", "Problems"; a tab's own name,
+  //"All", said too little: the owner 2026-10-15)
+  var heading = document.getElementById('folder-title');
+  var name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+  try { sessionStorage.setItem(BACK_KEY, JSON.stringify({ to: folderOf(url), from: location.pathname + location.search, name: name })); } catch (e) {}
+}
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a.btn-icon[href*="folder="]');
+    if (a && /^Open this folder/.test(a.title || '')) rememberBack(a.getAttribute('href'));
+  });
+  var b = null;
+  try { b = JSON.parse(sessionStorage.getItem(BACK_KEY) || 'null'); } catch (e) {}
+  if (!b || b.to !== folderOf(location.href)) return;
+  document.querySelectorAll('.folder-up').forEach(function (up) {
+    if (!up.offsetParent) return;  // (only beside the Up that shows)
+    var a = document.createElement('a');
+    a.className = up.className.replace('folder-up', 'folder-back');
+    a.href = b.from;
+    var words = 'Back';
+    a.innerHTML = (window.qgenIcon ? window.qgenIcon('lc-arrow-left') : '') + '<span class="sr-only">' + words + '</span>';
+    a.title = 'Back: return to ' + (b.name ? '“' + b.name + '”' : 'where you were');
+    a.addEventListener('click', function () { try { sessionStorage.removeItem(BACK_KEY); } catch (e) {} });
+    //(the leftmost of its group: before Expand all / Collapse all and Up, the owner 2026-10-15)
+    up.parentNode.insertBefore(a, up.parentNode.firstChild);
+  });
 })();

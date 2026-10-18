@@ -174,7 +174,7 @@
                 {% if page.directions %}<p class="muted small">Directions on the page: {{ page.directions }}</p>{% endif %}
                 <div class="btn-row small">
                   {% if ns.problems_before %}<label class="check" title="Put this page's problems in the same quiz as the page before"><input type="checkbox" name="{{ pre }}join_prev"{% if page.join_prev %} checked{% endif %}> Join with the page before</label>{% endif %}
-                  <label class="check" title="Each student gets the questions in their own order (off keeps the workbook's order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
+                  <label class="check" title="Each student gets the questions in his/her own order (off keeps the workbook's order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
                   <label class="check" title="Students can use the on-screen calculator"><input type="checkbox" name="{{ pre }}calculator"{% if page.calculator %} checked{% endif %}> Calculator</label>
                 </div>
               </div>

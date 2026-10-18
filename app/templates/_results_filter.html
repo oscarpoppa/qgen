@@ -13,5 +13,6 @@
       <option value="out">Not handed in yet only</option>
     </select></label>
   {% endcall %}
+  {% if filter_right %}<div class="btn-row results-filter-right">{{ filter_right }}</div>{% endif %}
 </div>
 <p class="card empty small filter-none" hidden>Nothing here matches. Try “All results”, or another folder.</p>

@@ -1,51 +1,63 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_people.html" import people_switch %}
+{% from "_archive_sections.html" import archive_switch %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar with context %}
-{% from "_folders.html" import folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {% block body_attrs %}{{ watch('users') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
-{# people as boxes, like My quizzes' quizzes: each folds to their name (checkbox, badges and
-   Assign stay in its heading); open, their folders, last seen and the rest. `here` is the
-   folder they're listed under (None: the main list or All users), which is where a drag
-   takes them out of #}
+{# people as rows, like the Problems and Quizzes pages' (the owner, 2026-10-16): each row folds
+   to the name (with its checkbox, folders and icons); open, it shows the role and when they were
+   last seen. `here` is the folder they're listed under (None: the main list or All people),
+   which is where a drag takes them out of #}
 {% macro people_table(people, here) %}
   {% if people %}
-  <div class="grid person-grid">
-  {% for item in people %}
-    {% set mine = folders_of.get(item.id, []) %}
-    <details class="box card person-card" data-list data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
-      <summary class="card-head drag-person" data-drag="user" data-id="{{ item.id }}"
-          data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
-          title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">
-        <span class="fold" aria-hidden="true"></span>
-        {# checked people can be given a quiz together (the bar above the list) #}
-        <input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" form="assign-people" aria-label="Check {{ item.shown_name }}">
-        {# online now: a green dot after the name (the words are under "Last seen" when it's open) #}
-        <span class="person">{{ avatar(item, 32) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span>
-        {% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}
-        <span class="box-end"><a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>{# (Message, a speech bubble, beside it; Edit up here beside the trash can: the owner 2026-10-14) #}{% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>{{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete account', 'You can’t delete your own account' if item == current_user else none,
-                 ('Their quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')) }}</span>
-      </summary>
-      <dl class="person-facts small">
-        <dt>Folders</dt><dd class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</dd>
-        <dt>Role</dt><dd>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</dd>
-        <dt>Last seen</dt><dd>{% if item.online %}online now
-          {% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>
-          {% else %}<span class="muted" title="Not since this was added on Oct 1, 2026">never</span>{% endif %}</dd>
-      </dl>
-      <div class="btn-row">
-        {# their page: quizzes and results, awards #}
-        <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student page: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>
-        {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
-        {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
-        {# (Delete is the card's Remove: it asks whether to take them out of a folder or delete the account) #}
-      </div>
-    </details>
-  {% endfor %}
+  <div class="table-wrap stack">
+    <table class="people-table">
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Folders</th><th></th></tr></thead>
+      <tbody>
+      {% for item in people %}
+        {% set mine = folders_of.get(item.id, []) %}
+        <tr data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
+          {# checked people can be given a quiz together (the bar above the list) #}
+          <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
+          <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}" open><summary><span class="fold" aria-hidden="true"></span>
+              {# online now: a green dot after the name; a teacher: the badge right after the name #}
+              <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
+                    title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{{ avatar(item, 28) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span></summary>
+            <ul class="quiz-facts small muted">
+              <li>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</li>
+              <li>Last seen: {% if item.online %}online now{% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>{% else %}<span title="Not since the site began keeping track">never</span>{% endif %}</li>
+              {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
+            </ul></details></td>
+          <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
+          <td class="actions">
+            {% if in_archive %}
+            {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
+            <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
+            {{ slot('Student page', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-user') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
+            {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good',
+                 delete_note=('His/her quiz results are kept in the Archive’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive’s Attempts.')) }}
+            {% else %}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
+            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            {# their page: quizzes and results, awards #}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student page: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>
+            {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
+            {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
+            {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good', archive_url=url_for('user.archive_user', uid=item.id) if item != current_user else none, no_delete= 'You can’t delete your own account' if item == current_user else none,
+                 delete_note=('His/her quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')) }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% endif %}
 {% endmacro %}
@@ -53,65 +65,49 @@
 {# People's two views count as one page for Back buttons (static/js/trail.js) #}
 {% block html_attrs %} data-trail-key="people"{% endblock %}
 {% block content %}
-<div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.settings') }}" title="Change the site name, logo and sign-up code">Sign-up &amp; site settings</a></div></div>
+{% if in_archive %}
+<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+<p class="muted page-intro">People moved to the Archive: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
+  They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.</p>
+{% else %}
+{# (no Sign-up & site settings button here: it's More › Settings; the owner, 2026-10-16) #}
+<div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}</div>
+{% endif %}
 
-{% set actions %}{% if fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
+{% set actions %}{% if in_archive %}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
+{% if in_archive and not ulst %}
+  <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>
+{% else %}
 {% call folders_page(fk, actions) %}
-    <form method="get" action="{{ url_for('qgen.assign') }}" id="assign-people" class="pick-bar-users" hidden>
-      <span class="pick-users-count"></span>
-      <button class="btn btn-sm" title="Pick a quiz to give everyone checked">Assign a quiz to them →</button>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
-    </form>
-    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='details.person-card', boxes='details.sub-box', url=true) }}
+    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true) }}
       {# the checked people: in a folder, or out of it; the same bar as the Problems and Quizzes
          pages' (grayed until someone is checked: static/js/folders.js; out of someone's only
          folder: asked first, static/js/takeout.js) #}
       <form method="post" action="{{ url_for('user.file_people') }}" id="file-form" class="file-bar" data-takeout="remove" data-takeout-items="input.pick-person:checked">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="view" value="{{ fk.view }}">
         {% if fk.flat %}
-          <span class="muted small file-count" aria-live="polite" data-hint="Check people to put them in a folder or take them out.">Check people to put them in a folder or take them out.</span>
+          <span class="muted small file-count" aria-live="polite" data-hint="Check people, then pick an action:">Check people, then pick an action:</span>
           <label class="sr-only" for="file-subject">Folder</label>
           <select id="file-subject" name="folder">
             {% for f, depth in fk.flat %}<option value="{{ f.id }}"{% if fk.node and fk.node.folder.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
           </select>
-          <button class="btn btn-sm" name="action" value="add" title="Put the checked people in the chosen folder">Put in folder</button>
+          <button class="btn btn-sm" name="action" value="add" title="Move the checked people to a folder (or copy them there)">Move to folder</button>
           <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked people out of the chosen folder">Take out of folder</button>
+          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
         {% else %}
           <span class="muted small">Make a folder first (+ New folder), then check people to put in it.</span>
         {% endif %}
       </form></div>{% endif %}
     <div id="folder-items">
-      {% if fk.view == 'all' and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
+      {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
       {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
-      {{ people_table(shown, fk.node.folder if fk.node else none) }}{% endif %}
+      {% call named_box(fk, 'user:') %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
     </div>
-    {% if not shown and not (fk.node and fk.node.folders) %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
 {% endcall %}
+{% endif %}
+{% include "_dialog_assign_people.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>
-<script>
-/* checking people: someone listed twice (in a folder and a folder inside it) is checked in
- * both; the bar says how many are checked and takes them to Assign */
-(function () {
-  var bar = document.getElementById('assign-people');
-  if (!bar) return;
-  var boxes = document.querySelectorAll('input.pick-person'), count = bar.querySelector('.pick-users-count');
-  function refresh() {
-    var ids = {};
-    boxes.forEach(function (b) { if (b.checked) ids[b.value] = 1; });
-    var n = Object.keys(ids).length;
-    bar.hidden = !n;
-    count.textContent = n + ' checked';
-  }
-  boxes.forEach(function (b) {
-    b.addEventListener('change', function () {
-      document.querySelectorAll('input.pick-person[value="' + b.value + '"]').forEach(function (o) { o.checked = b.checked; });
-      refresh();
-    });
-  });
-  bar.querySelector('[data-pick="clear"]').addEventListener('click', function () { boxes.forEach(function (b) { b.checked = false; }); refresh(); });
-  refresh();
-})();
-</script>{% endblock %}
+<script src="{{ asset('js/assign_people.js') }}"></script>{% endblock %}

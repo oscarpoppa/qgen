@@ -12,7 +12,9 @@
   </div>
 </div>
 
-<div id="dash-live" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
+{# Right now and At a glance start open, the other cards (lists) collapsed (the owner, 2026-10-15); data-boxes-reset forgets, once,
+   what this browser remembered for them, so they do #}
+<div id="dash-live" data-boxes-reset="2026-10-15b:now,glance,queue,pinned,handins,out" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
 {% include "_dashboard_live.html" %}
 </div>
 {% endblock %}

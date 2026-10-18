@@ -49,7 +49,7 @@ def problem_input(data):
         raise bad_request('"type" must be one of: {}.'.format(', '.join(REGISTRY)))
     for key in ('title', 'question', 'answer'):
         if data.get(key) is not None and not isinstance(data[key], str):
-            raise bad_request('"{}" must be text.'.format(key))
+            raise bad_request('“{}” must be text.'.format(key))
     options = dict(OPTION_DEFAULTS)
     given = data.get('options') or {}
     if not isinstance(given, dict):
@@ -220,7 +220,7 @@ def parse_when(data, key):
     try:
         return datetime.fromisoformat(str(data[key]))
     except ValueError:
-        raise bad_request('"{}" must be a date and time like 2026-10-05T09:00.'.format(key))
+        raise bad_request('“{}” must be a date and time like 2026-10-05T09:00.'.format(key))
 
 
 @api_bp.route('/quizzes/<int:qid>/assign', methods=['POST'])

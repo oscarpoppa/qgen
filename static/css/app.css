@@ -655,7 +655,7 @@ th .tip-wrap { margin-left: 4px; }
 @media (prefers-reduced-motion: reduce) { .dock-btn.pulse { animation: none; background: var(--warn-soft); } }
 
 .dock {
-  position: fixed; right: 0; top: var(--topbar-h); bottom: 0; width: var(--dock-w); z-index: 9;
+  position: fixed; right: 0; top: var(--dock-top, var(--topbar-h)); bottom: 0; width: var(--dock-w); z-index: 9;
   display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--border);
 }
 .dock-pane { display: none; flex-direction: column; min-height: 0; flex: 1 1 0; }
@@ -707,14 +707,13 @@ html.dock-resizing, html.dock-resizing * { cursor: row-resize !important; user-s
 .notice-icon { font-size: var(--fs-lg); line-height: 1.4; }
 .notice-text { min-width: 0; overflow-wrap: anywhere; }
 
-/* wide screens: open panels slide over the page (it keeps its whole width) unless they're
-   pinned, when the page makes room beside them */
+/* wide screens: Notices and Messages are cards that pop up over the page, on top of whatever's
+   there (the page keeps its whole width), pinned or not; pinned only keeps them open from page
+   to page (the owner, 2026-10-15) */
 @media (min-width: 1001px) {
-  html:not(.dock-pinned) .dock { z-index: 30; box-shadow: -8px 0 24px rgba(16, 24, 40, .25); }
-  html.dock-pinned.dock-notices body, html.dock-pinned.dock-messages body { padding-right: var(--dock-w); }
-  /* ...but the top bar still runs the full width, above the panels */
-  html.dock-pinned.dock-notices .topbar, html.dock-pinned.dock-messages .topbar { margin-right: calc(-1 * var(--dock-w)); }
-  html.dock-pinned.dock-notices .topbar-inner, html.dock-pinned.dock-messages .topbar-inner { max-width: none; }
+  .dock { z-index: 30; top: calc(var(--dock-top, var(--topbar-h)) + 8px); right: 8px; bottom: 8px;
+    border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, .28), 0 2px 6px rgba(16, 24, 40, .12); }
 }
 /* phones and small windows: the panels slide over the page */
 @media (max-width: 1000px) {
@@ -738,7 +737,7 @@ html.dock-resizing, html.dock-resizing * { cursor: row-resize !important; user-s
 @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 @media (min-width: 1001px) {
-  html.dock-pinned.dock-notices .toasts, html.dock-pinned.dock-messages .toasts { right: calc(var(--dock-w) + 16px); }
+  html.dock-notices .toasts, html.dock-messages .toasts { right: calc(var(--dock-w) + 24px); }
 }
 @media (max-width: 1000px) {
   /* top bar on small screens: name, the two panel buttons, then Menu */
@@ -877,11 +876,15 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .side-fold::before { content: ""; position: absolute; left: 6px; top: calc(50% - 5px); border-style: solid; border-width: 5px 0 5px 7px;
   border-color: transparent transparent transparent var(--muted); transform: rotate(90deg); transition: transform .15s; }
 .side-fold[aria-expanded="false"]::before { transform: none; }
-.folder-side .new-folder { margin-top: 10px; padding: 0 4px; }
+.folder-side .new-folder { display: block; margin-top: 12px; padding: 0 4px; }
 .side-hint { margin: 8px 4px 0; }
-.new-folder > summary { list-style: none; display: inline-flex; }
-.new-folder > summary::-webkit-details-marker { display: none; }
-.new-folder[open] > summary { margin-bottom: 8px; }
+/* the small folder dialogs: + New folder, Rename, Move to (static/js/folders.js) */
+dialog.folder-dialog input[type=text] { display: block; width: 100%; margin: 0 0 16px; }
+dialog.folder-dialog p { margin-bottom: 12px; }
+/* Folder options: a short menu, one choice per line (each opens its own dialog) */
+.folder-tools-box.folder-menu { min-width: 0; gap: 8px; align-items: stretch; }
+.folder-menu > .folder-opt, .folder-menu > .new-folder, .folder-menu > .folder-form { display: block; }
+.folder-menu .btn { width: 100%; justify-content: flex-start; }
 .folder-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
 .folder-form input[type=text] { width: auto; flex: 1 1 140px; min-width: 0; max-width: 260px; }
 .folder-main { min-width: 0; }
@@ -1045,7 +1048,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* every bar of math keys under the same small heading that folds (the optional ones start folded) */
 .math-keys { margin: 0 0 4px; }
 .math-keys-head { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; color: var(--muted);
-  font-size: var(--fs-sm); font-weight: 600; padding: 2px 6px 2px 0; margin-bottom: 4px; border-radius: var(--r-sm); }
+  font-size: var(--fs-sm); font-weight: 600; padding: 2px 6px 2px 0; margin-bottom: 8px; border-radius: var(--r-sm); }
 .math-keys-head::-webkit-details-marker { display: none; }
 .math-keys-head::before { content: "\25B8"; font-size: .8em; transition: transform .15s; }
 .math-keys[open] > .math-keys-head::before { transform: rotate(90deg); }
@@ -1132,7 +1135,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 .file-bar select { width: auto; max-width: 14rem; }
 .file-count.error { color: var(--bad); }
 /* nothing checked: the list and button are grayed out (never hidden) */
-.file-bar-idle select, .file-bar-idle button { cursor: not-allowed; }
+.file-bar-idle select, .file-bar-idle button:disabled { cursor: not-allowed; }
 th.tick-col, td.tick-col { width: 36px; }
 .subject-label { font-weight: 500; font-size: var(--fs-xs); margin-left: 2px; vertical-align: middle; }
 .subject-checks { border: 0; padding: 0; margin: 12px 0; }
@@ -1966,13 +1969,15 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .head-pair .level-buttons[hidden] { display: none; }
 @media (max-width: 640px) { .sub-head:has(> .head-pair) { flex-wrap: wrap; row-gap: 6px; } }
 
-/* a student page: every quiz box's table has the same columns (the score column and the Retake
-   column a set width, the attempts column the rest), so the buttons of quiz boxes at one folder
+/* a student page: every quiz box's table has the same columns (see below), so the buttons of quiz boxes at one folder
    level line up under one another */
 @media (min-width: 641px) {
   .result-box > .table-wrap > table { table-layout: fixed; width: 100%; }
-  .result-box > .table-wrap > table > thead th:nth-child(2) { width: 16rem; }
-  .result-box > .table-wrap > table > thead th:nth-child(3) { width: 7.5rem; }
+  /* (Attempts as wide as its lines, each attempt's icons and Retake set widths, the score
+     the rest, as on People's Results: the owner, 2026-10-16) */
+  .result-box > .table-wrap > table > thead th:nth-child(1) { width: 20rem; }
+  .result-box > .table-wrap > table > thead th:nth-child(3) { width: 11rem; }
+  .result-box > .table-wrap > table > thead th:nth-child(4) { width: 5rem; }
 }
 /* "Results" and "Assigned" share a place in an attempt's buttons: one width, so the buttons
    beside them don't shift from row to row */
@@ -2386,7 +2391,8 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 /* (an empty folder with folders inside: just those folders' tabs, grayed, like the folder list;
    no All or Unsorted: the owner, 2026-10-14) */
 .folder-filter-rows > .folder-tabs-empty > .folder-tab-all, .folder-filter-rows > .folder-tabs-empty > .folder-tab-self,
-.folder-filter-rows > .folder-tabs-plain > .folder-tab { display: none; }
+.folder-filter-rows > .folder-tabs-plain > .folder-tab:not(.folder-tab-name) { display: none; }
+.folder-filter-rows > .folder-tabs-plain > .folder-tab-name { cursor: default; }
 /* icon buttons (row and card buttons, the folder tools: the owner, 2026-10-14): just the
    drawing, no button around it (no border, no fill: "an icon" always means this, the owner);
    its words in the tooltip and for screen readers (icon_label() in app/icons.py,
@@ -2434,3 +2440,334 @@ fieldset.view-only :is(input, select, textarea, label, button) { cursor: default
 fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover highlight on a choice that can't be picked) */
 
 
+
+/* SANDBOX TRY-OUT note (folderfilter.js pickedLineLast) */
+.icon-sample-note { position: fixed; left: 12px; bottom: 12px; z-index: 50; background: #f5c400; color: #1c1300; padding: 6px 12px; border-radius: var(--r); font-size: var(--fs-sm); }
+.icon-sample-note a { color: inherit; font-weight: 600; }
+
+/* tabs wrapped on to several lines: a line under each but the last, like the one under the
+   bottom row (folderfilter.js lineRules; the owner, 2026-10-15) */
+.folder-filter-rows > .folder-tabs { position: relative; }
+.folder-filter-rows > .folder-tabs > .tab-line-rule { position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
+  background: var(--border); }  /* (the same line as the divider above the tabs: the owner, 2026-10-15) */
+/* the folder tabs' edges a little easier to see (the owner, 2026-10-15); the open tab keeps its own */
+.folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]) { border-color: color-mix(in srgb, var(--muted) 65%, var(--border)); }
+/* empty folders: a dimmer gray than other muted text, in the folder lists and on the tabs, so
+   they stand apart from folders with something in them (the owner, 2026-10-15) */
+:root { --empty-folder: color-mix(in srgb, var(--muted) 58%, var(--bg)); }
+.side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count,
+.folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab,
+.folder-tab.is-empty .box-title, .folder-tabs-empty > .folder-tab .box-title { color: var(--empty-folder); }
+/* an empty folder's tab itself a little darker than the others (the owner, 2026-10-15) */
+.folder-filter-rows > .folder-tabs > .folder-tab.is-empty:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--bg) 58%, #000); }
+/* folders with something in them: their tab's name a little easier to read than the gray it was
+   (the owner, 2026-10-15) */
+.folder-filter-rows > .folder-tabs > .folder-tab:not(.is-empty):not([aria-pressed="true"]),
+.folder-filter-rows > .folder-tabs > .folder-tab:not(.is-empty):not([aria-pressed="true"]) .box-title { color: color-mix(in srgb, var(--text) 75%, var(--muted)); }
+
+/* (the line break before the open tab, so it starts the bottom line: folderfilter.js) */
+.folder-filter-rows > .folder-tabs > .tab-break { flex-basis: 100%; height: 0; margin: 0; }
+/* the folder's heading between the filter and the checked bar (folderfilter.js; the owner,
+   2026-10-15) */
+.folder-tools-bar > .folder-title-row.in-tools-bar { flex: 1 1 auto; justify-content: center; align-self: center; margin: 0; gap: 8px 12px; }
+.folder-tools-bar > .folder-title-row.in-tools-bar .title-actions { margin-left: 0; }
+
+
+
+/* Choosing problems for the quiz being built (static/js/quiz_pick.js): a line across the top
+   of the Problems page's bar, staying in sight while scrolling with it (the owner, 2026-10-15) */
+.folder-tools-bar > .pick-banner { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 16px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--radius, 8px);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.pick-banner p { margin: 0; }
+.pick-banner .btn-row { margin: 0; }
+dialog.add-quiz select, dialog.folder-dialog select { width: 100%; margin-bottom: 16px; }
+
+/* Add to a quiz on the checked bar: green, set apart from the folder buttons (the owner, 2026-10-15) */
+.btn.btn-quiz { background: var(--ok); border-color: var(--ok); color: var(--on-ok); }
+.btn.btn-quiz:hover:not(:disabled) { background: color-mix(in srgb, var(--ok) 85%, #000); border-color: color-mix(in srgb, var(--ok) 85%, #000); }
+
+/* a page title with its buttons right after it, small (Problems: the owner, 2026-10-15) */
+.page-head.title-inline .actions { margin-left: 0; }
+
+/* the checked bar: small buttons, all on one line under its line of words, and the bar itself
+   tighter, so the list starts higher (the owner, 2026-10-15; every checked bar, alike) */
+.folder-tools-bar { padding: 4px 0 6px; margin-bottom: 10px; }
+@media (min-width: 761px) {
+  /* (a grid as wide as its buttons, one column each: static/js/filebar.js counts them) */
+  .folder-tools-bar .file-bar { display: grid; grid-template-columns: repeat(var(--bar-cols, 3), auto); justify-content: end; gap: 4px 5px; }
+  /* (its line of words wraps to the buttons' width instead of widening the bar) */
+  .folder-tools-bar .file-bar > .file-count, .folder-tools-bar .file-bar > span.muted { width: 0; min-width: 100%; }
+}
+.folder-tools-bar .file-bar .btn { padding: 3px 7px; min-height: 28px; font-size: var(--fs-xs); border-radius: var(--r-sm); }
+.page-head.title-inline { margin-bottom: 6px; }
+@media (min-width: 761px) {
+  .folder-tools-bar { column-gap: 12px; }
+  .folder-tools-bar .filter-bar input[type="search"], .folder-tools-bar .filter-bar input[type="text"] { width: 140px; }
+  .folder-tools-bar .file-bar .btn { padding-left: 6px; padding-right: 6px; }
+}
+.folder-title-row .title-actions:empty { display: none; }
+.page-head.title-inline { gap: 8px; }
+
+/* a folder page's title over the folder list only, its buttons small and wrapping there
+   (static/js/folders.js: lifted) */
+.page-head.lifted { gap: 6px 8px; }
+.page-head.lifted .actions { margin-left: 0; gap: 6px; }
+.page-head.lifted .btn { padding: 3px 8px; min-height: 28px; font-size: var(--fs-xs); border-radius: var(--r-sm); }
+.page-head.lifted .btn.btn-icon { width: 30px; height: 30px; padding: 0; }
+/* the list's count beside the folder heading in the bar (static/js/folderfilter.js) */
+.folder-title-row > .title-count { font-size: var(--fs-sm); align-self: center; flex: none; }
+.folder-tools-bar { align-items: center; }
+
+/* a thing's folders: the bare folder-with-plus icon (the owner, 2026-10-15); the list of folders
+   lies over it, see-through, so a click on the icon opens it */
+.move-form:has(> .add-select) { position: relative; width: 28px; height: 28px; align-items: center; justify-content: center; }
+.move-form > .add-folder-icon { display: inline-flex; color: var(--accent); pointer-events: none; }
+.move-form > .add-folder-icon svg { width: 20px; height: 20px; }
+.move-form > select.add-select { position: absolute; inset: 0; width: 100% !important; height: 100%; opacity: 0; border: 0; }
+.move-form:has(> .add-select:hover) > .add-folder-icon { filter: brightness(1.25); }
+.move-form:has(> .add-select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+/* the Quizzes page's Assign quizzes dialog (static/js/assign_many.js) */
+dialog.assign-many .assign-many-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+dialog.assign-many .assign-many-tools select { flex: 1 1 160px; }
+dialog.assign-many .assign-many-people { list-style: none; margin: 0 0 12px; padding: 6px 8px; max-height: 45vh; overflow: auto;
+  border: 1px solid var(--border); border-radius: var(--r); columns: 2 160px; column-gap: 16px; }
+dialog.assign-many .assign-many-people li { break-inside: avoid; padding: 2px 0; }
+dialog.assign-many .assign-many-people li[hidden] { display: none; }
+dialog.takeout-dialog .takeout-lines { margin: 0 0 16px; padding-left: 18px; }
+/* a person card: its Take out of folder icon at the Folders line's end; its own icons (Student
+   page, Reset password, Remove picture) side by side on one line (the owner, 2026-10-15) */
+.person-card .person-folders { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.person-card .person-folders > .take-out-one { margin-left: 0; }  /* (right beside the folder-with-plus) */
+.person-card > .btn-row { display: flex; flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: 8px; }
+.person-card > .btn-row > form, .person-card > .btn-row > .inline-form { display: inline-flex; margin: 0; }
+.person-card > .btn-row > *, .person-card > .btn-row .btn, .person-card > .btn-row .inline-form { width: auto; flex: none; }
+.take-out-one { vertical-align: middle; margin: 0 0 4px; }
+/* the two folder icons beside a thing's folder chips, always together (the owner, 2026-10-15) */
+.folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 0 4px; }
+.folder-icons > .move-form, .folder-icons > .take-out-one { margin: 0; }
+.folder-icons > .add-folder-off { width: 28px; height: 28px; padding: 0; }
+/* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
+dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+dialog.assign-many .assign-defaults ul { margin: 4px 0 6px; padding-left: 18px; columns: 2 150px; }
+.folder-icons > .put-in-one { margin: 0; }
+dialog.put-dialog .put-list { columns: 1; }
+dialog.put-dialog .assign-defaults ul { columns: 1; }
+/* My quizzes: an open quiz box shows Start / Continue on the attempt's own row, not on the
+   heading's far end (the owner, 2026-10-15) */
+details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
+.move-mini > .move-one { margin: 0; }
+/* the checked things, kept whatever folder is open (static/js/checked.js; the owner, 2026-10-15) */
+.folder-tools-bar > .checked-strip { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding-top: 2px; }
+.folder-tools-bar > .checked-strip[hidden] { display: none; }
+.checked-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border: 1px solid var(--accent);
+  border-radius: 999px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); font-size: var(--fs-xs); }
+.checked-chip .chip-x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: var(--fs-xs); }
+.checked-chip .chip-x:hover { color: var(--bad); }
+/* the quiz editor: "Problems in this quiz" wider, set off, its rows one line each (the owner,
+   2026-10-15) */
+@media (min-width: 1101px) {
+  .editor.quiz-editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr) minmax(420px, 42%); }
+}
+#quiz-contents { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+#quiz-contents .order-total { font-weight: 600; }
+#quiz-contents .order-item { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+#quiz-contents .order-item > .order-top { flex: 1 1 14rem; flex-direction: row; justify-content: space-between; display: flex; align-items: center; gap: 8px; min-width: 0; }
+#quiz-contents .order-item > .order-top .order-title { flex: 1 1 auto; min-width: 0; }
+#quiz-contents .order-item > .order-bottom { flex: 0 1 auto; display: flex; align-items: center; gap: 6px; margin: 0; }
+/* every help line under a form part, the same everywhere: the quieter small gray text, with a
+   little room above it (the owner, 2026-10-15) */
+.help, .field .help { color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; margin-top: 8px; }
+.subject-new-inline + .help { margin-top: 10px; }
+/* Save under the Helper, on the editors (the owner, 2026-10-15) */
+.side-col > .save-card { padding: 12px 16px; }
+.side-col > .save-card .btn-row { margin: 0; }
+.side-col > .editor-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+/* a teacher's badge right after the name; the icons drop to the next line, at the right, when
+   the line is too full (the owner, 2026-10-16) */
+.person-card > summary .person > .badge { flex: none; }
+/* room between the editors' folder list and the "Or a new folder" box (the owner, 2026-10-16) */
+.subject-new-inline { margin-top: 14px; }
+/* the editors' Folder question: the folder list on the left, the new folder box and its notes to
+   its right; stacked when there isn't room (the owner, 2026-10-16) */
+.subject-cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 24px; }
+.subject-cols > .subject-check-list { flex: none; }
+.subject-side { flex: 1 1 18rem; min-width: 0; max-width: 36rem; }
+.subject-side > .subject-new-inline { margin-top: 0; }
+.subject-side > .help:first-of-type { margin-top: 8px; }
+/* room between blocks (the spacing check, 2026-10-16): 8px inside a group, 12-16px between
+   blocks; and help text no wider than about 70 characters a line, to be easy to read */
+.person-card > .card-head + .person-facts { margin-top: 8px; }
+.box-body > .box-empty + .btn-row { margin-top: 8px; }
+.subject-check-list { gap: 4px; }
+#question-card > .form-row + .field { margin-top: 16px; }
+.math-keys { margin: 0 0 8px; }
+.answer-help + .t-numeric { margin-top: 8px; }
+.latest-finished h2 { margin-bottom: 8px; }
+.quiz-card > .card-head + .muted.small { margin-top: 4px; }
+.attempt-row { margin: 8px 0; }
+.result-attempt { margin: 8px 0; }
+.help, .field .help, .page-intro { max-width: 70ch; }
+/* Put in folder: "Copy instead" under what happens (the owner, 2026-10-16) */
+dialog.put-dialog .put-copy { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: 600; }
+/* Reset password's temporary password, in a dialog with Copy and Done (the owner, 2026-10-16) */
+dialog.temp-pw-dialog .temp-pw code { display: block; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2);
+  font-size: var(--fs-lg); letter-spacing: .04em; user-select: all; overflow-wrap: anywhere; }
+/* Expand all / Collapse all: one toggle, only the one that applies shows (static/js/boxes.js;
+   the owner, 2026-10-16) */
+.lvl-off { display: none !important; }
+/* Quizzes: a quiz's facts under its title, one a line (the owner, 2026-10-16) */
+.quiz-facts { list-style: circle; margin: 4px 0 0; padding-left: 1.1em; line-height: 1.5; }  /* (the open circle of the Problems column's "2 of these" lists) */
+.quiz-facts > li { margin: 0; }
+/* Spacing on the 4/8/12/16 steps (the spacing check, part c; the owner, 2026-10-16) */
+.field { margin-bottom: 16px; }
+.folder-filter-rows > .folder-tabs:first-child > .folder-tab { padding: 8px 12px; }
+.side-row { gap: 4px; }
+details.row-fold > summary { gap: 8px; }
+td.actions { padding-top: 4px; padding-bottom: 4px; }
+.quiz-card:not([open]), .person-card:not([open]) { padding-top: 12px; padding-bottom: 12px; }
+.card-head { gap: 8px; }
+.dash-head { gap: 8px 12px; }
+.btn-row.result-attempt-buttons { gap: 8px; }
+.attempt-row { gap: 8px; }
+.folder-side { padding: 12px 8px; }
+.btn-row.small { margin-bottom: 8px; }
+.math-keys-head { padding: 4px 8px 4px 0; gap: 8px; }
+.order-item { padding: 8px 12px; }
+#quiz-contents .order-item { gap: 4px 12px; }
+.folder-tab { gap: 8px; }
+.folder-filter-rows > .folder-tabs-inner > .folder-tab, .folder-side-list > .side-row > .folder-tab { padding-top: 4px; padding-bottom: 4px; }
+.dash-head { margin-bottom: 8px; }
+.folder-tools-bar { padding-bottom: 8px; margin-bottom: 12px; }
+.folder-tools-bar .file-bar { column-gap: 4px; }
+.subject-box > summary { gap: 12px; }
+/* the Archive's four sections fit a phone's width */
+@media (max-width: 480px) { .seg-switch a { padding: 6px 8px; font-size: var(--fs-sm); } }
+/* People as rows, like Problems and Quizzes (the owner, 2026-10-16) */
+.people-table .person { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.people-table .person .badge, .people-table .person .online-dot { flex: none; }
+/* a timed quiz's last five minutes: the time shows, in the warning color (the owner, 2026-10-16) */
+.timer.timer-soon { color: var(--warn); font-weight: 600; }
+
+/* People's Results: Results by quiz and Assign a quiz at the right end of the filter bar (the owner, 2026-10-16) */
+.folder-tools-bar .results-filter-right { margin-left: auto; flex-wrap: nowrap; }
+@media (max-width: 760px) { .folder-tools-bar .results-filter-right { margin-left: 0; } }
+/* a results row: the quiz's name, the score counted and the row's buttons line up with the
+   first attempt's line (the owner, 2026-10-16) */
+td.attempts > .result-attempt:first-of-type { margin-top: 0; }
+@media (min-width: 641px) {
+  tr:has(> td.attempts) > td:not(.attempts):not(.attempt-buttons):not(.actions) { padding-top: 16px; }
+  tr:has(> td.attempts) > td.actions { padding-top: 10px; }
+}
+/* each attempt's line the same height in Attempts and in its buttons' column after the score,
+   so they stay level (the owner, 2026-10-16) */
+td.attempts > .result-attempt, td.attempt-buttons > .result-attempt { min-height: 36px; }
+td.attempt-buttons > .result-attempt:first-of-type { margin-top: 0; }
+td.attempt-buttons { width: 1%; white-space: nowrap; }
+td.attempt-buttons .result-attempt-buttons { margin-left: 0; padding-left: 0; }
+/* the Attempts column only as wide as its lines, on every results table alike (a student's
+   page, People's Results, Results by quiz): the score and its rule get the room (the owner,
+   2026-10-16) */
+@media (min-width: 641px) { td.attempts { width: 1%; white-space: nowrap; padding-right: 32px; } }
+/* each attempt's icons to the right of their column, next to Retake (the owner, 2026-10-16) */
+td.attempt-buttons > .result-attempt { justify-content: flex-end; }
+td.attempt-buttons { text-align: right; }
+/* the open folder on a list page scrolls inside itself, as tall as the window has room for
+   (static/js/folderfilter.js fitHeight; the owner, 2026-10-17): its tables' headings stay in view */
+.folder-filter-list.folder-scroll { overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.folder-filter-list.folder-scroll .table-wrap { overflow: visible; }
+.folder-filter-list.folder-scroll thead th { position: sticky; top: -12px; z-index: 2; }
+/* the folder list down the side scrolls inside itself once it's as tall as the window has room
+   for (static/js/folders.js; the owner, 2026-10-17) */
+.folder-side > nav.side-scroll { overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; position: relative; }
+/* (position: relative, so screen-reader-only words inside stay in the scroll area instead of
+   stretching the page) */
+/* a folder's list sorted by a column: its heading is a button, with an arrow once sorted
+   (static/js/sorttable.js; the owner, 2026-10-17) */
+.th-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font: inherit; color: inherit; }
+.th-sort:hover { color: var(--text); text-decoration: underline; }
+.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.th-sort-arrow { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; opacity: 0; }
+.th-sort:hover .th-sort-arrow { opacity: .4; border-bottom: 5px solid currentColor; }
+.th-sort[data-dir="up"] .th-sort-arrow { opacity: 1; border-bottom: 5px solid var(--accent); border-top: 0; }
+.th-sort[data-dir="down"] .th-sort-arrow { opacity: 1; border-top: 5px solid var(--accent); border-bottom: 0; }
+/* the folder list's card is its <nav>; the hint sits under the card (the owner, 2026-10-17) */
+@media (min-width: 761px) {
+  .folder-side { border: 0; padding: 0; background: none; border-radius: 0; overflow: visible; max-height: none; }
+  .folder-side > nav { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px; background: var(--surface); }
+  .folder-dragging .folder-side > nav { border-color: var(--accent); }
+  .folder-side > .side-hint { margin: 8px 4px 0; }
+}
+/* a page's one long list as a panel that scrolls inside itself (static/js/fitpanel.js; the
+   owner, 2026-10-17); what's inside it just grows, so there's one scroll at a time */
+.fit-scroll { overflow-y: auto !important; overscroll-behavior: contain; position: relative; padding-right: 4px; }
+.fit-scroll details.grading-group > .table-wrap { max-height: none; }
+.fit-scroll .table-wrap { overflow: visible; }
+.fit-scroll thead th { position: sticky; top: 0; z-index: 2; }
+/* Grading: the five oldest waiting, a card of their own above the folders (the owner, 2026-10-17) */
+.grading-oldest { margin: 12px 0 0; padding: 10px 14px; }
+.grading-oldest-head { font-size: var(--fs-base, 1rem); margin: 0 0 6px; }
+.grading-oldest .table-wrap { margin: 0; }
+/* Grading's oldest waiting: its button under the folder list; a pop-over beside it, or pinned
+   in the page under the quizzes (static/js/grading_oldest.js; the owner, 2026-10-17) */
+.folder-side > .oldest-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin: 8px 0 0; }
+.grading-oldest-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
+.grading-oldest-top .grading-oldest-head { margin: 0; }
+.grading-oldest.oldest-pop { position: fixed; z-index: 70; margin: 0; max-height: calc(100vh - 16px); overflow: auto;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, .35); }
+@media (max-width: 760px) { .grading-oldest.oldest-pop { left: 8px !important; right: 8px; width: auto !important; } }
+/* (a stronger edge, so it stands apart from what's behind it: the owner, 2026-10-17) */
+.grading-oldest { border: 2px solid var(--accent); }
+.grading-oldest.oldest-pop { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45); }
+/* the grading page's heading: Grade (avatar) ava's “Quiz” (the owner, 2026-10-17) */
+.page-head h1.grade-head a.person { display: inline-flex; align-items: center; gap: 6px; vertical-align: bottom; }
+.page-head h1.grade-head a.person .avatar { flex: none; }
+/* one student's page: the folder list in its own card like the other list pages, the name
+   filter over the tabs on the right (templates ulist.html; the owner, 2026-10-17) */
+/* (left: the title, the folder list, the Awards button; right: the filter row with the page's
+   buttons, the tabs, the list) */
+.student-folders > .folder-filter[data-style="list"][data-tabs] { grid-template-columns: minmax(170px, 260px) minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr; column-gap: 16px; row-gap: 0; }
+.student-folders > .folder-filter[data-tabs] > .student-head { grid-column: 1; grid-row: 1; margin: 0 0 8px; }
+.student-folders > .folder-filter[data-tabs] > .folder-filter-side { grid-column: 1; grid-row: 2 / span 2; align-self: start; }
+.student-folders > .folder-filter[data-tabs] > .student-awards-spot { grid-column: 1; grid-row: 4; align-self: start; margin-top: 8px; }
+.student-folders > .folder-filter[data-tabs] > .student-filter { grid-column: 2; grid-row: 1; }
+.student-folders > .folder-filter[data-tabs] > .folder-filter-tabs { grid-column: 2; grid-row: 2; }
+.student-folders > .folder-filter[data-tabs] > .folder-filter-list,
+.student-folders > .folder-filter[data-tabs] > .folder-filter-empty { grid-column: 2; grid-row: 3 / span 2; }
+.student-awards-spot > .awards-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
+/* a card popped over the page from its button (static/js/popcard.js), with the same strong
+   edge as Grading's oldest waiting */
+.pop-card { position: fixed; z-index: 70; margin: 0; padding: 10px 14px; max-height: calc(100vh - 16px); overflow: auto;
+  border: 2px solid var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45); }
+.pop-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
+.pop-card-head { font-size: var(--fs-base, 1rem); margin: 0; }
+@media (max-width: 640px) {
+  .student-folders > .folder-filter[data-style="list"][data-tabs] { grid-template-columns: minmax(0, 1fr); }
+  .student-folders > .folder-filter[data-tabs] > * { grid-column: 1 !important; grid-row: auto !important; position: static; }
+}
+/* My quizzes as rows (the owner, 2026-10-17): the row's name folds open; no card inside a row;
+   a new or started quiz has its colored edge down the row's left */
+.quiz-rows details.quiz-card { border: 0; padding: 0; margin: 0; background: none; box-shadow: none; }
+.quiz-rows details.quiz-card > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.quiz-rows details.quiz-card[open] > summary { margin-bottom: 6px; }
+/* (a new or started quiz's row outlined all the way round, its cells drawing the edge so no side
+   is cut off: the owner, 2026-10-17) */
+.quiz-rows tr.row-is-new { --row-edge: var(--new-edge); }
+.quiz-rows tr.row-is-started { --row-edge: var(--accent); }
+.quiz-rows tr[class*="row-is-"] > td { box-shadow: inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
+.quiz-rows tr[class*="row-is-"] > td:first-child { box-shadow: inset 3px 0 0 var(--row-edge), inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
+.quiz-rows tr[class*="row-is-"] > td:last-child { box-shadow: inset -1px 0 0 var(--row-edge), inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
+.quiz-rows td.quiz-sum { white-space: nowrap; }
+.quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
+/* a button under the folder list that opens a pop-over (Just finished) */
+.folder-side > .side-pop-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin: 8px 0 0; }
+/* (each outlined row its own: a little room between rows, and no gray line under each) */
+table.quiz-rows { border-collapse: separate; border-spacing: 0 4px; }
+table.quiz-rows > tbody > tr > td { border-bottom: 0; }
+/* the results tables' last column (Retake, Archive all) only as wide as its icons, still at the
+   right edge; each attempt's icons then sit just left of it, the same on every results table
+   (the owner, 2026-10-17) */
+tr:has(> td.attempts) > td.actions { width: 1%; white-space: nowrap; }
+@media (min-width: 641px) { .result-box > .table-wrap > table > thead th:nth-child(4) { width: 3.75rem; } }
+tr:has(> td.attempts) > td.actions .btn-stack { flex-wrap: nowrap; }

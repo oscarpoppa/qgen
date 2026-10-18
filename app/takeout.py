@@ -64,7 +64,8 @@ def _item(kind, item_id):
         from app.qgen import services as S
         cls = S.subject_kind(kind)[1]
     try:
-        item = db.session.get(cls, int(item_id))
+        #(archived people too: the Archive's People has the same folder actions)
+        item = db.session.get(cls, int(item_id), execution_options={'include_archived': True})
     except (TypeError, ValueError):
         item = None
     if item is None:
@@ -136,7 +137,7 @@ def question(kind, folder, p):
     one = len(left) == 1
     it = 'it' if one else 'them'
     if kind == 'people':
-        it = 'them'
+        it = 'him/her' if one else 'them'
     q = '{} {} only in “{}”. Do you want me to permanently delete {} or put {} in Uncategorized?'.format(
         ', '.join(item_name(kind, i) for i in left), 'is' if one else 'are', folder_name(kind, folder), it, it)
     if kind == 'people':
@@ -151,8 +152,22 @@ def question(kind, folder, p):
             q += S.archive_warning(archived.get(item.id, 0), 'problem')
     for item, why in p['blocked']:
         q += ' {} can’t be deleted ({}), so {} would go in Uncategorized.'.format(
-            item_name(kind, item), why.rstrip('.'), 'they' if kind == 'people' else 'it')
+            item_name(kind, item), why.rstrip('.'), 'he/she' if kind == 'people' else 'it')
     return q
+
+
+def preview(kind, folder, p):
+    """Where each would go, said before it's done (the checked bar's Take out of folder: OK or
+    Cancel, the owner 2026-10-15): up to the folder this one is in, else Uncategorized; nothing
+    is deleted from there."""
+    lines = []
+    for item in p['up']:
+        lines.append('{} will go to “{}”.'.format(item_name(kind, item), folder_name(kind, p['parent'])))
+    for item in p['out']:
+        lines.append('{} will stay in {}.'.format(item_name(kind, item), _still_in(kind, item, p['ids'])))
+    for item in p['delete'] + [i for i, _why in p['blocked']]:
+        lines.append('{} will go to Uncategorized (in no folder).'.format(item_name(kind, item)))
+    return lines
 
 
 def _still_in(kind, item, ids):
@@ -207,17 +222,17 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
         _take_out(kind, item, ids)
         _put_in(kind, item, p['parent'])
         done.append('Took {} out of “{}”; {} now in “{}” (its Unsorted){}.'.format(item_name(kind, item), where,
-                    'they’re' if kind == 'people' else 'it’s', folder_name(kind, p['parent']),
+                    'he/she is' if kind == 'people' else 'it’s', folder_name(kind, p['parent']),
                     ' and still in {}'.format(also) if also else ''))
     for item in p['out']:
         done.append('Took {} out of “{}”; {} still in {}.'.format(item_name(kind, item), where,
-                    'they’re' if kind == 'people' else 'it’s', _still_in(kind, item, ids)))
+                    'he/she is' if kind == 'people' else 'it’s', _still_in(kind, item, ids)))
         _take_out(kind, item, ids)
     to_uncategorized = [i for i, _why in p['blocked']] + (p['delete'] if confirm == 'uncategorized' else [])
     for item in to_uncategorized:
         _take_out(kind, item, ids)
         done.append('Took {} out of “{}”; {} now in Uncategorized.'.format(item_name(kind, item), where,
-                    'they’re' if kind == 'people' else 'it’s'))
+                    'he/she is' if kind == 'people' else 'it’s'))
     db.session.commit()
     if confirm == 'delete':
         from flask import current_app
@@ -260,10 +275,10 @@ def handle(kind, item_ids, folder_id, done, one_folder=False):
         q = question(kind, folder, p)
         can_delete = bool(p['delete'])  # (when nothing left can be deleted, "Delete for good" is grayed)
         if request.form.get('check'):
-            return jsonify(ok=True, question=q, can_delete=can_delete)
+            return jsonify(ok=True, question=q, can_delete=can_delete, preview=preview(kind, folder, p))
         confirm = request.form.get('confirm')
         if q and confirm not in ('delete', 'uncategorized') and fetch:
-            return jsonify(ok=False, confirm=q, can_delete=can_delete), 409
+            return jsonify(ok=False, confirm=q, can_delete=can_delete, preview=preview(kind, folder, p)), 409
         try:
             message = run(kind, item_ids, folder, by=current_user, confirm=confirm, one_folder=one_folder)
         except Exception as exc:  # e.g. someone started the quiz meanwhile (S.ServiceError)
@@ -277,6 +292,53 @@ def handle(kind, item_ids, folder_id, done, one_folder=False):
             return jsonify(ok=False, error=str(exc)), 400
         return done(str(exc), error=True)
     return done(message)
+
+
+def _each_plan(kind, item_ids):
+    """No folder open (All): each thing comes out of the folder it's in. In one folder: out of
+    that one, up to the folder it's inside, else Uncategorized. In several: out of all of them,
+    to Uncategorized. [(item, [its folders], where to)] (the owner, 2026-10-15)"""
+    cls = _folder_cls(kind)
+    out = []
+    for item_id in dict.fromkeys(item_ids):
+        item = _item(kind, item_id)
+        if item is None:
+            continue
+        mine = _folders_of(kind, item)
+        folders = sorted((db.session.get(cls, f) for f in mine), key=lambda f: folder_name(kind, f).lower())
+        to = None
+        if len(folders) == 1 and folders[0].parent_id:
+            to = db.session.get(cls, folders[0].parent_id)
+        out.append((item, folders, to))
+    return out
+
+
+def handle_each(kind, item_ids, done):
+    """The checked bar's Take out of folder with no folder open: check=1 gives the preview."""
+    from flask import request, jsonify
+    plan_ = _each_plan(kind, item_ids)
+    q = lambda fs: ' and '.join('“{}”'.format(folder_name(kind, f)) for f in fs)
+    if request.form.get('check'):
+        lines = []
+        for item, folders, to in plan_:
+            if not folders:
+                lines.append('{} isn’t in any folder.'.format(item_name(kind, item)))
+            else:
+                lines.append('{} will come out of {} and go to {}.'.format(item_name(kind, item), q(folders),
+                             '“{}”'.format(folder_name(kind, to)) if to else 'Uncategorized (in no folder)'))
+        return jsonify(ok=True, question=None, can_delete=False, preview=lines)
+    said = []
+    for item, folders, to in plan_:
+        if not folders:
+            continue
+        _take_out(kind, item, {f.id for f in folders})
+        if to is not None:
+            _put_in(kind, item, to)
+        said.append('Took {} out of {}; {} now in {}.'.format(item_name(kind, item), q(folders),
+                    'he/she is' if kind == 'people' else 'it’s',
+                    '“{}”'.format(folder_name(kind, to)) if to else 'Uncategorized'))
+    db.session.commit()
+    return done(' '.join(said) or 'Nothing to take out: none of them is in a folder.')
 
 
 def folder_delete_plan(kind, folder):
@@ -308,7 +370,7 @@ def folder_delete_plan(kind, folder):
                 out.append('Moved to Uncategorized: {}.'.format(names(alone)))
             rest = [i for i in items if i not in alone]
             if rest:
-                out.append('Still in their other folders: {}.'.format(names(rest)))
+                out.append('Still in {} other folders: {}.'.format('his/her' if kind == 'people' and len(rest) == 1 else 'their', names(rest)))
             if inner:
                 out.append('Its folders {} are now at the top level.'.format(', '.join('“{}”'.format(n) for n in inner)))
         if not items and not inner:

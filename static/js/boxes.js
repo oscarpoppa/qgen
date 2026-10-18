@@ -29,6 +29,17 @@
   var memory = {};
   try { memory = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (e) {} }
+  //a page can forget, once, what was remembered for some of its boxes, when how they start
+  //changes: data-boxes-reset="<when>:<box>,<box>" (the Dashboard's list cards, 2026-10-15)
+  var reset = document.querySelector('[data-boxes-reset]');
+  if (reset) {
+    var parts = reset.dataset.boxesReset.split(':'), mark = '_reset:' + parts[0];
+    if (!memory[mark]) {
+      (parts[1] || '').split(',').forEach(function (b) { delete memory[b]; });
+      memory[mark] = 1;
+      save();
+    }
+  }
 
   //a name for a box on this page that stays the same from visit to visit
   function idOf(d) {
@@ -218,12 +229,42 @@
         if (same) pair.hidden = true;
         else shown.push(set);
       });
+      syncToggles();
     }, 0);
   }
+
+  /* Every Expand all / Collapse all pair is one toggle (the owner, 2026-10-16): only one of the
+   * two shows, with its own icon: Expand all while anything it covers is folded, Collapse all
+   * once everything is open. Both pairs kinds: boxes ([data-level]) and folder lists
+   * ([data-side-level], whose folds are the .side-fold arrows beside it). */
+  function syncToggles() {
+    document.querySelectorAll('[data-level="open"]').forEach(function (open) {
+      var close = open.parentElement && open.parentElement.querySelector(':scope > [data-level="close"]');
+      if (!close) return;
+      var set = folds(levelOf(open), open);
+      var anyShut = !set.length || set.some(function (d) { return !d.open; });
+      open.classList.toggle('lvl-off', !anyShut);
+      close.classList.toggle('lvl-off', anyShut);
+    });
+    document.querySelectorAll('[data-side-level="open"]').forEach(function (open) {
+      var row = open.parentElement, close = row && row.querySelector(':scope > [data-side-level="close"]');
+      if (!close) return;
+      var scope = row.parentElement || document;
+      var all = Array.prototype.filter.call(scope.querySelectorAll('.side-fold'), function (f) { return !f.closest('[hidden]'); });
+      var anyShut = !all.length || all.some(function (f) { return f.getAttribute('aria-expanded') === 'false'; });
+      open.classList.toggle('lvl-off', !anyShut);
+      close.classList.toggle('lvl-off', anyShut);
+    });
+  }
+  var syncSoon = function () { clearTimeout(syncSoon.t); syncSoon.t = setTimeout(syncToggles, 30); };
+  document.addEventListener('toggle', syncSoon, true);
+  document.addEventListener('click', syncSoon);
+  document.addEventListener('DOMContentLoaded', syncSoon);
+  window.addEventListener('load', syncSoon);
   document.addEventListener('qgen-filtered', showLevelButtons);
   window.addEventListener('resize', showLevelButtons);
 
-  window.qgenBoxes = { restore: restore, idOf: idOf, levels: showLevelButtons };
+  window.qgenBoxes = { restore: restore, idOf: idOf, levels: showLevelButtons, toggles: syncSoon };
   setUp(document);
   //boxes drawn later (the Dashboard's refresh, pages that redraw parts of themselves)
   if (window.MutationObserver) new MutationObserver(function (changes) {

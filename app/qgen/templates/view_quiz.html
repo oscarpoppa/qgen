@@ -18,7 +18,7 @@
   {% if vq.shuffle_order %}<span class="badge">order shuffled for each student</span>{% endif %}
   <label class="check" style="margin-left:auto"><input type="checkbox" id="show-answers"> Show the answers</label>
 </div>
-<p class="muted small">One student's version: each student gets their own values{% if vq.shuffle_order %} and order{% endif %}, and their own picks from any question groups. Nothing is saved or sent.</p>
+<p class="muted small">One student's version: each student gets his/her own values{% if vq.shuffle_order %} and order{% endif %}, and his/her own picks from any question groups. Nothing is saved or sent.</p>
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div id="sample-quiz" class="sample-quiz answers-off">
   {% for s in items %}{% with show_titles = true %}{% include "_sample_item.html" %}{% endwith %}{% else %}

@@ -316,7 +316,7 @@ class QType:
             known = known + ['i']
         if picture_labels(options):
             if PICTURE_NAME in known:
-                errors.append('"{}" is used by the picture labels; please rename that value.'.format(PICTURE_NAME))
+                errors.append('“{}” is used by the picture labels; please rename that value.'.format(PICTURE_NAME))
             known = known + [PICTURE_NAME]
             if not all(picture_labels(options)):
                 errors.append('Every picture needs a label, since the problem uses [picture].')
@@ -403,7 +403,7 @@ class Numeric(QType):
             except F.FriendlyError as exc:
                 errors.append(str(exc))
                 continue
-            errors += ['The answer uses "{}", which isn\'t in your values table.{}'
+            errors += ['The answer uses “{}”, which isn\'t in your values table.{}'
                        .format(n, F._suggest(n, known)) for n in sorted(F.names_in(tree) - set(known))]
         return list(dict.fromkeys(errors + display_errors))
 
@@ -451,7 +451,7 @@ class Text(QType):
     key = 'text'
     label = 'Short text'
     answer_label = 'Accepted answers (one per line)'
-    answer_help = 'Any of these counts as correct. Capitals and extra spaces are ignored unless you check "Case sensitive".'
+    answer_help = 'Any of these counts as correct. Capitals and extra spaces are ignored unless you check “Case sensitive”.'
 
     def validate_parts(self, answer, options, known):
         if not [a for a in (answer or '').splitlines() if a.strip()]:
@@ -508,9 +508,9 @@ class ChoiceOne(QType):
                 errors.append('To show {} choices you need at least {} wrong ones.'.format(show_n, show_n - 1))
         elif not self.multi and len(right) > 1:
             errors.append('Pick one questions can only have one choice marked with *, '
-                          'unless you use "Show only" to pick one of them at random.')
+                          'unless you use “Show only” to pick one of them at random.')
         for text, _ in choices:
-            errors += F.check_text('choice "{}"'.format(text), text, known)
+            errors += F.check_text('choice “{}”'.format(text), text, known)
         return errors
 
     def pick(self, choices, show_n, rng):
@@ -601,7 +601,7 @@ class ChoiceMany(ChoiceOne):
         for combo in combos:
             for item in combo:
                 if item not in texts:
-                    errors.append('The combination "{}" uses "{}", which isn\'t one of the choices. '
+                    errors.append('The combination “{}” uses “{}”, which isn\'t one of the choices. '
                                   'Write it exactly as in the choices list.'.format(', '.join(combo), item))
         show_n = options.get('show_n')
         if show_n:
@@ -610,7 +610,7 @@ class ChoiceMany(ChoiceOne):
             elif all(len(c) > show_n for c in self.answer_sets(choices, combos)):
                 errors.append('Every correct combination has more than {} choices, so it can\'t be shown whole.'.format(show_n))
         for text in texts:
-            errors += F.check_text('choice "{}"'.format(text), text, known)
+            errors += F.check_text('choice “{}”'.format(text), text, known)
         return errors
 
     def answer_sets(self, choices, combos):
@@ -633,8 +633,8 @@ class ChoiceMany(ChoiceOne):
         sets = [sorted(set(filled[t] for t in s)) for s in raw_sets]
         for raw, got in zip(raw_sets, sets):
             if len(got) < len(set(raw)):
-                raise F.FriendlyError('With some values, the combination "{}" turns into the same answer twice ({}). '
-                                      'Change the ranges or use "different from" so that can\'t happen.'
+                raise F.FriendlyError('With some values, the combination “{}” turns into the same answer twice ({}). '
+                                      'Change the ranges or use “different from” so that can\'t happen.'
                                       .format(', '.join(raw), ', '.join(filled[t] for t in raw)))
         show_n = options.get('show_n')
         if show_n:
@@ -680,7 +680,7 @@ class TrueFalse(ChoiceOne):
             missing = sorted(F.condition_names(answer) - set(known))
         except F.FriendlyError as exc:
             return [str(exc)]
-        return ['The answer uses "{}", which isn\'t in your values table.{}'
+        return ['The answer uses “{}”, which isn\'t in your values table.{}'
                 .format(n, F._suggest(n, known)) for n in missing]
 
     def render(self, question, answer, options, env, rng):

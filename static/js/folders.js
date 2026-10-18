@@ -46,6 +46,15 @@
     btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); save(FOLD, folded); });
   });
   save(FOLD, folded);
+  //a folder opened from its tab on the right is shown in this list too: the folders above it
+  //unfold (the owner, 2026-10-15; static/js/folderfilter.js asks)
+  window.qgenSideReveal = function (id) {
+    var li = document.querySelector('.side-item[data-folder="' + id + '"]');
+    for (var up = li && li.parentElement.closest('.side-item'); up; up = up.parentElement.closest('.side-item')) {
+      shows.forEach(function (x) { if (String(x.id) === String(up.dataset.folder)) x.show(true); });
+    }
+    save(FOLD, folded);
+  };
   //Expand all / Collapse all above the list (the folders above the one you're in stay open)
   //(always there: grayed out, with why, when no folder in the list has folders inside it)
   var levels = document.querySelector('.side-levels');
@@ -59,7 +68,8 @@
       var b = e.target.closest('[data-side-level]');
       if (!b) return;
       var open = b.dataset.sideLevel === 'open';
-      shows.forEach(function (s) { s.show(open || path.map(String).indexOf(String(s.id)) !== -1); });
+      //(the folder you're in folds too, like its own arrow: only the folders above it stay open)
+      shows.forEach(function (s) { s.show(open || path.slice(0, -1).map(String).indexOf(String(s.id)) !== -1); });
       save(FOLD, folded);
     });
   }
@@ -79,9 +89,26 @@
       sel.form.requestSubmit ? sel.form.requestSubmit() : sel.form.submit();
     });
   });
-  //a new folder's name box gets the cursor when its form opens
-  document.querySelectorAll('details.new-folder').forEach(function (d) {
-    d.addEventListener('toggle', function () { if (d.open) d.querySelector('input[name=name]').focus(); });
+  //+ New folder, and Folder options' Rename / Move to / + New folder inside: each opens its own
+  //small dialog (the owner, 2026-10-16). The dialog moves to the page's end the first time, so a
+  //closed Folder options (or a folder tab's copy of it) doesn't hide it; Folder options closes.
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-fopt]');
+    if (!b) return;
+    var box = b._dialog || b.parentElement.querySelector(':scope > dialog[data-fopt-dialog]');
+    if (!box) return;
+    e.preventDefault();
+    if (!b._dialog) {
+      b._dialog = box;
+      document.body.appendChild(box);
+      box.querySelector('[data-cancel]').addEventListener('click', function () { box.close(); });
+      box.addEventListener('close', function () { box.querySelector('form').reset(); });
+    }
+    var menu = b.closest('details.folder-tools');
+    if (menu) menu.open = false;
+    box.showModal();
+    var name = box.querySelector('input[name=name]');
+    if (name) { name.focus(); name.select(); }
   });
 
   //after a drag: "Moved "train" to "abc"." at the top, and what moved lit up
@@ -132,6 +159,8 @@
   var ticks = Array.prototype.slice.call(document.querySelectorAll('.folder-main input[name="items"], .folder-main input.pick-person'));
   var fileForm = document.getElementById('file-form'), fileCount = document.querySelector('.file-count');
   function counted() {
+    //(everything checked, here or in another folder: static/js/checked.js)
+    if (window.qgenCheckedIds) return window.qgenCheckedIds().length;
     var ids = {};
     ticks.forEach(function (t) { if (t.checked) ids[t.value] = 1; });
     return Object.keys(ids).length;
@@ -160,6 +189,7 @@
     });
   });
   if (fileForm) { fileForm.addEventListener('change', syncBar); syncBar(); }
+  document.addEventListener('qgen-checked', syncBar);
   if (fileForm) fileForm.addEventListener('submit', function (e) {
     if (!counted()) {
       e.preventDefault();
@@ -219,8 +249,9 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .then(function (res) {
         //out of its only folder: delete it or put it in Uncategorized? (app/takeout.py)
-        if (res.confirm && window.qgenChoose) {
-          window.qgenChoose(res.confirm, window.qgenTakeOutChoices(res.can_delete)).then(function (choice) { if (choice) move(d, to, choice); });
+        if (res.confirm && window.qgenAsk) {
+          //(where it will go, OK or Cancel: never deleted by dragging it out, the owner 2026-10-15)
+          window.qgenAsk((res.preview || []).join(' ') || res.confirm, 'OK').then(function (yes) { if (yes) move(d, to, 'uncategorized'); });
           return;
         }
         if (res.ok) {
@@ -328,4 +359,111 @@
       if (s) s.focus();
     });
   });
+})();
+
+/* Folder pages (Problems, Quizzes, People, the results pages): the title and its buttons sit over
+   the folder list only (the buttons small, wrapping there), and the list's side slides up beside
+   them into the room that leaves (the owner, 2026-10-15). Only where the folders come right
+   under the title; on a phone it all stays stacked. */
+(function () {
+  var layout = document.querySelector('.folders-layout');
+  var head = layout && layout.previousElementSibling;
+  if (!head || !head.classList.contains('page-head')) return;
+  var main = layout.querySelector(':scope > .folder-main'), side = layout.querySelector(':scope > .folder-side');
+  if (!main || !side) return;
+  function lift() {
+    main.style.marginTop = '';
+    head.style.maxWidth = '';
+    head.classList.remove('lifted');
+    if (window.innerWidth <= 760) return;
+    head.classList.add('lifted');
+    head.style.maxWidth = (side.getBoundingClientRect().right - head.getBoundingClientRect().left) + 'px';
+    main.style.marginTop = -(main.getBoundingClientRect().top - head.getBoundingClientRect().top) + 'px';
+  }
+  lift();
+  window.addEventListener('resize', lift);
+  window.addEventListener('load', lift);
+  //(the folder list made wider or narrower by hand)
+  if (window.ResizeObserver) new ResizeObserver(function () { lift(); }).observe(side);
+})();
+
+/* the folder list down the side: no taller than the window has room for below its top, then it
+   scrolls inside itself (the owner, 2026-10-17); on phones it's stacked and folds away instead */
+(function () {
+  //(the list inside it scrolls: a <details> doesn't clip what's in it)
+  var side = document.querySelector('.folders-layout > .folder-side'), nav = side && side.querySelector(':scope > nav');
+  if (!nav) return;
+  function fit() {
+    nav.style.maxHeight = '';
+    nav.classList.remove('side-scroll');
+    if (window.innerWidth <= 760) return;
+    var top = nav.getBoundingClientRect().top + window.scrollY;
+    //(the folder list's own bottom padding and border, then the page's bottom margin, so the
+    //page itself doesn't scroll)
+    var main = side.closest('main'), gap = main ? parseFloat(getComputedStyle(main).paddingBottom) || 16 : 16;
+    //(what sits under the card: the hint, a page's own button like Just finished)
+    var below = 0;
+    for (var el = nav.nextElementSibling; el; el = el.nextElementSibling) {
+      if (el.offsetParent) below += el.offsetHeight + (parseFloat(getComputedStyle(el).marginTop) || 0);
+    }
+    nav.style.maxHeight = Math.max(200, window.innerHeight - top - gap - 3 - below) + 'px';
+    nav.classList.add('side-scroll');
+  }
+  fit();
+  setTimeout(fit, 0);
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+})();
+
+/* My quizzes: a quiz's Move (a bare folder icon) opens a dialog to choose the folder, like the
+   other folder dialogs; the folder it's in now is shown grayed; Move sends the quiz's own small
+   form (the owner, 2026-10-15). */
+(function () {
+  var box = document.createElement('dialog');
+  box.className = 'ask ask-many assign-many put-dialog move-dialog';
+  box.innerHTML = '<p><strong data-head></strong><br><span class="muted small" data-one></span></p>'
+    + '<ul class="assign-many-people put-list" data-list></ul>'
+    + '<p class="error small" data-err hidden>Choose a folder first.</p>'
+    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Move</button></div>';
+  document.body.appendChild(box);
+  var list = box.querySelector('[data-list]'), err = box.querySelector('[data-err]');
+  box.querySelector('[data-no]').addEventListener('click', function () { box.close(); });
+  box.addEventListener('change', function () { err.hidden = true; });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-move-one]');
+    if (!b) return;
+    e.preventDefault();  // (it's on the box's heading: not folding it)
+    e.stopPropagation();
+    openMove(b.closest('form'), b.dataset.label);
+  }, true);
+  //(also the Archive's Remove, "Move from …": the row's own Move form, static/js/takeout.js)
+  window.qgenMoveOne = openMove;
+  function openMove(form, label) {
+    var sel = form.querySelector('select.move-select');
+    box.querySelector('[data-head]').textContent = 'Move ' + (label || 'it') + ' to a folder';
+    //(an Archive attempt or a My quizzes quiz: each is in one folder at a time)
+    box.querySelector('[data-one]').textContent = 'It leaves the folder it\u2019s in now. ' + (form.querySelector('input[name=attempt]') ? 'An attempt' : 'A quiz') + ' is in one folder at a time.';
+    list.innerHTML = '';
+    Array.prototype.forEach.call(sel.options, function (o) {
+      if (!o.value) return;
+      var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
+      r.type = 'radio'; r.name = 'move-to'; r.value = o.value; r.disabled = o.disabled;
+      var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
+      li.style.paddingLeft = (depth * 6) + 'px';
+      lab.appendChild(r);
+      if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
+      lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));
+      li.appendChild(lab);
+      list.appendChild(li);
+    });
+    err.hidden = true;
+    box.querySelector('[data-ok]').onclick = function () {
+      var r = list.querySelector('input:checked');
+      if (!r) { err.hidden = false; return; }
+      sel.value = r.value;
+      box.close();
+      form.submit();
+    };
+    box.showModal();
+  }
 })();

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, back_home with context %}
+{% from "_macros.html" import back_button, back_home, filter_bar with context %}
 {% from "_macros.html" import post_button with context %}
 
 {% block body_attrs %}{{ watch('files') }}{% endblock %}
@@ -9,12 +9,15 @@
   <div class="actions">{{ back_home() }}<a class="btn" href="{{ url_for('upload.upload') }}" title="Add a file that isn't a picture">Upload a file</a></div>
 </div>
 {% if files %}
-  <div class="table-wrap stack">
+  {#- the name filter once there are more than 5, and the list as a panel down to the window's
+      bottom that scrolls inside itself, like Pictures (the owner, 2026-10-17) #}
+  {% if files|length > 5 %}{{ filter_bar('#file-list', 'file', 'files', url=true) }}{% endif %}
+  <div class="table-wrap stack" id="file-list" data-fit-window>
     <table>
       <thead><tr><th>File</th><th></th></tr></thead>
       <tbody>
       {% for file in files %}
-        <tr>
+        <tr data-name="{{ file|lower }}">
           <td data-label="File">{{ file }}</td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=file) }}" target="_blank" rel="noopener" title="View: Open {{ file }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>

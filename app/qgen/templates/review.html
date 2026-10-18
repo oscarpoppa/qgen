@@ -8,15 +8,15 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Grade: <a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's history: every student's attempts and scores">{{ cq.vquiz.title }}</a></h1>
-  <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}'s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>
+  {#- the student's name in the heading (the owner, 2026-10-17) #}
+  <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}'s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's history: every student's attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
   <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
 <p class="muted">Type each score in <strong>Credit</strong>. If you like, you can also highlight an answer for the student: select words, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> (with nothing selected, the whole answer is highlighted). Click a highlight to remove it.</p>
 
-<form method="post" id="review-form" novalidate>
-  {{ form.hidden_tag() }}
+<form method="post" id="review-form" data-unsaved novalidate>
+  {{ form.hidden_tag() }}{% if came_from %}<input type="hidden" name="back" value="{{ came_from }}">{% endif %}
   {% for row in items %}
     {% set it = row.item %}
     <section class="card question">
@@ -62,13 +62,13 @@
   {% endfor %}
   <div class="card btn-row">
     {% if others %}{{ form.finalize_next(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and open the next one waiting') }}
-    {{ form.finalize(class='btn btn-secondary', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to Grading') }}{% else %}{{ form.finalize(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to Grading') }}{% endif %}
+    {{ form.finalize(class='btn btn-secondary', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% else %}{{ form.finalize(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% endif %}
     {{ form.save(class='btn btn-secondary', title='Keep your grades so far without finishing; ' ~ cq.taker.shown_name ~ ' sees nothing yet') }}
     <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
   </div>
 </form>
 {% endblock %}
 
-{% block scripts %}
+{% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script>
 <script src="{{ asset('js/review.js') }}"></script>
 {% endblock %}
