@@ -45,7 +45,7 @@
   </details>
 
   <details class="box card dash-card" data-elastic="recent" data-elastic-dir="v" data-box="recent">
-    <summary class="dash-head">{{ box_label('checkbox', 'Recently completed', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('checkbox', 'Just finished', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
       <a href="{{ url_for('user.mypage', folder='all') }}" title="See every quiz you've had, old and new">All my quizzes →</a></p>
     {% if recent %}

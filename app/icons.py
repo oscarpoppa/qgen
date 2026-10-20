@@ -106,10 +106,24 @@ PATHS = {
 }
 
 
+#drawn in full each time: the page's styles color their parts (a <use> copy can't be styled inside)
+INLINE = {k for k, v in PATHS.items() if 'class=' in v}
+
+
 def svg(name, cls=None):
-    """The drawing named name, as markup (decorative: screen readers skip it)."""
+    """The drawing named name, as markup (decorative: screen readers skip it): a small <use> of
+    the page's one copy of it (icon_sprite in base.html), so a page with many icons stays light
+    (the Problems page: 1,600 icons; the owner, 2026-10-20)."""
+    inside = PATHS[name] if name in INLINE else '<use href="#i-{}"/>'.format(name)
     return Markup('<svg class="ico{}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{}</svg>'.format(
-        ' ' + escape(cls) if cls else '', PATHS[name]))
+        ' ' + escape(cls) if cls else '', inside))
+
+
+def icon_sprite():
+    """Every drawing once, hidden, at the top of each page, for svg()'s <use> copies."""
+    return Markup('<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>'
+                  + ''.join('<symbol id="i-{}" viewBox="0 0 24 24">{}</symbol>'.format(k, v) for k, v in PATHS.items() if k not in INLINE)
+                  + '</defs></svg>')
 
 
 def icon(name, cls=None):

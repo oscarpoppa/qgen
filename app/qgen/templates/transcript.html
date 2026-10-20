@@ -8,7 +8,8 @@
 
 {% block content %}
 <div class="page-head no-print">
-  <h1>Results</h1>
+  {#- (it was “Results”: the owner, 2026-10-20, from the Oct 7 review) #}
+  <h1>Quiz results</h1>
   <div class="actions">
     {# (the way back always first, on every page: the owner, 2026-10-14) #}
     {% if current_user == cq.taker %}{{ after_quiz() }}

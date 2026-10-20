@@ -18,7 +18,7 @@ def logout_required(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if current_user.is_authenticated:
-            flash('You are already logged in.')
+            flash('You’re already logged in.', 'info')
             return redirect(home_url())
         return func(*args, **kwargs)
     return inner
@@ -38,7 +38,7 @@ def pw_check(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if current_user.pw_man_reset:
-            flash('Please change your password before continuing')
+            flash('Please change your password before going on.', 'warning')
             return redirect(url_for('user.chpass'))
         else:
             return func(*args, **kwargs)
@@ -268,7 +268,7 @@ def move_to_folder():
         return _folder_done(str(exc), error=True)
     return _folder_done('Moved “{}” to {}.'.format(what, where), moved=moved)
 
-#Home's "Recently completed": how far back, and how many at most
+#Home's "Just finished" (was "Recently completed"): how far back, and how many at most
 RECENT_DAYS, RECENT_MAX = 14, 10
 #how many of the latest handed-in quizzes My quizzes lists at the top
 LATEST_FINISHED = 3
@@ -303,7 +303,7 @@ def home():
 @user_bp.route('/logout')
 @login_required
 def logout():
-    flash('{} has been logged out'.format(current_user.shown_name))
+    flash('You’re logged out.', 'success')
     current_app.logger.info('{} has logged out'.format(current_user.username))
     current_user.logged_in = False
     current_user.save()
@@ -338,7 +338,8 @@ def login():
         session['qgen_welcome'] = True
         #only a page on this site (a link could otherwise send them elsewhere after signing in)
         return redirect(safe_next(request.args.get('next'), home_url()))
-    return render_template('login.html', title='Log in', form=form)
+    from app.qgen.models import Setting
+    return render_template('login.html', title='Log in', form=form, signup_open=bool(Setting.get('class_code')))
 
 # route to user registration action
 @user_bp.route('/register', methods=['POST','GET'])
@@ -356,7 +357,7 @@ def register():
         notify_teachers(u.id, 'New student signed up: {}.'.format(u.shown_name), url_for('qgen.list_user', uid=u.id))
         db.session.commit()
         current_app.logger.info('User {} has been created'.format(u.username))
-        flash('Account {} registered'.format(form.username.data))
+        flash('Your account “{}” is ready.'.format(form.username.data), 'success')
         return redirect(url_for('user.login'))
     else:
         return render_template('register.html', title='Create an account', form=form)
@@ -473,6 +474,8 @@ def eduser(uid):
     uform = model_form(User, base_class=FlaskForm, db_session=db)
     uobj = User.query.filter_by(id=uid).first_or_404('No user with id {}'.format(uid))
     form = uform(obj=uobj)
+    #(the site's word for them: the owner, 2026-10-20; the model's own label was "Is Admin")
+    form.is_admin.label.text = 'Teacher'
     if request.method == 'POST':
         email = clean_email(form.email.data)
         taken = email and User.query.filter(User.email == email, User.id != uobj.id).first()
@@ -482,7 +485,7 @@ def eduser(uid):
         uobj.username = form.username.data
         uobj.email = email
         if uobj == current_user and uobj.is_admin != form.is_admin.data:
-            flash("I can't let you change is_admin, {}".format(current_user.shown_name))
+            flash('You can’t change whether you’re a teacher.', 'error')
         else:
             uobj.is_admin = form.is_admin.data
         uobj.save()

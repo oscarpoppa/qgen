@@ -5,6 +5,8 @@
 
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
 {% set tip_ai %}<p>Describe it the way you'd tell a colleague. Claude fills in the form below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
+{#- (the values box's: it fills in only the table: the owner, 2026-10-20) #}
+{% set tip_ai_table %}<p>Describe it the way you'd tell a colleague. Claude fills in the table below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
 {% set tip_ai_problem %}<p>Say what kind of question, what changes from student to student, and what's being asked. For example:</p><ul><li>A pick-one question adding two different whole numbers from 1 to 20</li><li>True or false: a random number from 1 to 50 is bigger than another one</li><li>Short text: the capital of a random country from France, Japan and Brazil</li></ul><p>It fills in the type, question, values and answer.</p>{% endset %}
 {% set tip_ai_values %}<p>Describe the random values in plain English, and Claude fills in the table below, using the [names] in your question.</p><ul><li>two different numbers under 20</li><li>a price between $2 and $20 in quarters</li><li>a random first name</li><li>a decimal from 1 to 10 with 2 places</li></ul><p>No square brackets needed here: plain English is fine.</p>{% endset %}
 {% set tip_qtype %}<p>How students answer, and how it's marked:</p><ul><li><b>Numeric</b>: they type a number. Marked instantly.</li><li><b>Short text</b>: a word or phrase; any answer on your list counts.</li><li><b>Pick one</b>: round buttons, one right choice.</li><li><b>Pick several</b>: checkboxes; they must check exactly the right ones.</li><li><b>True / False</b>: the right answer can depend on the values, like <code>a &gt; b</code>.</li><li><b>Long text</b>: an essay you grade yourself, with partial credit, highlights and comments.</li><li><b>Paper only</b>: drawing, circling or coloring done on a printed page (put the page in the picture section). You score it from the paper; the page prints when you assign the quiz.</li></ul><p>Everything except Long text and Paper only is scored automatically.</p>{% endset %}
@@ -19,7 +21,7 @@
 {% set tip_shuffle %}<p>Each student gets the choices in a different order, so “it's the second one” doesn't help anyone.</p>{% endset %}
 {% set tip_show_n %}<p>Show each student only some of the choices, e.g. 4 out of 8, so students see different options.</p><p>At least one correct choice is always included. Leave it empty to show them all.</p>{% endset %}
 {% set tip_precision %}<ul><li><b>Within 0.01</b>: 3.14 counts for 3.14159 (for numbers under 1, within 1%). Best for most problems.</li><li><b>Exactly</b>: must match to 4 decimal places.</li><li><b>Rounded to 2 decimal places</b>: they must round, e.g. 3.14.</li><li><b>Rounded to a whole number</b>: they must round, e.g. 3; 6.5 rounds to 7.</li></ul>{% endset %}
-{% set tip_display %}<p>The answer box above is worked out as a number, so results show e.g. 3.4641. Write the exact form here to show it too: results then say <code>\( 2\sqrt{3} \)  (≈ 3.4641)</code>.</p><p>Use the same [values] as the question, e.g. <code>\( \frac{[a]}{[b]} \)</code> or <code>\( [a]\sqrt{[n]} \)</code>. Students are graded on the number either way, and may type math themselves, like 2√3.</p>{% endset %}
+{% set tip_display %}<p>The answer box above is worked out as a number, so results show e.g. 3.4641. Write the exact form here to show it too: results then say \( 2\sqrt{3} \) (≈ 3.4641).</p><p>Use the same [values] as the question, e.g. \( \frac{[a]}{[b]} \) or \( [a]\sqrt{[n]} \). Students are graded on the number either way, and may type math themselves, like 2√3.</p>{% endset %}
 {% set tip_ordered %}<p>For an answer with several numbers, like <code>r1, r2</code>:</p><ul><li><b>Off</b>: <code>3, 5</code> and <code>5, 3</code> both count. Right for roots or "the two numbers".</li><li><b>On</b>: they must be in your order. Right for a point <code>(x, y)</code>.</li></ul><p>Answers with a single number aren't affected.</p>{% endset %}
 {% set tip_complex %}<p>Leave this off for ordinary arithmetic: then a square root of a negative number is an error you'll hear about, instead of an imaginary number sneaking into a student's problem.</p>{% endset %}
 {% set tip_case %}<p>Check this when capital letters matter, e.g. chemical symbols (<code>Co</code> is cobalt, <code>CO</code> is carbon monoxide).</p>{% endset %}
@@ -113,7 +115,7 @@
   {# folded until it's wanted: it takes a lot of room (always starts folded: data-fixed) #}
   <details class="box card ai-box" data-fixed>
     <summary>{{ box_label('sparkle', 'Describe it in plain English', none, 'h2') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
-    <p class="muted small">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</p>
+    <div class="muted small ai-intro">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</div>
     <div class="field">
       <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
       <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
@@ -148,14 +150,20 @@
     {% if ai_enabled %}
     {#- here, after the question is written, not in the AI box at the top: it uses the question's
         [names] (the owner, 2026-10-19) #}
-    <div class="field ai-values-field">
-      <div class="label-line"><label for="ai-values">{{ icon('sparkle') }} Describe the values for your question</label>{{ tip('describing the random values', tip_ai_values) }}</div>
+    {#- tinted and outlined like the AI box at the top, with its "AI helper" badge, and folding
+        like it too (starts folded; the tint stays when folded: the owner, 2026-10-20) #}
+    <details class="box ai-box ai-values-field" data-fixed>
+      <summary>{{ box_label('sparkle', 'Describe the values for your question', none, 'h3') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
+      {#- (the same words as the top box, but "the table": it fills in only the values: the owner, 2026-10-20) #}
+      <div class="muted small ai-intro">Claude fills in the table below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper for values', tip_ai_table) }}</div>
+      <label for="ai-values" class="sr-only">Describe the values for your question</label>
       <textarea id="ai-values" rows="2" placeholder="e.g. all integers from 3 to 5, then a random one of those"></textarea>
       <div class="btn-row" style="margin-top:8px">
         <button type="button" class="btn btn-secondary ai-go" data-kind="values" data-src="ai-values" data-url="{{ url_for('qgen.ai_values') }}" title="Fills in only the Random values table">Fill in the values</button>
+        {{ tip('describing the random values', tip_ai_values) }}
       </div>
       <div class="ai-status small" role="status" aria-live="polite"></div>
-    </div>
+    </details>
     {% endif %}
     <div class="table-wrap stack values-table">
       <table>
@@ -199,10 +207,11 @@
       {% set display_bar %}{% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
       {# a worked example: what to write, with a value in [brackets], and what a student then sees #}
       {% set display_help %}Optional. Shows the exact form next to the number; students are still graded on the number.
-        <span class="display-example">For example, if the answer is <code>sqrt([a])</code>, write <code>\( \sqrt{[a]} \)</code>
+        {#- (the example drawn as math, never as its code: the owner, 2026-10-20) #}
+        <span class="display-example">For example, if the answer is <code>sqrt([a])</code>, write \( \sqrt{[a]} \)
         (press √, then type <code>[a]</code> between the brackets, using your own value's name).
         A student whose <code>a</code> is 3 then sees √3 (≈ 1.7321) instead of just 1.7321.</span>{% endset %}
-      {{ field(form.answer_display, display_help, attrs={'placeholder': '\\( 2\\sqrt{[n]} \\)'}, tip_body=tip_display, above=display_bar) }}
+      {{ field(form.answer_display, display_help, attrs={'placeholder': 'e.g. 2√[n]'}, tip_body=tip_display, above=display_bar) }}
       <div class="math-preview" data-source="answer_display" hidden aria-live="polite"><span class="label">How the correct answer will look</span><div class="math-preview-body"></div></div>
     </div>
     <div class="t-numeric">{{ check(form.ordered, 'Only for answers with several numbers. Off: any order counts (like the two roots of an equation). On: same order as your answer, like a point (x, y).', tip_body=tip_ordered) }}</div>
@@ -241,8 +250,8 @@
 <div class="side-col">
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="editor-go">
-    {{ form.submit(class='btn btn-big', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
     <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
+    {{ form.submit(class='btn btn-big', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
     {# beside Save (the owner, 2026-10-16); the examples still show under the form #}
     <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
   </div>

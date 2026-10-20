@@ -36,6 +36,8 @@
       <div class="help">JPG, PNG or PDF, up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
     <div class="btn-row">
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" data-back-href title="Leave without uploading anything">Cancel</a>
+      {#- back where you came from, like the ← arrow; nothing is uploaded (the owner, 2026-10-20) #}
       <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
       <span class="muted small" id="scan-wait" hidden>Uploading…</span>
     </div>
@@ -54,7 +56,7 @@
         <tr>
           <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-            {%- if kinds.get(j.id) %}{% set x = kinds[j.id] %}<br><span class="small muted">{% include '_scan_kind.html' %}</span>{% endif %}</td>
+            {%- if kinds.get(j.id) %}{% set x = kinds[j.id] %}<br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span>{% endif %}</td>
           <td data-label="Pages">{{ j.pages }}</td>
           <td data-label="Last changed" class="nowrap">{{ j.updated_at|when }}</td>
           <td class="btn-row">

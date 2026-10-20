@@ -17,9 +17,10 @@
     box = document.createElement('dialog');
     box.className = 'ask';
     box.setAttribute('aria-labelledby', 'ask-text');
+    //(Cancel first, the answer on the right, as in every dialog: the owner, 2026-10-20)
     box.innerHTML = '<p id="ask-text"></p><div class="btn-row">'
-      + '<button type="button" class="btn ask-ok"></button>'
-      + '<button type="button" class="btn btn-secondary ask-cancel" title="Don\'t do it; nothing changes">Cancel</button></div>';
+      + '<button type="button" class="btn btn-secondary ask-cancel" title="Don\'t do it; nothing changes">Cancel</button>'
+      + '<button type="button" class="btn ask-ok"></button></div>';
     document.body.appendChild(box);
   }
 
@@ -52,7 +53,7 @@
   };
 
   /* qgenChoose(question, choices): the same question box with several answers, each
-   * {value, label, title, danger, disabled: why it can't be chosen}, and Cancel last (with the focus). Resolves to the value
+   * {value, label, title, danger, disabled: why it can't be chosen}, and Cancel first (with the focus). Resolves to the value
    * chosen, or null for Cancel or Esc. */
   var many = null;
   window.qgenChoose = function (question, choices) {
@@ -74,7 +75,8 @@
     return new Promise(function (resolve) {
       function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(v); }
       function esc(e) { e.preventDefault(); done(null); }
-      choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {
+      //(Cancel first, then the answers: the owner, 2026-10-20)
+      [{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }].concat(choices).forEach(function (c) {
         var b = document.createElement('button');
         b.type = 'button';
         //(only a dangerous answer is filled in: the others are plain, like Cancel)
@@ -87,7 +89,7 @@
       });
       many.addEventListener('cancel', esc);
       many.showModal();
-      row.lastChild.focus();
+      row.firstChild.focus();
     });
   };
 

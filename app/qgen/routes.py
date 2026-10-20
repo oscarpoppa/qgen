@@ -1698,6 +1698,15 @@ def subject_page(kind, template, in_archive=False, **extra):
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['items'] if node else everything if view == 'all' else root['items']
     fk = subject_kit(kind, view, node, root, flat, nodes, in_archive=in_archive)
+    #(speed, the owner 2026-10-20: every row's folders in one query, not one query a row; and for
+    #problems, which have any answers at all (History) in one query, not each one's every answer)
+    if everything and kind not in S.UPLOAD_KINDS:
+        from sqlalchemy.orm import selectinload
+        ids = [x.id for x in everything]
+        item_cls.query.options(selectinload(getattr(item_cls, rel))).filter(item_cls.id.in_(ids)).all()
+    if kind == 'problems':
+        from .models import CProblem
+        extra.setdefault('answered', {pid for (pid,) in db.session.query(CProblem.vproblem_id).distinct()})
     return render_template(template, fk=fk, items=shown, total=len(everything), kind=kind, in_archive=in_archive,
                            moved=request.args.get('moved', ''), show=request.args.get('show', ''), **extra)
 

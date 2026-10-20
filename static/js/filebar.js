@@ -14,7 +14,9 @@
   var unit = unitEl ? unitEl.dataset.unit : 'one', units = unitEl ? unitEl.dataset.units : 'ones';
 
   var dialog = document.createElement('dialog');
-  dialog.className = 'ask ask-many folder-dialog';
+  //(it looks and works like a row's Move dialog: the folders as a list to choose from, never a
+  //drop-down: the owner, 2026-10-20; the bar's list stays hidden in it, only to be sent)
+  dialog.className = 'ask ask-many assign-many put-dialog move-dialog folder-dialog';
   dialog.id = 'folder-dialog';
   var head = document.createElement('p');
   head.id = 'folder-dialog-head';
@@ -25,6 +27,33 @@
   if (label) { label.classList.add('sr-only'); dialog.appendChild(label); }
   sel.setAttribute('form', form.id);
   dialog.appendChild(sel);
+  sel.hidden = true;
+  var one = document.createElement('span');
+  one.className = 'muted small';
+  head.appendChild(document.createElement('br')); head.appendChild(one);
+  var list = document.createElement('ul');
+  list.className = 'assign-many-people put-list';
+  dialog.appendChild(list);
+  var err = document.createElement('p');
+  err.className = 'error small'; err.hidden = true; err.textContent = 'Choose a folder first.';
+  dialog.appendChild(err);
+  list.addEventListener('change', function () { err.hidden = true; });
+  //the bar's folders as round buttons, indented as in the folder list
+  function fillList() {
+    list.innerHTML = '';
+    Array.prototype.forEach.call(sel.options, function (o) {
+      if (!o.value) return;
+      var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
+      r.type = 'radio'; r.name = 'bar-move-to'; r.value = o.value; r.disabled = o.disabled;
+      var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
+      li.style.paddingLeft = (depth * 6) + 'px';
+      lab.appendChild(r);
+      if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
+      lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));
+      li.appendChild(lab);
+      list.appendChild(li);
+    });
+  }
   var row = document.createElement('div');
   row.className = 'btn-row';
   var cancel = document.createElement('button');
@@ -37,8 +66,10 @@
   dialog.appendChild(row);
   document.body.appendChild(dialog);
   //(sent: the dialog steps aside, so takeout.js's question, if any, shows alone)
-  go.addEventListener('click', function () {
-    if (sel.required !== false && sel.value === '') return;
+  go.addEventListener('click', function (e) {
+    var r = list.querySelector('input:checked');
+    if (!r) { e.preventDefault(); err.hidden = false; return; }
+    sel.value = r.value;
     //(what's checked in other folders goes too: static/js/checked.js)
     form.querySelectorAll('input[data-kept]').forEach(function (i) { i.remove(); });
     if (window.qgenCheckedIds) {
@@ -79,8 +110,12 @@
       if (b.name) { go.name = b.name; go.value = b.value; } else { go.removeAttribute('name'); go.removeAttribute('value'); }
       //(the bar grays its list out while nothing is checked: here something is)
       sel.disabled = false; sel.removeAttribute('title');
+      //(the same words as a row's Move: the Archive's attempts)
+      one.textContent = units === 'attempts' ? 'It leaves the folder it\u2019s in now. An attempt is in one folder at a time.' : '';
+      fillList(); err.hidden = true;
       dialog.showModal();
-      sel.focus();
+      var first = list.querySelector('input:not(:disabled)');
+      if (first) first.focus();
     });
   });
 
@@ -90,7 +125,7 @@
   var confirmBox = document.createElement('dialog');
   confirmBox.className = 'ask ask-many takeout-dialog';
   confirmBox.innerHTML = '<p><strong data-head></strong></p><ul class="takeout-lines small" data-lines></ul>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>OK</button></div>';
+    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Take out</button></div>';
   document.body.appendChild(confirmBox);
   confirmBox.querySelector('[data-no]').addEventListener('click', function () { confirmBox.close(); });
   function openFolder() {

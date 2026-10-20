@@ -1042,6 +1042,9 @@ def save_all(job, data, author):
                 S.file_items('problems', ids_in, _folder_named('problems', vq.title, top))
         else:
             S.file_items('problems', [i for ids_in in by_quiz for i in ids_in], top)
+            #(one page's quiz too, in the Quizzes folder of the workbook's name, like several
+            #pages' quizzes: the owner, 2026-10-20; it was left uncategorized)
+            S.file_items('quizzes', [q.id for q in quizzes], _folder_named('quizzes', plan['base']))
     #5. its pictures (a cover, a page's pictures) in a Pictures folder of the same name, so they
     #stay with the workbook (the owner, 2026-10-19)
     if pictures:

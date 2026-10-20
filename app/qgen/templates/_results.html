@@ -75,7 +75,7 @@
                 {% endfor %}
               </td>
               <td class="actions"><div class="btn-stack">
-                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Retake', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip='Give ' ~ (student.shown_name)|string ~ ' a new attempt at this quiz, with new values', icon='lc-retake') }}{% else %}{{ slot('Retake', 'A new attempt can be given once the latest one is handed in and graded') }}{% endif %}
+                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Give another attempt', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip=(student.shown_name)|string ~ ' gets new values this time', icon='lc-retake') }}{% else %}{{ slot('Give another attempt', 'A new attempt can be given once the latest one is handed in and graded', icon='lc-retake') }}{% endif %}
                 {# all of this student's attempts to the Archive at once, beside Retake (no row of its own;
                    a student page's quiz box has it on its heading line instead: archive_all=false) #}
                 {% if archive_all %}{{ archive_all_button(g, student) }}{% endif %}

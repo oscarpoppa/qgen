@@ -261,7 +261,7 @@
         //out of its only folder: delete it or put it in Uncategorized? (app/takeout.py)
         if (res.confirm && window.qgenAsk) {
           //(where it will go, OK or Cancel: never deleted by dragging it out, the owner 2026-10-15)
-          window.qgenAsk((res.preview || []).join(' ') || res.confirm, 'OK').then(function (yes) { if (yes) move(d, to, 'uncategorized'); });
+          window.qgenAsk((res.preview || []).join(' ') || res.confirm, 'Take out').then(function (yes) { if (yes) move(d, to, 'uncategorized'); });
           return;
         }
         if (res.ok) {

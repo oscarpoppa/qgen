@@ -30,7 +30,7 @@
       <a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>
       <div class="progress-bar" role="progressbar" aria-label="Pages read in “{{ j.name }}”" aria-valuemin="0" aria-valuemax="{{ x.total }}" aria-valuenow="{{ x.done }}"><span style="width: {{ (100 * x.done / x.total) if x.total else 0 }}%"></span>{% if x.failed %}<span class="failed" style="width: {{ 100 * x.failed / x.total }}%"></span>{% endif %}</div>
       {#- each scan's kind, with its mark (the owner, 2026-10-19) #}
-      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}</span>
+      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{% if x.by %} · by {{ x.by }}{% endif %}</span>
       {#- (a row's controls are bare icons, the words in their tooltips; opening a scan to check it is
           an arrow (not a play button, nor the clipboard that looked like a trash can: the owner, 2026-10-19) #}
       <span class="btn-row nowrap">

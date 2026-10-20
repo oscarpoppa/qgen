@@ -12,6 +12,9 @@
     {{ field(form.password, attrs={'autocomplete': 'current-password'}) }}
     {{ form.submit(class='btn', value='Log in', style='width:100%', title='Go in with the name and password above') }}
   </form>
-  <p class="muted small" style="margin-top:14px">New here? <a href="{{ url_for('user.register') }}" title="Make a new account with the class code from your teacher">Create an account</a></p>
+  {#- grayed, with why, while sign-up is closed (never left out); a forgotten password is the
+      teacher's to reset (the owner, 2026-10-20, from the Oct 7 review) #}
+  <p class="muted small" style="margin-top:14px">New here? {% if signup_open %}<a href="{{ url_for('user.register') }}" title="Make a new account with the class code from your teacher">Create an account</a>{% else %}<span class="link-disabled" aria-disabled="true" title="Sign-up is closed. Ask your teacher for an account.">Create an account</span>{% endif %}</p>
+  <p class="muted small">Forgot your password? Ask your teacher.</p>
 </div>
 {% endblock %}

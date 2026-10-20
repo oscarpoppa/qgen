@@ -104,16 +104,16 @@ def nonimages():
 @post_form_only
 def delimg(fname):
     if fname not in static_files():
-        flash('Image not found: {}'.format(fname))
+        flash('Couldn’t find the picture “{}”. It may have been deleted already.'.format(fname), 'error')
     else:
         try:
             remove(static_dir() + fname)
             remove(static_dir() + 'T_' + fname)
             files_changed()
-            flash('Image and thumbnail removed: {}'.format(fname))
+            flash('Deleted “{}”.'.format(fname), 'success')
             current_app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
         except Exception as exc:
-            flash('Deletion failed for {}'.format(fname))
+            flash('Couldn’t delete “{}”. Please try again.'.format(fname), 'error')
     return back_to_list('upload.images')
 
 #admin-only delete a non-image from server
@@ -124,15 +124,15 @@ def delimg(fname):
 @post_form_only
 def delnonimg(fname):
     if fname not in static_files():
-        flash('File not found: {}'.format(fname))
+        flash('Couldn’t find the file “{}”. It may have been deleted already.'.format(fname), 'error')
     else:
         try:
             remove(static_dir() + fname)
             files_changed()
-            flash('File removed: {}'.format(fname))
+            flash('Deleted “{}”.'.format(fname), 'success')
             current_app.logger.info('{} removed file {}'.format(current_user.username, fname))
         except Exception as exc:
-            flash('Deletion failed for {}'.format(fname))
+            flash('Couldn’t delete “{}”. Please try again.'.format(fname), 'error')
     return back_to_list('upload.nonimages')
 
 

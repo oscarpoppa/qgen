@@ -63,7 +63,7 @@ from app.qgen.models import CQuiz, Setting, attempts_by_quiz
 
 #the site's drawn icons (app/icons.py), in every template and macro
 from app import icons as _icons
-app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_script=_icons.icon_script, icon_label=_icons.icon_label, button_icons=_icons.BUTTON_ICONS)
+app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_script=_icons.icon_script, icon_sprite=_icons.icon_sprite, icon_label=_icons.icon_label, button_icons=_icons.BUTTON_ICONS)
 from app import tuning as _tuning  # noqa: E402
 app.jinja_env.globals.update(score_class=_tuning.score_class)
 
@@ -293,3 +293,25 @@ def set_password_command(username):
 from app.commands import dbdump as dbdump_cli_group
 app.cli.add_command(dbdump_cli_group, name='dbdump')
 
+
+
+#pages sent compressed when the browser takes it (they're mostly repeated markup: the Problems
+#page's 1.5 MB goes as about a tenth of that; the owner, 2026-10-20). Only whole HTML and JSON
+#answers of some size; files, streams and anything already encoded go as they are.
+@app.after_request
+def _gzip(response):
+    import gzip
+    from flask import request as _rq
+    if (response.status_code < 200 or response.status_code >= 300 or response.direct_passthrough
+            or response.is_streamed or 'Content-Encoding' in response.headers
+            or 'gzip' not in (_rq.headers.get('Accept-Encoding') or '').lower()
+            or response.mimetype not in ('text/html', 'application/json')):
+        return response
+    data = response.get_data()
+    if len(data) < 2048:
+        return response
+    response.set_data(gzip.compress(data, compresslevel=6))
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = str(len(response.get_data()))
+    response.vary.add('Accept-Encoding')
+    return response

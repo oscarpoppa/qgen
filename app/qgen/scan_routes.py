@@ -17,15 +17,20 @@ def _key():
     return current_app.config.get('ANTHROPIC_API_KEY')
 
 
+from app.user.models import User
+
+
 def _no_key():
     flash('Scanning workbook pages needs the AI helper, which isn’t set up (no API key).', 'error')
     return redirect(url_for('qgen.list_vquizzes'))
 
 
 def _mine(job_id):
-    """The teacher's own scan, or 404 (someone else's scans aren't theirs to see)."""
+    """A scan, for any teacher (the routes are teachers only), or 404. Every teacher sees every
+    unfinished scan on the Dashboard, so each can open or discard it (the owner, 2026-10-20; it
+    was the author's alone)."""
     job = db.session.get(ScanJob, job_id)
-    if job is None or job.author_id != current_user.id:
+    if job is None:
         abort(404)
     return job
 
@@ -41,7 +46,8 @@ def _reading(job):
 def scan_start():
     if not _key():
         return _no_key()
-    jobs = ScanJob.query.filter_by(author_id=current_user.id).order_by(ScanJob.updated_at.desc()).all()
+    #(every teacher's unfinished scans, like the Dashboard's pop-over: the owner, 2026-10-20)
+    jobs = ScanJob.query.order_by(ScanJob.updated_at.desc()).all()
     #(the folder each scan's pages came from, if any: the owner, 2026-10-19)
     folders = {j.id: SC.get_data(j).get('from_folder') for j in jobs}
     #(each scan's kind, with its mark: the owner, 2026-10-19)
@@ -50,16 +56,20 @@ def scan_start():
 
 
 def scan_progress_data(user):
-    """This teacher's unfinished scans, for the Dashboard's progress card: each with how far
-    the reading has got (the owner, 2026-10-18)."""
+    """Every teacher's unfinished scans, for the Dashboard's chip and pop-over (all teachers see
+    them all: the owner, 2026-10-20; it was this teacher's own): each with how far the reading
+    has got (the owner, 2026-10-18)."""
     out = []
-    for job in ScanJob.query.filter_by(author_id=user.id).order_by(ScanJob.updated_at.desc()).all():
+    for job in ScanJob.query.order_by(ScanJob.updated_at.desc()).all():
         pages = SC.get_data(job).get('pages') or []
         now = next((p['n'] for p in pages if p.get('state') == 'reading'), None)
         data = SC.get_data(job)
         reading = _reading(job)
         kept = data.get('kept_at')
+        #(who started it: every teacher sees every scan; the owner, 2026-10-20)
+        author = db.session.get(User, job.author_id)
         out.append({'job': job, 'total': len(pages), 'reading': reading, 'now': now,
+                    'by': author.shown_name if author else '',
                     'from_folder': data.get('from_folder'),
                     'done': sum(1 for p in pages if p.get('state') == 'done'),
                     'failed': sum(1 for p in pages if p.get('state') == 'error'),

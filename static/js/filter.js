@@ -151,4 +151,6 @@ window.qgenHideRow = function (row, key, hide) {
     run();
   }
   document.querySelectorAll('[data-filter-bar]').forEach(setUp);
+  //(for bars a script adds later: the folder dialogs' filter, dialogfilter.js)
+  window.qgenFilterBar = setUp;
 })();

@@ -188,7 +188,18 @@ def link_kind(link):
 
 def link_label(link, for_student=False):
     """The words for a notice's link: "Grade it", "See results"... ("Open" if it's unknown)."""
-    kind = link_kind(link)
+    path = safe_next(link)
+    kind, args = _match(path) if path else (None, None)
     if kind == 'qgen.qtake':
-        return 'Go to the quiz' if for_student else 'See results'
+        if not for_student:
+            return 'See results'
+        #(a student's: the quiz while it's still to do, its results once handed in, e.g. a
+        #"was graded" notice: the owner, 2026-10-20)
+        from app import db
+        from app.qgen.models import CQuiz
+        try:
+            cq = db.session.get(CQuiz, int((args or {}).get('cidx')))
+        except (TypeError, ValueError):
+            cq = None
+        return 'See your results' if cq is not None and cq.completed else 'Go to the quiz'
     return LINK_LABELS.get(kind, 'Open')

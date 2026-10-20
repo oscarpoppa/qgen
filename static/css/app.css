@@ -2426,7 +2426,7 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 /* a picking card's list and its folder list beside it scroll inside themselves, at most about the
    window's height, so a long list (All problems) never runs on down the page (the owner, 2026-10-19) */
 .folder-filter[data-style="list"] > .folder-filter-list,
-.folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(100vh - var(--topbar-h) - 170px); overflow-y: auto; overscroll-behavior: contain; }
+.folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(100vh - var(--topbar-h) - 170px); overflow-y: auto; overscroll-behavior: auto; }
 dialog .folder-filter[data-style="list"] > .folder-filter-list,
 dialog .folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(80vh - 170px); }
 @media (max-width: 640px) {
@@ -2737,12 +2737,12 @@ td.attempt-buttons > .result-attempt { justify-content: flex-end; }
 td.attempt-buttons { text-align: right; }
 /* the open folder on a list page scrolls inside itself, as tall as the window has room for
    (static/js/folderfilter.js fitHeight; the owner, 2026-10-17): its tables' headings stay in view */
-.folder-filter-list.folder-scroll { overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.folder-filter-list.folder-scroll { overflow-y: auto; overscroll-behavior: auto; position: relative; }
 .folder-filter-list.folder-scroll .table-wrap { overflow: visible; }
 .folder-filter-list.folder-scroll thead th { position: sticky; top: -12px; z-index: 2; }
 /* the folder list down the side scrolls inside itself once it's as tall as the window has room
    for (static/js/folders.js; the owner, 2026-10-17) */
-.folder-side > nav.side-scroll { overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; position: relative; }
+.folder-side > nav.side-scroll { overflow-y: auto; overscroll-behavior: auto; padding-right: 4px; position: relative; }
 /* (position: relative, so screen-reader-only words inside stay in the scroll area instead of
    stretching the page) */
 /* a folder's list sorted by a column: its heading is a button, with an arrow once sorted
@@ -2763,7 +2763,7 @@ td.attempt-buttons { text-align: right; }
 }
 /* a page's one long list as a panel that scrolls inside itself (static/js/fitpanel.js; the
    owner, 2026-10-17); what's inside it just grows, so there's one scroll at a time */
-.fit-scroll { overflow-y: auto !important; overscroll-behavior: contain; position: relative; padding-right: 4px; }
+.fit-scroll { overflow-y: auto !important; overscroll-behavior: auto; position: relative; padding-right: 4px; }
 .fit-scroll details.grading-group > .table-wrap { max-height: none; }
 .fit-scroll .table-wrap { overflow: visible; }
 .fit-scroll thead th { position: sticky; top: 0; z-index: 2; }
@@ -3063,3 +3063,64 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 .dz-tile-x { position: absolute; top: -6px; right: -2px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%;
   background: var(--surface); color: var(--muted); font-size: 13px; line-height: 22px; cursor: pointer; }
 .dz-tile-x:hover, .dz-tile-x:focus-visible { color: var(--bad); }
+
+/* Every pop-over card has the same strong, clear edge, so it never blends into the page behind
+   it (the owner, 2026-10-18/19): the accent border, a soft accent ring and a deep shadow, as
+   Grading's oldest waiting has had since 2026-10-17. Awards and Just finished (pop-card), the
+   Dashboard's unfinished scans, who's online. A new pop-over card gets .pop-edge. */
+.pop-edge, .pop-card, .grading-oldest.oldest-pop, .scan-pop, .online-pop {
+  border: 2px solid var(--accent) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45) !important; }
+/* drop-down menus (the top bar's, More ▸ Files, a row's menu): a firmer edge and a deeper shadow
+   too, a step quieter than the cards; on a phone the top bar's menus open in place, with no edge */
+@media (min-width: 1001px) {
+  .menu-list, .floating-menu { border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)) !important;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, .4) !important; }
+}
+@media (min-width: 601px) {
+  .nav.nav-few .menu-list { border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)) !important;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, .4) !important; }
+}
+.floating-menu { border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)) !important;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, .4) !important; }
+
+/* a link that can't be used right now: shown grayed, with why in its tooltip (Log in's
+   "Create an account" while sign-up is closed: the owner, 2026-10-20) */
+.link-disabled { color: var(--muted); opacity: .6; cursor: not-allowed; text-decoration: underline dotted; }
+
+/* the problem editor's "Describe the values for your question" (Random values card): the top AI
+   box's tint and dashed edge, its title as big as a box title (the owner, 2026-10-20) */
+.ai-values-field.ai-box { padding: 12px 14px; border-radius: var(--r-lg); margin-bottom: 14px; }
+.ai-values-field > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.ai-values-field[open] > summary { margin-bottom: 8px; }
+/* (the AI boxes' first line: a div, since its ? tip holds paragraphs a <p> can't; the owner, 2026-10-20) */
+.ai-box .ai-intro { margin: 0 0 10px; }
+
+/* Every dialog fits the window, and its buttons (Cancel and the action) always stay on screen at
+   the bottom, however long the dialog: it scrolls under them (the owner, 2026-10-20: "Add to
+   quizzes" had its buttons below the window's edge) */
+dialog.ask { max-height: calc(100vh - 32px); overflow: auto; }
+dialog.ask > .btn-row:last-child, dialog.ask > form > .btn-row:last-child {
+  position: sticky; bottom: -18px; z-index: 2; margin: 12px -20px -18px; padding: 10px 20px 14px;
+  background: var(--surface); border-top: 1px solid var(--border); }
+
+/* A dialog with a list (pickers, Put in folder, Move, Write to…, Pinned): its button row (Cancel
+   or Close, and the action) sits at the top, right-aligned above the title, and stays there while
+   the dialog scrolls (the owner, 2026-10-20: at the bottom they were easy to miss). Short
+   question boxes keep theirs under the question. */
+dialog.ask.assign-many[open], dialog.ask.pick-dialog[open], dialog.ask.put-dialog[open], dialog.ask.panel-dialog[open],
+dialog.ask.write-to-dialog[open] { display: flex; flex-direction: column; }
+:is(dialog.ask.assign-many, dialog.ask.pick-dialog, dialog.ask.put-dialog, dialog.ask.panel-dialog, dialog.ask.write-to-dialog)[open] > form {
+  display: flex; flex-direction: column; min-height: 0; }
+:is(dialog.ask.assign-many, dialog.ask.pick-dialog, dialog.ask.put-dialog, dialog.ask.panel-dialog, dialog.ask.write-to-dialog) > .btn-row:last-child,
+:is(dialog.ask.assign-many, dialog.ask.pick-dialog, dialog.ask.put-dialog, dialog.ask.panel-dialog, dialog.ask.write-to-dialog) > form > .btn-row:last-child {
+  order: -1; position: sticky; top: -18px; bottom: auto; margin: -18px -20px 12px; padding: 12px 20px 10px;
+  border-top: 0; border-bottom: 1px solid var(--border); }
+
+/* A list that scrolls inside itself still hands the scroll on once it reaches its top or bottom,
+   so scrolling up (a wheel, a swipe) always ends up moving the page or the dialog too (the owner,
+   2026-10-20; the lists used to keep it: overscroll-behavior contain) */
+
+/* a drop-down's lines never wrap ("Scan workbook pages" on one line): the list grows to fit
+   (the owner, 2026-10-20) */
+.menu-list a, .menu-list .menu-disabled, .menu-list .submenu > summary { white-space: nowrap; }

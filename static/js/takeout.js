@@ -119,7 +119,7 @@
       //is in, else Uncategorized, and OK does it; nothing is deleted by taking it out)
       var said = (res.preview || []).join(' ');
       if (!said) { go(null); return; }
-      window.qgenAsk(said, 'OK').then(function (yes) { if (yes) go('uncategorized'); });
+      window.qgenAsk(said, 'Take out').then(function (yes) { if (yes) go('uncategorized'); });
     });
   }
 
