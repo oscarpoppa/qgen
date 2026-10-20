@@ -43,25 +43,26 @@
   {% if gs %}
   <div class="table-wrap stack">
   <table class="quiz-rows">
-    <thead><tr><th>Quiz</th><th>Score</th><th></th></tr></thead>
+    {#- (attempts and status are columns of their own, sortable, and lined up by the table itself
+        whatever badges come and go: the owner, 2026-10-20) #}
+    <thead><tr><th>Quiz</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
     <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
     {# each attempt's state ("id:status:score"), so a folded row can flag the teacher's changes #}
     {% set states = [] %}{% for a in g.attempts %}{% set _ = states.append(a.id ~ ':' ~ a.status ~ ':' ~ (a.score if a.score is not none else '')) %}{% endfor %}
-    {% set edge = 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' %}
+    {#- (a new attempt wins: a quiz with both a new and a started one is outlined in gold, the owner 2026-10-20) #}
+    {% set edge = 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else '' %}
     <tr class="{{ edge }}" data-box="quiz:{{ g.vquiz.id }}" data-name="{{ g.vquiz.title|lower }}">
       <td data-label="Quiz">
       <details class="box row-fold quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz-row:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}">
         <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
           {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}
-          {{ box_label('note', g.vquiz.title, count_of(tried, 'attempt', 'attempts') if tried else none, 'span', g.vquiz.title) }}
+          {{ box_label('note', g.vquiz.title, none, 'span', g.vquiz.title) }}
           {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
-          {% if has_new %}<span class="badge badge-warn quiz-new">New</span>{% endif %}
-          {% if g.attempts|selectattr('status', 'equalto', 'started')|list %}<span class="badge badge-accent badge-status quiz-new">In progress</span>{% endif %}
+          {#- (handed in and waiting for grading counts as in progress, as everywhere else) #}
+          {% set has_started = g.attempts|selectattr('status', 'in', ['started', 'review'])|list %}
           {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
-          {% if due_cq %}<span class="badge badge-bad quiz-new" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
-          <span class="badge badge-warn quiz-flag" hidden></span>
         </summary>
         {% if here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">{{ icon('folder') }} {{ here.name }}</a></p>{% endif %}
         {% set ahead = g.open or latest %}
@@ -71,18 +72,27 @@
         {% if g.attempts|length > 1 and g.combined is not none %}
           <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ student_rules.get(g.rule_key, g.rule)|lower if student_rules is defined else g.rule|lower }})</span></p>
         {% endif %}
-        <ol class="small attempt-list" style="padding-left:1.2em;margin:0 0 4px">
+        <ol class="small attempt-list" data-fold-body>
           {% for cq in g.attempts %}
-            {#- (no button on the attempt the row's own button at the right already starts, continues or
-                shows: two of the same side by side were confusing, the owner 2026-10-19) #}
-            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }}{% if cq != (g.open or latest) %} {{ action(cq, compact=true) }}{% endif %}</li>
+            {#- (every attempt has its button, in one column under the row's own: the owner 2026-10-20;
+                before, the one the row's button already did was left out, which looked like a missing icon) #}
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} <span class="attempt-act">{{ action(cq, compact=true) }}</span></li>
           {% endfor %}
         </ol>
       </details></td>
+      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}<span class="badge box-count">{{ count_of(tried, 'attempt', 'attempts') }}</span>{% endif %}</td>
+      {#- the row's state first (In progress, else New, else Completed), then anything more: Due soon, a second New, a change -#}
+      {#- (Completed: every attempt handed in and graded, the owner 2026-10-20) -#}
+      <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_started else '2' if has_new else '3' }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
+        {%- if has_started %}<span class="badge badge-accent badge-status">In progress</span>{% elif has_new %}<span class="badge badge-warn">New</span>{% else %}<span class="badge badge-ok badge-status">Completed</span>{% endif %}
+        {%- if has_new and has_started %}<span class="badge badge-warn">New</span>{% endif %}
+        {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
+        <span class="badge badge-warn quiz-flag" hidden></span></span></td>
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
-      {#- Start / Continue when one is waiting (one click from the quiz), else View; then Move -#}
-      <td class="actions"><span class="btn-row quiz-row-actions">{% if g.open %}{{ action(g.open) }}{% else %}{{ action(latest) }}{% endif %}
+      {#- View the latest when nothing is waiting; Start / Continue only on the attempt lines, never
+          here, where it was unclear which attempt it meant (the owner, 2026-10-20); then Move -#}
+      <td class="actions"><span class="btn-row quiz-row-actions">{% if not g.open %}{{ action(latest) }}{% endif %}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}</span></td>
     </tr>
   {% endfor %}
@@ -229,7 +239,7 @@
     return graded ? 'Score ready' : updated ? 'Changed' : '';
   }
   function flag(d, text) {
-    var f = d.querySelector('.quiz-flag');
+    var f = d.closest('tr').querySelector('.quiz-flag');
     f.textContent = text || '';
     f.hidden = !text;
     d.classList.toggle('quiz-alert', !!text);

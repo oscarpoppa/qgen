@@ -22,7 +22,7 @@
 {% for it in items %}
   <section class="card question">
     <div class="card-head">
-      <span class="qnum">{{ it.num }}</span>
+      {% set lab = qlabel(cq.vquiz, it.num) %}<span class="qnum{% if lab != it.num %} qnum-label{% endif %}">{{ lab }}</span>
       {% if it.look %}{#- (a page to look at: no mark, it isn't graded: the owner, 2026-10-19) #}
       {% elif it.credit is none and not cq.completed %}
       <span class="right badge">not graded</span>

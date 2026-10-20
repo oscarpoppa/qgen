@@ -23,7 +23,7 @@ def test_a_teacher_clears_one_students_conversation_for_themselves_only(app_db):
     # the same conversation, now empty for this teacher; the pinned one stays
     panel = teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
     assert 'Hi Sam' not in panel and 'Hello teachers' not in panel and 'Pinned note' in panel
-    assert 'Hi Sam' not in teach.get('/messages/{}'.format(ids('sam'))).data.decode()
+    assert 'Hi Sam' not in teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
     # another student's conversation is untouched, and so is everyone else's view
     assert 'Hi Kim' in teach.get('/messages/panel?student={}'.format(ids('kim'))).data.decode()
     assert 'Hello teachers' in lee.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
@@ -56,7 +56,7 @@ def test_clearing_all_messages_counts_them_read(app_db):
     panel = teach.get('/messages/panel?student=all').data.decode()
     assert 'From Sam' not in panel and 'From Kim' not in panel
     # the Messages page's list doesn't show the cleared message either
-    assert 'From Sam' not in teach.get('/messages').data.decode()
+    assert 'From Sam' not in teach.get('/messages/panel').data.decode()
 
 
 def test_a_student_clears_their_view(app_db):
@@ -80,7 +80,7 @@ def test_a_student_clears_their_view(app_db):
     assert 'From teach' not in panel and 'My question' not in panel and 'Stays pinned' in panel
     assert sam.get('/messages/poll').get_json()['unread'] == 0
     # the teachers still see all of it
-    convo = teach.get('/messages/{}'.format(ids('sam'))).data.decode()
+    convo = teach.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
     assert 'From teach' in convo and 'My question' in convo
     # a student can't clear for a student, or as a teacher
     assert clear(sam, ids('kim')).status_code == 404
@@ -108,7 +108,7 @@ def test_the_pages_clear_and_come_back(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     teach.post('/messages/send', data={'to': str(ids('sam')), 'body': 'Hi Sam'})
-    page = '/messages/{}'.format(ids('sam'))
+    page = '/messages/{}?show=40'.format(ids('sam'))
     assert 'thread-clear-all' in teach.get(page).data.decode()
     r = teach.post('/messages/clear', data={'view': str(ids('sam'))}, headers={'Referer': 'http://localhost' + page})
     assert r.status_code == 302 and r.headers['Location'].endswith(page)

@@ -41,7 +41,9 @@ def test_the_pages_use_it(app_db):
     for i in range(6):
         teacher.post('/upload/json', data={'file': (png_bytes('red'), 'p{}.png'.format(i))}, content_type='multipart/form-data')
     page = teacher.get('/images').data.decode()
-    assert 'data-many="pictures"' in page and 'id="image-list"' in page and 'data-name="p0.png"' in page
+    #(Pictures is a folder page now, like Problems: the bar filters its folder items)
+    assert 'data-many="pictures"' in page and 'data-filter="#folder-items"' in page
+    assert re.search(r'<tr data-item="\d+" data-box="picture:\d+" data-name="p0.png">', page)
 
 
 def test_folder_list_has_expand_and_collapse_all(app_db):

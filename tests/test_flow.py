@@ -54,6 +54,13 @@ def no_titles(html):
     return re.sub(r' title="[^"]*"', '', html)
 
 
+def back_by_the_trail(html):
+    """The way back is the top bar's ← → arrows (static/js/trail.js), not a worded back button on
+    the page (worded back buttons removed: the owner, scratchpad mode 2026-10)."""
+    return ('id="trail-back"' in html and 'id="trail-fwd"' in html and 'js/trail.js' in html
+            and 'data-back>' not in html and 'class="back-label"' not in html)
+
+
 def take_page(client, cqid):
     """A quiz's page after pressing "Start the quiz" on its start card (as opening it did before)."""
     client.post('/quiz/take/{}/start'.format(cqid))

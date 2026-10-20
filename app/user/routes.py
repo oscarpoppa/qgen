@@ -114,9 +114,9 @@ def mypage():
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
         #the automatic folders, always in this order (the teacher's view of a student too): New, In progress
-        auto_views=[{'key': 'new', 'icon': 'sparkle', 'label': 'New', 'count': len(fresh), 'badge': '{} new'.format(tries['new']),
+        auto_views=[{'key': 'new', 'icon': 'sparkle', 'label': 'New', 'count': tries['new'], 'badge': '{} new'.format(tries['new']),
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
-                    {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': len(working),
+                    {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': tries['started'],
                      'badge': '{} in progress'.format(tries['started']), 'badge_class': 'badge-accent',
                      'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),

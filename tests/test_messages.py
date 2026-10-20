@@ -27,9 +27,10 @@ def test_two_way_messages_announcements_and_notices(app_db):
     r = sam.post('/messages/reply', data={'body': 'Thanks! Can I retake quiz 2?'})
     assert r.status_code == 302
     assert teacher.get('/messages/poll').get_json()['unread'] == 1
-    inbox = teacher.get('/messages').data.decode()
-    assert 'Can I retake quiz 2?' in inbox and 'aria-label="1 unread"' in inbox
-    convo = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    #(the Messages page is retired: its panel's "All messages" shows it, marked new)
+    inbox = teacher.get('/messages/panel').data.decode()
+    assert 'Can I retake quiz 2?' in inbox and 'msg-new' in inbox
+    convo = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'Great &lt;b&gt;work' in convo and 'Can I retake quiz 2?' in convo
     assert teacher.get('/messages/poll').get_json()['unread'] == 0
 
@@ -57,7 +58,7 @@ def test_two_way_messages_announcements_and_notices(app_db):
     # ...in the notices panel, not the conversation, with its own count
     assert sam.get('/messages/poll').get_json()['notices'] == 1
     assert 'New quiz' not in sam.get('/messages/panel').data.decode()
-    assert 'New quiz: &#34;Quiz 9&#34;' in sam.get('/messages/notices?seen=1').data.decode()
+    assert 'New quiz: “Quiz 9”' in sam.get('/messages/notices?seen=1').data.decode()
     assert sam.get('/messages/poll').get_json()['notices'] == 0
 
     # deleting a student removes their conversation
@@ -84,7 +85,7 @@ def test_chosen_students_and_pinning_on_the_web(app_db):
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday!', 'pin': '1'})
     home = login(app, 'kim').get('/messages/panel').data.decode()
     assert 'pinned-list' in home and 'Test Friday!' in home
-    assert teacher.get('/messages').data.decode().count('Unpin</span></button>') == 2  # (icon buttons: owner 2026-10-14)
+    assert teacher.get('/messages/panel').data.decode().count('Unpin</span></button>') == 2  # (icon buttons: owner 2026-10-14)
     batch_msg = Message.query.filter_by(body='Test Friday!').first()
     teacher.post('/messages/pin/{}'.format(batch_msg.id), data={'pinned': '0'})
     assert Message.query.filter_by(body='Test Friday!', pinned=True).count() == 0
@@ -178,7 +179,7 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Quiz 5', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
-    assert 'teach assigned &#34;Quiz 5&#34;' in teacher.get('/messages/notices?seen=1').data.decode()  # read it
+    assert 'teach assigned “Quiz 5”' in teacher.get('/messages/notices?seen=1').data.decode()  # read it
 
     # sam hands in: the teachers get a notice, not a message
     from app.qgen import services as S
@@ -186,9 +187,9 @@ def test_teachers_get_notices_apart_from_messages(app_db):
         S.submit(cq, {1: '5'})
     poll = teacher.get('/messages/poll').get_json()
     assert poll['notices'] == 1 and poll['unread'] == 0
-    assert poll['notice_preview']['from'] is None and 'sam handed in "Quiz 5"' in poll['notice_preview']['text']
+    assert poll['notice_preview']['from'] is None and 'sam handed in “Quiz 5”' in poll['notice_preview']['text']
     panel = teacher.get('/messages/notices?seen=1').data.decode()
-    assert 'sam handed in &#34;Quiz 5&#34;' in panel and 'notice-new' in panel
+    assert 'sam handed in “Quiz 5”' in panel and 'notice-new' in panel
     # its Open goes to that attempt's results, which a teacher can see
     from app.messages.models import Message
     link = Message.query.filter(Message.body.like('sam handed in%')).one().link
@@ -196,8 +197,8 @@ def test_teachers_get_notices_apart_from_messages(app_db):
     assert 'Quiz 5' in teacher.get(link).data.decode()
     assert teacher.get('/messages/poll').get_json()['notices'] == 0
     # not in the conversation or inbox, and never shown to the student
-    assert 'handed in' not in teacher.get('/messages/{}'.format(sam_id)).data.decode()
-    assert 'handed in' not in teacher.get('/messages').data.decode()
+    assert 'handed in' not in teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
+    assert 'handed in' not in teacher.get('/messages/panel').data.decode()
     sam = login(app, 'sam')
     assert 'handed in' not in sam.get('/messages/notices?seen=1').data.decode()
     assert 'handed in' not in sam.get('/messages/panel').data.decode()
@@ -237,12 +238,13 @@ def test_conversation_page_switches_students(app_db):
     kim_id = User.query.filter_by(username='kim').one().id
     teacher = login(app, 'teach')
     login(app, 'kim').post('/messages/reply', data={'body': 'Hello from kim'})
-    page = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    page = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     # only sam's thread on sam's page, and a menu of every student to switch to
-    assert 'Hello from kim' not in page and 'id="switch-student"' in page
-    assert '<option value="/messages/{}" selected>sam</option>'.format(sam_id) in page
-    assert '<option value="/messages/{}">kim (1 new)</option>'.format(kim_id) in page
-    assert 'Hello from kim' in teacher.get('/messages/{}'.format(kim_id)).data.decode()
+    #(the conversation is the Messages panel's now: its "Showing" menu switches students)
+    assert 'Hello from kim' not in page and 'id="msg-student"' in page
+    assert '<option value="{}" selected>sam</option>'.format(sam_id) in page
+    assert '<option value="{}">kim (1 new)</option>'.format(kim_id) in page
+    assert 'Hello from kim' in teacher.get('/messages/panel?student={}'.format(kim_id)).data.decode()
 
 
 def test_new_from_others_button_goes_to_them(app_db):
@@ -289,23 +291,23 @@ def test_teachers_get_a_notice_when_a_quiz_is_assigned(app_db):
     notices = Message.query.filter_by(kind='notice', from_teacher=False).all()
     assert len(notices) == 1
     body = notices[0].body
-    assert body.startswith('teach assigned "Quiz 7" to 2 students: ') and 'sam' in body and 'kim' in body
+    assert body.startswith('teach assigned “Quiz 7” to 2 students: ') and 'sam' in body and 'kim' in body
     assert 'Due {}'.format(__import__('app').when_filter(due)) in body and '20 minute time limit.' in body
     assert notices[0].student_id == User.query.filter_by(username='teach').one().id
     # "Open" goes to the students' copies: with two students, the quiz's results listing each
     assert notices[0].link == '/quiz/results/{}'.format(VQuiz.query.one().id)
     assert 'Quiz 7' in teacher.get(notices[0].link).data.decode()
     assert teacher.get('/messages/poll').get_json()['notices'] == 1
-    assert 'teach assigned &#34;Quiz 7&#34;' in teacher.get('/messages/notices?seen=1').data.decode()
+    assert 'teach assigned “Quiz 7”' in teacher.get('/messages/notices?seen=1').data.decode()
     # students still get their own "New quiz" notice, and never see the teachers' one
     sam = login(app, 'sam')
     page = sam.get('/messages/notices?seen=1').data.decode()
-    assert 'New quiz: &#34;Quiz 7&#34;' in page and 'assigned' not in page
+    assert 'New quiz: “Quiz 7”' in page and 'assigned' not in page
     # the API's assign does the same
     from test_api import Api
     Api(app, 'teach').post('/quizzes/{}/assign'.format(VQuiz.query.one().id), json={'students': [sam_id]})
     assert Message.query.filter(Message.kind == 'notice', Message.from_teacher.is_(False),
-                                Message.body.like('teach assigned "Quiz 7" to 1 student: sam.%')).count() == 1
+                                Message.body.like('teach assigned “Quiz 7” to 1 student: sam.%')).count() == 1
 
 
 def test_deleting_messages(app_db):
@@ -332,7 +334,7 @@ def test_deleting_messages(app_db):
     assert 'From the teacher' not in sam.get('/messages/panel').data.decode()
     assert db.session.get(Message, teacher_msg) is not None  # still there for the teacher...
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
-    assert 'From the teacher' in box and 'sam removed this from their messages' in box  # ...marked
+    assert 'From the teacher' in box and 'sam removed this from his/her messages' in box  # ...marked
     from app.messages import services as MS
     assert all(m.body != 'From the teacher' for m in MS.thread(sam_id))  # and not through the API
     assert sam.post('/messages/delete/{}'.format(mid('Mine to delete')), headers=J).get_json() == {'ok': True, 'deleted': 1}
@@ -348,7 +350,8 @@ def test_deleting_messages(app_db):
     # an announcement to several: "only from this student" or "from every student who got it"
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Test Friday', 'pin': '1'})
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
-    assert 'Only from sam' in box and 'From every student who got it' in box
+    #(its ✕ asks "Only from sam / From all 2 students", messages.js: the owner, 2026-10-19)
+    assert 'data-ann-del data-who="sam" data-n="2"' in box and 'data-ann-one hidden' in box and 'data-ann-all hidden' in box
     first = Message.query.filter_by(body='Test Friday', student_id=sam_id).one().id
     teacher.post('/messages/delete/{}'.format(first), headers=J)
     assert Message.query.filter_by(body='Test Friday').count() == 1  # kim keeps hers
@@ -467,7 +470,7 @@ def test_questions_are_asked_in_the_page_and_delete_is_always_an_x(app_db):
     teacher.post('/messages/send', data={'to': 'all', 'body': 'Everyone hello'})
     sam.post('/messages/reply', data={'body': 'Hi'})
     for client, url in ((sam, '/messages/panel'), (teacher, '/messages/panel?student={}'.format(sam_id)),
-                        (teacher, '/messages/panel?student=all'), (teacher, '/messages/{}'.format(sam_id))):
+                        (teacher, '/messages/panel?student=all'), (teacher, '/messages/{}?show=40'.format(sam_id))):
         page = client.get(url).data.decode()
         assert 'class="msg-x"' in page and '>Delete<' not in page and 'Delete</button>' not in page, url
         # each question names its button
@@ -498,7 +501,7 @@ def test_sending_to_everyone_asks_first(app_db):
     panel = teacher.get('/messages/panel?student=all').data.decode()
     assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in panel
     assert 'data-confirm-ok="Send to everyone"' in panel
-    page = teacher.get('/messages').data.decode()
+    page = teacher.get('/messages/panel').data.decode()
     assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in page
     # one student's conversation doesn't ask
     from app.user.models import User
@@ -555,7 +558,12 @@ def test_all_messages_view_shows_an_announcement_once(app_db):
     from app.user.models import User
     sam_id = User.query.filter_by(username='sam').one().id
     box = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
-    assert 'Only from sam' in box and 'From every student who got it' in box and 'to all 2 students' not in box
+    #(one ✕ asking "Only from sam / From all 2 students / Cancel", built by messages.js: the owner, 2026-10-19)
+    assert 'data-ann-del data-who="sam" data-n="2"' in box and 'data-ann-one hidden' in box and 'data-ann-all hidden' in box
+    assert 'to all 2 students' not in box
+    import os
+    js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'messages.js')).read()
+    assert "label: 'Only from ' + who" in js and "label: 'From all ' + n + ' students'" in js
 
 
 def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
@@ -576,18 +584,18 @@ def test_teachers_get_a_notice_when_a_retake_is_given(app_db):
     # the Retake button: a notice for the teachers, and still one for the student
     assert teacher.post('/quiz/retcq/{}'.format(cq.id)).status_code == 302
     poll = teacher.get('/messages/poll').get_json()
-    assert poll['notices'] == 1 and poll['notice_preview']['text'] == 'teach gave sam a retake of "Again".'
-    notice = Message.query.filter_by(body='teach gave sam a retake of "Again".').one()
+    assert poll['notices'] == 1 and poll['notice_preview']['text'] == 'teach gave sam a retake of “Again”.'
+    notice = Message.query.filter_by(body='teach gave sam a retake of “Again”.').one()
     assert not notice.from_teacher and notice.link == '/quiz/listuser/{}'.format(sam_id)
     page = login(app, 'sam').get('/messages/notices?seen=1').data.decode()
-    assert 'You can try &#34;Again&#34; again.' in page and 'gave sam a retake' not in page
+    assert 'You can try “Again” again.' in page and 'gave sam a retake' not in page
     # through the API too
     from test_api import Api
     new = CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first()
     with app.test_request_context():
         S.submit(new, {1: '4'})
     Api(app, 'teach').post('/attempts/{}/retake'.format(new.id))
-    assert Message.query.filter_by(body='teach gave sam a retake of "Again".').count() == 2
+    assert Message.query.filter_by(body='teach gave sam a retake of “Again”.').count() == 2
 
 
 def test_review_count_next_to_review_stays_current(app_db):
@@ -651,7 +659,8 @@ def test_every_teacher_gets_every_alert(app_db):
     assert (p['unread'], p['notices'], p['message_preview'], p['notice_preview']) == (0, 0, None, None)
     p = coach.get('/messages/poll').get_json()
     assert (p['unread'], p['notices']) == (1, 1) and p['message_preview'] and p['notice_preview']
-    assert 'aria-label="1 unread"' in coach.get('/messages').data.decode()
+    #(the Messages page, which showed coach's unread count without reading them, is retired: the
+    #panel marks what it shows as read, so coach opens just sam's conversation below)
     # ...and it's still shown to coach as new
     assert 'msg-new' in coach.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'notice-new' in coach.get('/messages/notices?seen=1').data.decode()
@@ -900,23 +909,28 @@ def test_pinning_is_a_small_pin_beside_the_x(app_db):
     sam_id = User.query.filter_by(username='sam').one().id
     teacher.post('/messages/send', data={'to': 'chosen', 'students': [str(sam_id)], 'body': 'Bring a ruler.'})
     m = Message.query.one()
-    page = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    page = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'Pin to top' not in page and 'class="msg-pin" aria-pressed="false"' in page
     assert 'title="Pin to the top of sam’s messages"' in page
     teacher.post('/messages/pin/{}'.format(m.id), data={'pinned': '1'})
-    page = teacher.get('/messages/{}'.format(sam_id)).data.decode()
+    page = teacher.get('/messages/panel?student={}'.format(sam_id)).data.decode()
     assert 'class="msg-pin is-pinned" aria-pressed="true"' in page
     # students see no pin button, only the pinned mark
     assert 'class="msg-pin' not in login(app, 'sam').get('/messages/panel').data.decode()
 
 
 def test_messages_folder_list_counts_unread(app_db):
-    """Messages uses the shared folder list (2026-10-12): the All students row still shows how
-    many messages wait unread in all, as a dot like a folder's."""
+    """The Messages panel's "Showing" menu (it took over the retired Messages page's folder list,
+    2026-10-17): each student and each People folder says how many messages wait unread."""
     app, db = app_db
+    from test_archive import ids
     teacher, sam = login(app, 'teach'), login(app, 'sam')
+    teacher.post('/users/folders', data={'name': '7th grade'})
+    from app.user.models import UserFolder
+    g7 = UserFolder.query.one()
+    teacher.post('/users/folders/add', data={'user': ids('sam'), 'to': g7.id})
     sam.post('/messages/reply', data={'body': 'help please'})
-    page = teacher.get('/messages').data.decode()
-    side = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
-    all_row = side.split('All students')[1].split('</li>')[0]
-    assert 'side-dot dot-unread' in all_row and 'aria-label="1 unread"' in all_row
+    #(opened on another student, so sam's message isn't read by looking)
+    page = teacher.get('/messages/panel?student={}'.format(ids('kim'))).data.decode()
+    assert '<option value="{}">sam (1 new)</option>'.format(ids('sam')) in page
+    assert '<option value="f{}">7th grade (1 new)</option>'.format(g7.id) in page

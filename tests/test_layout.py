@@ -1,6 +1,7 @@
 import random
 
 from app.qgen import layout
+from test_flow import app_db  # noqa: F401  (fixture)
 
 
 def test_old_and_new_formats():
@@ -29,11 +30,11 @@ def test_group_mistakes():
     assert layout.check([{'pick': 2, 'from': [5, 6]}]) == []
 
 
-def test_scripts_and_styles_are_versioned():
+def test_scripts_and_styles_are_versioned(app_db):
     # after an update, browsers must fetch the new files instead of a saved old copy
+    #(the sign-in page reads a setting, whether sign-up is open, so it needs the test database)
     import os, re
-    from app import app
-    app.config.update(TESTING=True)
+    app, db = app_db
     os.makedirs(os.path.join(app.static_folder, 'css'), exist_ok=True)
     path = os.path.join(app.static_folder, 'css', 'app.css')
     with open(path, 'w') as f:
@@ -49,7 +50,9 @@ def test_my_quizzes_fold():
     import os
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     page = open(os.path.join(root, 'app', 'user', 'templates', 'mypage.html')).read()
-    assert '<details class="box card quiz-card {{ edge }}"' in page and 'folders_page' in page and 'qgen-folded-quizzes' in page
+    #(each quiz a table row that folds: the owner, scratchpad mode)
+    assert '<tr class="{{ edge }}" data-box="quiz:{{ g.vquiz.id }}"' in page and '<details class="box row-fold quiz-card"' in page
+    assert 'folders_page' in page and 'qgen-folded-quizzes' in page
 
 
 def test_tests_always_use_a_throwaway_database():

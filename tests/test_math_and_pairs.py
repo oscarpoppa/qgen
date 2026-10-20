@@ -44,8 +44,8 @@ def test_pair_answers_are_checked_part_by_part():
     errors = qt.validate('?', 'x, ', opts)
     assert errors == ['The answer has an empty spot between commas. For a pair, write it like: x, y']
     errors = qt.validate('?', 'x, z, z + 1', opts)
-    assert len(errors) == 1 and '"z"' in errors[0]  # each mistake said once
-    assert any('"q"' in e for e in qt.validate('?', 'q', opts))  # a single formula is still checked
+    assert len(errors) == 1 and '“z”' in errors[0]  # each mistake said once
+    assert any('“q”' in e for e in qt.validate('?', 'q', opts))  # a single formula is still checked
 
 
 # ---------------------------------------------------------------- grading
@@ -202,7 +202,7 @@ def test_exact_form_of_a_numeric_answer(app_db):
     qt = get_qtype('numeric')
     assert qt.validate('Root of [n]?', 'sqrt(n)', {'values': N, 'answer_display': r'\( \sqrt{[n]} \)'}) == []
     errors = qt.validate('Root?', 'sqrt(n)', {'values': N, 'answer_display': r'\( \sqrt{[m]} \)'})
-    assert any('"m"' in e for e in errors)  # checked like the question
+    assert any('“m”' in e for e in errors)  # checked like the question
     teacher = login(app, 'teach')
     r = teacher.post('/quiz/makevprob', data=problem_form('numeric', 'Root', r'What is \( \sqrt{[n]} \)?', 'sqrt(n)', N,
                                                           answer_display=r'\( \sqrt{[n]} \)'))
@@ -311,8 +311,9 @@ def test_each_row_of_math_buttons_sits_under_its_label(app_db):
         box = page.index('name="{}"'.format(target), bar)
         assert label < bar < box, target
         assert '<label' not in page[label + 6:bar], target  # its own label, not another field's
-    # the exact form has a worked example with a value, kept as written (inside <code>, which the math display skips)
-    assert 'if the answer is <code>sqrt([a])</code>, write <code>\\( \\sqrt{[a]} \\)</code>' in page
+    # the exact form has a worked example with a value; what to write is drawn as math, never as
+    # its code (the owner, 2026-10-20)
+    assert 'if the answer is <code>sqrt([a])</code>, write \\( \\sqrt{[a]} \\)' in page
     assert 'sees √3 (≈ 1.7321)' in page
 
 

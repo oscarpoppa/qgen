@@ -403,6 +403,8 @@ td.actions .btn { margin-left: 4px; }
   width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
   font-weight: 700; margin-right: 8px; flex: none;
 }
+/* the page's own number, e.g. "7 b." (a quiz made from a scanned page): a pill, not a circle */
+.question .qnum.qnum-label { width: auto; min-width: 30px; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
 .question .qtext { font-size: var(--fs-lg); margin-bottom: 12px; overflow-wrap: anywhere; }
 /* a picture in a quiz or problem (taking it, its results, grading, previews): scaled down to
    fit, keeping its shape, never wider than the column nor taller than about half the window */
@@ -544,6 +546,7 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .result-attempt { margin: 2px 0; }
 .result-attempt-note { margin: -2px 0 4px; }
 .btn-row.result-attempt-buttons { gap: 6px; }
+td.attempts > .result-attempt, td.attempt-buttons > .result-attempt { box-sizing: border-box; align-items: flex-start; }
 @media (min-width: 641px) {
   td.attempts { white-space: nowrap; }
   .btn-row.result-attempt { flex-wrap: nowrap; }
@@ -863,10 +866,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 @media (prefers-reduced-motion: reduce) { .quiz-card .fold, .person-card .fold { transition: none; } }
 /* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
 .quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
-.quiz-card .quiz-flag { flex: 0 0 auto; }
-.quiz-card .quiz-new { flex: 0 0 auto; }
+/* My quizzes: Attempts and Status are columns of their own (the owner, 2026-10-20) */
+.quiz-rows td.quiz-tries, .quiz-rows td.quiz-state { white-space: nowrap; width: 1%; }
+.quiz-state-badges { flex-wrap: nowrap; gap: 6px; }
 .quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
-.quiz-card[open] .quiz-flag { display: none; }
 
 /* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
 /* the folder list, its divider (static/js/splitter.js: drag to widen; remembered) and the list */
@@ -1098,8 +1101,29 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 /* My quizzes: one attempt per line — date, score, a small button at the end */
 .attempt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
 .attempt-row > * { white-space: nowrap; }
-.attempt-row .btn { margin-left: auto; }
+/* ...each attempt's own button in one column, centered under the quiz's own button at the
+   row's right end (static/js/dividers.js measures --act-r; the owner, 2026-10-20: no lone icon
+   mid-card) */
+.attempt-row { position: relative; padding-right: 40px; }
+.attempt-act { display: contents; }
+.attempt-act > .btn, .attempt-act > .icon-link { position: absolute; top: 50%; transform: translate(50%, -50%); right: var(--act-r, 20px); margin: 0; }
 .attempt-row > .not-open-note { white-space: normal; flex-basis: 100%; text-align: right; }
+/* entries listed one under another inside a row or box (a quiz's attempts, and any list like
+   it): a faint line between each, never above the first, running end to end across the card
+   (the owner, 2026-10-20: static/js/dividers.js stretches it across a table row's other
+   cells, or a card's or pop-over's whole width). A new list of that kind gets the class .divided */
+ol.attempt-list > li + li, td.attempts > .result-attempt ~ .result-attempt, .online-people > li + li,
+.scan-progress-list > li + li, .divided > * + * { position: relative; padding-top: 4px; }
+ol.attempt-list > li + li::before, td.attempts > .result-attempt ~ .result-attempt::before, .online-people > li + li::before,
+.scan-progress-list > li + li::before, .divided > * + *::before {
+  content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
+  border-top: 1px solid var(--border); pointer-events: none; }
+td.attempt-buttons > .result-attempt ~ .result-attempt { padding-top: 4px; }
+/* ...and a slightly stronger one, also end to end, between a quiz's summary and its attempts */
+ol.attempt-list { position: relative; padding-top: 6px; padding-right: 12px; }
+ol.attempt-list::before { content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
+  border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 45%); pointer-events: none; }
+ol.attempt-list > li { padding-bottom: 2px; }
 .not-open-note { overflow-wrap: anywhere; }
 
 /* the worked example under "Show the correct answer as" */
@@ -1610,10 +1634,9 @@ details.grading-group > .table-wrap { max-height: min(60vh, 640px); overflow-y: 
 .pick-list { max-height: 20rem; overflow-y: auto; }
 details.subject-box > .box-body { max-height: min(55vh, 560px); overflow-y: auto; scrollbar-gutter: stable; }
 .order-list { max-height: min(60vh, 640px); overflow-y: auto; }
-ol.attempt-list { max-height: 12rem; overflow-y: auto; }
 @media print {
   .dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
-  .order-list, ol.attempt-list { max-height: none; overflow: visible; }
+  .order-list { max-height: none; overflow: visible; }
 }
 /* ...but not where the box is the page's own content (one student's page, one quiz's results),
    nor the awards box (its list has its own scroll and drag bar) */
@@ -1627,7 +1650,7 @@ ol.attempt-list { max-height: 12rem; overflow-y: auto; }
 @media print { .grip-bar { display: none; } }
 /* room between a scroll area's scroll bar and the buttons at the right end of its rows */
 .dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
-.order-list, ol.attempt-list, #folder-items > details.sub-box > .sub-body, details.item-box > .box-body,
+.order-list, #folder-items > details.sub-box > .sub-body, details.item-box > .box-body,
 details.result-folder > .result-folder-body, details.month-box > .table-wrap, details.done-box > .quiz-grid { padding-right: 12px; }
 .student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
 .student-single details.subject-box > .box-body { padding-right: 0; }
@@ -1690,8 +1713,8 @@ details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
 /* one scroll at a time: on a folder page (whose list scrolls with the page) and in the messages
    list, a folder, a student's or quiz's results, a month or Done just grows when opened, on
    phones too, never a scroll area inside the page */
-.folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list),
-.folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid, ol.attempt-list) { max-height: none !important; }
+.folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid),
+.folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid) { max-height: none !important; }
 
 /* back where you were after a button reloaded the page: what happened floats at the top of
    the window for a few seconds (static/js/place.js) */
@@ -2139,6 +2162,10 @@ details.row-fold > summary .fold { display: inline-block; width: 0; height: 0; b
   border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
 details.row-fold[open] > summary .fold { transform: rotate(90deg); }
 details.row-fold > .small { margin: 4px 0 0 13px; }
+/* an open row's contents indented under its title (not the title line, not the controls), so it
+   reads apart from the rows around it (the owner, 2026-10-20) */
+details.row-fold[open] > :not(summary) { margin-left: 28px; }
+ol.attempt-list { padding-left: 1.2em; margin-top: 0; margin-bottom: 4px; }
 tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 @media (prefers-reduced-motion: reduce) { details.row-fold > summary .fold { transition: none; } }
 /* (as cards, a folded row's other parts go altogether, labels too) */
@@ -2292,7 +2319,14 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 .side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }
 /* things to click are at least 24px across (WCAG 2.5.8) */
 .chip-x { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
-td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 24px; height: 24px; }
+/* a list's row checkboxes are quiet: small and faded until the row is pointed at, the box is
+   focused or checked, so they don't invite a click that's rarely wanted (the owner, 2026-10-20;
+   16px with room around it in its 36px column meets WCAG 2.5.8's spacing rule) */
+td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 16px; height: 16px; opacity: .45; transition: opacity .15s; }
+tr:hover > td.tick-col input[type=checkbox], tr:hover > th.tick-col input[type=checkbox],
+td.tick-col input[type=checkbox]:is(:focus-visible, :checked), th.tick-col input[type=checkbox]:is(:focus-visible, :checked, :indeterminate) { opacity: 1; }
+@media (pointer: coarse) { td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 22px; height: 22px; opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { transition: none; } }
 /* Results by quiz: a long title is cut short with "…" (full title in its tooltip), so the quiz's
    buttons stay on its heading line, while the list is wide enough for both; narrower, the
    buttons go on a line of their own (the title is never squeezed to a few letters) */
@@ -2540,7 +2574,7 @@ fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover high
 /* Choosing problems for the quiz being built (static/js/quiz_pick.js): a line across the top
    of the Problems page's bar, staying in sight while scrolling with it (the owner, 2026-10-15) */
 .folder-tools-bar > .pick-banner { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 8px 16px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--radius, 8px);
+  gap: 8px 16px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .pick-banner p { margin: 0; }
 .pick-banner .btn-row { margin: 0; }
@@ -2749,7 +2783,7 @@ td.attempt-buttons { text-align: right; }
    (static/js/sorttable.js; the owner, 2026-10-17) */
 .th-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font: inherit; color: inherit; }
 .th-sort:hover { color: var(--text); text-decoration: underline; }
-.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
 .th-sort-arrow { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; opacity: 0; }
 .th-sort:hover .th-sort-arrow { opacity: .4; border-bottom: 5px solid currentColor; }
 .th-sort[data-dir="up"] .th-sort-arrow { opacity: 1; border-bottom: 5px solid var(--accent); border-top: 0; }
@@ -2769,7 +2803,7 @@ td.attempt-buttons { text-align: right; }
 .fit-scroll thead th { position: sticky; top: 0; z-index: 2; }
 /* Grading: the five oldest waiting, a card of their own above the folders (the owner, 2026-10-17) */
 .grading-oldest { margin: 12px 0 0; padding: 10px 14px; }
-.grading-oldest-head { font-size: var(--fs-base, 1rem); margin: 0 0 6px; }
+.grading-oldest-head { font-size: var(--fs-md); margin: 0 0 6px; }
 .grading-oldest .table-wrap { margin: 0; }
 /* Grading's oldest waiting: its button under the folder list; a pop-over beside it, or pinned
    in the page under the quizzes (static/js/grading_oldest.js; the owner, 2026-10-17) */
@@ -2804,7 +2838,7 @@ td.attempt-buttons { text-align: right; }
 .pop-card { position: fixed; z-index: 70; margin: 0; padding: 10px 14px; max-height: calc(100vh - 16px); overflow: auto;
   border: 2px solid var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45); }
 .pop-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
-.pop-card-head { font-size: var(--fs-base, 1rem); margin: 0; }
+.pop-card-head { font-size: var(--fs-md); margin: 0; }
 @media (max-width: 640px) {
   .student-folders > .folder-filter[data-style="list"][data-tabs] { grid-template-columns: minmax(0, 1fr); }
   .student-folders > .folder-filter[data-tabs] > * { grid-column: 1 !important; grid-row: auto !important; position: static; }
@@ -2821,9 +2855,25 @@ tr.row-is-started { --row-edge: var(--accent); }
 /* (a new or started quiz's whole row outlined in its color, all four sides, drawn inside its
    cells so the standard line between rows stays: the owner, 2026-10-19; it was a stripe down
    the left edge. Every table that marks New / In progress uses it, like the boxes' .quiz-is-new) */
-tr[class*="row-is-"] > td { box-shadow: inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
-tr[class*="row-is-"] > td:first-child { box-shadow: inset 2px 0 0 var(--row-edge), inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
-tr[class*="row-is-"] > td:last-child { box-shadow: inset -2px 0 0 var(--row-edge), inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
+/* (subtle: 1px, the color softened toward the usual line color, the owner 2026-10-20) */
+tr[class*="row-is-"], tr:has(> td > details.row-fold[open]) { --row-line: color-mix(in srgb, var(--row-edge) 55%, var(--border)); }
+tr[class*="row-is-"] > td, tr:has(> td > details.row-fold[open]) > td { box-shadow: inset 0 1px 0 var(--row-line), inset 0 -1px 0 var(--row-line); }
+tr[class*="row-is-"] > td:first-child, tr:has(> td > details.row-fold[open]) > td:first-child { box-shadow: inset 1px 0 0 var(--row-line), inset 0 1px 0 var(--row-line), inset 0 -1px 0 var(--row-line); }
+tr[class*="row-is-"] > td:last-child, tr:has(> td > details.row-fold[open]) > td:last-child { box-shadow: inset -1px 0 0 var(--row-line), inset 0 1px 0 var(--row-line), inset 0 -1px 0 var(--row-line); }
+/* an opened row (a quiz unfolded to its attempts, on any list page) gets the same subtle outline,
+   in the accent color unless it's already new or started (the owner, 2026-10-20) */
+tr:has(> td > details.row-fold[open]):not([class*="row-is-"]) { --row-edge: var(--accent); }
+/* ...and sits on the raised card color, a step lighter than the rows around it, so the open one
+   is easy to find among folded ones (the owner, 2026-10-20) */
+tr:has(> td > details.row-fold[open]) > td { background: var(--surface-2); }
+/* ...and its two parts are told apart: the heading part (the name, and on My quizzes its question
+   count and score) on that color, the contents (the attempts) a shade between it and the page's
+   rows, end to end across the row (the owner, 2026-10-20). The contents start at [data-fold-body],
+   else right after the heading; static/js/dividers.js measures --body-top/l/r */
+details.row-fold[open] { position: relative; z-index: 0; }
+details.row-fold[open]::after { content: ""; position: absolute; z-index: -1; pointer-events: none;
+  top: var(--body-top, 100%); bottom: -10px; left: var(--body-l, 0); right: var(--body-r, 0);
+  background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
 .quiz-rows td.quiz-sum { white-space: nowrap; }
 .quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
 /* a button under the folder list that opens a pop-over (Just finished) */
@@ -2890,7 +2940,7 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 
 /* the Dashboard's unfinished scans: a chip beside the heading and its pop-over (the owner, 2026-10-18) */
 #scan-progress-box { position: relative; align-self: center; }
-.scan-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid var(--border); font: inherit; font-size: .85rem; }
+.scan-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid var(--border); font: inherit; font-size: var(--fs-sm); }
 .scan-chip:hover { background: var(--surface-2); }
 .scan-chip-bar { display: inline-block; width: 48px; height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .scan-chip-bar { display: inline-flex; }
@@ -2899,7 +2949,7 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 @keyframes scan-chip-now { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .scan-chip-bar > .scan-chip-now { animation: none; opacity: .5; } }
 .scan-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: min(560px, calc(100vw - 32px)); box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.35)); }
-.scan-pop h2 { margin: 0 0 8px; font-size: 1rem; }
+.scan-pop h2 { margin: 0 0 8px; font-size: var(--fs-md); }
 .scan-progress-row { display: grid; grid-template-columns: minmax(8rem, 13rem) minmax(5rem, 1fr) auto auto; align-items: center; gap: 6px 12px; padding: 4px 0; }
 /* (the name with its picture stays in its own column: a long one is cut short with "…", never under the bar) */
 .scan-progress-row .scan-pop-name { min-width: 0; overflow: hidden; }
@@ -2922,15 +2972,15 @@ dialog.pick-dialog .folder-filter { margin: 0 0 8px; }
 dialog.ask.pick-dialog .write-to-checks { justify-content: flex-start; }
 /* (one scroll bar: the list of names scrolls, not the box around it) */
 dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-list { max-height: min(38vh, 22rem); overflow-y: auto; }
-.scan-timer { font-variant-numeric: tabular-nums; margin-left: 6px; font-size: .9rem; }
+.scan-timer { font-variant-numeric: tabular-nums; margin-left: 6px; font-size: var(--fs-sm); }
 .scan-progress-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; } .scan-progress-top p { margin: 0; }
 
 /* small pictures of scanned pages (the owner, 2026-10-18) */
-.scan-thumb { height: 40px; width: auto; max-width: 40px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; vertical-align: middle; margin-right: 8px; }
+.scan-thumb { height: 40px; width: auto; max-width: 40px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; vertical-align: middle; margin-right: 8px; }
 .scan-progress-list li, .scan-unread li { display: flex; align-items: center; gap: 0 6px; margin: 4px 0; }
 .scan-progress-list li .scan-thumb, .scan-unread li .scan-thumb { margin-right: 2px; }
 .scan-progress-list, .scan-unread { padding-left: 0; list-style: none; }
-.scan-chip-thumb { height: 18px; width: auto; max-width: 18px; object-fit: cover; object-position: top; border-radius: 2px; background: #fff; }
+.scan-chip-thumb { height: 18px; width: auto; max-width: 18px; object-fit: cover; object-position: top; border-radius: 0; background: #fff; }
 .scan-pop-name { display: inline-flex; align-items: center; min-width: 0; }
 .scan-pop-name .scan-thumb { height: 32px; max-width: 32px; }
 @media (max-width: 599px) { .scan-pop { position: fixed; left: 16px; right: 16px; top: 120px; width: auto; } }
@@ -2961,9 +3011,9 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-t
 /* small pictures of the pages dropped or chosen on the Scan page (the owner, 2026-10-19) */
 .scan-drop-thumbs { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 4px; }
 .scan-drop-thumb { margin: 0; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.scan-drop-thumb img, .scan-drop-pdf { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
-.scan-drop-pdf { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: .85rem; }
-.scan-drop-thumb figcaption { font-size: .7rem; color: var(--muted); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-drop-thumb img, .scan-drop-pdf { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
+.scan-drop-pdf { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: var(--fs-sm); }
+.scan-drop-thumb figcaption { font-size: var(--fs-xs); color: var(--muted); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scan-chip-folder { display: inline-flex; color: var(--muted); }
 
 /* a quiz made from scanned pages: a small picture of each page, shown large in a pop-over when
@@ -3040,16 +3090,16 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 
 /* "Choose pictures" (the problem editor): a small thumbnail before each name */
 .pic-pick-list label { display: inline-flex; align-items: center; gap: 8px; }
-.pic-pick-list img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; }
+.pic-pick-list img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--r-sm); flex: none; }
 
 /* Upload files: a tile for each file just uploaded, inside the box, looking like Scan workbook
    pages' thumbnails: the picture (or the file's extension), its name, then ✓ and where it went
    (dropzone.js; the owner, 2026-10-19) */
 .dz-done { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 4px; }
 .dz-tile { margin: 0; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
-.dz-tile img, .dz-tile-ext { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
-.dz-tile-ext { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: .85rem; }
-.dz-tile figcaption { display: flex; flex-direction: column; gap: 1px; max-width: 72px; font-size: .7rem; color: var(--muted); }
+.dz-tile img, .dz-tile-ext { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
+.dz-tile-ext { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: var(--fs-sm); }
+.dz-tile figcaption { display: flex; flex-direction: column; gap: 1px; max-width: 72px; font-size: var(--fs-xs); color: var(--muted); }
 .dz-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dz-tile.busy { opacity: .55; }
 .dz-tile.saved img, .dz-tile.saved .dz-tile-ext { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
@@ -3124,3 +3174,8 @@ dialog.ask.write-to-dialog[open] { display: flex; flex-direction: column; }
 /* a drop-down's lines never wrap ("Scan workbook pages" on one line): the list grows to fit
    (the owner, 2026-10-20) */
 .menu-list a, .menu-list .menu-disabled, .menu-list .submenu > summary { white-space: nowrap; }
+
+/* a scan being read: a bar that keeps moving and the time so far (the owner, 2026-10-20) */
+.scan-working { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
+.scan-working .scan-chip-bar { width: 64px; }
+.scan-controls .btn-danger.btn-icon { background: none; border: 0; color: var(--bad); }

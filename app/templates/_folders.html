@@ -103,13 +103,13 @@
         {% endfor %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
-        {# (no folders yet: nothing to sort, so it counts 0; everything is under All) #}
         {% set no_folders = not fk.root.folders %}
-        <li><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if no_folders or not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
+        <li><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ fk.page('main') }}" title="{{ 'There are no folders yet.' if no_folders else 'See the ' ~ fk.units ~ ' that aren\'t in any folder' }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
-          {#- (no folders yet: it's still grayed and has no flags (the owner, 2026-10-17), but it counts what's
-              in no folder, everything: the owner, 2026-10-19) -#}
+          <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren’t in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
+          {#- (no folders yet: it has no flags (the owner, 2026-10-17), counts what's in no folder,
+              everything (2026-10-19), and isn't grayed: it opens like any tab with something in it
+              (the owner, 2026-10-20) -#}
           {% if not no_folders %}{{ flag_badges(fk, fk.root, true) }}{% endif %}
           <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>
       </ul>

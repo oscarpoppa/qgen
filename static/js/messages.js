@@ -499,12 +499,12 @@
     if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
   });
 
-  //the tab: 🟡 new quizzes and 🔵 unfinished ones in front of the page's title, the same as the
-  //gold and blue boxes on My quizzes (a tab's title is plain text; the site's icon stays as it is)
-  var DOTS = /^(?:[\u{1F7E1}\u{1F535}]\d+ )+/u;
+  //the tab: the page's name, then 🔵 unfinished quizzes and 🟡 new ones after it, the same colors
+  //as the boxes on My quizzes (a tab's title is plain text; the owner, 2026-10-20)
+  var DOTS = /(?: [\u{1F7E1}\u{1F535}]\d+)+$/u;
   var baseTitle = document.title.replace(DOTS, '');
   function tabDots(fresh, started) {
-    document.title = (fresh ? '\u{1F7E1}' + fresh + ' ' : '') + (started ? '\u{1F535}' + started + ' ' : '') + baseTitle;
+    document.title = baseTitle + (started ? ' \u{1F535}' + started : '') + (fresh ? ' \u{1F7E1}' + fresh : '');
   }
 
   function check() {

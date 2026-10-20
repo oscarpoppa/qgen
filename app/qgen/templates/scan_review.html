@@ -131,9 +131,9 @@
       <p>{{ count_of(unread|length, 'page wasn’t', 'pages weren’t') }} read yet:</p>
       <ul class="scan-unread">{% for p in data.pages if p.state != 'done' %}<li><a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" target="_blank" rel="noopener" title="See page {{ p.n }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}"></a>Page {{ p.n }}{% if p.error %}: {{ p.error }}{% endif %}</li>{% endfor %}</ul>
       {%- if kind == 'paused' %}
-      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Resume', cls='btn btn-sm', tip='Go on reading the pages not read yet (each counts as one AI use)') }}
+      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Resume', cls='btn btn-sm', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}
       {%- else %}
-      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Read the rest', cls='btn btn-sm', tip='Have the AI read the pages that are missing (each counts as one AI use)') }}
+      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Read the rest', cls='btn btn-sm', tip='Have the AI read the pages that are missing (each page uses a few AI calls)') }}
       {%- endif %}
     </div>
   {% endif %}

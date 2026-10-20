@@ -79,7 +79,8 @@ def test_the_teachers_page_deleting_and_the_pop_up(app_db):
     from app.messages.models import StaffMessage
     teachers(db, 'lee')
     teach, lee = login(app, 'teach'), login(app, 'lee')
-    assert 'Teachers’ messages' in teach.get('/messages').data.decode()
+    #(the Messages page is retired: the panel's Showing menu lists the teachers' messages)
+    assert '<optgroup label="Teachers">' in teach.get('/messages/panel').data.decode()
     # the page writes with a plain form (one other teacher: no checkboxes, it's to all of them)
     page = teach.get('/messages/teachers').data.decode()
     assert 'All messages (every teacher)' in page and 'name="to" value="all"' in page

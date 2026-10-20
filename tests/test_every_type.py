@@ -90,7 +90,7 @@ def test_every_question_type_end_to_end(app_db):
     assert 'Everything' in home and 'class="quiz-is-new"' in home
     sensible(home, 'Home')
     mine = student.get('/mypage').data.decode()
-    assert 'quiz-card quiz-is-new' in mine
+    assert '<tr class="row-is-new" data-box="quiz:' in mine
     sensible(mine, 'My quizzes')
 
     # --- the start card, then the quiz: each kind gets its own way to answer
@@ -196,12 +196,15 @@ def test_problem_history(app_db):
     page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
     sensible(page, 'problem history')
     assert '<h1>Problem history: Capital</h1>' in page and 'History</span></a>' in teacher.get('/quiz/listvp').data.decode()  # (an icon button: its words for screen readers)
-    assert 'data-level="open" data-level-of="#problem-results"' in page  # Expand all / Collapse all over its quizzes
+    # Expand all / Collapse all over its quizzes (the page is laid out in the Quizzes page's folders now)
+    assert 'data-level="open" aria-label="Expand all in Problem history: Capital"' in page
     assert '<h1>Quiz history: Geo 1</h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
     home = login(app, 'sam').get('/home').data.decode()
     assert 'data-level-of="#home-boxes"' in home and 'id="home-boxes"' in home
     assert '4 answers from 2 students' in page and 'Average 50%' in page and '2 fully right' in page
-    assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="') == 4
+    #(each answer a row, "student quiz", inside its quiz's box, which is named too)
+    assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="sam  geo') + page.count('data-name="kim  geo') == 4
+    assert 'data-name="geo 1"' in page and 'data-name="geo 2"' in page
     assert 'Most common wrong answers' in page and '<strong>Lyon</strong> <span class="muted">(2 times)</span>' in page
     assert teacher.get('/quiz/problem-results/999').status_code == 302  # gone: back to Problems
     assert login(app, 'sam').get('/quiz/problem-results/{}'.format(vp.id)).status_code == 302  # teachers only

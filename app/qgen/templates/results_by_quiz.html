@@ -34,7 +34,7 @@
           <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
           <tbody>
           {% for student, g in q.rows %}
-            <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' }}">
+            <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else '' }}">
               <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
               {{ result_cells(g, student, rules) }}
             </tr>
@@ -59,7 +59,7 @@
       <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
       <tbody>
       {% for person in people %}{% set student, g = rows[person.id] %}
-        <tr data-box="student:{{ student.id }}" data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' }}">
+        <tr data-box="student:{{ student.id }}" data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else '' }}">
           <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
           {{ result_cells(g, student, rules) }}
         </tr>

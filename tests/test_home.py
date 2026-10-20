@@ -39,8 +39,8 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
     assert 'Continue</span></a>' in page and page.count('Start</span></a>') == 2  # (the play triangle: owner 2026-10-14)
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in no_titles(page)  # in the menu for students
-    # the boxes fold away (remembered in the browser)
-    assert 'data-box="waiting" open>' in page and 'data-elastic="awards" data-box="awards" open>' in page
+    # the boxes fold away (remembered in the browser); they start folded (the owner, scratchpad mode)
+    assert 'data-box="waiting">' in page and 'data-elastic="awards" data-box="awards">' in page
     # teachers have Home too (they take quizzes as students do); they still land on the Dashboard
     assert '<a href="/home">Home</a>' in no_titles(teach.get('/dashboard').data.decode())
     assert teach.get('/home').status_code == 200
@@ -62,7 +62,7 @@ def test_awards(app_db):
     finish(give(quizzes[4], 'sam'), 100, t + timedelta(days=5))             # perfect; 5 quizzes; streak 4
     page = sam.get('/home').data.decode()
     assert titles(page) == ['Perfect score', '5 quizzes', '3 in a row', 'Perfect score', 'Comeback', 'First quiz']
-    assert '100% on &#34;W4&#34;' in page or '100% on "W4"' in page
+    assert '100% on “W4”' in page
     assert 'Up 25 points on' in page
     # still to earn: the next of each kind only
     rest = page.split('Still to earn')[1]
@@ -80,7 +80,8 @@ def test_awards(app_db):
     assert '6 quizzes' not in sam.get('/home').data.decode()
     # teachers see them on the student's page; other students never do
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'class="box-title">Awards</span><span class="badge box-count">5 awards</span>' in page
+    #(a button opening them as a pop-over: the owner, 2026-10-17)
+    assert '</svg> Awards (5)</button>' in page and 'id="student-awards-pop"' in page and '<h2 id="awards-pop-head" class="pop-card-head">sam’s awards</h2>' in page
     kim = login(app, 'kim')
     assert titles(kim.get('/home').data.decode()) == []
     assert kim.get('/quiz/listuser/{}'.format(ids('sam'))).status_code == 302
@@ -104,14 +105,14 @@ def test_a_perfect_score_means_the_score_that_counts(app_db):
     finish(give(latest, 'sam'), 100, t + timedelta(hours=4))
     finish(give(latest, 'sam'), 80, t + timedelta(hours=5))
     page = sam.get('/home').data.decode()
-    perfect = re.findall(r'100% on (?:&#34;|")([^"&]+)', page.split('Still to earn')[0])
+    perfect = re.findall(r'100% on “([^”]+)”', page.split('Still to earn')[0])
     assert perfect == ['Best']
     # a teacher's own rule for this student changes it: "best" on Latest makes it count
     from app.qgen.models import CQuiz
     from app.qgen import services as S
     S.set_retake_rule(CQuiz.query.filter_by(vquiz_id=latest.id).order_by(CQuiz.id.desc()).first(), 'best')
     page = sam.get('/home').data.decode()
-    assert sorted(re.findall(r'100% on (?:&#34;|")([^"&]+)', page.split('Still to earn')[0])) == ['Best', 'Latest']
+    assert sorted(re.findall(r'100% on “([^”]+)”', page.split('Still to earn')[0])) == ['Best', 'Latest']
 
 
 def test_recently_completed(app_db):
@@ -120,7 +121,7 @@ def test_recently_completed(app_db):
     now = datetime.now()
     quizzes = [make_quiz(app, teach, 'R{}'.format(i)) for i in range(13)]
     page = sam.get('/home').data.decode()
-    assert 'class="box-title">Recently completed</h2><span class="badge box-count">0 quizzes</span>' in page and 'Nothing handed in during the last 14 days.' in page
+    assert 'class="box-title">Just finished</h2><span class="badge box-count">0 quizzes</span>' in page and 'Nothing handed in during the last 14 days.' in page
     finish(give(quizzes[0], 'sam'), 40, now - timedelta(days=20))       # too long ago
     finish(give(quizzes[1], 'sam'), 85, now - timedelta(days=3))
     being = give(quizzes[2], 'sam')                                       # being graded
@@ -128,13 +129,13 @@ def test_recently_completed(app_db):
     db.session.commit()
     give(quizzes[3], 'sam')                                               # not handed in
     page = sam.get('/home').data.decode()
-    part = page.split('class="box-title">Recently completed</h2>')[1].split('</details>')[0]
+    part = page.split('class="box-title">Just finished</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
     assert 'title="Handed in; your teacher is checking your written answers">In progress</span>' in part and '>85%</span>' in part and part.count('View</span></a>') == 2  # (the eye for both: owner 2026-10-14)
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))
-    part = sam.get('/home').data.decode().split('class="box-title">Recently completed</h2>')[1].split('</details>')[0]
+    part = sam.get('/home').data.decode().split('class="box-title">Just finished</h2>')[1].split('</details>')[0]
     assert len(re.findall(r'<strong>“', part)) == 10
 
 
@@ -173,10 +174,13 @@ def test_every_box_opens_and_is_remembered_the_same_way(app_db):
     sam_id = __import__('app.user.models', fromlist=['User']).User.query.filter_by(username='sam').one().id
     assert 'js/boxes.js?v=' in page and 'data-user="{}"'.format(sam_id) in page
     assert page.index('js/boxes.js') < page.index('</main>') + 400 and 'qgen-home-closed' not in page
-    assert 'data-box="waiting" open>' in page
+    assert 'data-box="waiting">' in page  # (drawn folded: the owner, scratchpad mode)
     here = os.path.join(os.path.dirname(__file__), '..')
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert 'overscroll-behavior' not in css
+    #(scroll areas say overscroll-behavior: auto, the default, which lets the wheel go on to the
+    #page: never contain or none)
+    import re as _re
+    assert not _re.search(r'overscroll-behavior(?:-[xy])?\s*:\s*(?:contain|none)', css)
     for js in ('dashboard.js', 'subjects.js', 'folders.js'):
         text = open(os.path.join(here, 'static', 'js', js)).read()
         assert 'localStorage.setItem(KEY' not in text and 'data-dash-boxes' not in text and 'itemKey' not in text
@@ -229,6 +233,7 @@ def test_a_sandbox_says_so_on_every_page(app_db):
     app.config['SANDBOX'] = True
     try:
         page = app.test_client().get('/login').data.decode()
-        assert 'class="sandbox-bar"' in page and '<title>SANDBOX · ' in page
+        # (the yellow bar says it; the tab is just the page's name, the owner 2026-10-20)
+        assert 'class="sandbox-bar"' in page and '<title>SANDBOX' not in page
     finally:
         app.config['SANDBOX'] = False

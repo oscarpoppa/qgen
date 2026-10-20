@@ -19,14 +19,17 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert title(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()).startswith("Answer key: sam – Week 1")
     assert title(teach.get('/edituser/{}'.format(ids('sam'))).data.decode()).startswith('Edit user: sam')
     assert title(app.test_client().get('/login').data.decode()).startswith('Log in')
-    # Back says where it goes
-    assert "← sam&#39;s student page</span></a>" in teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()
+    # the way back is the top bar's arrows (worded Back buttons removed)
+    from test_flow import back_by_the_trail
+    assert back_by_the_trail(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode())
     # one name per action: Grading in the menu
     assert '">Grading' in teach.get('/dashboard').data.decode()
     # the student page: each quiz a box that folds
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert 'class="box card result-box quiz-is-new" data-list data-quiz-box="{}-{}" data-fkey="q:{}" data-name="week 1">'.format(ids('sam'), vq.id, vq.id) in page
-    assert 'data-level="open" data-level-of="#student-' in page and '<span class="badge badge-warn badge-status">Not started</span>' in page
+    #(one student's page is laid out like the other list pages: its folder list's levels get
+    #Expand all / Collapse all from folderfilter.js)
+    assert 'data-folder-filter' in page and '<span class="badge badge-warn badge-status">Not started</span>' in page
     # Results by student (everyone) keeps its table
     assert 'class="card result-box"' not in teach.get('/quiz/listuser').data.decode()
 
@@ -38,6 +41,11 @@ def test_the_count_beside_a_name_is_quizzes_not_attempts(app_db):
     for _ in range(5):
         give(w1, 'sam')  # one quiz, five attempts
     give(w2, 'sam')
-    for url in ('/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam'))):
-        page = teach.get(url).data.decode()
-        assert '<span class="badge box-count">2 quizzes</span>' in page, url
+    page = teach.get('/quiz/listuser').data.decode()
+    assert '<span class="badge box-count">2 quizzes</span>' in page
+    #(one student's page has no box round the student: its New folder counts quizzes too)
+    import json
+    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
+    assert [(t['id'], t['count']) for t in tree if t['id'] == 'new'] == [('new', 2)]
+    assert page.count('class="box card result-box') == 2

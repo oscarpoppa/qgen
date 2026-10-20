@@ -112,21 +112,23 @@ def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):
     sam = User.query.filter_by(username='sam').one()
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     s = login(app, 'sam')
-    assert 'quiz-card quiz-is-new' in s.get('/mypage').data.decode()
-    # the browser tab: 🟡 new quizzes in front of the title (and the check-in keeps it up to date)
-    assert '<title>🟡1 ' in s.get('/home').data.decode()
+    assert '<tr class="row-is-new" data-box="quiz:' in s.get('/mypage').data.decode()
+    # the browser tab: the page's name, then 🟡 new quizzes after it (and the check-in keeps it up to date)
+    assert ' 🟡1</title>' in s.get('/home').data.decode()
     assert s.get('/messages/poll').get_json()['tab'] == [1, 0]
     assert 'class="quiz-is-new"' in s.get('/home').data.decode()
     assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
     take_page(s, CQuiz.query.one().id)
-    assert 'quiz-card quiz-is-started' in s.get('/mypage').data.decode()
-    assert '<title>🔵1 ' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
+    assert '<tr class="row-is-started" data-box="quiz:' in s.get('/mypage').data.decode()
+    assert ' 🔵1</title>' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
     # counted by quiz, like the boxes: a second try at the same quiz doesn't add a dot
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert s.get('/messages/poll').get_json()['tab'] == [0, 1]
     assert '<title>Quizzes' in teacher.get('/dashboard').data.decode() or '🟡' not in teacher.get('/dashboard').data.decode().split('</title>')[0]
     assert 'class="quiz-is-started"' in s.get('/home').data.decode()
-    assert 'result-box quiz-is-started' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    # a new attempt and a started one at the same quiz: gold wins (the owner, 2026-10-20)
+    assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    assert '<tr class="row-is-new" data-box="quiz:' in s.get('/mypage').data.decode()
 
 
 def test_quiz_without_paper_redirects_as_before(app_db):
@@ -155,3 +157,24 @@ def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):
     assert 'class="btn-row small pick-bar filter-bar"' in quiz
     assert 'placeholder="Filter by name…"' in quiz and 'data-filter-clear' in quiz and 'data-filter-count' in quiz
     assert 'id="assign-subject"' not in page and '<select id="vquiz"' not in page
+
+
+def test_my_quizzes_status_column_says_completed(app_db):
+    """My quizzes' Status column: In progress, else New, else Completed once every attempt is
+    handed in and graded (the owner, 2026-10-20)."""
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    from app.user.models import User
+    teacher = login(app, 'teach')
+    vq, _ = _quiz(app, db, teacher, with_paper=False)
+    sam = User.query.filter_by(username='sam').one()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
+    s = login(app, 'sam')
+    status = lambda: (lambda h: h[h.index('data-label="Status"'):][:400])(s.get('/mypage').data.decode())
+    assert '>New</span>' in status()
+    take_page(s, CQuiz.query.one().id)
+    assert '>In progress</span>' in status()
+    S.submit(CQuiz.query.one(), {})
+    db.session.commit()
+    assert CQuiz.query.one().completed and '>Completed</span>' in status()

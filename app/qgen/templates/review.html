@@ -24,7 +24,7 @@
     {% set it = row.item %}
     <section class="card question">
       <div class="card-head">
-        <span class="qnum">{{ it.num }}</span>
+        {% set lab = qlabel(cq.vquiz, it.num) %}<span class="qnum{% if lab != it.num %} qnum-label{% endif %}">{{ lab }}</span>
         {% if not (it.essay or it.check) %}
           <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
           <span class="muted small">graded automatically</span>

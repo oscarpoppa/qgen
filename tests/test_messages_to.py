@@ -31,18 +31,18 @@ def test_a_message_to_one_teacher_is_only_theirs(app_db):
     # teach: counted, popped up, listed everywhere, labeled
     poll = teach.get('/messages/poll').get_json()
     assert poll['unread'] == 2 and poll['message_preview']['text'] == 'For everyone'
-    for url in ('/messages/panel', '/messages/panel?student={}'.format(ids('sam')), '/messages/{}'.format(ids('sam'))):
+    for url in ('/messages/panel', '/messages/panel?student={}'.format(ids('sam')), '/messages/{}?show=40'.format(ids('sam'))):
         page = teach.get(url).data.decode()
         assert 'Only for teach' in page and 'For everyone' in page, url
     assert 'to you only' in teach.get('/messages/panel').data.decode()
 
     # lee: never sees it, isn't told about it, and can't delete it
     assert lee.get('/messages/poll').get_json()['unread'] == 1
-    for url in ('/messages/panel', '/messages/panel?student={}'.format(ids('sam')), '/messages/{}'.format(ids('sam')),
+    for url in ('/messages/panel', '/messages/panel?student={}'.format(ids('sam')), '/messages/{}?show=40'.format(ids('sam')),
                 '/messages', '/dashboard'):
         page = lee.get(url).data.decode()
         assert 'Only for teach' not in page, url
-    assert 'For everyone' in lee.get('/messages/{}'.format(ids('sam'))).data.decode()
+    assert 'For everyone' in lee.get('/messages/panel?student={}'.format(ids('sam'))).data.decode()
     lee.post('/messages/delete/{}'.format(private.id), headers=FETCH)
     assert db.session.get(Message, private.id) is not None
     assert lee.get('/messages/poll').get_json()['unread'] == 0  # reading what lee can see clears lee's count

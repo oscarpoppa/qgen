@@ -6,7 +6,8 @@ from test_flow import app_db, login, problem_form, no_titles, without_all_box  #
 def make_problems(teacher, *titles):
     from app.qgen.models import VProblem
     for t in titles:
-        teacher.post('/quiz/makevprob', data=problem_form('numeric', t, 'What is 2 + 2?', '4', []))
+        #the same question each time: "Save anyway" past the same-problem notice (same_ok)
+        teacher.post('/quiz/makevprob', data=problem_form('numeric', t, 'What is 2 + 2?', '4', [], same_ok='1'))
     return {p.title: p for p in VProblem.query.all()}
 
 
@@ -106,7 +107,7 @@ def test_problems_page_lists_by_folder(app_db):
     assert shown(teacher, 'problems', 'main') == []
     page = teacher.get('/quiz/listvp').data.decode()
     assert side_counts(page) == {'All problems': 3, 'Uncategorized': 0, 'Algebra': 2, 'Geometry': 2}
-    assert 'Expand all' in page and 'Collapse all' in page and 'Put in folder' in page
+    assert 'Expand all' in page and 'Collapse all' in page and 'Move to folder' in page
     # taken out of a folder: it stays in its others; out of its only folder it's deleted, but
     # only once the teacher agrees (the page asks first: check=1 gives the question)
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Area'].id], 'action': 'remove'})
@@ -166,7 +167,7 @@ def test_one_at_a_time_and_dragging(app_db):
     FETCH = {'X-Requested-With': 'fetch'}
     # dragged from Fall to Spring: moved
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': spring.id, 'from': fall.id}, headers=FETCH).get_json()
-    assert res == {'ok': True, 'message': 'Moved "Q1" to "Spring".'}
+    assert res == {'ok': True, 'message': 'Moved “Q1” to “Spring”.'}
     db.session.expire_all()
     assert [g.title for g in q.vqgroups] == ['Spring']
     # dragged from All onto Fall: put in it too
@@ -209,7 +210,9 @@ def test_folders_inside_folders(app_db):
     # "Math itself"); the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
     assert '"name": "Algebra"' in page and 'data-main-label="Unsorted"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
-    assert '>Math</a> <span class="muted" aria-hidden="true">›</span>' in teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
+    #(the path is the heading, "Math › Algebra", with Up going back to Math)
+    page = teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
+    assert ' Math › Algebra</h2>' in page and 'folder-up" href="/quiz/listvp?folder={}"'.format(math.id) in page
     # never inside itself
     FETCH = {'X-Requested-With': 'fetch'}
     res = teacher.post('/quiz/subjects/problems/move', data={'folder': math.id, 'to': alg.id}, headers=FETCH)
@@ -271,17 +274,29 @@ def test_new_items_can_be_given_a_subject(app_db):
     assert r.headers['Location'].endswith('/quiz/listvp?show={}'.format(vp.id))
     import re
     assert re.search(r'data-item="{}" data-box="problem:{}" [^>]*data-show'.format(vp.id, vp.id), teacher.get(r.headers['Location']).data.decode())
+    # the same problem again: said once, nothing saved; "Save" again (same_ok) saves it anyway
+    r = teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1'))
+    assert r.status_code == 200 and 'You already have this problem' in r.data.decode() and 'name="same_ok"' in r.data.decode()
+    assert VProblem.query.count() == 1
+    form['same_ok'] = '1'
     # none chosen: in no folder (Uncategorized)
     teacher.post('/quiz/makevprob', data=dict(form, title='Later', subjects_shown='1'))
     assert VProblem.query.filter_by(title='Later').one().vpgroups == []
     # a new subject typed on the form (an existing name in another case is reused)
     teacher.post('/quiz/makevprob', data=dict(form, title='Shapes', subjects_shown='1', new_subject=' Geometry '))
-    teacher.post('/quiz/makevprob', data=dict(form, title='Lines', subjects_shown='1', new_subject='geometry',
-                                               subjects=[str(alg.id)]))
+    #(with one folder checked, a new name now makes the folder inside that one, the owner
+    #2026-10-16: see test_a_new_folder_name_taken_elsewhere_with_one_folder_checked)
+    teacher.post('/quiz/makevprob', data=dict(form, title='Lines', subjects_shown='1', new_subject='geometry'))
     geo = VPGroup.query.filter_by(title='Geometry').one()
     assert VPGroup.query.count() == 2
     assert sorted(p.title for p in geo.vproblems) == ['Lines', 'Shapes']
-    assert sorted(g.title for g in VProblem.query.filter_by(title='Lines').one().vpgroups) == ['Algebra', 'Geometry']
+    assert sorted(g.title for g in VProblem.query.filter_by(title='Lines').one().vpgroups) == ['Geometry']
+    # one folder checked and a new name: the new folder is made inside it, with the problem in it
+    teacher.post('/quiz/makevprob', data=dict(form, title='Rays', subjects_shown='1', new_subject='Lines and rays',
+                                               subjects=[str(alg.id)]))
+    inner = VPGroup.query.filter_by(title='Lines and rays').one()
+    assert inner.parent_id == alg.id
+    assert [g.title for g in VProblem.query.filter_by(title='Rays').one().vpgroups] == ['Lines and rays']
     # an overlong new name is refused before anything is saved
     r = teacher.post('/quiz/makevprob', data=dict(form, title='Long', subjects_shown='1', new_subject='x' * 65))
     assert VProblem.query.filter_by(title='Long').count() == 0 and 'at most 64 characters' in r.data.decode()
@@ -352,10 +367,13 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     assert 'data-start="all"' in card
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', card, re.S).group(1))
     assert tree[0]['id'] == p2.id and tree[0]['keys'] == ['quiz:{}'.format(q2.id)]  # Q1 is in no folder
-    # ?subject= opens on that folder's tab; a link for one quiz opens on All with it picked
+    # ?subject= opens on that folder's tab; a link for one quiz opens on its own folder (or
+    # Uncategorized, "none", when it's in none) with it picked
     assert 'data-start="{}"'.format(p2.id) in quiz_card('/quiz/assign?subject={}'.format(p2.id))
     card = quiz_card('/quiz/assign?vq={}'.format(q1.id))
-    assert 'data-start="all"' in card and 'value="{}" id="vquiz-{}" checked'.format(q1.id, q1.id) in card
+    assert 'data-start="none"' in card and 'value="{}" id="vquiz-{}" checked'.format(q1.id, q1.id) in card
+    card = quiz_card('/quiz/assign?vq={}'.format(q2.id))
+    assert 'data-start="{}"'.format(p2.id) in card and 'value="{}" id="vquiz-{}" checked'.format(q2.id, q2.id) in card
     sam_id = User.query.filter_by(username='sam').one().id
     teacher.post('/quiz/assign', data={'vquiz': q1.id, 'users': [sam_id]})
     assert len(q1.cquizzes) == 1
@@ -403,9 +421,10 @@ def test_they_are_called_folders_on_screen(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert '+ New folder' in page and 'Make a folder first' in page
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
-    assert 'Folder &#34;Algebra&#34; made.' in r.data.decode() or 'Folder "Algebra" made.' in r.data.decode()
+    assert 'Folder “Algebra” made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'Put in folder' in page and 'Take out of folder' in page and '<option value="">+</option>' in page
+    #(each row's own way into a folder is now its Move to folder icon, not a "+" menu)
+    assert 'Move to folder' in page and 'Take out of folder' in page and 'title="Move to folder: move “Add” to a folder' in page
     from app.qgen.models import VPGroup
     page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
     assert 'Delete the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page
@@ -416,6 +435,23 @@ def test_they_are_called_folders_on_screen(app_db):
     for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/makevprob', '/quiz/makevquiz', '/quiz/assign'):
         text = teacher.get(url).data.decode()
         assert '>Subject' not in text and 'subject “' not in text and 'New subject' not in text, url
+
+
+def test_a_new_folder_name_taken_elsewhere_with_one_folder_checked(app_db):
+    """A new folder's name that's already a folder somewhere else, with one folder checked (so
+    it would be made inside that one): the teacher is told, not shown a server error, and the
+    problem isn't saved half-filed."""
+    app, db = app_db
+    from app.qgen.models import VPGroup, VProblem
+    teacher = login(app, 'teach')
+    for name in ('Algebra', 'Geometry'):
+        teacher.post('/quiz/subjects/problems/new', data={'name': name})
+    alg = VPGroup.query.filter_by(title='Algebra').one()
+    form = problem_form('numeric', 'Lines', 'What is 2 + 2?', '4', [])
+    r = teacher.post('/quiz/makevprob', data=dict(form, subjects_shown='1', new_subject='geometry', subjects=[str(alg.id)]))
+    assert r.status_code in (200, 302)
+    if r.status_code == 200:
+        assert 'already a folder called' in r.data.decode() and VProblem.query.count() == 0
 
 
 def test_the_quiz_builder_says_what_students_get(app_db):
@@ -527,20 +563,19 @@ def test_an_archive_folder_action_keeps_the_open_tab(app_db):
     assert 'tab=none' in r.headers['Location']
 
 
-def test_with_no_folders_uncategorized_counts_nothing(app_db):
-    """No folders yet: Uncategorized has nothing to sort, so the folder list shows it grayed at 0
-    (everything is under All), not the same count as All."""
+def test_with_no_folders_uncategorized_counts_everything_and_opens(app_db):
+    """No folders yet: Uncategorized counts what's in no folder, everything (the owner, 2026-10-19),
+    and isn't grayed: a tab with something in it always opens (the owner, 2026-10-20)."""
     app, db = app_db
     teacher = login(app, 'teach')
     make_problems(teacher, 'Add', 'Area')
     page = teacher.get('/quiz/listvp').data.decode()
-    at = page.index('title="There are no folders yet."')
+    at = page.index('title="See the problems that aren’t in any folder"')
     row = page[page.rindex('<li>', 0, at):page.index('</div></li>', at)]
-    assert 'is-empty' in row and '>0</span>' in row
-    # with a folder, it counts what's in no folder again
-    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
-    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'is-empty' not in row and '>2</span>' in row
     assert 'There are no folders yet' not in page
+    import os
+    assert 'There are no folders yet' not in open(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'folderfilter.js')).read()
 
 
 def test_each_folder_page_keeps_its_own_filter_and_tab_in_the_address(app_db):
@@ -572,7 +607,9 @@ def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db)
     probs = make_problems(teacher, 'Add')
     teacher.post('/quiz/makevquiz', data={'title': 'Q1', 'vplist': str(probs['Add'].id)})
     page = teacher.get('/quiz/assign').data.decode()
-    assert page.count('data-style="list"') == 2
+    #(the Messages side panel's "write to" picker, on every page, is a third such list)
+    assert 'data-remember="write-to" data-tools-home="#write-to-bar" data-style="list"' in page
+    assert page.count('data-style="list"') == 3
     assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
     assert page.index('id="pick-quiz"') < page.index('id="pick-people"') < page.index('class="card assign-when"') < page.index('class="assign-go"')
     assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()

@@ -55,6 +55,14 @@ def scan_start():
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, folders=folders, kinds=kinds, max_pages=SC.MAX_PAGES)
 
 
+def _elapsed(data):
+    since = data.get('reading_since')
+    try:
+        return max(0, int((SC.datetime.now() - SC.datetime.fromisoformat(since)).total_seconds())) if since else 0
+    except ValueError:
+        return 0
+
+
 def scan_progress_data(user):
     """Every teacher's unfinished scans, for the Dashboard's chip and pop-over (all teachers see
     them all: the owner, 2026-10-20; it was this teacher's own): each with how far the reading
@@ -70,6 +78,8 @@ def scan_progress_data(user):
         author = db.session.get(User, job.author_id)
         out.append({'job': job, 'total': len(pages), 'reading': reading, 'now': now,
                     'by': author.shown_name if author else '',
+                    #(seconds read so far, for the running timer: the owner, 2026-10-20)
+                    'elapsed': _elapsed(data) if reading else 0,
                     'from_folder': data.get('from_folder'),
                     'done': sum(1 for p in pages if p.get('state') == 'done'),
                     'failed': sum(1 for p in pages if p.get('state') == 'error'),

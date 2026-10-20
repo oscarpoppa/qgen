@@ -46,8 +46,18 @@ def subject_form_error(kind, new):
     if error:
         return error
     #(a new folder goes inside the one folder checked, or at the top with none: the owner 2026-10-16)
-    if name.strip() and len(request.form.getlist('subjects')) > 1:
+    checked = request.form.getlist('subjects')
+    if name.strip() and len(checked) > 1:
         return 'To make the new folder inside one of your folders, check just that one (or none, to make it at the top).'
+    if name.strip() and len(checked) == 1:
+        #(made inside the checked folder: a folder of that name anywhere else would stop it, after
+        #the item was already saved; said here instead, found by the tests 2026-10-20)
+        parent = S.get_subject(kind, checked[0])
+        clean = ' '.join(name.split()).lower()
+        other = next((g for g in S.subjects(kind) if (g.title or '').lower() == clean
+                      and (parent is None or g.parent_id != parent.id)), None)
+        if other is not None:
+            return 'There’s already a folder called “{}”.'.format(other.title)
     return None
 
 
@@ -883,6 +893,50 @@ def pq_no_blank(words):
     """A problem's words without the "???" (or "___") at the very end, where the answer box goes."""
     import re
     return re.sub(r'\s*(\?{2,}|_{3,}|\?)\s*$', '', words)
+
+
+def _label(number):
+    """A printed problem number as its label: "1 a." stays "1 a.", "3)" becomes "3"."""
+    return ' '.join(str(number or '').replace(')', ' ').split()).strip('( ')[:8]
+
+
+def page_labels(vq):
+    """{position in the quiz: the page's own number for it, e.g. "1 a."} for a quiz made
+    from a scanned page (the owner, 2026-10-20: blanks labeled the way the page prints them,
+    so "7 b." on the page is "7 b." everywhere); {} for any other quiz, or when the page
+    doesn't number its problems. Only while the quiz still matches its page."""
+    from flask import g
+    memo = g.setdefault('page_labels', {})
+    if vq.id in memo:
+        return memo[vq.id]
+    from . import layout as quiz_layout
+    L = vq.page_layout
+    out = {}
+    if L and not vq.shuffle_order and quiz_layout.parse(vq.vpid_lst) == L.get('ids'):
+        if L.get('labels'):
+            out = {int(k): v for k, v in L['labels'].items() if v}
+        else:
+            #(saved before labels were kept: every printed problem in the quiz, in page order)
+            order = []
+            for pg in L.get('pages') or []:
+                qs = {q['id']: q for q in pg.get('qs') or []}
+                order += [_label((qs.get(i) or {}).get('number')) for i in pg.get('items') or []]
+            if len(order) == len(L.get('ids') or []):
+                out = {n: v for n, v in enumerate(order, 1) if v}
+    #(all or nothing: a page numbering only some of its problems keeps the quiz's own numbers)
+    if not L or len(out) != len(L.get('ids') or []):
+        out = {}
+    memo[vq.id] = out
+    return out
+
+
+@qgen_bp.app_template_global('qlabel')
+def qlabel(vq, num):
+    """How question `num` of this quiz is labeled: the page's own number, or `num`."""
+    #(an archived attempt's quiz is a plain record, with no page layout: its own numbers)
+    if vq is None or getattr(vq, 'id', None) is None or not getattr(vq, 'page_layout', None):
+        return num
+    return page_labels(vq).get(num, num)
 
 
 def page_layout(vq, cq=None):

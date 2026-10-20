@@ -2,7 +2,7 @@
 several, folders hold folders; usable on the Assign and Messages pages, which follow changes."""
 import re
 
-from test_flow import app_db, login, no_titles, without_all_box  # noqa: F401  (fixture)
+from test_flow import app_db, login, no_titles, without_all_box, back_by_the_trail  # noqa: F401  (fixture)
 from test_archive import ids
 
 FETCH = {'X-Requested-With': 'fetch'}
@@ -44,9 +44,9 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert sorted(people(teach)) == ['kim', 'sam', 'teach']  # the main list: nobody's in a folder yet
     # dragging from the main list puts them in; the "Add to folder" list too; several folders
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g7, 'from': 'top'}, headers=FETCH).get_json() == \
-        {'ok': True, 'message': 'Put sam in "7th grade".'}
+        {'ok': True, 'message': 'Put sam in “7th grade”.'}
     assert teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club}, headers=FETCH).get_json()['message'] == \
-        'Put sam in "Math club".'
+        'Put sam in “Math club”.'
     assert in_folders('sam') == ['7th grade', 'Math club']
     assert sorted(people(teach)) == ['kim', 'teach'] and people(teach, g7) == ['sam'] and people(teach, club) == ['sam']
     # All: one list, everyone once (sam is in both folders: two chips on one card)
@@ -55,7 +55,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert 'title="Open the folder “7th grade”">' in page and 'aria-label="Take sam out of Math club"' in page
     # dragging from one folder to another moves them (their other folders stay)
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
-        'Moved sam to "8th grade".'
+        'Moved sam to “8th grade”.'
     assert in_folders('sam') == ['8th grade', 'Math club']
     # onto the main list from a folder: out of that folder; from All users: out of every folder
     teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
@@ -69,7 +69,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
     # out of their only folder: that deletes their account, so it's asked first (not done here)
     res = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': folder('8th grade')}, headers=FETCH)
-    assert res.status_code == 409 and 'Do you want me to permanently delete them or put them in Uncategorized?' in res.get_json()['confirm']
+    assert res.status_code == 409 and 'Do you want me to permanently delete him/her or put him/her in Uncategorized?' in res.get_json()['confirm']
     assert in_folders('sam') == ['8th grade']
     # the ✕ beside a folder
     # the ✕ beside a folder: the message says where they still are; out of their only folder,
@@ -77,10 +77,10 @@ def test_make_folders_and_put_people_in_them(app_db):
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g8})
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g7}, headers=FETCH).get_json()['message'] == \
-        'Took kim out of “7th grade”; they’re still in “8th grade”.'
+        'Took kim out of “7th grade”; he/she is still in “8th grade”.'
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8, 'confirm': 'uncategorized'},
-                      headers=FETCH).get_json()['message'] == 'Took kim out of “8th grade”; they’re now in Uncategorized.'
+                      headers=FETCH).get_json()['message'] == 'Took kim out of “8th grade”; he/she is now in Uncategorized.'
     assert in_folders('kim') == []
     # names; renaming
     assert teach.post('/users/folders', data={'name': ' '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -115,10 +115,9 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert people(teach, g7) == ['kim', 'sam'] and '"name": "Period 2"' in page
     assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
-    # each person a box that folds to their name (like My quizzes' quizzes), so Expand all /
-    # Collapse all works inside a folder too
-    assert page.count('<details class="box card person-card" data-list data-box="user:') == 2  # kim, and sam in Period 2's box
-    assert '<details class="box card person-card" data-list data-box="user:{}"'.format(ids('kim')) in page
+    # each person a row of the folder's table (People shown as rows)
+    assert page.count('<tr data-box="user:') == 2  # kim, and sam in Period 2
+    assert '<tr data-box="user:{}" data-name="kim'.format(ids('kim')) in page
     # not inside itself
     assert teach.post('/users/folders/move', data={'folder': g7, 'to': p2}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'
@@ -164,13 +163,14 @@ def test_assigning_and_messaging_a_folder(app_db):
     vq = make_quiz(app, teach, 'Twice')
     teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam'), ids('sam')]})
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 1
-    # Messages: the folders down the side, a folder's students only
-    page = teach.get('/messages').data.decode()
-    assert '<span class="side-name">7th grade</span>' in page
-    assert '<option value="folder:{}">7th grade (1 student)</option>'.format(g7) in page
-    rows = lambda v: re.findall(r'<td data-label="Student"><a class="name-link person"[^>]*>.*?<strong>([^<]+)</strong>',
-                                teach.get('/messages?folder={}'.format(v)).data.decode(), re.S)
-    assert rows(g7) == ['sam'] and rows('main') == ['kim'] and sorted(rows('all')) == ['kim', 'sam']
+    # Messages (the panel's "Write to chosen students", the Messages page is retired): the
+    # People folders down the side, students only (the teacher in 7th grade isn't there)
+    page = teach.get('/dashboard').data.decode()
+    page = page[page.index('id="write-to-dialog"'):page.index('</dialog>', page.index('id="write-to-dialog"'))]
+    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
+    assert [(t['name'], [c['name'] for c in t['children']]) for t in tree] == [('7th grade', ['Period 2'])]
+    assert tree[0]['keys'] == ['user:{}'.format(ids('sam'))] and tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
+    assert sorted(re.findall(r'name="students" value="(\d+)"', page)) == sorted([str(ids('kim')), str(ids('sam'))])
     # writing to a folder reaches its students (folders inside included)
     teach.post('/messages/send', data={'to': 'folder:{}'.format(g7), 'body': 'Field trip Friday'})
     got = Message.query.filter_by(body='Field trip Friday').all()
@@ -202,8 +202,9 @@ def test_assigning_from_the_users_page(app_db):
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     # each person: a box to check (for the bar) and a quick Assign; a folder: Assign a quiz to this folder
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
-    assert 'name="users" value="{}" form="assign-people"'.format(ids('kim')) in page
-    assert '<form method="get" action="/quiz/assign" id="assign-people"' in page
+    #(the checked people get their quizzes from the Assign a quiz dialog, not a trip to Assign)
+    assert 'class="pick-person" name="users" value="{}"'.format(ids('kim')) in page
+    assert 'id="assign-people-dialog"' in page and '<form method="post" action="/quiz/assignmany">' in page
     assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'Assign a quiz</span></a>' in page  # (the paper plane: owner 2026-10-14)
     #(paper planes, the words for screen readers: owner 2026-10-14)
     assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'Assign a quiz to this folder</span></a>' in page
@@ -222,7 +223,7 @@ def test_assigning_from_the_users_page(app_db):
 
 def test_results_pages_lead_back_to_users(app_db):
     """People: Accounts and Results are two views of one page (2026-10-09): each has the
-    switch, keeping the folder; the menu's People opens the view used last; one student's
+    switch, keeping the folder; the menu's People opens Accounts (?view=results: Results); one student's
     page goes Back to People."""
     app, db = app_db
     teach = login(app, 'teach')
@@ -234,21 +235,22 @@ def test_results_pages_lead_back_to_users(app_db):
     assert teach.get('/people').headers['Location'] == '/userdet'
     results = no_titles(teach.get('/quiz/listuser?folder=all').data.decode())
     assert '<h1>People</h1>' in results and 'href="/quiz/listuser?folder=all" aria-current="page">Results</a>' in results
-    assert teach.get('/people?folder=all').headers['Location'] == '/quiz/listuser?folder=all'  # used last
+    #(the menu's People opens Accounts unless ?view=results asks for Results, no longer the one
+    #used last: the owner, 2026-10-16)
+    assert teach.get('/people?folder=all').headers['Location'] == '/userdet?folder=all'
+    assert teach.get('/people?folder=all&view=results').headers['Location'] == '/quiz/listuser?folder=all'
     # the menu: one People entry, lit on both views; the Quizzes menu has Results by student too,
     # under Results by quiz (the owner, 2026-10-15)
     assert '>People</a>' in results and 'class="active" aria-current="page">People</a>' in results
     menu = results.split('<main')[0]
     assert '>Results by student</a>' in menu and menu.index('>Results by quiz</a>') < menu.index('>Results by student</a>')
-    assert '<a class="btn btn-secondary" href="/people" data-back><span class="back-label">← People</span></a>' in \
-        no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
-    # one quiz's history is about the quiz: back to Quizzes (when there's no trail to follow)
-    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back><span class="back-label">← Quizzes</span></a>' in \
-        no_titles(teach.get('/quiz/results/{}'.format(vq.id)).data.decode())
-    # results by quiz are about quizzes, not people: back to the Dashboard (when there's no trail)
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in no_titles(teach.get('/quiz/results').data.decode())
+    # one student's page, a quiz's history and Results by quiz: the way back is the top bar's
+    # arrows (the trail), no worded back button
+    for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results/{}'.format(vq.id), '/quiz/results'):
+        assert back_by_the_trail(teach.get(url).data.decode()), url
     # one student's page: Assign a quiz to them
-    assert 'href="/quiz/assign?users={}">Assign a quiz to sam</a>'.format(ids('sam')) in \
+    #(it opens the Assign a quiz dialog: data-what names who it's for)
+    assert 'href="/quiz/assign?users={}" data-what="sam">Assign a quiz to sam</a>'.format(ids('sam')) in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
 
 
@@ -279,15 +281,15 @@ def test_taking_people_out_of_their_only_folder(app_db):
         teach.post('/users/folders/add', data={'user': ids(who), 'to': g8})
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
     page = teach.get('/userdet?folder=all').data.decode()
-    # the bar: the same folder menu, Put in folder and Take out of folder as Problems and Quizzes;
-    # each card: Remove (it asks which folder when they're in several)
-    assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Put in folder</button>' in page
-    assert page.count('Remove</span></button>') >= 2  # (icon buttons: their words for screen readers)
+    # the bar: the same folder menu, Move to folder and Take out of folder as Problems and Quizzes;
+    # each row: Take out of folder (it asks which folder when they're in several)
+    assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Move to folder</button>' in page
+    assert page.count('Take out of folder</span></button>') >= 2  # (icon buttons: their words for screen readers)
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
     assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove', 'confirm': 'delete'}, headers=FETCH)
-    assert res.get_json()['message'] == 'Took sam out of “8th grade”; they’re still in “Math club”. Deleted kim’s account.'
+    assert res.get_json()['message'] == 'Took sam out of “8th grade”; he/she is still in “Math club”. Deleted kim’s account.'
     assert User.query.filter_by(username='kim').count() == 0 and in_folders('sam') == ['Math club']
     # never your own account: you go in Uncategorized instead
     teach.post('/users/folders/add', data={'user': ids('teach'), 'to': club})
@@ -309,7 +311,7 @@ def test_out_of_a_folder_inside_another_goes_back_up(app_db):
     assert in_folders('kim') == ['needs special attention']
     # the ✕ on the folder, the card's Remove (just that folder), and the checked bar: all the same
     res = teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': special}, headers=FETCH).get_json()
-    assert res['message'] == 'Took kim out of “needs special attention”; they’re now in “8th grade” (its Unsorted).'
+    assert res['message'] == 'Took kim out of “needs special attention”; he/she is now in “8th grade” (its Unsorted).'
     assert in_folders('kim') == ['8th grade']
     teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
     teach.post('/folders/people/takeout', data={'items': [ids('kim')], 'folder': special, 'just': '1', 'confirm': 'uncategorized'})

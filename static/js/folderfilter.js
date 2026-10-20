@@ -102,7 +102,8 @@
     function isFolder(id) { return /^\d+$/.test(id) && !!byId[id]; }
     if (chosen !== 'all' && chosen !== 'none' && !byId[base()]) chosen = 'all';
     if (chosen.indexOf('self:') === 0 && !isFolder(base())) chosen = 'all';
-    if (chosen === 'none' && (!loose || 'noMain' in box.dataset || !tree.some(function (n) { return isFolder(String(n.id)); }))) chosen = 'all';
+    //(Uncategorized opens whenever something is in it, folders or not: the owner, 2026-10-20)
+    if (chosen === 'none' && (!loose || 'noMain' in box.dataset)) chosen = 'all';
     //what's in a folder itself: in it, and in none of the folders inside it
     function own(n) {
       var out = {};
@@ -237,11 +238,10 @@
             //Problems page, the owner 2026-10-13; Unsorted is the tab inside an open folder)
           });
         })(tree, 1);
-        var noneFolders = !tree.some(function (n) { return isFolder(String(n.id)); });
-        //(no folders yet: grayed, but counting what's in no folder, everything: the owner, 2026-10-19)
+        //(grayed only when nothing is in it: with no folders yet it holds everything, and opens, the
+        //owner 2026-10-20; it was grayed then, 2026-10-19)
         var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
-        if (noneFolders) { noneBtn.disabled = true; noneBtn.title = 'There are no folders yet.'; }
-        else if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
+        if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
         sideRow(noneBtn, 1, null);
         //folding: the rows after a folder that are deeper belong to it; the folder picked (and the
         //folders it's in) always stay open
@@ -305,7 +305,6 @@
         tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
         var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? 0 : loose, 'tray');
         if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
-        else if (noFolders) { none.disabled = true; none.title = 'There are no folders yet.'; }
         else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
         row.appendChild(none);
         //(a folder's own page with no folders inside: no tabs, just its things, as above)

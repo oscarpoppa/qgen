@@ -60,9 +60,9 @@ def test_teachers_get_the_badge_and_the_notice(app_db):
     assert got['quizzes'] == 1
     # their own "New quiz" notice, besides the usual "teach assigned ..." one; it pops up
     assert got['notices'] == before + 2
-    assert got['notice_preview']['text'].startswith('New quiz: "Week 1"')
+    assert got['notice_preview']['text'].startswith('New quiz: “Week 1”')
     panel = lee.get('/messages/notices').data.decode()
-    assert 'New quiz: &#34;Week 1&#34;' in panel or 'New quiz: "Week 1"' in panel
+    assert 'New quiz: “Week 1”' in panel
     # only to the teacher it's for
     assert 'New quiz:' not in teach.get('/messages/notices').data.decode()
     assert teach.get('/messages/poll').get_json()['quizzes'] == 0
@@ -150,4 +150,4 @@ def test_the_assigned_notice_shows_the_students_picture(app_db):
     # several students: a group icon
     assign(teach, vq, 'sam', 'kim')
     assert shared().student_id == ids('teach')
-    assert '<span class="notice-icon" aria-hidden="true"><svg class="ico"' in teach.get('/messages/notices').data.decode()
+    assert '<span class="notice-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-users"/>' in teach.get('/messages/notices').data.decode()

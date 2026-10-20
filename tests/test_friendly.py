@@ -79,11 +79,11 @@ def test_plain_language_errors():
         {'name': 'f', 'kind': 'whole', 'min': 1, 'max': 3, 'different_from': ['zz']},
     ])
     text = '\n'.join(errors)
-    assert '"from" (5) must not be bigger than "to" (1)' in text
-    assert 'Did you mean "speed"?' in text
+    assert '“from” (5) must not be bigger than “to” (1)' in text
+    assert 'Did you mean “speed”?' in text
     assert "can't be a name" in text
     assert 'picks 3 from a list of only 2' in text
-    assert '"Never the same as" says "zz"' in text
+    assert '“Never the same as” says “zz”' in text
 
 
 def test_calculation_loop_reported():
@@ -94,7 +94,7 @@ def test_calculation_loop_reported():
 
 def test_unknown_name_in_text_suggests_fix():
     errors = F.check_text('question', '[hrs] and [0, 5]', ['hours', 'speed'])
-    assert errors == ['The question uses "hrs", which isn\'t in your values table. Did you mean "hours"?']
+    assert errors == ['The question uses “hrs”, which isn\'t in your values table. Did you mean “hours”?']
 
 
 def test_impossible_different_from_reported():
@@ -179,14 +179,14 @@ def test_a_description_typed_in_never_the_same_as_is_explained():
 def test_numbered_picks_without_how_many_say_what_to_do():
     values = [{'name': 'ns', 'kind': 'list', 'items': '2, 3, 5, 6'}]
     errors = ' '.join(F.check_text('question', '[ns1] [ns3]', F.known_names(values)))
-    assert 'put 3 or more in "how many" for ns' in errors or 'put 1 or more in "how many" for ns' in errors
+    assert 'put 3 or more in “how many” for ns' in errors or 'put 1 or more in “how many” for ns' in errors
     assert 'Did you mean' not in errors
     from app.qgen import coach
     hints = coach.problem_hints('choice_one', 'Which?', '', {'values': values, 'choices': '*[ns1]\n[ns2]\n[ns3]'}) \
         if hasattr(coach, 'problem_hints') else None
     if hints is not None:
         text = ' '.join(h['text'] for h in hints)
-        assert 'Put 3 in "how many" for ns' in text and 'Add a value named ns1' not in str(hints)
+        assert 'Put 3 in “how many” for ns' in text and 'Add a value named ns1' not in str(hints)
 
 
 def test_the_helper_ignores_a_hidden_choices_box():
@@ -198,4 +198,4 @@ def test_the_helper_ignores_a_hidden_choices_box():
     opts = {'values': values, 'choices': '*[capitol]\nLondon'}
     words = lambda hints: ' '.join(h['text'] for h in hints)
     assert 'capitol' not in words(coach.problem_hints('text', 'What is the capital of [country]?', '[capital]', opts))
-    assert '"capitol" isn\'t in your values table' in words(coach.problem_hints('choice_one', 'What is the capital of [country]?', '', opts))
+    assert '“capitol” isn\'t in your values table' in words(coach.problem_hints('choice_one', 'What is the capital of [country]?', '', opts))

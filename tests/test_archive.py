@@ -13,7 +13,8 @@ def setup_quiz(app, teacher, *qtypes):
         if qt == 'essay':
             f = problem_form('essay', 'Essay {}'.format(i), 'Explain photosynthesis.')
         else:
-            f = problem_form('numeric', 'Sum {}'.format(i), 'What is 2 + 2?', '4', [])
+            #(the same question each time: past the same-problem notice with same_ok)
+            f = problem_form('numeric', 'Sum {}'.format(i), 'What is 2 + 2?', '4', [], same_ok='1')
         teacher.post('/quiz/makevprob', data=f)
         made.append(VProblem.query.order_by(VProblem.id.desc()).first())
     teacher.post('/quiz/makevquiz', data={'title': 'Week 1', 'vplist': ','.join(str(p.id) for p in made),
@@ -170,17 +171,17 @@ def test_deleting_a_student_keeps_their_results(app_db):
     with app.test_request_context():
         S.submit(CQuiz.query.one(), {1: '4'})
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})  # a second, unstarted one
-    assert 'Their quiz results are kept in the Archive.' in teacher.get('/userdet').data.decode()
+    assert 'His/her quiz results are kept in the Archive' in teacher.get('/userdet').data.decode()
     teacher.post('/deluser/{}'.format(sam_id))
     db.session.expire_all()
     assert db.session.get(User, sam_id) is None and CQuiz.query.count() == 0
     rows = ArchivedAttempt.query.order_by(ArchivedAttempt.original_id).all()
     assert [(r.student_name, r.reason) for r in rows] == [('sam', 'student deleted')] * 2
     page = teacher.get('/quiz/archive').data.decode()
-    # both attempts stay in sam's folder (it keeps its name), each marked as a deleted account
+    # both attempts stay in sam's folder (now called "sam (deleted)"), each marked as a deleted account
     assert page.count('account deleted') == 2 and '100%' in page and 'Not started' in page
     from test_subjects import side_counts
-    assert side_counts(page).get('sam') == 2
+    assert side_counts(page).get('sam (deleted)') == 2 and 'sam' not in side_counts(page)
     view = teacher.get('/quiz/archive/{}'.format(rows[0].id)).data.decode()
     assert '100%' in view and "account was deleted" in view
     # can't be restored, even to a new account with the same name
@@ -216,7 +217,7 @@ def test_deleting_a_quiz_or_problem_an_archived_attempt_uses(app_db):
     page = teacher.get('/quiz/archive').data.decode()
     assert 'quiz deleted' in page and 'disabled' in page
     view = teacher.get('/quiz/archive/{}'.format(a.id)).data.decode()
-    assert 'Week 1' in view and 'the quiz “Week 1” was deleted'.replace('“', '"').replace('”', '"') in view.replace('&#34;', '"')
+    assert 'Week 1' in view and 'the quiz “Week 1” was deleted' in view
     r = teacher.post('/quiz/archive/{}/restore'.format(a.id), follow_redirects=True)
     assert b'was deleted' in r.data and ArchivedAttempt.query.count() == 1
 
@@ -317,7 +318,8 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     assert 'kim' in counts and 'sam' in counts and 'teach' not in counts
     assert page.index('<span class="side-name">kim') < page.index('<span class="side-name">sam') and __import__('app.icons', fromlist=['PATHS']).PATHS['user'] in page
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
-    assert 'Nothing archived for sam yet.' in archive_view(teacher, sam_folder.id)[0]
+    #(nothing archived at all yet: the Archive's own empty note, in any folder)
+    assert 'Nothing archived yet. When you archive an attempt' in archive_view(teacher, sam_folder.id)[0]
     # a new student gets one automatically
     u = User(username='ava', is_admin=False)
     u.set_password('pw-for-tests')
@@ -330,6 +332,7 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     kim_folder = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
     assert archive_view(teacher, sam_folder.id)[1] == [('sam', 'Week 1')]
     assert archive_view(teacher, kim_folder.id)[1] == [] and side_counts(archive_view(teacher)[0])['sam'] == 1
+    assert 'Nothing archived for kim yet.' in archive_view(teacher, kim_folder.id)[0]  # (an empty student folder says so)
     # grouped by the month it was archived
     assert 'class="box-title">{:%B %Y}</span>'.format(__import__('datetime').datetime.now()) in archive_view(teacher)[0]
 

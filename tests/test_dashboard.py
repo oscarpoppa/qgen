@@ -230,7 +230,7 @@ def test_who_is_logged_in(app_db):
     part = teacher.get('/dashboard/online').data.decode()
     assert 'teach' in part and '(you)' in part and 'sam' in part and 'kim' not in part
     users = teacher.get('/userdet').data.decode()
-    assert '<dt>Last seen</dt>' in users and 'online now' in users and '12 min ago' in users
+    assert '<li>Last seen: online now</li>' in users and '">12 min ago</span></li>' in users
     assert '<span class="nav-online">1</span>' in page  # the top bar: just this teacher so far
     assert teacher.get('/messages/poll').get_json()['online'] == 1
 
@@ -246,9 +246,11 @@ def test_dashboard_boxes_open_and_close(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
-    for key in ('now', 'out', 'queue', 'handins'):
+    #(Right now and At a glance start open, the lists start folded: scratchpad mode, the owner)
+    for key in ('now', 'glance'):
         assert 'data-box="{}" open>'.format(key) in page
-    assert 'data-box="glance">' in page  # numbers to look at now and then: starts folded
+    for key in ('out', 'queue', 'handins', 'pinned'):
+        assert 'data-box="{}">'.format(key) in page
     assert 'data-level="open" data-level-of="#dash-live"' in page and 'data-level="close" data-level-of="#dash-live"' in page and 'js/dashboard.js' in page
     assert 'data-box="now" open>' in teacher.get('/dashboard/now').data.decode()
 
@@ -266,8 +268,10 @@ def test_the_whole_dashboard_refreshes(app_db):
         S.submit(cq, {1: '4'})
     part = teacher.get('/dashboard/now').data.decode()
     assert 'Nothing handed in yet.' not in part and '/quiz/take/{}'.format(cq.id) in part  # Recent hand-ins
-    for key in ('now', 'out', 'queue', 'handins'):
+    for key in ('now', 'glance'):
         assert 'data-box="{}" open>'.format(key) in part
+    for key in ('out', 'queue', 'handins'):
+        assert 'data-box="{}">'.format(key) in part
 
 
 def test_no_quiz_progress_or_students_to_check(app_db):
@@ -370,7 +374,10 @@ def test_folded_dashboard_boxes_are_a_row_of_buttons(app_db):
     page = teacher.get('/dashboard').data.decode()
     assert 'js/dashchips.js' in page and 'dash-counters' not in page
     head = page.split('<div class="actions dash-actions"')[1].split('</div>')[0]
-    assert '>Upload</a>' not in head and 'data-level="open"' in head
+    assert '>Upload</a>' not in head
+    # Expand all / Collapse all beside the page's title, not at the far end of its buttons (the owner, 2026-10-19)
+    title = page.split('<div class="page-head">')[1].split('<div class="actions dash-actions"')[0]
+    assert 'data-level="open" data-level-of="#dash-live"' in title
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'dashchips.js')).read()
     assert "d._byHand = Date.now();" in js and "classList.toggle('dash-folded', !d.open)" in js

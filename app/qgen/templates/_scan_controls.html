@@ -1,0 +1,28 @@
+{#- One scan's controls, the same in the "Current scans" table (Scan workbook pages) and the
+    Dashboard's scan pop-over (the owner, 2026-10-20): bare icons, by what the scan is doing.
+    Reading: Pause and a ✕ that stops and discards it (no Continue: there's nothing to check yet).
+    Paused: Resume, Continue (check what's read so far) and Discard. Ready, a draft or stopped:
+    Continue and Discard. x: one row of scan_progress_data; back: 'dashboard' to come back there. -#}
+{% from "_macros.html" import post_button with context %}
+{% macro scan_controls(x, back='') -%}
+{%- set j = x.job -%}
+<span class="btn-row nowrap scan-controls">
+  {%- if x.kind == 'reading' -%}
+    {%- if not x.pausing %}{{ post_button(url_for('qgen.scan_pause', job_id=j.id, back=back or none), 'Pause', icon='lc-pause', tip='Pause “' ~ j.name ~ '” after the page being read') }}{% endif %}
+    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Stop and discard', 'btn btn-danger btn-sm', icon='lc-x', confirm='Stop reading “' ~ j.name ~ '” and discard it? Its pages and draft are removed; nothing from it was saved.', tip='Stop reading “' ~ j.name ~ '” and discard it (asks first)') }}
+  {%- else -%}
+    {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}{% endif %}
+    <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>
+    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Discard', icon='lc-trash', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}
+  {%- endif -%}
+</span>
+{%- endmacro %}
+
+{#- while it's being read: a bar that keeps moving and the time so far, counting up each second
+    (static/js/scantimer.js; the owner, 2026-10-20) -#}
+{% macro scan_working(x, bar=true) -%}
+{%- if x.kind == 'reading' -%}
+<span class="scan-working">{% if bar %}<span class="scan-chip-bar"><span class="scan-chip-now" style="width:100%"></span></span>{% endif %}
+  <span class="small muted scan-elapsed" data-elapsed="{{ x.elapsed or 0 }}" aria-live="off"></span></span>
+{%- endif -%}
+{%- endmacro %}

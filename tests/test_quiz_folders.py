@@ -21,7 +21,7 @@ def cards(c, view='main'):
     """The quiz boxes My quizzes shows: everything, or one part of the folder list."""
     import re
     page = c.get('/mypage' + ('?folder={}'.format(view) if view is not None else '')).data.decode()
-    return re.findall(r'<h2 title="([^"]+)" class="box-title">', page)
+    return re.findall(r'<span title="([^"]+)" class="box-title">', page)
 
 
 def test_make_folders_and_put_quizzes_in_them(app_db):
@@ -33,13 +33,13 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     page = sam.get('/mypage').data.decode()
     assert '+ New folder' in page and 'class="move-form"' not in page  # no folders yet: nothing to move to
     r = sam.post('/mypage/folders', data={'name': '  Unit   1 '}, follow_redirects=True)
-    assert 'Folder &#34;Unit 1&#34; made.' in r.data.decode() or 'Folder "Unit 1" made.' in r.data.decode()
+    assert 'Folder “Unit 1” made.' in r.data.decode()
     unit = folder_id('Unit 1', 'sam')
     page = sam.get('/mypage').data.decode()
     assert page.count('aria-label="Move “Week 1” to a folder"') == 1 and '>Unit 1</option>' in page
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
-        {'ok': True, 'message': 'Moved "Week 1" to "Unit 1".'}
+        {'ok': True, 'message': 'Moved “Week 1” to “Unit 1”.'}
     # a quiz is in one place only: the folder shows it, and the main list doesn't any more
     assert cards(sam, unit) == ['Week 1'] and cards(sam) == ['Week 2']
     page = sam.get('/mypage?folder=main').data.decode()
@@ -64,7 +64,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert kim.post('/mypage/move', data={'quiz': w2.id, 'to': folder_id('K', 'kim')}, headers=FETCH).get_json() == \
         {'ok': False, 'error': 'That quiz isn\'t on your list.'}
     # back to the main list
-    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved "Week 1" to Uncategorized.'
+    assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': 'top'}, headers=FETCH).get_json()['message'] == 'Moved “Week 1” to Uncategorized.'
     assert cards(sam, unit) == [] and 'No quizzes in this folder' in sam.get('/mypage?folder={}'.format(unit)).data.decode()
     # names: needed, not too long; renaming
     assert sam.post('/mypage/folders', data={'name': '   '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -90,14 +90,15 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert '+ New folder inside' in page and 'data-all-label="All"' in page and 'data-main-label="Unsorted"' in page
     assert '"id": {}'.format(algebra) in page and 'data-no-main' not in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
-    assert '<a href="/mypage?folder={}">Math</a>'.format(math) in no_titles(page)  # Math › Algebra
+    #(the path is the heading, "Math › Algebra", with Up going back to Math)
+    assert ' Math › Algebra</h2>' in page and 'folder-up" href="/mypage?folder={}"'.format(math) in page
     # a folder can't go inside itself, or inside a folder in it
     assert sam.post('/mypage/move', data={'folder': math, 'to': algebra}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'
     assert not sam.post('/mypage/move', data={'folder': math, 'to': math}, headers=FETCH).get_json()['ok']
     # moving a folder (dragging it out to the main list)
     assert sam.post('/mypage/move', data={'folder': algebra, 'to': 'top'}, headers=FETCH).get_json()['message'] == \
-        'Moved "Algebra" to the top.'
+        'Moved “Algebra” to the top.'
     assert db.session.get(QuizFolder, algebra).parent_id is None
     sam.post('/mypage/move', data={'folder': algebra, 'to': math})
     # removing Math: Algebra (with the quiz) moves up to the main list; no quiz is deleted
@@ -217,7 +218,7 @@ def test_a_folder_page_lists_everything_in_it_with_tabs_for_its_folders(app_db):
     sam.post('/mypage/move', data={'quiz': w2.id, 'to': algebra})
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     # Math's quiz and Algebra's, each once, in one list
-    assert sorted(re.findall(r'<h2 title="([^"]+)" class="box-title">', page)) == ['Week 1', 'Week 2']
+    assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', page)) == ['Week 1', 'Week 2']
     # the tabs: Algebra holds Week 2 (what's in Math and not in Algebra is its Uncategorized)
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
     assert [(t['id'], t['name'], t['keys']) for t in tree] == [(algebra, 'Algebra', ['quiz:{}'.format(w2.id)])]

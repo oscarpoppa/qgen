@@ -339,8 +339,9 @@ def scan_kind(data, reading):
 
 def read_one(job, n, api_key, user_id):
     """Read page n: QuizScan reads the page (exactly, and where everything is), then the AI
-    gives its problems random numbers, then the page picture is searched for the places
-    students answer (pagelayout.py). Two AI calls, both counted against the hourly limit.
+    gives its problems random numbers, then the page picture is leveled and searched for the
+    places students answer (pagelayout.py), then the AI checks those places (check_places).
+    Three to five AI calls, all counted against the hourly limit.
     Returns the page's draft, or {'state': 'error', ...} (the owner, 2026-10-18)."""
     from app import tuning
     from . import ai_helper, pagelayout
@@ -368,8 +369,12 @@ def read_one(job, n, api_key, user_id):
         finally:
             db.session.add(call)
             db.session.commit()
-        #the page as QuizScan read it: flattened and leveled, so every box is a place on it
-        quizscan.flat_page(path, qs).convert('RGB').save(path, 'JPEG', quality=90)
+        #the page as QuizScan read it: flattened and leveled, so every box is a place on it; then
+        #made truly level (its rows straight across, its margins straight down, the paper's dark
+        #edge painted out) and QuizScan's boxes laid on its own printed lines (the owner, 2026-10-20)
+        flat, qs = pagelayout.level_page(quizscan.flat_page(path, qs).convert('RGB'), qs)
+        qs = pagelayout.snap_boxes(flat, qs)
+        flat.save(path, 'JPEG', quality=90)
         #(kept at once, so a reading cut off from here on, e.g. by the site restarting, doesn't pay
         #for QuizScan again: the owner, 2026-10-18)
         fresh = db.session.get(ScanJob, job.id)
@@ -395,6 +400,8 @@ def read_one(job, n, api_key, user_id):
             job.id, n, call.ok, call.input_tokens, call.output_tokens))
     covered = {pid for pid, item in numbers.items() if item.get('values') and item.get('page_text')}
     slots = pagelayout.find_slots(flat, qs, covered)
+    #(the AI looks at the page as a student will see it, and the places it moves are checked here)
+    slots, checked = check_places(job, n, flat, qs, slots, covered, api_key, user_id)
     samples = {}
     for p in qs['problems']:
         if p['id'] in covered:
@@ -402,9 +409,137 @@ def read_one(job, n, api_key, user_id):
             samples[p['id']] = words.replace('_', '').strip()
     font = pagelayout.pick_font(flat, qs, slots, samples, os.path.join(current_app.static_folder, 'fonts'))
     page = draft_page(n, quizscan_raw(qs, numbers))
-    page.update(size=qs['size'], slots=slots, font=font,
+    page.update(size=qs['size'], slots=slots, font=font, checked=checked,
                 qs=[{k: p.get(k) for k in ('id', 'type', 'box', 'choices', 'text', 'number')} for p in qs['problems']])
     return page
+
+
+CHECK_ROUNDS = 3   # AI looks at a page's answer places at most this often (one check, two more if it moved some)
+
+
+def _overlap(a, b):
+    """The area two boxes share, as a fraction of the page."""
+    w = min(a['right'], b['right']) - max(a['left'], b['left'])
+    h = min(a['bottom'], b['bottom']) - max(a['top'], b['top'])
+    return w * h if w > 0 and h > 0 else 0.0
+
+
+def _area(b):
+    return max(0.0, b['right'] - b['left']) * max(0.0, b['bottom'] - b['top'])
+
+
+def _sane_box(box, most_h=0.08):
+    """A box the AI gave, if it's a real place on the page: inside it, not a sliver, not huge."""
+    if not isinstance(box, dict):
+        return None
+    try:
+        l, t, r, b = (float(box[k]) for k in ('left', 'top', 'right', 'bottom'))
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not (0 <= l < r <= 1 and 0 <= t < b <= 1) or r - l < 0.008 or b - t < 0.006 or b - t > most_h or r - l > 0.6:
+        return None
+    return {'left': round(l, 4), 'top': round(t, 4), 'right': round(r, 4), 'bottom': round(b, 4)}
+
+
+def draw_places(img, qs, slots):
+    """The page as the AI checks it: each answer place in blue and covered wording in green, each
+    labeled with its problem's id; a problem with no place gets a red label at its line."""
+    from PIL import ImageDraw
+    pic = img.convert('RGB').copy()
+    W, H = pic.size
+    d = ImageDraw.Draw(pic)
+    P = lambda b: (b['left'] * W, b['top'] * H, b['right'] * W, b['bottom'] * H)
+    for p in qs.get('problems') or []:
+        s = slots.get(p['id'])
+        if s and s.get('kind') == 'field':
+            d.rectangle(P(s['answer']), outline=(0, 70, 255), width=3)
+            d.text((s['answer']['right'] * W + 3, s['answer']['top'] * H), p['id'], fill=(0, 70, 255))
+            if s.get('text'):
+                d.rectangle(P(s['text']), outline=(0, 160, 0), width=2)
+                d.text((s['text']['left'] * W, s['text']['top'] * H - 11), p['id'], fill=(0, 160, 0))
+        elif not s and isinstance(p.get('box'), dict) and p.get('type') not in ('paper', 'essay'):
+            d.text((p['box']['right'] * W + 3, p['box']['top'] * H), p['id'] + ' ?', fill=(230, 0, 0))
+    return pic
+
+
+def check_places(job, n, img, qs, slots, covered, api_key, user_id, client=None):
+    """The AI checks a read page's answer places (the owner, 2026-10-20): it looks at the page
+    as a student will see it and says what to move; every move is checked here before it's
+    taken (on the page, on the problem's own line, never over another problem's place, the
+    wording never over the blank). At most CHECK_ROUNDS looks, each one AI call counted
+    against the hourly limit; stops when it says all is well or a look changes nothing.
+    Returns (slots, {'rounds': looks, 'moved': places changed, 'error': text or None})."""
+    from app import tuning
+    from . import ai_helper, pagelayout
+    probs = {p['id']: p for p in qs.get('problems') or []
+             if p.get('type') not in ('paper', 'essay', 'choice_one', 'choice_many', 'truefalse') and isinstance(p.get('box'), dict)}
+    if not probs:
+        return slots, {'rounds': 0, 'moved': 0, 'error': None}
+    slots = {k: dict(v) for k, v in slots.items()}
+    report = {'rounds': 0, 'moved': 0, 'error': None}
+    chars = [s.get('char') for s in slots.values() if s.get('char')]
+    char = sorted(chars)[len(chars) // 2] if chars else 0.015
+    for rnd in range(1, CHECK_ROUNDS + 1):
+        since = datetime.now() - timedelta(hours=1)
+        if AICall.query.filter(AICall.user_id == user_id, AICall.created >= since).count() + 1 > tuning.get('ai_hourly'):
+            break
+        listing = []
+        for pid, p in probs.items():
+            s = slots.get(pid) if (slots.get(pid) or {}).get('kind') == 'field' else None
+            listing.append({'id': pid, 'label': (p.get('number') or '').strip(), 'text': p.get('text') or '',
+                            'changes': pid in covered, 'answer': s['answer'] if s else None,
+                            'text_box': s.get('text') if s else None})
+        buf = io.BytesIO()
+        draw_places(img, qs, slots).save(buf, 'JPEG', quality=85)
+        call = AICall(user_id=user_id, created=datetime.now(), kind='scan',
+                      request='Scan {} page {}: check {}'.format(job.id, n, rnd), ok=False)
+        try:
+            answer, usage = ai_helper.check_places(api_key, buf.getvalue(), listing, client=client)
+            call.ok = True
+            call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
+        except ai_helper.AIError as exc:
+            report['error'] = str(exc)
+            break
+        finally:
+            db.session.add(call)
+            db.session.commit()
+        report['rounds'] = rnd
+        moved = 0
+        for fix in answer['fixes']:
+            pid = str(fix.get('id'))
+            p = probs.get(pid)
+            if p is None:
+                continue  # (an id that isn't on the list: never a new problem)
+            line = p['box']
+            lh = line['bottom'] - line['top']
+            slot = dict(slots.get(pid) or {'kind': 'field', 'answer': None, 'text': None, 'char': char})
+            if slot.get('kind') != 'field':
+                continue
+            ans = _sane_box(fix.get('answer'))
+            if ans:
+                mid = (ans['top'] + ans['bottom']) / 2
+                own_line = line['top'] - 0.6 * lh <= mid <= line['bottom'] + 1.6 * lh
+                others = [o['answer'] for k, o in slots.items() if k != pid and o.get('kind') == 'field' and o.get('answer')]
+                words = [o['text'] for k, o in slots.items() if k != pid and o.get('text')]
+                if own_line and not any(_overlap(ans, o) > 0 for o in others) and \
+                        not any(_overlap(ans, o) > 0.2 * _area(ans) for o in words):
+                    slot['answer'] = ans
+                    moved += 1
+            txt = _sane_box(fix.get('text')) if pid in covered else None
+            if txt and slot.get('answer') and _overlap(txt, slot['answer']) <= 0.1 * _area(txt):
+                mid = (txt['top'] + txt['bottom']) / 2
+                if line['top'] - 0.6 * lh <= mid <= line['bottom'] + 0.6 * lh:
+                    slot['text'] = txt
+                    slot['paper'] = pagelayout.paper_color(img, txt)
+                    moved += 1
+            if slot.get('answer'):
+                slots[pid] = slot
+        report['moved'] += moved
+        current_app.logger.info('scan {} page {} check {}: all good {}, {} fixes, {} taken'.format(
+            job.id, n, rnd, answer['all_good'], len(answer['fixes']), moved))
+        if answer['all_good'] or not moved:
+            break
+    return slots, report
 
 
 def quizscan_raw(qs, numbers):
@@ -763,8 +898,11 @@ def quiz_groups(data):
             continue
         if page.get('state') != 'done' or page.get('kind') != 'problems' or not any(i['include'] for i in page['items']):
             continue
-        if page.get('join_prev') and groups:
-            groups[-1][1].append(page)
+        #(joined to the last quiz with problems: an Image only page between them isn't one, and
+        #joining to it lost the page's problems; found by the tests, 2026-10-20)
+        prev = next((g for g in reversed(groups) if not image_page(g[0])), None)
+        if page.get('join_prev') and prev is not None:
+            prev[1].append(page)
         else:
             groups.append((page, [page]))
     return groups
@@ -856,7 +994,7 @@ def page_layout_of(job, pages, places, ids, shuffled=False):
     from app.upload.routes import static_dir
     folder = os.path.join(static_dir(), 'pagequiz')
     os.makedirs(folder, exist_ok=True)
-    out = {'v': 1, 'ids': list(ids), 'font': 'fonts/' + (pages[0].get('font') or 'NotoSans-Bold.ttf'), 'pages': [], 'slots': []}
+    out = {'v': 1, 'ids': list(ids), 'font': 'fonts/' + (pages[0].get('font') or 'NotoSans-Bold.ttf'), 'pages': [], 'slots': [], 'labels': {}}
     if shuffled:
         return None
     where = {(page['n'], i): pos for pos, (page, i) in enumerate(places, 1)}
@@ -866,6 +1004,10 @@ def page_layout_of(job, pages, places, ids, shuffled=False):
         for i, item in enumerate(page['items']):
             slot = dict(page['slots'].get(item.get('qs_id') or '') or {})
             pos = where.get((page['n'], i))
+            if pos is not None:
+                #(the page's own number for it, e.g. "1 a.": routes.page_labels, the owner, 2026-10-20)
+                from .routes import _label
+                out['labels'][pos] = _label((qs.get(item.get('qs_id')) or {}).get('number'))
             if pos is None:
                 #left out: covered, so nobody answers it
                 box = (qs.get(item.get('qs_id')) or {}).get('box')

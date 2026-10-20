@@ -102,14 +102,36 @@ def _frame(comps, ink, X0, Y0, box_px, W, H):
     return (a + X0, b + Y0, c + X0, d + Y0)
 
 
-def _lines(comps, ch):
+def _lines(comps, ch, H=0):
     """Answer lines: long, thin, solid blobs. [(x0, y0, x1, y1)] relative to the region."""
     out = []
     for (a, b, c, d, n) in comps:
         w, h = c - a, d - b
-        if h <= max(3, 0.3 * ch) and w >= 2.5 * ch and n >= 0.5 * w * h:
+        #(a grainy photo thickens a line: up to nearly half a letter's height, the owner, 2026-10-20)
+        if h <= max(3, 0.45 * ch, 0.006 * H) and w >= 2.5 * ch and n >= 0.5 * w * h:
             out.append((a, b, c, d))
     return out
+
+
+def _ruled_runs(ink, ch):
+    """Answer lines that touch something else (a mark or a smudge on the line, the owner,
+    2026-10-20): unbroken runs of ink at least 2.5 letters long, a few rows thick at most.
+    [(x0, y0, x1, y1)] relative to the region."""
+    rows = {}
+    for y in range(ink.shape[0]):
+        for a, b in _runs(ink[y], int(2.5 * ch)):
+            rows.setdefault(y, []).append((a, b))
+    out = []
+    for y in sorted(rows):
+        for a, b in rows[y]:
+            for o in out:
+                if o[3] >= y - 1 and a < o[2] and b > o[0]:
+                    o[1], o[3] = min(o[1], y), y + 1
+                    o[0], o[2] = min(o[0], a), max(o[2], b)
+                    break
+            else:
+                out.append([a, y, b, y + 1])
+    return [tuple(o) for o in out if o[3] - o[1] <= max(3, 0.45 * ch)]
 
 
 def _marks(full, region, exclude, ch, want):
@@ -689,6 +711,123 @@ def _last_word(ink, X0, Y0, ch):
     return (X0 + x0 - pad, Y0 + y0 - pad, X0 + x1 + pad, Y0 + y1 + pad)
 
 
+def _bands(full, x0, x1):
+    """The printed lines in this stretch of the page, top to bottom: [(y0, y1)] in page pixels."""
+    prof = full[:, max(0, x0):max(x0 + 1, x1)].sum(axis=1)
+    on = prof >= max(2, 0.01 * (x1 - x0))
+    out, start, gap = [], None, 0
+    for y, v in enumerate(on):
+        if v:
+            if start is None:
+                start = y
+            gap = 0
+        elif start is not None:
+            gap += 1
+            if gap > 2:
+                if y - gap - start >= 4:
+                    out.append((start, y - gap + 1))
+                start, gap = None, 0
+    if start is not None and len(on) - start >= 4:
+        out.append((start, len(on)))
+    return out
+
+
+def snap_boxes(img_or_mask, page):
+    """QuizScan's boxes put on the page's own printed lines (the owner, 2026-10-20: on a grainy,
+    crooked photo its boxes crept down the page, a whole row off by the bottom). For each column
+    of problems, the stretch and shift that best lays their boxes over the printed lines is
+    found; then each one-line problem is moved onto its nearest line, unless two would share
+    one. Returns the page with corrected boxes (a copy); boxes that already fit are left alone."""
+    if hasattr(img_or_mask, 'convert'):
+        full = ink_mask(np.asarray(img_or_mask.convert('L')))
+    else:
+        full = img_or_mask
+    H, W = full.shape
+    probs = [dict(p) for p in page.get('problems') or []]
+    #(only problems printed on one line: others span several, and choice questions are matched
+    #by their marks instead, _rows_of_marks)
+    boxed = [p for p in probs if isinstance(p.get('box'), dict)
+             and p.get('type') not in ('choice_one', 'choice_many', 'truefalse', 'paper', 'essay')
+             and len([t for t in (p.get('text') or '').split('\n') if t.strip()]) == 1]
+    #columns: problems whose boxes overlap side to side
+    cols = []
+    for p in sorted(boxed, key=lambda q: q['box']['left']):
+        x0, _y0, x1, _y1 = px(p['box'], W, H)
+        for c in cols:
+            if x0 < c['x1'] and x1 > c['x0']:
+                c['items'].append(p)
+                c['x0'], c['x1'] = min(c['x0'], x0), max(c['x1'], x1)
+                break
+        else:
+            cols.append({'x0': x0, 'x1': x1, 'items': [p]})
+    for c in cols:
+        items = c['items']
+        if len(items) < 3:
+            continue
+        boxes = [px(p['box'], W, H) for p in items]
+        bh = float(np.median([b[3] - b[1] for b in boxes]))
+        #(lines about as tall as the problems' own: not a big title, not a speck)
+        bands = [b for b in _bands(full, c['x0'], c['x1']) if 0.35 * bh <= b[1] - b[0] <= 1.8 * bh]
+        if len(bands) < 2:
+            continue
+        mids = np.array([(a + b) / 2.0 for a, b in bands])
+        cy = np.array([(b[1] + b[3]) / 2.0 for b in boxes])
+        heights = sorted(b[3] - b[1] for b in boxes)
+        cap = max(4.0, 0.6 * float(np.median(np.diff(np.sort(cy)))) if len(cy) > 1 else 0.02 * H)
+
+        def cost(a, b):
+            pred = a * cy[None, :] + np.atleast_1d(b)[:, None]
+            k = np.clip(np.searchsorted(mids, pred), 1, len(mids) - 1)
+            near = np.where(np.abs(pred - mids[k - 1]) <= np.abs(pred - mids[k]), k - 1, k)
+            d = np.minimum(np.abs(pred - mids[k - 1]), np.abs(pred - mids[k]))
+            #(two problems on one line is wrong: each costs as much as a miss)
+            srt = np.sort(near, axis=1)
+            twice = (np.diff(srt, axis=1) == 0).sum(axis=1)
+            #(and the smaller the change from QuizScan's boxes, the better)
+            return np.minimum(d, cap).sum(axis=1) + cap * twice + 0.02 * np.abs(np.atleast_1d(b)) + 20 * cap * abs(a - 1)
+
+        best = (float(cost(1.0, 0.0)[0]), 1.0, 0.0)
+        if best[0] <= 0.15 * cap * len(items):
+            fit = (1.0, 0.0)
+        else:
+            for a in np.arange(0.85, 1.1501, 0.0025):
+                bs = (mids[:, None] - a * cy[None, :]).ravel()
+                bs = bs[np.abs(bs) <= 0.12 * H]
+                if not bs.size:
+                    continue
+                cs = cost(a, bs)
+                i = int(np.argmin(cs))
+                if cs[i] < best[0] - 1e-6:
+                    best = (float(cs[i]), float(a), float(bs[i]))
+            fit = (best[1], best[2])
+        a, b = fit
+        pred = a * cy + b
+        k = np.clip(np.searchsorted(mids, pred), 1, len(mids) - 1)
+        near = np.where(np.abs(pred - mids[k - 1]) <= np.abs(pred - mids[k]), k - 1, k)
+        taken = {}
+        for i, n in enumerate(near):
+            taken.setdefault(int(n), []).append(i)
+        for i, p in enumerate(items):
+            x0, y0, x1, y1 = boxes[i]
+            h = y1 - y0
+            n = int(near[i])
+            band = bands[n]
+            one_line = h <= 2.2 * (band[1] - band[0]) + 4
+            if one_line and len(taken[n]) == 1 and abs(pred[i] - mids[n]) <= cap:
+                pad = max(2, int(0.15 * (band[1] - band[0])))
+                ny0, ny1 = min(band[0] - pad, int(round(mids[n] - h / 2.0))), max(band[1] + pad, int(round(mids[n] + h / 2.0)))
+            else:
+                ny0, ny1 = int(round(a * y0 + b)), int(round(a * y1 + b))
+            ny0, ny1 = max(0, ny0), min(H, ny1)
+            if ny1 - ny0 >= 4 and (ny0, ny1) != (y0, y1):
+                p['box'] = frac(x0, ny0, x1, ny1, W, H)
+                if p.get('number_box'):
+                    nb = px(p['number_box'], W, H)
+                    dy = ny0 - y0
+                    p['number_box'] = frac(nb[0], max(0, nb[1] + dy), nb[2], min(H, nb[3] + dy), W, H)
+    return dict(page, problems=probs)
+
+
 def find_slots(img, page, covered=()):
     """Where each problem on a QuizScan page is answered. img: the flat page (PIL); page:
     QuizScan's page dict; covered: ids of problems whose numbers change (their wording is
@@ -704,6 +843,8 @@ def find_slots(img, page, covered=()):
     page = dict(page, problems=[p for p in page.get('problems') or [] if isinstance(p.get('box'), dict)],
                 pictures=[p for p in page.get('pictures') or [] if isinstance(p.get('box'), dict)])
     full = ink_mask(np.asarray(img.convert('L')))
+    #(QuizScan's boxes laid on the page's own lines first: snap_boxes, the owner, 2026-10-20)
+    page = snap_boxes(full, page)
     #(for the little boxes and circles before choices: a more sensitive look, as some pages print
     #them in pale gray, and at the usual one their edges break up: the owner, 2026-10-19)
     pale = ink_mask(np.asarray(img.convert('L')), CONTRAST / 2)
@@ -743,6 +884,21 @@ def find_slots(img, page, covered=()):
         ink = _blank_out(full[Y0:Y1, X0:X1], pictures, X0, Y0)
         comps = _components(ink)
         ch = _char_height(comps, H)
+        if not number and (p.get('number') or '').strip() and (p.get('text') or '').strip().startswith(p['number'].strip()):
+            #(the printed number, e.g. "1 a.", with no box of its own: the first run of ink before
+            #a wide gap, so it's never covered over, the owner, 2026-10-20)
+            #(a column with a speck or two of grain is still a gap, and so is a thin stray mark)
+            from scipy import ndimage
+            on = ndimage.binary_opening(ink.sum(axis=0) >= 3, structure=np.ones(max(2, int(0.2 * ch)), bool))
+            cols = np.nonzero(on)[0]
+            if cols.size:
+                gaps = np.nonzero(np.diff(cols) > 1.2 * ch)[0]
+                if gaps.size:
+                    end = cols[gaps[0]] + 1
+                    #(about as wide as the number's own letters, no more)
+                    if end - cols[0] <= (len(p['number'].strip()) + 1) * 0.9 * ch:
+                        rows = np.nonzero(ink[:, cols[0]:end].any(axis=1))[0]
+                        number = [(int(cols[0] + X0), int(rows[0] + Y0), int(end + X0), int(rows[-1] + 1 + Y0))]
 
         if p.get('type') in ('choice_one', 'choice_many', 'truefalse'):
             want = len(p.get('choices') or []) or (2 if p.get('type') == 'truefalse' else 0)
@@ -823,7 +979,9 @@ def find_slots(img, page, covered=()):
                     erase = cell
         if answer is None:
             #(a table's ruled line across the whole problem isn't an answer line)
-            lines = [l for l in _lines(comps, ch) if l[2] - l[0] < 0.9 * (X1 - X0)]
+            lines = [l for l in _lines(comps, ch, H) if l[2] - l[0] < 0.9 * (X1 - X0)]
+            if not lines:
+                lines = [l for l in _ruled_runs(ink, ch) if l[2] - l[0] < 0.9 * (X1 - X0)]
             if len(lines) == 1:
                 a, b, c, d = lines[0]
                 a, b, c, d = a + X0, b + Y0, c + X0, d + Y0
@@ -869,7 +1027,12 @@ def find_slots(img, page, covered=()):
             if xs.size:
                 # (specks left over at the edges are not wording)
                 keep = _components(mask)
-                keep = [k for k in keep if (k[3] - k[1]) >= 0.25 * ch or (k[2] - k[0]) >= 0.25 * ch]
+                keep = [k for k in keep if ((k[3] - k[1]) >= 0.4 * ch or (k[2] - k[0]) >= 0.4 * ch) and k[4] >= 0.15 * ch * ch]
+                #(the words come before the answer place on their line: a mark past its start,
+                #e.g. an icon sitting on the line, isn't wording, the owner, 2026-10-20)
+                before = [k for k in keep if k[2] <= cut[0] - X0 + 0.2 * ch]
+                if before and cut[1] - Y0 <= np.median([k[3] for k in before]):
+                    keep = before
                 if keep:
                     tx0, ty0 = min(k[0] for k in keep), min(k[1] for k in keep)
                     tx1, ty1 = max(k[2] for k in keep), max(k[3] for k in keep)
@@ -968,3 +1131,225 @@ def style_of(text):
     if len(lines) > 1 and any(l.strip()[:1] in OPERATORS for l in lines[1:]):
         return 'column'
     return 'left'
+
+
+def _skew(full):
+    """How far the page's printed lines slope (radians, + when they run down to the right).
+    The page is cut into upright strips; how far each strip's rows of ink sit above or below
+    the next one's gives the slope (a straight line through those shifts)."""
+    H, W = full.shape
+    n = 8
+    edges = np.linspace(int(0.05 * W), int(0.95 * W), n + 1).astype(int)
+    profs = [full[:, edges[i]:edges[i + 1]].sum(axis=1).astype(np.float64) for i in range(n)]
+    reach = max(4, int(0.03 * H))
+    mid = n // 2
+    ref = profs[mid] - profs[mid].mean()
+    centers = (edges[:-1] + edges[1:]) / 2.0
+    slopes = []
+    for i in range(n):
+        if i == mid or profs[i].sum() < 50 or profs[mid].sum() < 50:
+            continue
+        a = profs[i] - profs[i].mean()
+        vals = []
+        for d in range(-reach, reach + 1):
+            vals.append(float((ref[max(0, -d):H - max(0, d)] * a[max(0, d):H - max(0, -d)]).sum()))
+        k = int(np.argmax(vals))
+        if vals[k] <= 0:
+            continue
+        at = float(k - reach)
+        #(between whole pixels: the peak's own shape, for small slopes)
+        if 0 < k < len(vals) - 1:
+            l, c, r = vals[k - 1], vals[k], vals[k + 1]
+            den = l - 2 * c + r
+            if den < 0:
+                at += 0.5 * (l - r) / den
+        slopes.append(at / (centers[i] - centers[mid]))
+    if len(slopes) < 2:
+        return 0.0
+    return float(np.arctan(np.median(slopes)))
+
+
+def _margin_slope(full):
+    """How far the page's left margins lean (dx per dy, + when they run right going down): the
+    places where printed lines start, lined up in columns down the page. None when the page
+    doesn't have a column of at least 4 line starts reaching over a quarter of its height."""
+    H, W = full.shape
+    starts = []
+    for (a, b) in _bands(full, 0, W):
+        if b - a > 0.06 * H:
+            continue
+        cols = full[a:b].any(axis=0)
+        #(the start of each run of words: after a gap of at least 3% of the page's width)
+        gap, last = int(0.03 * W), -W
+        for x in np.nonzero(cols)[0]:
+            if x - last > gap:
+                starts.append(((a + b) / 2.0, float(x)))
+            last = x
+    if len(starts) < 4:
+        return None
+    starts.sort(key=lambda p: p[1])
+    tol = 0.02 * W
+    groups, cur = [], [starts[0]]
+    for p in starts[1:]:
+        if p[1] - cur[-1][1] <= tol / 2:
+            cur.append(p)
+        else:
+            groups.append(cur)
+            cur = [p]
+    groups.append(cur)
+    fits = []
+    for g in groups:
+        ys = [p[0] for p in g]
+        if len(g) >= 4 and max(ys) - min(ys) >= 0.25 * H:
+            k, _c = np.polyfit(ys, [p[1] for p in g], 1)
+            fits.append((len(g), float(k)))
+    if not fits:
+        return None
+    return float(np.average([k for n, k in fits], weights=[n for n, k in fits]))
+
+
+def _edge_strips(gray):
+    """Dark lines down the very edges of the page (the paper's own edge, the table or the next
+    page showing past it, the owner, 2026-10-20), often slanting: a mask of their pixels, or
+    None. Only within the outer 2% of the page, dark in most rows, with plain paper just inside;
+    a picture or a printed border at the edge isn't one."""
+    from scipy import ndimage
+    H, W = gray.shape
+    reach = max(3, int(0.02 * W))
+    inner = max(4, int(0.03 * W))
+    mask = np.zeros(gray.shape, bool)
+    for side in ('left', 'right'):
+        zone = gray[:, :reach] if side == 'left' else gray[:, W - reach:]
+        dark = zone < 110
+        if dark.any(axis=1).mean() < 0.8:
+            continue
+        inside = gray[:, reach:reach + inner] if side == 'left' else gray[:, W - reach - inner:W - reach]
+        if inside.mean() <= 200:
+            continue
+        dark = ndimage.binary_dilation(dark, iterations=2)
+        if side == 'left':
+            mask[:, :reach] |= dark
+        else:
+            mask[:, W - reach:] |= dark
+    return mask if mask.any() else None
+
+
+def level_page(img, page):
+    """The flat page made level (the owner, 2026-10-20: its printed lines run straight across,
+    square with the top of the page), and the dark strips at its edges painted out. QuizScan's
+    boxes are turned with it. Returns (image, page); both unchanged when it's already level."""
+    from PIL import Image
+    rgb = img.convert('RGB')
+    gray = np.asarray(rgb.convert('L'))
+    full = ink_mask(gray)
+    H, W = full.shape
+    paper = tuple(int(v) for v in np.median(np.asarray(rgb)[~full], axis=0)) if (~full).any() else (255, 255, 255)
+    changed = False
+    strips = _edge_strips(gray)
+    if strips is not None:
+        arr = np.asarray(rgb).copy()
+        arr[strips] = paper
+        rgb = Image.fromarray(arr)
+        full = ink_mask(np.asarray(rgb.convert('L')))
+        changed = True
+    #(rows run straight across and the left edges of the lines straight down, everywhere on the
+    #page: a page photographed at a slant leans more at one end than the other, so each slope
+    #is measured in each third of the page and straightened there, the owner, 2026-10-20)
+    def slopes(mask, along):
+        """[(middle, slope)] for each third of the page along `along` (0: rows, 1: columns)."""
+        n = mask.shape[along]
+        out = []
+        for i in range(3):
+            a, b = int(i * n / 3), int((i + 1) * n / 3)
+            part = mask[a:b] if along == 0 else mask[:, a:b]
+            if part.sum() < 0.002 * part.size:
+                continue
+            k = np.tan(_skew(part if along == 0 else part.T)) if along == 0 else np.tan(_skew(part.T))
+            if abs(np.degrees(np.arctan(k))) <= 4:
+                out.append(((a + b) / 2.0, float(k)))
+        return out
+
+    def fit(pts):
+        """slope at place t: a straight line through the thirds' slopes (or one slope)."""
+        if not pts:
+            return 0.0, 0.0
+        if len(pts) == 1:
+            return pts[0][1], 0.0
+        t, k = np.array([p[0] for p in pts]), np.array([p[1] for p in pts])
+        g, c = np.polyfit(t, k, 1)
+        return float(c), float(g)
+
+    cx, cy = W / 2.0, H / 2.0
+
+    def maps(full):
+        #(the slope of the whole page first: a clean page (under 0.15°) is left as it is; then
+        #each third's, where it agrees with the whole page's (pictures and sparse lines in a
+        #third can give a wild reading))
+        whole = np.tan(_skew(full))
+        if abs(np.degrees(np.arctan(whole))) < 0.15:
+            h0, h1 = 0.0, 0.0
+        else:
+            near = [(t, k) for t, k in slopes(full, 0) if abs(np.degrees(np.arctan(k) - np.arctan(whole))) <= 0.5]
+            h0, h1 = fit(near) if len(near) >= 2 else (float(whole), 0.0)
+        #(the lean of the margins: one slope for the page, or none when it has no clear margins)
+        v = _margin_slope(full)
+        #(only on a page that's crooked across too: a clean page's margins can wander a little
+        #with indents and numbers, and it mustn't be bent for that)
+        crooked = max(abs(h0 + h1 * y) for y in (0, H)) >= np.tan(np.radians(0.2))
+        return h0, h1, (v if crooked and v is not None and abs(v) <= 0.07 else 0.0), 0.0
+
+    def warp(im, h0, h1, v0, v1):
+        """each place on the new page comes from (x + kv(x)·(y − cy), y + kh(y)·(x − cx)) on the old one"""
+        from scipy import ndimage
+        arr = np.asarray(im).astype(np.float32)
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        kh = h0 + h1 * yy
+        kv = v0 + v1 * xx
+        sx, sy = xx + kv * (yy - cy), yy + kh * (xx - cx)
+        chans = [ndimage.map_coordinates(arr[:, :, i], [sy, sx], order=1, mode='constant', cval=paper[i]) for i in range(3)]
+        return Image.fromarray(np.clip(np.stack(chans, axis=2), 0, 255).astype(np.uint8))
+
+    h0, h1, v0, v1 = maps(full)
+    biggest = max(abs(h0 + h1 * y) for y in (0, H)) + max(abs(v0 + v1 * x) for x in (0, W))
+    if np.degrees(np.arctan(biggest)) < 0.1:
+        return (rgb, page) if changed else (img, page)
+    once = warp(rgb, h0, h1, v0, v1)
+    #(looked at again once straightened: what's left over is taken out too)
+    r = maps(ink_mask(np.asarray(once.convert('L'))))
+    h0, h1, v0, v1 = h0 + r[0], h1 + r[1], v0 + r[2], v1 + r[3]
+    rgb = warp(rgb, h0, h1, v0, v1)
+
+    def move(x, y):
+        """where a place on the old page lands on the new one (the map turned round, by steps)"""
+        u, v = x, y
+        for _ in range(6):
+            u = x - (v0 + v1 * u) * (v - cy)
+            v = y - (h0 + h1 * v) * (u - cx)
+        return u, v
+
+    def turn(box):
+        if not isinstance(box, dict):
+            return box
+        x0, y0, x1, y1 = box['left'] * W, box['top'] * H, box['right'] * W, box['bottom'] * H
+        pts = [move(x, y) for x in (x0, x1) for y in (y0, y1)]
+        #(the box keeps its size: moved by its middle, not grown to hold its moved corners)
+        mx, my = sum(p[0] for p in pts) / 4.0, sum(p[1] for p in pts) / 4.0
+        w, h = x1 - x0, y1 - y0
+        return frac(max(0, mx - w / 2), max(0, my - h / 2), min(W, mx + w / 2), min(H, my + h / 2), W, H)
+
+    page = dict(page, problems=[dict(p, **{k: turn(p[k]) for k in ('box', 'number_box') if p.get(k)}) for p in page.get('problems') or []],
+                pictures=[dict(p, box=turn(p.get('box'))) for p in page.get('pictures') or []])
+    return rgb, page
+
+
+def paper_color(img, box):
+    """The paper's color in this box ('#rrggbb'): the middle of what isn't ink."""
+    rgb = np.asarray(img.convert('RGB'))
+    H, W = rgb.shape[:2]
+    x0, y0, x1, y1 = px(box, W, H)
+    area = rgb[y0:y1, x0:x1]
+    if not area.size:
+        return '#ffffff'
+    ink = ink_mask(np.asarray(img.convert('L')))[y0:y1, x0:x1]
+    paper = area[~ink] if (~ink).any() else area.reshape(-1, 3)
+    return '#%02x%02x%02x' % tuple(int(v) for v in np.median(paper, axis=0))

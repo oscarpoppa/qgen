@@ -24,7 +24,7 @@
 
   //the page's name: its title without the site's name after it
   //(and without the sandbox's "SANDBOX · " in front)
-  var name = document.title.replace(/^SANDBOX · /, '').replace(/^(?:[\u{1F7E1}\u{1F535}]\d+ )+/u, '').replace(/ · [^·]*$/, '').trim() || 'Back';
+  var name = document.title.replace(/(?: [\u{1F7E1}\u{1F535}]\d+)+$/u, '').trim() || 'Back';
   //a page with two views at two addresses (People: Accounts and Results) counts as one page
   var here = { k: document.documentElement.dataset.trailKey || location.pathname, p: location.pathname + location.search, t: name };
   //"New examples" / "Roll another": the same page drawn again, in place of this one in the

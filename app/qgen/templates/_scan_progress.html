@@ -1,3 +1,4 @@
+{% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {% from "_macros.html" import post_button with context %}
 {# the Dashboard's unfinished scans (the owner, 2026-10-18): a small chip beside the heading,
    with a thin bar while a page is being read; it opens a pop-over with each scan, its progress
@@ -16,7 +17,7 @@
   <span class="scan-chip-label">Scanner</span>
   {%- if busy and busy[0].now %} reading page {{ busy[0].now }} of {{ busy[0].total }}…{% if busy[0].from_folder %} <span class="scan-chip-folder" title="From the folder “{{ busy[0].from_folder }}”">{{ icon('folder') }}</span>{% endif %}{% endif %}
   {%- set n = kinds|select('equalto', 'ready')|list|length %}{% if n %} <span class="scan-chip-done" title="{{ n }} ready to check">✓ {{ n }}</span>{% endif %}
-  {%- set n = kinds|select('equalto', 'paused')|list|length %}{% if n %} <span class="scan-chip-wait" title="{{ n }} paused">⏸ {{ n }}</span>{% endif %}
+  {%- set n = kinds|select('equalto', 'paused')|list|length %}{% if n %} <span class="scan-chip-wait" title="{{ n }} paused">{{ icon('lc-pause') }} {{ n }}</span>{% endif %}
   {%- set n = kinds|select('equalto', 'stopped')|list|length %}{% if n %} <span class="scan-chip-stopped" title="{{ n }} stopped: a page couldn’t be read">{{ icon('lc-alert') }} {{ n }}</span>{% endif %}
   {%- set n = kinds|select('equalto', 'draft')|list|length %}{% if n %} <span class="scan-chip-draft" title="{{ n }} draft{{ '' if n == 1 else 's' }} you kept">{{ icon('lc-pencil') }} {{ n }}</span>{% endif %}
   {#- (the page being read moves, so the bar shows it's working even before a page is done) #}
@@ -30,14 +31,10 @@
       <a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>
       <div class="progress-bar" role="progressbar" aria-label="Pages read in “{{ j.name }}”" aria-valuemin="0" aria-valuemax="{{ x.total }}" aria-valuenow="{{ x.done }}"><span style="width: {{ (100 * x.done / x.total) if x.total else 0 }}%"></span>{% if x.failed %}<span class="failed" style="width: {{ 100 * x.failed / x.total }}%"></span>{% endif %}</div>
       {#- each scan's kind, with its mark (the owner, 2026-10-19) #}
-      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{% if x.by %} · by {{ x.by }}{% endif %}</span>
+      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{% if x.by %} · by {{ x.by }}{% endif %}{{ scan_working(x, bar=false) }}</span>
       {#- (a row's controls are bare icons, the words in their tooltips; opening a scan to check it is
           an arrow (not a play button, nor the clipboard that looked like a trash can: the owner, 2026-10-19) #}
-      <span class="btn-row nowrap">
-        {%- if x.kind == 'reading' and not x.pausing %}{{ post_button(url_for('qgen.scan_pause', job_id=j.id, back='dashboard'), 'Pause', icon='lc-pause', tip='Pause “' ~ j.name ~ '”') }}{% endif %}
-        {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back='dashboard'), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each counts as one AI use)') }}{% endif %}
-        <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>
-      {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back='dashboard'), 'Discard', icon='lc-trash', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}</span>
+      {{ scan_controls(x, 'dashboard') }}
     </div>
   {% endfor %}
 </div>

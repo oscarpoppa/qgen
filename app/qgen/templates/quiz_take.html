@@ -74,12 +74,12 @@
               {%- else %}{% for line in lines %}<span>{{ line }}</span>{% endfor %}{% endif %}</div>
           {% endif %}
           <div class="pq-answer{% if s.inline %} pq-inline{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.62, (s.char or 0.02) * ratio * 100 / 0.714 * 1.15]|min }}cqw">
-            {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', inputmode='numeric' if it.qtype == 'numeric' else none, **{'aria-label': 'Question ' ~ it.num ~ ': ' ~ it.text}) }}</div>
+            {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', inputmode='numeric' if it.qtype == 'numeric' else none, **{'aria-label': 'Question ' ~ qlabel(cq.vquiz, it.num) ~ ': ' ~ it.text}) }}</div>
         </div>
         {% elif s.kind == 'choices' %}
         {%- set mine = co.choices or [] %}
         {%- set checked = it.field.data if it.field.data is iterable and it.field.data is not string else [it.field.data] %}
-        <div class="question pq-q" data-q="{{ it.num }}" role="group" aria-label="Question {{ it.num }}: {{ it.text }}">
+        <div class="question pq-q" data-q="{{ it.num }}" role="group" aria-label="Question {{ qlabel(cq.vquiz, it.num) }}: {{ it.text }}">
           <input type="hidden" name="{{ it.field.name }}_present" value="1">
           {% for printed in s.choices %}{% set r, m = s.rows[loop.index0], s.marks[loop.index0] %}
             {#- the printed choice, found in this student's choices by its words (they may be in another order) #}
@@ -101,7 +101,7 @@
   {% for it in items %}
     <section class="card question{% if page_layout and page_layout.by_pos.get(it.num) %} pq-has-slot{% endif %}" data-q="{{ it.num }}"{% if it.qtype in ('paper', 'look') %} data-paper{% endif %} aria-labelledby="q{{ it.num }}">
       <input type="hidden" name="{{ it.field.name }}_present" value="1">
-      <div class="card-head"><span class="qnum">{{ it.num }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ it.num }}</h2></div>
+      <div class="card-head">{% set lab = qlabel(cq.vquiz, it.num) %}<span class="qnum{% if lab != it.num %} qnum-label{% endif %}">{{ lab }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ lab }}</h2></div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="Picture for question {{ it.num }}">{% endif %}
       <div class="qtext">{{ it.text }}</div>
       {% if it.qtype in ('choice_one', 'truefalse') %}

@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  {# the tab: 🟡 new quizzes and 🔵 unfinished ones first (static/js/messages.js keeps them up to date) #}
+  {# the tab: just the page's name, then 🔵 unfinished quizzes and 🟡 new ones after it, nothing
+     more (the owner, 2026-10-20; static/js/messages.js keeps the counts up to date) #}
   {% set tab_new, tab_started = tab_counts() %}
-  <title>{% if config.SANDBOX %}SANDBOX · {% endif %}{% if tab_new %}🟡{{ tab_new }} {% endif %}{% if tab_started %}🔵{{ tab_started }} {% endif %}{{ title or 'Quizzes' }}{% if site %} · {{ site().name }}{% endif %}</title>
+  <title>{{ title or 'Quizzes' }}{% if tab_started %} 🔵{{ tab_started }}{% endif %}{% if tab_new %} 🟡{{ tab_new }}{% endif %}</title>
   {% if site %}{% set s_icon = site() %}{% if s_icon.icon %}
   <link rel="icon" {% if s_icon.icon_svg %}type="image/svg+xml"{% else %}type="image/png" sizes="32x32"{% endif %} href="{{ url_for('user.site_icon', size=32, v=s_icon.icon) }}">
   <link rel="apple-touch-icon" href="{{ url_for('user.site_icon', size=180, v=s_icon.icon) }}">{% endif %}{% endif %}
@@ -338,6 +339,7 @@
   <script src="{{ asset('js/folderfilter.js') }}" defer></script>
   <script src="{{ asset('js/dialogfilter.js') }}" defer></script>
   <script src="{{ asset('js/sorttable.js') }}" defer></script>
+  <script src="{{ asset('js/dividers.js') }}" defer></script>
   <script src="{{ asset('js/fitpanel.js') }}" defer></script>
   <script src="{{ asset('js/grip.js') }}" defer></script>
   <script src="{{ asset('js/splitter.js') }}" defer></script>

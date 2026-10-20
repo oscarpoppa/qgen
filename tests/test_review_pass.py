@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import event
 
-from test_flow import app_db, login, take_page, no_titles  # noqa: F401  (fixture)
+from test_flow import app_db, login, take_page, no_titles, back_by_the_trail  # noqa: F401  (fixture)
 from test_dashboard import make_quiz, give
 from test_archive import ids
 from app.icons import icon as ico
@@ -217,19 +217,18 @@ def test_menu_marks_where_you_are(app_db):
 
 
 def test_back_goes_where_you_came_from(app_db):
+    """The way back is the top bar's ← → arrows, which follow where you actually came from
+    (static/js/trail.js): the pages no longer draw a worded Back button of their own, whatever
+    the page came from (worded back buttons removed in scratchpad mode, 2026-10)."""
     app, db = app_db
     teach = login(app, 'teach')
-    page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': 'http://localhost/dashboard'}).data.decode()
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in no_titles(page)
-    page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<a class="btn btn-secondary" href="/people" data-back><span class="back-label">← People</span></a>' in no_titles(page)
-    # from another site, or from the page itself: its own Back
-    for ref in ('https://evil.example/dashboard', 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
-        page = teach.get('/quiz/listuser/{}'.format(ids('sam')), headers={'Referer': ref}).data.decode()
-        assert '← People</span></a>' in page, ref
-    # and a student page names the student
-    page = teach.get('/quiz/results', headers={'Referer': 'http://localhost/quiz/listuser/{}'.format(ids('sam'))}).data.decode()
-    assert "← sam&#39;s student page</span></a>" in page
+    for ref in (None, 'http://localhost/dashboard', 'https://evil.example/dashboard',
+                'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
+        headers = {'Referer': ref} if ref else {}
+        for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results'):
+            page = teach.get(url, headers=headers).data.decode()
+            assert back_by_the_trail(page), (url, ref)
+            assert 'evil.example' not in page
 
 
 def test_editing_a_quiz_returns_where_it_started(app_db):
@@ -292,7 +291,7 @@ def test_after_handing_in_there_is_no_next_quiz_only_back(app_db):
     page = sam.get('/quiz/take/{}'.format(done.id)).data.decode()
     assert 'Handed in!' in page and 'Your teacher is checking' in page
     assert 'Next:' not in page and 'href="/quiz/take/{}"'.format(nxt.id) not in page
-    assert '← Home</span></a>' in page
+    assert back_by_the_trail(page)  # (the way back: the top bar's arrows)
     assert 'instructor' not in page.lower()
 
 
@@ -330,7 +329,7 @@ def test_nicknames(app_db):
     assert 'sam (' not in teach.get('/userdet').data.decode()
     r = sam.post('/profile/nickname', data={'nickname': '  Sammy   the  Great '})
     assert db.session.get(User, ids('sam')).nickname == 'Sammy the Great'
-    for url in ('/userdet', '/quiz/listuser', '/quiz/assign', '/messages', '/quiz/listuser/{}'.format(ids('sam'))):
+    for url in ('/userdet', '/quiz/listuser', '/quiz/assign', '/messages/panel', '/quiz/listuser/{}'.format(ids('sam'))):
         assert 'sam (Sammy the Great)' in teach.get(url).data.decode(), url
     assert 'Hi, Sammy the Great!' in sam.get('/home').data.decode()  # the nickname, when there is one
     # too long, or someone else's name: refused, nothing changes
@@ -410,10 +409,11 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
                 text = open(os.path.join(folder, name)).read()
                 for old in ('Main list', 'Top level', 'No folder'):  # ("Unsorted" is the owner's word inside a folder, 2026-10-13)
                     assert old not in text, (name, old)
-    # each page remembers its own folders (Messages no longer shares the Users page's)
+    # each page remembers its own folders (the Messages page is retired: its panel's student
+    # list remembers its own, data-remember="write-to")
     keys = [who.get(url).data.decode().split('data-fold-key="')[1].split('"')[0] for url, who in pages.items()]
-    keys.append(teach.get('/messages').data.decode().split('data-fold-key="')[1].split('"')[0])
     assert len(set(keys)) == len(keys)
+    assert 'data-remember="write-to"' in teach.get('/dashboard').data.decode()
 
 
 def test_my_quizzes_shows_every_quiz_with_the_ones_to_do_first(app_db):
@@ -426,7 +426,7 @@ def test_my_quizzes_shows_every_quiz_with_the_ones_to_do_first(app_db):
     from app.qgen import services as S
     S.submit(done, {1: '4'})
     page = sam.get('/mypage').data.decode()
-    assert page.index('>A</h2>') < page.index('>B</h2>')
+    assert page.index('class="box-title">A</span>') < page.index('class="box-title">B</span>')
     assert 'done-box' not in page and '>To do <' not in page and 'class="box-title">Done<' not in page
 
 
@@ -475,7 +475,11 @@ def test_a_long_conversation_shows_the_newest(app_db):
     for i in range(45):
         db.session.add(Message(student_id=ids('sam'), from_teacher=True, body='note {:02d}'.format(i), kind='message', to_all=False))
     db.session.commit()
-    page = teach.get('/messages/{}'.format(ids('sam'))).data.decode()
+    #(the conversation has no page of its own any more: its address opens the Messages panel on
+    #this student; ?show= is what the panel loads, the newest 40 first)
+    r = teach.get('/messages/{}'.format(ids('sam')))
+    assert r.status_code == 302 and r.headers['Location'].endswith('?msg={}'.format(ids('sam')))
+    page = teach.get('/messages/{}?show=40'.format(ids('sam'))).data.decode()
     assert 'note 44' in page and 'note 05' in page and 'note 04' not in page and 'Show older messages' in page
     page = teach.get('/messages/{}?show=80'.format(ids('sam'))).data.decode()
     assert 'note 00' in page and 'Show older messages' not in page
@@ -489,8 +493,8 @@ def test_grading_list_by_quiz(app_db):
     for vq, who in ((a, 'sam'), (b, 'kim'), (a, 'kim')):
         S.submit(give(vq, who), {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
-    assert page.count('<details class="box card grading-group" data-list>') == 2 and '3 waiting, oldest first' in page
-    assert page.index('“A”') < page.index('“B”')
+    assert page.count('<details class="box card item-box grading-group" data-list data-box="quiz:') == 2 and '3 waiting, oldest first' in page
+    assert page.index('data-box="quiz:{}"'.format(a.id)) < page.index('data-box="quiz:{}"'.format(b.id))
 
 
 def test_dashboard_folds_long_lists_of_people(app_db):
@@ -560,7 +564,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<h1>sam&#39;s student page</h1>' in page or "<h1>sam's student page</h1>" in page
+    assert '<h1>sam’s student page</h1>' in page
     assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
     # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
     # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder
@@ -598,7 +602,7 @@ def test_taking_a_quiz_away_updates_everything(app_db):
     keys = {k: poll(who, k) for who, k in ((sam, 'home'), (sam, 'mine'), (teach, 'students'),
                                             (teach, 'student:{}'.format(ids('sam'))), (teach, 'byquiz'),
                                             (teach, 'quizresults:{}'.format(a.id)))}
-    assert '>A</h2>' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
+    assert 'class="box-title">A</span>' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
     assert 'Perfect score' in sam.get('/home').data.decode()
 
     # take away the 100% attempt (finished): A's score that counts is now 0%, the perfect-score
@@ -621,7 +625,7 @@ def test_taking_a_quiz_away_updates_everything(app_db):
     # the last attempt at A gone: A leaves sam's folder and My quizzes; the folder stays, empty
     teach.post('/quiz/delcq/{}'.format(retake.id))
     page = sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
-    assert '>A</h2>' not in page and CQuiz.query.filter_by(assignee=ids('sam')).count() == 0
+    assert 'class="box-title">A</span>' not in page and CQuiz.query.filter_by(assignee=ids('sam')).count() == 0
     # its notices are gone too (they'd lead nowhere), and sam opening the old address is told
     r = sam.get('/quiz/take/{}'.format(first.id), follow_redirects=True).data.decode()
     assert 'Your teacher has taken this quiz away.' in r
@@ -646,7 +650,7 @@ def test_folder_pages_start_on_all(app_db):
     assert shown(sam.get('/mypage').data.decode()) == 'all'
     # open the folder, go Home, come back from the menu: All again
     page = sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
-    assert shown(page) == str(folder.id) and '>A</h2>' in page and '>B</h2>' not in page
+    assert shown(page) == str(folder.id) and 'class="box-title">A</span>' in page and 'class="box-title">B</span>' not in page
     sam.get('/home')
     assert shown(sam.get('/mypage').data.decode()) == 'all'
     # the side list's links say which folder, so "Uncategorized" and "All" can be picked
@@ -686,7 +690,9 @@ def test_my_quizzes_lists_the_last_few_handed_in(app_db):
     for cq in attempts:
         S.submit(cq, {1: '4'})
     page = sam.get('/mypage?folder=main').data.decode()
-    top = page.split('id="latest-finished"')[1].split('</section>')[0]
+    #(a pop-up card, "Just finished", opened by its button beside the folders)
+    assert 'data-popcard="#finished-pop"' in page
+    top = page.split('id="finished-pop"')[1].split('</section>')[0]
     shown = re.findall(r'<strong>“(Q\d)”</strong>', top)
     assert len(shown) == LATEST_FINISHED and 'Q0' not in shown  # newest first, the oldest left out
     assert '100%' in top and '/quiz/take/{}'.format(attempts[-1].id) in top
@@ -718,7 +724,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     def titles(show):
         page = sam.get('/mypage?show=' + show).data.decode()
         assert 'data-keep-open' in page and 'Just finished' in page and 'Show all my quizzes' not in page
-        return re.findall(r'<h2 title="([^"]+)" class="box-title">', page)
+        return re.findall(r'<span title="([^"]+)" class="box-title">', page)
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
     assert titles('soon') == ['Soon']
@@ -727,7 +733,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     assert 'data-view="all"' in sam.get('/mypage').data.decode()
 
 
-# ---------------------------------------------------------------- a Back button on every page
+# ---------------------------------------------------------------- a way back on every page
 
 def test_pages_off_the_menu_have_a_back_button(app_db):
     app, db = app_db
@@ -736,14 +742,10 @@ def test_pages_off_the_menu_have_a_back_button(app_db):
     cq = give(vq, 'sam')
     for who, url in ((sam, '/profile'), (teach, '/profile'), (teach, '/settings'), (teach, '/upload'),
                      (teach, '/images'), (teach, '/nonimages'), (teach, '/quiz/assign'),
-                     (teach, '/messages/{}'.format(ids('sam'))), (sam, '/quiz/take/{}'.format(cq.id)),
-                     (sam, '/no/such/page')):
+                     (sam, '/quiz/take/{}'.format(cq.id)), (sam, '/no/such/page')):
         page = who.get(url).data.decode()
-        assert re.search(r'<a class="btn btn-secondary" href="[^"]+" data-back><span class="back-label">← ', no_titles(page)), url
-    # with nowhere better known, My profile goes back to Home (Dashboard for a teacher)
-    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(sam.get('/profile').data.decode())
-    # the script that points each Back at the page it was opened from is on every page
-    assert 'js/trail.js' in sam.get('/profile').data.decode()
+        #(the way back on every page: the top bar's ← → arrows, worded back buttons removed)
+        assert back_by_the_trail(page), url
     assert 'data-back-href>Cancel</a>' in no_titles(teach.get('/chpass').data.decode())
 
 
@@ -793,17 +795,19 @@ def test_removing_an_assigned_quiz_keeps_everything_for_students(app_db):
     r = teach.post('/quiz/delvq/{}'.format(vq.id), follow_redirects=True).data.decode()
     assert 'Removed “Old quiz” from Quizzes' in r
     assert db.session.get(VQuiz, vq.id).removed_at is not None
-    # off the Quizzes page and Assign; still on My quizzes, Results and the Removed list
+    # off the Quizzes page and Assign; still on My quizzes, Results and the Archive's Quizzes
+    # (the Removed list is now the Archive's Quizzes section, the owner 2026-10-16)
     assert 'data-item="{}"'.format(vq.id) not in teach.get('/quiz/listvq?folder=all').data.decode()
-    assert 'Removed quizzes (1)' in teach.get('/quiz/listvq').data.decode()
+    removed = lambda: teach.get('/quiz/archive?section=quizzes').data.decode()
+    assert 'data-box="quiz-row:{}"'.format(vq.id) in removed() and '/quiz/removed/{}/back'.format(vq.id) in removed()
     assert '>Old quiz<' not in teach.get('/quiz/assign').data.decode()
-    assert '>Old quiz</h2>' in sam.get('/mypage?folder=all').data.decode()
+    assert 'class="box-title">Old quiz</span>' in sam.get('/mypage?folder=all').data.decode()
     assert 'Removed</span>' in teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Old quiz' in teach.get('/quiz/removed').data.decode()
+    assert teach.get('/quiz/removed').headers['Location'] == '/quiz/archive?section=quizzes'
     # brought back
     teach.post('/quiz/removed/{}/back'.format(vq.id))
     assert db.session.get(VQuiz, vq.id).removed_at is None
-    assert 'disabled title="No quizzes have been removed">Removed quizzes (0)</button>' in teach.get('/quiz/listvq').data.decode()
+    assert 'data-box="quiz-row:{}"'.format(vq.id) not in removed()
     # never assigned: deleted for good, as before
     other = make_quiz(app, teach, 'Unused')
     teach.post('/quiz/delvq/{}'.format(other.id))
@@ -857,8 +861,8 @@ def test_a_removed_quiz_can_be_deleted_for_good(app_db):
     S.submit(give(vq, 'sam'), {1: '4'})
     give(vq, 'kim')
     teach.post('/quiz/delvq/{}'.format(vq.id))
-    page = teach.get('/quiz/removed').data.decode()
-    assert '/quiz/removed/{}/delete'.format(vq.id) in page and '2 attempts leave students’ My quizzes' in page
+    page = teach.get('/quiz/archive?section=quizzes').data.decode()
+    assert 'data-delete-url="/quiz/removed/{}/delete"'.format(vq.id) in page and '2 attempts leave students’ My quizzes' in page
     r = teach.post('/quiz/removed/{}/delete'.format(vq.id), follow_redirects=True).data.decode()
     assert 'Deleted “Gone soon” for good. Its 2 attempts are in the' in r
     assert db.session.get(VQuiz, vq.id) is None and CQuiz.query.count() == 0
@@ -882,8 +886,8 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     folder = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
     sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
     page = sam.get('/mypage?folder=main').data.decode()
-    # in the side list, with a badge counting what's new
-    assert 'href="/mypage?folder=new"' in page and 'side-new-badge" title="1 attempt not started yet">1 new</span>' in page
+    # in the side list, with a count like every other row, what it counts in its tooltip (the owner, 2026-10-17)
+    assert 'href="/mypage?folder=new"' in page and 'class="side-count muted small" title="1 attempt not started yet">1</span>' in page
     # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
     assert '<span class="side-dot dot-new" title="1 new attempt" role="img" aria-label="1 new attempt">1</span>' in page
     # and Uncategorized has the started one
@@ -907,7 +911,8 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
         c.startdate = datetime.now()
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
-    assert ' new</span>' not in mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0] and '2 in progress</span>' in mine
+    side = mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
+    assert 'not started yet">' not in side and 'title="2 attempts started, or handed in and not graded yet">2</span>' in side
     assert 'No new quizzes right now.' in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = dict((t[0], t[1]) for t in student_filter(page))
@@ -923,10 +928,10 @@ def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
     home = teach.get('/home').data.decode()
     assert '“Mine”' in home and 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(page)
+    assert back_by_the_trail(page)  # (a student's page: no teacher's buttons, the top bar's arrows)
     S.submit(cq, {1: '4'})
     page = teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'href="/home" data-back><span class="back-label">← Home</span></a>' in no_titles(page) and 'Answer key' not in no_titles(page)
+    assert back_by_the_trail(page) and 'Answer key' not in no_titles(page)
     # taken away: told as a student is, not sent to the Archive
     teach.post('/quiz/delcq/{}'.format(cq.id))
     r = teach.get('/quiz/take/{}'.format(cq.id), follow_redirects=True).data.decode()
@@ -959,12 +964,12 @@ def test_a_student_deletes_a_folder_and_its_quizzes(app_db):
     assert 'Delete folder and everything in it' in page and 'disabled title="First hand in' not in page
     assert 'Delete the folder “Old” and the folders inside it and the 1 quiz in it? It goes to your teacher' in page
     r = sam.post('/mypage/folders/{}/purge'.format(old.id), data={'view': str(old.id)}, follow_redirects=True).data.decode()
-    assert 'Deleted the folder &#34;Old&#34; and its 1 quiz' in r or 'Deleted the folder "Old" and its 1 quiz' in r
+    assert 'Deleted the folder “Old” and its 1 quiz' in r
     assert QuizFolder.query.filter_by(owner_id=ids('sam')).count() == 0
     assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=a.id).count() == 0
     assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=b.id).count() == 1     # not in the folder: kept
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam'), reason='student folder').count() == 1
-    assert Message.query.filter(Message.body.like('sam deleted their folder "Old"%')).count() == 1
+    assert Message.query.filter(Message.body.like('sam deleted his/her folder “Old”%')).count() == 1
     # someone else's folder: refused
     teach.post('/mypage/folders', data={'name': 'T'})
     t = QuizFolder.query.filter_by(owner_id=ids('teach')).one()
@@ -1090,7 +1095,7 @@ def test_uploading_never_replaces_a_file_already_there(app_db):
 
 
 def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automatic_folders(app_db):
-    """Every quiz on My quizzes has "Move… ▾" in its heading (new, started or done), whose list
+    """Every quiz on My quizzes has a Move button on its row (new, started or done), whose list
     moves it at once; moved, it's still in New / In progress."""
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
@@ -1100,9 +1105,10 @@ def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automati
     sam.post('/mypage/folders', data={'name': 'Week 1'})
     wk = QuizFolder.query.filter_by(owner_id=ids('sam')).one()
     page = sam.get('/mypage?folder=new').data.decode()
+    #(quizzes are rows now: the Move icon is in the row's buttons, at its end)
     head = page[page.index('data-quiz="{}"'.format(fresh.id)):]
-    head = head[:head.index('</summary>')]
-    assert 'class="move-form move-mini"' in head and 'Uncategorized (here now)' in head
+    head = head[:head.index('</tr>')]
+    assert 'class="move-form move-mini"' in head and 'data-move-one' in head and 'Uncategorized (here now)' in head
     r = sam.post('/mypage/move', data={'quiz': fresh.id, 'to': wk.id, 'view': 'new', 'from': 'top'}, follow_redirects=True)
     page = r.data.decode()
     assert 'Fresh' in page and '>Week 1 (here now)</option>' in page  # still in New, now in Week 1
@@ -1134,11 +1140,13 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
         assert 'dot-new" title="1 new attempt"' in row  # Soon isn't started yet
         assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
     cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
-    begun_head = cards[cards.index('data-quiz="{}"'.format(begun.id)):]
-    assert '>In progress</span>' in begun_head[:begun_head.index('</summary>')]
-    soon_head = cards[cards.index('data-quiz="{}"'.format(soon.id)):]
-    soon_head = soon_head[:soon_head.index('</summary>')]
-    assert '>Due soon</span>' in soon_head and '>New</span>' in soon_head and 'Hand it in by' in soon_head
+    #(the badges are in the row's Status column now, the owner 2026-10-20)
+    def status_of(quiz):
+        row = cards[cards.index('data-quiz="{}"'.format(quiz.id)):]
+        row = row[row.index('data-label="Status"'):]
+        return row[:row.index('</td>')]
+    assert '>In progress</span>' in status_of(begun)
+    assert '>Due soon</span>' in status_of(soon) and '>New</span>' in status_of(soon) and 'Hand it in by' in status_of(soon)
 
 
 def test_folder_numbers_count_tries_not_quizzes(app_db):
@@ -1148,9 +1156,12 @@ def test_folder_numbers_count_tries_not_quizzes(app_db):
     vq = make_quiz(app, teach)
     for _ in range(2):
         teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
+    #(Uncategorized carries its flags only once there are folders: the owner, 2026-10-17)
+    sam.post('/mypage/folders', data={'name': 'Week 1'})
     page = sam.get('/mypage?folder=main').data.decode()
-    assert '2 attempts not started yet">2 new</span>' in page
     assert '<span class="side-dot dot-new" title="2 new attempts" role="img" aria-label="2 new attempts">2</span>' in page
+    # the New row: its number and its tooltip (what it counts) say the same
+    assert 'class="side-count muted small" title="2 attempts not started yet">2</span>' in page
 
 
 def test_standard_wording_and_history_buttons(app_db):
@@ -1170,11 +1181,13 @@ def test_standard_wording_and_history_buttons(app_db):
     vp_page = no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
     assert 'href="/quiz/problem-results/{}"><svg'.format(vp.id) in vp_page and 'History</span></a>' in vp_page
     # unchecking everyone says so (Clear is the filter box's)
-    for url in ('/userdet', '/quiz/assign'):
-        assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get(url).data.decode()), url
-    # the teachers' messages page: one name, and Back to Messages
-    page = no_titles(teach.get('/messages/teachers').data.decode())
-    assert 'Teachers’ messages' in page and '← Messages</span></a>' in page and 'Messages with' not in page
+    #(People's own "Assign a quiz to them" bar, with its Uncheck all, is gone: the checked people
+    #use the folder bar, and its dialogs say Uncheck all)
+    assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get('/quiz/assign').data.decode())
+    assert 'data-check-set="0">Uncheck all</button>' in no_titles(teach.get('/userdet').data.decode())
+    # the teachers' messages page: one name, and the way back is the top bar's arrows
+    page = teach.get('/messages/teachers').data.decode()
+    assert 'Teachers’ messages' in page and back_by_the_trail(page) and 'Messages with' not in page
 
 
 def test_pages_come_back_as_they_were_left(app_db):
@@ -1207,7 +1220,9 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
                    headers={'Host': 'localhost', 'Referer': 'http://localhost:8080/quiz/results?folder=2'})
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/results?folder=2'), r.headers['Location']
     page = teach.get('/quiz/results').data.decode()
-    assert 'this.form.requestSubmit ? this.form.requestSubmit()' in page  # keeps the place on the page
+    #(a pencil opening "How should sam’s score count?", never a drop-down that saves the moment
+    #it's picked: the owner, 2026-10-19; static/js/retakerule.js sends the form)
+    assert 'class="inline-form retake-rule-form"' in page and 'data-rule-edit' in page and 'js/retakerule.js' in page
 
 
 def test_folder_lists_have_one_order(app_db):
@@ -1254,7 +1269,9 @@ def test_one_set_of_sizes_and_accessible_controls():
     assert not sizes, sizes  # every rem size is a --fs-* token
     ok = {'var(--r-sm)', 'var(--r)', 'var(--r-lg)', '50%', '999px', '0'}
     # (a value per corner is fine when each is one of the set: a file-folder tab's top corners)
-    corners = {c for c in re.findall(r'radius\s*:\s*([^;}]*)', body) if not all(part in ok for part in c.strip().split())}
+    #(a quiz taken on its scanned page scales with the page: its corners are in cqw, 2026-10-20)
+    corners = {c for c in re.findall(r'radius\s*:\s*([^;}]*)', body)
+               if not all(part in ok or part.endswith('cqw') for part in c.strip().split())}
     assert not corners, corners
     assert 'uppercase' not in css
     assert '--field-border: #7d8695' in css and '--new-edge: #b08300' in css
@@ -1276,7 +1293,7 @@ def test_list_items_have_only_buttons(app_db):
     S.submit(give(vq, 'sam'), {1: 'Light makes sugar.'})
     give(vq, 'kim')
     pages = ['/dashboard', '/dashboard/now', '/quiz/review', '/quiz/listvp?folder=all', '/quiz/listvq?folder=all', '/userdet',
-             '/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id), '/messages']
+             '/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id), '/messages/panel']
     for url in pages:
         page = teach.get(url).data.decode()
         main = page[page.index('<main'):page.index('</main>')] if '<main' in page else page
@@ -1315,7 +1332,8 @@ def test_folders_on_top_and_their_contents_below(app_db):
     # folders wait to be picked, except the first in a top-level row, while nothing about that row
     # is remembered (an All view never starts as only folder buttons)
     assert "if (d.matches(FOLDER)) {" in boxes and "if (d.parentElement.closest(FOLDER)) return false;" in boxes
-    assert "return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });" in boxes
+    #(what's remembered counts only when coming back to the page: trail.js's return)
+    assert "return row[0] === d && !(returning && row.some(function (b) { return idOf(b) in memory; }));" in boxes
     assert "row.qgenExpanded = true" in js  # Expand all shows every folder open; Collapse all brings the buttons back
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
@@ -1330,7 +1348,7 @@ def test_drawn_icons_everywhere_and_no_emoji():
     from app.icons import PATHS
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     emoji = re.compile('[\U0001F300-\U0001FAFF☀-➿⭐⏰-⏿\U0001F100-\U0001F1FF]')
-    keep = set('✓✕✗◐○★✔✖')
+    keep = set('✓✕✗◐○★✔✖☐')  # (☐: the scanner's word for a check box on a page, app/qgen/pagelayout.py)
     named, found = set(), []
     for top in ('app', os.path.join('static', 'js')):
         for dp, _dn, files in os.walk(os.path.join(here, top)):
@@ -1414,30 +1432,35 @@ def test_kid_friendly_review_batch(app_db):
     assert 'Hi, Sammy!' in sam.get('/home').data.decode()
     # 13: the More menu: lines between groups, plain names
     teach = login(app, 'teach')
-    more = teach.get('/dashboard').data.decode().split('>More</summary>')[1].split('</details>')[0]
-    assert more.count('<hr class="menu-rule">') == 2 and '>Upload files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
+    #(Upload files, Pictures and Other files are in a Files menu inside More now)
+    more = teach.get('/dashboard').data.decode().split('>More</summary>')[1]
+    more = more[:more.index('>Settings</a>')]
+    assert more.count('<hr class="menu-rule">') == 2 and '>Files</summary>' in more and '>Upload files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
     assert '<h1>Pictures</h1>' in teach.get('/images').data.decode()
     # 15 and 16: the quiz builder's problem boxes have names; the "?" buttons are 24px
     from test_flow import problem_form
     teach.post('/quiz/makevprob', data=problem_form('numeric', 'Sum', 'What is 2 + 2?', '4', []))
     assert 'aria-label="Include “Sum”"' in teach.get('/quiz/makevquiz').data.decode()
-    assert 'width: 24px; height: 24px; min-height: 0; padding: 0; margin-left: 2px;' in css
+    #(the "?" is drawn 16px, light and unfilled, the owner 2026-10-19; its invisible target stays
+    #24px: 16 + 4 on each side, WCAG 2.5.8)
+    assert 'width: 16px; height: 16px; min-height: 0; padding: 0;' in css and 'button.tip::after { content: ""; position: absolute; inset: -4px; }' in css
 
 
 def test_the_messages_page_has_a_way_back(app_db):
-    """The Messages page left the menu (2026-10-09), so it has a Back button: to the page you
-    came from, else the Dashboard."""
+    """The Messages page is retired (2026-10-17): its address opens the Messages panel over the
+    page you came from (this site's only), else over the Dashboard."""
     app, db = app_db
     teach = login(app, 'teach')
-    page = no_titles(teach.get('/messages').data.decode())
-    assert '<a class="btn btn-secondary" href="/dashboard" data-back><span class="back-label">← Dashboard</span></a>' in page
-    page = no_titles(teach.get('/messages', headers={'Referer': 'http://localhost/quiz/listvq'}).data.decode())
-    assert '<a class="btn btn-secondary" href="/quiz/listvq" data-back><span class="back-label">← Quizzes</span></a>' in page
+    assert teach.get('/messages').headers['Location'] == '/dashboard#messages-panel'
+    r = teach.get('/messages', headers={'Referer': 'http://localhost/quiz/listvq'})
+    assert r.headers['Location'] == '/quiz/listvq#messages-panel'
+    r = teach.get('/messages', headers={'Referer': 'https://evil.example/quiz/listvq'})
+    assert 'evil' not in r.headers['Location']
 
 
 def test_side_panels_slide_over_the_page_unless_pinned(app_db):
-    """Notices and Messages start closed and slide over the page, so it keeps its whole width;
-    the pin in a panel's heading keeps them beside the page instead, as they were left."""
+    """Notices and Messages slide (or pop up) over the page, so it keeps its whole width; the pin
+    in a panel's heading keeps them open from page to page, as they were left."""
     import os
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     app, db = app_db
@@ -1447,8 +1470,11 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     assert "localStorage.getItem('qgen-dock-pinned') !== '0'" in start and 'roomy' not in start  # (pinned unless unpinned: owner 2026-10-14)
     assert "if (pinned && wide) {" in start  # only pinned panels open by themselves
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert 'html:not(.dock-pinned) .dock { z-index: 30;' in css
-    assert 'html.dock-pinned.dock-notices body, html.dock-pinned.dock-messages body { padding-right: var(--dock-w); }' in css
+    #(wide screens: the panels are cards over the page, pinned or not, so the page keeps its whole
+    #width; pinned only keeps them open from page to page: the owner, 2026-10-15)
+    wide = css[css.index('@media (min-width: 1001px) {\n  .dock { z-index: 30;'):]
+    assert 'border-radius: var(--r-lg)' in wide[:wide.index('}\n}')]
+    assert 'padding-right: var(--dock-w)' not in css
     js = open(os.path.join(here, 'static', 'js', 'messages.js')).read()
     assert "if (pinned()) store('qgen-dock-' + p, open ? 'open' : 'closed');" in js
     # a click on the page closes them, but not the click that opened them (e.g. "Message students")
@@ -1477,7 +1503,8 @@ def test_results_rows_are_one_line_tall(app_db):
     assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
-    assert "'Archive all (' ~ g.attempts|length ~ ')'" in tpl and "slot('Archive all (1)', 'Only one attempt: use its own Archive button', 'btn btn-secondary btn-sm btn-all', icon='lc-archive-all')" in tpl
+    #(with one attempt it's not grayed any more: "Archive all (1)" works, the same as its own Archive)
+    assert "'Archive all (' ~ n ~ ')'" in tpl and 'Only one attempt: use its own Archive button' not in tpl
 
 
 def test_a_folded_student_says_where_they_are(app_db):
@@ -1580,13 +1607,15 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
     pages = {
         '/quiz/viewvprob/{}'.format(vp.id): ['disabled title="History: No one has answered this problem yet">'],
         '/quiz/editvprob/{}'.format(vp.id): ['disabled title="History: No one has answered this problem yet">'],
+        #("Archive all (1)" isn't grayed any more: it works, the same as the attempt's own Archive;
+        #Grading's "Grade the oldest" is gone)
         '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
-                                           'disabled title="Archive all (1): Only one attempt: use its own Archive button">',
+                                           'disabled title="Give another attempt: A new attempt can be given once the latest one is handed in and graded">',
                                            'disabled title="Print paper pages: this quiz has no Paper only questions"'],
-        '/quiz/review': ['disabled title="Nothing is waiting for grading">Grade the oldest</button>'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
-        '/userdet': ['disabled title="Remove: You can’t delete your own account, and you’re in no folder">',
+        '/userdet': ['disabled title="Delete for good: You can’t delete your own account">',
+                     'disabled title="Move to folder: make a folder first (+ New folder)">',
                      'title="Message: teachers write to each other in Teachers’ messages">'],
     }
     for url, wanted in pages.items():
@@ -1623,14 +1652,15 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     Collapse all for what's inside it, on its heading line (boxes.js adds the pair where the page
     drew none; it shows only with two or more boxes inside). A click there doesn't fold the box,
     and Expand all opens it too. In a row of folder buttons the open folder's pair sits at the
-    row's right end (foldertabs.js). The student box's own pair is on its heading too."""
+    row's right end (foldertabs.js). One student's page gets its pairs from folderfilter.js."""
     import os
     app, db = app_db
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     assert "document.querySelectorAll('details.sub-box').forEach(function (d) {" in js
     assert "return p.closest('details.sub-box') === d;" in js  # a folder that already has one keeps it
-    assert "bar.className = 'head-pair';" in js and "head.appendChild(bar);" in js
+    #(right after the folder's name and badges, before any buttons on the line: the owner, 2026-10-19)
+    assert "bar.className = 'head-pair';" in js and "head.insertBefore(bar, first || null);" in js
     assert "open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;" in js
     assert "var head = btn.closest('summary');" in js and "e.preventDefault();" in js and "head.parentElement.open = true;" in js
     tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
@@ -1639,10 +1669,13 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
     give(vq, 'sam')
+    #(one student's page is laid out like the other list pages, no box round the student, the
+    #owner 2026-10-17: its folder list's levels get their pair from folderfilter.js)
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    head = page[page.index('id="student-{}"'.format(ids('sam'))):]
-    head = head[:head.index('</summary>')]
-    assert '<span class="head-pair"><span class="level-buttons">' in head and 'data-level="open"' in head
+    assert '<div class="student-single student-folders" id="student-{}">'.format(ids('sam')) in page
+    assert 'data-folder-filter' in page and 'js/folderfilter.js' in page
+    ff = open(os.path.join(here, 'static', 'js', 'folderfilter.js')).read()
+    assert "window.qgenIconButton(btn, b[0] === 'open' ? 'lc-expand' : 'lc-collapse', b[1], b[2] + label + '\\u201d');" in ff
     assert 'quiz-box-bar' not in page
 
 
@@ -1658,15 +1691,19 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     assert 'class="icon-link attempt-open"' in page and 'View</span></a>' in page
-    assert '<thead><tr><th>Attempts</th><th>Score counted</th><th></th></tr></thead>' in page
+    assert '<thead><tr><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.result-box > .table-wrap > table { table-layout: fixed; width: 100%; }' in css
-    assert '.result-box > .table-wrap > table > thead th:nth-child(2) { width: 16rem; }' in css
+    #(Attempts as wide as its lines, each attempt's icons and Retake set widths, the score the
+    #rest: the owner, 2026-10-16)
+    assert '.result-box > .table-wrap > table > thead th:nth-child(1) { width: 20rem; }' in css
+    assert '.result-box > .table-wrap > table > thead th:nth-child(3) { width: 11rem; }' in css
     assert '.result-attempt-buttons .attempt-open { min-width: 5.5rem; text-align: center; }' in css
     assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
     # "Archive all" acts on every attempt: its own look, on the quiz's heading line
-    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" disabled title="Archive all (1): Only one attempt' in page
+    #(with one attempt it isn't grayed any more: it does the same as the attempt's own Archive)
+    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" form="archive-all-{}-{}" title="Archive all (1): Move sam’s attempt'.format(ids('sam'), vq.id) in page
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
     # with two attempts it's the real button, with the same look
     give(vq, 'sam')

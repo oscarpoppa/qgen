@@ -2,6 +2,7 @@
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button, post_button with context %}
+{% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {% block content %}
 <div class="page-head">
   <h1>Scan workbook pages</h1>
@@ -45,7 +46,7 @@
 </div>
 
 {% if jobs %}
-<div class="card">
+<div class="card" id="scan-current">
   {#- ("Current", like the Dashboard's pop-over: finished scans are in it too, the owner 2026-10-19) #}
   <h2>Current scans</h2>
   <div class="table-wrap stack">
@@ -56,13 +57,10 @@
         <tr>
           <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-            {%- if kinds.get(j.id) %}{% set x = kinds[j.id] %}<br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span>{% endif %}</td>
+            {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}<br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span>{{ scan_working(x) }}</td>
           <td data-label="Pages">{{ j.pages }}</td>
           <td data-label="Last changed" class="nowrap">{{ j.updated_at|when }}</td>
-          <td class="btn-row">
-            <a class="btn btn-sm" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">Continue</a>
-            {{ post_button(url_for('qgen.scan_discard', job_id=j.id), 'Discard', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}
-          </td>
+          <td>{{ scan_controls(x) }}</td>
         </tr>
       {% endfor %}
       </tbody>
@@ -71,7 +69,23 @@
 </div>
 {% endif %}
 {% endblock %}
-{% block scripts %}
+{% block scripts %}<script src="{{ asset('js/scantimer.js') }}" defer></script>
+<script>
+//while a scan is being read, the "Current scans" table keeps itself up to date every few seconds
+//(what it's doing, its controls: the owner, 2026-10-20); nothing else on the page is touched
+(function () {
+  function refresh() {
+    var card = document.getElementById('scan-current');
+    if (!card || !card.querySelector('.scan-working')) return;
+    fetch(location.pathname, { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
+      var fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('scan-current');
+      if (fresh) card.replaceWith(fresh); else card.remove();
+      setTimeout(refresh, 4000);
+    }).catch(function () { setTimeout(refresh, 8000); });
+  }
+  setTimeout(refresh, 4000);
+})();
+</script>
 <script>
 (function () {
   //a folder instead of files: every photo and PDF in it, in file-name order (the owner, 2026-10-19)

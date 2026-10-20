@@ -4,7 +4,7 @@
 {%- elif x.kind == 'ready' -%}
   <span class="scan-chip-done" aria-hidden="true">✓</span> Ready to check
 {%- elif x.kind == 'paused' -%}
-  <span class="scan-chip-wait" aria-hidden="true">⏸</span> Paused: {{ x.done }} of {{ x.total }} pages read
+  <span class="scan-chip-wait" aria-hidden="true">{{ icon('lc-pause') }}</span> Paused: {{ x.done }} of {{ x.total }} pages read
 {%- elif x.kind == 'stopped' -%}
   <span class="scan-chip-stopped" aria-hidden="true">{{ icon('lc-alert') }}</span> Stopped: {{ x.failed }} page{{ '' if x.failed == 1 else 's' }} couldn’t be read
 {%- else -%}

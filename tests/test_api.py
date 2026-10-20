@@ -273,11 +273,11 @@ def test_overdue_quizzes_close_on_their_own(app_db):
     # and so are the teachers
     from app.messages.models import Message
     told = {m.body for m in Message.query.all()}
-    assert '"Timed" was handed in automatically because your time ran out, with the answers you had saved. Your score: 0%.' in told
-    assert '"Timed" closed before you started it, so it was handed in with no answers. Your score: 0%.' in told
-    assert 'sam\'s "Timed" was handed in automatically (time ran out): 0%.' in told
-    assert 'kim never started "Timed"; it was handed in automatically (it closed): 0%.' in told
-    student_notices = Message.query.filter(Message.body.like('"Timed"%')).all()
+    assert '“Timed” was handed in automatically because your time ran out, with the answers you had saved. Your score: 0%.' in told
+    assert '“Timed” closed before you started it, so it was handed in with no answers. Your score: 0%.' in told
+    assert 'sam\'s “Timed” was handed in automatically (time ran out): 0%.' in told
+    assert 'kim never started “Timed”; it was handed in automatically (it closed): 0%.' in told
+    student_notices = Message.query.filter(Message.body.like('“Timed”%')).all()
     assert sorted(m.student_id for m in student_notices) == sorted([st['sam'], st['kim']])
 
 

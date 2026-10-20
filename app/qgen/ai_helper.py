@@ -499,3 +499,59 @@ def page_numbers(api_key, qs_page, client=None):
     raw, usage = _json_call(api_key, NUMBERS_PROMPT, 'The page, as read:\n' + json.dumps(page, ensure_ascii=False, indent=1),
                             NUMBERS_SCHEMA, client, max_tokens=32000, stream=True)
     return {str(i.get('id')): i for i in raw.get('items') or []}, usage
+
+
+# ---------------------------------------------------------------- checking a page's answer places
+
+#(the owner, 2026-10-20: after the page is read and its answer places found, the AI looks at the
+#page as a student will see it and says what to move; the program checks every move: scan.check_places)
+CHECK_FIX_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string'},
+        'answer': {'anyOf': [BOX_SCHEMA, {'type': 'null'}]},
+        'text': {'anyOf': [BOX_SCHEMA, {'type': 'null'}]},
+        'why': {'type': 'string'},
+    },
+    'required': ['id', 'answer', 'text', 'why'],
+    'additionalProperties': False,
+}
+
+CHECK_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'all_good': {'type': 'boolean'},
+        'fixes': {'type': 'array', 'items': CHECK_FIX_SCHEMA},
+    },
+    'required': ['all_good', 'fixes'],
+    'additionalProperties': False,
+}
+
+CHECK_PROMPT = """You check a quiz that a program made from a scanned page of a children's paper workbook. Students take the quiz on the page itself: for each problem, a typing box sits on the page's own blank (an answer line, a box, or "???"), and, when the problem's numbers change for each student, its printed wording is covered and written again.
+
+You get the page as the program will show it, with its marks drawn on:
+- a BLUE rectangle labeled with a problem's id: where the student types that problem's answer;
+- a GREEN rectangle with the same id: the printed wording that gets covered (only for problems whose numbers change);
+- a RED label with an id and no rectangle: a problem that has no place yet.
+You also get the list of the page's problems: id, its printed label (e.g. "7 b."), its printed text, and the rectangles as fractions of the page's width and height (0 = left or top edge, 1 = right or bottom edge).
+
+For each problem, check:
+1. The blue rectangle covers that problem's own blank, on that problem's own printed line, snugly (a little room above an answer line is right; the student writes on the line). Never over printed words, never on another problem's line.
+2. The green rectangle covers exactly that problem's printed wording after its label: the label (e.g. "7 b.") stays visible, and the blank and the blue rectangle are not inside it.
+3. A problem with a red label: find its blank on the page and give a blue rectangle for it (and a green one when the list says its numbers change).
+
+Return a fix only for a problem whose rectangles are wrong, with the corrected rectangles (null for one that is right or not used) and a few words saying why. Never invent problems: use only the ids in the list. When everything is right, return all_good true and no fixes."""
+
+
+def check_places(api_key, image_bytes, problems, client=None, media_type='image/jpeg'):
+    """The page with its answer places drawn on, and [{id, label, text, changes, answer, text_box}]
+    -> ({'all_good': bool, 'fixes': [...]}, usage)."""
+    import base64
+    content = [
+        {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type,
+                                     'data': base64.b64encode(image_bytes).decode('ascii')}},
+        {'type': 'text', 'text': 'The page\'s problems:\n' + json.dumps(problems, ensure_ascii=False, indent=1)},
+    ]
+    raw, usage = _json_call(api_key, CHECK_PROMPT, content, CHECK_SCHEMA, client, max_tokens=16000, stream=True)
+    fixes = [f for f in raw.get('fixes') or [] if isinstance(f, dict) and f.get('id')]
+    return {'all_good': bool(raw.get('all_good')) and not fixes, 'fixes': fixes}, usage

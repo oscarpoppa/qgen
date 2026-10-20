@@ -115,7 +115,7 @@ def test_essay_needs_instructor():
 
 def test_validation_messages():
     assert get_qtype('numeric').validate('[a] + [hrs]', 'a', opts()) == [
-        'The question uses "hrs", which isn\'t in your values table.']
+        'The question uses “hrs”, which isn\'t in your values table.']
     assert 'Mark the correct choice' in get_qtype('choice_one').validate('q', '', opts(choices='a\nb'))[0]
     assert get_qtype('text').validate('q', '', opts()) == ['Please give at least one accepted answer.']
     assert get_qtype('numeric').validate('', 'a', opts()) == ['Please write the question.']
@@ -124,7 +124,7 @@ def test_validation_messages():
 def test_divide_by_zero_found_before_saving():
     o = {'values': [{'name': 'a', 'kind': 'whole', 'min': 0, 'max': 3}], 'markup': 'friendly'}
     errors = get_qtype('numeric').validate('6 / [a]', '6 / a', o)
-    assert errors == ['"6 / a" divides by zero for some values.']
+    assert errors == ['“6 / a” divides by zero for some values.']
 
 
 def test_each_student_can_get_a_different_picture_with_matching_answer():
@@ -205,7 +205,7 @@ def test_combinations_with_a_pool_show_one_whole_combination():
 def test_combination_typos_reported():
     o = {'markup': 'friendly', 'values': [], 'choices': '3\n7\n4\n6', 'combos': '3, 8'}
     errs = get_qtype('choice_many').validate('q', '', o)
-    assert any('"8", which isn\'t one of the choices' in e for e in errs)
+    assert any('“8”, which isn\'t one of the choices' in e for e in errs)
 
 
 def test_combination_that_can_collapse_is_refused():
