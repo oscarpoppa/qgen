@@ -160,7 +160,7 @@ def page_helpers():
                 avatar_initials=initials, avatar_color=color,
                 people_choices=assign_dialogs.people_choices, quiz_choices=assign_dialogs.quiz_choices, assign_quizzes=assign_dialogs.assign_quizzes,
                 person_folder_map=assign_dialogs.person_folders, message_students=assign_dialogs.message_students,
-                assign_people=assign_dialogs.assign_people)
+                assign_people=assign_dialogs.assign_people, pick_pictures=assign_dialogs.pick_pictures)
 
 #quizzes whose time is up are handed in and scored even if the student never
 #returns: checked at most once a minute per server process

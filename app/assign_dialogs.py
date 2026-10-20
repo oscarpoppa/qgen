@@ -40,6 +40,18 @@ def assign_quizzes():
     return quizzes, folder_tree.filter_tree(root, lambda f: f.title, lambda fid: None, 'quiz:')
 
 
+def pick_pictures():
+    """For the problem editor's "Choose pictures" dialog (static/js/pickpictures.js; the owner,
+    2026-10-19): every picture A to Z, with the Pictures page's folders as the folder list."""
+    from app import folder_tree
+    from app.qgen import services as S
+    from app.qgen import uploads
+    uploads.sync()
+    root = S.subject_tree('pictures')[0]
+    pictures = S.in_use('pictures').order_by(*S.upload_order('pictures')).all()
+    return pictures, folder_tree.filter_tree(root, lambda f: f.title, lambda fid: None, 'pic:')
+
+
 def person_folders():
     """{person id: 'ids of every People folder they're in, or in one inside'} (a folder's Assign)."""
     people, _ = people_choices()

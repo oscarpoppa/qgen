@@ -43,7 +43,7 @@
       if (card && !card.hidden) s.textContent = ++n;
     });
     //a slot for the page, ready to fill
-    if (paper && !document.querySelector('#images-body .image-row')) document.getElementById('add-image').click();
+    if (paper && !document.querySelector('#images-body .image-row')) addImage();
   }
 
   function showType() {
@@ -217,11 +217,125 @@
   document.getElementById('add-value').addEventListener('click', function () {
     addValue().querySelector('input').focus();
   });
-  document.getElementById('add-image').addEventListener('click', function () {
+  //a new picture slot (the drop strip and "Choose one already uploaded" make them; there's no
+  //button for an empty slot: the owner, 2026-10-19)
+  function addImage() {
     var row = fromTemplate('image-template', 'images');
     document.getElementById('images-body').appendChild(row);
     if (window.qgenDropzone) window.qgenDropzone(row.querySelector('.dropzone'));
-  });
+    return row;
+  }
+  //Pictures dropped on the card (anywhere but a slot's own drop zone) or chosen from its drop
+  //area: each goes in the first empty slot, else a new one, and uploads there
+  (function () {
+    var card = document.getElementById('pictures-card'), area = card && card.querySelector('.pictures-drop');
+    if (!area) return;
+    var pick = area.querySelector('input[type=file]');
+    function emptySlot() {
+      var rows = document.querySelectorAll('#images-body .image-row');
+      for (var i = 0; i < rows.length; i++) {
+        var h = rows[i].querySelector('input[type=hidden][name$="-file"]');
+        if (h && !h.value && !rows[i].querySelector('.dropzone.busy')) return rows[i];
+      }
+      return addImage();
+    }
+    //"Choose one already uploaded": check any number in the "Choose pictures" dialog; each goes
+    //in an empty slot, else a new one
+    document.getElementById('pick-image').addEventListener('click', function () {
+      if (!window.qgenPickPictures) return;
+      window.qgenPickPictures({ single: false, onPick: function (list) {
+        var last;
+        list.forEach(function (p) {
+          last = emptySlot();
+          var z = last.querySelector('.dropzone');
+          if (z && z.qgenShow) z.qgenShow(p.name, p.url);
+        });
+        if (last) last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } });
+    });
+    //(a dropped folder: every picture in it and in the folders inside it, in name order, each
+    //with the folder's name, for a Pictures folder of that name)
+    function readFolder(entry, top, out) {
+      return new Promise(function (done) {
+        if (entry.isFile) {
+          entry.file(function (f) { if (/^image\//.test(f.type)) out.push({ file: f, folder: top }); done(); }, function () { done(); });
+          return;
+        }
+        var reader = entry.createReader(), all = [];
+        (function more() {
+          reader.readEntries(function (batch) {
+            if (batch.length) { all = all.concat(Array.prototype.slice.call(batch)); more(); return; }
+            all.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+            all.reduce(function (p, en) { return p.then(function () { return readFolder(en, top, out); }); }, Promise.resolve()).then(done);
+          }, function () { done(); });
+        })();
+      });
+    }
+    function dropped(dt) {
+      var entries = [], items = dt.items || [];
+      for (var i = 0; i < items.length; i++) {
+        var en = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+        if (en) entries.push(en);
+      }
+      if (!entries.some(function (en) { return en.isDirectory; })) { take(dt.files); return; }
+      var out = [];
+      entries.reduce(function (p, en) {
+        return p.then(function () { return readFolder(en, en.isDirectory ? en.name : '', out); });
+      }, Promise.resolve()).then(function () { put(out); });
+    }
+    function put(list) {
+      list.forEach(function (it) {
+        var zone = emptySlot().querySelector('.dropzone');
+        if (!zone || !zone.qgenHandle) return;
+        if (it.folder) zone.dataset.folder = it.folder;
+        zone.qgenHandle([it.file]);
+      });
+    }
+    function take(files) {
+      //(Paper only has one page: a drop anywhere on the card goes in its one slot)
+      if (card.classList.contains('paper-page')) {
+        var one = document.querySelector('#images-body .image-row .dropzone') || addImage().querySelector('.dropzone');
+        if (one.qgenHandle && files && files.length) one.qgenHandle([files[0]]);
+        return;
+      }
+      Array.prototype.forEach.call(files || [], function (f) {
+        if (!/^image\//.test(f.type)) return;
+        var zone = emptySlot().querySelector('.dropzone');
+        if (zone && zone.qgenHandle) zone.qgenHandle([f]);
+      });
+    }
+    function slotZone(e) { return e.target.closest && e.target.closest('.image-row .dropzone'); }
+    area.addEventListener('click', function (e) { if (e.target !== pick) pick.click(); });
+    area.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick.click(); }
+    });
+    pick.addEventListener('change', function () { take(pick.files); pick.value = ''; });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      card.addEventListener(ev, function (e) {
+        if (slotZone(e)) { area.classList.remove('over'); return; }
+        e.preventDefault(); area.classList.add('over');
+      });
+    });
+    card.addEventListener('dragleave', function (e) {
+      if (!card.contains(e.relatedTarget)) area.classList.remove('over');
+    });
+    function hasFolder(dt) {
+      var items = dt.items || [];
+      for (var i = 0; i < items.length; i++) {
+        var en = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+        if (en && en.isDirectory) return true;
+      }
+      return false;
+    }
+    card.addEventListener('drop', function (e) {
+      area.classList.remove('over');
+      //(a slot's own drop zone takes a picture for itself; a folder is always the card's)
+      if (slotZone(e) && !hasFolder(e.dataTransfer)) return;
+      e.preventDefault();
+      if (card.classList.contains('paper-page')) { take(e.dataTransfer.files); return; }
+      dropped(e.dataTransfer);
+    });
+  })();
   form.addEventListener('click', function (e) {
     if (e.target.closest('.remove-row')) { e.target.closest('.value-row').remove(); renderChips(); }
     if (e.target.closest('.remove-image')) e.target.closest('.image-row').remove();

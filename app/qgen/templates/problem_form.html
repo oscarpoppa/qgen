@@ -69,7 +69,7 @@
 
 {% macro image_row(row) %}
   <div class="image-row card">
-    {{ image_drop(row.form.file, 'Drag a picture here, or click to choose one.') }}
+    {{ image_drop(row.form.file) }}
     <div class="field">
       {{ row.form.label.label }}
       {{ row.form.label(placeholder='optional, e.g. cat') }}
@@ -218,7 +218,13 @@
     <div id="images-body">
       {% for row in form.images %}{{ image_row(row) }}{% endfor %}
     </div>
-    <button type="button" class="btn btn-secondary btn-sm" id="add-image" title="Add a picture slot. With several, each student gets one at random">+ Add a picture</button>
+    {#- drop pictures on the card (or click here): each one goes in an empty slot or a new one, like
+        the Pictures page's drop zone (static/js/problem_form.js; the owner, 2026-10-19) #}
+    <div class="dropzone pictures-drop" data-own tabindex="0" role="button" aria-label="Upload pictures: drop files here or press Enter to choose them">
+      <div class="dz-text"><strong class="dz-msg">Drop pictures here</strong><span class="dz-hint">or click to choose. You can add several at once.</span></div>
+      <input type="file" accept="image/*" multiple hidden>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="pick-image" title="Pick a picture from the ones uploaded before">Choose one already uploaded</button>
   </div>
 
   <div class="card">
@@ -295,9 +301,10 @@ Answer:   [picture]</pre>
 
 <template id="value-template">{{ value_row(blank.values[0], 0) }}</template>
 <template id="image-template">{{ image_row(blank.images[0]) }}</template>
+{% include "_dialog_pick_pictures.html" %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script>
+{% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script><script src="{{ asset('js/pickpictures.js') }}"></script>
 <script src="{{ asset('js/problem_form.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>
 {% endblock %}

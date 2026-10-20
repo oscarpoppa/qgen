@@ -149,6 +149,14 @@ main:focus { outline: none; }
 .menu-list a { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
 .menu-list a:hover { background: var(--surface-2); }
 .menu-list .menu-disabled { padding: 8px 10px; color: var(--muted); opacity: .6; cursor: not-allowed; }
+/* a submenu inside a drop-down (More ▸ Files: the owner, 2026-10-19): a line like the others with
+   ▸, its list beside the drop-down; on a phone it opens in place, indented */
+.menu-list .submenu > summary { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); font-size: inherit;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; box-shadow: none; }
+.menu-list .submenu > summary:hover, .menu-list .submenu[open] > summary { background: var(--surface-2); }
+.menu-list .submenu > summary.active { font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
+.menu-list .submenu > summary::after { content: "▸"; }
+.menu-list .submenu > .menu-list { top: -6px; left: calc(100% + 6px); }
 /* a line between groups in a drop-down (More: Archive | files | Settings) */
 .menu-rule { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
 
@@ -178,6 +186,7 @@ main.container.container-wide { max-width: none; }
   .nav.open { display: flex; flex-wrap: nowrap; max-height: calc(100vh - var(--topbar-h, 56px)); overflow-y: auto; }
   .nav-right { margin-left: 0; flex-direction: column; align-items: stretch; }
   .menu-list { position: static; box-shadow: none; border: 0; padding: 0 0 0 12px; }
+  .menu-list .submenu > summary::after { content: "▾"; }
   h1 { font-size: var(--fs-xl); }
   /* a student's short menu (Home, My quizzes, their name) stays in the bar while it fits */
   .nav.nav-few { display: flex; flex-basis: auto; flex-direction: row; align-items: center; padding-bottom: 0; }
@@ -466,6 +475,12 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 .dropzone .dz-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dropzone .dz-name { overflow-wrap: anywhere; }
 .dropzone .dz-hint { color: var(--muted); font-size: var(--fs-sm); }
+/* every drop area's message looks the same (the owner, 2026-10-19): bold, a size up, the text
+   color; anything more under it is a small gray .dz-hint. Pictures, a problem's picture slots and
+   its Pictures card, My profile, Scan workbook pages */
+.dropzone .dz-msg, .scan-drop .dz-msg { font-weight: 700; font-size: var(--fs-lg); color: var(--text); }
+.scan-drop .dz-hint { color: var(--muted); font-size: var(--fs-sm); margin-top: -8px; }
+.dropzone.pictures-drop { justify-content: center; text-align: center; }
 .dz-actions { margin-top: 8px; }
 .dz-gallery { margin-top: 10px; max-height: 320px; overflow-y: auto; padding: 4px; }
 .dz-gallery .thumb { cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -1803,8 +1818,9 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .quiz-is-started { border-color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
 .dash-list > li.quiz-is-new, .dash-list > li.quiz-is-started { border: 1px solid; border-radius: var(--r); padding-left: 8px; padding-right: 8px; margin: 4px 0; }
 
-/* Paper only: one page to print, so no labels, slots or "+ Add a picture" (problem_form.js) */
-#pictures-card.paper-page #add-image, #pictures-card.paper-page .remove-image,
+/* Paper only: one page to print, so no labels or more slots: the card's drop strip and its
+   "Choose one already uploaded" go too; the page's own slot has both (problem_form.js) */
+#pictures-card.paper-page .pictures-drop, #pictures-card.paper-page #pick-image, #pictures-card.paper-page .remove-image,
 #pictures-card.paper-page .image-row > .field + .field { display: none; }
 #pictures-card.paper-page .image-row { border: 0; padding: 0; box-shadow: none; background: none; }
 
@@ -2934,12 +2950,13 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-t
 .scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.125em; }
 /* a picked lettered choice ("b. Red"): a pencil-thin circle around its letter, not over it (the owner, 2026-10-19) */
 .page-quiz .pq-choice input:checked + .pq-tick.pq-letter::after { width: 100%; border-width: 0.22cqw; }
-.scan-pick > .btn { min-width: 9rem; justify-content: center; }
+.scan-drop { cursor: pointer; }
 /* the Scan page's drop box: Pictures' look, with the two buttons inside it (the owner, 2026-10-19) */
 /* (its own class, not .dropzone: static/js/dropzone.js takes over any .dropzone's file field and uploads it) */
 .scan-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center;
   min-height: 140px; padding: 16px; border: 2px dashed var(--border); border-radius: var(--r-lg); background: var(--surface);
   transition: border-color .15s, background .15s; }
+.scan-drop:hover, .scan-drop:focus-visible { border-color: var(--accent); }
 .scan-drop.over { border-color: var(--accent); background: var(--accent-soft); }
 /* small pictures of the pages dropped or chosen on the Scan page (the owner, 2026-10-19) */
 .scan-drop-thumbs { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 4px; }
@@ -3020,3 +3037,29 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 /* (no folders yet: its longer line stays one line, so the bar is as tall as on every other folder
    page and the tabs under it don't sit lower: the owner, 2026-10-19, from the user critic) */
 @media (min-width: 761px) { .folder-tools-bar .file-bar > .file-hint-nofolder { white-space: nowrap; } }
+
+/* "Choose pictures" (the problem editor): a small thumbnail before each name */
+.pic-pick-list label { display: inline-flex; align-items: center; gap: 8px; }
+.pic-pick-list img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; }
+
+/* Upload files: a tile for each file just uploaded, inside the box, looking like Scan workbook
+   pages' thumbnails: the picture (or the file's extension), its name, then ✓ and where it went
+   (dropzone.js; the owner, 2026-10-19) */
+.dz-done { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 4px; }
+.dz-tile { margin: 0; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.dz-tile img, .dz-tile-ext { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
+.dz-tile-ext { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: .85rem; }
+.dz-tile figcaption { display: flex; flex-direction: column; gap: 1px; max-width: 72px; font-size: .7rem; color: var(--muted); }
+.dz-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-tile.busy { opacity: .55; }
+.dz-tile.saved img, .dz-tile.saved .dz-tile-ext { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
+.dz-tile.saved .dz-tile-where a { color: var(--ok); font-weight: 600; text-decoration: none; }
+.dz-tile.failed img, .dz-tile.failed .dz-tile-ext { border-color: var(--bad); }
+.dz-tile.failed .dz-tile-where { color: var(--bad); }
+
+/* a thumbnail waiting to be sent (Upload files, Scan workbook pages): a bare ✕ on its corner
+   takes it out (the owner, 2026-10-19) */
+.dz-tile, .scan-drop-thumb { position: relative; }
+.dz-tile-x { position: absolute; top: -6px; right: -2px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--surface); color: var(--muted); font-size: 13px; line-height: 22px; cursor: pointer; }
+.dz-tile-x:hover, .dz-tile-x:focus-visible { color: var(--bad); }

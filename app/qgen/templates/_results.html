@@ -43,9 +43,14 @@
                 {% if g.latest.status in ('new', 'started') %}<span class="muted"{% if g.combined is not none %} title="Earlier attempts: {{ '%.0f' % g.combined }}%. The score shows here once the latest attempt is handed in."{% endif %}>—</span>
                 {% elif g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}
                 {% if g.attempts|length > 1 or g.overridden %}
-                <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="small" style="margin-top:4px">
+                {#- a pencil that opens "How should ava’s score on “Quiz 1” count?" (static/js/retakerule.js),
+                    never a drop-down that saves the moment it's picked (the owner, 2026-10-19); the
+                    hidden list is only where the dialog's choices come from #}
+                {% set now_rule = (short_rules.get(g.rule_key, g.rule_key) ~ ' (just for ' ~ student.shown_name ~ ')') if g.overridden else (short_rules.get(g.vquiz.retake_rule, g.vquiz.retake_rule) ~ ' (the quiz’s rule)') %}
+                <form method="post" action="{{ url_for('qgen.set_retake_rule', cqid=g.latest.id) }}" class="inline-form retake-rule-form">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="rule" aria-label="How {{ student.shown_name }}'s attempts count" onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()" style="min-height:32px;padding:2px 6px">
+                  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-rule-edit data-head="How should {{ student.shown_name }}’s score on “{{ g.vquiz.title }}” count?" title="Counts: {{ now_rule }}. Change it">{{ icon_label('lc-pencil', 'Change how the score counts') }}</button>
+                  <select name="rule" hidden aria-label="How {{ student.shown_name }}'s attempts count">
                     <option value="" {{ 'selected' if not g.overridden }} title="{{ rules[g.vquiz.retake_rule] }}">Quiz rule ({{ short_rules.get(g.vquiz.retake_rule, g.vquiz.retake_rule)|lower }})</option>
                     {% for key, label in rules.items() %}<option value="{{ key }}" title="{{ label }}" {{ 'selected' if g.overridden and g.rule_key == key }}>{{ short_rules.get(key, label) }}</option>{% endfor %}
                   </select>

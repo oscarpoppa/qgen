@@ -31,8 +31,9 @@
   {% endif %}
 {% endmacro %}
 
-{# Drag-and-drop image picker. `f` is a text field holding the image file name. #}
-{% macro image_drop(f, help='Drag a picture here, or click to choose one.') %}
+{# Drag-and-drop image picker. `f` is a text field holding the image file name. Its words look like
+   the Pictures page's drop zone: msg in bold, hint under it in small gray (the owner, 2026-10-19) #}
+{% macro image_drop(f, msg='Drop a picture here', hint='or click to choose one.') %}
   <div class="field{% if f.errors %} has-error{% endif %}">
     {{ f.label }}
     <div class="dropzone" data-target="{{ f.id }}" data-upload="{{ url_for('upload.upload_json') }}" data-list="{{ url_for('upload.image_list') }}" tabindex="0" role="button"
@@ -40,7 +41,8 @@
       <img class="dz-preview" alt="" {% if f.data %}src="{{ url_for('static', filename=f.data) }}"{% else %}hidden{% endif %}>
       <div class="dz-text">
         <strong class="dz-name">{{ f.data or '' }}</strong>
-        <span class="dz-hint">{{ help }}</span>
+        <strong class="dz-msg">{{ msg }}</strong>
+        <span class="dz-hint">{{ hint }}</span>
       </div>
       <input type="file" accept="image/*" hidden>
     </div>

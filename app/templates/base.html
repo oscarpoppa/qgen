@@ -133,9 +133,15 @@
                 {# the Messages page: every conversation, by folder (the owner, 2026-10-16) #}
                 {#- (no Messages page: it's the Messages panel now, from the Messages button: the owner, 2026-10-17) #}
                 <hr class="menu-rule">
-                {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
-                {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
-                {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
+                {#- Files, a submenu of its three pages (the owner, 2026-10-19; they were three lines here) #}
+                <details class="menu submenu">
+                  <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }} title="Upload files, and see the pictures and other files you uploaded">Files</summary>
+                  <div class="menu-list">
+                    {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
+                    {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
+                    {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
+                  </div>
+                </details>
                 {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
                 {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
                 {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn't have">Scan workbook pages</span>{% endif %}
@@ -303,7 +309,8 @@
     /* Esc closes an open drop-down, then the phone menu */
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-      var menu = document.querySelector('details.menu[open]'), nav = document.getElementById('nav');
+      //(the innermost first: More ▸ Files closes Files, then More)
+      var open = document.querySelectorAll('details.menu[open]'), menu = open[open.length - 1], nav = document.getElementById('nav');
       if (menu) { menu.removeAttribute('open'); menu.querySelector('summary').focus(); return; }
       if (nav && nav.classList.contains('open')) {
         nav.classList.remove('open');
@@ -320,6 +327,7 @@
   <script src="{{ asset('js/tips.js') }}" defer></script>
   <script src="{{ asset('js/confirm.js') }}" defer></script>
   <script src="{{ asset('js/takeout.js') }}" defer></script>
+  <script src="{{ asset('js/retakerule.js') }}" defer></script>
   <script src="{{ asset('js/filebar.js') }}" defer></script>
   <script src="{{ asset('js/checked.js') }}" defer></script>
   <script src="{{ asset('js/masonry.js') }}" defer></script>

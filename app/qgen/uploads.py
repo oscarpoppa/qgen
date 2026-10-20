@@ -21,9 +21,17 @@ def sync():
     after an upload) can both add the same new file: the second one's insert is then simply
     dropped (the owner, 2026-10-19, from the code critic)."""
     from sqlalchemy.exc import IntegrityError
-    from app.upload.routes import static_files, static_dir
+    from app.upload.routes import static_files, static_dir, trythumb, is_image_name
     files = static_files()
     thumbs = {f[2:] for f in files if f.startswith('T_')}
+    #a picture put there without one (copied in, not uploaded) gets its thumbnail now, so it's
+    #on Pictures, not Other files (the owner, 2026-10-19); one that won't open stays an other file
+    missing = [f for f in files if not f.startswith('T_') and f not in thumbs and is_image_name(f)]
+    for f in missing:
+        trythumb(static_dir(), f, quiet=True)
+    if missing:
+        files = static_files()
+        thumbs = {f[2:] for f in files if f.startswith('T_')}
     real = {f: f in thumbs for f in files if not f.startswith('T_') and len(f) <= NAME_MAX}
     rows = {u.name: u for u in UploadFile.query.all()}
     for name, picture in real.items():

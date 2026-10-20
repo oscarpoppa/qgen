@@ -19,19 +19,16 @@
       <div class="help">The problems and quizzes go in a folder with this name.</div>
     </div>
     <div class="field">
-      <label class="label" for="scan-pages">Pages</label>
+      <label class="label" for="scan-pages">Images</label>
       {#- one picture, several, a PDF, or a whole folder; dropped on the box like Pictures' (the owner, 2026-10-19) #}
-      <div class="scan-drop" id="scan-drop" title="Drop pages here: a picture, several, a PDF or a whole folder">
-        <strong style="font-size:1.1rem">Drop pages here</strong>
-      <div class="btn-row scan-pick">
-        {#- (the browser's own picker hidden behind a button like Choose a folder, the same size: the owner, 2026-10-19) #}
-        <button type="button" class="btn btn-secondary btn-sm" id="scan-files-btn" title="Choose one or more photos, or a PDF">Choose files</button>
-        <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple hidden>
-        <span class="muted small">or</span>
-        <button type="button" class="btn btn-secondary btn-sm" id="scan-folder-btn" title="Scan every photo and PDF in a folder, in file-name order">Choose a folder</button>
-        <input type="file" id="scan-folder" name="folder_pages" webkitdirectory multiple hidden>
-        <input type="hidden" name="from_folder" id="scan-folder-name" value="">
-      </div>
+      <div class="scan-drop" id="scan-drop" tabindex="0" role="button" aria-label="Choose pages: press Enter, or drop them here" title="Drop pages here: a picture, several, a PDF or a whole folder">
+        <strong class="dz-msg">Drop images here</strong>
+        <span class="dz-hint">or click to choose. You can add several at once.</span>
+      {#- (no Choose files / Choose a folder buttons: a click or tap on the box chooses files, a
+          folder is dropped: the owner, 2026-10-19) #}
+      <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple hidden>
+      <input type="file" id="scan-folder" name="folder_pages" webkitdirectory multiple hidden>
+      <input type="hidden" name="from_folder" id="scan-folder-name" value="">
       {#- small pictures of what was dropped or chosen (the owner, 2026-10-19) #}
       <div class="scan-drop-thumbs" id="scan-thumbs" hidden></div>
       </div>
@@ -98,6 +95,13 @@
         var img = document.createElement('img'); var u = URL.createObjectURL(f); urls.push(u); img.src = u; img.alt = ''; tile.appendChild(img);
       }
       var cap = document.createElement('figcaption'); cap.textContent = f.name; tile.appendChild(cap);
+      //(a bare ✕ takes it out before Upload and read, as on Upload files: the owner, 2026-10-19)
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'dz-tile-x'; x.textContent = '\u2715';
+      x.title = 'Take \u201c' + f.name + '\u201d out (it isn\u2019t uploaded)';
+      x.setAttribute('aria-label', x.title);
+      x.addEventListener('click', function (e) { e.stopPropagation(); removeFile(f); });
+      tile.appendChild(x);
       thumbs.appendChild(tile);
     });
     if (fs.length > 12) {
@@ -105,8 +109,26 @@
     }
     thumbs.hidden = !fs.length;
   }
-  document.getElementById('scan-folder-btn').addEventListener('click', function () { folder.click(); });
-  document.getElementById('scan-files-btn').addEventListener('click', function () { files.click(); });
+  //one file out of what's chosen or dropped (its ✕): the rest stay, in the same order
+  function removeFile(f) {
+    var fromFolder = folder.files.length > 0, inp = fromFolder ? folder : files;
+    var dt = new DataTransfer();
+    Array.prototype.forEach.call(inp.files, function (g) { if (g !== f) dt.items.add(g); });
+    inp.files = dt.files;
+    if (!fromFolder) { files.dispatchEvent(new Event('change')); return; }
+    var name = document.getElementById('scan-folder-name').value || 'the folder';
+    var n = Array.prototype.filter.call(folder.files, usable).length;
+    if (!n) { folder.value = ''; document.getElementById('scan-folder-name').value = ''; chosen.hidden = true; showThumbs([], false); return; }
+    showThumbs(folder.files, true);
+    chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from \u201c' + name + '\u201d';
+  }
+  //a click or tap on the box (not on its thumbnails' "more") chooses files, as the Pictures drop
+  //zones do (the owner, 2026-10-19)
+  var box = document.getElementById('scan-drop');
+  box.addEventListener('click', function (e) { if (e.target !== files) files.click(); });
+  box.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); files.click(); }
+  });
   folder.addEventListener('change', function () {
     if (!folder.files.length) return;
     files.value = '';
@@ -174,7 +196,7 @@ document.getElementById('scan-upload').addEventListener('submit', function (e) {
   var picked = form.pages.files.length || document.getElementById('scan-folder').files.length;
   if (!form.name.value.trim() || !picked) {
     e.preventDefault();
-    (form.name.value.trim() ? document.getElementById('scan-files-btn') : form.name).focus();
+    (form.name.value.trim() ? document.getElementById('scan-drop') : form.name).focus();
     return;
   }
   document.getElementById('scan-go').disabled = true;

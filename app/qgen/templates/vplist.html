@@ -100,9 +100,11 @@
 {% endif %}
 {% if quizzes %}
 {# Add to a quiz: one row's problem (its icon) or the checked ones (the bar's button) #}
-{# laid out and working like the Assign dialogs (the owner, 2026-10-15): what happens in a box, a
-   Quizzes folder to narrow the list, Check all / Uncheck all, any number of quizzes checked #}
-<dialog class="ask ask-many add-quiz assign-many" id="add-quiz-dialog" aria-labelledby="add-quiz-head">
+{# laid out and working like the Assign dialogs (the owner, 2026-10-15); the quizzes: the standard
+   picker, the Quizzes page's folders as the folder list, the filter, and checking on a line of its
+   own, like the Assign dialogs (the owner, 2026-10-19; it was a folder drop-down) #}
+{% from "_macros.html" import filter_bar with context %}
+<dialog class="ask ask-many add-quiz assign-many pick-dialog" id="add-quiz-dialog" aria-labelledby="add-quiz-head">
   <form method="post" action="{{ url_for('qgen.add_to_quiz') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
@@ -110,25 +112,29 @@
       <span class="muted small">Check the quizzes to add to.</span></p>
     <div class="assign-defaults small">
       <strong>What happens:</strong>
-      <ul><li>added at the end of each quiz</li><li>what’s already in a quiz stays as it is</li>
-        <li>a problem already in a quiz isn’t added twice</li><li>quizzes already assigned keep the version they were given</li></ul>
+      <ul><li>Added at the end of each quiz</li><li>What’s already in a quiz stays as it is</li>
+        <li>A problem already in a quiz isn’t added twice</li><li>Quizzes already assigned keep the version they were given</li></ul>
     </div>
-    {% set add_quizzes, add_folders = quiz_choices() %}
-    <div class="assign-many-tools">
-      <label class="sr-only" for="add-quiz-folder">Show</label>
-      <select id="add-quiz-folder" title="Show only the quizzes in a folder">
-        <option value="">All quizzes</option>
-        {% for g, depth in add_folders %}<option value="{{ g.id }}">{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}{{ g.title }}</option>{% endfor %}
-      </select>
-      <button type="button" class="btn btn-secondary btn-xs" data-quizzes="all" title="Check every quiz shown">Check all</button>
-      <button type="button" class="btn btn-secondary btn-xs" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
-      <span class="muted small" data-quiz-count></span>
+    {% set aq_quizzes, aq_tree = assign_quizzes() %}
+    <div class="field pick-people" id="add-quiz-pick">
+      {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='li', id='add-quiz-bar') }}
+      <div class="btn-row small write-to-checks">
+        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="all" title="Check every quiz in the list below (the folder chosen, and the names that match)">Check all shown</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
+        <span class="muted small" data-quiz-count aria-live="polite">0 checked</span>
+      </div>
+      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+           data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ aq_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          <ul class="choice-list pick-list add-quiz-list">
+            {% for q in aq_quizzes %}<li data-box="quiz:{{ q.id }}"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"><label for="aq-{{ q.id }}">{{ q.title }}</label></li>{% endfor %}
+          </ul>
+        </div>
+      </div>
     </div>
-    <ul class="assign-many-people add-quiz-list">
-      {% for q, folders in add_quizzes %}<li data-folders="{{ folders }}"><label><input type="checkbox" name="quiz" value="{{ q.id }}"> {{ q.title }}</label></li>{% endfor %}
-    </ul>
     <p class="error small" data-quiz-error hidden>Check at least one quiz first.</p>
-    <div data-items></div>
+    <div data-problem-ids></div>
     {# or a new quiz with them in it (quiz_pick.js fills in which, and the way back) #}
     <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make a new quiz with {{ 'them' }} instead</a></p>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Add to the end of the checked quizzes">Add</button></div>

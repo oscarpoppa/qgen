@@ -2,7 +2,6 @@
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button, back_home with context %}
-{% from "_macros.html" import field %}
 
 {% block content %}
 <div class="page-head">
@@ -14,25 +13,24 @@
   </div>
 </div>
 
+{#- one drop box for every kind of file: pictures go to Pictures, anything else to Other files
+    (the owner, 2026-10-19; it was a Pictures drop box and an Other files Browse… form) #}
 <div class="card">
-  <h2>Pictures</h2>
-  <div class="dropzone big" data-multiple data-upload="{{ url_for('upload.upload_json') }}" tabindex="0" role="button"
-       aria-label="Upload pictures: drop files here or press Enter to choose them"
-       title="Upload pictures: drop files here or click to choose them">
+  <div class="dropzone big" data-multiple data-stage-btn="#upload-go" data-upload="{{ url_for('upload.upload_json', any=1) }}" tabindex="0" role="button"
+       aria-label="Upload files: drop them here or press Enter to choose them"
+       title="Upload files: drop them here or click to choose them">
     <div class="dz-text">
-      <strong style="font-size:1.1rem">Drop pictures here</strong>
+      <strong class="dz-msg">Drop files here</strong>
       <span class="dz-hint">or click to choose. You can add several at once.</span>
     </div>
-    <input type="file" accept="image/*" hidden>
+    <input type="file" hidden>
+    {#- what was just saved, inside the box like Scan workbook pages' thumbnails: each with its
+        thumbnail (or a file tile) and where it went (dropzone.js; the owner, 2026-10-19: a drop with
+        no sign of it looked like nothing happened) #}
+    <div class="dz-done" data-dz-done data-pictures="{{ url_for('upload.images') }}" data-files="{{ url_for('upload.nonimages') }}" hidden></div>
   </div>
-</div>
-
-<div class="card">
-  <h2>Other files</h2>
-  <form method="post" enctype="multipart/form-data" novalidate>
-    {{ form.hidden_tag() }}
-    {{ field(form.thefile) }}
-    {{ form.submit(class='btn', value='Upload', title='Upload the file chosen above') }}
-  </form>
+  {#- two steps, like Scan workbook pages: drop or choose (each can be taken out with its ✕), then
+      Upload sends them all (the owner, 2026-10-19); grayed until something waits (dropzone.js) #}
+  <div class="btn-row" style="margin-top:12px"><button type="button" class="btn" id="upload-go" disabled title="Drop or choose files first">Upload</button></div>
 </div>
 {% endblock %}

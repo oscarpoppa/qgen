@@ -109,7 +109,7 @@
     function ask(ids, what) {
       if (!dialog || !ids.length) return;
       dialog.querySelector('[data-what]').textContent = what;
-      var box = dialog.querySelector('[data-items]');
+      var box = dialog.querySelector('[data-problem-ids]');
       box.innerHTML = '';
       ids.forEach(function (id) {
         var i = document.createElement('input');
@@ -123,30 +123,15 @@
         make.href = make.getAttribute('href').split('?')[0] + '?problems=' + ids.join(',') + '&next=' + encodeURIComponent(location.pathname + location.search);
       }
       dialog.showModal();
-      dialog.querySelector('select').focus();
+      var first = dialog.querySelector('.filter-list:not([hidden])') || dialog.querySelector('input[name=quiz]');
+      if (first) first.focus();
     }
     if (dialog) {
       dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });
-      //(like the Assign dialogs: a Quizzes folder narrows the list; Check all / Uncheck all; as
-      //many quizzes as wanted)
-      var only = dialog.querySelector('#add-quiz-folder'), err = dialog.querySelector('[data-quiz-error]');
+      //(like the Assign dialogs: the Quizzes page's folder list and the filter narrow the list
+      //(folderfilter.js, filter.js); Check all shown / Uncheck all; as many quizzes as wanted)
+      var err = dialog.querySelector('[data-quiz-error]');
       var rows = Array.prototype.slice.call(dialog.querySelectorAll('.add-quiz-list > li'));
-      //(each folder in the drop-down says how many it holds, and the first choice the whole
-      //list's count: the owner, 2026-10-15)
-      function countFolders(sel, rows) {
-        if (!sel || sel.dataset.counted) return;
-        sel.dataset.counted = '1';
-        Array.prototype.forEach.call(sel.options, function (o) {
-          var n = o.value ? rows.filter(function (li) { return (' ' + li.dataset.folders + ' ').indexOf(' ' + o.value + ' ') !== -1; }).length : rows.length;
-          o.textContent = o.textContent + ' (' + n + ')';
-        });
-      }
-      countFolders(only, rows);
-
-      if (only) only.addEventListener('change', function () {
-        var f = only.value;
-        rows.forEach(function (li) { li.hidden = !!f && (' ' + li.dataset.folders + ' ').indexOf(' ' + f + ' ') === -1; });
-      });
       var count = dialog.querySelector('[data-quiz-count]');
       function sync() {
         var n = dialog.querySelectorAll('input[name=quiz]:checked').length;
@@ -155,7 +140,7 @@
       }
       dialog.addEventListener('change', sync);
       dialog.querySelector('[data-quizzes="all"]').addEventListener('click', function () {
-        rows.forEach(function (li) { if (!li.hidden) li.querySelector('input').checked = true; }); sync();
+        rows.forEach(function (li) { if (li.offsetParent) li.querySelector('input').checked = true; }); sync();
       });
       dialog.querySelector('[data-quizzes="none"]').addEventListener('click', function () {
         rows.forEach(function (li) { li.querySelector('input').checked = false; }); sync();

@@ -1,0 +1,30 @@
+{# Choose pictures already uploaded, for the problem editor (static/js/pickpictures.js; the owner,
+   2026-10-19): the Pictures page's folders as the folder list, the filter, checking on a line of
+   its own, as in "Write to…" and the Assign dialogs. The card's button checks several (each gets
+   a slot); a slot's own button picks one, to replace its picture. #}
+{% from "_macros.html" import filter_bar with context %}
+{% set pp_pictures, pp_tree = pick_pictures() %}
+<dialog class="ask ask-many assign-many pick-dialog pick-pictures-dialog" id="pick-pictures-dialog" aria-labelledby="pick-pictures-head">
+  <p><strong id="pick-pictures-head" data-head>Choose pictures</strong></p>
+  {% if pp_pictures %}
+  <div class="field pick-people" id="pick-pictures-pick">
+    {{ filter_bar('#pick-pictures-pick .folder-filter-list', 'picture', 'pictures', items='li', id='pick-pictures-bar') }}
+    <div class="btn-row small write-to-checks" data-many-only>
+      <button type="button" class="btn btn-secondary btn-sm" data-pics="all" title="Check every picture in the list below (the folder chosen, and the names that match)">Check all shown</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-pics="none" title="Uncheck every picture">Uncheck all</button>
+      <span class="muted small" data-pics-count aria-live="polite">0 checked</span>
+    </div>
+    <div class="folder-filter" data-folder-filter data-prefix="pic:" data-all-label="All pictures" data-main-label="Uncategorized"
+         data-unit="picture" data-units="pictures" data-remember="pick-pictures" data-tools-home="#pick-pictures-bar" data-style="list">
+      <script type="application/json" class="folder-filter-tree">{{ pp_tree|tojson }}</script>
+      <div class="folder-filter-list">
+        <ul class="choice-list pick-list pic-pick-list">
+          {% for u in pp_pictures %}<li data-box="pic:{{ u.id }}"><input type="checkbox" name="pick-pic" value="{{ u.name }}" data-url="{{ url_for('static', filename=u.name) }}" id="pp-{{ u.id }}"><label for="pp-{{ u.id }}"><img src="{{ url_for('static', filename='T_' ~ u.name) }}" alt="" loading="lazy" width="40" height="40"> {{ u.name }}</label></li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% else %}<p class="muted small">No pictures uploaded yet.</p>{% endif %}
+  <p class="error small" data-pics-error hidden>Check a picture first.</p>
+  <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button type="button" class="btn" data-ok>Add</button></div>
+</dialog>

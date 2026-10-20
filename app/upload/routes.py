@@ -171,19 +171,37 @@ def upload_json():
     fname = secure_filename(ufile.filename)
     if not fname:
         return jsonify(ok=False, error='That file name can\'t be used.'), 400
-    #only real pictures, checked by opening them
+    #only real pictures, checked by opening them; with ?any=1 (Upload files' one drop box: the
+    #owner, 2026-10-19) anything else is kept too, as an other file (no thumbnail)
+    anyfile = request.args.get('any') == '1'
     try:
         im = Image.open(ufile.stream)
         im.verify()
+        picture = True
     except Exception:
-        return jsonify(ok=False, error='That doesn\'t look like a picture.'), 400
+        if not anyfile:
+            return jsonify(ok=False, error='That doesn\'t look like a picture.'), 400
+        picture = False
     ufile.stream.seek(0)
     fname = unique_name(fname)
     ufile.save(static_dir() + fname)
-    trythumb(static_dir(), fname, quiet=True)
+    if picture:
+        trythumb(static_dir(), fname, quiet=True)
+    #(a dropped folder's pictures go in a Pictures folder of its name, made or reused: the owner,
+    #2026-10-19)
+    folder = ' '.join((request.form.get('folder') or '').split())[:60]
+    if folder:
+        from app.qgen.uploads import file_in_folder
+        try:
+            file_in_folder(fname, folder)
+        except Exception:  # (a name that can't be a folder: the picture is still uploaded)
+            from app import db
+            db.session.rollback()
+            current_app.logger.exception('could not file {} in folder {!r}'.format(fname, folder))
     files_changed()
     current_app.logger.info('{} uploaded {}'.format(current_user.username, fname))
-    return jsonify(ok=True, name=fname, url=url_for('static', filename=fname))
+    return jsonify(ok=True, name=fname, url=url_for('static', filename=fname), picture=picture,
+                   thumb=url_for('static', filename='T_' + fname) if picture else None)
 
 #admin-only list of uploaded pictures for the picker
 @upload_bp.route('/upload/imagelist', methods=['GET'])

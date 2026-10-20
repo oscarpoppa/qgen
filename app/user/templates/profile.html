@@ -32,7 +32,7 @@
       <div class="dropzone" data-upload="{{ url_for('user.upload_avatar') }}" tabindex="0" role="button"
            aria-label="Upload your picture: drop a file here or press Enter to choose one"
            title="Upload your picture: drop a file here or click to choose one">
-        <div class="dz-text"><strong>Drop a picture here</strong><span class="dz-hint">or click to choose one. It's cropped to a square.</span></div>
+        <div class="dz-text"><strong class="dz-msg">Drop a picture here</strong><span class="dz-hint">or click to choose one. It's cropped to a square.</span></div>
         <input type="file" accept="image/*" hidden>
       </div>
       {% if current_user.avatar %}
