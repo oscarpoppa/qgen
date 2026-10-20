@@ -44,7 +44,8 @@
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
             {% if in_archive %}
             {# the Archive's Problems (the owner, 2026-10-16): Restore, History and Delete for good #}
-            <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form">
+            <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form"
+                  data-confirm="Restore “{{ item.title or 'Untitled' }}”? It goes back on the Problems page." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title or 'Untitled' }}” back on the Problems page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {% if item.cproblems %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
             {% if blockers[item.id] %}{{ slot('Delete for good', blockers[item.id], 'btn btn-danger btn-sm', 'lc-trash') }}

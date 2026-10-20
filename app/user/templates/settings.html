@@ -18,4 +18,8 @@
   {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
   {{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}
 </form>
+{#- the logo's and tab picture's "Choose one already uploaded": the same dialog as the problem
+    editor's (the owner, 2026-10-19) #}
+{% include "_dialog_pick_pictures.html" %}
 {% endblock %}
+{% block scripts %}<script src="{{ asset('js/pickpictures.js') }}"></script>{% endblock %}

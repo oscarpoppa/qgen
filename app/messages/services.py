@@ -143,7 +143,18 @@ def _newest(q, limit, unread=None):
 
 
 def _oldest_first(q, limit, unread=None):
-    return list(reversed(_newest(q, limit, unread)))
+    return _with_copies(list(reversed(_newest(q, limit, unread))))
+
+
+def _with_copies(items):
+    """Each announcement sent to several students says how many got it (`.copies`), for its
+    ✕'s question "From all 12 students" (the owner, 2026-10-19); everything else 1."""
+    batches = {m.batch for m in items if m.batch and m.kind == 'announcement'}
+    counts = dict(db.session.query(Message.batch, db.func.count(Message.id))
+                  .filter(Message.batch.in_(batches)).group_by(Message.batch).all()) if batches else {}
+    for m in items:
+        m.copies = counts.get(m.batch, 1) if m.batch and m.kind == 'announcement' else 1
+    return items
 
 
 def unread_by_student():

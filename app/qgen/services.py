@@ -1090,6 +1090,35 @@ def student_folder(user):
     return folder
 
 
+DELETED_MARK = ' (deleted)'
+
+
+def _deleted_name(name, folder):
+    """“ava (deleted)”, or “ava (deleted 2)” when that's taken: a deleted account's Archive folder,
+    so a new account with the same name doesn't look like the same person (the owner, 2026-10-19)."""
+    taken = {(f.name or '').lower() for f in ArchiveFolder.query.filter_by(removed=False) if f is not folder}
+    n = 1
+    while True:
+        mark = DELETED_MARK if n == 1 else ' (deleted {})'.format(n)
+        cand = (name or '')[:FOLDER_NAME_MAX - len(mark)] + mark
+        if cand.lower() not in taken:
+            return cand
+        n += 1
+
+
+def mark_deleted_folder(user):
+    """The Archive folder of an account about to be deleted gets “ (deleted)” on its name, unless
+    the teacher gave it a name of its own. Not committed."""
+    f = ArchiveFolder.query.filter_by(student_id=user.id).first()
+    if f is None:
+        return
+    if not f.own_name and '(deleted' not in (f.name or ''):
+        f.name = _deleted_name(f.name, f)
+    #(tied to no one from now on, whatever the database does on the delete: a new account can
+    #never take it over)
+    f.student_id = None
+
+
 def ensure_archive_folders():
     """Every student has a folder (a new student gets one the first time the Archive is
     shown); one the teacher removed isn't made again here. A student's folder follows their
@@ -1123,6 +1152,16 @@ def ensure_archive_folders():
             a.folder_id = home.id
         db.session.delete(old)
         changed = True
+    #(a deleted account's folder from before “ (deleted)” was added: tied to no one, named after
+    #the person, holding only attempts of deleted accounts with that name: the owner, 2026-10-19)
+    for old in ArchiveFolder.query.filter(ArchiveFolder.student_id.is_(None), ArchiveFolder.removed.is_(False),
+                                          ArchiveFolder.own_name.is_(False)).all():
+        if '(deleted' in (old.name or '') or ArchiveFolder.query.filter_by(parent_id=old.id).first() is not None:
+            continue
+        inside = ArchivedAttempt.query.filter_by(folder_id=old.id).all()
+        if inside and all(a.student_id is None and (a.student_name or '').lower() == (old.name or '').lower() for a in inside):
+            old.name = _deleted_name(old.name, old)
+            changed = True
     if changed:
         try:
             db.session.commit()

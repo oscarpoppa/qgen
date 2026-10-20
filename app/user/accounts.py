@@ -11,6 +11,8 @@ def delete_account(usr, by):
     from .models import User
     name = usr.username
     S.archive_student(usr, by=by)
+    #(its Archive folder becomes “ava (deleted)”: a new “ava” gets a folder of her own)
+    S.mark_deleted_folder(usr)
     avatars.remove(usr, commit=False)
     remove_user_jobs(usr)  # their unfinished workbook scans
     User.query.filter_by(id=usr.id).delete()

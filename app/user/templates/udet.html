@@ -39,7 +39,8 @@
           <td class="actions">
             {% if in_archive %}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
-            <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form">
+            <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form"
+                  data-confirm="Restore {{ item.shown_name }}’s account? He/she can sign in again." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {{ slot('Student page', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-user') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good',
@@ -95,14 +96,14 @@
           </select>
           <button class="btn btn-sm" name="action" value="add" title="Move the checked people to a folder (or copy them there)">Move to folder</button>
           <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked people out of the chosen folder">Take out of folder</button>
-          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
+          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
           {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
         {% else %}
           {#- (no folders yet: grayed, with why, never left out: the owner, 2026-10-19) #}
           <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check people to put in it.</span>
           <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
           <button type="button" class="btn btn-secondary btn-sm" data-no-folder="Take out of folder: there are no folders yet">Take out of folder</button>
-          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
+          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
           {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
         {% endif %}
       </form></div>{% endif %}

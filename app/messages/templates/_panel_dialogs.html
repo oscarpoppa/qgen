@@ -11,7 +11,8 @@
     {% for m in pinned %}
       <li class="hint"><span class="hint-icon" aria-hidden="true">{{ icon('pin') }}</span>
         <span>{{ m.body }} <span class="small muted">· {{ m.created|when('short') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name if m.student else 'someone' }}{% endif %}</span></span>
-        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
+        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}"
+              data-confirm="Unpin this message? It stops showing at the top of {{ 'every student’s' if m.kind == 'announcement' else (m.student.shown_name if m.student else 'the student') ~ '’s' }} messages." data-confirm-ok="Unpin">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
           <button class="icon-link" title="Unpin: stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
         </form>

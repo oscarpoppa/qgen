@@ -322,6 +322,16 @@
     var form = document.getElementById('file-form');
     var ids = window.qgenCheckedIds ? window.qgenCheckedIds() : [];
     if (!ids.length) return;
+    //(asks first: "Restore the 3 checked problems? They go back on the Problems page."; the
+    //owner, 2026-10-19)
+    var q = ids.length === 1 ? 'Restore the checked ' + b.dataset.one + '? ' + b.dataset.thenOne
+                             : 'Restore the ' + ids.length + ' checked ' + b.dataset.noun + '? ' + b.dataset.then;
+    (window.qgenAsk ? window.qgenAsk(q, 'Restore') : Promise.resolve(true)).then(function (yes) {
+      if (yes) send(ids);
+    });
+  });
+  function send(ids) {
+    var form = document.getElementById('file-form');
     var f = document.createElement('form');
     f.method = 'post'; f.action = b.dataset.url; f.hidden = true;
     function hidden(k, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); }
@@ -332,5 +342,5 @@
     document.body.appendChild(f);
     if (window.qgenCheckedClear) window.qgenCheckedClear();
     f.submit();
-  });
+  }
 })();

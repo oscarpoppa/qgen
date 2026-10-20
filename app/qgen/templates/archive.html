@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_archive_sections.html" import archive_switch %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, move_mini, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
@@ -37,7 +37,10 @@
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
               <td data-label="When" class="small when-col row-more" data-sort="{{ a.archived_at.isoformat() if a.archived_at else '' }}">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
                 <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
-              <td data-label="Folder">{{ move_menu(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
+              {#- the folder it's in, then the bare folder icon that opens the Move dialog, as on My
+                  quizzes (the owner, 2026-10-19; it was a drop-down that moved at once) #}
+              <td data-label="Folder"><span class="nowrap">{{ fk.name(home) if home else fk.main_label }}</span>
+                {{ move_mini(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}</td>
               <td class="actions">
                 <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when archived">{{ icon_label('lc-eye', 'View') }}</a>
                 {% if blocker %}

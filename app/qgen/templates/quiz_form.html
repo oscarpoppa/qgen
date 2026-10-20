@@ -130,11 +130,14 @@
 </div>
 </div>
 {% include "_dialog_assign_quizzes.html" %}
+{#- the quiz picture's "Choose one already uploaded": the same dialog as the problem editor's (the owner, 2026-10-19) #}
+{% include "_dialog_pick_pictures.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/unsaved.js') }}"></script><script src="{{ asset('js/assign_many.js') }}"></script>
 <script src="{{ asset('js/quiz_pick.js') }}"></script>
 <script src="{{ asset('js/quiz_form.js') }}"></script>
+<script src="{{ asset('js/pickpictures.js') }}"></script>
 <script src="{{ asset('js/subjects.js') }}"></script>
 <script src="{{ asset('js/helper.js') }}"></script>
 {% endblock %}

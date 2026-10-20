@@ -36,7 +36,8 @@
         <input type="file" accept="image/*" hidden>
       </div>
       {% if current_user.avatar %}
-      <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px">
+      <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px"
+            data-confirm="Remove your picture? Your initials show instead." data-confirm-ok="Remove picture">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove my picture</button>
       </form>

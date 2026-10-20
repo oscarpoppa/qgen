@@ -52,7 +52,8 @@
           <td class="actions">
             {% if in_archive %}
             {# the Archive's Quizzes (the owner, 2026-10-16): Restore, View, History and Delete for good #}
-            <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=item.id) }}" class="inline-form">
+            <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=item.id) }}" class="inline-form"
+                  data-confirm="Restore “{{ item.title }}”? It goes back on the Quizzes page and Assign." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title }}” back on the Quizzes page and Assign">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student's version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student's attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
