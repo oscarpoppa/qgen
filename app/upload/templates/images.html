@@ -1,27 +1,9 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar with context %}
-{% from "_macros.html" import back_button, back_home with context %}
-{% from "_macros.html" import post_button with context %}
-
+{% from "_upload_list.html" import upload_page with context %}
+{# the folder list beside the pictures needs the room: the whole width of the window #}
+{% block main_class %} container-wide{% endblock %}
 {% block body_attrs %}{{ watch('files') }}{% endblock %}
 {% block content %}
-<div class="page-head">
-  <h1>Pictures</h1>
-  <div class="actions">{{ back_home() }}<a class="btn" href="{{ url_for('upload.upload') }}" title="Add new pictures to use in problems">Upload pictures</a></div>
-</div>
-{% if imgs %}
-  {% if imgs|length > 5 %}{{ filter_bar('#image-list', 'picture', 'pictures', items='.thumb', url=true) }}{% endif %}
-  {#- (a panel down to the window's bottom that scrolls inside itself, static/js/fitpanel.js: the owner, 2026-10-17) #}
-  <div class="thumbs" id="image-list" data-fit-window>
-  {% for pair in imgs %}
-    <div class="thumb" data-name="{{ pair[1]|lower }}">
-      <a href="{{ url_for('static', filename=pair[1]) }}" target="_blank" rel="noopener" title="Open {{ pair[1] }} full size in a new tab"><img src="{{ url_for('static', filename=pair[0]) }}" alt="{{ pair[1] }}"></a>
-      <div class="name">{{ pair[1] }}</div>
-      {{ post_button(url_for('upload.delimg', fname=pair[1]), 'Delete', 'btn btn-danger btn-sm', 'Delete the picture “' ~ (pair[1])|string ~ '”? Problems using it will show no picture.', tip='Delete “' ~ (pair[1])|string ~ '” for good (asks first)', icon='lc-trash') }}
-    </div>
-  {% endfor %}
-  </div>
-{% else %}
-  <div class="card empty"><span class="big">{{ icon('picture') }}</span>No pictures yet. <a href="{{ url_for('upload.upload') }}" title="Add pictures to use in problems">Upload some</a>.</div>
-{% endif %}
+{{ upload_page('Upload pictures', 'Add new pictures to use in problems', 'picture', 'No pictures yet.') }}
 {% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}

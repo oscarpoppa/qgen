@@ -35,8 +35,22 @@
       }
       b.setAttribute('aria-expanded', d.open && !searching ? 'true' : 'false');
     });
+    //(the open folder's pair right after its tab, beside its name, not at the row's end: the owner, 2026-10-19)
+    if (row.qgenPairs) {
+      var open = boxesIn(row).filter(function (d) { return d.open && !d.hidden; })[0];
+      var tab = open && open.qgenTab;
+      if (tab && tab.nextSibling !== row.qgenPairs) row.insertBefore(row.qgenPairs, tab.nextSibling);
+      //(on one line with it: when the pair would wrap by itself, the tab goes down with it)
+      row.querySelectorAll(':scope > .tab-pair-break').forEach(function (b) { b.remove(); });
+      if (tab && tab.offsetParent && row.qgenPairs.offsetTop - tab.offsetTop > 3) {
+        var brk = document.createElement('span');
+        brk.className = 'tab-break tab-pair-break';
+        brk.setAttribute('aria-hidden', 'true');
+        row.insertBefore(brk, tab);
+      }
+    }
   }
-  //the row's right end: the open folder's Expand all / Collapse all
+  //the open folder's Expand all / Collapse all (moved right after its tab by sync)
   function pairsOf(row) {
     if (!row.qgenPairs) {
       row.qgenPairs = document.createElement('span');

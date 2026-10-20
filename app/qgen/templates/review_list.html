@@ -8,7 +8,7 @@
    Results by quiz (the owner, 2026-10-17) #}
 {% macro quiz_group(vq) %}
   {% set rows = by_quiz[vq.id] %}
-  <details class="box card item-box grading-group" data-list data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}">
+  <details class="box card item-box grading-group" data-list data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}" data-weight="{{ rows|length }}">
     <summary>{{ box_label('note', quiz_link(vq), count_of(rows|length, 'attempt', 'attempts')) }}</summary>
     <div class="table-wrap stack">
       <table>
@@ -36,7 +36,7 @@
 {#- the button for the oldest waiting, under the folder list (the owner, 2026-10-17) #}
 {% set oldest_button %}<button type="button" class="btn btn-secondary btn-sm oldest-toggle" aria-controls="grading-oldest" aria-expanded="false" title="Show the {{ [5, waiting|length]|min }} attempts that have waited longest, whatever their quiz">{{ icon('hourglass') }} The {{ [5, waiting|length]|min }} oldest waiting</button>{% endset %}
 {% call folders_page(fk, under_side=oldest_button) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.item-box', boxes='details.sub-box', url=true) }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.item-box', boxes='details.sub-box', url=true, count_one='attempt', count_many='attempts') }}
     {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
   <div id="folder-items">

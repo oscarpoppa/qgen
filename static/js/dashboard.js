@@ -47,7 +47,31 @@
         function mine() { moved = true; }  // the reader scrolling meanwhile: theirs to keep
         ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(function (t) { window.addEventListener(t, mine, { passive: true }); });
         box.style.minHeight = box.offsetHeight + 'px';
+        //each box keeps its place while it's redrawn (the owner, 2026-10-18): the new boxes come in
+        //where the old ones were (their row spans, folded or open, the row of folded boxes), instead
+        //of first in plain grid order and then jumping into place; only a box whose size changed moves
+        var oldGrid = box.querySelector('.dash-grid'), keep = {}, chips = box.querySelector('.dash-chips');
+        var key = function (d) { return d.dataset.box || d.id; };
+        if (oldGrid) Array.prototype.forEach.call(oldGrid.children, function (d) {
+          if (key(d)) keep[key(d)] = { span: d.style.gridRowEnd, open: d.open, folded: d.classList.contains('dash-folded') };
+        });
         box.innerHTML = html;
+        var newGrid = box.querySelector('.dash-grid');
+        if (oldGrid && newGrid) {
+          if (oldGrid.classList.contains('masonry-on')) { newGrid.classList.add('masonry-on'); newGrid.dataset.gap = oldGrid.dataset.gap; }
+          Array.prototype.forEach.call(newGrid.children, function (d) {
+            var k = keep[key(d)];
+            if (!k) return;
+            if (k.span) d.style.gridRowEnd = k.span;
+            if (d.tagName === 'DETAILS') d.open = k.open;
+            d.classList.toggle('dash-folded', k.folded);
+          });
+          if (chips) newGrid.parentNode.insertBefore(chips, newGrid);  // (built again straight after: dashchips.js)
+        }
+        //and the sizes kept by hand (a list pulled longer, a card pulled taller) straight away, not
+        //a moment later, so a card doesn't shrink and grow again
+        if (window.qgenGripScan) window.qgenGripScan();
+        if (window.qgenElasticScan) window.qgenElasticScan();
         box.querySelectorAll('details[data-more]').forEach(function (d) { if (more[d.dataset.more]) d.open = true; });
         setTimeout(function () {
           ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(function (t) { window.removeEventListener(t, mine); });

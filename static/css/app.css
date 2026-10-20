@@ -148,6 +148,7 @@ main:focus { outline: none; }
 .nav-right .menu-list { left: auto; right: 0; }
 .menu-list a { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
 .menu-list a:hover { background: var(--surface-2); }
+.menu-list .menu-disabled { padding: 8px 10px; color: var(--muted); opacity: .6; cursor: not-allowed; }
 /* a line between groups in a drop-down (More: Archive | files | Settings) */
 .menu-rule { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
 
@@ -278,8 +279,9 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
   input[type=text], input[type=password], input[type=email], input[type=number], input[type=search], input:not([type]) { min-height: 44px !important; }
   .btn-sm, .btn-xs { padding-left: 12px; padding-right: 12px; }
   input[type=checkbox], input[type=radio] { width: 24px; height: 24px; }
-  /* the small round ones (?, ✕, pin) keep their shape, a little bigger */
-  button.tip, .msg-x, .msg-pin { width: 32px; height: 32px; }
+  /* the small round ones (✕, pin) keep their shape, a little bigger; the "?" stays small, its
+     invisible target made finger-sized instead */
+  .msg-x, .msg-pin { width: 32px; height: 32px; }
   .notice-x, .dock-close, .chip-x { min-height: 32px; min-width: 32px; }
   /* a quiz's answer keys and the calculator: finger-sized for children on tablets */
   .keypad .key, .math-btn, .calc-keys button { min-height: 44px; min-width: 44px; }
@@ -580,16 +582,19 @@ input[data-calendar=on]::-webkit-calendar-picker-indicator { display: none; }
 .label-line { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .label-line > label { margin: 0; font-weight: 600; }
 .tip-wrap { display: inline-flex; vertical-align: middle; }
+/* the help "?": small, light and unfilled, so it reads as a note beside a control, not another
+   control (the owner, 2026-10-19); its invisible target stays 24px (WCAG 2.5.8) */
 button.tip {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; min-height: 0; padding: 0; margin-left: 2px;  /* 24px: the smallest target WCAG 2.5.8 allows */
-  border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  background: var(--accent-soft); color: var(--accent);
-  font: 700 var(--fs-xs)/1 inherit; cursor: help; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
+  width: 16px; height: 16px; min-height: 0; padding: 0; margin-left: 3px;
+  border-radius: 50%; border: 1px solid color-mix(in srgb, var(--muted) 55%, transparent);
+  background: none; color: var(--muted);
+  font: 600 11px/1 inherit; cursor: help; flex: 0 0 auto;
 }
-button.tip:hover, button.tip[aria-expanded=true] { background: var(--accent); color: var(--accent-text); }
+button.tip::after { content: ""; position: absolute; inset: -4px; }
+button.tip:hover, button.tip[aria-expanded=true] { color: var(--accent); border-color: var(--accent); }
 /* a bigger invisible target for fingers */
-@media (pointer: coarse) { button.tip { position: relative; } button.tip::after { content: ""; position: absolute; inset: -10px; } }
+@media (pointer: coarse) { button.tip::after { inset: -10px; } }
 .tip-body {
   position: fixed; z-index: 1000; width: max-content; max-width: min(340px, calc(100vw - 24px));
   padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--border);
@@ -659,6 +664,8 @@ th .tip-wrap { margin-left: 4px; }
   display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--border);
 }
 .dock-pane { display: none; flex-direction: column; min-height: 0; flex: 1 1 0; }
+/* (no pane open: no empty panel showing for a moment while the page loads, before messages.js hides it) */
+html:not(.dock-notices):not(.dock-messages) .dock { display: none; }
 html.dock-notices #dock-notices, html.dock-messages #dock-messages { display: flex; }
 /* both open: notices take the top third, the conversation the rest, until the divider
    between them is dragged (--dock-split, set by messages.js) */
@@ -849,6 +856,10 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* My quizzes: your own folders, listed down the side; the chosen one's quizzes beside them */
 /* the folder list, its divider (static/js/splitter.js: drag to widen; remembered) and the list */
 .folders-layout { display: grid; grid-template-columns: var(--side-w, minmax(170px, 260px)) 12px minmax(0, 1fr); column-gap: 4px; row-gap: 20px; align-items: start; }
+/* (each in its own column from the start: the 12px one is for the drag handle grip.js adds, so before
+   the scripts run the list doesn't land in it, words one letter a line: the owner, 2026-10-19) */
+.folders-layout > .folder-side { grid-column: 1; }
+.folders-layout > .folder-main { grid-column: -2 / -1; }
 /* sticks below the top bar (also sticky), never under it */
 .folder-side { position: sticky; top: calc(var(--topbar-h) + 12px); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px;
   background: var(--surface); max-height: calc(100vh - var(--topbar-h) - 24px); overflow: auto; }
@@ -894,6 +905,10 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 /* beside a folder's title: Expand all / Collapse all, and Folder options */
 .title-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
 .folder-title-row .folder-title { align-self: center; }
+/* Expand all / Collapse all right beside the page's or folder's title (the owner, 2026-10-19) */
+.page-head > .head-icons { display: inline-flex; gap: 6px; align-items: center; flex: 0 0 auto; }
+.page-head > .head-icons:empty { display: none; }
+.folder-title-row > .level-buttons, .page-head > .level-buttons { align-self: center; flex: 0 0 auto; }
 .folder-tools > summary { list-style: none; }
 .folder-tools > summary::-webkit-details-marker { display: none; }
 /* Folder options pops up over the page (nothing below it moves); a click anywhere else or Esc
@@ -1967,6 +1982,11 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .head-pair .head-tools { display: inline-flex; gap: 6px; align-items: center; }
 .head-pair .level-buttons { display: inline-flex; gap: 6px; }
 .head-pair .level-buttons[hidden] { display: none; }
+/* on a box's heading line: its Expand all / Collapse all right after its name, its other buttons
+   still at the right end (the owner, 2026-10-19; the pair was at the right end too) */
+summary > .head-pair { display: contents; }
+summary > .head-pair > .level-buttons { margin-left: 4px; }
+summary > .head-pair > .head-tools { margin-left: auto; }
 @media (max-width: 640px) { .sub-head:has(> .head-pair) { flex-wrap: wrap; row-gap: 6px; } }
 
 /* a student page: every quiz box's table has the same columns (see below), so the buttons of quiz boxes at one folder
@@ -2011,7 +2031,8 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 .link-tip[hidden] { display: none; }
 @media print { .link-tip { display: none; } }
 /* a row of folder buttons: the open folder's Expand all / Collapse all at the row's right end */
-.folder-tabs .tab-pairs { display: inline-flex; flex-wrap: wrap; padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--border); }
+/* (the open folder's Expand all / Collapse all right after its tab, not at the row's end: the owner, 2026-10-19) */
+.folder-tabs .tab-pairs { display: inline-flex; flex-wrap: wrap; align-self: center; margin: 0 4px; }
 .folder-tabs .tab-pairs:not(:has(.tab-pair:not([hidden]))) { display: none; }
 .folder-tabs .tab-pair[hidden] { display: none; }
 
@@ -2132,6 +2153,8 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding: 0 4px 4px 0; }
+/* the open tab's Expand all / Collapse all, right after it (the owner, 2026-10-19) */
+.folder-filter-rows .tab-level-pair { flex: 0 0 auto; align-self: center; margin: 0 4px; padding-bottom: 4px; }
 /* the panel: the chosen folder's own folders (a smaller row of tabs on a line), then the list */
 .folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; border-radius: 0;
   background: var(--tab-open); padding: 10px 12px 0; gap: 4px; align-items: flex-end;
@@ -2374,6 +2397,27 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
 .folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs { grid-column: 2; grid-row: 1; min-width: 0; }
 .folder-filter[data-style="list"][data-tabs] > .folder-filter-list,
 .folder-filter[data-style="list"][data-tabs] > .folder-filter-empty { grid-column: 2; grid-row: 2; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+/* (a side list with no tabs: one tab over the list naming the folder shown, laid out the same:
+   the owner, 2026-10-19) */
+.folder-filter[data-style="list"].has-onetab { grid-template-rows: auto 1fr; row-gap: 0; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 1 / span 2; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 1; min-width: 0; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-list,
+.folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 2; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+.folder-filter-onetab .folder-tab { cursor: default; }
+.folder-filter-onetab > .folder-tabs { align-items: flex-end; }
+.folder-filter-onetab .tab-level-pair { align-self: center; margin: 0 6px; padding-bottom: 4px; }
+/* a picking card's list and its folder list beside it scroll inside themselves, at most about the
+   window's height, so a long list (All problems) never runs on down the page (the owner, 2026-10-19) */
+.folder-filter[data-style="list"] > .folder-filter-list,
+.folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(100vh - var(--topbar-h) - 170px); overflow-y: auto; overscroll-behavior: contain; }
+dialog .folder-filter[data-style="list"] > .folder-filter-list,
+dialog .folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(80vh - 170px); }
+@media (max-width: 640px) {
+  .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: auto; }
+  .folder-filter[data-style="list"].has-onetab > .folder-filter-onetab, .folder-filter[data-style="list"].has-onetab > .folder-filter-list { grid-column: 1; grid-row: auto; }
+  .folder-filter[data-style="list"] > .folder-filter-list, .folder-filter[data-style="list"] > .folder-filter-side { max-height: none; overflow: visible; }
+}
 @media (max-width: 640px) {
   .folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-row: auto; }
   .folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs, .folder-filter[data-style="list"][data-tabs] > .folder-filter-list { grid-column: 1; grid-row: auto; }
@@ -2454,12 +2498,15 @@ fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover high
 .folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]) { border-color: color-mix(in srgb, var(--muted) 65%, var(--border)); }
 /* empty folders: a dimmer gray than other muted text, in the folder lists and on the tabs, so
    they stand apart from folders with something in them (the owner, 2026-10-15) */
-:root { --empty-folder: color-mix(in srgb, var(--muted) 58%, var(--bg)); }
+:root { --empty-folder: color-mix(in srgb, var(--muted) 80%, var(--bg)); --empty-tab-bg: color-mix(in srgb, var(--bg) 94%, #000); }
+/* (dimmer, but still readable: at least 3:1, the owner 2026-10-19; it was 1.25:1 to 1.85:1. The
+   darker tab only a touch darker in light, where a dark fill hid its gray name) */
+@media (prefers-color-scheme: dark) { :root { --empty-tab-bg: color-mix(in srgb, var(--bg) 58%, #000); } }
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count,
 .folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab,
 .folder-tab.is-empty .box-title, .folder-tabs-empty > .folder-tab .box-title { color: var(--empty-folder); }
 /* an empty folder's tab itself a little darker than the others (the owner, 2026-10-15) */
-.folder-filter-rows > .folder-tabs > .folder-tab.is-empty:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--bg) 58%, #000); }
+.folder-filter-rows > .folder-tabs > .folder-tab.is-empty:not([aria-pressed="true"]) { background: var(--empty-tab-bg); }
 /* folders with something in them: their tab's name a little easier to read than the gray it was
    (the owner, 2026-10-15) */
 .folder-filter-rows > .folder-tabs > .folder-tab:not(.is-empty):not([aria-pressed="true"]),
@@ -2567,7 +2614,7 @@ details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
 /* the quiz editor: "Problems in this quiz" wider, set off, its rows one line each (the owner,
    2026-10-15) */
 @media (min-width: 1101px) {
-  .editor.quiz-editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr) minmax(420px, 42%); }
+  .editor.quiz-editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr) minmax(340px, 30%); }  /* (narrower: more room for the problems, the owner 2026-10-19) */
 }
 #quiz-contents { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
 #quiz-contents .order-total { font-weight: 600; }
@@ -2753,21 +2800,223 @@ td.attempt-buttons { text-align: right; }
 .quiz-rows details.quiz-card[open] > summary { margin-bottom: 6px; }
 /* (a new or started quiz's row outlined all the way round, its cells drawing the edge so no side
    is cut off: the owner, 2026-10-17) */
-.quiz-rows tr.row-is-new { --row-edge: var(--new-edge); }
-.quiz-rows tr.row-is-started { --row-edge: var(--accent); }
-.quiz-rows tr[class*="row-is-"] > td { box-shadow: inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
-.quiz-rows tr[class*="row-is-"] > td:first-child { box-shadow: inset 3px 0 0 var(--row-edge), inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
-.quiz-rows tr[class*="row-is-"] > td:last-child { box-shadow: inset -1px 0 0 var(--row-edge), inset 0 1px 0 var(--row-edge), inset 0 -1px 0 var(--row-edge); }
+tr.row-is-new { --row-edge: var(--new-edge); }
+tr.row-is-started { --row-edge: var(--accent); }
+/* (a new or started quiz's whole row outlined in its color, all four sides, drawn inside its
+   cells so the standard line between rows stays: the owner, 2026-10-19; it was a stripe down
+   the left edge. Every table that marks New / In progress uses it, like the boxes' .quiz-is-new) */
+tr[class*="row-is-"] > td { box-shadow: inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
+tr[class*="row-is-"] > td:first-child { box-shadow: inset 2px 0 0 var(--row-edge), inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
+tr[class*="row-is-"] > td:last-child { box-shadow: inset -2px 0 0 var(--row-edge), inset 0 2px 0 var(--row-edge), inset 0 -2px 0 var(--row-edge); }
 .quiz-rows td.quiz-sum { white-space: nowrap; }
 .quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
 /* a button under the folder list that opens a pop-over (Just finished) */
 .folder-side > .side-pop-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin: 8px 0 0; }
-/* (each outlined row its own: a little room between rows, and no gray line under each) */
-table.quiz-rows { border-collapse: separate; border-spacing: 0 4px; }
-table.quiz-rows > tbody > tr > td { border-bottom: 0; }
 /* the results tables' last column (Retake, Archive all) only as wide as its icons, still at the
    right edge; each attempt's icons then sit just left of it, the same on every results table
    (the owner, 2026-10-17) */
 tr:has(> td.attempts) > td.actions { width: 1%; white-space: nowrap; }
 @media (min-width: 641px) { .result-box > .table-wrap > table > thead th:nth-child(4) { width: 3.75rem; } }
 tr:has(> td.attempts) > td.actions .btn-stack { flex-wrap: nowrap; }
+/* the teacher's Messages panel: Write to… and Pinned, from the retired Messages page (the
+   owner, 2026-10-17); their lists scroll after about 10 lines */
+.panel-extras { margin: 6px 0 8px; gap: 6px; }
+.panel-extras .btn { display: inline-flex; align-items: center; gap: 5px; }
+dialog.panel-dialog { width: min(560px, calc(100vw - 32px)); }
+dialog.panel-dialog .panel-pick { max-height: 20rem; overflow-y: auto; margin: 0; }
+dialog.panel-dialog textarea { width: 100%; box-sizing: border-box; }
+dialog.write-to-dialog { width: min(820px, calc(100vw - 32px)); }
+/* Write to…: one even step (8px) between its lines (the owner, 2026-10-17) */
+dialog.write-to-dialog form > p { margin: 0 0 8px; }
+dialog.write-to-dialog .pick-people { margin: 0; }
+dialog.write-to-dialog .filter-bar { margin: 0 0 8px; }
+.write-to-checks { margin: 0 0 8px; align-items: center; justify-content: flex-start; gap: 8px; }
+dialog.write-to-dialog .folder-filter { margin: 0 0 8px; }
+dialog.write-to-dialog label[for="wt-body"] { margin: 0 0 4px !important; }
+dialog.write-to-dialog .check.field { margin: 8px 0; }
+dialog.ask.write-to-dialog { width: min(820px, calc(100vw - 32px)); max-width: min(820px, calc(100vw - 32px)); }
+dialog.ask.write-to-dialog .write-to-checks { justify-content: flex-start; }
+dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
+/* a quiz taken on its scanned page (templates quiz_take.html, static/js/pagequiz.js; the owner,
+   2026-10-18). The page is always white paper, in dark mode too, since it is a picture of paper. */
+.page-quiz { position: relative; container-type: inline-size; padding: 0; overflow: hidden; max-width: 900px; margin: 0 auto 16px; background: #fff; }
+.page-quiz .pq-page { display: block; width: 100%; height: auto; }
+.page-quiz .pq-hide { position: absolute; background: #fff; }
+.page-quiz .pq-q { display: contents; }
+/* a problem's printed numbers, covered and written again with this student's */
+.page-quiz .pq-text { position: absolute; display: flex; box-sizing: content-box; padding: 0.4cqw 0.6cqw; margin: -0.4cqw -0.6cqw;
+  background: #fff; color: #222; font-family: "PageFont", "Noto Sans", sans-serif; font-weight: var(--pq-weight, 700); white-space: pre; }
+.page-quiz .pq-equals { justify-content: space-between; align-items: center; line-height: 1; }
+.page-quiz .pq-left { flex-direction: column; justify-content: space-around; align-items: flex-start; line-height: var(--pq-line); }
+.page-quiz .pq-column { flex-direction: column; justify-content: space-around; align-items: flex-end; line-height: var(--pq-line); }
+/* the answer, typed in the page's own box or on its line */
+.page-quiz .pq-answer { position: absolute; }
+.page-quiz .pq-input { position: absolute; inset: 0; width: 100%; height: 100%; font-size: inherit; box-sizing: border-box; border: 0; background: transparent; text-align: center; color: #1b3fbf;
+  font-family: "PageFont", "Noto Sans", sans-serif; font-weight: var(--pq-weight, 700); padding: 0; min-height: 0; border-radius: 1.2cqw; }
+.page-quiz .pq-input:focus { outline: 3px solid #2f5bd3; outline-offset: -0.6cqw; }
+/* a choice: the printed box (or circle) and its words are the button; the check goes in the box */
+.page-quiz .pq-choice { position: absolute; cursor: pointer; border-radius: 0.8cqw; }
+.page-quiz .pq-choice:hover { background: rgba(47, 91, 211, 0.08); }
+.page-quiz .pq-choice:has(input:focus-visible) { outline: 3px solid #2f5bd3; outline-offset: 2px; }
+.page-quiz .pq-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.page-quiz .pq-tick { position: absolute; display: flex; align-items: center; justify-content: center; line-height: 1; color: #1b3fbf; font-weight: 700; }
+.page-quiz .pq-choice input:checked + .pq-tick::after { content: "✓"; }
+.page-quiz .pq-choice:has(input:checked) { background: rgba(47, 91, 211, 0.12); }
+/* a table cell to mark (e.g. "Circle True (T) or False (F)"): picked, it gets a circle, as a pencil would */
+.page-quiz .pq-choice input:checked + .pq-tick.pq-ring::after { content: ""; width: 70%; aspect-ratio: 1; border: 0.45cqw solid #1b3fbf; border-radius: 50%; box-sizing: border-box; }
+/* the page on a tablet or computer, the usual list on a phone (the same width as pagequiz.js) */
+.card.pq-has-slot { display: none; }
+@media (max-width: 599px) { .page-quizzes { display: none; } .card.pq-has-slot { display: block; } }
+
+/* a scanned item that is the same as a problem already there (the owner, 2026-10-18) */
+.scan-reuse { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0; }
+.scan-reuse:has(input:checked) .scan-reuse-note { text-decoration: line-through; opacity: .6; }
+
+/* the Dashboard's unfinished scans: a chip beside the heading and its pop-over (the owner, 2026-10-18) */
+#scan-progress-box { position: relative; align-self: center; }
+.scan-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid var(--border); font: inherit; font-size: .85rem; }
+.scan-chip:hover { background: var(--surface-2); }
+.scan-chip-bar { display: inline-block; width: 48px; height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.scan-chip-bar { display: inline-flex; }
+.scan-chip-bar > span { display: block; height: 100%; background: var(--accent); }
+.scan-chip-bar > .scan-chip-now { background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
+@keyframes scan-chip-now { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .scan-chip-bar > .scan-chip-now { animation: none; opacity: .5; } }
+.scan-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: min(560px, calc(100vw - 32px)); box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.35)); }
+.scan-pop h2 { margin: 0 0 8px; font-size: 1rem; }
+.scan-progress-row { display: grid; grid-template-columns: minmax(8rem, 13rem) minmax(5rem, 1fr) auto auto; align-items: center; gap: 6px 12px; padding: 4px 0; }
+/* (the name with its picture stays in its own column: a long one is cut short with "…", never under the bar) */
+.scan-progress-row .scan-pop-name { min-width: 0; overflow: hidden; }
+.scan-progress-row .scan-pop-name .scan-thumb { flex: none; }
+.scan-progress-row .scan-pop-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.scan-progress-row .progress-bar { display: flex; }
+.scan-progress-row .progress-bar > span.failed { background: var(--bad); }
+@media (max-width: 599px) { .scan-progress-row { grid-template-columns: 1fr auto; } .scan-progress-row .progress-bar { grid-column: 1 / -1; grid-row: 2; } }
+.scan-progress-row .btn-row { flex-wrap: nowrap; gap: 2px; }
+
+/* the Dashboard's boxes, until they're in their places (static/js/masonry.js) */
+.dash-settling { visibility: hidden; }
+
+/* dialogs that pick people with the folder list (Assign's people: the owner, 2026-10-18), as wide
+   and laid out as "Write to…" */
+dialog.ask.pick-dialog { width: min(820px, calc(100vw - 32px)); max-width: min(820px, calc(100vw - 32px)); }
+dialog.pick-dialog .pick-people { margin: 0; }
+dialog.pick-dialog .filter-bar { margin: 0 0 8px; }
+dialog.pick-dialog .folder-filter { margin: 0 0 8px; }
+dialog.ask.pick-dialog .write-to-checks { justify-content: flex-start; }
+/* (one scroll bar: the list of names scrolls, not the box around it) */
+dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-list { max-height: min(38vh, 22rem); overflow-y: auto; }
+.scan-timer { font-variant-numeric: tabular-nums; margin-left: 6px; font-size: .9rem; }
+.scan-progress-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; } .scan-progress-top p { margin: 0; }
+
+/* small pictures of scanned pages (the owner, 2026-10-18) */
+.scan-thumb { height: 40px; width: auto; max-width: 40px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; vertical-align: middle; margin-right: 8px; }
+.scan-progress-list li, .scan-unread li { display: flex; align-items: center; gap: 0 6px; margin: 4px 0; }
+.scan-progress-list li .scan-thumb, .scan-unread li .scan-thumb { margin-right: 2px; }
+.scan-progress-list, .scan-unread { padding-left: 0; list-style: none; }
+.scan-chip-thumb { height: 18px; width: auto; max-width: 18px; object-fit: cover; object-position: top; border-radius: 2px; background: #fff; }
+.scan-pop-name { display: inline-flex; align-items: center; min-width: 0; }
+.scan-pop-name .scan-thumb { height: 32px; max-width: 32px; }
+@media (max-width: 599px) { .scan-pop { position: fixed; left: 16px; right: 16px; top: 120px; width: auto; } }
+/* an answer typed where the page prints "???": a box drawn there, over the question marks (the owner, 2026-10-18) */
+.page-quiz .pq-inline .pq-input { background: var(--pq-paper, #fff); border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
+/* a question under the page keeps its lines (a puzzle written line by line) */
+.qtext { white-space: pre-line; }
+.scan-chip-done { color: var(--ok, #2e9d5b); font-weight: 700; }
+.scan-done-thumb { height: 64px; max-width: 64px; }
+/* the scanner chip: room after the heading, and its label (the owner, 2026-10-19) */
+#scan-progress-box { margin-left: 14px; }
+.scan-chip-label { font-weight: 700; }
+.scan-chip-wait { color: var(--warn, #b7791f); font-weight: 600; }
+/* the scans' other kinds: stopped on a page that couldn't be read, and drafts kept (the owner, 2026-10-19) */
+.scan-chip-stopped { color: var(--bad); font-weight: 600; }
+.scan-chip-draft { color: var(--accent-text, var(--accent)); font-weight: 600; }
+.scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.125em; }
+/* a picked lettered choice ("b. Red"): a pencil-thin circle around its letter, not over it (the owner, 2026-10-19) */
+.page-quiz .pq-choice input:checked + .pq-tick.pq-letter::after { width: 100%; border-width: 0.22cqw; }
+.scan-pick > .btn { min-width: 9rem; justify-content: center; }
+/* the Scan page's drop box: Pictures' look, with the two buttons inside it (the owner, 2026-10-19) */
+/* (its own class, not .dropzone: static/js/dropzone.js takes over any .dropzone's file field and uploads it) */
+.scan-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center;
+  min-height: 140px; padding: 16px; border: 2px dashed var(--border); border-radius: var(--r-lg); background: var(--surface);
+  transition: border-color .15s, background .15s; }
+.scan-drop.over { border-color: var(--accent); background: var(--accent-soft); }
+/* small pictures of the pages dropped or chosen on the Scan page (the owner, 2026-10-19) */
+.scan-drop-thumbs { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin-top: 4px; }
+.scan-drop-thumb { margin: 0; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.scan-drop-thumb img, .scan-drop-pdf { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
+.scan-drop-pdf { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: .85rem; }
+.scan-drop-thumb figcaption { font-size: .7rem; color: var(--muted); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-chip-folder { display: inline-flex; color: var(--muted); }
+
+/* a quiz made from scanned pages: a small picture of each page, shown large in a pop-over when
+   clicked (templates/_page_thumbs.html, js/pagezoom.js; the owner, 2026-10-19) */
+.page-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.page-thumb { display: inline-block; line-height: 0; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; background: #fff; }
+.page-thumb:hover, .page-thumb:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.page-thumb-paper { position: relative; display: inline-block; line-height: 0; }
+.page-thumb img { display: block; height: 96px; width: auto; max-width: 160px; object-fit: contain; }
+.page-thumb-hide { position: absolute; background: #fff; }
+dialog.page-zoom { padding: 12px; border: 2px solid var(--border-strong, var(--border)); border-radius: var(--r-lg); background: var(--surface);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .45); max-width: min(96vw, 1000px); max-height: 94vh; overflow: auto; }
+dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
+.page-zoom-x { position: sticky; top: 0; float: right; margin: 0 0 8px 8px; z-index: 1; }
+.page-zoom-body .page-thumb-paper { display: block; }
+.page-zoom-body img { display: block; width: 100%; height: auto; max-height: none; max-width: 100%; }
+
+/* Back and Forward at the bar's left end: two quiet arrows, no border, the words in their tooltips
+   (base.html, js/trail.js; the owner, 2026-10-19). Grayed out when there's nowhere to go. */
+.trail-nav { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px; flex: 0 0 auto; }
+.trail-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm);
+  color: var(--muted); text-decoration: none; cursor: pointer; }
+.trail-btn svg { width: 18px; height: 18px; }
+.trail-btn:hover { color: var(--text); background: var(--surface-2); }
+.trail-btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: auto; }
+.trail-btn[aria-disabled="true"]:hover { background: none; color: var(--muted); }
+@media print { .trail-nav { display: none; } }
+
+/* a folder list's Expand all / Collapse all beside the page's or card's title, not on top of the list
+   (folders.js, folderfilter.js, folder_checks.js; the owner, 2026-10-19) */
+.side-levels.title-levels { display: inline-flex; gap: 4px; margin: 0 0 0 6px; padding: 0; vertical-align: middle; align-self: center; flex: 0 0 auto; }
+.side-levels.title-levels[hidden] { display: none; }
+/* (Assign's "Quiz" and "Students" headings: their pair on the same line, then the filter under them) */
+.label.pick-wrap-head:has(+ .title-levels) { display: inline-block; margin-right: 0; }
+.label.pick-wrap-head + .title-levels { margin-bottom: 6px; }
+.page-thumbs-top > .page-thumbs { justify-content: center; }
+.page-thumbs-top:empty { display: none; }
+
+/* the site's name set apart from the menus: its own look and a thin line after it, then the
+   Back / Forward arrows, so it doesn't read as one more menu ("Quizzes" beside the Quizzes menu)
+   (the owner, 2026-10-19) */
+.topbar .brand { padding-right: 14px; margin-right: 6px; border-right: 1px solid var(--border); font-weight: 800;
+  letter-spacing: .02em; color: var(--accent); }
+.topbar .brand:hover { color: var(--accent); filter: brightness(1.15); }
+.topbar .trail-nav { margin-right: 8px; }
+/* (the open tab moved down to the next line with its Expand all / Collapse all, so they stay together) */
+.folder-tabs > .tab-pair-break { flex-basis: 100%; height: 0; margin: 0; padding: 0; border: 0; }
+/* Pictures and Other files as rows in folders: a small thumbnail before each name (the owner, 2026-10-19) */
+.upload-name { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.upload-thumb { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; overflow: hidden; }
+.upload-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.upload-thumb.upload-file { background: var(--surface-2); color: var(--muted); }
+.upload-name > strong { overflow-wrap: anywhere; }
+/* phones: a folder page shows only the open folder's tab (and its Expand all / Collapse all), joined
+   to what it shows; the other folders are picked from the Folders fold above (the owner, 2026-10-19:
+   a wall of tabs pushed the list half a screen down, and the open tab wasn't over its folder) */
+@media (max-width: 640px) {
+  .folder-main .folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]),
+  .folder-main .folder-filter-rows > .folder-tabs > .folder-tabs-label,
+  .folder-main .folder-filter-rows > .folder-tabs > .tab-break,
+  .folder-main .folder-filter-rows > .folder-tabs > .tab-line-rule { display: none; }
+}
+/* phones: a folded row is its check box and title only, one line; its folders, date and icons show
+   when it's opened (a folded Problems row was a 295px card, 196 of them 58,000px: the owner,
+   2026-10-19, from the code critic). A cell with nothing in it (no Created date) shows no caption. */
+@media (max-width: 640px) {
+  .table-wrap.stack tr:has(details.row-fold:not([open])) > td:not(.tick-col):not(:has(details.row-fold)) { display: none; }
+  .table-wrap.stack td[data-label]:empty { display: none; }
+}
+/* (no folders yet: its longer line stays one line, so the bar is as tall as on every other folder
+   page and the tabs under it don't sit lower: the owner, 2026-10-19, from the user critic) */
+@media (min-width: 761px) { .folder-tools-bar .file-bar > .file-hint-nofolder { white-space: nowrap; } }

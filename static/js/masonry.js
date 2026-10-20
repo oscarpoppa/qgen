@@ -24,6 +24,9 @@
       var m = getComputedStyle(box), h = box.getBoundingClientRect().height + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
       box.style.gridRowEnd = 'span ' + Math.max(1, Math.ceil((h + gap) / UNIT));
     });
+    //laid out: a page that hid its boxes until now (the Dashboard) shows them, in place
+    var settling = grid.closest('.dash-settling');
+    if (settling) setTimeout(function () { settling.classList.remove('dash-settling'); }, 30);
   }
   function soon(grid) {
     if (pending.indexOf(grid) === -1) pending.push(grid);

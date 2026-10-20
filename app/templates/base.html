@@ -54,6 +54,12 @@
       {% set s = site() %}
       <a class="brand" href="{{ home_url() if current_user.is_authenticated else url_for('user.login') }}" title="{{ 'Go to your start page' if current_user.is_authenticated else 'Go to the log-in page' }}">
         {% if s.logo %}<img class="brand-logo" src="{{ url_for('static', filename=s.logo) }}" alt="">{% endif %}<span>{{ s.name }}</span></a>
+      {#- Back and Forward through the pages visited in this browser tab, before anything else on the
+          bar after the site's name: two quiet arrows, their words in the tooltips (static/js/trail.js; the owner, 2026-10-19).
+          Grayed out until the script knows where they go. #}
+      {% if current_user.is_authenticated %}<span class="trail-nav">
+        <a class="trail-btn" id="trail-back" role="button" aria-disabled="true" aria-label="Back" title="Nothing to go back to">{{ icon('lc-arrow-left') }}</a>
+        <a class="trail-btn" id="trail-fwd" role="button" aria-disabled="true" aria-label="Forward" title="Nothing to go forward to">{{ icon('lc-arrow-right') }}</a></span>{% endif %}
       {% if current_user.is_authenticated %}
         {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}{% set nav_new_quizzes = new_quiz_count() %}
         <div class="dock-buttons">
@@ -120,16 +126,19 @@
             {{ item('user.people', 'People', ('user.userdet', 'user.eduser', 'qgen.list_users', 'qgen.list_user'), tip='Everyone: their accounts, folders and quiz results') }}
             {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
-              <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages',
+              <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages', 'qgen.scan_start', 'qgen.scan_review', 'qgen.scan_done',
                                 'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Archive, files and settings">More</summary>
               <div class="menu-list">
                 {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
                 {# the Messages page: every conversation, by folder (the owner, 2026-10-16) #}
-                {{ item('messages.inbox', 'Messages', ('messages.conversation', 'messages.teachers_page'), tip='Every conversation with your students, and messages between teachers') }}
+                {#- (no Messages page: it's the Messages panel now, from the Messages button: the owner, 2026-10-17) #}
                 <hr class="menu-rule">
                 {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
                 {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
                 {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
+                {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
+                {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
+                {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn't have">Scan workbook pages</span>{% endif %}
                 <hr class="menu-rule">
                 {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
               </div>
@@ -332,6 +341,9 @@
   <script src="{{ asset('js/push.js') }}" data-every="{{ tuning_poll_ms() }}" defer></script>
   {% endif %}
   {% endif %}
+  {#- a teacher's "Write to…" (from the Messages panel), on the page so its folders work like
+      every other picker's (the owner, 2026-10-17) #}
+  {% if current_user.is_authenticated and current_user.is_admin %}{% include "_dialog_write_to.html" %}{% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

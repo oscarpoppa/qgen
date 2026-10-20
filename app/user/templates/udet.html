@@ -17,14 +17,14 @@
   {% if people %}
   <div class="table-wrap stack">
     <table class="people-table">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Folders</th><th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Folders</th><th>Created</th><th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
         <tr data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
-          <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}" open><summary><span class="fold" aria-hidden="true"></span>
+          <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span>
               {# online now: a green dot after the name; a teacher: the badge right after the name #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{{ avatar(item, 28) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span></summary>
@@ -34,6 +34,8 @@
               {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
             </ul></details></td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
+          {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td class="actions">
             {% if in_archive %}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
@@ -96,7 +98,12 @@
           {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
           {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
         {% else %}
-          <span class="muted small">Make a folder first (+ New folder), then check people to put in it.</span>
+          {#- (no folders yet: grayed, with why, never left out: the owner, 2026-10-19) #}
+          <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check people to put in it.</span>
+          <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-no-folder="Take out of folder: there are no folders yet">Take out of folder</button>
+          {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
         {% endif %}
       </form></div>{% endif %}
     <div id="folder-items">

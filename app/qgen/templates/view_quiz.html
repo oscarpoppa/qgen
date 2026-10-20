@@ -1,16 +1,25 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button with context %}
+{% from "_macros.html" import back_button, slot with context %}
 {% from "_subjects.html" import subject_labels with context %}
+{% from "_page_thumbs.html" import page_thumbs with context %}
 {% block body_attrs %}{{ watch('viewquiz:%d' % vq.id, note='This quiz has been changed since you opened it.', button='Reload', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>View: {{ vq.title }}</h1>
+  {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
+  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit: Change this quiz's questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
+    {#- Assign from here too (the owner, 2026-10-19), as on the quiz's Edit page #}
+    {%- if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}</span>
   <div class="actions">
     {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
-    <a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="Draw another student's version">Another version</a>
-    <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit: Change this quiz's questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
+    {#- (grayed out when every student gets the same: the owner, 2026-10-19) #}
+    {% if varies %}<a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" data-reroll title="Draw another student's version">Roll another</a>
+    {%- else %}<button type="button" class="btn" disabled title="Every student gets the same questions">Roll another</button>{% endif %}
   </div>
 </div>
+{#- a quiz from scanned pages: the page, small, at the top in the middle; a click shows it large
+    (the owner, 2026-10-19) #}
+<div class="page-thumbs-top">{{ page_thumbs(vq) }}</div>
 <div class="btn-row small" style="margin-bottom:12px">
   <span class="badge">{{ items|length }} question{{ '' if items|length == 1 else 's' }}</span>
   {% if vq.vqgroups %}<span class="muted">Folders:</span> {{ subject_labels(vq.vqgroups) }}{% endif %}

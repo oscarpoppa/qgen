@@ -300,6 +300,7 @@ class QType:
     label = ''
     auto_graded = True
     paper = False  # done on paper: no answer box, the teacher scores it
+    look = False   # a page to look at: nothing to answer, never graded, left out of the score
     answer_label = 'Answer'
     answer_help = ''
     uses_choices = False
@@ -349,6 +350,9 @@ class QType:
         prob, ansr, opts = self.render(question, answer, options, env, rng)
         if picture:
             opts = dict(opts, image=picture['file'])
+        if options.get('page_text'):
+            #a scanned problem: this version's words, written over the page's (pagelayout.py)
+            opts = dict(opts, page_text=F.fill_question(options['page_text'], env))
         return prob, ansr, opts
 
     def render(self, question, answer, options, env, rng):
@@ -739,12 +743,47 @@ class PaperOnly(QType):
         return None
 
 
+class LookOnly(QType):
+    """A page to look at (a workbook's cover, a picture page): its picture is shown, there's
+    nothing to answer, it's never graded and it's left out of the quiz's score (a quiz of only
+    these counts as done, 100%). Made by the scanner for a page with no questions (the owner,
+    2026-10-19)."""
+    key = 'look'
+    label = 'Image only (not graded)'
+    look = True
+    answer_label = 'Notes (optional, only you see them)'
+
+    def validate(self, question, answer, options):
+        return self.validate_parts(answer, options, [])
+
+    def validate_parts(self, answer, options, known):
+        return [] if options.get('images') else ['An Image only problem needs its picture in the picture section.']
+
+    def render(self, question, answer, options, env, rng):
+        return question or '', '', {}
+
+    def make_field(self, name, conc_opts):
+        return HiddenField(name)
+
+    def to_stored(self, data):
+        return ''
+
+    def is_blank(self, stored):
+        return False  # (nothing to answer: never "left blank")
+
+    def grade(self, stored, conc_ansr, conc_opts, options):
+        return 1.0
+
+    def show_correct(self, conc_ansr, conc_opts):
+        return ''
+
+
 def enumerate_choices(conc_opts):
     for i, text in enumerate(conc_opts.get('choices', [])):
         yield str(i), text
 
 
-REGISTRY = {t.key: t for t in (Numeric(), Text(), ChoiceOne(), ChoiceMany(), TrueFalse(), Essay(), PaperOnly())}
+REGISTRY = {t.key: t for t in (Numeric(), Text(), ChoiceOne(), ChoiceMany(), TrueFalse(), Essay(), PaperOnly(), LookOnly())}
 
 
 def get_qtype(key):

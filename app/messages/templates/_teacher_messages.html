@@ -1,17 +1,24 @@
 {# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
 {# what's shown: 'all' (every student), a student's id, 'teachers' (every teacher) or 't<id>' (one teacher) #}
 {% from "_clear_thread.html" import clear_thread with context %}
-{% set current = ('t' ~ other.id if other else 'teachers') if teachers_view else (student.id if student else 'all') %}
+{% set current = ('t' ~ other.id if other else 'teachers') if teachers_view else (student.id if student else ('f' ~ folder.id) if folder else 'all') %}
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=current) }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
   {% if rows or staff.teachers %}
-    <form method="get" action="{{ url_for('messages.inbox') }}" class="convo-pick">
+    <form method="get" action="{{ url_for('messages.panel') }}" class="convo-pick">
       <label for="msg-student" class="small muted">Showing</label>
       <select id="msg-student" name="student" data-current="{{ current }}">
         <optgroup label="Students">
-        <option value="all"{{ ' selected' if everyone }}>All messages (every student)</option>
+        <option value="all"{{ ' selected' if everyone and not folder }}>All messages (every student)</option>
         {% for r in rows %}<option value="{{ r.student.id }}"{{ ' selected' if student and r.student.id == student.id }}>{{ r.student.shown_name }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
         </optgroup>
+        {#- People's folders: their students' messages together (from the retired Messages page:
+            the owner, 2026-10-17) #}
+        {% if folders %}
+        <optgroup label="A folder (from People)">
+        {% for f in folders %}<option value="f{{ f.id }}"{{ ' selected' if folder and folder.id == f.id }}>{{ '\u00a0\u00a0' * (f.depth - 1) }}{{ f.name }}{% if f.unread %} ({{ f.unread }} new){% endif %}</option>{% endfor %}
+        </optgroup>
+        {% endif %}
         {% if staff.teachers %}
         <optgroup label="Teachers">
         <option value="teachers"{{ ' selected' if teachers_view and not other }}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</option>
@@ -20,6 +27,12 @@
         {% endif %}
       </select>
     </form>
+    {#- what the Messages page used to do: write to chosen students or a folder, and the pinned
+        messages; each opens in a box of its own (static/js/messages.js) #}
+    {% if rows %}<div class="btn-row small panel-extras">
+      <button type="button" class="btn btn-secondary btn-sm" data-panel-dialog="write-to-dialog" title="Write to the students you check, or everyone in a folder">{{ icon('lc-message') }} Write to…</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-panel-dialog="pinned-dialog" title="The messages pinned to the top of students’ messages; unpin them here">{{ icon('pin') }} Pinned ({{ pinned|length }})</button>
+    </div>{% endif %}
   {% endif %}
   {% set clear_who = (other.shown_name if other else 'The other teachers') if teachers_view else (student.shown_name if student else 'Your students') %}
   {# one student: Clear all goes on the "← All messages" line below; otherwise on its own, at the top #}
@@ -82,8 +95,8 @@
         <button class="btn" title="Send this to {{ student.shown_name }}">Send</button>
       </form>
     {% endif %}
-    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.inbox') }}" title="Open the full Messages page">Messages page: write to chosen students, see pinned messages</a></p>
   {% else %}
     <p class="muted small">No students yet. Once students sign up, you can talk with them here.{% if staff.teachers %} To write to another teacher, pick him/her above.{% endif %}</p>
   {% endif %}
+  {% if rows %}{% include "_panel_dialogs.html" %}{% endif %}
 </section>

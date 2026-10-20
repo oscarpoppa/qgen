@@ -46,6 +46,10 @@
       {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">{{ icon('pencil') }} Paper only</span>{% endif %}
     </div>
     {{ errs(key) }}
+    {#- the same as a problem already there: used again instead of saved twice (the owner, 2026-10-18) #}
+    {% set same = reused.get((n, i)) or matches.get((n, i)) %}
+    {% if same %}<div class="scan-reuse small"><span class="scan-reuse-note">{{ icon('note') }} Same as problem “{{ same }}”: reused</span>
+      <label class="check" title="Save this one as a problem of its own"><input type="checkbox" name="{{ ip }}new"{% if item.new %} checked{% endif %}> Make a new one instead</label></div>{% elif item.new %}<input type="hidden" name="{{ ip }}new" value="1">{% endif %}
     <div class="scan-item-body">
     {% if item.kind == 'paper' %}
       <input type="hidden" name="{{ ip }}box" id="{{ ip }}box" value="{{ item.box.left }},{{ item.box.top }},{{ item.box.right }},{{ item.box.bottom }}">
@@ -101,27 +105,36 @@
 {% block content %}
 <div class="page-head">
   <h1>Scan: {{ job.name }}</h1>
+  {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
   <div class="actions">
     {{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}
-    {{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}
-    {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
+    {#- (not while it's being read: Pause is on the reading card; Discard comes back once the reading is
+        done or paused, the owner 2026-10-18) #}
+    {% if not reading %}{{ post_button(url_for('qgen.scan_discard', job_id=job.id), 'Discard', cls='btn btn-secondary', confirm='Discard the scan “' ~ job.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it is saved') }}{% endif %}
   </div>
 </div>
 
 {% if reading %}
   <div class="card" id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}">
-    <p><strong id="scan-progress-line">Reading the pages…</strong></p>
+    <div class="scan-progress-top"><p><strong id="scan-progress-line">Reading the pages…</strong> <span class="scan-timer muted" id="scan-timer" aria-live="off"></span>
+      {%- if data.from_folder %}<br><span class="small muted scan-from-folder">{{ icon('folder') }} From the folder “{{ data.from_folder }}”, {{ count_of(data.pages|length, 'page', 'pages') }}</span>{% endif %}</p>
+      {#- (Pause, it was Cancel: the page being read is finished first, the owner 2026-10-19) #}
+      {% if data.pausing %}<span class="muted">Pausing after this page…</span>{% else %}{{ post_button(url_for('qgen.scan_pause', job_id=job.id), 'Pause', tip='Pause after the page being read; Resume goes on with the rest') }}{% endif %}</div>
     <p class="muted small">About half a minute per page. You can leave this page and come back from “Scan workbook pages”; the reading goes on.</p>
     <ol class="scan-progress-list">
-      {% for p in data.pages %}<li data-n="{{ p.n }}">Page {{ p.n }}: <span class="muted">{{ {'waiting': 'waiting', 'reading': 'reading…', 'done': 'done ✓', 'error': 'couldn’t be read'}[p.state] }}</span></li>{% endfor %}
+      {% for p in data.pages %}<li data-n="{{ p.n }}"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="" loading="lazy">Page {{ p.n }}: <span class="muted">{{ {'waiting': 'waiting', 'reading': 'reading…', 'done': 'done ✓', 'error': 'couldn’t be read'}[p.state] }}</span></li>{% endfor %}
     </ol>
   </div>
 {% else %}
   {% if unread %}
     <div class="card alert alert-warning">
       <p>{{ count_of(unread|length, 'page wasn’t', 'pages weren’t') }} read yet:</p>
-      <ul>{% for p in data.pages if p.state != 'done' %}<li>Page {{ p.n }}{% if p.error %}: {{ p.error }}{% endif %}</li>{% endfor %}</ul>
+      <ul class="scan-unread">{% for p in data.pages if p.state != 'done' %}<li><a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" target="_blank" rel="noopener" title="See page {{ p.n }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}"></a>Page {{ p.n }}{% if p.error %}: {{ p.error }}{% endif %}</li>{% endfor %}</ul>
+      {%- if kind == 'paused' %}
+      {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Resume', cls='btn btn-sm', tip='Go on reading the pages not read yet (each counts as one AI use)') }}
+      {%- else %}
       {{ post_button(url_for('qgen.scan_read', job_id=job.id), 'Read the rest', cls='btn btn-sm', tip='Have the AI read the pages that are missing (each counts as one AI use)') }}
+      {%- endif %}
     </div>
   {% endif %}
   {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
@@ -135,7 +148,7 @@
       </div>
       <div class="field">
         <label class="label" for="scan-folder">Folder</label>
-        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="64" placeholder="(none: Uncategorized)">
+        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="64" placeholder="(blank: the workbook’s name)">
         <div class="help">The problems go in this folder on Problems, and the quizzes in this folder on Quizzes. A folder with this name is used if there is one.</div>
         {{ errs('folder') }}
       </div>
@@ -145,7 +158,9 @@
     {% for page in data.pages if page.state == 'done' %}
       {% set n = page.n %}
       {% set pre = 'p' ~ n ~ '-' %}
-      <details class="box card scan-page" open data-page="{{ n }}" data-box="scan-page:{{ n }}">
+      {#- (pages start folded, the owner 2026-10-19; one with something to fix shows open) #}
+      {%- set pb = namespace(bad=false) %}{% for k in problems if k.startswith('page:' ~ n ~ ':') %}{% set pb.bad = true %}{% endfor %}
+      <details class="box card scan-page" data-page="{{ n }}" data-box="scan-page:{{ n }}"{% if pb.bad %} open data-keep-open{% endif %}>
         <summary>
           {{ box_label('file', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
           {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
@@ -180,7 +195,7 @@
               </div>
               {% set ns.problems_before = true %}
             {% elif page.kind == 'picture' %}
-              <p>This page has no questions. Its picture is saved in Pictures, and can go at the top of a quiz or with a problem:</p>
+              <p>This page has no questions. It becomes an Image only quiz, and its picture is saved in Pictures too.</p>
             {% else %}
               <p class="muted">Nothing on this page to make into problems (a cover, contents or answer page). Check “save” to keep it as a picture anyway.</p>
             {% endif %}

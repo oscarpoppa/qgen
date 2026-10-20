@@ -397,7 +397,8 @@
     btn.addEventListener('click', function () {
       var kind = btn.dataset.kind;
       var text = document.getElementById(btn.dataset.src).value.trim();
-      var status = form.querySelector('.ai-status');
+      //(each AI box has its own status line: the one at the top, and Random values' own)
+      var status = (btn.closest('.ai-box, .ai-values-field') || form).querySelector('.ai-status');
       if (!text) { status.textContent = 'Please describe what you want first.'; return; }
       if (formHasContent(kind)) {
         ask('Replace what\'s already in the form?', 'Replace').then(function (yes) { if (yes) fill(btn, kind, text, status); });
@@ -434,7 +435,10 @@
   function fill(btn, kind, text, status) {
       form.querySelectorAll('.ai-go').forEach(function (b) { b.disabled = true; });
       status.innerHTML = '<span class="spinner"></span> Thinking… this can take up to a minute.';
-      aiRequest(btn.dataset.url, { text: text }).then(function (res) {
+      var body = { text: text };
+      //"Fill in the values": the question already written, so the values get its [names]
+      if (kind === 'values') { var q = form.querySelector('[name=question]'); if (q) body.question = q.value; }
+      aiRequest(btn.dataset.url, body).then(function (res) {
         if (!res.ok) { status.textContent = res.error || 'Something went wrong.'; return; }
         var f = res.fill || {};
         if (kind === 'problem') {

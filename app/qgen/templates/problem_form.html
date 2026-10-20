@@ -6,7 +6,7 @@
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
 {% set tip_ai %}<p>Describe it the way you'd tell a colleague. Claude fills in the form below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
 {% set tip_ai_problem %}<p>Say what kind of question, what changes from student to student, and what's being asked. For example:</p><ul><li>A pick-one question adding two different whole numbers from 1 to 20</li><li>True or false: a random number from 1 to 50 is bigger than another one</li><li>Short text: the capital of a random country from France, Japan and Brazil</li></ul><p>It fills in the type, question, values and answer.</p>{% endset %}
-{% set tip_ai_values %}<p>Use this when you'll write the question yourself and only want help with the random values. It fills in the <b>Random values</b> table and leaves everything else alone.</p><ul><li>two different numbers under 20</li><li>a price between $2 and $20 in quarters</li><li>a random first name</li><li>a decimal from 1 to 10 with 2 places</li></ul><p>No square brackets needed here: plain English is fine.</p>{% endset %}
+{% set tip_ai_values %}<p>Describe the random values in plain English, and Claude fills in the table below, using the [names] in your question.</p><ul><li>two different numbers under 20</li><li>a price between $2 and $20 in quarters</li><li>a random first name</li><li>a decimal from 1 to 10 with 2 places</li></ul><p>No square brackets needed here: plain English is fine.</p>{% endset %}
 {% set tip_qtype %}<p>How students answer, and how it's marked:</p><ul><li><b>Numeric</b>: they type a number. Marked instantly.</li><li><b>Short text</b>: a word or phrase; any answer on your list counts.</li><li><b>Pick one</b>: round buttons, one right choice.</li><li><b>Pick several</b>: checkboxes; they must check exactly the right ones.</li><li><b>True / False</b>: the right answer can depend on the values, like <code>a &gt; b</code>.</li><li><b>Long text</b>: an essay you grade yourself, with partial credit, highlights and comments.</li><li><b>Paper only</b>: drawing, circling or coloring done on a printed page (put the page in the picture section). You score it from the paper; the page prints when you assign the quiz.</li></ul><p>Everything except Long text and Paper only is scored automatically.</p>{% endset %}
 {% set tip_title %}<p>A short name so you can find this problem in your lists and in the quiz builder.</p><p>Students never see it; they see the quiz's title.</p>{% endset %}
 {% set tip_question %}<p>What the student reads. Put a value's name in square brackets and every student sees a randomly picked number or word:</p><p><code>A train goes [speed] mph for [hours] hours.</code></p><p>Math works inside the brackets too: <code>[speed * 2]</code>, <code>[round(a / b, 2)]</code>, <code>[sqrt(n)]</code>.</p><p>Brackets without a value name, like <code>[0, 5]</code>, are shown just as typed.</p><p>The chips under this box insert your value names for you.</p><p><b>Math that looks like math:</b> put it between <code>\(</code> and <code>\)</code>. <code>\( [a]x^2 + [b]x + [c] \)</code> shows as a real formula, with each student's numbers. For Numeric problems, the math buttons above the box write this for you, and the preview under the box shows how it will look.</p>{% endset %}
@@ -86,11 +86,11 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
+  <span class="head-icons">{% if vp and vp.id %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View: See three students' versions of the saved problem">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}{% if vp and vp.id %}{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to {{ vp.title or 'this problem' }}, quiz by quiz">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}{% endif %}</span>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vprobs'), 'Problems') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving"><span class="back-label">← {{ came[1] }}</span></a>
-    {% if vp and vp.id %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View: See three students' versions of the saved problem">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}
-    {% if vp and vp.id %}{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to {{ vp.title or 'this problem' }}, quiz by quiz">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}{% endif %}
+  <div class="actions">
     {# back to how the page was when it opened: blank for a new problem, the saved version when editing #}
     {% if vp and vp.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>
@@ -100,10 +100,12 @@
 </div>
 
 {{ error_box(errors) }}
+{% if same %}<div class="alert alert-warning" role="alert">{{ icon('warning') }} You already have this problem: <a href="{{ url_for('qgen.view_vprob', vpid=same.id) }}" title="Open it (this page stays as it is)" target="_blank" rel="noopener">“{{ same.title or 'Untitled' }}”</a></div>{% endif %}
 
 <div class="editor">
 <form method="post" id="problem-form" data-fresh-page data-unsaved novalidate>
   {{ form.hidden_tag() }}
+  {% if same %}<input type="hidden" name="same_ok" value="1">{% endif %}
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vprobs') }}" data-back-next>
 
@@ -117,13 +119,6 @@
       <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
       <div class="btn-row" style="margin-top:8px">
         <button type="button" class="btn ai-go" data-kind="problem" data-src="ai-problem" data-url="{{ url_for('qgen.ai_problem') }}" title="Claude drafts the type, question, values and answer. You check before saving.">Fill in for me</button>
-      </div>
-    </div>
-    <div class="field">
-      <div class="label-line"><label for="ai-values">…or just describe the random values</label>{{ tip('describing the random values', tip_ai_values) }}</div>
-      <textarea id="ai-values" placeholder="e.g. all integers from 3 to 5, then a random one of those"></textarea>
-      <div class="btn-row" style="margin-top:8px">
-        <button type="button" class="btn btn-secondary ai-go" data-kind="values" data-src="ai-values" data-url="{{ url_for('qgen.ai_values') }}" title="Fills in only the Random values table">Fill in the values</button>
       </div>
     </div>
     <div class="ai-status small" role="status" aria-live="polite"></div>
@@ -150,6 +145,18 @@
   <div class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay">
     <div class="card-head"><span class="step-num" aria-hidden="true">2</span><h2>Random values</h2><span class="muted small">picked separately for each student</span>{{ tip('random values', tip_values) }}</div>
     <div class="values-guide small muted">Help with: <span>Name{{ tip('value names', tip_name) }}</span> <span>Kind{{ tip('kinds of value', tip_kind) }}</span> <span>Settings{{ tip('value settings', tip_settings) }}</span></div>
+    {% if ai_enabled %}
+    {#- here, after the question is written, not in the AI box at the top: it uses the question's
+        [names] (the owner, 2026-10-19) #}
+    <div class="field ai-values-field">
+      <div class="label-line"><label for="ai-values">{{ icon('sparkle') }} Describe the values for your question</label>{{ tip('describing the random values', tip_ai_values) }}</div>
+      <textarea id="ai-values" rows="2" placeholder="e.g. all integers from 3 to 5, then a random one of those"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn btn-secondary ai-go" data-kind="values" data-src="ai-values" data-url="{{ url_for('qgen.ai_values') }}" title="Fills in only the Random values table">Fill in the values</button>
+      </div>
+      <div class="ai-status small" role="status" aria-live="polite"></div>
+    </div>
+    {% endif %}
     <div class="table-wrap stack values-table">
       <table>
         <thead><tr><th style="width:16%">Name{{ tip('value names', tip_name) }}</th><th style="width:18%">Kind{{ tip('kinds of value', tip_kind) }}</th><th>Settings{{ tip('value settings', tip_settings) }}</th><th></th></tr></thead>

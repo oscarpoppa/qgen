@@ -73,7 +73,9 @@
         {% endif %}
         <ol class="small attempt-list" style="padding-left:1.2em;margin:0 0 4px">
           {% for cq in g.attempts %}
-            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} {{ action(cq, compact=true) }}</li>
+            {#- (no button on the attempt the row's own button at the right already starts, continues or
+                shows: two of the same side by side were confusing, the owner 2026-10-19) #}
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }}{% if cq != (g.open or latest) %} {{ action(cq, compact=true) }}{% endif %}</li>
           {% endfor %}
         </ol>
       </details></td>

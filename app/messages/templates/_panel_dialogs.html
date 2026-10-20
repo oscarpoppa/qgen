@@ -1,0 +1,22 @@
+{# The teacher's Messages panel: what the retired Messages page did (the owner, 2026-10-17).
+   Pinned opens from its button above the conversation (static/js/messages.js copies it out of
+   the panel, so the panel can reload behind it); Write to… is on every teacher's page
+   (templates/_dialog_write_to.html). #}
+
+{# Pinned: what's pinned to the top of students' messages, each with Unpin #}
+<dialog class="ask panel-dialog" id="pinned-dialog" aria-labelledby="pinned-head">
+  <p><strong id="pinned-head">Pinned</strong></p>
+  {% if not pinned %}<p class="muted small">Nothing is pinned yet. To pin a message, check “Pin it to the top of their messages” when you send it, or press the pin beside a message you’ve already sent.</p>
+  {% else %}<ul class="hints panel-pick">
+    {% for m in pinned %}
+      <li class="hint"><span class="hint-icon" aria-hidden="true">{{ icon('pin') }}</span>
+        <span>{{ m.body }} <span class="small muted">· {{ m.created|when('short') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name if m.student else 'someone' }}{% endif %}</span></span>
+        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
+          <button class="icon-link" title="Unpin: stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>{% endif %}
+  <div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Close</button></div>
+</dialog>

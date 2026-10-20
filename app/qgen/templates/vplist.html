@@ -10,14 +10,14 @@
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Question</th><th class="row-more">Answer</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Question</th><th class="row-more">Answer</th><th>Created</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title or 'Untitled' }}”"></td>{% endif %}
           {# the row folds to its title (and folders and buttons); open, it shows its kind, question
              and answer too. Folded to begin with; Expand all / Collapse all and the page remember it #}
-          <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}" open><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
+          <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
               data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
             <div class="small muted">
               <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
@@ -38,6 +38,8 @@
               <div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div>
             {% endif %}
           </td>
+          {#- when it was made, to sort by (the owner, 2026-10-18) #}
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
             {% if in_archive %}

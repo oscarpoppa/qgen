@@ -2,6 +2,7 @@
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar with context %}
 {% from "_macros.html" import field %}
+{% from "_page_thumbs.html" import page_thumbs with context %}
 
 {# another teacher's draft, or the attempt archived: offered, never reloaded under the grader #}
 {% block body_attrs %}{{ watch('grading:%d' % cq.id, note='Someone else has changed this attempt or its grades.', ask=True) }}{% endblock %}
@@ -9,10 +10,12 @@
 {% block content %}
 <div class="page-head">
   {#- the student's name in the heading (the owner, 2026-10-17) #}
-  <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}'s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's history: every student's attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
+  <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}’s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz's history: every student's attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
   <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
+{#- a quiz from scanned pages: the page, small, at the top in the middle; a click shows it large (the owner, 2026-10-19) #}
+<div class="page-thumbs-top">{{ page_thumbs(cq.vquiz) }}</div>
 <p class="muted">Type each score in <strong>Credit</strong>. If you like, you can also highlight an answer for the student: select words, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> (with nothing selected, the whole answer is highlighted). Click a highlight to remove it.</p>
 
 <form method="post" id="review-form" data-unsaved novalidate>

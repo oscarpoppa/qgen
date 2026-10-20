@@ -2,8 +2,8 @@
  * folds and is remembered the same way, on every page:
  *
  * Starting state: a page's own sections (the HTML says open: Home, the Dashboard, settings)
- * start open; boxes in a list (data-list: quizzes, students, folders, months...) start
- * closed, except the only one in its list, which starts open; data-closed ones (Done, help)
+ * start open; boxes in a list (data-list: quizzes, students, folders, months...) and list rows
+ * start closed, even the only one (the owner, 2026-10-19); data-closed ones (Done, help)
  * start closed; data-fixed ones (Assign's people) are left as the page drew them.
  *
  * Memory: what this person opens or folds themselves (a click on its heading, or Expand all
@@ -28,6 +28,36 @@
   var FOLDER = 'details.sub-box[data-sub], details.sub-box[data-folder-box]';
   var memory = {};
   try { memory = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
+  //arriving on a page anew, everything starts as the page draws it (folded): what was opened or
+  //folded before comes back only when returning to the page (Back, Forward, the top bar's arrows)
+  //or reloading it (the owner, 2026-10-19)
+  var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+  var going = null;
+  try { going = sessionStorage.getItem('qgen-going-back'); } catch (e) {}
+  var touched = {};  // (opened or folded by hand on this visit: kept as left)
+  var returning = !!(nav && (nav.type === 'back_forward' || nav.type === 'reload')) || going !== null;
+  //coming back from something done on this page (a Move, Take out, Delete, Restore, New folder:
+  //the page sends a form and comes back) or from an editor's Save or Cancel: returning too, so
+  //what was open stays open (the owner, 2026-10-19, from the code critic)
+  var RET = 'qgen-returning';
+  try {
+    var ret = sessionStorage.getItem(RET);
+    //('*': an editor's Save going back to wherever it came from, its list by default)
+    if (ret === location.pathname || ret === '*') returning = true;
+    sessionStorage.removeItem(RET);
+  } catch (e) {}
+  function willReturn(path) { try { sessionStorage.setItem(RET, path); } catch (e) {} }
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f || (f.method || '').toLowerCase() !== 'post') return;
+    var next = f.querySelector('input[data-back-next], input[name="next"]');
+    var to = next ? (next.value ? new URL(next.value, location.href).pathname : '*') : location.pathname;
+    willReturn(to);
+  }, true);
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-back-href]');
+    if (a && a.href) willReturn(new URL(a.href, location.href).pathname);
+  }, true);
   function save() { try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (e) {} }
   //a page can forget, once, what was remembered for some of its boxes, when how they start
   //changes: data-boxes-reset="<when>:<box>,<box>" (the Dashboard's list cards, 2026-10-15)
@@ -66,15 +96,17 @@
       var row = Array.prototype.filter.call(d.parentElement.children, function (b) {
         return b.matches && b.matches(FOLDER) && !b.hidden;
       });
-      return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });
+      return row[0] === d && !(returning && row.some(function (b) { return idOf(b) in memory; }));
     }
-    if (d.hasAttribute('data-list')) return listed(d).length === 1;
+    //(a box in a list starts folded, even the only one: the owner, 2026-10-19; it was open when
+    //it was the only one)
+    if (d.hasAttribute('data-list')) return false;
     return d.dataset.drawnOpen === '1';
   }
   function restore(d) {
     if (d.closest('[data-keep-open]')) { d.open = true; return; }
     var id = idOf(d);
-    d.open = id in memory ? !!memory[id] : starting(d);
+    d.open = (returning || touched[id]) && id in memory ? !!memory[id] : starting(d);
   }
 
   var seen = window.WeakSet ? new WeakSet() : { has: function () { return false; }, add: function () {} };
@@ -111,7 +143,7 @@
   document.addEventListener('toggle', function (e) {
     var d = e.target;
     if (!d.matches || !d.matches(BOX)) return;
-    if (d._byHand && Date.now() - d._byHand < 1000) { memory[idOf(d)] = d.open ? 1 : 0; save(); }
+    if (d._byHand && Date.now() - d._byHand < 1000) { memory[idOf(d)] = d.open ? 1 : 0; touched[idOf(d)] = 1; save(); }
     d._byHand = 0;
     showLevelButtons();
   }, true);
@@ -157,12 +189,12 @@
     }
     folds(levelOf(btn), btn).forEach(function (d) {
       d.open = want;
-      if (keep && !d.hasAttribute('data-fixed')) memory[idOf(d)] = want ? 1 : 0;
+      if (keep && !d.hasAttribute('data-fixed')) { memory[idOf(d)] = want ? 1 : 0; touched[idOf(d)] = 1; }
     });
     if (keep) save();
   });
   //every folder box holding boxes of its own (sub-folders, quizzes, attempts) gets its own
-  //Expand all / Collapse all pair, on its heading line at the right (taking no room of its own);
+  //Expand all / Collapse all pair, on its heading line right after its name (taking no room of its own);
   //grayed out where there's nothing inside to open or fold (below)
   var pairs = 0;
   function addFolderPairs() {
@@ -187,7 +219,11 @@
       open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;
       window.qgenIconButton(open, 'lc-expand', 'Expand all', 'Open every box in ' + name); open.setAttribute('aria-label', 'Expand all in ' + name);
       window.qgenIconButton(close, 'lc-collapse', 'Collapse all', 'Fold every box in ' + name + ' down to its heading'); close.setAttribute('aria-label', 'Collapse all in ' + name);
-      head.appendChild(bar);
+      //(right after its name and badges, before any buttons on the line: the owner, 2026-10-19)
+      var first = Array.prototype.filter.call(head.children, function (c) {
+        return c.matches('.box-actions, .head-tools, .btn, .btn-row, form, a.btn');
+      })[0];
+      head.insertBefore(bar, first || null);
     });
   }
   function showLevelButtons() {
@@ -249,7 +285,8 @@
     document.querySelectorAll('[data-side-level="open"]').forEach(function (open) {
       var row = open.parentElement, close = row && row.querySelector(':scope > [data-side-level="close"]');
       if (!close) return;
-      var scope = row.parentElement || document;
+      //(a pair moved beside a title keeps its list: qgenScope, the owner 2026-10-19)
+      var scope = row.qgenScope || row.parentElement || document;
       var all = Array.prototype.filter.call(scope.querySelectorAll('.side-fold'), function (f) { return !f.closest('[hidden]'); });
       var anyShut = !all.length || all.some(function (f) { return f.getAttribute('aria-expanded') === 'false'; });
       open.classList.toggle('lvl-off', !anyShut);

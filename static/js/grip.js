@@ -102,4 +102,5 @@
   if (window.MutationObserver) new MutationObserver(function () { clearTimeout(scan._m); scan._m = setTimeout(scan, 100); })
     .observe(document.querySelector('main') || document.body, { childList: true, subtree: true });
   scan();
+  window.qgenGripScan = scan;  // (the Dashboard's redraw sets the kept heights straight away: dashboard.js)
 })();

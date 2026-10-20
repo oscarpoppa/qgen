@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{#- (not on the Back/Forward trail: the top bar's ← never goes back to an error page, the owner 2026-10-19) #}
+{% block html_attrs %} data-no-trail{% endblock %}
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
 {% from "_macros.html" import back_button, back_home with context %}

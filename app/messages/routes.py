@@ -19,37 +19,14 @@ from app.qgen.models import new_quizzes, quiz_counts
 # ---------------------------------------------------------------- teachers
 
 #route to the teacher's inbox: every student's conversation, unread first
+#the Messages page is retired (the owner, 2026-10-17): everything it did is in the Messages
+#panel now. Its address (old links, bookmarks) opens the panel over the page you were on.
 @messages_bp.route('/messages', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def inbox():
-    from .models import unread_staff
-    from app.user import groups
-    rows = M.inbox(current_user)
-    #the Users page's folders down the side: all students, those in no folder, or one folder
-    #(with the folders inside it); each with how many unread messages are waiting in it
-    root, flat, nodes, _ = groups.tree([r['student'] for r in rows])
-    from app import folder_tree
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    unread = {r['student'].id: r['unread'] for r in rows}
-    #(the folder list's dots: unread messages in a folder, or in the folders inside it)
-    for n in nodes.values():
-        n['unread'] = sum(unread.get(i, 0) for i in n['everyone'])
-    in_none = {u.id for u in root['people']}
-    root['unread_here'] = sum(unread.get(i, 0) for i in in_none)
-    shown = node['people'] if node else root['people'] if view == 'main' else [r['student'] for r in rows]
-    #the same folder page as every other (_folders.html): folder list, heading, folder tabs
-    fk = folder_tree.kit(
-        view, node, root, flat, nodes, readonly=True,
-        page=lambda v: url_for('messages.inbox', folder=v),
-        unit='student', units='students', all_label='All students', all_count=len(rows), name=lambda f: f.name,
-        all_flags={'unread': sum(unread.values())},
-        hint=Markup('Folders are made in <a href="{}" title="Make folders and put students in them in People’s Accounts view">People</a>.').format(url_for('user.userdet')),
-        fold_key='qgen-folded-message-folders')
-    return render_template('inbox.html', rows=rows, shown=shown, pinned=M.pinned_announcements(), fk=fk,
-                           staff_unread=unread_staff(current_user.id), title='Messages',
-                           user_folders=groups.picker(), students={r['student'].id for r in rows})
+    return redirect(back_to(home_url()) + '#messages-panel')
 
 #route to one student's conversation, as a teacher
 #how many of a conversation's messages its page shows at first (and adds with "Show older")
@@ -65,6 +42,19 @@ def conversation(student_id):
     if student is None:
         flash("That student's account has been deleted.", 'info')
         return redirect(url_for('messages.inbox'))
+    #(no page of its own any more: back to the page this came from, with the Messages panel open on
+    #this student, static/js/messages.js ?msg=; links on the site open the panel without coming
+    #here at all: the owner, 2026-10-19)
+    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+    back = urlsplit(request.referrer or '')
+    #(only a page of this site, by its own path: never "//elsewhere"; and its msg= replaced, not
+    #added to, so it opens this student: from the code critic, 2026-10-19)
+    if back.netloc == request.host and back.path.startswith('/') and not back.path.startswith('//') \
+            and not back.path.startswith('/messages/') and not request.args.get('show'):
+        query = urlencode([(k, v) for k, v in parse_qsl(back.query, keep_blank_values=True) if k != 'msg'] + [('msg', student.id)])
+        return redirect(urlunsplit(('', '', back.path, query, '')))
+    if not request.args.get('show'):
+        return redirect(url_for('qgen.dashboard') + '?msg={}'.format(student.id))
     #the newest messages (a long conversation shows "Show older" for the rest), 40 at a time
     shown = max(request.args.get('show', type=int) or 0, PAGE)
     items = M.conversation(student.id, teacher=current_user, limit=shown + 1)
@@ -354,7 +344,29 @@ def teacher_panel(choice='all', mark_seen=True):
     rows = M.inbox(current_user)
     staff = staff_picker(current_user)
     if choice == 'teachers' or (isinstance(choice, str) and choice[:1] == 't' and choice[1:].isdigit()):
-        return teachers_view(rows, staff, choice, mark_seen)
+        return dict(teachers_view(rows, staff, choice, mark_seen), **panel_extras(rows))
+    #a People folder: every message from its students (and the folders inside it) together
+    if isinstance(choice, str) and choice[:1] == 'f' and choice[1:].isdigit():
+        extras = panel_extras(rows)
+        folder = next((f for f in extras['folders'] if str(f['id']) == choice[1:]), None)
+        if folder is not None:
+            ids = set(folder['ids'])
+            from .models import Message
+            #(an announcement is listed once, under its first copy's student: it belongs here if
+            #any of its copies went to someone in the folder)
+            def in_folder(m):
+                if m.batch and m.kind == 'announcement':
+                    return db.session.query(Message.id).filter(Message.batch == m.batch, Message.student_id.in_(ids)).first() is not None
+                return m.student_id in ids
+            items = [m for m in M.everyone(unread=M.unread_by_teacher(current_user), teacher=current_user) if in_folder(m)]
+            unread_ids = M.unseen_ids(current_user, items)
+            if mark_seen:
+                M.mark_messages_seen_by_teachers(current_user, items)
+                for r in rows:
+                    r['unread'] = M.unread_from(current_user, r['student'].id)
+            return dict({'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
+                         'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True,
+                         'folder': folder}, **extras)
     try:
         student_id = int(choice)
     except (TypeError, ValueError):
@@ -367,8 +379,9 @@ def teacher_panel(choice='all', mark_seen=True):
             M.mark_messages_seen_by_teachers(current_user, items)
             for r in rows:
                 r['unread'] = M.unread_from(current_user, r['student'].id)
-        return {'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
-                'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True}
+        return dict({'rows': rows, 'student': None, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
+                     'others_unread': sum(r['unread'] for r in rows), 'max_len': M.max_len(), 'everyone': True},
+                    **panel_extras(rows))
     student = chosen['student']
     items = M.conversation(student.id, limit=30, unread=M.unread_by_teacher(current_user), teacher=current_user)
     unread_ids = M.unseen_ids(current_user, items)
@@ -377,9 +390,23 @@ def teacher_panel(choice='all', mark_seen=True):
         chosen['unread'] = 0
     #other students waiting for an answer, most recent first: the "new from ..." button
     waiting = sorted((r for r in rows if r['unread']), key=lambda r: r['last'].created, reverse=True)
-    return {'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
-            'others_unread': sum(r['unread'] for r in rows), 'waiting': waiting,
-            'max_len': M.max_len(), 'everyone': False}
+    return dict({'rows': rows, 'student': student, 'items': items, 'unread_ids': unread_ids, 'staff': staff,
+                 'others_unread': sum(r['unread'] for r in rows), 'waiting': waiting,
+                 'max_len': M.max_len(), 'everyone': False}, **panel_extras(rows))
+
+
+def panel_extras(rows):
+    """What the teacher's panel took over from the Messages page (the owner, 2026-10-17):
+    People's folders (for "Showing" and for "Write to…"), with how many of their students have
+    unread messages, and the pinned announcements."""
+    from app.user import groups
+    students = {r['student'].id for r in rows}
+    unread = {r['student'].id: r['unread'] for r in rows}
+    folders = groups.picker()
+    for f in folders:
+        f['students'] = [i for i in f['ids'] if i in students]
+        f['unread'] = sum(unread.get(i, 0) for i in f['students'])
+    return {'folders': folders, 'pinned': M.pinned_announcements()}
 
 
 def staff_picker(me):

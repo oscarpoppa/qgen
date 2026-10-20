@@ -203,8 +203,11 @@
   //once the page has settled (the grid laid out, lists at their kept heights), and again for
   //cards a live update draws afresh (the Dashboard's)
   function scan() { document.querySelectorAll('[data-elastic]').forEach(setUp); }
-  function start() { setTimeout(scan, 250); }
-  if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
+  window.qgenElasticScan = scan;  // (the Dashboard's redraw: dashboard.js)
+  //(straight away, before the Dashboard shows its cards, so a card kept taller is taller from the
+  //start instead of growing a moment after: the owner, 2026-10-18)
+  function start() { setTimeout(scan, 0); }
+  if (document.readyState !== 'loading') start(); else document.addEventListener('DOMContentLoaded', start);
   if (window.MutationObserver) new MutationObserver(function () { clearTimeout(scan._t); scan._t = setTimeout(scan, 250); })
     .observe(document.querySelector('main') || document.body, { childList: true, subtree: true });
 })();

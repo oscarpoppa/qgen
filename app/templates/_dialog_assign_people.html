@@ -1,8 +1,11 @@
 {# Assign a quiz: pick the quizzes for the people (People's checked bar, any person's or folder's
    paper plane: static/js/assign_people.js; the owner, 2026-10-15). Included where it's offered. #}
-{% set assign_quizzes, quiz_folders = quiz_choices() %}
+{#- the quizzes: the standard picker, the Quizzes page's folders as the folder list, the filter, and
+    checking on a line of its own, like the people dialog (the owner, 2026-10-19; it was a drop-down) #}
+{% set ap_quizzes, ap_tree = assign_quizzes() %}
+{% from "_macros.html" import filter_bar with context %}
 <script type="application/json" id="person-folders">{{ person_folder_map()|tojson }}</script>
-<dialog class="ask ask-many assign-many" id="assign-people-dialog" aria-labelledby="assign-people-head">
+<dialog class="ask ask-many assign-many pick-dialog" id="assign-people-dialog" aria-labelledby="assign-people-head">
   <form method="post" action="{{ url_for('qgen.assign_many') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="">
@@ -11,21 +14,28 @@
     {# what it's given with, said plainly (the owner, 2026-10-15) #}
     <div class="assign-defaults small">
       <strong>Given with the usual settings:</strong>
-      <ul><li>opens now</li><li>no closing time</li><li>no time limit</li><li>calculator: as each quiz is set (change it in Edit quiz)</li></ul>
+      <ul><li>Opens now</li><li>No closing time</li><li>No time limit</li><li>Calculator: as each quiz is set (change it in Edit quiz)</li></ul>
       <span class="muted">To set opening and closing times or a time limit, use the Assign page: <a href="{{ url_for('qgen.assign') }}" data-full-assign>open it</a>.</span>
     </div>
-    <div class="assign-many-tools">
-      <label class="sr-only" for="assign-people-folder">Show</label>
-      <select id="assign-people-folder" title="Show only the quizzes in a folder">
-        <option value="">All quizzes</option>
-        {% for g, depth in quiz_folders %}<option value="{{ g.id }}">{{ '\u00a0\u00a0\u00a0' * (depth - 1) }}{{ g.title }}</option>{% endfor %}
-      </select>
-      <span class="muted small" data-pick-count></span>
+    <div class="field pick-people" id="assign-people-pick">
+      {{ filter_bar('#assign-people-pick .folder-filter-list', 'quiz', 'quizzes', items='li', id='assign-people-bar') }}
+      <div class="btn-row small write-to-checks">
+        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="all" title="Check every quiz in the list below (the folder chosen, and the names that match)">Check all shown</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
+        <span class="muted small" data-pick-count aria-live="polite">0 checked</span>
+      </div>
+      {% if ap_quizzes %}
+      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+           data-unit="quiz" data-units="quizzes" data-remember="assign-people" data-tools-home="#assign-people-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ ap_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          <ul class="choice-list pick-list">
+            {% for q in ap_quizzes %}<li data-box="quiz:{{ q.id }}"><input type="checkbox" name="items" value="{{ q.id }}" id="ap-{{ q.id }}"><label for="ap-{{ q.id }}">{{ q.title }}</label></li>{% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% else %}<p class="muted small">No quizzes yet.</p>{% endif %}
     </div>
-    <ul class="assign-many-people">
-      {% for q, folders in assign_quizzes %}<li data-folders="{{ folders }}"><label><input type="checkbox" name="items" value="{{ q.id }}"> {{ q.title }}</label></li>{% endfor %}
-      {% if not assign_quizzes %}<li class="muted small">No quizzes yet.</li>{% endif %}
-    </ul>
     <div data-users></div>
     <p class="error small" data-pick-error hidden>Check at least one quiz first.</p>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Give the checked quizzes to them">Assign</button></div>

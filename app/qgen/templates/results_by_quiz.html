@@ -34,7 +34,7 @@
           <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
           <tbody>
           {% for student, g in q.rows %}
-            <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
+            <tr data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' }}">
               <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
               {{ result_cells(g, student, rules) }}
             </tr>
@@ -59,7 +59,7 @@
       <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
       <tbody>
       {% for person in people %}{% set student, g = rows[person.id] %}
-        <tr data-box="student:{{ student.id }}" data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
+        <tr data-box="student:{{ student.id }}" data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else '' }}">
           <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
           {{ result_cells(g, student, rules) }}
         </tr>
@@ -74,10 +74,10 @@
 {% set laid_out = single and quizzes[0].rows %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
+  {% if single %}<span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="View quiz: look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Edit quiz: change “{{ quizzes[0].vquiz.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a></span>{% endif %}
   {% if not laid_out %}<div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
     {% if single %}
-      <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="View quiz: look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
-      <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Edit quiz: change “{{ quizzes[0].vquiz.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
       {% if quizzes[0].vquiz.removed_at %}{{ slot('Assign it', 'A removed quiz can’t be assigned: restore it first', 'btn') }}{% else %}<a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) }}" data-what="“{{ quizzes[0].vquiz.title }}”" title="Give “{{ quizzes[0].vquiz.title }}” to students">Assign it</a>{% endif %}
     {% endif %}</div>{% endif %}
 </div>
@@ -86,11 +86,9 @@
 {% set q = quizzes[0] %}{% set vq = q.vquiz %}
 {% call folders_page(fk) %}
   <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'student', 'students', items='tr[data-box]', boxes='details.sub-box', url=true) }}
-    {#- the way back, View, Edit and Assign it at the right end of the filter row, as on a
+    {#- the way back and Assign it at the right end of the filter row (View and Edit beside the title), as on a
         problem's history (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes', 'btn btn-secondary btn-sm') }}
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
       {% if vq.removed_at %}{{ slot('Assign it', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% else %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Give “{{ vq.title }}” to students">Assign it</a>{% endif %}</div></div>
   {#- the quiz at a glance, like a problem's history's summary #}
   <div class="card problem-summary">

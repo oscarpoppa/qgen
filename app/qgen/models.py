@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 import json
 from sqlalchemy.dialects import mysql
 
+#a long text column: MySQL's plain TEXT stops at 64 KB
+LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
+
 #add save method
 class SaveMixin:
     def save(self):
@@ -68,6 +71,60 @@ class VQGroup(db.Model, SaveMixin, DateMixin):
     def __repr__(self):
         return '<VQuiz Group: {}>'.format(self.title)
 
+#an uploaded file (a picture or another file) in the static folder, as a row, so it can be put
+#in folders like problems and quizzes (the owner, 2026-10-19). The files are still the truth:
+#app/qgen/uploads.py keeps these rows in step with what's in the folder.
+upload_picgroup = db.Table('upload_picgroup',
+    db.Column('upload_id', db.Integer, db.ForeignKey('upload_file.id', ondelete='CASCADE'), nullable=False),
+    db.Column('picgroup_id', db.Integer, db.ForeignKey('picgroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('upload_id', 'picgroup_id', name='uq_upload_picgroup'))
+upload_filegroup = db.Table('upload_filegroup',
+    db.Column('upload_id', db.Integer, db.ForeignKey('upload_file.id', ondelete='CASCADE'), nullable=False),
+    db.Column('filegroup_id', db.Integer, db.ForeignKey('filegroup.id', ondelete='CASCADE'), nullable=False),
+    db.UniqueConstraint('upload_id', 'filegroup_id', name='uq_upload_filegroup'))
+
+
+class UploadFile(db.Model, DateMixin):
+    __tablename__ = 'upload_file'
+    id = db.Column(db.Integer, primary_key=True)
+    #(191: the longest a unique index fits on MySQL with utf8mb4 on any row format; a file with a
+    #longer name isn't given a row, so it can't go in a folder: app/qgen/uploads.py NAME_MAX)
+    name = db.Column(db.String(191), nullable=False, unique=True)
+    #a picture (it has a thumbnail, on the Pictures page) or another file (Other files)
+    picture = db.Column(db.Boolean, nullable=False, default=False)
+    picgroups = db.relationship('PicGroup', back_populates='uploads', secondary=upload_picgroup, lazy=True)
+    filegroups = db.relationship('FileGroup', back_populates='uploads', secondary=upload_filegroup, lazy=True)
+
+    @property
+    def title(self):
+        return self.name
+
+    def __repr__(self):
+        return '<Upload {}>'.format(self.name)
+
+
+#a teacher's folder for sorting pictures
+class PicGroup(db.Model, SaveMixin, DateMixin):
+    __tablename__ = 'picgroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_picgroup_title'),)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64))
+    summary = db.Column(db.String(256))
+    parent_id = db.Column(db.Integer, db.ForeignKey('picgroup.id', ondelete='CASCADE'), nullable=True, index=True)
+    uploads = db.relationship('UploadFile', back_populates='picgroups', secondary=upload_picgroup, lazy=True)
+
+
+#a teacher's folder for sorting other files
+class FileGroup(db.Model, SaveMixin, DateMixin):
+    __tablename__ = 'filegroup'
+    __table_args__ = (db.UniqueConstraint('title', name='uq_filegroup_title'),)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64))
+    summary = db.Column(db.String(256))
+    parent_id = db.Column(db.Integer, db.ForeignKey('filegroup.id', ondelete='CASCADE'), nullable=True, index=True)
+    uploads = db.relationship('UploadFile', back_populates='filegroups', secondary=upload_filegroup, lazy=True)
+
+
 #for virtual problem DB storage
 class VProblem(db.Model, SaveMixin, DateMixin):
     __tablename__ = 'vproblem'
@@ -120,6 +177,16 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     retake_rule = db.Column(db.String(16), default='best', nullable=False, server_default='best')
     #taken off the Quizzes page and Assign (students keep their copies and scores); None: in use
     removed_at = db.Column(db.DateTime, nullable=True)
+    #JSON: a quiz made from a scanned page is taken on the page itself (pagelayout.py); None: an ordinary quiz
+    page_layout_json = db.Column('page_layout', LongText, nullable=True)
+
+    @property
+    def page_layout(self):
+        return json.loads(self.page_layout_json) if self.page_layout_json else None
+
+    @page_layout.setter
+    def page_layout(self, val):
+        self.page_layout_json = json.dumps(val) if val else None
 
     @property
     def calculator_problems(self):
@@ -250,8 +317,6 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
 
     def __repr__(self):
         return '<Concrete Quiz: {} : {}>'.format(self.taker.username, self.vquiz.title or 'Untitled')
-
-
 
 
 #log of "Fill in for me" requests; also used for the hourly limit
@@ -398,10 +463,6 @@ def attempts_by_quiz(cquizzes):
                     'overridden': bool(override)})
     #newest activity first
     return sorted(out, key=lambda g: -g['attempts'][-1].id)
-
-
-#a long text column: MySQL's plain TEXT stops at 64 KB
-LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
 
 
 #a folder on the Archive page. Each student gets one automatically (student_id), named

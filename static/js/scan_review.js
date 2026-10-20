@@ -11,8 +11,24 @@
   var progress = document.getElementById('scan-progress');
   if (progress) {
     var words = { waiting: 'waiting', reading: 'reading…', done: 'done ✓', error: 'couldn’t be read' };
+    //the timer (the owner, 2026-10-18): this page so far, and the whole reading so far, counted from
+    //the server's times (skew: how far this computer's clock is off) and ticking every second
+    var timer = document.getElementById('scan-timer'), skew = 0, pageSince = null, allSince = null;
+    function when(iso) { return iso ? new Date(iso).getTime() : null; }
+    function mmss(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+    function showTime() {
+      if (!timer || allSince === null) return;
+      var now = Date.now() + skew;
+      timer.textContent = (pageSince !== null ? 'this page ' + mmss(now - pageSince) + ' · ' : '') + 'in all ' + mmss(now - allSince);
+    }
+    setInterval(showTime, 1000);
     var poll = function () {
       fetch(progress.dataset.status, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
+        if (s.now) skew = when(s.now) - Date.now();
+        allSince = when(s.since);
+        var reading = s.pages.filter(function (p) { return p.state === 'reading'; })[0];
+        pageSince = reading ? when(reading.since) : null;
+        showTime();
         var done = 0;
         s.pages.forEach(function (p) {
           var li = progress.querySelector('li[data-n="' + p.n + '"] span');

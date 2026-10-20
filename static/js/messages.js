@@ -212,6 +212,33 @@
     }
   });
 
+  //a link to a student's messages (/messages/<id>: People's speech bubble, a student page, the
+  //inbox...) opens this panel on that student, over the page you're on, instead of a page of its
+  //own; so does ?msg=<id> in the address (the old page's address sends you back with it) (the
+  //owner, 2026-10-19)
+  function openStudent(id) {
+    var go = function () { store('qgen-dock-view', String(id)); if (isOpen('messages')) load('messages'); else setOpen('messages', true);
+      setTimeout(function () { var t = pane('messages').querySelector('textarea'); if (t) t.focus(); }, 400); };
+    if (!busyTyping() || String(id) === String(drawnView)) { go(); return; }
+    ask('Discard the message you were writing?', 'Discard').then(function (yes) { if (yes) go(); });
+  }
+  if (pane('messages')) {
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a || e.ctrlKey || e.metaKey || e.shiftKey || a.target === '_blank') return;
+      var m = /^\/messages\/(\d+)$/.exec(a.pathname || '');
+      if (!m || a.origin !== location.origin) return;
+      e.preventDefault();
+      openStudent(m[1]);
+    });
+    var asked = new URLSearchParams(location.search).get('msg');
+    if (asked && /^\d+$/.test(asked)) {
+      var u = new URL(location.href); u.searchParams.delete('msg');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+      openStudent(asked);
+    }
+  }
+
   //teacher: show everyone's messages ('all') or one student's conversation
   function showStudent(choice, focus) {
     store('qgen-dock-view', choice);
@@ -584,7 +611,77 @@
   }
   var splitFit = function () {};
 
+  /* ---------- what the retired Messages page did (the owner, 2026-10-17) ---------- */
+
+  //"Write to…" and "Pinned": a copy of the panel's box opens over the page (the panel itself
+  //reloads as messages arrive, which would close a box inside it)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-panel-dialog]');
+    //(a box on the page itself, Write to…: opened as it is, its folders already set up)
+    var onPage = b && document.querySelector('body > dialog#' + b.dataset.panelDialog);
+    if (onPage) { onPage.showModal(); countChecked(onPage); return; }
+    if (b) {
+      var src = pane('messages').querySelector('#' + b.dataset.panelDialog);
+      if (!src) return;
+      var d = src.cloneNode(true);
+      d.removeAttribute('id');
+      d.querySelectorAll('[id]').forEach(function (el) { el.id = 'open-' + el.id; });
+      d.querySelectorAll('label[for]').forEach(function (l) { l.htmlFor = 'open-' + l.htmlFor; });
+      d.querySelectorAll('[aria-labelledby]').forEach(function (el) { el.setAttribute('aria-labelledby', 'open-' + el.getAttribute('aria-labelledby')); });
+      if (d.getAttribute('aria-labelledby')) d.setAttribute('aria-labelledby', 'open-' + d.getAttribute('aria-labelledby'));
+      document.body.appendChild(d);
+      d.addEventListener('close', function () { d.remove(); b.focus(); });
+      d.showModal();
+      return;
+    }
+    var x = e.target.closest('dialog.panel-dialog [data-close]');
+    if (x) { x.closest('dialog').close(); return; }
+    var set = e.target.closest('dialog.panel-dialog [data-check-set]');
+    if (set) {
+      set.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) { c.checked = set.dataset.checkSet === '1'; });
+      countChecked(set.closest('dialog'));
+      return;
+    }
+    //"Check all shown": the students the folder tab and the name filter leave in the list
+    var shown = e.target.closest('dialog.panel-dialog [data-check-shown]');
+    if (shown) {
+      shown.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) {
+        var li = c.closest('li');
+        if (!li.hidden && !li.closest('[hidden]')) c.checked = true;
+      });
+      countChecked(shown.closest('dialog'));
+      return;
+    }
+    var f = e.target.closest('dialog.panel-dialog [data-check-ids]');
+    if (f) {
+      var ids = JSON.parse(f.dataset.checkIds).map(String);
+      f.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) { if (ids.indexOf(c.value) !== -1) c.checked = true; });
+    }
+  });
+  function countChecked(d) {
+    var c = d && d.querySelector('[data-check-count]');
+    if (c) c.textContent = d.querySelectorAll('input[name=students]:checked').length + ' checked';
+  }
+  document.addEventListener('change', function (e) {
+    if (e.target.name === 'students') countChecked(e.target.closest('dialog.panel-dialog'));
+  });
+  //nobody checked: say so before sending
+  document.addEventListener('submit', function (e) {
+    var d = e.target.closest('dialog.panel-dialog');
+    if (!d || !d.querySelector('input[name=students]')) return;
+    if (!d.querySelector('input[name=students]:checked')) {
+      e.preventDefault();
+      window.alert('Check at least one student.');
+    }
+  });
+
   /* ---------- start ---------- */
+
+  //the old Messages page's address (and its links) open this panel instead
+  if (location.hash === '#messages-panel') {
+    if (window.history && history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+    if (!isOpen('messages')) setOpen('messages', true);
+  }
 
   measure();
   window.addEventListener('resize', measure);

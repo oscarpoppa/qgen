@@ -117,7 +117,7 @@ def _named(endpoint, args):
         return vq.title if vq else None
     if endpoint == 'qgen.list_user':
         name = user('uid')
-        return "{}'s student page".format(name) if name else None
+        return "{}’s student page".format(name) if name else None
     if endpoint == 'messages.conversation':
         name = user('student_id')
         return 'Messages: {}'.format(name) if name else None
@@ -147,7 +147,7 @@ def _match(path):
 
 
 def place_name(path):
-    """"Dashboard", "sam's student page"... for a page someone can go back to, or None."""
+    """"Dashboard", "sam’s student page"... for a page someone can go back to, or None."""
     if not path:
         return None
     endpoint, args = _match(path)

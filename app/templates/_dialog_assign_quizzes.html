@@ -1,7 +1,8 @@
 {# Assign quizzes: pick the people for the quizzes (the Quizzes page's checked bar, any quiz's paper
    plane: static/js/assign_many.js; the owner, 2026-10-15). Included where it's offered. #}
-{% set assign_people, assign_folders = people_choices() %}
-<dialog class="ask ask-many assign-many" id="assign-many-dialog" aria-labelledby="assign-many-head">
+{% from "_macros.html" import filter_bar with context %}
+{% set am_people, am_tree = assign_people() %}
+<dialog class="ask ask-many assign-many pick-dialog" id="assign-many-dialog" aria-labelledby="assign-many-head">
   <form method="post" action="{{ url_for('qgen.assign_many') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view if fk else '' }}"><input type="hidden" name="next" value="">
@@ -10,23 +11,29 @@
     {# what it's given with, said plainly (the owner, 2026-10-15) #}
     <div class="assign-defaults small">
       <strong>Given with the usual settings:</strong>
-      <ul><li>opens now</li><li>no closing time</li><li>no time limit</li><li>calculator: as each quiz is set (change it in Edit quiz)</li></ul>
+      <ul><li>Opens now</li><li>No closing time</li><li>No time limit</li><li>Calculator: as each quiz is set (change it in Edit quiz)</li></ul>
       <span class="muted">To set opening and closing times or a time limit, use the Assign page: <a href="{{ url_for('qgen.assign') }}" data-full-assign>open it</a>.</span>
     </div>
-    <div class="assign-many-tools">
-      <label class="sr-only" for="assign-many-folder">Show</label>
-      <select id="assign-many-folder" title="Show only the people in a folder">
-        <option value="">Everyone</option>
-        {% for f, depth in assign_folders %}<option value="{{ f.id }}">{{ '   ' * (depth - 1) }}{{ f.name }}</option>{% endfor %}
-      </select>
-      <button type="button" class="btn btn-secondary btn-xs" data-people="all" title="Check everyone shown">Check all</button>
-      <button type="button" class="btn btn-secondary btn-xs" data-people="none" title="Uncheck everyone">Uncheck all</button>
-      <span class="muted small" data-people-count></span>
+    {#- the people: the standard picker, People's folders as the folder list and tabs, the filter,
+        and checking on a line of its own, as in "Write to…" (the owner, 2026-10-18) #}
+    <div class="field pick-people" id="assign-many-pick">
+      {{ filter_bar('#assign-many-pick .folder-filter-list', 'person', 'people', items='li', id='assign-many-bar') }}
+      <div class="btn-row small write-to-checks">
+        <button type="button" class="btn btn-secondary btn-sm" data-people="all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-people="none" title="Uncheck everyone">Uncheck all</button>
+        <span class="muted small" data-people-count aria-live="polite">0 checked</span>
+      </div>
+      <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="Everyone" data-main-label="Uncategorized"
+           data-unit="person" data-units="people" data-remember="assign-many" data-tools-home="#assign-many-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ am_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          <ul class="choice-list pick-list">
+            {% for u in am_people %}<li data-box="user:{{ u.id }}"><input type="checkbox" name="users" value="{{ u.id }}" id="am-{{ u.id }}"><label for="am-{{ u.id }}">{{ u.shown_name }}</label></li>{% endfor %}
+          </ul>
+        </div>
+      </div>
     </div>
-    <ul class="assign-many-people">
-      {% for u, folders in assign_people %}<li data-folders="{{ folders }}"><label><input type="checkbox" name="users" value="{{ u.id }}"> {{ u.shown_name }}</label></li>{% endfor %}
-    </ul>
-    <div data-items></div>
+    <div data-quiz-items></div>
     <p class="error small" data-people-error hidden>Check at least one person first.</p>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Give the quizzes to the people checked">Assign</button></div>
   </form>

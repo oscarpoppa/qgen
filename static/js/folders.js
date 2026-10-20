@@ -58,6 +58,14 @@
   //Expand all / Collapse all above the list (the folders above the one you're in stay open)
   //(always there: grayed out, with why, when no folder in the list has folders inside it)
   var levels = document.querySelector('.side-levels');
+  //(beside the page's title, not on top of the folder list: the owner, 2026-10-19; it still opens
+  //and folds the list's folders)
+  var title = levels && document.querySelector('main .page-head > h1');
+  if (title) {
+    levels.qgenScope = levels.parentElement;
+    levels.classList.add('title-levels');
+    title.parentNode.insertBefore(levels, title.nextSibling);
+  }
   if (levels) levels.hidden = false;
   if (levels && !shows.length) levels.querySelectorAll('[data-side-level]').forEach(function (b) {
     b.disabled = true;
@@ -177,6 +185,8 @@
     }
     if (sel) { sel.disabled = !n; if (!n) sel.title = 'Check something below first'; else sel.removeAttribute('title'); }
     fileForm.querySelectorAll('button').forEach(function (b) {
+      //(no folders yet: grayed, with why, never hidden: the owner, 2026-10-19)
+      if (b.dataset.noFolder !== undefined) { b.disabled = true; b.title = b.dataset.noFolder; return; }
       b.disabled = !n || (sel && sel.value === '');
       if (!b.dataset.titleWas) b.dataset.titleWas = b.title || '';
       b.title = !n ? 'Check something below first' : b.disabled ? 'Choose a folder first' : b.dataset.titleWas;

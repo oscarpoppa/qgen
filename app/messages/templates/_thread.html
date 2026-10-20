@@ -62,7 +62,8 @@
             {%- if me_teacher and others|length < m.recipients|length %}to you{{ ' and ' ~ others|join(', ') if others }} only
             {%- else %}to {{ m.recipients|map(attribute='shown_name')|join(', ') or 'a teacher' }} only{% endif %}</span>
         {% elif not m.from_teacher and m.kind != 'notice' and not me_teacher %}<span class="muted">to all teachers</span>{% endif %}
-        {% if grouped %}<span class="muted">to all {{ m.copies }} students</span>
+        {#- ("all" only when it went to every student; chosen ones: "to 3 students", the owner 2026-10-17) -#}
+        {% if grouped %}<span class="muted">to {{ 'all ' if rows is defined and rows and m.copies >= rows|length }}{{ m.copies }} students</span>
         {% elif everyone is defined and everyone and m.from_teacher %}<span class="muted">to {{ m.student.shown_name }}</span>{% endif %}
         <span class="muted">{{ m.created|when }}</span>
         {# (pinned: said plainly, for everyone, beside its other badges: the owner, 2026-10-14) #}

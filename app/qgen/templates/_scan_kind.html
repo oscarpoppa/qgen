@@ -1,0 +1,12 @@
+{#- one scan's kind, with its mark (the owner, 2026-10-19): x from scan_progress_data #}
+{%- if x.kind == 'reading' -%}
+  {%- if x.pausing %}Pausing after this page…{% elif x.now %}Reading page {{ x.now }} of {{ x.total }}…{% else %}Reading the pages…{% endif -%}
+{%- elif x.kind == 'ready' -%}
+  <span class="scan-chip-done" aria-hidden="true">✓</span> Ready to check
+{%- elif x.kind == 'paused' -%}
+  <span class="scan-chip-wait" aria-hidden="true">⏸</span> Paused: {{ x.done }} of {{ x.total }} pages read
+{%- elif x.kind == 'stopped' -%}
+  <span class="scan-chip-stopped" aria-hidden="true">{{ icon('lc-alert') }}</span> Stopped: {{ x.failed }} page{{ '' if x.failed == 1 else 's' }} couldn’t be read
+{%- else -%}
+  <span class="scan-chip-draft" aria-hidden="true">{{ icon('lc-pencil') }}</span> Draft, kept {% if x.kept_today %}{{ '{}:{:%M} {:%p}'.format(x.kept_at.hour % 12 or 12, x.kept_at, x.kept_at) }}{% else %}{{ x.kept_at|when('date') }}{% endif %}
+{%- endif -%}

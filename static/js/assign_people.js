@@ -7,21 +7,16 @@
   if (!dialog) return;
   var folders = {};
   try { folders = JSON.parse(document.getElementById('person-folders').textContent); } catch (e) {}
-  var items = Array.prototype.slice.call(dialog.querySelectorAll('.assign-many-people > li[data-folders]'));
+  //(the quizzes: the standard picker, folder list and filter, static/js/folderfilter.js and
+  //filter.js; Check all shown / Uncheck all here: the owner, 2026-10-19)
+  var items = Array.prototype.slice.call(dialog.querySelectorAll('#assign-people-pick li[data-box]'));
   var boxes = items.map(function (li) { return li.querySelector('input'); });
-  var pick = dialog.querySelector('#assign-people-folder'), count = dialog.querySelector('[data-pick-count]');
+  var count = dialog.querySelector('[data-pick-count]');
   var error = dialog.querySelector('[data-pick-error]'), full = dialog.querySelector('[data-full-assign]');
-  //(each folder in the drop-down says how many it holds, and the first choice the whole
-  //list's count: the owner, 2026-10-15)
-  function countFolders(sel, rows) {
-    if (!sel || sel.dataset.counted) return;
-    sel.dataset.counted = '1';
-    Array.prototype.forEach.call(sel.options, function (o) {
-      var n = o.value ? rows.filter(function (li) { return (' ' + li.dataset.folders + ' ').indexOf(' ' + o.value + ' ') !== -1; }).length : rows.length;
-      o.textContent = o.textContent + ' (' + n + ')';
-    });
-  }
-  countFolders(pick, items);
+  function shownNow(li) { return !li.hidden && !li.closest('[hidden]'); }
+  var all = dialog.querySelector('[data-quizzes="all"]'), none = dialog.querySelector('[data-quizzes="none"]');
+  if (all) all.addEventListener('click', function () { items.forEach(function (li, i) { if (shownNow(li)) boxes[i].checked = true; }); sync(); });
+  if (none) none.addEventListener('click', function () { boxes.forEach(function (b) { b.checked = false; }); sync(); });
 
   function nameOf(id) {
     var el = document.querySelector('input.pick-person[value="' + id + '"]');
@@ -33,10 +28,6 @@
     count.textContent = n + ' checked';
     if (n) error.hidden = true;
   }
-  pick.addEventListener('change', function () {
-    var f = pick.value;
-    items.forEach(function (li) { li.hidden = !!f && (' ' + li.dataset.folders + ' ').indexOf(' ' + f + ' ') === -1; });
-  });
   dialog.addEventListener('change', sync);
   dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });
   //"open it": the Assign page with these people, and the quiz checked here when it's one

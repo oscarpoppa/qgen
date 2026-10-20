@@ -7,7 +7,7 @@
   <h1>Scan workbook pages</h1>
   <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}</div>
 </div>
-<p class="muted">Photograph or scan pages of a workbook. The AI reads each page and drafts its problems, with random numbers so every student gets his/her own. You check everything beside the page before anything is saved.</p>
+<p class="muted">Photograph or scan workbook pages. You check each one before anything is saved.</p>
 
 <div class="card">
   <h2>New scan</h2>
@@ -16,12 +16,27 @@
     <div class="field">
       <label class="label" for="scan-name">Workbook name</label>
       <input type="text" id="scan-name" name="name" maxlength="128" placeholder="e.g. Math Grade 2, pages 10–15" required>
-      <div class="help">Also the folder the problems and quizzes go in (you can change it later).</div>
+      <div class="help">The problems and quizzes go in a folder with this name.</div>
     </div>
     <div class="field">
       <label class="label" for="scan-pages">Pages</label>
-      <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple required>
-      <div class="help">Photos (JPG, PNG) or a PDF; up to {{ max_pages }} pages at a time. Take each photo straight on, in good light, with the whole page showing.</div>
+      {#- one picture, several, a PDF, or a whole folder; dropped on the box like Pictures' (the owner, 2026-10-19) #}
+      <div class="scan-drop" id="scan-drop" title="Drop pages here: a picture, several, a PDF or a whole folder">
+        <strong style="font-size:1.1rem">Drop pages here</strong>
+      <div class="btn-row scan-pick">
+        {#- (the browser's own picker hidden behind a button like Choose a folder, the same size: the owner, 2026-10-19) #}
+        <button type="button" class="btn btn-secondary btn-sm" id="scan-files-btn" title="Choose one or more photos, or a PDF">Choose files</button>
+        <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple hidden>
+        <span class="muted small">or</span>
+        <button type="button" class="btn btn-secondary btn-sm" id="scan-folder-btn" title="Scan every photo and PDF in a folder, in file-name order">Choose a folder</button>
+        <input type="file" id="scan-folder" name="folder_pages" webkitdirectory multiple hidden>
+        <input type="hidden" name="from_folder" id="scan-folder-name" value="">
+      </div>
+      {#- small pictures of what was dropped or chosen (the owner, 2026-10-19) #}
+      <div class="scan-drop-thumbs" id="scan-thumbs" hidden></div>
+      </div>
+      <div class="small" id="scan-chosen" aria-live="polite" hidden></div>
+      <div class="help">JPG, PNG or PDF, up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
     <div class="btn-row">
       <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
@@ -32,14 +47,17 @@
 
 {% if jobs %}
 <div class="card">
-  <h2>Unfinished scans</h2>
+  {#- ("Current", like the Dashboard's pop-over: finished scans are in it too, the owner 2026-10-19) #}
+  <h2>Current scans</h2>
   <div class="table-wrap stack">
     <table>
       <thead><tr><th>Workbook</th><th>Pages</th><th>Last changed</th><th></th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>
-          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a></td>
+          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
+            {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
+            {%- if kinds.get(j.id) %}{% set x = kinds[j.id] %}<br><span class="small muted">{% include '_scan_kind.html' %}</span>{% endif %}</td>
           <td data-label="Pages">{{ j.pages }}</td>
           <td data-label="Last changed" class="nowrap">{{ j.updated_at|when }}</td>
           <td class="btn-row">
@@ -56,11 +74,107 @@
 {% endblock %}
 {% block scripts %}
 <script>
+(function () {
+  //a folder instead of files: every photo and PDF in it, in file-name order (the owner, 2026-10-19)
+  var files = document.getElementById('scan-pages'), folder = document.getElementById('scan-folder');
+  var chosen = document.getElementById('scan-chosen');
+  var usable = function (f) { return /\.(jpe?g|png|webp|pdf)$/i.test(f.name); };
+  //small pictures of the pages chosen or dropped, in the order they'll be read (file-name order for
+  //a folder); a PDF as a tile with its name; the first 12, then how many more (the owner, 2026-10-19)
+  var thumbs = document.getElementById('scan-thumbs'), urls = [];
+  function natural(a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }); }
+  function showThumbs(list, sorted) {
+    urls.forEach(function (u) { URL.revokeObjectURL(u); }); urls = [];
+    thumbs.textContent = '';
+    var fs = Array.prototype.filter.call(list || [], usable);
+    if (sorted) fs.sort(natural);
+    fs.slice(0, 12).forEach(function (f) {
+      var tile = document.createElement('figure');
+      tile.className = 'scan-drop-thumb';
+      tile.title = f.name;
+      if (/\.pdf$/i.test(f.name)) {
+        var pdf = document.createElement('span'); pdf.className = 'scan-drop-pdf'; pdf.textContent = 'PDF'; tile.appendChild(pdf);
+      } else {
+        var img = document.createElement('img'); var u = URL.createObjectURL(f); urls.push(u); img.src = u; img.alt = ''; tile.appendChild(img);
+      }
+      var cap = document.createElement('figcaption'); cap.textContent = f.name; tile.appendChild(cap);
+      thumbs.appendChild(tile);
+    });
+    if (fs.length > 12) {
+      var more = document.createElement('span'); more.className = 'scan-drop-more muted small'; more.textContent = '+' + (fs.length - 12) + ' more'; thumbs.appendChild(more);
+    }
+    thumbs.hidden = !fs.length;
+  }
+  document.getElementById('scan-folder-btn').addEventListener('click', function () { folder.click(); });
+  document.getElementById('scan-files-btn').addEventListener('click', function () { files.click(); });
+  folder.addEventListener('change', function () {
+    if (!folder.files.length) return;
+    files.value = '';
+    var n = Array.prototype.filter.call(folder.files, usable).length;
+    showThumbs(folder.files, true);
+    var path = folder.files[0].webkitRelativePath || '';
+    var name = path.split('/')[0] || 'the folder';
+    document.getElementById('scan-folder-name').value = path.split('/')[0] || '';
+    chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from “' + name + '”';
+    chosen.hidden = false;
+  });
+  //dropped on the box: files as if chosen; a folder (or anything inside folders) as if its folder
+  //was chosen, every file in it, however deep (the owner, 2026-10-19)
+  var drop = document.getElementById('scan-drop');
+  ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.remove('over'); }); });
+  function walk(entry, out) {
+    return new Promise(function (done) {
+      if (entry.isFile) { entry.file(function (f) { out.push(f); done(); }, function () { done(); }); return; }
+      var reader = entry.createReader(), all = [];
+      (function more() {
+        reader.readEntries(function (batch) {
+          if (!batch.length) { Promise.all(all.map(function (e) { return walk(e, out); })).then(done); return; }
+          all = all.concat(Array.prototype.slice.call(batch)); more();
+        }, function () { done(); });
+      })();
+    });
+  }
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault();
+    var items = Array.prototype.slice.call(e.dataTransfer.items || []);
+    var entries = items.map(function (it) { return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; }).filter(Boolean);
+    var folderName = (entries.filter(function (en) { return en.isDirectory; })[0] || {}).name;
+    var got = [];
+    var ready = entries.length ? Promise.all(entries.map(function (en) { return walk(en, got); })) : Promise.resolve(got = Array.prototype.slice.call(e.dataTransfer.files));
+    ready.then(function () {
+      var dt = new DataTransfer();
+      got.forEach(function (f) { dt.items.add(f); });
+      if (!dt.files.length) return;
+      if (folderName) {
+        files.value = '';
+        folder.files = dt.files;
+        document.getElementById('scan-folder-name').value = folderName;
+        showThumbs(dt.files, true);
+        var n = Array.prototype.filter.call(dt.files, usable).length;
+        chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from “' + folderName + '”';
+        chosen.hidden = false;
+      } else {
+        files.files = dt.files;
+        files.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+  files.addEventListener('change', function () {
+    folder.value = '';
+    document.getElementById('scan-folder-name').value = '';
+    var n = files.files.length;
+    chosen.textContent = n === 1 ? files.files[0].name : n + ' files: ' + Array.prototype.map.call(files.files, function (f) { return f.name; }).join(', ');
+    chosen.hidden = !n;
+    showThumbs(files.files, false);
+  });
+})();
 document.getElementById('scan-upload').addEventListener('submit', function (e) {
   var form = e.target;
-  if (!form.name.value.trim() || !form.pages.files.length) {
+  var picked = form.pages.files.length || document.getElementById('scan-folder').files.length;
+  if (!form.name.value.trim() || !picked) {
     e.preventDefault();
-    (form.name.value.trim() ? form.pages : form.name).focus();
+    (form.name.value.trim() ? document.getElementById('scan-files-btn') : form.name).focus();
     return;
   }
   document.getElementById('scan-go').disabled = true;

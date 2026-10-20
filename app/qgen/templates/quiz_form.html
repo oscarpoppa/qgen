@@ -34,14 +34,11 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
+  <span class="head-icons">{% if vq and vq.id %} <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student's version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a> {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %} {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %} {% endif %}</span>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
-  <div class="actions"><a class="btn btn-secondary" href="{{ came[0] }}" data-back title="Go back to {{ came[1] }} without saving"><span class="back-label">← {{ came[1] }}</span></a>
-    {% if vq and vq.id %}
-      <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student's version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a>
-      {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %}
-      {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}
-    {% endif %}
+  <div class="actions">
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
     {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>
@@ -68,7 +65,7 @@
         Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
         <ul>
         {% for student, rule in retake_overrides %}
-          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}'s student page">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}’s student page">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
         {% endfor %}
         </ul>
       </div>
@@ -77,7 +74,7 @@
   </div>
 
   <div class="card">
-      <div class="card-head"><h2>Problems</h2><span class="muted small">check the ones to include</span>
+      <div class="card-head"><h2>Problems</h2>
         {# or go to the Problems page to check them there, and come back with them (static/js/quiz_pick.js) #}
         {% if has_problems %}<a class="btn btn-secondary btn-sm" id="pick-on-problems" data-keeps-form href="{{ url_for('qgen.list_vprobs') }}" title="Go to the Problems page, check the problems you want there, then come back here with them (what you've filled in here is kept)">Pick on the Problems page</a>{% endif %}</div>
       {% if has_problems %}

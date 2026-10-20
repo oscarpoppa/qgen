@@ -58,11 +58,35 @@ def page_file(job_id, n):
     return os.path.join(job_dir(job_id), 'page-{}.jpg'.format(int(n)))
 
 
-def load_pages(files):
+def thumb_file(job_id, n):
+    """A small copy of page n (about 200 pixels tall), made when first asked for, and again
+    after the page is straightened (the owner, 2026-10-18)."""
+    from PIL import Image
+    src = page_file(job_id, n)
+    out = os.path.join(job_dir(job_id), 'thumb-{}.jpg'.format(int(n)))
+    if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
+        with Image.open(src) as im:
+            im = im.convert('RGB')
+            im.thumbnail((200, 200))
+            im.save(out, 'JPEG', quality=80)
+    return out
+
+
+def _natural(name):
+    """Sort key for file names, numbers by their value: page2 before page10."""
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', name or '')]
+
+
+def load_pages(files, folder=False):
     """Uploaded files (photos and PDFs) -> page pictures: upright, RGB, long side at most
-    LONG_SIDE. Raises ScanError for files that can't be read or too many pages."""
+    LONG_SIDE. Raises ScanError for files that can't be read or too many pages.
+    folder: the files of a whole folder (the owner, 2026-10-19): taken in file-name order, and
+    anything in it that isn't a picture or a PDF (notes, system files) is skipped, not an error.
+    Returns (pages, names of the files skipped)."""
     from PIL import Image, ImageOps
-    pages = []
+    pages, skipped = [], []
+    if folder:
+        files = sorted(files, key=lambda f: _natural(f.filename))
 
     def room(more=1):
         if len(pages) + more > MAX_PAGES:
@@ -78,6 +102,9 @@ def load_pages(files):
             try:
                 doc = pdfium.PdfDocument(data)
             except Exception:
+                if folder:
+                    skipped.append(name)
+                    continue
                 raise ScanError('“{}” couldn’t be opened as a PDF (it may be damaged or have a password).'.format(name))
             try:
                 room(len(doc))
@@ -92,14 +119,19 @@ def load_pages(files):
             im = Image.open(io.BytesIO(data))
             im.load()
         except Exception:
+            if folder:
+                skipped.append(name)
+                continue
             raise ScanError('“{}” isn’t a photo or PDF that can be read. Please use JPG, PNG or PDF.'.format(name))
         room()
         im = ImageOps.exif_transpose(im).convert('RGB')
         im.thumbnail((LONG_SIDE, LONG_SIDE))
         pages.append(im)
     if not pages:
+        if folder:
+            raise ScanError('That folder has no photos or PDFs to scan.')
         raise ScanError('Please choose at least one photo or PDF of a workbook page.')
-    return pages
+    return pages, skipped
 
 
 def create_job(author, name, pages):
@@ -155,6 +187,17 @@ def start_reading(job, api_key, user_id):
     for p in data['pages']:
         if p['state'] == 'error':
             p['state'] = 'waiting'
+        if p['state'] == 'waiting':
+            p.pop('error', None)
+    #(read again: no longer paused nor a kept draft, the owner 2026-10-19)
+    for k in ('paused', 'pausing', 'kept_at'):
+        data.pop(k, None)
+    #(when this reading started, for the scan page's timer: the owner, 2026-10-18)
+    data['reading_since'] = now.isoformat(timespec='seconds')
+    #this reading's own mark: Cancel takes it away, and a reading started again gets a new one, so an
+    #old reading still finishing a page stops instead of going on beside the new one
+    import uuid
+    run = data['run'] = uuid.uuid4().hex
     claimed = ScanJob.query.filter(ScanJob.id == job.id, db.or_(ScanJob.status != 'reading', ScanJob.updated_at < now - STALE)) \
         .update({'status': 'reading', 'updated_at': now, 'data': json.dumps(data)}, synchronize_session=False)
     db.session.commit()
@@ -162,13 +205,13 @@ def start_reading(job, api_key, user_id):
         return False
     app = current_app._get_current_object()
     if app.testing:
-        _read_all(app, job.id, api_key, user_id)  # tests wait for it
+        _read_all(app, job.id, api_key, user_id, run)  # tests wait for it
     else:
-        threading.Thread(target=_read_all, args=(app, job.id, api_key, user_id), daemon=True).start()
+        threading.Thread(target=_read_all, args=(app, job.id, api_key, user_id, run), daemon=True).start()
     return True
 
 
-def _read_all(app, job_id, api_key, user_id):
+def _read_all(app, job_id, api_key, user_id, run=None):
     with app.app_context():
         try:
             while True:
@@ -176,10 +219,22 @@ def _read_all(app, job_id, api_key, user_id):
                 if job is None:
                     return  # discarded meanwhile
                 data = get_data(job)
+                if data.get('run') != run:
+                    return  # read again since: this reading stops
+                if data.get('pausing'):
+                    #Pause: the page being read was finished; the rest wait for Resume
+                    _paused(data)
+                    put_data(job, data)
+                    job.status = 'ready'
+                    db.session.commit()
+                    return
                 page = next((p for p in data['pages'] if p['state'] in ('waiting', 'reading')), None)
                 if page is None:
+                    data.pop('pausing', None)
+                    put_data(job, data)
                     break
                 page['state'] = 'reading'
+                page['since'] = datetime.now().isoformat(timespec='seconds')
                 put_data(job, data)
                 db.session.commit()
                 result = read_one(job, page['n'], api_key, user_id)
@@ -187,6 +242,13 @@ def _read_all(app, job_id, api_key, user_id):
                 if job is None:
                     return
                 data = get_data(job)
+                if data.get('run') != run:
+                    #read again meanwhile: a page read all the way is kept (it's paid for)
+                    if result.get('state') == 'done':
+                        data['pages'][page['n'] - 1] = result
+                        put_data(job, data)
+                        db.session.commit()
+                    return
                 data['pages'][page['n'] - 1] = result
                 put_data(job, data)
                 db.session.commit()
@@ -196,6 +258,7 @@ def _read_all(app, job_id, api_key, user_id):
             job = db.session.get(ScanJob, job_id)
             if job is not None:
                 job.status = 'ready'
+                _tell_done(job)
                 db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -213,31 +276,166 @@ def _read_all(app, job_id, api_key, user_id):
             db.session.remove()
 
 
+def _tell_done(job):
+    """A notice for the teacher when a scan has been read all the way (not when it was canceled
+    or stopped at the hourly limit) (the owner, 2026-10-18)."""
+    from app.messages.models import notify
+    pages = get_data(job).get('pages') or []
+    if any(p.get('state') in ('waiting', 'reading') for p in pages):
+        return
+    done = sum(1 for p in pages if p.get('state') == 'done')
+    failed = len(pages) - done
+    if not failed:
+        body = 'Your scan “{}” has been read and is ready to check.'.format(job.name)
+    elif done:
+        body = 'Your scan “{}” has been read: {} of {} pages are ready to check; {} couldn’t be read.'.format(job.name, done, len(pages), failed)
+    else:
+        body = 'Your scan “{}” couldn’t be read. Open it to try again.'.format(job.name)
+    notify(job.author_id, body, '/quiz/scan/{}'.format(job.id))
+
+
+PAUSED_NOTE = 'Paused before this page was read.'
+
+
+def _paused(data):
+    """The reading stopped by Pause: the pages not read yet wait, with a note, for Resume."""
+    data['run'] = None
+    data.pop('pausing', None)
+    data['paused'] = True
+    for p in data['pages']:
+        if p['state'] in ('waiting', 'reading'):
+            p.update(state='waiting', error=PAUSED_NOTE)
+
+
+def pause_reading(job, reading):
+    """Pause (the owner, 2026-10-19; it was Cancel): the page being read is finished (it's paid
+    for), then the reading stops; Resume goes on with the rest. reading: whether it's still going
+    (when it isn't, e.g. the site restarted meanwhile, it's paused at once)."""
+    data = get_data(job)
+    if reading:
+        data['pausing'] = True
+    else:
+        _paused(data)
+        job.status = 'ready'
+    put_data(job, data)
+    db.session.commit()
+
+
+def scan_kind(data, reading):
+    """Which of the five a scan is (the owner, 2026-10-19): 'reading'; 'stopped' (a page couldn't
+    be read); 'paused' (pages waiting: Pause, or the hourly limit); 'draft' (Keep draft pressed);
+    'ready' (read all the way, waiting to be checked)."""
+    pages = data.get('pages') or []
+    if reading:
+        return 'reading'
+    if any(p.get('state') == 'error' for p in pages):
+        return 'stopped'
+    if any(p.get('state') in ('waiting', 'reading') for p in pages):
+        return 'paused'
+    if data.get('kept_at'):
+        return 'draft'
+    return 'ready'
+
+
 def read_one(job, n, api_key, user_id):
-    """Read page n with the AI. Returns the page's draft, or {'state': 'error', ...}."""
+    """Read page n: QuizScan reads the page (exactly, and where everything is), then the AI
+    gives its problems random numbers, then the page picture is searched for the places
+    students answer (pagelayout.py). Two AI calls, both counted against the hourly limit.
+    Returns the page's draft, or {'state': 'error', ...} (the owner, 2026-10-18)."""
     from app import tuning
-    from . import ai_helper
+    from . import ai_helper, pagelayout
     hourly = tuning.get('ai_hourly')
     since = datetime.now() - timedelta(hours=1)
-    if AICall.query.filter(AICall.user_id == user_id, AICall.created >= since).count() >= hourly:
+    if AICall.query.filter(AICall.user_id == user_id, AICall.created >= since).count() + 2 > hourly:
         return {'n': n, 'state': 'waiting', 'stop': True,
                 'error': 'You’ve used the AI helper {} times in the last hour, so this page is waiting. '
                          'Press “Read the rest” in a while.'.format(hourly)}
-    call = AICall(user_id=user_id, created=datetime.now(), kind='scan', request='Scan {} page {}'.format(job.id, n), ok=False)
     try:
-        with open(page_file(job.id, n), 'rb') as fh:
-            raw, usage = ai_helper.read_page(api_key, fh.read())
+        import quizscan
+    except ImportError:
+        return {'n': n, 'state': 'error', 'error': 'The page reader (QuizScan) isn’t installed on this site.'}
+    path = page_file(job.id, n)
+    #(read before, and only the numbers failed: QuizScan's reading is kept, so it isn't paid for twice)
+    qs = (get_data(job)['pages'][n - 1] or {}).get('qs_reading')
+    if qs is None:
+        call = AICall(user_id=user_id, created=datetime.now(), kind='scan', request='Scan {} page {}'.format(job.id, n), ok=False)
+        try:
+            try:
+                qs = quizscan.convert_image(path, api_key=api_key, model=tuning.get('ai_model'))[0]
+                call.ok = True
+            except quizscan.QuizScanError as exc:
+                return {'n': n, 'state': 'error', 'error': str(exc)}
+        finally:
+            db.session.add(call)
+            db.session.commit()
+        #the page as QuizScan read it: flattened and leveled, so every box is a place on it
+        quizscan.flat_page(path, qs).convert('RGB').save(path, 'JPEG', quality=90)
+        #(kept at once, so a reading cut off from here on, e.g. by the site restarting, doesn't pay
+        #for QuizScan again: the owner, 2026-10-18)
+        fresh = db.session.get(ScanJob, job.id)
+        if fresh is not None:
+            data = get_data(fresh)
+            data['pages'][n - 1]['qs_reading'] = qs
+            put_data(fresh, data)
+            db.session.commit()
+    from PIL import Image
+    flat = Image.open(path).convert('RGB')
+    numbers = {}
+    call = AICall(user_id=user_id, created=datetime.now(), kind='scan', request='Scan {} page {}: numbers'.format(job.id, n), ok=False)
+    try:
+        numbers, usage = ai_helper.page_numbers(api_key, qs)
         call.ok = True
         call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
-        page = draft_page(n, raw)
     except ai_helper.AIError as exc:
-        page = {'n': n, 'state': 'error', 'error': str(exc)}
+        return {'n': n, 'state': 'error', 'error': str(exc), 'qs_reading': qs}
     finally:
         db.session.add(call)
         db.session.commit()
-        current_app.logger.info('scan {} page {} read by the AI (ok={}, tokens in/out {}/{})'.format(
+        current_app.logger.info('scan {} page {} read (numbers ok={}, tokens in/out {}/{})'.format(
             job.id, n, call.ok, call.input_tokens, call.output_tokens))
+    covered = {pid for pid, item in numbers.items() if item.get('values') and item.get('page_text')}
+    slots = pagelayout.find_slots(flat, qs, covered)
+    samples = {}
+    for p in qs['problems']:
+        if p['id'] in covered:
+            words = p['text'][len(p.get('number') or ''):] if p['text'].startswith(p.get('number') or '\0') else p['text']
+            samples[p['id']] = words.replace('_', '').strip()
+    font = pagelayout.pick_font(flat, qs, slots, samples, os.path.join(current_app.static_folder, 'fonts'))
+    page = draft_page(n, quizscan_raw(qs, numbers))
+    page.update(size=qs['size'], slots=slots, font=font,
+                qs=[{k: p.get(k) for k in ('id', 'type', 'box', 'choices', 'text', 'number')} for p in qs['problems']])
     return page
+
+
+def quizscan_raw(qs, numbers):
+    """QuizScan's page and the AI's numbers -> the page in the form draft_page reads."""
+    kind = {'quiz': 'problems', 'picture': 'picture'}.get(qs.get('page_kind'), 'other')
+    raw = {'page_kind': kind, 'title': ' '.join((qs.get('title') or '').split()), 'directions': qs.get('directions'), 'notes': qs.get('notes'),
+           'pictures': [{'id': p['id'], 'box': p['box'], 'label': p.get('label') or ''} for p in qs.get('pictures') or []
+                        if kind != 'problems' or p.get('role') == 'question'],
+           'items': []}
+    for p in qs.get('problems') or []:
+        #(nothing to ask: QuizScan can list an empty problem with no place on the page, which would
+        #only stop Save with "Please write the question"; the owner, 2026-10-19)
+        if not isinstance(p.get('box'), dict) and not (p.get('question') or p.get('text') or '').strip():
+            continue
+        pics = [x['id'] for x in p.get('pictures') or []]
+        if p.get('type') == 'paper':
+            question = '\n'.join(x for x in [p.get('directions'), p.get('question')] if x)
+            raw['items'].append({'kind': 'paper_only', 'qs_id': p['id'], 'box': p['box'], 'picture_ids': pics, 'qtype': 'essay',
+                                 'title': '{} {}'.format(qs.get('title') or 'Page', (p.get('number') or '').strip('.)( ')).strip(),
+                                 'question': question, 'answer': p.get('answer') or '', 'values': [], 'page_question': question})
+            continue
+        item = numbers.get(p['id'])
+        if item is None:
+            #(the AI left it out: the page's own wording, numbers kept)
+            choices = '\n'.join(('*' if c == p.get('answer') else '') + c for c in p.get('choices') or [])
+            question = '\n'.join(x for x in [p.get('directions'), p.get('question')] if x)
+            item = {'qtype': p.get('type'), 'title': '', 'question': question, 'answer': p.get('answer') or '',
+                    'choices': choices, 'values': [], 'page_question': question, 'page_answer': p.get('answer') or '',
+                    'page_choices': choices, 'page_text': None, 'fixed_reason': 'The AI didn’t return this one.'}
+        raw['items'].append(dict(item, kind='question', qs_id=p['id'], box=p['box'], picture_ids=pics))
+    return raw
 
 
 def _num(v, default):
@@ -273,17 +471,17 @@ def draft_page(n, raw):
             'notes': str(raw.get('notes') or '').strip(),
             'join_prev': False, 'shuffle': False, 'calculator': False,
             'pictures': [], 'items': []}
+    #a page with no questions (a cover, a picture page): just the whole page, one picture, saved in
+    #Pictures; nothing cut out of it (the owner, 2026-10-19: a cover came back as 12 pieces)
+    if kind != 'problems':
+        page['pictures'] = [{'id': 'p1', 'box': clean_box(None), 'label': page['title'], 'keep': True, 'use': ''}]
+        return page
     ids = {}
     for i, pic in enumerate(raw.get('pictures') or []):
         pid = 'p{}'.format(i + 1)
         ids[str(pic.get('id') or '')] = pid
         page['pictures'].append({'id': pid, 'box': clean_box(pic.get('box')), 'label': str(pic.get('label') or '')[:64],
-                                 'keep': kind != 'other', 'use': ''})
-    if kind != 'problems':
-        page['items'] = []
-        if not page['pictures']:
-            page['pictures'] = [{'id': 'p1', 'box': clean_box(None), 'label': page['title'], 'keep': kind == 'picture', 'use': ''}]
-        return page
+                                 'keep': True, 'use': ''})
     for raw_item in raw.get('items') or []:
         i = len(page['items'])
         paper = raw_item.get('kind') == 'paper_only'
@@ -301,6 +499,9 @@ def draft_page(n, raw):
                 'fixed_reason': str(raw_item.get('fixed_reason') or '').strip(),
                 'answer_whole': raw_item.get('answer_whole') is True,
                 'answer_nonnegative': raw_item.get('answer_nonnegative') is True}
+        #a page read by QuizScan: which printed problem it is, and its wording to write over it
+        item['qs_id'] = raw_item.get('qs_id')
+        item['page_text'] = str(raw_item.get('page_text') or '') if raw_item.get('values') else ''
         if paper:
             item.update(values=[], question=item['page_question'] or item['question'], fixed_reason='')
         item['use_page'] = not paper and (bool(item['fixed_reason']) or not item['values'])
@@ -333,6 +534,8 @@ def item_problem(item, picture_files=()):
                'ordered': False, 'answer_display': '', 'complex': False,
                'grading_notes': item.get('grading_notes') or '',
                'images': [{'file': f, 'label': ''} for f in picture_files]}
+    if options['values'] and item.get('page_text'):
+        options['page_text'] = item['page_text']
     return qtype, (item.get('title') or '').strip(), question or '', answer or '', options
 
 
@@ -400,6 +603,9 @@ def _f(form, key, default=''):
 
 def update_from_form(data, form):
     """Take the review page's fields into the draft (only pages that were read)."""
+    #(the names as the page showed them, so a title left as shown keeps following the workbook's name)
+    if any(p.get('state') == 'done' for p in data.get('pages') or []):
+        apply_names(data)
     data['name'] = _f(form, 'name', data.get('name', '')).strip()[:128]
     data['folder'] = ' '.join(_f(form, 'folder', data.get('folder', '')).split())
     for page in data['pages']:
@@ -409,7 +615,10 @@ def update_from_form(data, form):
         pre = 'p{}-'.format(n)
         if pre + 'shown' not in form:
             continue  # not on the page that was sent
-        page['title'] = _f(form, pre + 'title', page['title']).strip()[:64]
+        title = _f(form, pre + 'title', page['title']).strip()[:64]
+        if title != page['title']:
+            page['title_auto'] = False  # (typed by hand: kept as typed, the owner 2026-10-19)
+        page['title'] = title
         page['join_prev'] = bool(form.get(pre + 'join_prev'))
         page['shuffle'] = bool(form.get(pre + 'shuffle'))
         page['calculator'] = bool(form.get(pre + 'calculator'))
@@ -437,7 +646,10 @@ def update_from_form(data, form):
         for i, item in enumerate(page['items']):
             ip = 'p{}i{}-'.format(n, i)
             item['include'] = bool(form.get(ip + 'include'))
-            item['title'] = _f(form, ip + 'title', item['title']).strip()[:64]
+            title = _f(form, ip + 'title', item['title']).strip()[:64]
+            if title != item['title']:
+                item['title_auto'] = False
+            item['title'] = title
             if item['kind'] == 'paper':
                 item['question'] = item['page_question'] = _f(form, ip + 'question', item['question'])
                 item['answer'] = _f(form, ip + 'answer', item['answer'])
@@ -446,6 +658,7 @@ def update_from_form(data, form):
             qtype = _f(form, ip + 'qtype', item['qtype'])
             item['qtype'] = qtype if qtype in QTYPES else item['qtype']
             item['use_page'] = bool(form.get(ip + 'use_page'))
+            item['new'] = bool(form.get(ip + 'new'))
             for field in ('question', 'answer', 'choices', 'page_question', 'page_answer', 'page_choices'):
                 if ip + field in form:
                     item[field] = form[ip + field]
@@ -472,11 +685,82 @@ def update_from_form(data, form):
     return data
 
 
+def _folder_named(kind, name, parent=None):
+    """The folder called `name` (any case) if there is one, wherever it is; otherwise a new one
+    inside `parent` (or at the top). A workbook name used again files into the same folders
+    (the owner, 2026-10-19)."""
+    from . import services as S
+    want = ' '.join((name or '').split())[:64]
+    for g in S.subjects(kind):
+        if (g.title or '').lower() == want.lower():
+            return g
+    try:
+        return S.create_subject(kind, want, parent)
+    except S.ServiceError:
+        return S.subject_named(kind, want)
+
+
+def workbook_plan(data):
+    """How a scan's quizzes, problems and folders are named after its workbook (the owner,
+    2026-10-19):
+      - one page: the quiz is the workbook's name (in Uncategorized), its problems "Name-1",
+        "Name-2"... in a Problems folder with the workbook's name;
+      - several pages (a folder, several pictures or a PDF): the quizzes "Name 1", "Name 2"...
+        in a Quizzes folder with the workbook's name; the problems "Name 2-3" (quiz 2's third)
+        in a Problems folder with the workbook's name, one folder in it per quiz, named after it.
+    The same workbook name used again: the same folders, and the quizzes carry on from the
+    numbers already used ("Name 4", "Name 5"...; a second one-page quiz "Name 2").
+    Returns {'base', 'multi', 'quizzes': [quiz names, in order]}."""
+    from . import services as S
+    base = ' '.join((data.get('name') or 'Workbook').split())[:57] or 'Workbook'
+    multi = len(data.get('pages') or []) > 1
+    count = max(len(quiz_groups(data)), 1)
+    taken = {' '.join((vq.title or '').split()).lower() for vq in S.in_use('quizzes').all()}
+    if multi:
+        #(a quiz's problems get a folder named after it: that name must be free too)
+        taken |= {(g.title or '').lower() for g in S.subjects('problems')}
+    elif base.lower() not in taken:
+        return {'base': base, 'multi': multi, 'quizzes': [base]}
+    #the numbers after the highest already used: "Name 4" after "Name 3"
+    pre = base.lower() + ' '
+    used = [int(t[len(pre):]) for t in taken if t.startswith(pre) and t[len(pre):].isdigit()]
+    start = max(used + [0 if multi else 1]) + 1
+    return {'base': base, 'multi': multi, 'quizzes': ['{} {}'.format(base, start + k) for k in range(count)]}
+
+
+def apply_names(data, plan=None):
+    """The quiz and problem titles not typed by hand, named after the workbook (workbook_plan)."""
+    plan = plan or workbook_plan(data)
+    for g, (lead, pages) in enumerate(quiz_groups(data)):
+        quiz = plan['quizzes'][g] if g < len(plan['quizzes']) else plan['quizzes'][-1]
+        if lead.get('title_auto', True):
+            lead['title'] = quiz
+        k = 0
+        for page in pages:
+            for item in page['items']:
+                if not item.get('include'):
+                    continue
+                k += 1
+                if item.get('title_auto', True):
+                    item['title'] = '{}-{}'.format(quiz, k)[:64]
+    return plan
+
+
+def image_page(page):
+    """A read page with no questions whose picture is kept: it becomes an Image only quiz of its
+    own (the owner, 2026-10-19: "store it as a quiz instead of just storing the image")."""
+    return page.get('state') == 'done' and page.get('kind') != 'problems' and any(p.get('keep') for p in page.get('pictures') or [])
+
+
 def quiz_groups(data):
     """[(lead page, [pages])]: each problems page with something included is a quiz, unless
-    it's joined to the one before."""
+    it's joined to the one before; a page with no questions whose picture is kept is a quiz of its
+    own (an Image only one)."""
     groups = []
     for page in data['pages']:
+        if image_page(page):
+            groups.append((page, [page]))
+            continue
         if page.get('state') != 'done' or page.get('kind') != 'problems' or not any(i['include'] for i in page['items']):
             continue
         if page.get('join_prev') and groups:
@@ -518,9 +802,15 @@ def check_all(data):
         err = S.new_subject_name_error('problems', data['folder'])
         if err:
             problems['folder'] = [err]
+    seen = {}
     for lead, pages in quiz_groups(data):
-        if not (lead.get('title') or '').strip():
+        title = ' '.join((lead.get('title') or '').split())
+        if not title:
             problems['page:{}:title'.format(lead['n'])] = ['Please give the quiz a title.']
+        elif S.quiz_name_taken(title) or title.lower() in seen:
+            #(a quiz already called that, or another page of this scan with the same title)
+            problems['page:{}:title'.format(lead['n'])] = [S.QUIZ_NAME_TAKEN.format(title)]
+        seen[title.lower()] = lead['n']
         for page in pages:
             for i, item in enumerate(page['items']):
                 if not item['include']:
@@ -557,13 +847,107 @@ def save_picture(job, page_n, box, name):
     return fname
 
 
+def page_layout_of(job, pages, places, ids, shuffled=False):
+    """The layout a quiz made from these pages is taken on (pagelayout.py): each page's
+    picture, copied into static/pagequiz/, and each problem's place on it by its position
+    in the quiz. A problem left out of the quiz is covered over, and one whose place wasn't
+    found is taken the usual way, under the page. None when no problem has a place."""
+    import uuid
+    from app.upload.routes import static_dir
+    folder = os.path.join(static_dir(), 'pagequiz')
+    os.makedirs(folder, exist_ok=True)
+    out = {'v': 1, 'ids': list(ids), 'font': 'fonts/' + (pages[0].get('font') or 'NotoSans-Bold.ttf'), 'pages': [], 'slots': []}
+    if shuffled:
+        return None
+    where = {(page['n'], i): pos for pos, (page, i) in enumerate(places, 1)}
+    for k, page in enumerate(pages):
+        qs = {p['id']: p for p in page.get('qs') or []}
+        hide = []
+        for i, item in enumerate(page['items']):
+            slot = dict(page['slots'].get(item.get('qs_id') or '') or {})
+            pos = where.get((page['n'], i))
+            if pos is None:
+                #left out: covered, so nobody answers it
+                box = (qs.get(item.get('qs_id')) or {}).get('box')
+                if box:
+                    hide.append(box)
+                continue
+            if not slot or slot['kind'] == 'paper':
+                if slot.get('kind') == 'paper':
+                    out['slots'].append({'pos': pos, 'page': k, 'kind': 'paper'})
+                continue
+            if slot['kind'] == 'field':
+                changes = bool(item.get('values')) and not item.get('use_page') and item.get('page_text')
+                if changes and not slot.get('text'):
+                    continue  # its printed numbers couldn't be covered: taken the usual way
+                if not changes:
+                    slot['text'] = None
+            if slot['kind'] == 'choices':
+                printed = (qs.get(item['qs_id']) or {}).get('choices') or []
+                if item['qtype'] == 'truefalse' and not printed:
+                    text = ((qs.get(item['qs_id']) or {}).get('text') or '').lower()
+                    printed = sorted(['True', 'False'], key=lambda w: text.find(w.lower()) if w.lower() in text else 99)
+                slot['choices'] = printed
+            out['slots'].append(dict(slot, pos=pos, page=k))
+        name = 'pagequiz/{}.jpg'.format(uuid.uuid4().hex)
+        #(an answer key's colored, or bold, right answers made like the rest, so the page doesn't
+        #give them away: pagelayout.clean_answer_key, the owner 2026-10-19)
+        from PIL import Image
+        from . import pagelayout
+        with Image.open(page_file(job.id, page['n'])) as im:
+            pic, _changed = pagelayout.erase_answers(im.convert('RGB'), page['slots'])
+            pic, _changed = pagelayout.clean_answer_key(pic, {'problems': page.get('qs') or []}, page['slots'],
+                                                       os.path.join(current_app.static_folder, 'fonts'))
+            pic.save(os.path.join(static_dir(), name), 'JPEG', quality=90)
+        size = page.get('size') or {}
+        #(QuizScan's boxes are kept too, so the places can be found again later without reading the page again)
+        out['pages'].append({'image': name, 'width': size.get('width'), 'height': size.get('height'), 'hide': hide,
+                             'qs': page.get('qs') or [], 'items': [item.get('qs_id') for item in page['items']]})
+    #(the page is shown even when no answer place was found on it: the problems are then all
+    #answered under it, the owner 2026-10-18)
+    return out
+
+
+def reused_as(data, ignore_new=False):
+    """{(page n, item i): title} for the included items that Save would not make, because they
+    are the same as a problem already in the library or an item before them in the scan
+    (S.problem_key; the owner, 2026-10-18). An item with pictures is always made: its pictures
+    are new files. An item checked "Make a new one instead" is left out, unless ignore_new."""
+    from . import services as S
+    out, seen = {}, {}
+    for page in data.get('pages') or []:
+        if page.get('state') != 'done' or page.get('kind') != 'problems':
+            continue
+        linked = {int(m.group(1)) for pic in page.get('pictures', [])
+                  for m in [re.match(r'^item:{}:(\d+)$'.format(page['n']), pic.get('use') or '')] if m}
+        for i, item in enumerate(page.get('items') or []):
+            if not item.get('include') or item.get('kind') == 'paper' or i in linked:
+                continue
+            qtype, title, question, answer, options = item_problem(item)
+            if check_item(item, samples=0)['errors']:
+                continue
+            key = S.problem_key(qtype, question, answer, options)
+            #(as save_all does: a new one is made, and the same items after it use it)
+            if item.get('new') and not ignore_new:
+                seen[key] = title
+                continue
+            if key not in seen:
+                vp = S.same_problem(qtype, question, answer, options)
+                if vp is None:
+                    seen[key] = title
+                    continue
+                seen[key] = vp.title or 'Untitled'
+            out[(page['n'], i)] = seen[key]
+    return out
+
+
 def save_all(job, data, author):
     """Make the pictures, problems and quizzes. Call check_all first: this assumes the draft is
     fine. Returns {'quizzes': [VQuiz], 'problems': n, 'pictures': [file names]}."""
     from . import services as S
     book = _slug(data.get('name') or job.name)
     leads = lead_of(data)
-    pictures, for_item, for_quiz = [], {}, {}
+    pictures, for_item, for_quiz, kept_of = [], {}, {}, {}
     #1. the pictures, cropped into the pictures folder
     for page in data['pages']:
         if page.get('state') != 'done':
@@ -573,6 +957,8 @@ def save_all(job, data, author):
                 continue
             fname = save_picture(job, page['n'], pic['box'], '{}-p{}-{}'.format(book, page['n'], _slug(pic.get('label'))))
             pictures.append(fname)
+            if pic.get('keep'):
+                kept_of.setdefault(page['n'], []).append(fname)
             use = pic.get('use') or ''
             m = re.match(r'^item:(\d+):(\d+)$', use)
             if m:
@@ -581,22 +967,51 @@ def save_all(job, data, author):
             if m:
                 for_quiz.setdefault(leads.get(int(m.group(1)), int(m.group(1))), []).append(fname)
     #2. the problems, and 3. one quiz per page (or joined pages)
-    quizzes, made = [], []
+    quizzes, made, reused, by_quiz = [], [], [], []
+    #(the same problem twice, on a page or already in the library, is made once and used again:
+    #the owner, 2026-10-18)
+    by_key = {}
     for lead, pages in quiz_groups(data):
-        ids = []
+        ids, places = [], []
+        if image_page(lead):
+            #a page with no questions: an Image only quiz, its one problem the page's picture
+            files = kept_of.get(lead['n'])[:1]
+            vp = VProblem(author_id=author.id)
+            errors = S.save_problem(vp, 'look', '{}-1'.format(lead['title'])[:64], '', '', {'markup': 'friendly', 'values': [],
+                                    'images': [{'file': f, 'label': ''} for f in files]})
+            if errors:
+                raise ScanError('“{}” couldn’t be saved: {}'.format(lead['title'], ' '.join(errors)))
+            made.append(vp.id)
+            vq = VQuiz()
+            errors = S.save_vquiz(vq, lead['title'], [vp.id], author_id=author.id, shuffle_order=False, calculator_ok=False)
+            if errors:
+                raise ScanError('The quiz “{}” couldn’t be saved: {}'.format(lead['title'], ' '.join(errors)))
+            by_quiz.append([vp.id])
+            quizzes.append(vq)
+            continue
         for page in pages:
             for i, item in enumerate(page['items']):
                 if not item['include']:
                     continue
+                places.append((page, i))
                 files = list(for_item.get((page['n'], i), []))
                 if item['kind'] == 'paper':
                     files = [save_picture(job, page['n'], item['box'], '{}-p{}-{}'.format(book, page['n'], _slug(item['title'])))] + files
                     pictures.append(files[0])
                 qtype, title, question, answer, options = item_problem(item, files)
+                key = S.problem_key(qtype, question, answer, options)
+                same = None if item.get('new') else by_key.get(key) or S.same_problem(qtype, question, answer, options)
+                if same is not None:
+                    by_key[key] = same
+                    ids.append(same.id)
+                    if same.id not in made and same.id not in reused:
+                        reused.append(same.id)
+                    continue
                 vp = VProblem(author_id=author.id)
                 errors = S.save_problem(vp, qtype, title, question, answer, options, page.get('calculator'))
                 if errors:
                     raise ScanError('“{}” couldn’t be saved: {}'.format(title, ' '.join(errors)))
+                by_key[key] = vp
                 ids.append(vp.id)
                 made.append(vp.id)
         vq = VQuiz()
@@ -605,12 +1020,35 @@ def save_all(job, data, author):
                               calculator_ok=bool(lead.get('calculator')), image=images[0] if images else None)
         if errors:
             raise ScanError('The quiz “{}” couldn’t be saved: {}'.format(lead['title'], ' '.join(errors)))
+        by_quiz.append(list(dict.fromkeys(ids)))
+        if all(page.get('slots') is not None for page in pages):
+            vq.page_layout = page_layout_of(job, pages, places, ids, shuffled=bool(lead.get('shuffle')))
+            vq.save()
         quizzes.append(vq)
-    #4. filed in the workbook's folder
+    #4. filed: in the folder typed on the draft, if one was; otherwise in folders named after the
+    #workbook (workbook_plan; the owner, 2026-10-19)
     folder = data.get('folder')
     if folder:
         if made:
             S.file_items('problems', made, S.subject_named('problems', folder))
         if quizzes:
             S.file_items('quizzes', [q.id for q in quizzes], S.subject_named('quizzes', folder))
-    return {'quizzes': quizzes, 'problems': len(made), 'pictures': pictures}
+    elif quizzes:
+        plan = data.get('_plan') or {'base': data.get('name') or 'Workbook', 'multi': len(data['pages']) > 1}
+        top = _folder_named('problems', plan['base'])
+        if plan['multi']:
+            S.file_items('quizzes', [q.id for q in quizzes], _folder_named('quizzes', plan['base']))
+            for vq, ids_in in zip(quizzes, by_quiz):
+                S.file_items('problems', ids_in, _folder_named('problems', vq.title, top))
+        else:
+            S.file_items('problems', [i for ids_in in by_quiz for i in ids_in], top)
+    #5. its pictures (a cover, a page's pictures) in a Pictures folder of the same name, so they
+    #stay with the workbook (the owner, 2026-10-19)
+    if pictures:
+        from . import uploads
+        uploads.sync()
+        name = folder or (data.get('_plan') or {}).get('base') or data.get('name') or job.name or 'Workbook'
+        home = S.subject_named('pictures', name) if folder else _folder_named('pictures', name)
+        rows = [uploads.get(f) for f in dict.fromkeys(pictures)]
+        S.file_items('pictures', [u.id for u in rows if u is not None], home)
+    return {'quizzes': quizzes, 'problems': len(made), 'reused': len(reused), 'pictures': pictures}

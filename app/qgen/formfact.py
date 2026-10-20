@@ -104,7 +104,11 @@ def quiz_score(cquiz):
     probs = cquiz.cproblems
     if not probs:
         return 0.0
-    return 100.0 * sum(cp.credit or 0 for cp in probs) / len(probs)
+    #(pages to look at aren't scored; a quiz of only those is done: 100%, the owner 2026-10-19)
+    scored = [cp for cp in probs if not get_qtype(cp.vproblem.qtype).look]
+    if not scored:
+        return 100.0
+    return 100.0 * sum(cp.credit or 0 for cp in scored) / len(scored)
 
 
 #finish a quiz: score it and save the permanent transcript
@@ -156,6 +160,7 @@ class TranscriptItem:
     #as {'text', 'picked', 'right'}; None for other types
     choices: Optional[list] = None
     paper: bool = False  # done on paper: no typed answer to show
+    look: bool = False   # a page to look at: nothing answered, not graded
     check: bool = False  # an automatic type's answer the teacher checks (Short text that came close)
 
     @property
@@ -188,7 +193,7 @@ def transcript_item(cp):
         credit=cp.credit,
         feedback=cp.feedback,
         choices=transcript_choices(qt, cp),
-        paper=qt.paper,
+        paper=qt.paper, look=qt.look,
         check=qt.auto_graded and bool((cp.conc_opts or {}).get('to_check')),
     )
 

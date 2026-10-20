@@ -35,6 +35,8 @@ class User(UserMixin, db.Model):
     #archived (the trash can's Move to Archive, the owner 2026-10-16): can't log in, and left out of
     #every list of people; restored from the Archive. See archived_filter below.
     archived_at = db.Column(db.DateTime, nullable=True, index=True)
+    #when the account was made, to sort People by (the owner, 2026-10-18); None for accounts from before
+    created_at = db.Column(db.DateTime, nullable=True, default=datetime.now)
     #(the folders they were in, as a JSON list of ids: they leave them while archived and go
     #back in on Restore)
     archived_folders = db.Column(db.Text, nullable=True)

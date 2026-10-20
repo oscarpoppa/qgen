@@ -78,12 +78,14 @@ window.qgenHideRow = function (row, key, hide) {
         shown = 0;
         things().forEach(function (el) {
           if (el.hidden) return;
-          var key = el.dataset.box || el.dataset.item;
-          if (!key) { shown++; return; }
-          if (!seen[key]) { seen[key] = 1; shown++; }
+          var key = el.dataset.box || el.dataset.item, w = el.dataset.weight ? +el.dataset.weight : 1;
+          if (!key) { shown += w; return; }
+          if (!seen[key]) { seen[key] = 1; shown += w; }
         });
       }
-      if (count) count.textContent = shown + ' ' + (shown === 1 ? one : many);
+      //(the count can count something else than the things: Grading's attempts, data-count-many)
+      var cOne = bar.dataset.countOne || one, cMany = bar.dataset.countMany || many;
+      if (count) count.textContent = shown + ' ' + (shown === 1 ? cOne : cMany);
       //nothing matches: say so, with a way back (a page with its own note keeps it: the results pages)
       if (typeof bar.qgenFilter !== 'function' && root) {
         if (!none) {

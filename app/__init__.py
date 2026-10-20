@@ -158,8 +158,9 @@ def page_helpers():
                 tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color,
-                people_choices=assign_dialogs.people_choices, quiz_choices=assign_dialogs.quiz_choices,
-                person_folder_map=assign_dialogs.person_folders)
+                people_choices=assign_dialogs.people_choices, quiz_choices=assign_dialogs.quiz_choices, assign_quizzes=assign_dialogs.assign_quizzes,
+                person_folder_map=assign_dialogs.person_folders, message_students=assign_dialogs.message_students,
+                assign_people=assign_dialogs.assign_people)
 
 #quizzes whose time is up are handed in and scored even if the student never
 #returns: checked at most once a minute per server process

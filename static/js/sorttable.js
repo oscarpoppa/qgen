@@ -43,12 +43,15 @@
   }
 
   function setUp(list, key) {
-    var tables = Array.prototype.slice.call(list.querySelectorAll('table'));
+    //(not a table that's part of a form being filled in, like the problem editor's Random values;
+    //nor a heading with its own controls, like a ? help button)
+    var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form'); });
     if (!tables.length) return;
     tables.forEach(function (table) {
       table.querySelectorAll(':scope > thead > tr > th').forEach(function (th) {
         var name = label(th);
         if (!name || th.classList.contains('tick-col') || th.querySelector('.sr-only:only-child') || th.querySelector('.th-sort')) return;
+        if (th.querySelector('button, a, input, select, .tip-wrap, [role=tooltip]')) return;
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'th-sort';

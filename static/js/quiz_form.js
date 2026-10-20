@@ -215,6 +215,7 @@
   function mark() {
     var on = checked();
     picker.querySelectorAll('.folder-tab').forEach(function (tab) {
+      if (!tab.dataset.folder) return;  // (a tab that isn't a folder's)
       var n = countFor(tab.dataset.folder, on), badge = tab.querySelector('.tab-ticked');
       if (!badge) {
         badge = document.createElement('span');
@@ -226,6 +227,8 @@
     });
   }
   picker.addEventListener('change', mark);
+  //(the one tab over the list is drawn again with each folder picked: its count too)
+  picker.addEventListener('qgen-shown', function () { setTimeout(mark, 0); });
   //(the tabs are drawn again when the window crosses the phone width)
   if (window.matchMedia) { var mq = window.matchMedia('(max-width: 640px)'); if (mq.addEventListener) mq.addEventListener('change', function () { setTimeout(mark, 0); }); }
   picker.addEventListener('click', function (e) { if (e.target.closest('.folder-tab')) setTimeout(mark, 0); });

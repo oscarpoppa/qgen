@@ -11,7 +11,7 @@
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Problems</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Problems</th><th>Created</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -20,7 +20,7 @@
           {% if ticks %}<td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.title }}”"></td>{% endif %}
           {# the row folds to its title (and folders and buttons); open, it shows its settings and its
              problems too. Folded to begin with; Expand all / Collapse all and the page remember it #}
-          <td data-label="Quiz"><details class="box row-fold" data-box="quiz-row:{{ item.id }}" open><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
+          <td data-label="Quiz"><details class="box row-fold" data-box="quiz-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="quiz" data-id="{{ item.id }}" data-name="{{ item.title }}"
               data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title }}</strong></summary>
             {# one fact a line, so the column stays narrow (the owner, 2026-10-16) #}
             <ul class="quiz-facts small muted">
@@ -35,7 +35,7 @@
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
           <td data-label="Problems" class="row-more">
             {# the problems fold away (a long quiz would make a tall row) #}
-            <details class="box box-mini problem-list" data-box="quiz-items:{{ item.id }}" open><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
+            <details class="box box-mini problem-list" data-box="quiz-items:{{ item.id }}"><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
             <ol class="small" style="margin:0;padding-left:1.2em">
               {% for e in entries %}
                 {% if layout.is_group(e) %}
@@ -47,6 +47,8 @@
               {% endfor %}
             </ol></details>
           </td>
+          {#- when it was made, to sort by (the owner, 2026-10-18) #}
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           <td class="actions">
             {% if in_archive %}
             {# the Archive's Quizzes (the owner, 2026-10-16): Restore, View, History and Delete for good #}
@@ -58,11 +60,12 @@
             {{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.delete_removed_vquiz', vqid=item.id),
                  delete_note='This can’t be undone.' ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Archive’s Attempts, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '.' if n else '') ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
             {% else %}
-            {% if not item.removed_at %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=item.id) }}" data-what="“{{ item.title }}”" title="Assign: Give {{ item.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student's version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Edit: Change this quiz's questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# a copy, named in a small dialog (static/js/copy.js): the owner, 2026-10-16 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-copy-url="{{ url_for('qgen.copy_item', kind='quizzes', iid=item.id) }}" data-copy-name="{{ item.title }}" data-copy-kind="quiz" title="Copy: Make a new quiz from “{{ item.title }}”">{{ icon_label('lc-copy', 'Copy') }}</button>
+            {#- (one order on every list: View, Edit, Copy, the page's own action, History, Delete: the owner, 2026-10-19) #}
+            {% if not item.removed_at %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=item.id) }}" data-what="“{{ item.title }}”" title="Assign: Give {{ item.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student's attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
             {% if not item.removed_at %}{{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.del_vquiz', vqid=item.id), archive_url=url_for('qgen.archive_vquiz', vqid=item.id),
                  delete_note=('A quiz students have taken goes to the Archive instead, where you can restore it.' if item.cquizzes else 'Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'quiz'))) }}{% endif %}

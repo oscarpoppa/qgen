@@ -42,7 +42,42 @@ def scan_start():
     if not _key():
         return _no_key()
     jobs = ScanJob.query.filter_by(author_id=current_user.id).order_by(ScanJob.updated_at.desc()).all()
-    return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, max_pages=SC.MAX_PAGES)
+    #(the folder each scan's pages came from, if any: the owner, 2026-10-19)
+    folders = {j.id: SC.get_data(j).get('from_folder') for j in jobs}
+    #(each scan's kind, with its mark: the owner, 2026-10-19)
+    kinds = {x['job'].id: x for x in scan_progress_data(current_user)}
+    return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, folders=folders, kinds=kinds, max_pages=SC.MAX_PAGES)
+
+
+def scan_progress_data(user):
+    """This teacher's unfinished scans, for the Dashboard's progress card: each with how far
+    the reading has got (the owner, 2026-10-18)."""
+    out = []
+    for job in ScanJob.query.filter_by(author_id=user.id).order_by(ScanJob.updated_at.desc()).all():
+        pages = SC.get_data(job).get('pages') or []
+        now = next((p['n'] for p in pages if p.get('state') == 'reading'), None)
+        data = SC.get_data(job)
+        reading = _reading(job)
+        kept = data.get('kept_at')
+        out.append({'job': job, 'total': len(pages), 'reading': reading, 'now': now,
+                    'from_folder': data.get('from_folder'),
+                    'done': sum(1 for p in pages if p.get('state') == 'done'),
+                    'failed': sum(1 for p in pages if p.get('state') == 'error'),
+                    #(reading, ready, paused, stopped or draft, each with its own mark: the owner, 2026-10-19)
+                    'kind': SC.scan_kind(data, reading), 'pausing': reading and bool(data.get('pausing')),
+                    'kept_at': SC.datetime.fromisoformat(kept) if kept else None,
+                    'kept_today': bool(kept) and kept[:10] == SC.datetime.now().date().isoformat()})
+    return out
+
+
+@qgen_bp.route('/quiz/scan/progress', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def scan_progress():
+    """The Dashboard's scans card, as it stands now (static/js/scanprogress.js asks while reading)."""
+    scans = scan_progress_data(current_user)
+    return jsonify(reading=any(x['reading'] for x in scans), html=render_template('_scan_progress.html', scans=scans))
 
 
 @qgen_bp.route('/quiz/scan/new', methods=['POST'])
@@ -54,18 +89,31 @@ def scan_upload():
     if not _key():
         return _no_key()
     try:
-        pages = SC.load_pages(request.files.getlist('pages'))
+        #(a whole folder comes in its own field: the owner, 2026-10-19)
+        from_folder = [f for f in request.files.getlist('folder_pages') if f.filename]
+        pages, skipped = SC.load_pages(from_folder or request.files.getlist('pages'), folder=bool(from_folder))
     except SC.ScanError as exc:
         flash(str(exc), 'error')
         return redirect(url_for('qgen.scan_start'))
+    if skipped:
+        flash('Skipped {} file{} in the folder that {} a photo or PDF.'.format(
+            len(skipped), '' if len(skipped) == 1 else 's', 'isn’t' if len(skipped) == 1 else 'aren’t'), 'info')
     job = SC.create_job(current_user, request.form.get('name', ''), pages)
     data = SC.get_data(job)
     data['name'] = job.name
-    data['folder'] = job.name
+    #(the folder the pages came from, for the reading card and the Dashboard: the owner, 2026-10-19)
+    if from_folder:
+        data['from_folder'] = ' '.join(request.form.get('from_folder', '').split())[:128] or 'a folder'
+    #(no folder made for each scan: its problems and quizzes go in Uncategorized unless the
+    #draft's Folder is filled in: the owner, 2026-10-18)
+    data['folder'] = ''
     SC.put_data(job, data)
     db.session.commit()
     current_app.logger.info('{} scanned {} page(s) of "{}" (scan {})'.format(current_user.username, job.pages, job.name, job.id))
     SC.start_reading(job, _key(), current_user.id)
+    #(Resume from the Dashboard's scans pop-over: back there, the owner 2026-10-19)
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
     return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
@@ -80,14 +128,29 @@ def scan_page_image(job_id, n):
     return send_file(SC.page_file(job.id, n), mimetype='image/jpeg', max_age=0)
 
 
+@qgen_bp.route('/quiz/scan/<int:job_id>/thumb/<int:n>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def scan_page_thumb(job_id, n):
+    """A small picture of page n, private like the page itself (the owner, 2026-10-18)."""
+    job = _mine(job_id)
+    if not 1 <= n <= job.pages:
+        abort(404)
+    return send_file(SC.thumb_file(job.id, n), mimetype='image/jpeg', max_age=0)
+
+
 @qgen_bp.route('/quiz/scan/<int:job_id>/status', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def scan_status(job_id):
     job = _mine(job_id)
-    pages = SC.get_data(job)['pages']
-    return jsonify(reading=_reading(job), pages=[{'n': p['n'], 'state': p['state'], 'error': p.get('error')} for p in pages])
+    data = SC.get_data(job)
+    pages = data['pages']
+    #(times for the page's timer, with the server's own time so a computer's clock being off doesn't matter)
+    return jsonify(reading=_reading(job), now=SC.datetime.now().isoformat(timespec='seconds'), since=data.get('reading_since'),
+                   pages=[{'n': p['n'], 'state': p['state'], 'error': p.get('error'), 'since': p.get('since')} for p in pages])
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/read', methods=['POST'])
@@ -101,6 +164,9 @@ def scan_read(job_id):
     if not _key():
         return _no_key()
     SC.start_reading(job, _key(), current_user.id)
+    #(Resume from the Dashboard's scans pop-over: back there, the owner 2026-10-19)
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
     return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
@@ -108,11 +174,16 @@ def review_page(job, data, problems=None, status=200):
     reading = _reading(job)
     checks = {}
     if not reading:
+        #(the names the quizzes and problems will get, from the workbook's name)
+        SC.apply_names(data)
         for page in data['pages']:
             for i, item in enumerate(page.get('items') or []):
                 checks[(page['n'], i)] = SC.check_item(item)
     return render_template('scan_review.html', title='Scan: {}'.format(job.name), job=job, data=data, reading=reading,
-                           checks=checks, problems=problems or {}, uses=SC.use_choices(data), leads=SC.lead_of(data),
+                           kind=SC.scan_kind(data, reading),
+                           checks=checks, problems=problems or {},
+                           reused=SC.reused_as(data) if not reading else {},
+                           matches=SC.reused_as(data, ignore_new=True) if not reading else {}, uses=SC.use_choices(data), leads=SC.lead_of(data),
                            qtypes={k: SC.REGISTRY[k].label for k in SC.QTYPES}, kinds=SC.SCAN_KINDS,
                            unread=[p['n'] for p in data['pages'] if p['state'] != 'done']), status
 
@@ -141,8 +212,14 @@ def scan_save(job_id):
     SC.put_data(job, data)
     db.session.commit()
     if request.form.get('action') != 'save':
+        #(a draft the teacher kept, shown as such among the scans: the owner, 2026-10-19)
+        data['kept_at'] = SC.datetime.now().isoformat(timespec='seconds')
+        SC.put_data(job, data)
+        db.session.commit()
         flash('Draft kept. You can come back to it from “Scan workbook pages”.', 'success')
         return redirect(url_for('qgen.scan_review', job_id=job.id))
+    #(the quizzes and problems named after the workbook, before anything is made: the owner, 2026-10-19)
+    data['_plan'] = SC.apply_names(data)
     problems = SC.check_all(data)
     if problems:
         flash('Nothing was saved yet: please fix the items marked below.', 'error')
@@ -156,7 +233,7 @@ def scan_save(job_id):
     current_app.logger.info('{} saved scan {} "{}": {} quiz(zes), {} problem(s), {} picture(s)'.format(
         current_user.username, job.id, job.name, len(made['quizzes']), made['problems'], len(made['pictures'])))
     session['scan_done'] = {'name': data.get('name') or job.name, 'quizzes': [q.id for q in made['quizzes']],
-                            'problems': made['problems'], 'pictures': made['pictures'], 'folder': data.get('folder')}
+                            'problems': made['problems'], 'reused': made.get('reused', 0), 'pictures': made['pictures'], 'folder': data.get('folder')}
     SC.remove_job(job)
     return redirect(url_for('qgen.scan_done'))
 
@@ -180,6 +257,21 @@ def scan_check(job_id):
     return jsonify(ok=True, html=render_template('_scan_check.html', check=result, item=item))
 
 
+@qgen_bp.route('/quiz/scan/<int:job_id>/pause', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_pause(job_id):
+    """Pause the reading after the page being read; Resume goes on (the owner, 2026-10-19; it was Cancel)."""
+    job = _mine(job_id)
+    SC.pause_reading(job, _reading(job))
+    current_app.logger.info('{} paused reading scan {} "{}"'.format(current_user.username, job.id, job.name))
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
+    return redirect(url_for('qgen.scan_review', job_id=job.id))
+
+
 @qgen_bp.route('/quiz/scan/<int:job_id>/discard', methods=['POST'])
 @login_required
 @pw_check
@@ -191,6 +283,9 @@ def scan_discard(job_id):
     SC.remove_job(job)
     flash('Discarded the scan “{}”. Nothing from it was saved.'.format(name), 'success')
     current_app.logger.info('{} discarded scan {} "{}"'.format(current_user.username, job_id, name))
+    #(discarded from the Dashboard's scans pop-over: back there, the owner 2026-10-18)
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
     return redirect(url_for('qgen.scan_start'))
 
 
@@ -203,4 +298,5 @@ def scan_done():
     if not done:
         return redirect(url_for('qgen.scan_start'))
     quizzes = [q for q in (db.session.get(VQuiz, i) for i in done['quizzes']) if q]
-    return render_template('scan_done.html', title='Scanned: {}'.format(done['name']), done=done, quizzes=quizzes)
+    from . import layout as quiz_layout
+    return render_template('scan_done.html', title='Scanned: {}'.format(done['name']), done=done, quizzes=quizzes, quiz_layout=quiz_layout)

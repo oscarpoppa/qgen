@@ -24,7 +24,9 @@ def parse_vplist(text):
 
 # ---------------------------------------------------------------- subjects
 
-LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes'}
+LIST_PAGES = {'problems': 'qgen.list_vprobs', 'quizzes': 'qgen.list_vquizzes',
+              #(uploads in folders too: the owner, 2026-10-19)
+              'pictures': 'upload.images', 'files': 'upload.nonimages'}
 
 
 def ticked_subjects(item, rel):
@@ -90,18 +92,24 @@ def subject_page_data(kind, item=None, rel=None, error=None):
 
 # ---------------------------------------------------------------- problems
 
-def problem_page(form, vp, errors, title, subject_error=None):
+def problem_page(form, vp, errors, title, subject_error=None, same=None):
     #unbound copy with one empty row of each kind, cloned by problem_form.js for "+ Add"
     blank = ProblemForm(formdata=None)
     blank.values.append_entry()
     blank.images.append_entry()
     return render_template('problem_form.html', form=form, vp=vp, errors=errors, title=title, blank=blank,
-                           kinds=KINDS, qtypes=REGISTRY, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
+                           kinds=KINDS, qtypes=REGISTRY, same=same, ai_enabled=bool(current_app.config.get('ANTHROPIC_API_KEY')),
                            **subject_page_data('problems', vp, 'vpgroups', subject_error))
 
 def save_from_form(form, vp):
+    options = form.options()
+    #a problem made from a scanned page keeps how its words are written over the page, while its
+    #values are still there (the owner, 2026-10-18)
+    kept = (vp.options or {}).get('page_text') if vp.id is not None else None
+    if kept and options['values'] and S.page_text_fits(kept, options['values']):
+        options['page_text'] = kept
     return S.save_problem(vp, form.qtype.data, form.title.data, form.question.data, form.answer.data,
-                          form.options(), form.calculator_ok.data)
+                          options, form.calculator_ok.data)
 
 #route to create a virtual problem
 @qgen_bp.route('/quiz/makevprob', methods=['POST', 'GET'])
@@ -114,6 +122,13 @@ def mkvprob():
     if form.validate_on_submit():
         nuprob = VProblem(author_id=current_user.id)
         subject_error = subject_form_error('problems', new=True)
+        #the same as a problem already there: said once; Save again saves it anyway (the owner, 2026-10-18)
+        same = None
+        if not subject_error and not request.form.get('same_ok') and not S.problem_errors(
+                form.qtype.data, form.question.data, form.answer.data, form.options()):
+            same = S.same_problem(form.qtype.data, form.question.data, form.answer.data, form.options())
+        if same is not None:
+            return problem_page(form, None, [], 'New problem', same=same)
         errors = [subject_error] if subject_error else save_from_form(form, nuprob)
         if not errors:
             save_subjects('problems', nuprob)
@@ -396,7 +411,8 @@ def view_vquiz(vqid):
         items, error = S.sample_quiz(vq), None
     except S.ServiceError as exc:
         items, error = [], str(exc)
-    return render_template('view_quiz.html', vq=vq, items=items, error=error, title='View: {}'.format(vq.title))
+    return render_template('view_quiz.html', vq=vq, items=items, error=error, title='View: {}'.format(vq.title),
+                           varies=S.quiz_varies(vq) if not error else True)
 
 #route to edit a specific virtual quiz
 @qgen_bp.route('/quiz/editvquiz/<vqid>', methods=['POST', 'GET'])
@@ -511,8 +527,8 @@ def del_vquiz(vqid):
                      'You can restore it from the <a href="{}">Archive</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
     else:
         flash('Deleted quiz “{}”.'.format(title), 'success')
-        return redirect(back_to(url_for('qgen.list_vquizzes')))
-    current_app.logger.info("{} {} VQuiz: ({}) '{}'".format(current_user.username, done, vqid, title))
+    #(logged either way, with the page it came from, so where it went back to can be checked)
+    current_app.logger.info("{} {} VQuiz: ({}) '{}' from {}".format(current_user.username, done, vqid, title, request.referrer))
     return redirect(back_to_list('qgen.list_vquizzes'))
 
 
@@ -529,6 +545,12 @@ def copy_item(kind, iid):
     item = db.session.get(S.subject_kind(kind)[1], iid)
     if item is None:
         return gone('That {} has been deleted.'.format('problem' if kind == 'problems' else 'quiz'), url_for(LIST_PAGES[kind]))
+    if kind == 'quizzes':
+        #(two quizzes may not share a name: the owner, 2026-10-19)
+        name = ' '.join((request.form.get('title', '') or item.title).split())[:64]
+        if S.quiz_name_taken(name):
+            flash(S.QUIZ_NAME_TAKEN.format(name), 'error')
+            return redirect(back_to(url_for(LIST_PAGES[kind])))
     new = S.copy_item(kind, item, request.form.get('title', ''), current_user)
     current_app.logger.info('{} copied {} {} to {} "{}"'.format(current_user.username, kind, iid, new.id, new.title))
     #(straight to the new copy, open in its editor: the owner, 2026-10-16)
@@ -544,7 +566,7 @@ def copy_item(kind, iid):
 @post_form_only
 def restore_many(kind):
     ids = [int(i) for i in request.form.getlist('items') if str(i).isdigit()]
-    n = 0
+    n, kept = 0, []
     if kind == 'people':
         from app.user.accounts import any_person, restore_account
         for uid in ids:
@@ -556,12 +578,21 @@ def restore_many(kind):
     elif kind in ('problems', 'quizzes'):
         item_cls = S.subject_kind(kind)[1]
         for item in item_cls.query.filter(item_cls.id.in_(ids), item_cls.removed_at.isnot(None)).all() if ids else []:
+            if kind == 'quizzes' and S.quiz_name_taken(item.title, item.id):
+                kept.append(item.title)  # (two quizzes may not share a name: the owner, 2026-10-19)
+                continue
             (S.restore_problem if kind == 'problems' else S.bring_back_vquiz)(item)  # (in Uncategorized)
             n += 1
         word = _item_word(kind, n)
+        if kept:
+            flash('Not restored: {}. There’s already a quiz by that name on the Quizzes page; rename that one first.'.format(
+                ', '.join('“{}”'.format(t) for t in kept)), 'error')
     else:
         abort(404)
-    flash('Restored {} {}.'.format(n, word), 'success')
+    #(none restored because every one clashed: only the "Not restored" message, not "Restored 0"
+    #beside it: from the code critic, 2026-10-19)
+    if n or not kept:
+        flash('Restored {} {}.'.format(n, word), 'success')
     view = request.form.get('view')
     return redirect(url_for('qgen.archive', section=kind, **({'folder': view} if view else {})))
 
@@ -632,6 +663,10 @@ def bring_back_vquiz(vqid):
     vq = db.session.get(VQuiz, vqid)
     if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.archive', section='quizzes'))
+    if S.quiz_name_taken(vq.title, vq.id):
+        #(two quizzes may not share a name: the owner, 2026-10-19)
+        flash('There’s already a quiz called “{}” on the Quizzes page. Rename that one first, then restore this one.'.format(vq.title), 'error')
+        return redirect(url_for('qgen.archive', section='quizzes'))
     S.bring_back_vquiz(vq)
     flash('“{}” is back on the Quizzes page.'.format(vq.title), 'success')
     current_app.logger.info("{} brought back VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
@@ -700,6 +735,13 @@ def assign():
     quiz_root = S.subject_tree('quizzes', items=quizzes)[0]
     quiz_tree = folder_tree.filter_tree(quiz_root, lambda f: f.title, lambda fid: None, 'quiz:')
     quiz_start = choice
+    #(opened for one quiz, e.g. View's paper plane: on that quiz's own folder, its first one A to Z,
+    #or Uncategorized when it's in none, so it's in sight: the owner, 2026-10-19)
+    if request.args.get('vq', '').isdigit() and request.method == 'GET':
+        came = db.session.get(VQuiz, int(request.args['vq']))
+        if came is not None:
+            homes = sorted(came.vqgroups, key=lambda g: (g.title or '').lower())
+            quiz_start = str(homes[0].id) if homes else 'none'
     #nothing picked yet: the first quiz, as the menu had it
     if form.vquiz.data is None and quizzes:
         form.vquiz.data = quizzes[0].id
@@ -825,7 +867,38 @@ def qtake(cidx):
     if request.method == 'GET':
         prefill(cq, form)
     return render_template('quiz_take.html', cq=cq, form=form, items=quiz_items(cq, form), title=title,
-                           preview=not is_taker, deadline=cq.deadline())
+                           preview=not is_taker, deadline=cq.deadline(), page_layout=page_layout(cq.vquiz, cq),
+                           page_opts={cp.ordinal: cp.conc_opts for cp in cq.cproblems})
+
+
+#how a covered problem's words are set on its page (pagelayout.style_of): for quiz_take.html
+@qgen_bp.app_template_filter('pq_style')
+def pq_style(words):
+    from .pagelayout import style_of
+    return style_of(words)
+
+
+@qgen_bp.app_template_filter('pq_no_blank')
+def pq_no_blank(words):
+    """A problem's words without the "???" (or "___") at the very end, where the answer box goes."""
+    import re
+    return re.sub(r'\s*(\?{2,}|_{3,}|\?)\s*$', '', words)
+
+
+def page_layout(vq, cq=None):
+    """A quiz made from a scanned page is taken on the page itself (pagelayout.py, the owner,
+    2026-10-18): its layout, with each slot under its question number, or None to take it
+    the usual way. That's also so when the quiz was changed after it was made (other
+    problems, or a shuffled order), since the page then no longer matches it."""
+    from . import layout as quiz_layout
+    L = vq.page_layout
+    if not L or vq.shuffle_order or quiz_layout.parse(vq.vpid_lst) != L.get('ids'):
+        return None
+    if cq is not None and len(cq.cproblems) != len(L['ids']):
+        return None
+    L['by_pos'] = {s['pos']: s for s in L['slots']}
+    return L
+
 
 #"Start the quiz" on the start card: the quiz (and its time limit) starts now
 @qgen_bp.route('/quiz/take/<int:cidx>/start', methods=['POST'])
@@ -890,12 +963,22 @@ def review_list():
             quizzes.append(cq.vquiz)
         by_quiz[cq.vquiz_id].append(cq)
     root, flat, nodes = S.subject_tree('quizzes', items=quizzes)
+    #(the folders count attempts waiting, not quizzes: the owner, 2026-10-19)
+    weight = {q.id: len(by_quiz[q.id]) for q in quizzes}
+    def weigh(n):
+        n['count'] = sum(weight.get(k, 0) for k in n['everyone'])
+        for c in n['folders']:
+            weigh(c)
+    for c in root['folders']:
+        weigh(c)
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['items'] if node else quizzes if view == 'all' else root['items']
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.review_list', folder=v),
-        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
+        unit='quiz', units='quizzes', count_unit='attempt', count_units='attempts',
+        main_count=sum(weight.get(q.id, 0) for q in root['items']),
+        all_label='All quizzes', all_count=len(waiting), name=lambda f: f.title,
         hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
         fold_key='qgen-folded-grading-folders')
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, fk=fk, title='Grading')
@@ -1023,7 +1106,7 @@ def list_user(uid):
                    {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None}]
     if quiz_tree:
         quiz_filter += some(folder_tree.filter_tree(quiz_tree, lambda f: f.title, lambda fid: None, 'q:'))
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}'s student page".format(ulst.shown_name),
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}’s student page".format(ulst.shown_name),
                            awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter)
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
@@ -1226,14 +1309,17 @@ def ai_job(job):
 def ai_fill(kind):
     """Shared by both "Fill in for me" buttons; always answers with JSON."""
     from .ai_helper import ask, problems_with
-    text = (request.get_json(silent=True) or {}).get('text')
+    body = request.get_json(silent=True) or {}
+    text = body.get('text')
+    #("Fill in the values": the question already written, for its [names])
+    question = str(body.get('question') or '')[:4000] if kind == 'values' else ''
 
     def finish(fill):
         if fill.get('off_topic'):
             #the helper is for school quiz problems only; nothing else is filled in
             return {'ok': False, 'error': 'The AI helper only writes school quiz problems. Please describe a quiz question for your students.'}, 422
         return {'ok': True, 'fill': fill, 'note': fill.get('cannot_do'), 'problems': problems_with(fill, kind)}, 200
-    return ai_call(kind, text, lambda key, t: ask(key, kind, t), finish)
+    return ai_call(kind, text, lambda key, t: ask(key, kind, t, question=question), finish)
 
 @qgen_bp.route('/quiz/ai/problem', methods=['POST'])
 @login_required
@@ -1355,7 +1441,7 @@ def _subject_done(kind, message, error=False, show=None, moved=None):
     return subject_list(kind, **values)
 
 def _item_word(kind, n=1):
-    return ('problem' if kind == 'problems' else 'quiz') if n == 1 else kind
+    return S.item_word(kind, n)
 
 def _item_title(kind, item_id):
     _g, item_cls, _r, _b = S.subject_kind(kind)
@@ -1417,6 +1503,8 @@ def delete_subject(kind, sid):
 @admin_only
 @post_form_only
 def purge_subject(kind, sid):
+    if kind in S.UPLOAD_KINDS:
+        abort(404)  # (uploads are deleted one by one)
     subject = subject_or_404(kind, sid)
     name, parent = subject.title, subject.parent_id
     try:
@@ -1450,7 +1538,7 @@ def move_subject(kind):
         abort(404)
     to, came_from = request.form.get('to'), request.form.get('from') or ''
     here = S.get_subject(kind, came_from) if came_from.isdigit() else None
-    what = 'problem' if kind == 'problems' else 'quiz'
+    what = S.item_word(kind)
     try:
         if request.form.get('folder'):
             subject = subject_or_404(kind, request.form.get('folder'))
@@ -1478,7 +1566,7 @@ def move_subject(kind):
 @admin_only
 @post_form_only
 def add_to_subject(kind):
-    what = 'problem' if kind == 'problems' else 'quiz'
+    what = S.item_word(kind)
     target = subject_or_404(kind, request.form.get('to'))
     try:
         item = S.file_one(kind, request.form.get(what), target)
@@ -1494,7 +1582,7 @@ def add_to_subject(kind):
 def remove_from_subject(kind):
     #(just that folder; something left in no folder is deleted, asked first: app/takeout.py)
     from app import takeout
-    what = 'problem' if kind == 'problems' else 'quiz'
+    what = S.item_word(kind)
     return takeout.handle(kind, [request.form.get(what)], request.form.get('folder'),
                           lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True)
 
@@ -1572,7 +1660,11 @@ def subject_kit(kind, view, node, root, flat, nodes, in_archive=False):
     Problems or Quizzes, the same page for the ones moved to the Archive)."""
     from app import folder_tree
     page = LIST_PAGES[kind]
-    unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
+    unit, units = S.ITEM_WORDS[kind]
+    upload = kind in S.UPLOAD_KINDS
+    #(example folder names that suit the things: the owner, 2026-10-19)
+    first, second = {'pictures': ('Animals', 'Maps'), 'files': ('Worksheets', 'Answer keys')}.get(kind, ('Algebra', 'Period 2'))
+    examples = '“{}” or “{}”'.format(first, second)
     return folder_tree.kit(
         view, node, root, flat, nodes,
         page=(lambda v: url_for('qgen.archive', section=kind, folder=v)) if in_archive else (lambda v: url_for(page, folder=v)),
@@ -1581,12 +1673,13 @@ def subject_kit(kind, view, node, root, flat, nodes, in_archive=False):
         delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
         add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
         unit=unit, units=units, all_label='All ' + units, all_count=root['all_count'],
-        name=lambda f: f.title, placeholder='e.g. Algebra', add_words='+', drag_what='a ' + unit,
-        hint='Your own folders for sorting {}, e.g. “Algebra” or “Period 2”. A {} can be in several folders. '
-             'Students never see them.'.format(units, unit),
+        name=lambda f: f.title, placeholder='e.g. ' + first, add_words='+', drag_what='a ' + unit,
+        hint='Your own folders for sorting {}, e.g. {}. A {} can be in several folders. '
+             'Students never see them.'.format(units, examples, unit),
         fold_key='qgen-folded-{}-folders'.format(kind),
-        purge_url=lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid),
-        purge_question=lambda n: S.purge_question(kind, n['folder']))
+        #(no "Delete folder and everything in it" for uploads: deleting files is done one by one)
+        purge_url=None if upload else (lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid)),
+        purge_question=None if upload else (lambda n: S.purge_question(kind, n['folder'])))
 
 
 def subject_page(kind, template, in_archive=False, **extra):
@@ -1600,7 +1693,7 @@ def subject_page(kind, template, in_archive=False, **extra):
         root, flat, nodes = S.subject_tree(kind, items=everything)
     else:
         root, flat, nodes = S.subject_tree(kind)
-        everything = S.in_use(kind).order_by(item_cls.id.desc()).all()
+        everything = S.in_use(kind).order_by(*(S.upload_order(kind) if kind in S.UPLOAD_KINDS else (item_cls.id.desc(),))).all()
     root['all_count'] = len(everything)
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
     shown = node['items'] if node else everything if view == 'all' else root['items']
@@ -1907,7 +2000,9 @@ def dashboard_data():
 @admin_only
 def dashboard():
     from app import tuning
-    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), **dashboard_data())
+    from .scan_routes import scan_progress_data
+    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), scans=scan_progress_data(current_user),
+                           **dashboard_data())
 
 #route to the top bar's "online" list (opened from any teacher page)
 @qgen_bp.route('/dashboard/online', methods=['GET'])

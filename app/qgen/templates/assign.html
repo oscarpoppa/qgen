@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions">{% if came_from %}<a class="btn btn-secondary" href="{{ came_from[0] }}" data-back title="Go back to {{ came_from[1] }} without assigning"><span class="back-label">← {{ came_from[1] }}</span></a>{% else %}{{ back_home() }}{% endif %}</div></div>
+  <div class="actions"></div></div>
 
 <form method="post" class="assign-form" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
@@ -54,12 +54,14 @@
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# always open, like the Quiz card beside it #}
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
-    {# the same filter bar as the Quiz card's (filter, Clear, how many shown), with the checking buttons #}
-    {% call filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='li', id='people-pick-bar') %}
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
+    {# the same filter bar as the Quiz card's (filter, Clear, how many shown), then the checking on a
+       line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
+    {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='li', id='people-pick-bar') }}
+    <div class="btn-row small write-to-checks">
       <button type="button" class="btn btn-secondary btn-sm pick-all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
-      <span class="chosen-count muted" aria-live="polite">{{ chosen|length }} chosen</span>
-    {% endcall %}
+      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
+      <span class="chosen-count muted small" aria-live="polite">{{ chosen|length }} checked</span>
+    </div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
@@ -120,6 +122,20 @@
   }
   card.addEventListener('qgen-shown', keep);
   keep();
+  //the quiz checked, scrolled into view in its list on arrival (the list scrolls inside its card):
+  //opened for one quiz, it's the one you came from (the owner, 2026-10-19)
+  function show() {
+    var on = radios.filter(function (r) { return r.checked; })[0];
+    var li = on && on.closest('li');
+    if (!li || !inSight(on)) return;
+    //(the box that scrolls: the list itself, or the card's list around it)
+    var list = li.parentElement;
+    while (list && list !== card && !(list.scrollHeight > list.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(list).overflowY))) list = list.parentElement;
+    if (!list || list === card) return;
+    var lr = list.getBoundingClientRect(), ir = li.getBoundingClientRect();
+    if (ir.top < lr.top || ir.bottom > lr.bottom) list.scrollTop += ir.top - lr.top - (list.clientHeight - li.offsetHeight) / 2;
+  }
+  window.addEventListener('load', function () { setTimeout(show, 50); });
 })();
 /* Students: one checklist beside its folder list (static/js/folderfilter.js). "Check all shown"
  * checks (or, when they all are, unchecks) everyone the list shows: the tab chosen, and the
@@ -136,7 +152,7 @@
     all.textContent = (every ? 'Uncheck' : 'Check') + ' all shown';
     all.disabled = !s.length;
     var picked = people.filter(function (i) { return i.checked; });
-    count.textContent = picked.length + ' chosen';
+    count.textContent = picked.length + ' checked';
     //"Assignee" at the top: who's checked, each with a ✕
     var list = document.querySelector('#recipients .recipient-list');
     if (!list) return;

@@ -12,16 +12,16 @@
   <h1>{{ cq.vquiz.title }}</h1>
   <span class="badge {{ 'badge-ok' if cq.vquiz.calculator_allowed else 'badge-warn' }}">{{ 'Calculator allowed' if cq.vquiz.calculator_allowed else 'No calculator' }}</span>
   {# leaving is safe: answers are saved as they're typed #}
-  <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "'s student page") }}{% else %}{{ back_button(url_for('user.home'), 'Home') }}{% endif %}
+  <div class="actions">{% if preview %}{{ back_button(url_for('qgen.list_user', uid=cq.assignee), cq.taker.shown_name ~ "’s student page") }}{% else %}{{ back_button(url_for('user.home'), 'Home') }}{% endif %}
     {% if cq.vquiz.calculator_allowed %}<button type="button" class="btn btn-secondary" id="calc-open" aria-controls="calc" aria-expanded="false" title="Open a calculator to help you work things out">{{ icon('calculator') }} Calculator</button>{% else %}<button type="button" class="btn btn-secondary" disabled title="No calculator on this quiz">{{ icon('calculator') }} Calculator</button>{% endif %}</div>
 </div>
 
 {% if preview %}
   <div class="alert alert-warning">You're viewing {{ cq.taker.shown_name }}'s quiz. Only {{ cq.taker.shown_name }} can submit it.
-    <a href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Go to {{ cq.taker.shown_name }}'s quizzes and scores">{{ cq.taker.shown_name }}'s student page</a></div>
+    <a href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="Go to {{ cq.taker.shown_name }}’s quizzes and scores">{{ cq.taker.shown_name }}’s student page</a></div>
 {% endif %}
 
-{% if cq.vquiz.image %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
+{% if cq.vquiz.image and not page_layout %}<img class="qimg card" src="{{ url_for('static', filename=cq.vquiz.image) }}" alt="">{% endif %}
 
 <form method="post" id="take-form" data-fresh-page novalidate
       {% if not preview %}data-save-url="{{ url_for('qgen.qsave', cidx=cq.id) }}"{% endif %}
@@ -38,8 +38,68 @@
 
   {# someone else's quiz (a teacher looking): every answer shown, none can be changed (the owner, 2026-10-14) #}
   {% if preview %}<fieldset class="view-only" disabled title="You're viewing {{ cq.taker.shown_name }}'s quiz: only {{ cq.taker.shown_name }} can answer">{% endif %}
+  {% if page_layout %}
+  {#- a quiz made from a scanned page, taken on the page itself (the owner, 2026-10-18): each
+      problem's printed numbers covered and this student's written in their place, answered in
+      the page's own answer box or by checking its own choice boxes. On a phone, the usual list
+      below instead (static/js/pagequiz.js). Problems with no place on the page are always in
+      the list. #}
+  {% set L = page_layout %}
+  {% set weight = 700 if 'Bold' in L.font else 400 %}
+  <style>@font-face { font-family: "PageFont"; src: url("{{ url_for('static', filename=L.font) }}"); font-weight: {{ weight }}; }</style>
+  <div class="page-quizzes" data-page-quiz>
+  {% for pg in L.pages %}{% set k = loop.index0 %}{% set ratio = pg.height / pg.width %}
+    <div class="page-quiz card" style="aspect-ratio: {{ pg.width }} / {{ pg.height }}; --pq-weight: {{ weight }}">
+      <img class="pq-page" src="{{ url_for('static', filename=pg.image) }}" alt="{{ cq.vquiz.title }}{% if L.pages|length > 1 %}, page {{ loop.index }}{% endif %}">
+      {% for b in pg.hide %}<div class="pq-hide" style="left: {{ b.left * 100 }}%; top: {{ b.top * 100 }}%; width: {{ (b.right - b.left) * 100 }}%; height: {{ (b.bottom - b.top) * 100 }}%"></div>{% endfor %}
+      {% for s in L.slots if s.page == k and s.pos <= items|length %}{% set it = items[s.pos - 1] %}{% set co = page_opts.get(it.num, {}) %}
+        {% if s.kind == 'paper' %}
+        <div class="question pq-q" data-q="{{ it.num }}" data-paper><input type="hidden" name="{{ it.field.name }}_present" value="1">{{ it.field(id='pq-' ~ it.field.id) }}</div>
+        {% elif s.kind == 'field' %}
+        {%- set a = s.answer %}
+        <div class="question pq-q" data-q="{{ it.num }}">
+          <input type="hidden" name="{{ it.field.name }}_present" value="1">
+          {% if s.text %}
+            {%- set t = s.text %}
+            {%- set words = (co.page_text or it.text)|replace('\r', '') %}
+            {#- (answered where the page printed "???": the box takes the place of the question marks) #}
+            {%- if s.inline %}{% set words = words|pq_no_blank %}{% endif %}
+            {%- set lines = words.split('\n') %}
+            {%- set ch = s.char if s.char else (t.bottom - t.top) / lines|length %}
+            {#- (printed letters are about 0.714 of the font size tall) #}
+            {%- set fs = ch * ratio * 100 / 0.714 %}
+            {%- set style = words|pq_style %}
+            <div class="pq-text pq-{{ style }}" style="{% if s.paper %}background: {{ s.paper }}; {% endif %}left: {{ t.left * 100 }}%; top: {{ t.top * 100 }}%; width: {{ (t.right - t.left) * 100 }}%; height: {{ (t.bottom - t.top) * 100 }}%; font-size: {{ fs }}cqw; --pq-line: {{ (t.bottom - t.top) * ratio * 100 / lines|length }}cqw" aria-hidden="true">
+              {%- if style == 'equals' %}{% set parts = words.rsplit('=', 1) %}<span>{{ parts[0].strip() }}</span><span>=</span>
+              {%- else %}{% for line in lines %}<span>{{ line }}</span>{% endfor %}{% endif %}</div>
+          {% endif %}
+          <div class="pq-answer{% if s.inline %} pq-inline{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.62, (s.char or 0.02) * ratio * 100 / 0.714 * 1.15]|min }}cqw">
+            {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', inputmode='numeric' if it.qtype == 'numeric' else none, **{'aria-label': 'Question ' ~ it.num ~ ': ' ~ it.text}) }}</div>
+        </div>
+        {% elif s.kind == 'choices' %}
+        {%- set mine = co.choices or [] %}
+        {%- set checked = it.field.data if it.field.data is iterable and it.field.data is not string else [it.field.data] %}
+        <div class="question pq-q" data-q="{{ it.num }}" role="group" aria-label="Question {{ it.num }}: {{ it.text }}">
+          <input type="hidden" name="{{ it.field.name }}_present" value="1">
+          {% for printed in s.choices %}{% set r, m = s.rows[loop.index0], s.marks[loop.index0] %}
+            {#- the printed choice, found in this student's choices by its words (they may be in another order) #}
+            {%- set ns = namespace(idx=none) %}{% for c in mine %}{% if ns.idx is none and c|lower|replace(' ', '') == printed|lower|replace(' ', '') %}{% set ns.idx = loop.index0 %}{% endif %}{% endfor %}
+            {% if ns.idx is not none %}
+            <label class="pq-choice" style="left: {{ r.left * 100 }}%; top: {{ r.top * 100 }}%; width: {{ (r.right - r.left) * 100 }}%; height: {{ (r.bottom - r.top) * 100 }}%">
+              <input type="{{ 'checkbox' if it.qtype == 'choice_many' else 'radio' }}" name="{{ it.field.name }}" value="{{ ns.idx }}" id="pq-{{ it.field.id }}-{{ ns.idx }}"{% if ns.idx|string in checked|map('string')|list %} checked{% endif %}>
+              <span class="pq-tick{% if s.cells or s.lettered %} pq-ring{% endif %}{% if s.lettered %} pq-letter{% endif %}" style="left: {{ (m.left - r.left) / (r.right - r.left) * 100 }}%; top: {{ (m.top - r.top) / (r.bottom - r.top) * 100 }}%; width: {{ (m.right - m.left) / (r.right - r.left) * 100 }}%; height: {{ (m.bottom - m.top) / (r.bottom - r.top) * 100 }}%; font-size: {{ (m.bottom - m.top) * ratio * 100 * 1.1 }}cqw" aria-hidden="true"></span>
+              <span class="sr-only">{{ mine[ns.idx] }}</span></label>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endfor %}
+  </div>
+  {% endif %}
   {% for it in items %}
-    <section class="card question" data-q="{{ it.num }}"{% if it.qtype == 'paper' %} data-paper{% endif %} aria-labelledby="q{{ it.num }}">
+    <section class="card question{% if page_layout and page_layout.by_pos.get(it.num) %} pq-has-slot{% endif %}" data-q="{{ it.num }}"{% if it.qtype in ('paper', 'look') %} data-paper{% endif %} aria-labelledby="q{{ it.num }}">
       <input type="hidden" name="{{ it.field.name }}_present" value="1">
       <div class="card-head"><span class="qnum">{{ it.num }}</span><h2 class="sr-only" id="q{{ it.num }}">Question {{ it.num }}</h2></div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="Picture for question {{ it.num }}">{% endif %}
@@ -52,6 +112,9 @@
       {% elif it.qtype == 'paper' %}
         {{ it.field() }}
         <p class="paper-note">{{ icon('pencil') }} Do this one on paper. Your teacher will check it.</p>
+      {% elif it.qtype == 'look' %}
+        {#- (a page to look at: its picture is it, nothing to answer: the owner, 2026-10-19) #}
+        {{ it.field() }}
       {% elif it.qtype == 'essay' %}
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
       {% else %}
@@ -113,6 +176,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if page_layout %}<script src="{{ asset('js/pagequiz.js') }}"></script>{% endif %}
 {% if cq.vquiz.calculator_allowed %}<script src="{{ asset('js/calculator.js') }}" defer></script>{% endif %}
 <script>
 /* math keys under a number answer: put the symbol where the cursor is */
@@ -136,7 +200,9 @@
 <script>
 (function () {
   var form = document.getElementById('take-form');
-  var qs = form.querySelectorAll('.question');
+  //(a quiz on its scanned page has each question twice, the page's and the list's: only the
+  //ones in use count, see pagequiz.js)
+  function questions() { return Array.prototype.filter.call(form.querySelectorAll('.question'), function (q) { return !q.closest('[data-off]'); }); }
   function answered(q) {
     if (q.hasAttribute('data-paper')) return true;  // done on paper: nothing to type
     //hidden markers (used by autosave) aren't answers
@@ -146,7 +212,8 @@
     });
   }
   function update() {
-    var n = Array.prototype.filter.call(qs, answered).length;
+    var qs = questions();
+    var n = qs.filter(answered).length;
     document.getElementById('answered').textContent = n;
     document.getElementById('bar').style.width = (qs.length ? 100 * n / qs.length : 0) + '%';
     return qs.length - n;

@@ -11,7 +11,7 @@ Removed quizzes).
 """
 from app import db
 
-KINDS = ('problems', 'quizzes', 'people', 'archive')
+KINDS = ('problems', 'quizzes', 'people', 'archive', 'pictures', 'files')
 
 
 class TakeOutError(ValueError):
@@ -69,7 +69,7 @@ def _item(kind, item_id):
     except (TypeError, ValueError):
         item = None
     if item is None:
-        raise TakeOutError('That {} doesn\'t exist any more.'.format({'problems': 'problem', 'quizzes': 'quiz', 'people': 'person', 'archive': 'attempt'}[kind]))
+        raise TakeOutError('That {} doesn\'t exist any more.'.format({'problems': 'problem', 'quizzes': 'quiz', 'people': 'person', 'archive': 'attempt', 'pictures': 'picture', 'files': 'file'}[kind]))
     return item
 
 
@@ -97,7 +97,7 @@ def _blocker(kind, item, by):
         return None
     if kind == 'people':
         return 'You can’t delete your own account.' if by is not None and item.id == by.id else None
-    if kind == 'problems':
+    if kind in ('problems', 'pictures', 'files'):
         return None  # (one a quiz uses is kept, quietly off the Problems page: S.delete_problem)
     return S.vquiz_delete_blocker(item)
 
@@ -144,7 +144,7 @@ def question(kind, folder, p):
         q += ' Deleting an account sends its quiz attempts to the Archive.'
     elif kind == 'quizzes':
         q += ' A quiz students have taken goes to Removed quizzes instead, where you can restore it.'
-    elif p['delete']:
+    elif p['delete'] and kind == 'problems':
         #(the same warning as the problem's own Delete for good)
         from app.qgen import services as S
         archived = S.archived_counts()[1]
@@ -247,6 +247,11 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
             elif kind == 'archive':
                 S.purge_archived(item)  # (the Archive's own Delete for good)
                 done.append('Deleted {} for good.'.format(name))
+            elif kind in ('pictures', 'files'):
+                #(an upload: the file itself, deleted for good; problems using a picture show none)
+                from app.qgen import uploads
+                uploads.delete_file(item)
+                done.append('Deleted {} {} for good.'.format(S.item_word(kind), name))
             elif kind == 'problems':
                 _take_out(kind, item, ids)
                 how = S.delete_problem(item)

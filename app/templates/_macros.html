@@ -64,10 +64,9 @@
    carrying the session token, optionally asking "are you sure?" first. #}
 {# a page's Back button: to the page they came from when it's one people go back to
    (Dashboard, Grading, a student page...), else to fallback (app/nav.py) #}
-{% macro back_button(fallback_url, fallback_label, cls='btn btn-secondary') %}
-  {%- set target = back(fallback_url, fallback_label) -%}
-  <a class="{{ cls }}" href="{{ target[0] }}" title="Go back to {{ target[1] }}" data-back><span class="back-label">← {{ target[1] }}</span></a>
-{%- endmacro %}
+{# (the way back on every page is the top bar's ← and → now, base.html and static/js/trail.js: the
+   owner, 2026-10-19; a page's own "← Quizzes" button is no more, so this draws nothing) #}
+{% macro back_button(fallback_url, fallback_label, cls='btn btn-secondary') %}{% endmacro %}
 
 {# a button that doesn't apply to this item: shown, grayed out, with why (rows of the same kind
    of item always have the same buttons, in the same places; the teacher chose this 2026-10-10) #}
@@ -83,7 +82,7 @@
 
 {# a teacher looking at one attempt: its student, the quiz's results, and the answer key #}
 {% macro attempt_links(cq) %}
-  {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "'s student page") }}
+  {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "’s student page") }}
   <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone's attempts and scores on “{{ cq.vquiz.title }}”">Quiz history</a>
 {%- endmacro %}
 
@@ -136,8 +135,10 @@
    called. compact: just the box (inside a small box). Put more in the bar with a call block
    (a results page's "Show"). Hidden until its script runs. #}
 {# url: the page's own bar, which keeps its words (?q=) and Show choice (?state=) in the address (filter.js) #}
-{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false) -%}
-<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
+{# count_one / count_many: what its count counts when it isn't the things themselves (Grading: the
+   attempts waiting, each thing weighing its data-weight; the owner, 2026-10-19) #}
+{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false, count_one=none, count_many=none) -%}
+<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if count_many %} data-count-one="{{ count_one }}" data-count-many="{{ count_many }}"{% endif %}{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
   {# the box and Clear stay side by side (only the box gets narrower on a small screen) #}
   <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter {{ many }} by name" title="Type part of a name to show only the {{ many }} that match">
   {%- if not compact %}<button type="button" class="btn btn-secondary btn-sm" data-filter-clear title="Show all the {{ many }} again">Clear</button>{% endif %}</span>

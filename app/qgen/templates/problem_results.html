@@ -39,10 +39,10 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
+  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View problem: three students' versions of {{ vp.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View problem') }}</a><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit problem: change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit problem') }}</a></span>
   {#- (no answers yet: no filter row, so the buttons stay here) #}
-  {% if not summary.tries %}<div class="actions">{{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
-    <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View problem: three students' versions of {{ vp.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View problem') }}</a>
-    <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit problem: change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit problem') }}</a></div>{% endif %}
+  {% if not summary.tries %}<div class="actions">{{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}</div>{% endif %}
 </div>
 
 {% if not summary.tries %}
@@ -50,11 +50,9 @@
 {% else %}
 {% call folders_page(fk) %}
   <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'answer', 'answers', boxes='details.item-box, details.sub-box', url=true) }}
-    {#- the way back (and View, Edit) at the right end of the filter row, as on Results by quiz
+    {#- the way back at the right end of the filter row (View and Edit beside the title), as on Results by quiz
         (the owner, 2026-10-17) #}
-    <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vprobs'), 'Problems', 'btn btn-secondary btn-sm') }}
-    <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View problem: three students' versions of {{ vp.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View problem') }}</a>
-    <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit problem: change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit problem') }}</a></div></div>
+    <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vprobs'), 'Problems', 'btn btn-secondary btn-sm') }}</div></div>
   <div class="card problem-summary">
     <div class="btn-row">
       <span class="badge">{{ count_of(summary.tries, 'answer', 'answers') }} from {{ count_of(summary.students, 'student', 'students') }}</span>

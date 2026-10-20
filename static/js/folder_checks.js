@@ -42,6 +42,13 @@
   });
   list.addEventListener('change', draw);
   var levels = document.querySelector('#subject-question .subject-levels');
+  //(beside the field's label, "Folder", not on top of the list: the owner, 2026-10-19)
+  var lab = levels && levels.closest('fieldset') && levels.closest('fieldset').querySelector(':scope > legend');
+  if (lab) {
+    levels.qgenScope = levels.parentElement;
+    levels.classList.add('title-levels');
+    lab.appendChild(levels);
+  }
   if (levels) {
     levels.hidden = false;
     if (!folds.length) levels.querySelectorAll('[data-side-level]').forEach(function (b) {

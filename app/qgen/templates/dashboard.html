@@ -3,21 +3,30 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
+  {#- (Expand all / Collapse all beside the page's title, not at the far end of its buttons: the owner, 2026-10-19) #}
+  {{ expand_collapse('#dash-live', 'boxes') }}
+  {#- this teacher's scans being read or waiting to be checked: a chip and its pop-over (the owner, 2026-10-18) #}
+  <span id="scan-progress-box" data-url="{{ url_for('qgen.scan_progress') }}"{% if scans|selectattr('reading')|list %} data-reading="1"{% endif %}>{% include "_scan_progress.html" %}</span>
   <div class="actions dash-actions" aria-label="Quick actions">
     <a class="btn btn-secondary" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
-    <button type="button" class="btn btn-secondary" data-open-pane="messages" title="Open the messages panel to write to students">Message students</button>
+    {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
+    {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>
+    {%- else %}<button type="button" class="btn btn-secondary" disabled title="Needs an AI key, which this site doesn't have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}
+    {#- (no "Message students": the top bar's Messages opens the same panel; the owner, 2026-10-19) #}
     <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
-    {{ expand_collapse('#dash-live', 'boxes') }}
   </div>
 </div>
 
 {# Right now and At a glance start open, the other cards (lists) collapsed (the owner, 2026-10-15); data-boxes-reset forgets, once,
    what this browser remembered for them, so they do #}
-<div id="dash-live" data-boxes-reset="2026-10-15b:now,glance,queue,pinned,handins,out" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
+<div id="dash-live" class="dash-settling" data-boxes-reset="2026-10-15b:now,glance,queue,pinned,handins,out" data-url="{{ url_for('qgen.dashboard_now') }}" data-every="{{ refresh_ms }}">
 {% include "_dashboard_live.html" %}
 </div>
+{#- the boxes are shown once they're in their places (static/js/masonry.js), not first in plain grid
+    order and then jumping into place (the owner, 2026-10-18); shown anyway after a moment #}
+<script>setTimeout(function () { var d = document.getElementById('dash-live'); if (d) d.classList.remove('dash-settling'); }, 1500);</script>
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/dashboard.js') }}" defer></script><script src="{{ asset('js/elastic.js') }}" defer></script>
-<script src="{{ asset('js/dashchips.js') }}" defer></script>{% endblock %}
+<script src="{{ asset('js/dashchips.js') }}" defer></script><script src="{{ asset('js/scanprogress.js') }}" defer></script>{% endblock %}

@@ -19,6 +19,7 @@ from app.messages.models import notify, notify_teachers
 from . import layout
 from .formfact import record_answers, finalize, TRANSCRIPT_V2
 from .friendly import FriendlyError
+from .models import UploadFile, PicGroup, FileGroup
 from .models import CQuiz, VQuiz, VProblem, CProblem, VPGroup, VQGroup, ArchivedAttempt, ArchiveFolder, RETAKE_RULES, \
     vproblem_vpgroup, vquiz_vqgroup
 from .qtypes import get_qtype
@@ -43,7 +44,19 @@ def _when(d):
 #be in several, or none). Stored in the old VPGroup / VQGroup tables. Not the "2 of
 #these 6" question groups inside a quiz (layout.py).
 SUBJECT_KINDS = {'problems': (VPGroup, VProblem, 'vpgroups', 'vproblems'),
-                 'quizzes': (VQGroup, VQuiz, 'vqgroups', 'vquizzes')}
+                 'quizzes': (VQGroup, VQuiz, 'vqgroups', 'vquizzes'),
+                 #(uploaded pictures and other files, in folders too: the owner, 2026-10-19)
+                 'pictures': (PicGroup, UploadFile, 'picgroups', 'uploads'),
+                 'files': (FileGroup, UploadFile, 'filegroups', 'uploads')}
+#what one thing of each kind is called, and several
+ITEM_WORDS = {'problems': ('problem', 'problems'), 'quizzes': ('quiz', 'quizzes'),
+              'pictures': ('picture', 'pictures'), 'files': ('file', 'files')}
+UPLOAD_KINDS = ('pictures', 'files')
+
+
+def item_word(kind, n=1):
+    one, many = ITEM_WORDS.get(kind, ('thing', 'things'))
+    return one if n == 1 else many
 SUBJECT_NAME_MAX = 64
 
 
@@ -174,7 +187,7 @@ def purge_plan(kind, subject):
 def purge_question(kind, subject):
     """The warning before deleting a folder with everything in it."""
     plan = purge_plan(kind, subject)
-    unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
+    unit, units = ITEM_WORDS[kind]
     def n(count, one=unit, many=units):
         return '{} {}'.format(count, one if count == 1 else many)
     inner = plan['folders'] - 1
@@ -219,7 +232,7 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
     except (TypeError, ValueError):
         item = None
     if item is None:
-        raise ServiceError('That {} doesn\'t exist any more.'.format('problem' if kind == 'problems' else 'quiz'))
+        raise ServiceError('That {} doesn\'t exist any more.'.format(item_word(kind)))
     current = getattr(item, rel)
     if add and subject not in current:
         current.append(subject)
@@ -242,6 +255,11 @@ def in_use(kind):
     """The problems or quizzes not removed (the ones the Problems and Quizzes pages, the quiz
     builder and Assign offer)."""
     item_cls = subject_kind(kind)[1]
+    if kind in UPLOAD_KINDS:
+        #(uploads: the pictures or the other files. Kept in step with the folder by uploads.sync(),
+        #called where files change and when their pages open, never here: this runs inside other
+        #requests, and a sync commits)
+        return item_cls.query.filter(item_cls.picture.is_(kind == 'pictures'))
     return item_cls.query.filter(item_cls.removed_at.is_(None))
 
 
@@ -255,14 +273,20 @@ def subject_tree(kind, items=None):
     first: (root, flat, nodes). items can also be attempts_by_quiz() groups (by their quiz)."""
     from app import folder_tree
     group_cls, item_cls, rel, _back = subject_kind(kind)
-    table = vproblem_vpgroup if kind == 'problems' else vquiz_vqgroup
+    table = getattr(item_cls, rel).property.secondary
     cols = list(table.c)
     homes = {}
     for item_id, group_id in db.session.query(cols[0], cols[1]):
         homes.setdefault(item_id, []).append(group_id)
-    items = in_use(kind).order_by(item_cls.id.desc()).all() if items is None else items
+    if items is None:
+        items = in_use(kind).order_by(*upload_order(kind) if kind in UPLOAD_KINDS else (item_cls.id.desc(),)).all()
     key = (lambda g: g['vquiz'].id) if items and isinstance(items[0], dict) else (lambda item: item.id)
     return folder_tree.tree(subjects(kind), lambda g: g.title, items, homes, key=key)
+
+
+def upload_order(kind):
+    """Pictures and other files A to Z by name, whatever case (the owner, 2026-10-17)."""
+    return (db.func.lower(UploadFile.name),)
 
 
 def subject_ancestors(kind):
@@ -537,11 +561,28 @@ def check_layout(value):
     return lay, layout.check(lay)
 
 
+def quiz_name_taken(title, except_id=None):
+    """The quiz in use (not in the Archive) already called this, ignoring capitals and extra
+    spaces, or None: two quizzes may not share a name (the owner, 2026-10-19)."""
+    want = ' '.join((title or '').split()).lower()
+    if not want:
+        return None
+    for vq in in_use('quizzes').all():
+        if vq.id != except_id and ' '.join((vq.title or '').split()).lower() == want:
+            return vq
+    return None
+
+
+QUIZ_NAME_TAKEN = 'There’s already a quiz called “{}”. Please give this one a different name.'
+
+
 def save_vquiz(vq, title, problems, author_id=None, **settings):
     """Check and save a quiz (new or existing). Returns errors; saves only if there are none."""
     lay, errors = check_layout(problems)
     if not (title or '').strip():
         errors = ['Please give the quiz a title.'] + errors
+    elif quiz_name_taken(title, vq.id):
+        errors = [QUIZ_NAME_TAKEN.format(' '.join(title.split()))] + errors
     if settings.get('retake_rule') and settings['retake_rule'] not in RETAKE_RULES:
         errors.append('Unknown retake rule “{}”.'.format(settings['retake_rule']))
     if errors:
@@ -700,7 +741,7 @@ def _sample_item(vp, rng, num=None):
     """One student's version of a problem, for viewing only."""
     qt = get_qtype(vp.qtype)
     prob, ansr, opts = instantiate_problem(vp, rng)
-    return {'num': num, 'vpid': vp.id, 'title': vp.title, 'qtype': qt.label, 'essay': not qt.auto_graded, 'paper': qt.paper,
+    return {'num': num, 'vpid': vp.id, 'title': vp.title, 'qtype': qt.label, 'essay': not qt.auto_graded, 'paper': qt.paper, 'look': qt.look,
             'text': prob, 'correct': qt.show_correct(ansr, opts), 'choices': opts.get('choices'),
             'right': opts.get('correct', []), 'image': opts.get('image')}
 
@@ -726,6 +767,38 @@ def sample_quiz(vq):
     return items
 
 
+def quiz_varies(vq, tries=8):
+    """Whether students can get different versions of this quiz: its order shuffled, a group's
+    picks, or a problem whose numbers or choices change. False: every student gets the same,
+    so View's "Roll another" is grayed out (the owner, 2026-10-19)."""
+    try:
+        entries = layout.parse(vq.vpid_lst)
+    except layout.LayoutError:
+        return True
+    if vq.shuffle_order and layout.question_count(entries) > 1:
+        return True
+    ids = []
+    for entry in entries:
+        if layout.is_group(entry):
+            if entry['pick'] < len(entry['from']):
+                return True
+            ids.extend(entry['from'])
+        else:
+            ids.append(entry)
+    rng = random.Random()
+    for pid in ids:
+        vp = db.session.get(VProblem, pid)
+        if vp is None:
+            continue
+        try:
+            seen = {repr((it['text'], it['choices'])) for it in (_sample_item(vp, rng) for _ in range(tries))}
+        except Exception:
+            return True
+        if len(seen) > 1:
+            return True
+    return False
+
+
 # ---------------------------------------------------------------- assigning
 
 def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None):
@@ -740,9 +813,17 @@ def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None
         #so "question 1 is B" means nothing to the student next door
         if vquiz.shuffle_order:
             random.shuffle(ordered)
+        seen = set()
         for ordinal, pid in enumerate(ordered, 1):
             vprob = db.session.get(VProblem, pid)
             prob, ansr, opts = instantiate_problem(vprob)
+            #a problem used several times in a quiz: a different version each time, when its
+            #values allow one (the owner, 2026-10-18)
+            tries = 0
+            while (pid, prob) in seen and tries < 30:
+                prob, ansr, opts = instantiate_problem(vprob)
+                tries += 1
+            seen.add((pid, prob))
             cp = CProblem(ordinal=ordinal, conc_prob=prob, conc_ansr=ansr, vproblem_id=vprob.id)
             cp.conc_opts = opts
             cq.cproblems.append(cp)
@@ -1023,6 +1104,25 @@ def ensure_archive_folders():
             changed = True
         elif not f.own_name and not f.removed and f.name != u.username:
             f.name, changed = u.username, True
+    #(old folders from before folders were tied to students: one with a student's name, holding
+    #only that student's attempts and no folders, is merged into the student's own folder, so the
+    #Archive doesn't show "ava" twice: the owner, 2026-10-19)
+    by_id = {f.student_id: f for f in ArchiveFolder.query.filter(ArchiveFolder.student_id.isnot(None))}
+    names = {}
+    for sid, f in by_id.items():
+        names.setdefault((f.name or '').lower(), []).append(f)
+    for old in ArchiveFolder.query.filter(ArchiveFolder.student_id.is_(None)).all():
+        twins = names.get((old.name or '').lower(), [])
+        if len(twins) != 1 or ArchiveFolder.query.filter_by(parent_id=old.id).first() is not None:
+            continue
+        home = twins[0]
+        inside = ArchivedAttempt.query.filter_by(folder_id=old.id).all()
+        if any(a.student_id != home.student_id for a in inside):
+            continue
+        for a in inside:
+            a.folder_id = home.id
+        db.session.delete(old)
+        changed = True
     if changed:
         try:
             db.session.commit()
@@ -1468,3 +1568,58 @@ def grade_essays(cq, grades, finish=False, grader_id=None):
            url_for('qgen.qtake', cidx=cq.id))
     cq.save()
     return []
+
+
+# ---------------------------------------------------------------- the same problem twice
+
+def problem_key(qtype, question, answer, options):
+    """What makes a problem what it is, the same for two problems that differ only in spacing
+    or in what their values are called (the owner, 2026-10-18): a scanned page's 20 sums of
+    two 2-digit numbers are one problem, used 20 times."""
+    import re as _re
+    options = options or {}
+    values = [dict(v) for v in options.get('values') or []]
+    names = [str(v.get('name') or '') for v in values]
+    text = ' '.join([question or '', answer or '', options.get('choices') or '', options.get('combos') or ''] +
+                    [str(v.get('formula') or '') for v in values])
+    def first(name):
+        m = _re.search(r'(?<![A-Za-z0-9_])' + _re.escape(name) + r'(?![A-Za-z0-9_])', text)
+        return m.start() if m else len(text)
+    order = sorted(range(len(names)), key=lambda i: (first(names[i]), i))
+    rename = {names[i]: 'v{}'.format(k + 1) for k, i in enumerate(order) if names[i]}
+    pattern = _re.compile(r'(?<![A-Za-z0-9_])(' + '|'.join(_re.escape(n) for n in sorted(rename, key=len, reverse=True)) + r')(?![A-Za-z0-9_])') if rename else None
+
+    def canon(t):
+        t = ' '.join(str(t or '').split())
+        return pattern.sub(lambda m: rename[m.group(1)], t) if pattern else t
+    vals = []
+    for v in values:
+        v = {k: (canon(x) if isinstance(x, str) else sorted(canon(y) for y in x) if isinstance(x, list) else x)
+             for k, x in v.items() if x not in (None, '', [])}
+        vals.append(v)
+    vals.sort(key=lambda v: json.dumps(v, sort_keys=True))
+    keep = {k: options.get(k) for k in ('precision', 'ordered', 'case_sensitive', 'show_n', 'complex', 'answer_display', 'shuffle')}
+    if not (options.get('choices') or '').strip():
+        keep.pop('shuffle')  # (only choices are shuffled)
+    pictures = sorted(str(i.get('file') or '') for i in options.get('images') or [])
+    #(a scanned problem's words as written over the page: a column sum isn't a row sum there)
+    return json.dumps([qtype, canon(question), canon(answer), canon(options.get('choices')), canon(options.get('combos')),
+                       vals, keep, pictures, canon(options.get('page_text'))], sort_keys=True)
+
+
+def page_text_fits(page_text, values):
+    """True when every [name] in a scanned problem's page wording is one of its values."""
+    import re as _re
+    names = {str(v.get('name') or '') for v in values}
+    used = set(_re.findall(r'[A-Za-z_][A-Za-z0-9_]*', ' '.join(_re.findall(r'\[([^\]]*)\]', page_text or ''))))
+    return bool(used) and used <= names
+
+
+def same_problem(qtype, question, answer, options, author_id=None):
+    """A problem already in the library that is the same as this one (problem_key), or None."""
+    key = problem_key(qtype, question, answer, options)
+    q = in_use('problems').filter(VProblem.qtype == qtype)
+    for vp in q.order_by(VProblem.id).all():
+        if problem_key(vp.qtype, vp.raw_prob, vp.raw_ansr, vp.options) == key:
+            return vp
+    return None

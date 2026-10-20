@@ -1,9 +1,10 @@
 {% from "_macros.html" import filter_bar with context %}
 {# Above the Problems and Quizzes pages' lists: a search, and a bar for the checked rows
    (put them in a folder, or take them out). It stays at the top while scrolling. #}
-{% set noun = 'problems' if kind == 'problems' else 'quizzes' %}
+{#- (the things' word, for Pictures and Other files too: the owner, 2026-10-19) #}
+{% set one, noun = {'problems': ('problem', 'problems'), 'quizzes': ('quiz', 'quizzes'), 'pictures': ('picture', 'pictures'), 'files': ('file', 'files')}[kind] %}
 <div class="folder-tools-bar">
-  {% if total %}{{ filter_bar('#folder-items', 'problem' if kind == 'problems' else 'quiz', noun, url=true, boxes='details.sub-box, details.subject-box') }}{% endif %}
+  {% if total %}{{ filter_bar('#folder-items', one, noun, url=true, boxes='details.sub-box, details.subject-box') }}{% endif %}
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar" data-takeout="remove">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
@@ -22,7 +23,14 @@
       {% elif kind == 'quizzes' %}<button type="button" class="btn btn-sm btn-quiz" data-assign-many title="Give the checked quizzes to people you pick">Assign quizzes</button>
       {% elif kind == 'problems' %}<button type="button" class="btn btn-sm btn-quiz" data-add-quiz="checked"{% if not quizzes %} data-no-quiz{% endif %} title="Put the checked problems at the end of one of your quizzes">Add to a quiz</button>{% endif %}
     {% else %}
-      <span class="muted small">Make a folder first (+ New folder), then check {{ noun }} to put in it.</span>
+      {#- (no folders yet: the folder buttons grayed, with why, never left out; the page's own button
+          still works: the owner, 2026-10-19) #}
+      <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check {{ noun }} to put in it.</span>
+      <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-no-folder="Take out of folder: there are no folders yet">Take out of folder</button>
+      {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-url="{{ url_for('qgen.restore_many', kind=kind) }}" title="Put the checked {{ noun }} back on the {{ noun|capitalize }} page">Restore</button>
+      {% elif kind == 'quizzes' %}<button type="button" class="btn btn-sm btn-quiz" data-assign-many title="Give the checked quizzes to people you pick">Assign quizzes</button>
+      {% elif kind == 'problems' %}<button type="button" class="btn btn-sm btn-quiz" data-add-quiz="checked"{% if not quizzes %} data-no-quiz{% endif %} title="Put the checked problems at the end of one of your quizzes">Add to a quiz</button>{% endif %}
     {% endif %}
   </form>
 </div>

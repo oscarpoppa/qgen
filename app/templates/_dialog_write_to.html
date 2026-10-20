@@ -1,0 +1,36 @@
+{# Write to chosen students, from the Messages panel's "Write to…" (static/js/messages.js; the
+   owner, 2026-10-17): the students with People's folders as the folder list and tabs, like the
+   Assign page's Students card, then the message #}
+{% from "_macros.html" import filter_bar with context %}
+{% set wt_students, wt_tree = message_students() %}
+<dialog class="ask panel-dialog write-to-dialog" id="write-to-dialog" aria-labelledby="write-to-head">
+  <form method="post" action="{{ url_for('messages.send') }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="to" value="chosen">
+    <p><strong id="write-to-head">Write to chosen students</strong></p>
+    {% if wt_students %}
+    <div class="field pick-people" id="write-to-pick">
+      {{ filter_bar('#write-to-pick .folder-filter-list', 'student', 'students', items='li', id='write-to-bar') }}
+      {#- (checking on a line of its own, under the filter: the owner, 2026-10-17) #}
+      <div class="btn-row small write-to-checks">
+        <button type="button" class="btn btn-secondary btn-sm" data-check-shown title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-check-set="0" title="Uncheck everyone">Uncheck all</button>
+        <span class="muted small" data-check-count aria-live="polite">0 checked</span>
+      </div>
+      <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"
+           data-unit="student" data-units="students" data-remember="write-to" data-tools-home="#write-to-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ wt_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          <ul class="choice-list pick-list">
+            {% for u in wt_students %}<li data-box="user:{{ u.id }}"><input type="checkbox" name="students" value="{{ u.id }}" id="wt-{{ u.id }}"><label for="wt-{{ u.id }}">{{ u.shown_name }}</label></li>{% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% else %}<p class="muted small">No students yet.</p>{% endif %}
+    <label for="wt-body" class="small" style="display:block;margin-top:8px">Message</label>
+    <textarea id="wt-body" name="body" rows="3" maxlength="{{ tuning.get('max_message') }}" required placeholder="e.g. Quiz 3 is open until Friday."></textarea>
+    <div class="check field"><input type="checkbox" name="pin" value="1" id="wt-pin"><label for="wt-pin">Pin it to the top of their messages (until you unpin it)</label></div>
+    <div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Cancel</button><button class="btn" title="Send this to the students you checked">Send</button></div>
+  </form>
+</dialog>

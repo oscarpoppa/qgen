@@ -37,7 +37,7 @@
         {{ draw_icon(fk.folder_icon(f)) }} <span class="side-name">{{ fk.name(n.folder) }}</span></a>
       {# quizzes that need the student in it, or in a folder inside it #}
       {{ flag_badges(fk, n) }}
-      <span class="side-count muted small" title="{{ fk.units|capitalize }} in it, and in the folders inside it">{{ n.count or 0 }}</span>
+      <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in it, and in the folders inside it">{{ n.count or 0 }}</span>
     </div>
     {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(fk, child) }}{% endfor %}</ul>{% endif %}
   </li>
@@ -108,9 +108,10 @@
         <li><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if no_folders or not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('main') }}" title="{{ 'There are no folders yet.' if no_folders else 'See the ' ~ fk.units ~ ' that aren\'t in any folder' }}" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
-          {#- (no folders yet: it counts 0, so no flags either: the owner, 2026-10-17) -#}
+          {#- (no folders yet: it's still grayed and has no flags (the owner, 2026-10-17), but it counts what's
+              in no folder, everything: the owner, 2026-10-19) -#}
           {% if not no_folders %}{{ flag_badges(fk, fk.root, true) }}{% endif %}
-          <span class="side-count muted small" title="{{ fk.units|capitalize }} in no folder">{{ 0 if no_folders else fk.main_count or 0 }}</span></div></li>
+          <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
     </nav>
@@ -129,8 +130,9 @@
         <h2 id="folder-title" class="folder-title">
           {#- the open folder's name with its path from the top, "Math › Fractions" (the owner, 2026-10-15) -#}
           {{- draw_icon(fk.folder_icon(f)) }} {% for pf in fk.path %}{{ fk.name(pf) }}{% if not loop.last %} › {% endif %}{% endfor %}</h2>
+        {#- (Expand all / Collapse all beside the title, not at the far end: the owner, 2026-10-19) #}
+        {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
         <div class="title-actions">
-          {{ level_buttons(fk.name(fk.node.folder), 'btn-sm') }}
           {# (no tabs on this page: Up goes here, beside the pair; with tabs it's on their row) #}
           {{ folder_up(fk, 'btn-sm') }}
           {{ actions }}
@@ -143,7 +145,8 @@
         {% set own_name = folder_heading or title or fk.units|capitalize %}
         {% set page_name = fk.title or (fk.main_label if fk.view == 'main' else own_name) %}
         <h2 id="folder-title" class="folder-title" data-page-name="{{ own_name }}">{{ page_name }}</h2>
-        <div class="title-actions">{{ level_buttons(page_name, 'btn-sm') }}{{ actions }}</div>
+        {{ level_buttons(page_name, 'btn-sm') }}
+        <div class="title-actions">{{ actions }}</div>
       {% endif %}
     </div>
     {# how many are shown ("3 quizzes"): the filter bar's count, put beside the heading
@@ -183,7 +186,7 @@
      first, then the folders, then Uncategorized) that show just what's in that folder (and the
      folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
-       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
@@ -218,7 +221,7 @@
   {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
   {% set name = fk.name(fk.node.folder) %}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All"
-       data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}:{{ fk.view }}" data-url-tab data-name="{{ name }}"{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
     {% for f, depth in fk.flat %}{% set n = fk.nodes[f.id] %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ fk.box_tools(n) if fk.box_tools }}{{ folder_options(fk, n, 'btn-xs') }}</template>{% endfor %}
@@ -239,7 +242,7 @@
   {% set label = fk.name(fk.node.folder) if fk.node else auto.label if auto else fk.main_label if fk.view == 'main' else fk.all_label %}
   {% set ic = fk.folder_icon(fk.node.folder) if fk.node else auto.icon if auto else 'tray' if fk.view == 'main' else 'folders' %}
   <div class="folder-filter named-box" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ label }}"
-       data-main-label="Unsorted" data-main-url="" data-all-url="" data-no-main data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"
+       data-main-label="Unsorted" data-main-url="" data-all-url="" data-no-main data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}:{{ fk.view }}:named" data-tab-name="{{ label }}" data-tab-icon="{{ ic }}">
     <script type="application/json" class="folder-filter-tree">[]</script>
     {# Up (and the Back beside it, static/js/folderfilter.js): a folder's to the folder it's in;
@@ -287,7 +290,7 @@
   {#- take it out of the folder open now (else its own): it says where it will go first
       (static/js/filebar.js) #}
   {% if mine %}<button type="button" class="btn btn-secondary btn-sm btn-icon take-out-one" data-take-out="{{ ident }}" data-label="{{ label }}" title="Take out of folder: take {{ label }} out of the folder open now (it says where {{ 'he/she' if what == 'user' else 'it' }}’ll go first)">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button>{% endif %}
-  </span>{% else %}<span class="muted small">none</span>{% endif %}
+  </span>{% else %}{#- (no folders yet: the icon grayed, with why, not the word "none": the owner, 2026-10-19) #}<span class="folder-icons"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move to folder: make a folder first (+ New folder)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button></span>{% endif %}
 {% endmacro %}
 
 {# for things that are in one place only: a "Move to…" list that moves as soon as a folder

@@ -13,7 +13,13 @@ from os import listdir, remove, path as osp
 
 def files_changed():
     """Uploads aren't in the database, so saving one tells no one by itself: tell the
-    teachers' open pages (Pictures, Other files) to check now."""
+    teachers' open pages (Pictures, Other files) to check now. Their rows (for folders) are
+    brought up to date first, here, where the files changed."""
+    try:
+        from app.qgen import uploads
+        uploads.sync()
+    except Exception as exc:
+        current_app.logger.warning('upload rows not synced: {}'.format(exc))
     from app.push import tell, TEACHERS
     tell({TEACHERS})
 
@@ -72,9 +78,11 @@ def upload():
 @pw_check
 @admin_only
 def images():
-    #A to Z by name, whatever case (the owner, 2026-10-17)
-    imgs = sorted(((f, f[2:]) for f in static_files() if f.startswith('T_')), key=lambda pair: pair[1].lower())
-    return render_template('images.html', imgs=imgs, title='Pictures')
+    #A to Z by name, whatever case (the owner, 2026-10-17), in folders like Problems (2026-10-19)
+    from app.qgen.routes import subject_page
+    from app.qgen import services as S, uploads
+    uploads.sync()
+    return subject_page('pictures', 'images.html', title='Pictures', all_subjects=S.subject_tree('pictures')[1])
 
 #admin-only list non-image files on server
 @upload_bp.route('/nonimages', methods=['GET'])
@@ -82,13 +90,11 @@ def images():
 @pw_check
 @admin_only
 def nonimages():
-    allf = static_files()
-    timgs = [f for f in allf if f.startswith('T_')]
-    imgs = [f[2:] for f in timgs]
-    imgs += timgs
-    #A to Z by name, whatever case, like Pictures (the owner, 2026-10-17)
-    nonims = sorted((f for f in allf if f not in imgs), key=str.lower)
-    return render_template('nonimages.html', files=nonims, title='Other files')
+    #A to Z by name, whatever case, like Pictures (the owner, 2026-10-17), in folders (2026-10-19)
+    from app.qgen.routes import subject_page
+    from app.qgen import services as S, uploads
+    uploads.sync()
+    return subject_page('files', 'nonimages.html', title='Other files', all_subjects=S.subject_tree('files')[1])
 
 #admin-only delete an image from server
 @upload_bp.route('/delimg/<fname>', methods=['POST'])
@@ -108,7 +114,7 @@ def delimg(fname):
             current_app.logger.info('{} removed image and thumbnail for {}'.format(current_user.username, fname))
         except Exception as exc:
             flash('Deletion failed for {}'.format(fname))
-    return redirect(url_for('upload.images'))
+    return back_to_list('upload.images')
 
 #admin-only delete a non-image from server
 @upload_bp.route('/delnonimg/<fname>', methods=['POST'])
@@ -127,9 +133,17 @@ def delnonimg(fname):
             current_app.logger.info('{} removed file {}'.format(current_user.username, fname))
         except Exception as exc:
             flash('Deletion failed for {}'.format(fname))
-    return redirect(url_for('upload.nonimages'))
+    return back_to_list('upload.nonimages')
 
 
+
+def back_to_list(endpoint):
+    """After a delete: back to the page as it was (the folder and tab open), else its start."""
+    from urllib.parse import urlsplit
+    ref = urlsplit(request.referrer or '')
+    if ref.netloc == request.host and ref.path == url_for(endpoint):
+        return redirect(ref.path + ('?' + ref.query if ref.query else ''))
+    return redirect(url_for(endpoint))
 
 #pick a free file name so a new upload never replaces an existing one
 def unique_name(fname):
