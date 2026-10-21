@@ -351,7 +351,7 @@
   open.addEventListener('click', function () {
     var n = count();
     if (!n) return;
-    dlg.querySelector('#with-checked-head').textContent = 'With the ' + (n === 1 ? 'checked ' + unit : n + ' checked ' + units);
+    dlg.querySelector('#with-checked-head').textContent = 'Apply to the ' + (n === 1 ? 'checked ' + unit : n + ' checked ' + units);
     dlg.showModal();
     var first = actions.querySelector('button:not(:disabled), a');
     if (first) first.focus();

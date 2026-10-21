@@ -123,6 +123,11 @@ class AIError(Exception):
     """A problem to show the teacher, in plain words."""
 
 
+class AITooLong(AIError):
+    """The AI's answer ran past its length: the caller can say what to do in its own words (a scanned
+    page: try again, else retake the photo; the owner, 2026-10-21)."""
+
+
 def _client(api_key):
     return anthropic.Anthropic(api_key=api_key, max_retries=2, timeout=90.0)
 
@@ -183,7 +188,7 @@ def _json_call(api_key, system, prompt, schema, client=None, max_tokens=16000, s
     if resp.stop_reason == 'refusal':
         raise AIError('The AI helper declined that request. Please rephrase it, or fill in the form yourself.')
     if resp.stop_reason == 'max_tokens':
-        raise AIError('That description was too long for the AI helper. Please shorten it.')
+        raise AITooLong('That description was too long for the AI helper. Please shorten it.')
     text_out = next((b.text for b in resp.content if b.type == 'text'), None)
     try:
         return json.loads(text_out or ''), usage

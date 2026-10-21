@@ -361,7 +361,7 @@ def scan_discard(job_id):
 @admin_only
 @post_form_only
 def scan_put_away(job_id):
-    """Put away a paused scan or a draft: out of Current scans into the Put away card (the owner, 2026-10-20)."""
+    """Put away a paused or stopped scan, or a draft: out of Current scans into the Put away card (the owner, 2026-10-20)."""
     job = _mine(job_id)
     if _reading(job):
         flash('“{}” is being read. Pause it first, then put it away.'.format(job.name), 'error')

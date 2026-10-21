@@ -282,6 +282,12 @@ def page_lock(job_id):
         push.tell(push._user_rooms(author))
 
 
+#a page whose reading ran too long: what to do next, step by step (the owner, 2026-10-21)
+PAGE_TOO_LONG = ('The AI\u2019s answer for this page ran too long, so the page wasn\u2019t read. '
+                 'Press \u201cRead the rest\u201d to try it again. If it stops again, photograph just this page, '
+                 'closer up, and scan that photo as a new scan.')
+
+
 def _read_page(app, job_id, n, api_key, user_id, reserved):
     """One page read in its own thread (read_one), with its own database session."""
     with app.app_context():
@@ -606,6 +612,9 @@ def read_one(job, n, api_key, user_id, reserved=0):
         numbers, usage = ai_helper.page_numbers(api_key, qs)
         call.ok = True
         call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
+    except ai_helper.AITooLong:
+        #(not the description box's "Please shorten it": a way forward for this page: the owner, 2026-10-21)
+        return {'n': n, 'state': 'error', 'error': PAGE_TOO_LONG, 'qs_reading': qs}
     except ai_helper.AIError as exc:
         return {'n': n, 'state': 'error', 'error': str(exc), 'qs_reading': qs}
     finally:
