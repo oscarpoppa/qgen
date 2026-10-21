@@ -3311,11 +3311,13 @@ table.pick-table img { width: 40px; height: 40px; object-fit: cover; border-radi
 .student-quiz-rows details.row-fold[open] > ol.attempt-list { margin-right: calc(var(--body-r, 0px) + 12px); }
 /* Problem history's open row (the owner, 2026-10-21): its answers' table runs the row's width on the
    row's own shade, flat (no card, no inset of its own), like the open rows on the other folder pages */
-.problem-history-rows details.row-fold[open] > .answer-rows { width: auto; margin-right: calc(var(--body-r, 0px) + 12px); margin-top: 6px;
+:is(.problem-history-rows, .grading-rows) details.row-fold[open] > .answer-rows { width: auto; margin-right: calc(var(--body-r, 0px) + 12px); margin-top: 6px;
   border: 0; border-radius: 0; box-shadow: none; background: none; }
-.problem-history-rows .answer-rows > table, .problem-history-rows .answer-rows > table > thead th,
-.problem-history-rows .answer-rows > table > tbody > tr > td { background: transparent; }
-.problem-history-rows .answer-rows > table > tbody > tr > td.actions { padding-right: 0; }
+:is(.problem-history-rows, .grading-rows) .answer-rows > table, :is(.problem-history-rows, .grading-rows) .answer-rows > table > thead th,
+:is(.problem-history-rows, .grading-rows) .answer-rows > table > tbody > tr > td { background: transparent; }
+:is(.problem-history-rows, .grading-rows) .answer-rows > table > tbody > tr > td.actions { padding-right: 0; }
 /* a title in two parts: what the page is on the top line, the thing's name under it (Quiz history) */
 h1.title-two > .title-kind { display: block; white-space: nowrap; }
 h1.title-two > .title-name { display: block; font-size: var(--fs-lg); margin-top: 2px; }  /* (smaller, so a long name wraps as little as it can: the owner, 2026-10-21) */
+/* (Grading's open row: its Grade icons right under the row's History icon, no scroll bar room) */
+.grading-rows details.grading-group > .answer-rows { padding-right: 0; }

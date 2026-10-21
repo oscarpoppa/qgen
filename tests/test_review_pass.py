@@ -494,7 +494,8 @@ def test_grading_list_by_quiz(app_db):
     for vq, who in ((a, 'sam'), (b, 'kim'), (a, 'kim')):
         S.submit(give(vq, who), {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
-    assert page.count('<details class="box card item-box grading-group" data-list data-box="quiz:') == 2 and '3 waiting, oldest first' in page
+    #(each quiz a row like the other folder pages': it was a box, the owner 2026-10-21)
+    assert page.count('<tr class="result-item" data-box="quiz:') == 2 and '3 waiting, oldest first' in page
     assert page.index('data-box="quiz:{}"'.format(a.id)) < page.index('data-box="quiz:{}"'.format(b.id))
 
 

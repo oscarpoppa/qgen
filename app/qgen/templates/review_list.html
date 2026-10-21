@@ -4,13 +4,21 @@
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
 
-{# one quiz's attempts waiting for grading, oldest hand-in first: a box in its folders, like
-   Results by quiz (the owner, 2026-10-17) #}
+{# the quizzes waiting for grading as rows like the other folder pages' (the owner, 2026-10-21; each was a
+   rounded box): the name folds the row open to its attempts, oldest hand-in first (Student, Handed in,
+   To grade, Grade); beside it Attempts, sortable; at the row's end History (on the quiz's name before) #}
+{% macro quiz_rows(vqs) %}
+  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows">
+    <thead><tr><th>Quiz</th><th>Attempts</th><th></th></tr></thead>
+    <tbody>{% for vq in vqs %}{{ quiz_group(vq) }}{% endfor %}</tbody>
+  </table></div>
+{% endmacro %}
 {% macro quiz_group(vq) %}
   {% set rows = by_quiz[vq.id] %}
-  <details class="box card item-box grading-group" data-list data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}" data-weight="{{ rows|length }}">
-    <summary>{{ box_label('note', quiz_link(vq), count_of(rows|length, 'attempt', 'attempts')) }}</summary>
-    <div class="table-wrap stack">
+  <tr class="result-item" data-box="quiz:{{ vq.id }}" data-weight="{{ rows|length }}" data-name="{{ vq.title|lower }}{% for cq in rows if cq.taker %} {{ cq.taker.username|lower }} {{ (cq.taker.nickname or '')|lower }}{% endfor %}">
+    <td data-label="Quiz"><details class="box row-fold grading-group" data-box="grading-row:{{ vq.id }}">
+      <summary>{{ box_label('note', vq.title, none, 'span', vq.title) }}</summary>
+    <div class="table-wrap stack answer-rows" data-fold-body>
       <table class="even-cols">
         <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
         <tbody>
@@ -26,7 +34,10 @@
         </tbody>
       </table>
     </div>
-  </details>
+    </details></td>
+    <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}"><span class="badge box-count">{{ count_of(rows|length, 'attempt', 'attempts') }}</span></td>
+    <td class="actions"><span class="btn-row quiz-row-actions"><a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Everyone’s attempts and scores on “{{ vq.title }}”">{{ icon_label('lc-history', 'History') }}</a></span></td>
+  </tr>
 {% endmacro %}
 
 {% block content %}
@@ -39,13 +50,13 @@
 {% set oldest_count = ('oldest ' ~ n_oldest ~ ' of ' ~ waiting|length) if n_oldest < waiting|length else (n_oldest ~ (' attempt' if n_oldest == 1 else ' attempts')) %}
 {% set oldest_button %}<button type="button" class="btn btn-secondary btn-sm oldest-toggle" aria-controls="grading-oldest" aria-expanded="false" title="Show the {{ n_oldest }} attempts that have waited longest, whatever their quiz">{{ icon('hourglass') }} Waiting for grading <span class="badge box-count">{{ oldest_count }}</span></button>{% endset %}
 {% call folders_page(fk, under_side=oldest_button) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='details.item-box', boxes='details.sub-box', url=true, count_one='attempt', count_many='attempts') }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', url=true, count_one='attempt', count_many='attempts') }}
     {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=shown, key_prefix='quiz:') %}{% for vq in n['items'] %}{{ quiz_group(vq) }}{% endfor %}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{% for vq in n['items'] %}{{ quiz_group(vq) }}{% endfor %}{% endcall %}{% else %}
-    {% call named_box(fk, 'quiz:') %}{% for vq in shown %}{{ quiz_group(vq) }}{% endfor %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=shown, key_prefix='quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
+    {% call named_box(fk, 'quiz:') %}{% if shown %}{{ quiz_rows(shown) }}{% endif %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
   </div>
   {# the five that have waited longest, whatever their quiz, in a card of their own, under the folders (the
      owner, 2026-10-17) #}
