@@ -378,7 +378,7 @@
   function sync() {
     var n = count(), list = ticks().filter(shown);
     var on = list.filter(function (t) { return t.checked; }).length;
-    open.textContent = 'With checked (' + n + ')';
+    open.textContent = 'Apply to checked (' + n + ')';  // (the owner's words, 2026-10-21)
     open.disabled = !n;
     open.title = n ? 'Move, take out or more, for the ' + (n === 1 ? 'checked ' + unit : n + ' checked ' + units) : 'Check some ' + units + ' first';
     document.querySelectorAll('.folder-main th.tick-col input.check-all').forEach(function (c) {
