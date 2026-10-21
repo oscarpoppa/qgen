@@ -21,6 +21,21 @@
         + '<span class="pick-count muted" data-filter-count aria-live="polite"></span>';
       var tools = d.querySelector('.assign-many-tools');
       (tools || list).parentNode.insertBefore(bar, tools || list);
+      //(the standard dialog for listed things, as the pickers' (the owner, 2026-10-21): a tab naming
+      //the list, "All folders" and how many, over a framed panel holding the list as square rows
+      //under a heading, "Folder")
+      var frame = document.createElement('div');
+      frame.className = 'put-frame';
+      frame.innerHTML = '<div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs">'
+        + '<span class="folder-tab folder-tab-name" aria-pressed="true">' + (window.qgenIcon ? window.qgenIcon('folders') : '')
+        + '<span class="box-title">All folders</span><span class="badge box-count" data-put-total></span></span></div></div>'
+        + '<div class="put-panel"><div class="table-wrap put-table"><div class="put-head" aria-hidden="true">Folder</div></div></div>';
+      list.parentNode.insertBefore(frame, list);
+      frame.querySelector('.put-table').appendChild(list);
+      var total = frame.querySelector('[data-put-total]');
+      function recount() { var n = list.querySelectorAll(':scope > li').length; total.textContent = n; total.title = n + (n === 1 ? ' folder' : ' folders'); }
+      recount();
+      new MutationObserver(recount).observe(list, { childList: true });
       if (window.qgenFilterBar) window.qgenFilterBar(bar);
       //(Enter in the filter box never sends the dialog's form: a folder's Move is a form)
       bar.querySelector('input.filter-list').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });

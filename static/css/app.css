@@ -3317,3 +3317,18 @@ th.tick-col input.check-all { margin: 0; }
    the owner, 2026-10-21) */
 .scan-progress-row { grid-template-columns: minmax(6rem, 13rem) minmax(4rem, 1fr) minmax(0, max-content) auto; }
 .scan-progress-row > .nowrap { white-space: normal; min-width: 0; }
+/* The standard dialog for listed things (the owner, 2026-10-21): the pickers' look for the folder
+   dialogs too (Move, Take out, Copy, the Archive's Move: static/js/dialogfilter.js): a tab over a
+   framed panel, the list in a box of square rows under a heading */
+.put-frame { margin: 4px 0 12px; }
+.put-frame > .folder-filter-onetab { margin: 0; }
+.put-frame > .put-panel { border: 1px solid var(--tab-edge); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--tab-open); padding: 12px; }
+.put-frame .put-table { margin: 0; max-height: min(45vh, 28rem); overflow-y: auto; }
+.put-frame .put-head { position: sticky; top: 0; z-index: 1; padding: 8px 12px; font-size: var(--fs-sm); font-weight: 600;
+  color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+dialog.assign-many .put-frame ul.put-list { margin: 0; padding: 0; max-height: none; overflow: visible; border: 0; background: var(--surface); columns: 1; }
+dialog.assign-many .put-frame ul.put-list > li { padding: 7px 12px; border-top: 1px solid var(--border); }
+dialog.assign-many .put-frame ul.put-list > li:first-child { border-top: 0; }
+dialog.assign-many .put-frame ul.put-list > li:has(input:checked) { background: var(--accent-soft); }
+dialog.assign-many .put-frame ul.put-list > li > label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
