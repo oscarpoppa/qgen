@@ -3306,3 +3306,14 @@ h1.title-two > .title-kind { display: block; white-space: nowrap; }
 h1.title-two > .title-name { display: block; font-size: var(--fs-lg); margin-top: 2px; }  /* (smaller, so a long name wraps as little as it can: the owner, 2026-10-21) */
 /* (Grading's open row: its Grade icons right under the row's History icon, no scroll bar room) */
 .grading-rows details.grading-group > .answer-rows { padding-right: 0; }
+/* the checked bar's "With checked (3)" dialog: its actions one under another, each its own button
+   (static/js/filebar.js; the owner, 2026-10-21) */
+.with-checked-dialog .with-checked-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 4px 0 12px; }
+.with-checked-dialog .with-checked-actions > .btn, .with-checked-dialog .with-checked-actions > button { justify-content: center; }
+.with-checked-dialog .with-checked-actions > span { white-space: normal; }
+th.tick-col input.check-all { margin: 0; }
+/* (the scan pop-over's row stays inside its card: a long status ("Stopped: 1 page couldn't be read ·
+   by teacher") wraps in its own column instead of pushing the row's icons past the card's edge:
+   the owner, 2026-10-21) */
+.scan-progress-row { grid-template-columns: minmax(6rem, 13rem) minmax(4rem, 1fr) minmax(0, max-content) auto; }
+.scan-progress-row > .nowrap { white-space: normal; min-width: 0; }

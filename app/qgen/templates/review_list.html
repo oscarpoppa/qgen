@@ -6,10 +6,11 @@
 
 {# the quizzes waiting for grading as rows like the other folder pages' (the owner, 2026-10-21; each was a
    rounded box): the name folds the row open to its attempts, oldest hand-in first (Student, Handed in,
-   To grade, Grade); beside it Attempts and Oldest (the longest-waiting hand-in), sortable; at the row's end History (on the quiz's name before) #}
+   To grade, Grade); beside it Attempts, To grade (answers waiting in all of them) and Oldest (the longest-waiting hand-in),
+   sortable #}
 {% macro quiz_rows(vqs) %}
   <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows">
-    <thead><tr><th>Quiz</th><th>Attempts</th><th>Oldest</th><th></th></tr></thead>
+    <thead><tr><th>Quiz</th><th>Attempts</th><th>To grade</th><th>Oldest</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_group(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -36,10 +37,14 @@
     </div>
     </details></td>
     <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}"><span class="badge box-count">{{ count_of(rows|length, 'attempt', 'attempts') }}</span></td>
+    {#- (how many answers wait for grading in all its attempts, in the words its lines use: the owner, 2026-10-21) -#}
+    {%- set ns_t = namespace(n=0) %}{% for cq in rows %}{% set ns_t.n = ns_t.n + cq.cproblems|selectattr('credit', 'none')|list|length %}{% endfor %}
+    <td data-label="To grade" class="nowrap" data-sort="{{ '%05d' % ns_t.n }}">{% if ns_t.n %}<span class="badge badge-warn">{{ ns_t.n }} answer{{ '' if ns_t.n == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
     {#- (the hand-in that has waited longest here, sortable: the owner, 2026-10-21) -#}
     {%- set old = rows|map(attribute='compdate')|reject('none')|min if rows|map(attribute='compdate')|reject('none')|list else none %}
     <td data-label="Oldest" class="nowrap small muted" data-sort="{{ old.isoformat() if old else '' }}">{{ old|when if old else '' }}</td>
-    <td class="actions"><span class="btn-row quiz-row-actions"><a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Everyone’s attempts and scores on “{{ vq.title }}”">{{ icon_label('lc-history', 'History') }}</a></span></td>
+    {#- (no History icon: Grading is for grading, the quiz's history is off its point: the owner, 2026-10-21) #}
+    <td class="actions"></td>
   </tr>
 {% endmacro %}
 

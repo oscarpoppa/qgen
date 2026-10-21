@@ -184,7 +184,10 @@
       fileCount.classList.remove('error');
     }
     if (sel) { sel.disabled = !n; if (!n) sel.title = 'Check something below first'; else sel.removeAttribute('title'); }
-    fileForm.querySelectorAll('button').forEach(function (b) {
+    //(the bar's actions wherever they sit: in the "With checked" dialog now, still the bar's by
+    //form="file-form"; the dialog's own button keeps its own words, static/js/filebar.js)
+    document.querySelectorAll('#file-form button, button[form="file-form"]').forEach(function (b) {
+      if (b.classList.contains('with-checked')) return;
       //(no folders yet: grayed, with why, never hidden: the owner, 2026-10-19)
       if (b.dataset.noFolder !== undefined) { b.disabled = true; b.title = b.dataset.noFolder; return; }
       b.disabled = !n || (sel && sel.value === '');

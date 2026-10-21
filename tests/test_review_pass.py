@@ -303,7 +303,8 @@ def test_names_and_titles_lead_somewhere(app_db):
     from app.qgen import services as S
     S.submit(cq, {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
-    assert 'href="/quiz/listuser/{}"'.format(ids('sam')) in page and 'href="/quiz/results/{}"'.format(vq.id) in page
+    #(Grading: no way off to the quiz's history, it's for grading: the owner, 2026-10-21)
+    assert 'href="/quiz/listuser/{}"'.format(ids('sam')) in page and 'href="/quiz/results/{}"'.format(vq.id) not in page
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     #(no "Message sam" button: the Messages pop-over does it, the owner 2026-10-21)
     assert 'href="/messages/{}"'.format(ids('sam')) not in page and 'Edit user' in page

@@ -296,30 +296,25 @@
   });
 })();
 
-/* Check all / Uncheck all on every checked bar (the owner, 2026-10-15): Check all checks
- * everything the list shows now (the open folder tab, what the filter matches; folded boxes
- * count too), Uncheck all unchecks everything. Each is grayed when there's nothing for it to do. */
+/* The checked bar, uncluttered (the owner, 2026-10-21; it was "Check …, then pick an action:" over a
+ * row of five small buttons): checking all is a check box at the top of the check column, and the
+ * bar's actions sit behind one button, "With checked (3)", that opens a small dialog listing them
+ * (each then opens its own dialog as before). Grayed, with why, while nothing is checked. The
+ * actions stay part of the bar's form (form="file-form"), so everything they did still works. */
 (function () {
   var form = document.getElementById('file-form');
   if (!form) return;
   var TICKS = '.folder-main input[name="items"], .folder-main input.pick-person';
   var unitEl = document.querySelector('[data-unit][data-units]');
-  var units = unitEl ? unitEl.dataset.units : 'ones';
+  var units = unitEl ? unitEl.dataset.units : 'ones', unit = unitEl ? unitEl.dataset.unit : 'one';
   function ticks() { return Array.prototype.slice.call(document.querySelectorAll(TICKS)); }
   function shown(t) { return !t.closest('[hidden], template') && !t.disabled; }
-  function make(words, title) {
-    var b = document.createElement('button');
-    b.type = 'button'; b.className = 'btn btn-secondary btn-sm bar-all';
-    b.textContent = words; b.dataset.titleWas = title; b.title = title;
-    return b;
+  function count() {
+    if (window.qgenCheckedIds) return window.qgenCheckedIds().length;
+    var ids = {};
+    ticks().forEach(function (t) { if (t.checked) ids[t.value] = 1; });
+    return Object.keys(ids).length;
   }
-  var all = make('Check all', 'Check every one of the ' + units + ' shown below');
-  var none = make('Uncheck all', 'Uncheck all the checked ' + units);
-  var first = form.querySelector('button, [data-add-quiz]');
-  form.insertBefore(all, first);
-  form.insertBefore(none, first);
-  //(the bar's buttons on one line: as many grid columns as it has buttons)
-  form.style.setProperty('--bar-cols', form.querySelectorAll(':scope > .btn, :scope > button').length);
   function set(list, on) {
     list.forEach(function (t) {
       if (t.checked === on) return;
@@ -327,19 +322,72 @@
       t.dispatchEvent(new Event('change', { bubbles: true }));
     });
   }
-  all.addEventListener('click', function () { set(ticks().filter(shown), true); });
-  none.addEventListener('click', function () {
-    set(ticks(), false);
-    //(and what's checked in other folders: static/js/checked.js)
-    if (window.qgenCheckedClear) { window.qgenCheckedClear(); form.dispatchEvent(new Event('change')); }
+
+  //the dialog of actions: the bar's buttons (and its no-folders note), moved in
+  var dlg = document.createElement('dialog');
+  dlg.className = 'ask ask-many with-checked-dialog';
+  dlg.id = 'with-checked-dialog';
+  dlg.setAttribute('aria-labelledby', 'with-checked-head');
+  dlg.innerHTML = '<p><strong id="with-checked-head"></strong></p><div class="with-checked-actions"></div>'
+    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>';
+  var actions = dlg.querySelector('.with-checked-actions');
+  Array.prototype.slice.call(form.children).forEach(function (el) {
+    if (el.matches('input[type=hidden], select, label')) return;
+    if (el.classList.contains('file-count')) { el.hidden = true; return; }
+    if (el.matches('button, a, .btn')) el.setAttribute('form', form.id);
+    actions.appendChild(el);
   });
-  //(after the bar's own update, which grays out every button while nothing is checked)
+  document.body.appendChild(dlg);
+  dlg.querySelector('[data-cancel]').addEventListener('click', function () { dlg.close(); });
+  //(an action picked: this dialog steps aside first, so the action's own dialog shows alone)
+  actions.addEventListener('click', function (e) {
+    var b = e.target.closest('button, a');
+    if (b && !b.disabled) dlg.close();
+  }, true);
+
+  var open = document.createElement('button');
+  open.type = 'button'; open.className = 'btn btn-sm with-checked';
+  form.appendChild(open);
+  open.addEventListener('click', function () {
+    var n = count();
+    if (!n) return;
+    dlg.querySelector('#with-checked-head').textContent = 'With the ' + (n === 1 ? 'checked ' + unit : n + ' checked ' + units);
+    dlg.showModal();
+    var first = actions.querySelector('button:not(:disabled), a');
+    if (first) first.focus();
+  });
+
+  //Check all / Uncheck all: a check box at the top of each check column
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.folder-main th.tick-col'));
+  heads.forEach(function (th) {
+    var c = document.createElement('input');
+    c.type = 'checkbox'; c.className = 'check-all';
+    th.textContent = '';
+    th.appendChild(c);
+    c.addEventListener('change', function () {
+      var list = ticks().filter(shown);
+      var every = list.length && list.every(function (t) { return t.checked; });
+      if (every) {
+        set(ticks(), false);
+        if (window.qgenCheckedClear) { window.qgenCheckedClear(); form.dispatchEvent(new Event('change')); }
+      } else set(list, true);
+      setTimeout(sync, 0);
+    });
+  });
+
   function sync() {
-    var list = ticks();
-    all.disabled = !list.some(function (t) { return shown(t) && !t.checked; });
-    none.disabled = !(window.qgenCheckedIds ? window.qgenCheckedIds().length : list.some(function (t) { return t.checked; }));
-    all.title = all.disabled ? 'Everything shown is checked' : all.dataset.titleWas;
-    none.title = none.disabled ? 'Nothing is checked' : none.dataset.titleWas;
+    var n = count(), list = ticks().filter(shown);
+    var on = list.filter(function (t) { return t.checked; }).length;
+    open.textContent = 'With checked (' + n + ')';
+    open.disabled = !n;
+    open.title = n ? 'Move, take out or more, for the ' + (n === 1 ? 'checked ' + unit : n + ' checked ' + units) : 'Check some ' + units + ' first';
+    document.querySelectorAll('.folder-main th.tick-col input.check-all').forEach(function (c) {
+      c.checked = !!list.length && on === list.length;
+      c.indeterminate = on > 0 && on < list.length;
+      c.disabled = !list.length;
+      var words = c.checked ? 'Uncheck all' : 'Check all shown';
+      c.title = words; c.setAttribute('aria-label', words);
+    });
   }
   document.addEventListener('change', function () { setTimeout(sync, 0); });
   document.addEventListener('click', function (e) { if (e.target.closest('.folder-tab, .side-row, [data-level]')) setTimeout(sync, 50); });
