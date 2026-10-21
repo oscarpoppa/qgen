@@ -1049,7 +1049,7 @@ def review_list():
         unit='quiz', units='quizzes', count_unit='attempt', count_units='attempts',
         main_count=sum(weight.get(q.id, 0) for q in root['items']),
         all_label='All quizzes', all_count=len(waiting), name=lambda f: f.title,
-        hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
+        hint=None,  # (no note under the folder list: clutter, the owner 2026-10-21)
         fold_key='qgen-folded-grading-folders')
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, fk=fk, title='Grading')
 

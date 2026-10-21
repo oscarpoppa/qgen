@@ -2853,21 +2853,6 @@ td.attempt-buttons { text-align: right; }
 .fit-scroll details.grading-group > .table-wrap { max-height: none; }
 .fit-scroll .table-wrap { overflow: visible; }
 .fit-scroll thead th { position: sticky; top: 0; z-index: 2; }
-/* Grading: the five oldest waiting, a card of their own above the folders (the owner, 2026-10-17) */
-.grading-oldest { margin: 12px 0 0; padding: 10px 14px; }
-.grading-oldest-head { font-size: var(--fs-md); margin: 0 0 6px; }
-.grading-oldest .table-wrap { margin: 0; }
-/* Grading's oldest waiting: its button under the folder list; a pop-over beside it, or pinned
-   in the page under the quizzes (static/js/grading_oldest.js; the owner, 2026-10-17) */
-.folder-side > .oldest-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin: 8px 0 0; }
-.grading-oldest-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
-.grading-oldest-top .grading-oldest-head { margin: 0; }
-.grading-oldest.oldest-pop { position: fixed; z-index: 70; margin: 0; max-height: calc(100vh - 16px); overflow: auto;
-  box-shadow: 0 12px 32px rgba(16, 24, 40, .35); }
-@media (max-width: 760px) { .grading-oldest.oldest-pop { left: 8px !important; right: 8px; width: auto !important; } }
-/* (a stronger edge, so it stands apart from what's behind it: the owner, 2026-10-17) */
-.grading-oldest { border: 2px solid var(--accent); }
-.grading-oldest.oldest-pop { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45); }
 /* the grading page's heading: Grade (avatar) ava's “Quiz” (the owner, 2026-10-17) */
 .page-head h1.grade-head a.person { display: inline-flex; align-items: center; gap: 6px; vertical-align: bottom; }
 .page-head h1.grade-head a.person .avatar { flex: none; }
@@ -3180,7 +3165,7 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
    it (the owner, 2026-10-18/19): the accent border, a soft accent ring and a deep shadow, as
    Grading's oldest waiting has had since 2026-10-17. Awards and Just finished (pop-card), the
    Dashboard's unfinished scans, who's online. A new pop-over card gets .pop-edge. */
-.pop-edge, .pop-card, .grading-oldest.oldest-pop, .scan-pop, .online-pop {
+.pop-edge, .pop-card, .scan-pop, .online-pop {
   border: 2px solid var(--accent) !important;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 12px 32px rgba(16, 24, 40, .45) !important; }
 /* drop-down menus (the top bar's, More ▸ Files, a row's menu): a firmer edge and a deeper shadow

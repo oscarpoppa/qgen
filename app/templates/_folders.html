@@ -118,8 +118,10 @@
     {#- (a page's own piece under the folder list's card, e.g. Grading's oldest waiting button) #}
     {{ under_side }}
     {#- (under the folder list's card, not in it: the owner, 2026-10-17) #}
-    <p class="muted small side-hint">{{ fk.hint }}
-      {% if fk.flat and not fk.readonly %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>
+    {#- (none when the page gives no hint and nothing can be dragged: Grading, the owner 2026-10-21) #}
+    {% set drag_note = fk.flat and not fk.readonly %}
+    {% if fk.hint or drag_note %}<p class="muted small side-hint">{{ fk.hint or '' }}
+      {% if drag_note %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>{% endif %}
   </details>
 
   {# the whole section is one level for Expand all / Collapse all (beside its title) #}

@@ -6,10 +6,10 @@
 
 {# the quizzes waiting for grading as rows like the other folder pages' (the owner, 2026-10-21; each was a
    rounded box): the name folds the row open to its attempts, oldest hand-in first (Student, Handed in,
-   To grade, Grade); beside it Attempts, sortable; at the row's end History (on the quiz's name before) #}
+   To grade, Grade); beside it Attempts and Oldest (the longest-waiting hand-in), sortable; at the row's end History (on the quiz's name before) #}
 {% macro quiz_rows(vqs) %}
   <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows">
-    <thead><tr><th>Quiz</th><th>Attempts</th><th></th></tr></thead>
+    <thead><tr><th>Quiz</th><th>Attempts</th><th>Oldest</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_group(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -36,20 +36,19 @@
     </div>
     </details></td>
     <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}"><span class="badge box-count">{{ count_of(rows|length, 'attempt', 'attempts') }}</span></td>
+    {#- (the hand-in that has waited longest here, sortable: the owner, 2026-10-21) -#}
+    {%- set old = rows|map(attribute='compdate')|reject('none')|min if rows|map(attribute='compdate')|reject('none')|list else none %}
+    <td data-label="Oldest" class="nowrap small muted" data-sort="{{ old.isoformat() if old else '' }}">{{ old|when if old else '' }}</td>
     <td class="actions"><span class="btn-row quiz-row-actions"><a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Everyone’s attempts and scores on “{{ vq.title }}”">{{ icon_label('lc-history', 'History') }}</a></span></td>
   </tr>
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>{% if waiting %}<span class="badge box-count">{{ waiting|length }} waiting, oldest first</span>{% endif %}</div>
+<div class="page-head"><h1>{{ title }}</h1>{#- (how many are waiting; not "oldest first": the owner, 2026-10-21) #}{% if waiting %}<span class="badge box-count">{{ waiting|length }} waiting</span>{% endif %}</div>
 {#- (no "Grade the oldest" button: the owner, 2026-10-17) #}
 {% if waiting %}
-{#- the button for the oldest waiting, under the folder list (the owner, 2026-10-17) #}
-{#- (how many of how many, as everywhere a list is cut short: "oldest 5 of 62", the owner 2026-10-20) #}
-{% set n_oldest = [5, waiting|length]|min %}
-{% set oldest_count = ('oldest ' ~ n_oldest ~ ' of ' ~ waiting|length) if n_oldest < waiting|length else (n_oldest ~ (' attempt' if n_oldest == 1 else ' attempts')) %}
-{% set oldest_button %}<button type="button" class="btn btn-secondary btn-sm oldest-toggle" aria-controls="grading-oldest" aria-expanded="false" title="Show the {{ n_oldest }} attempts that have waited longest, whatever their quiz">{{ icon('hourglass') }} Waiting for grading <span class="badge box-count">{{ oldest_count }}</span></button>{% endset %}
-{% call folders_page(fk, under_side=oldest_button) %}
+{#- (no "Waiting for grading" button or its pop-over of the oldest five here: the owner, 2026-10-21) #}
+{% call folders_page(fk) %}
   <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', url=true, count_one='attempt', count_many='attempts') }}
     {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
@@ -58,36 +57,10 @@
     {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
     {% call named_box(fk, 'quiz:') %}{% if shown %}{{ quiz_rows(shown) }}{% endif %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
   </div>
-  {# the five that have waited longest, whatever their quiz, in a card of their own, under the folders (the
-     owner, 2026-10-17) #}
-  {#- a pop-over from its button under the folder list; pinned, it sits here under the folders
-      instead and stays (static/js/grading_oldest.js) #}
-  <section class="card grading-oldest" id="grading-oldest" aria-labelledby="oldest-head" hidden>
-    <div class="grading-oldest-top"><h2 id="oldest-head" class="grading-oldest-head">Waiting for grading <span class="badge box-count">{{ oldest_count }}</span></h2>
-      <span class="btn-row"><button type="button" class="btn btn-secondary btn-sm btn-icon oldest-pin" aria-pressed="false"></button>
-      <button type="button" class="btn btn-secondary btn-sm btn-icon oldest-close" title="Close">{{ icon_label('lc-x', 'Close') }}</button></span></div>
-    <div class="table-wrap stack">
-      <table class="even-cols">
-        <thead><tr><th>Student</th><th>Quiz</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
-        <tbody>
-        {% for cq in waiting[:5] %}
-          {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
-          <tr>
-            <td data-label="Student">{{ person_link(cq.taker) }}</td>
-            <td data-label="Quiz">{{ quiz_link(cq.vquiz) }}</td>
-            <td data-label="Handed in" data-sort="{{ cq.compdate.isoformat() if cq.compdate else '' }}">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
-            <td data-label="To grade">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
-            <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">{{ icon_label('lc-grade', 'Grade') }}</a></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
 {% endcall %}
 {% else %}
   <div class="card empty"><span class="big">{{ icon('checkbox') }}</span>Nothing waiting. Written answers show up here when students hand them in.</div>
 {% endif %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/grading_oldest.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
