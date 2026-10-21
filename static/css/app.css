@@ -18,6 +18,7 @@
   --bad-soft: #fbe7e5;
   --warn: #8a5a00;
   --new-edge: #b08300;     /* a new quiz's box: gold (3:1 against the page) */
+  --open-tint: #14b8a6;    /* an open item's wash: soft teal, mixed in lightly (the owner, 2026-10-21) */
   --warn-soft: #fdf1d9;
   --info-soft: #e6f0fb;
   --field-border: #7d8695;  /* form fields and checkboxes: 3:1 against the page (WCAG 1.4.11) */
@@ -552,8 +553,9 @@ td.attempts > .result-attempt, td.attempt-buttons > .result-attempt { box-sizing
   .btn-row.result-attempt { flex-wrap: nowrap; }
   td.attempts + td select { max-width: 100%; }
 }
-/* ...unless the list is too narrow for that: then an attempt's buttons go under its date */
-@container listarea (max-width: 1080px) {
+/* ...unless the list is too narrow for that: then an attempt's buttons go under its date
+   (only below 560px: at 1024 they wrapped on every row, the user critic 2026-10-20) */
+@container listarea (max-width: 560px) {
   td.attempts { white-space: normal; }
   .btn-row.result-attempt { flex-wrap: wrap; }
   .result-attempt-buttons { margin-left: 0; padding-left: 0; }
@@ -867,7 +869,17 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 /* a folded quiz whose contents changed (new attempt, new grade) until it's opened */
 .quiz-card.quiz-alert { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
 /* My quizzes: Attempts and Status are columns of their own (the owner, 2026-10-20) */
-.quiz-rows td.quiz-tries, .quiz-rows td.quiz-state { white-space: nowrap; width: 1%; }
+.quiz-rows td.quiz-tries, .quiz-rows td.quiz-state, .quiz-rows td.quiz-latest { white-space: nowrap; }
+/* a list table's columns spread evenly: the name column takes about three-tenths (two-fifths left too
+   big a gap before the date: the owner, 2026-10-20), the others share
+   the rest, the icons only as wide as they are (the owner, 2026-10-20: the name was jammed left
+   and everything else right). Every list table is marked .even-cols */
+@media (min-width: 641px) {
+  table.even-cols { table-layout: auto; width: 100%; }
+  table.even-cols > thead > tr > th:first-child:not(.tick-col), table.even-cols > thead > tr > th.tick-col + th { width: 30%; }
+  table.even-cols > thead > tr > th.tick-col { width: 36px; }
+  table.even-cols td.actions { width: 1%; white-space: nowrap; }
+}
 .quiz-state-badges { flex-wrap: nowrap; gap: 6px; }
 .quiz-card .quiz-count { flex: 0 0 auto; white-space: nowrap; }
 
@@ -1013,6 +1025,10 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 .result-box[open] > summary { margin-bottom: 8px; }
 .result-box-title { min-width: 0; overflow-wrap: anywhere; }
 .result-box-sum { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+/* a student's page: the attempt count and the status each in a slot of the same width in every box,
+   so they line up like columns (the user critic, 2026-10-20) */
+.result-box-sum .attempts-slot { min-width: 6.5em; display: inline-flex; }
+.result-box-sum .status-slot { min-width: 7em; display: inline-flex; }
 @media (prefers-reduced-motion: reduce) { .result-box .fold { transition: none; } }
 /* Users page: the folders someone is in, each with a ✕ to take them out */
 .person-folders { min-width: 170px; }
@@ -1591,7 +1607,8 @@ td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: f
 /* ...but an attempt's own line (date, score, its buttons) comes first: it never wraps where the
    list is wide, and the row's buttons above make way by stacking (their column shrinks first) */
 @media (min-width: 641px) { .btn-row.result-attempt-buttons { flex-wrap: nowrap; } }
-@container listarea (max-width: 1080px) { .btn-row.result-attempt-buttons { flex-wrap: wrap; } }
+@container listarea (max-width: 560px) { .btn-row.result-attempt-buttons { flex-wrap: wrap; } }
+td.attempt-buttons { white-space: nowrap; }
 @container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }
 @media (max-width: 640px) { .stack td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; } }
 details.problem-list > summary { white-space: nowrap; }
@@ -1629,7 +1646,7 @@ details.item-box details.month-box > .table-wrap,
 /* more lists that can keep growing scroll inside themselves: Dashboard and Home boxes, the
    Grading groups, Assign's people, the quiz builder's problem boxes and question order, and a
    quiz box's tries on My quizzes */
-.dash-card .dash-list { max-height: 24rem; overflow-y: auto; scrollbar-gutter: stable; }
+.dash-card .dash-list { max-height: max(15rem, calc(100vh - 220px)); overflow-y: auto; }  /* every row it holds, up to the window's height; then it scrolls (the owner, 2026-10-20) */
 details.grading-group > .table-wrap { max-height: min(60vh, 640px); overflow-y: auto; }
 .pick-list { max-height: 20rem; overflow-y: auto; }
 details.subject-box > .box-body { max-height: min(55vh, 560px); overflow-y: auto; scrollbar-gutter: stable; }
@@ -1756,6 +1773,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .move-mini { display: inline-flex; margin: 0; flex: 0 0 auto; }
 .move-mini select { width: auto; min-height: 0; padding: 2px 4px; font-size: var(--fs-sm); cursor: pointer; }
 .quiz-card[open] .move-mini { margin-left: auto; }
+.archive-folder { display: inline-flex; align-items: center; gap: 6px; }  /* the Move icon, then the folder name (the owner, 2026-10-20) */
 
 /* a folder's "needs the student" numbers (new, started, due soon), in those folders' colors */
 .side-flags { display: inline-flex; gap: 3px; flex: 0 0 auto; align-items: center; }
@@ -1795,6 +1813,14 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .scan-canvas img { display: block; width: 100%; height: auto; max-height: none; }
 .crop { position: absolute; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); cursor: move; line-height: 1.2; }
 .crop.crop-paper { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+/* a problem's answer place on its page (scan draft, the owner 2026-10-20): a blue frame, no fill,
+   labeled with the page's number; dashed while it hasn't been placed yet */
+.crop.crop-place { background: none; border-width: 2px; }
+.crop.crop-place.is-missing { border-style: dashed; }
+.crop-place .crop-label { top: auto; bottom: 100%; }
+.crop-place .crop-handle { width: 10px; height: 10px; }
+.crop-place .crop-nw { left: -5px; top: -5px; } .crop-place .crop-se { right: -5px; bottom: -5px; }
+.crop-place .crop-ne { right: -5px; top: -5px; } .crop-place .crop-sw { left: -5px; bottom: -5px; }
 .crop.is-current { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
 .crop.is-dragging { opacity: .8; }
 .crop-label { position: absolute; left: 0; top: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1905,10 +1931,14 @@ html.elastic-sizing, html.elastic-sizing * { cursor: nwse-resize !important; use
 .student-sums { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
 
 /* results tables outside a folder page (a quiz's history, one student's page) have no "listarea"
-   container: the same narrow-list wrapping by the page's own width, so they never scroll sideways */
+   container: the same narrow-list wrapping by the page's own width, so they never scroll sideways
+   (an attempt's icons stay on one line down to 720px: the user critic, 2026-10-20) */
+@container page (max-width: 720px) {
+  .btn-row.result-attempt-buttons { flex-wrap: wrap; }
+}
 @container page (max-width: 1080px) {
   td.attempts { white-space: normal; }
-  .btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }
+  .btn-row.result-attempt { flex-wrap: wrap; }
   .result-attempt-buttons { margin-left: 0; padding-left: 0; }
   td.actions:has(.btn-stack) { white-space: normal; }
   td.actions .btn-stack { flex-direction: column; align-items: flex-end; }
@@ -1933,23 +1963,18 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 .person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }
 .person-card .btn-row > *, .person-card .btn-row .btn, .person-card .btn-row .inline-form { width: 100%; margin: 0; }
 .person-card .btn-row .btn { text-align: center; }
-/* Problems and Quizzes lists: where a row's buttons can't sit on one line they make an even grid
-   of equal buttons (two by two; five go three and two), never one left alone on a line */
-@container listarea (min-width: 861px) and (max-width: 1080px) {
-  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) { width: calc(2 * 5.6rem + 6px); }
-  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { width: calc(3 * 5.6rem + 12px); }
-  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) > * { display: inline-block; width: 5.6rem; margin: 0 0 6px 0; vertical-align: top; }
-  .folder-main table:not(.archive-table) td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; padding-left: 4px; padding-right: 4px; }
-}
+/* (Problems and Quizzes once made a row's worded buttons an even grid at 861-1080px; the buttons
+   are bare icons now and stay on one line: the user critic, 2026-10-20) */
 
 /* an attempt's buttons (Grade, Results, Answer key, Archive): on one line beside its date only where
-   the list is wide enough for all four; otherwise under the date, two by two */
-@container listarea (max-width: 1240px) {
+   the list is wide enough for all four; otherwise under the date, two by two (
+   four icons fit at 1024, where they wrapped on every row; only below 560px, the user critic 2026-10-20) */
+@container listarea (max-width: 560px) {
   td.attempts { white-space: normal; }
   .btn-row.result-attempt { flex-wrap: wrap; }
   .btn-row.result-attempt-buttons { display: grid; grid-template-columns: repeat(2, max-content); margin-left: 0; padding-left: 0; }
 }
-@container page (max-width: 1240px) {
+@container page (max-width: 560px) {
   td.attempts { white-space: normal; }
   .btn-row.result-attempt { flex-wrap: wrap; }
   .btn-row.result-attempt-buttons { display: grid; grid-template-columns: repeat(2, max-content); margin-left: 0; padding-left: 0; }
@@ -1964,11 +1989,20 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 }
 /* lists shown as cards (phones, narrow lists): a row's buttons in an even grid of equal buttons */
 @media (max-width: 640px) {
+  .stack table.even-cols td.actions, table.even-cols.stack td.actions { width: auto; white-space: normal; }
+  /* (bare icons only: one line of icons at their own size, wrapping if need be; never stretched) */
+  .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) > *, .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) .btn { width: auto; min-width: 34px; min-height: 34px; }
   .stack td.actions:not(:has(.btn-stack)) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
   .stack td.actions:not(:has(.btn-stack)) > *, .stack td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; }
 }
 @container listarea (max-width: 860px) {
+  /* (card layout: the even-spacing width of the icon cell, 1%, would squeeze its grid to nothing) */
+  .stack table.even-cols td.actions, table.even-cols.stack td.actions { width: auto; white-space: normal; }
+  /* (bare icons only: one line of icons at their own size, wrapping if need be; never stretched) */
+  .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) > *, .stack td.actions:not(:has(.btn-stack)):not(:has(.btn:not(.btn-icon))) .btn { width: auto; min-width: 34px; min-height: 34px; }
   .stack td.actions:not(:has(.btn-stack)) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .stack td.actions:not(:has(.btn-stack)):has(> :nth-child(5)) { grid-template-columns: repeat(3, 1fr); }
   .stack td.actions:not(:has(.btn-stack)) > *, .stack td.actions:not(:has(.btn-stack)) .btn { width: 100%; margin: 0; text-align: center; }
@@ -2158,8 +2192,10 @@ select.add-select option { text-align: left; font-weight: 400; }
 details.box.row-fold { border: 0; background: none; padding: 0; margin: 0; box-shadow: none; border-radius: 0; }
 details.row-fold > summary { display: flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; }
 details.row-fold > summary::-webkit-details-marker { display: none; }
-details.row-fold > summary .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
-  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+/* (a square box with the triangle cut out of it, so turning it keeps its place: a bare border
+   triangle moved 2px left when open; the user critic, 2026-10-20) */
+details.row-fold > summary .fold { display: inline-block; width: 10px; height: 10px; flex: 0 0 auto; background: var(--muted);
+  clip-path: polygon(15% 0, 85% 50%, 15% 100%); transition: transform .15s; }
 details.row-fold[open] > summary .fold { transform: rotate(90deg); }
 details.row-fold > .small { margin: 4px 0 0 13px; }
 /* an open row's contents indented under its title (not the title line, not the controls), so it
@@ -2289,7 +2325,7 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 @container listarea (max-width: 860px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
 @container page (max-width: 780px) { .stack td:has(> details.row-fold)::before { display: none !important; } }
 /* Assign: the one checklist of students under the folder tabs scrolls when it's long */
-.pick-people .folder-filter-list > .pick-list { max-height: 420px; overflow: auto; margin: 0; }
+.pick-people .folder-filter-list > .pick-list, .pick-people .folder-filter-list > .pick-wrap { max-height: 420px; overflow: auto; margin: 0; }
 /* a practice copy (QGEN_SANDBOX=1): a striped bar across the top of every page, so it's never
    mistaken for the real site */
 .sandbox-bar { display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -2343,7 +2379,9 @@ td.tick-col input[type=checkbox]:is(:focus-visible, :checked), th.tick-col input
   .subject-boxes > details.quiz-result > summary > .box-actions { margin-left: auto; }
 }
 /* while every row of a list is folded, the columns only an open row fills go, headings too */
-table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-fold[open])) td.row-more { display: none; }
+/* (a class set by static/js/rowopen.js, not :has(): asking "a table with no open row" here made Firefox
+   check every row on every change, 1.3 s on Problems; the owner, 2026-10-21) */
+table:not(.has-open-row) th.row-more, table:not(.has-open-row) td.row-more { display: none; }
 /* phone row cards: the checkbox on the title's line, the "+" beside the folder chips */
 @media (max-width: 640px) {
   .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; }
@@ -2356,6 +2394,9 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
    column with empty space beside it (docs/ui-patterns.md, principle 9) */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 0 16px; align-items: start; }
 .card-grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }  /* (a last card alone takes the row) */
+/* a column of cards in one grid cell, e.g. Scan workbook pages' Current scans with Put away under it */
+.card-grid > .card-col { display: flex; flex-direction: column; min-width: 0; }
+.scan-pop .scan-pop-away { margin-top: 14px; }
 .form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 24px; align-items: start; }
 .form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
 /* Assign: the Quiz card and the Students card side by side, alike (a filter bar, a folder list,
@@ -2370,7 +2411,7 @@ table:not(:has(details.row-fold[open])) th.row-more, table:not(:has(details.row-
   .assign-form > .assign-when { grid-column: 1; grid-row: 2 / span 2; }
   .assign-form > .pick-people-card { grid-column: 2; grid-row: 1 / span 2; }
   .assign-form > .assign-go { grid-column: 2; grid-row: 3; margin: 0; }
-  .pick-people .folder-filter-list > .pick-list { max-height: min(60vh, 560px); }
+  .pick-people .folder-filter-list > .pick-list, .pick-people .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); }
 }
 .pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 6px 8px; }
@@ -2641,7 +2682,7 @@ dialog.takeout-dialog .takeout-lines { margin: 0 0 16px; padding-left: 18px; }
 .person-card > .btn-row > *, .person-card > .btn-row .btn, .person-card > .btn-row .inline-form { width: auto; flex: none; }
 .take-out-one { vertical-align: middle; margin: 0 0 4px; }
 /* the two folder icons beside a thing's folder chips, always together (the owner, 2026-10-15) */
-.folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 0 4px; }
+.folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 6px 4px 0; }
 .folder-icons > .move-form, .folder-icons > .take-out-one { margin: 0; }
 .folder-icons > .add-folder-off { width: 28px; height: 28px; padding: 0; }
 /* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
@@ -2649,6 +2690,9 @@ dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; borde
 dialog.assign-many .assign-defaults ul { margin: 4px 0 6px; padding-left: 18px; columns: 2 150px; }
 .folder-icons > .put-in-one { margin: 0; }
 dialog.put-dialog .put-list { columns: 1; }
+/* the score rule's question box (Results' pencil): its choices one per line, round buttons */
+dialog.rule-dialog .rule-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+dialog.rule-dialog .rule-list label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 dialog.put-dialog .assign-defaults ul { columns: 1; }
 /* My quizzes: an open quiz box shows Start / Continue on the attempt's own row, not on the
    heading's far end (the owner, 2026-10-15) */
@@ -2743,6 +2787,14 @@ td.actions { padding-top: 4px; padding-bottom: 4px; }
 /* People as rows, like Problems and Quizzes (the owner, 2026-10-16) */
 .people-table .person { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .people-table .person .badge, .people-table .person .online-dot { flex: none; }
+/* the online dot on the picture's corner and the Teacher badge at the cell's right end: both line up
+   down the column whatever the name's length (the user critic, 2026-10-20) */
+.people-table summary > .person { flex: 1 1 auto; }
+/* (the Teacher badge right after the longest name on the page, not at the cell's far end: every
+   name as wide as the longest, static/js/namewidth.js; the owner, 2026-10-21) */
+.people-table .person .box-title { min-width: var(--name-w, auto); }
+.avatar-wrap { position: relative; display: inline-flex; flex: none; }
+.avatar-wrap > .online-dot { position: absolute; right: -2px; bottom: -2px; box-shadow: 0 0 0 2px var(--surface); }
 /* a timed quiz's last five minutes: the time shows, in the warning color (the owner, 2026-10-16) */
 .timer.timer-soon { color: var(--warn); font-weight: 600; }
 
@@ -2865,7 +2917,13 @@ tr[class*="row-is-"] > td:last-child, tr:has(> td > details.row-fold[open]) > td
 tr:has(> td > details.row-fold[open]):not([class*="row-is-"]) { --row-edge: var(--accent); }
 /* ...and sits on the raised card color, a step lighter than the rows around it, so the open one
    is easy to find among folded ones (the owner, 2026-10-20) */
-tr:has(> td > details.row-fold[open]) > td { background: var(--surface-2); }
+/* (a very light wash of soft teal, the same for every open item whatever its status, so the open one
+   stands out without shouting: the owner, 2026-10-21; blue was too hard to see, and a tint of its
+   own outline color turned new ones brown) */
+/* (on the row, its cells clear: a cell's own background painted over the contents' shade below, e.g.
+   the icons' cell on a results row showed as a box of its own: the owner, 2026-10-21) */
+tr:has(> td > details.row-fold[open]) { background: color-mix(in srgb, var(--open-tint) 14%, var(--surface)); }
+tr:has(> td > details.row-fold[open]) > td { background: transparent; }
 /* ...and its two parts are told apart: the heading part (the name, and on My quizzes its question
    count and score) on that color, the contents (the attempts) a shade between it and the page's
    rows, end to end across the row (the owner, 2026-10-20). The contents start at [data-fold-body],
@@ -2873,7 +2931,7 @@ tr:has(> td > details.row-fold[open]) > td { background: var(--surface-2); }
 details.row-fold[open] { position: relative; z-index: 0; }
 details.row-fold[open]::after { content: ""; position: absolute; z-index: -1; pointer-events: none;
   top: var(--body-top, 100%); bottom: -10px; left: var(--body-l, 0); right: var(--body-r, 0);
-  background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
+  background: color-mix(in srgb, var(--open-tint) 7%, var(--surface)); }
 .quiz-rows td.quiz-sum { white-space: nowrap; }
 .quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
 /* a button under the folder list that opens a pop-over (Just finished) */
@@ -2971,7 +3029,8 @@ dialog.pick-dialog .filter-bar { margin: 0 0 8px; }
 dialog.pick-dialog .folder-filter { margin: 0 0 8px; }
 dialog.ask.pick-dialog .write-to-checks { justify-content: flex-start; }
 /* (one scroll bar: the list of names scrolls, not the box around it) */
-dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-list { max-height: min(38vh, 22rem); overflow-y: auto; }
+dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-list,
+dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-wrap { max-height: min(38vh, 22rem); overflow-y: auto; }
 .scan-timer { font-variant-numeric: tabular-nums; margin-left: 6px; font-size: var(--fs-sm); }
 .scan-progress-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; } .scan-progress-top p { margin: 0; }
 
@@ -3066,6 +3125,7 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 .upload-thumb { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
   border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; overflow: hidden; }
 .upload-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.upload-thumb:not(.upload-file) { justify-content: flex-start; }  /* a picture at the left of its slot, so the left edges line up (the user critic, 2026-10-20) */
 .upload-thumb.upload-file { background: var(--surface-2); color: var(--muted); }
 .upload-name > strong { overflow-wrap: anywhere; }
 /* phones: a folder page shows only the open folder's tab (and its Expand all / Collapse all), joined
@@ -3089,7 +3149,9 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 @media (min-width: 761px) { .folder-tools-bar .file-bar > .file-hint-nofolder { white-space: nowrap; } }
 
 /* "Choose pictures" (the problem editor): a small thumbnail before each name */
-.pic-pick-list label { display: inline-flex; align-items: center; gap: 8px; }
+/* (a long name wraps inside its line instead of running out of the dialog: the user critic, 2026-10-20) */
+.pic-pick-list li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pic-pick-list label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
 .pic-pick-list img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--r-sm); flex: none; }
 
 /* Upload files: a tile for each file just uploaded, inside the box, looking like Scan workbook
@@ -3179,3 +3241,81 @@ dialog.ask.write-to-dialog[open] { display: flex; flex-direction: column; }
 .scan-working { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
 .scan-working .scan-chip-bar { width: 64px; }
 .scan-controls .btn-danger.btn-icon { background: none; border: 0; color: var(--bad); }
+/* a scanned page's "Read this page again": its note and button open under it (the owner, 2026-10-20) */
+.scan-again { margin-top: 8px; }
+.scan-again > summary { list-style: none; display: inline-flex; }
+.scan-again > summary::-webkit-details-marker { display: none; }
+.scan-again[open] > summary { margin-bottom: 8px; }
+.scan-again textarea { width: 100%; margin-bottom: 8px; }
+/* a problem's question and answer, from its row's icon (static/js/qa.js; the owner, 2026-10-21) */
+dialog.ask.qa-dialog { max-width: min(560px, calc(100vw - 32px)); }
+dialog.qa-dialog .qa-title { margin: 0 0 12px; font-size: var(--fs-lg); }
+dialog.qa-dialog .qa-head { margin: 10px 0 4px; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; }
+dialog.qa-dialog p.qa-text { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; }
+dialog.qa-dialog ul.qa-choices { list-style: none; margin: 0 0 8px; padding: 0; }
+dialog.qa-dialog ul.qa-choices li { padding: 2px 0; }
+dialog.qa-dialog .qa-right { font-weight: 600; }
+dialog.qa-dialog .qa-right .qa-mark { color: var(--ok); }
+/* an open box in a list (a student page's quizzes, Results by quiz, People's Results, Grading) gets
+   the same very light soft-teal wash as an open row: a little stronger on its heading line, lighter
+   on what it holds; never a folder, nor a grouping like the Archive's months (the owner, 2026-10-21) */
+details.result-box[open], details.item-box[open] { background: color-mix(in srgb, var(--open-tint) 7%, var(--surface)); }
+details.result-box[open] > summary, details.item-box[open] > summary {
+  background: color-mix(in srgb, var(--open-tint) 14%, var(--surface)); border-radius: var(--r) var(--r) 0 0; }
+/* a student page's open row (rows like My quizzes', the owner 2026-10-21): each attempt's icons as one
+   group at the row's right end, level with its line (static/js/dividers.js gives --act-r) */
+.attempt-act.attempt-act-group { display: block; position: absolute; top: 50%; transform: translateY(-50%); right: calc(var(--act-r, 20px) - 17px); }
+.attempt-act.attempt-act-group > .result-attempt-buttons { display: inline-flex; flex-wrap: nowrap; gap: 6px; align-items: center; margin: 0; }
+.attempt-act.attempt-act-group .btn, .attempt-act.attempt-act-group .icon-link { position: static; transform: none; margin: 0; }
+.student-score-line { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; margin: 6px 0; white-space: nowrap; }
+.student-score-line .retake-rule-form { display: inline-flex; }
+/* Results by quiz / by student rows (the owner, 2026-10-21): an open row holds a group per student
+   (or quiz): its heading line (name, the score that counts, its own icons at the row's right end),
+   then its attempts' lines, like a student page's open row */
+.result-groups > .result-group { padding: 4px 0; }
+.result-group-head { font-size: var(--fs-sm); }
+.result-group-head > .result-group-score { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.result-group-head .retake-rule-form { display: inline-flex; }
+.result-group > ol.attempt-list { margin-bottom: 0; }
+.result-rows td.actions { white-space: nowrap; }
+/* (an open results row's groups run the row's whole width, not just its first column's: --body-r is
+   how far the row's right edge is past the fold's, static/js/dividers.js foldBody; 12px in from it) */
+.result-rows details.row-fold[open] > .result-groups { margin-right: calc(var(--body-r, 0px) + 12px); }
+.result-group-head { flex-wrap: nowrap; }
+/* a row's icons at its right end 40px apart (34px icons, 6px between), the same as the Quizzes page's
+   rows and every attempt line's icons under them (the owner, 2026-10-21: "stick to the spacing
+   standards"); .btn-row's own 8px made My quizzes', a student page's and the results rows' 42px */
+.quiz-rows .quiz-row-actions { gap: 6px; }
+/* a picker's list as square rows, like the folder pages' (the owner, 2026-10-21; they were rounded
+   tiles): a check column and a name column, a line between rows, the checked ones in the light
+   accent they had as tiles; never the card layout (a dialog is narrow) */
+.folder-filter-list > .pick-wrap { margin: 0; }
+.pick-quiz .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); overflow: auto; }
+table.pick-table { width: 100%; border-collapse: collapse; }
+table.pick-table > thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2, var(--surface)); }
+table.pick-table > tbody > tr > td { padding: 6px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+table.pick-table > tbody > tr > td.tick-col { width: 36px; padding-right: 0; }
+table.pick-table td.tick-col input { opacity: 1; }
+table.pick-table label { display: flex; align-items: center; gap: 8px; cursor: pointer; overflow-wrap: anywhere; }
+table.pick-table > tbody > tr:has(> td > input:checked) > td { background: var(--accent-soft); }
+table.pick-table img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--r-sm); flex: none; }
+.stack table.pick-table tr, table.pick-table tr { display: table-row; }
+
+/* the Archive's four sections two by two, so they fit over the folder list like People's Accounts /
+   Results (its intro moved under the folder list, the owner 2026-10-21, put them in that column) */
+.seg-switch.archive-switch { display: inline-grid; grid-template-columns: auto auto; }
+.seg-switch.archive-switch a { white-space: nowrap; text-align: center; }
+.seg-switch.archive-switch a:nth-child(3) { border-left: 0; }
+.seg-switch.archive-switch a:nth-child(n+3) { border-top: 1px solid var(--field-border); }
+/* (the same on a student page and a quiz's history: an open row's attempt lines run the row's width) */
+.student-quiz-rows details.row-fold[open] > ol.attempt-list { margin-right: calc(var(--body-r, 0px) + 12px); }
+/* Problem history's open row (the owner, 2026-10-21): its answers' table runs the row's width on the
+   row's own shade, flat (no card, no inset of its own), like the open rows on the other folder pages */
+.problem-history-rows details.row-fold[open] > .answer-rows { width: auto; margin-right: calc(var(--body-r, 0px) + 12px); margin-top: 6px;
+  border: 0; border-radius: 0; box-shadow: none; background: none; }
+.problem-history-rows .answer-rows > table, .problem-history-rows .answer-rows > table > thead th,
+.problem-history-rows .answer-rows > table > tbody > tr > td { background: transparent; }
+.problem-history-rows .answer-rows > table > tbody > tr > td.actions { padding-right: 0; }
+/* a title in two parts: what the page is on the top line, the thing's name under it (Quiz history) */
+h1.title-two > .title-kind { display: block; white-space: nowrap; }
+h1.title-two > .title-name { display: block; font-size: var(--fs-lg); margin-top: 2px; }  /* (smaller, so a long name wraps as little as it can: the owner, 2026-10-21) */

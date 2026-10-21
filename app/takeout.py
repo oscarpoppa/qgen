@@ -358,7 +358,8 @@ def folder_delete_plan(kind, folder):
         items = User.query.filter(User.id.in_(ids)).all() if ids else []
     else:
         from app.qgen import services as S
-        items = [i for i in getattr(folder, S.subject_kind(kind)[3]) if not i.removed_at]
+        #(pictures and files have no removed_at: everything in their folder counts)
+        items = [i for i in getattr(folder, S.subject_kind(kind)[3]) if not getattr(i, 'removed_at', None)]
     alone = [i for i in items if _folders_of(kind, i) == {folder.id}]  # in no other folder
     name = folder_name(kind, folder)
     names = lambda xs: ', '.join(item_name(kind, i) for i in sorted(xs, key=lambda i: item_name(kind, i).lower()))

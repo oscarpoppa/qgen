@@ -3,7 +3,7 @@
    narrows the boxes; static/js/filter.js runs the bar). Set filter_one / filter_many first. #}
 {% from "_macros.html" import filter_bar with context %}
 <div class="folder-tools-bar results-filter">
-  {% call filter_bar('#folder-items', filter_one, filter_many, items='details.item-box', boxes='details.sub-box, details.month-box', url=true, id='results-filter') %}
+  {% call filter_bar('#folder-items', filter_one, filter_many, items='details.item-box, tr.result-item', boxes='details.sub-box, details.month-box', url=true, id='results-filter') %}
   {# "Show" on the same line as its menu, in line with the name box and Clear; the choices say
      what they keep #}
   <label class="small muted show-pick">Show

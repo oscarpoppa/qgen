@@ -305,7 +305,8 @@ def test_names_and_titles_lead_somewhere(app_db):
     page = teach.get('/quiz/review').data.decode()
     assert 'href="/quiz/listuser/{}"'.format(ids('sam')) in page and 'href="/quiz/results/{}"'.format(vq.id) in page
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'href="/messages/{}"'.format(ids('sam')) in page and 'Edit user' in page
+    #(no "Message sam" button: the Messages pop-over does it, the owner 2026-10-21)
+    assert 'href="/messages/{}"'.format(ids('sam')) not in page and 'Edit user' in page
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'href="/quiz/editvquiz/{}"'.format(vq.id) in page and 'href="/quiz/viewvquiz/{}"'.format(vq.id) in page
 
@@ -543,7 +544,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
     assert '>Week 1</a></span>' in box and 'data-tip="Open the history of “Week 1”' in box  # the name opens its history; the button their copy
-    assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'View</span></a>' in box
+    assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'aria-label="View"' in box
     assert '>Student page</a>' not in box  # sam's name is the way to their page
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
@@ -778,8 +779,8 @@ def test_home_counter_views_say_what_they_show(app_db):
         days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     assert '>Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. {}'.format(within, ico('party')) in page
-    # All: the page's own name (a folder chosen: its name, static/js/folderfilter.js; the owner, 2026-10-14)
-    assert 'class="folder-title" data-page-name="My quizzes">My quizzes</h2>' in sam.get('/mypage?folder=all').data.decode()
+    # All: its own name, like any folder (not the page's: the owner, 2026-10-21; it was the page's, 2026-10-14)
+    assert re.search(r'class="folder-title" data-page-name="My quizzes">All[^<]*</h2>', sam.get('/mypage?folder=all').data.decode())
 
 
 # ---------------------------------------------------------------- removing a quiz, taking one away
@@ -1172,14 +1173,16 @@ def test_standard_wording_and_history_buttons(app_db):
     # History only once there's some: not on a quiz or problem nobody has taken
     from app.qgen.models import VProblem
     vp = VProblem.query.first()
-    assert 'History</span></a>' not in no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
-    assert 'History</span></a>' not in no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
+    #(no History link: a grayed History, with its reason, is all there is)
+    history_link = re.compile(r'<a [^>]*><svg[^>]*aria-label="History"')
+    assert not history_link.search(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
+    assert not history_link.search(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
     give(VQuiz.query.one(), 'sam')
     page = no_titles(teach.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode())
     #(icon buttons: the drawing, then the words for screen readers)
-    assert 'href="/quiz/results/{}"><svg'.format(vq.id) in page and 'History</span></a>' in page
+    assert 'href="/quiz/results/{}"><svg'.format(vq.id) in page and 'aria-label="History"' in page
     vp_page = no_titles(teach.get('/quiz/editvprob/{}'.format(vp.id)).data.decode())
-    assert 'href="/quiz/problem-results/{}"><svg'.format(vp.id) in vp_page and 'History</span></a>' in vp_page
+    assert 'href="/quiz/problem-results/{}"><svg'.format(vp.id) in vp_page and 'aria-label="History"' in vp_page
     # unchecking everyone says so (Clear is the filter box's)
     #(People's own "Assign a quiz to them" bar, with its Uncheck all, is gone: the checked people
     #use the folder bar, and its dialogs say Uncheck all)
@@ -1333,7 +1336,7 @@ def test_folders_on_top_and_their_contents_below(app_db):
     # is remembered (an All view never starts as only folder buttons)
     assert "if (d.matches(FOLDER)) {" in boxes and "if (d.parentElement.closest(FOLDER)) return false;" in boxes
     #(what's remembered counts only when coming back to the page: trail.js's return)
-    assert "return row[0] === d && !(returning && row.some(function (b) { return idOf(b) in memory; }));" in boxes
+    assert "return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });" in boxes  # (remembered however the page is reached: owner 2026-10-21)
     assert "row.qgenExpanded = true" in js  # Expand all shows every folder open; Collapse all brings the buttons back
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
@@ -1342,7 +1345,7 @@ def test_folders_on_top_and_their_contents_below(app_db):
 def test_drawn_icons_everywhere_and_no_emoji():
     """The site's icons are drawn (app/icons.py), chosen over emoji (2026-10-09): every icon
     a template names exists, and no emoji is left in the pages, the code that fills them or
-    the page scripts. Text symbols stay (✓ ✕ ✗ ◐ ○ ★), and so do the tab title's 🟡/🔵
+    the page scripts. Text symbols stay (✓ ✕ ✗ ◐ ○ ★), and so do the tab title's • dots
     dots, since a tab's title can only hold text."""
     import os
     from app.icons import PATHS
@@ -1498,9 +1501,11 @@ def test_results_rows_are_one_line_tall(app_db):
     assert 'td.actions .btn-stack { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; }' in css
     # an attempt's own line never wraps where the list is wide: the row's buttons stack instead
     assert '@media (min-width: 641px) { .btn-row.result-attempt-buttons { flex-wrap: nowrap; } }' in css
-    # ...and narrow pages without a folder list (a quiz's history, one student) wrap by the page's width
+    # ...and narrow pages without a folder list (a quiz's history, one student) wrap by the page's width,
+    # an attempt's own icons only below 720px (they wrapped on every row at 1024: 2026-10-20)
     tail = css[css.index('@container page (max-width: 1080px) {\n  td.attempts { white-space: normal; }'):]
-    assert '.btn-row.result-attempt, .btn-row.result-attempt-buttons { flex-wrap: wrap; }' in tail
+    assert '.btn-row.result-attempt { flex-wrap: wrap; }' in tail
+    assert '@container page (max-width: 720px) {\n  .btn-row.result-attempt-buttons { flex-wrap: wrap; }\n}' in css
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
     #(with one attempt it's not grayed any more: "Archive all (1)" works, the same as its own Archive)
@@ -1520,8 +1525,10 @@ def test_a_folded_student_says_where_they_are(app_db):
         give(vq, 'sam')
         db.session.commit()
     page = teacher.get('/quiz/listuser').data.decode()
+    #(a row now, its sums in its Done and Status columns: the owner, 2026-10-21)
     sam = page[page.index('id="student-{}"'.format(ids('sam'))):]
-    head = sam[:sam.index('</summary>')]
+    head = sam[:sam.index('</tr>')]
+    head = head[head.index('</details>'):]  # (the row's own cells, not its attempts inside)
     assert '1 done · avg 100%' in head and '1 not started' in head and 'to grade' not in head
     # colored like every other score: green from 70%, amber from 50%, red below
     assert 'class="badge badge-ok" title="Quizzes with a score that counts' in head
@@ -1530,14 +1537,14 @@ def test_a_folded_student_says_where_they_are(app_db):
         db.session.commit()
     page = teacher.get('/quiz/listuser').data.decode()
     kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert 'class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done · avg 0%' in kim[:kim.index('</summary>')]
+    assert 'class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done · avg 0%' in kim[:kim.index('</tr>')]
     # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the box
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '4'})
         db.session.commit()
     page = teacher.get('/quiz/listuser').data.decode()
     kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert '1 done · avg 100%' in kim[:kim.index('</summary>')]
+    assert '1 done · avg 100%' in kim[:kim.index('</tr>')]
     emma = page[page.index('id="student-{}"'.format(ids('teach'))):]
     assert 'student-sums' not in emma[:emma.index('</summary>')]  # nothing given: nothing to say
 
@@ -1610,8 +1617,9 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         #("Archive all (1)" isn't grayed any more: it works, the same as the attempt's own Archive;
         #Grading's "Grade the oldest" is gone)
         '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
-                                           'disabled title="Give another attempt: A new attempt can be given once the latest one is handed in and graded">',
-                                           'disabled title="Print paper pages: this quiz has no Paper only questions"'],
+                                           'disabled title="Give another attempt: A new attempt can be given once the latest one is handed in and graded">'],
+        #(no Print paper pages on a quiz's history: the owner, 2026-10-21; Results by quiz's rows have it)
+        '/quiz/results': ['disabled title="Print paper pages: this quiz has no Paper only questions"'],
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
         '/userdet': ['disabled title="Delete for good: You can’t delete your own account">',
@@ -1690,8 +1698,11 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     vq = make_quiz(app, teach)
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'class="icon-link attempt-open"' in page and 'View</span></a>' in page
-    assert '<thead><tr><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>' in page
+    assert 'class="icon-link attempt-open"' in page and 'aria-label="View"' in page
+    #(a student page's quizzes are rows like My quizzes', each attempt's icons one group at the row's
+    #right end: the owner, 2026-10-21)
+    assert '<thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>' in page
+    assert 'class="attempt-act attempt-act-group"' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert '.result-box > .table-wrap > table { table-layout: fixed; width: 100%; }' in css
@@ -1710,7 +1721,7 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     # (a button on the heading sending a form kept outside the heading: no form inside a summary)
     form_id = 'archive-all-{}-{}'.format(ids('sam'), vq.id)
-    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Archive all (2): Move every one of sam'.format(form_id) in page and 'Archive all (2)</span></button>' in page
+    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Archive all (2): Move every one of sam'.format(form_id) in page and 'aria-label="Archive all (2)"' in page
     assert 'id="{}" class="inline-form" hidden'.format(form_id) in page
 
 
@@ -1761,21 +1772,27 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     vq = make_quiz(app, teach)
     give(vq, 'sam'); give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    box = page[page.index('data-quiz-box='):]
-    head = box[:box.index('</summary>')]
-    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head and 'History</span></a>' not in head and 'Archive all (2)</span></button>' in head
-    assert '<form' not in head and 'result-archive-all' not in box[:box.index('</details>')]
+    #(a row like My quizzes': its name folds it open, not a link off to the quiz's history; Archive all
+    #with the row's own icons: the owner, 2026-10-21)
+    row = page[page.index('data-fkey="q:{}"'.format(vq.id)):]
+    row = row[:row.index('</tr>')]
+    head = row[:row.index('</summary>')]
+    assert 'href="/quiz/results/{}"'.format(vq.id) not in head and 'aria-label="History"' not in head and 'aria-label="Archive all (2)"' in row
+    assert '<form' not in head and 'result-archive-all' not in row
     page = teach.get('/quiz/results').data.decode()
-    head = page[page.index('id="quiz-{}"'.format(vq.id)):]
-    head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and 'View quiz</span></a>' in head and 'Edit quiz</span></a>' in head and 'History</span></a>' not in head
-    assert 'class="name-link" href="/quiz/results/{}"'.format(vq.id) in head
+    #(a row like My quizzes': the name only opens it; View, Edit and History are icons at its end:
+    #the owner, 2026-10-21)
+    row = page[page.index('id="quiz-{}"'.format(vq.id)):]
+    row = row[:row.index('</tr>')]
+    head = row[:row.index('</summary>')]
+    assert 'href="/' not in head and 'aria-label="View quiz"' in row and 'aria-label="Edit quiz"' in row and 'aria-label="History"' in row
     assert 'box-links' not in page[page.index('<main'):]
     page = teach.get('/quiz/listuser').data.decode()
-    head = page[page.index('id="student-{}"'.format(ids('sam'))):]
-    head = head[:head.index('</summary>')]
-    assert '<span class="box-actions">' in head and '>Student page</a>' not in head and 'Assign a quiz</span></a>' in head and 'Message</span></a>' in head  # (icons: owner 2026-10-14)
-    assert 'class="name-link" href="/quiz/listuser/{}"'.format(ids('sam')) in head
+    row = page[page.index('id="student-{}"'.format(ids('sam'))):]
+    row = row[:row.index('</tr>')]
+    head = row[:row.index('</summary>')]
+    #(the name only opens the row; Assign a quiz and Student page are icons at its end: the owner, 2026-10-21)
+    assert 'href="/' not in head and 'aria-label="Assign a quiz"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' not in row  # (icons: owner 2026-10-14; no Message: 2026-10-21)
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()

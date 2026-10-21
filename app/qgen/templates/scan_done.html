@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button with context %}
+{#- the saved scan's own pages are removed: taken off the Back trail (static/js/trail.js), so ← goes
+    to the page before them, not to "Page not found" (the owner, 2026-10-20) #}
+{% block html_attrs %}{% if done.job %} data-trail-gone="/quiz/scan/{{ done.job }}"{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>Scanned: {{ done.name }}</h1>

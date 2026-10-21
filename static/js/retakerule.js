@@ -4,9 +4,11 @@
 (function () {
   if (!document.querySelector('[data-rule-edit]')) return;
   var box = document.createElement('dialog');
-  box.className = 'ask ask-many assign-many put-dialog rule-dialog';
+  //(a plain question box with round choices: not a folder dialog, so no filter and no folder
+  //list's top buttons; the user critic, 2026-10-20)
+  box.className = 'ask rule-dialog';
   box.innerHTML = '<p><strong data-head></strong></p>'
-    + '<ul class="assign-many-people put-list" data-list></ul>'
+    + '<ul class="rule-list" data-list></ul>'
     + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Save</button></div>';
   document.body.appendChild(box);
   var list = box.querySelector('[data-list]');

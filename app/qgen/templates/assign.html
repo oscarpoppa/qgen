@@ -3,6 +3,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field %}
+{% from "_pick.html" import pick_table %}
 
 
 {% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
@@ -23,17 +24,17 @@
     {# (the same words as the Quizzes page with none) #}
     <p class="card empty small">No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</p>
     {% else %}
-    {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='li', id='quiz-filter-bar') }}
+    {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='quiz-filter-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
          data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
-        <ul class="choice-list pick-list quiz-pick-list" role="radiogroup" aria-label="{{ form.vquiz.label.text }}">
+        {% call pick_table('Quiz', 'quiz-pick-list', (' role="radiogroup" aria-label="' ~ form.vquiz.label.text ~ '"')|safe) %}
           {% for q in quizzes %}
-            <li data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"><input type="radio" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if form.vquiz.data == q.id %} checked{% endif %}>
-              <label for="vquiz-{{ q.id }}">{{ q.title }}</label></li>
+            <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"><td class="tick-col"><input type="radio" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if form.vquiz.data == q.id %} checked{% endif %}></td>
+              <td><label for="vquiz-{{ q.id }}">{{ q.title }}</label></td></tr>
           {% endfor %}
-        </ul>
+        {% endcall %}
       </div>
     </div>
     {% endif %}
@@ -56,7 +57,7 @@
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
     {# the same filter bar as the Quiz card's (filter, Clear, how many shown), then the checking on a
        line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
-    {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='li', id='people-pick-bar') }}
+    {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='tr[data-box]', id='people-pick-bar') }}
     <div class="btn-row small write-to-checks">
       <button type="button" class="btn btn-secondary btn-sm pick-all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
       <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
@@ -66,12 +67,12 @@
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
       <div class="folder-filter-list">
-        <ul class="choice-list pick-list">
+        {% call pick_table('Name') %}
           {% for u in people %}
-            <li data-box="user:{{ u.id }}"><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}" data-name="{{ u.shown_name }}"{% if u.id in chosen %} checked{% endif %}>
-              <label for="users-{{ u.id }}">{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></li>
+            <tr data-box="user:{{ u.id }}"><td class="tick-col"><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}" data-name="{{ u.shown_name }}"{% if u.id in chosen %} checked{% endif %}></td>
+              <td data-sort="{{ u.shown_name|lower }}"><label for="users-{{ u.id }}">{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></td></tr>
           {% endfor %}
-        </ul>
+        {% endcall %}
       </div>
     </div>
     <div class="help">Only the people checked get the quiz. “Check all shown” checks everyone in the list (pick a folder first to check just them). Each student gets a different random version of the quiz.</div>
@@ -126,7 +127,7 @@
   //opened for one quiz, it's the one you came from (the owner, 2026-10-19)
   function show() {
     var on = radios.filter(function (r) { return r.checked; })[0];
-    var li = on && on.closest('li');
+    var li = on && on.closest('tr');
     if (!li || !inSight(on)) return;
     //(the box that scrolls: the list itself, or the card's list around it)
     var list = li.parentElement;
@@ -145,7 +146,7 @@
   if (!box) return;
   var people = Array.prototype.slice.call(box.querySelectorAll('input[data-user]'));
   var count = box.querySelector('.chosen-count'), all = box.querySelector('.pick-all');
-  function shown() { return people.filter(function (i) { var li = i.closest('li'); return !li.hidden && !li.closest('[hidden]'); }); }
+  function shown() { return people.filter(function (i) { var li = i.closest('tr'); return !li.hidden && !li.closest('[hidden]'); }); }
   function refresh() {
     var s = shown(), every = s.length > 0 && s.every(function (i) { return i.checked; });
     all.dataset.on = every ? '0' : '1';

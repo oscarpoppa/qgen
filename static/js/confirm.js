@@ -30,7 +30,9 @@
     box.querySelector('#ask-text').textContent = question;
     box.querySelector('.ask-cancel').textContent = cancelLabel || 'Cancel';
     var ok = box.querySelector('.ask-ok');
-    ok.textContent = okLabel || 'OK';
+    //(every caller names the action; "Yes" only if one ever doesn't: buttons never say "OK",
+    //the code critic 2026-10-20)
+    ok.textContent = okLabel || 'Yes';
     ok.title = danger ? 'Yes, go ahead; this can\'t be undone' : 'Yes, go ahead';
     ok.classList.toggle('btn-danger', !!danger);
     return new Promise(function (resolve) {
@@ -110,8 +112,11 @@
     if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
     e.preventDefault();
     e.stopImmediatePropagation();
-    var label = form.dataset.confirmOk || 'Yes';
     var submitter = e.submitter;
+    //(no data-confirm-ok: the button that was pressed names the action, its words or its
+    //tooltip's first part, e.g. "Archive" from "Archive: move it to the Archive")
+    var own = submitter ? (submitter.getAttribute('aria-label') || (submitter.title || '').split(':')[0] || submitter.textContent || '').trim() : '';
+    var label = form.dataset.confirmOk || own || 'Yes';
     window.qgenAsk(form.dataset.confirm, label, /delete|remove|clear/i.test(label)).then(function (yes) {
       if (!yes) return;
       form.dataset.confirmed = '1';

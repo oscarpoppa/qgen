@@ -459,17 +459,24 @@ def erase_answers(img, slots):
     """A page printed with its answers in an answer column (an answer key): each answer erased, in
     the paper's own color, leaving the table's ruled lines (the rows that are mostly ink) as they
     are (the owner, 2026-10-19). Returns (picture, changed?)."""
-    boxes = [s['erase'] for s in slots.values() if s.get('erase')]
+    boxes = [(s['erase'], bool(s.get('erase_plain'))) for s in slots.values() if s.get('erase')]
     if not boxes:
         return img, False
     from scipy import ndimage
     out = np.asarray(img.convert('RGB')).copy()
     H, W = out.shape[:2]
     full = ink_mask(np.asarray(img.convert('L')))
-    for b in boxes:
+    for b, plain in boxes:
         x0, y0, x1, y1 = px(b, W, H)
         ink = full[y0:y1, x0:x1].copy()
         if not ink.size:
+            continue
+        if plain:
+            #(an answer printed on a plain line, after its question: no table lines to keep, and a
+            #letter's strokes in a box that tight would pass for them)
+            area = out[y0:y1, x0:x1]
+            paper = area[~full[y0:y1, x0:x1]]
+            area[:] = np.median(paper, axis=0).astype(np.uint8) if paper.size else 255
             continue
         #(the whole cell painted, not just the dark pixels: the pale edges of letters would stay
         #as gray ghosts; the table's lines, and a pixel either side of them, are kept)
@@ -828,6 +835,142 @@ def snap_boxes(img_or_mask, page):
     return dict(page, problems=probs)
 
 
+def _printed_number(p, ink, ch, X0, Y0):
+    """The printed number, e.g. "1 a.", when it has no box of its own: the first run of ink before
+    a wide gap, so it's never covered over (the owner, 2026-10-20). [(x0, y0, x1, y1)] in page
+    pixels, or []."""
+    num = (p.get('number') or '').strip()
+    if not num or not (p.get('text') or '').strip().startswith(num):
+        return []
+    #(a column with a speck or two of grain is still a gap, and so is a thin stray mark)
+    from scipy import ndimage
+    on = ndimage.binary_opening(ink.sum(axis=0) >= 3, structure=np.ones(max(2, int(0.2 * ch)), bool))
+    cols = np.nonzero(on)[0]
+    if not cols.size:
+        return []
+    gaps = np.nonzero(np.diff(cols) > 1.2 * ch)[0]
+    if not gaps.size:
+        return []
+    end = cols[gaps[0]] + 1
+    #(about as wide as the number's own letters, no more)
+    if end - cols[0] > (len(num) + 1) * 0.9 * ch:
+        return []
+    rows = np.nonzero(ink[:, cols[0]:end].any(axis=1))[0]
+    return [(int(cols[0] + X0), int(rows[0] + Y0), int(end + X0), int(rows[-1] + 1 + Y0))]
+
+
+def _wording(ink, full, rgb, number, cut, ch, X0, Y0):
+    """A problem's printed wording, to be covered and written again: its ink without its number,
+    pictures and answer place. (box as fractions, paper color '#rrggbb') or (None, None)."""
+    H, W = full.shape
+    mask = _blank_out(ink, number + [cut], X0, Y0)
+    if not mask.any():
+        return None, None
+    # (specks left over at the edges are not wording)
+    keep = _components(mask)
+    keep = [k for k in keep if ((k[3] - k[1]) >= 0.4 * ch or (k[2] - k[0]) >= 0.4 * ch) and k[4] >= 0.15 * ch * ch]
+    #(the words come before the answer place on their line: a mark past its start, e.g. an
+    #icon sitting on the line, isn't wording, the owner, 2026-10-20)
+    before = [k for k in keep if k[2] <= cut[0] - X0 + 0.2 * ch]
+    if before and cut[1] - Y0 <= np.median([k[3] for k in before]):
+        keep = before
+    if not keep:
+        return None, None
+    tx0, ty0 = min(k[0] for k in keep), min(k[1] for k in keep)
+    tx1, ty1 = max(k[2] for k in keep), max(k[3] for k in keep)
+    #(covered in the paper's own color, not white: a cream or colored page stays as it is)
+    area = rgb[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]
+    paper = area[~full[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]]
+    color = '#%02x%02x%02x' % tuple(int(v) for v in np.median(paper, axis=0)) if paper.size else None
+    return frac(tx0 + X0, ty0 + Y0, tx1 + X0, ty1 + Y0, W, H), color
+
+
+def wording_box(img, p, answer):
+    """For an answer place the teacher put on the page by hand (scan draft, the owner,
+    2026-10-20): the problem's printed wording beside it, to cover and write each student's
+    numbers over. (box, paper color) or (None, None)."""
+    full = ink_mask(np.asarray(img.convert('L')))
+    rgb = np.asarray(img.convert('RGB'))
+    H, W = full.shape
+    pictures = []
+    x0, y0, x1, y1 = px(p['box'], W, H)
+    padx, pady = int(0.012 * W), int(0.008 * H)
+    X0, Y0, X1, Y1 = max(0, x0 - padx), max(0, y0 - pady), min(W, x1 + padx), min(H, y1 + pady)
+    ink = _blank_out(full[Y0:Y1, X0:X1], pictures, X0, Y0)
+    ch = _char_height(_components(ink), H)
+    number = [px(p['number_box'], W, H)] if p.get('number_box') else _printed_number(p, ink, ch, X0, Y0)
+    return _wording(ink, full, rgb, number, px(answer, W, H), ch, X0, Y0)
+
+
+def _text_width(text):
+    """About how wide a piece of printed text is, in letter widths: capitals and m/w wide, i/l/t
+    and punctuation narrow (a plain letter count puts a word boundary a word off on a long line)."""
+    w = 0.0
+    for c in text:
+        if c in 'mwMW':
+            w += 1.45
+        elif c.isupper() or c.isdigit():
+            w += 1.15
+        elif c in "iljtfr.,:;'’!|() ":
+            w += 0.5
+        else:
+            w += 1.0
+    return w
+
+
+def _printed_answer(p, ink, number, ch, X0, Y0, X1):
+    """An answer key's line, "1. What is the first book in the Bible? Genesis.": the question, then
+    its answer printed after the "?" on the same line (the owner, 2026-10-20, "bible quiz2"). Returns
+    (where the student types: from the answer's first word on, with room to write; the printed
+    answer's words, to erase), in page pixels, or None when the line isn't one."""
+    text = ' '.join((p.get('text') or '').split())
+    said = ' '.join(str(p.get('answer') or '').split()).rstrip('.')
+    m = re.match(r'^(.*\?)\s+(\S.*?)\.?$', text)
+    if not m or not said:
+        return None
+    printed = m.group(2).rstrip('.')
+    #(only when what follows the "?" is the problem's own answer, or starts with it: never a
+    #question that just goes on after a "?")
+    if not (printed.lower() == said.lower() or printed.lower().startswith(said.lower()) or said.lower().startswith(printed.lower())):
+        return None
+    words = _blank_out(ink, number, X0, Y0)
+    lines = _text_lines(words, ch)
+    if not lines:
+        return None
+    y0, y1 = lines[-1]
+    #(a space between words: a fifth of a letter's height or more, 3 pixels on a small scan; the
+    #letters of a word touch or sit a pixel apart)
+    found = _groups(words[y0:y1], max(2.5, 0.22 * ch))
+    if len(found) < 2:
+        return None
+    #(where the answer starts: the space between words nearest to where its letters' share of the
+    #line puts it; counting words can be a word off, as a narrow space can go unseen; the owner,
+    #2026-10-20)
+    line_text = text.split('\n')[-1] if '\n' in (p.get('text') or '') else text
+    share = _text_width(printed) / max(1.0, _text_width(line_text.rstrip('.')))
+    left, c = found[0][0], found[-1][1]
+    guess = c - share * (c - left)
+    #(the answer's first word counted from the line's start (the question's words) and from its end
+    #(the answer's): a narrow space gone unseen puts one of them a word off, so of the two the one
+    #nearer the guess; the guess alone when neither fits)
+    question = m.group(1).split('\n')[-1] if '\n' in (p.get('text') or '') else m.group(1)
+    if len(found) == len(line_text.split()):
+        k = len(question.split())  # every word seen: counted exactly
+    else:
+        counted = [i for i in (len(question.split()), len(found) - len(printed.split())) if 1 <= i < len(found)]
+        k = min(counted or range(1, len(found)), key=lambda i: abs(found[i][0] - guess))
+    a = found[k][0]
+    #(not more than about the answer's length, and a real gap before it: else it isn't found)
+    if (c - a) > (len(printed) + 4) * 0.9 * ch or a - found[k - 1][1] < 0.18 * ch:
+        return None
+    pad = max(2, int(0.2 * ch))
+    erase = (X0 + a - pad, Y0 + y0 - pad, X0 + c + pad, Y0 + y1 + pad)
+    #(room to type a longer answer than the printed one, up to the problem's right edge)
+    right = max(X0 + c + pad, min(X1, X0 + a + int(14 * ch)))
+    answer = (X0 + a - pad, Y0 + y0 - int(0.35 * ch), right, Y0 + y1 + int(0.35 * ch))
+    return answer, erase
+
+
 def find_slots(img, page, covered=()):
     """Where each problem on a QuizScan page is answered. img: the flat page (PIL); page:
     QuizScan's page dict; covered: ids of problems whose numbers change (their wording is
@@ -884,21 +1027,8 @@ def find_slots(img, page, covered=()):
         ink = _blank_out(full[Y0:Y1, X0:X1], pictures, X0, Y0)
         comps = _components(ink)
         ch = _char_height(comps, H)
-        if not number and (p.get('number') or '').strip() and (p.get('text') or '').strip().startswith(p['number'].strip()):
-            #(the printed number, e.g. "1 a.", with no box of its own: the first run of ink before
-            #a wide gap, so it's never covered over, the owner, 2026-10-20)
-            #(a column with a speck or two of grain is still a gap, and so is a thin stray mark)
-            from scipy import ndimage
-            on = ndimage.binary_opening(ink.sum(axis=0) >= 3, structure=np.ones(max(2, int(0.2 * ch)), bool))
-            cols = np.nonzero(on)[0]
-            if cols.size:
-                gaps = np.nonzero(np.diff(cols) > 1.2 * ch)[0]
-                if gaps.size:
-                    end = cols[gaps[0]] + 1
-                    #(about as wide as the number's own letters, no more)
-                    if end - cols[0] <= (len(p['number'].strip()) + 1) * 0.9 * ch:
-                        rows = np.nonzero(ink[:, cols[0]:end].any(axis=1))[0]
-                        number = [(int(cols[0] + X0), int(rows[0] + Y0), int(end + X0), int(rows[-1] + 1 + Y0))]
+        if not number:
+            number = _printed_number(p, ink, ch, X0, Y0)
 
         if p.get('type') in ('choice_one', 'choice_many', 'truefalse'):
             want = len(p.get('choices') or []) or (2 if p.get('type') == 'truefalse' else 0)
@@ -960,15 +1090,22 @@ def find_slots(img, page, covered=()):
                 out[p['id']] = {'kind': 'choices', 'marks': [frac(*m, W, H) for m in marks], 'rows': rows}
             continue
 
-        # a number or a word to type: the printed box or line it goes in
-        frame = _frame(comps, ink, X0, Y0, box_px, W, H)
+        # a number or a word to type: the printed box or line it goes in (an answer key's line,
+        # "Question? Answer.", first: its answer printed where the student types)
+        keyed = _printed_answer(p, ink, number, ch, X0, Y0, X1)
+        frame = None if keyed else _frame(comps, ink, X0, Y0, box_px, W, H)
         answer = cut = erase = None
-        if not frame:
+        if keyed:
+            answer, keyed = keyed
+            cut = answer
+        elif not frame:
             drawn = _drawn_boxes(ink, ch)
             if drawn:
                 a, b, c, d = max(drawn, key=lambda r: (r[0], r[1]))
                 frame = (a + X0, b + Y0, c + X0, d + Y0)
-        if frame:
+        if keyed:
+            pass
+        elif frame:
             answer = frame
             cut = frame
         else:
@@ -992,6 +1129,16 @@ def find_slots(img, page, covered=()):
                     answer = (a, d + int(0.15 * ch), c, min(H, d + int(1.6 * ch)))
                 else:
                     answer = (a, max(0, b - int(1.5 * ch)), c, d)
+                    #(on the problem's own printed line, e.g. "1- ______": centered on that line's
+                    #words, so what's typed reads level with the number, not above it, while the
+                    #answer line stays inside the box: the owner, 2026-10-20, the flags quiz)
+                    row_mid = (y0 + y1) / 2.0
+                    if (y1 - y0) <= 2.2 * ch and abs((b + d) / 2.0 - row_mid) <= 1.5 * ch:
+                        h = answer[3] - answer[1]
+                        top = int(round(row_mid - h / 2.0))
+                        top = min(top, b)                    # the line never below the box...
+                        top = max(top, d - h)                # ...nor above it
+                        answer = (a, max(0, top), c, min(H, top + h))
                 cut = (a, min(answer[1], b), c, max(answer[3], d))
         inline = False
         if answer is None:
@@ -1014,6 +1161,10 @@ def find_slots(img, page, covered=()):
         if answer is None:
             continue
         slot = {'kind': 'field', 'answer': frac(*answer, W, H), 'text': None, 'char': round(ch / H, 5)}
+        if keyed:
+            #(the printed answer erased in the paper's color; the student types where it was)
+            slot['erase'] = frac(*keyed, W, H)
+            slot['erase_plain'] = True
         if inline:
             slot['inline'] = True
         if erase:
@@ -1021,27 +1172,11 @@ def find_slots(img, page, covered=()):
             spill = int(0.9 * ch)
             slot['erase'] = frac(e0, max(0, erase[1] - spill), e1, min(H, erase[3] + spill), W, H)
         if p['id'] in covered:
-            # the wording: the problem's ink, without its number, pictures and answer place
-            mask = _blank_out(ink, number + [cut], X0, Y0)
-            ys, xs = np.nonzero(mask)
-            if xs.size:
-                # (specks left over at the edges are not wording)
-                keep = _components(mask)
-                keep = [k for k in keep if ((k[3] - k[1]) >= 0.4 * ch or (k[2] - k[0]) >= 0.4 * ch) and k[4] >= 0.15 * ch * ch]
-                #(the words come before the answer place on their line: a mark past its start,
-                #e.g. an icon sitting on the line, isn't wording, the owner, 2026-10-20)
-                before = [k for k in keep if k[2] <= cut[0] - X0 + 0.2 * ch]
-                if before and cut[1] - Y0 <= np.median([k[3] for k in before]):
-                    keep = before
-                if keep:
-                    tx0, ty0 = min(k[0] for k in keep), min(k[1] for k in keep)
-                    tx1, ty1 = max(k[2] for k in keep), max(k[3] for k in keep)
-                    slot['text'] = frac(tx0 + X0, ty0 + Y0, tx1 + X0, ty1 + Y0, W, H)
-                    #(covered in the paper's own color, not white: a cream or colored page stays as it is)
-                    area = rgb[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]
-                    paper = area[~full[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]]
-                    if paper.size:
-                        slot['paper'] = '#%02x%02x%02x' % tuple(int(v) for v in np.median(paper, axis=0))
+            text, paper = _wording(ink, full, rgb, number, cut, ch, X0, Y0)
+            if text:
+                slot['text'] = text
+                if paper:
+                    slot['paper'] = paper
         out[p['id']] = slot
     return out
 
@@ -1234,10 +1369,51 @@ def _edge_strips(gray):
     return mask if mask.any() else None
 
 
-def level_page(img, page):
+def level_page(img, page, full=None):
     """The flat page made level (the owner, 2026-10-20: its printed lines run straight across,
     square with the top of the page), and the dark strips at its edges painted out. QuizScan's
-    boxes are turned with it. Returns (image, page); both unchanged when it's already level."""
+    boxes are turned with it. Returns (image, page); both unchanged when it's already level.
+    full: a bigger copy of the same page (the owner, 2026-10-20: pictures are cut from it), made
+    level the same way as measured on img; then returns (image, page, full made level)."""
+    out, page, how = _level_page(img, page)
+    if full is None:
+        return out, page
+    return out, page, _level_like(full, how)
+
+
+def _level_like(full, how):
+    """A bigger copy of a page made level as _level_page measured on the smaller one: the same
+    edge strips painted out, the same warp (worked in bands of rows, so a big page doesn't need
+    much memory at once)."""
+    from PIL import Image
+    from scipy import ndimage
+    if how is None:
+        return full
+    arr = np.asarray(full.convert('RGB')).copy()
+    Hf, Wf = arr.shape[:2]
+    if how['strips'] is not None:
+        big = Image.fromarray(how['strips'].astype(np.uint8) * 255).resize((Wf, Hf), Image.NEAREST)
+        arr[np.asarray(big) > 127] = how['paper']
+    if how['map'] is None:
+        return Image.fromarray(arr)
+    h0, h1, v0, v1 = how['map']
+    s = Wf / float(how['size'][0])          # the bigger page's pixels per measured page pixel
+    cx, cy = Wf / 2.0, Hf / 2.0
+    xx = np.arange(Wf, dtype=np.float32)[None, :]
+    kv = v0 + v1 * xx / s
+    out = np.empty_like(arr)
+    chans = [np.ascontiguousarray(arr[:, :, i]) for i in range(3)]
+    for y0 in range(0, Hf, 256):
+        yy = np.arange(y0, min(Hf, y0 + 256), dtype=np.float32)[:, None]
+        sx, sy = xx + kv * (yy - cy), yy + (h0 + h1 * yy / s) * (xx - cx)
+        for i in range(3):
+            out[y0:y0 + yy.shape[0], :, i] = ndimage.map_coordinates(chans[i], [sy, sx], order=1, mode='constant',
+                                                                     cval=how['paper'][i])
+    return Image.fromarray(out)
+
+
+def _level_page(img, page):
+    """level_page's work: (image, page, how it was made level for _level_like, or None)."""
     from PIL import Image
     rgb = img.convert('RGB')
     gray = np.asarray(rgb.convert('L'))
@@ -1312,7 +1488,7 @@ def level_page(img, page):
     h0, h1, v0, v1 = maps(full)
     biggest = max(abs(h0 + h1 * y) for y in (0, H)) + max(abs(v0 + v1 * x) for x in (0, W))
     if np.degrees(np.arctan(biggest)) < 0.1:
-        return (rgb, page) if changed else (img, page)
+        return (rgb, page, {'strips': strips, 'paper': paper, 'map': None, 'size': (W, H)}) if changed else (img, page, None)
     once = warp(rgb, h0, h1, v0, v1)
     #(looked at again once straightened: what's left over is taken out too)
     r = maps(ink_mask(np.asarray(once.convert('L'))))
@@ -1339,7 +1515,7 @@ def level_page(img, page):
 
     page = dict(page, problems=[dict(p, **{k: turn(p[k]) for k in ('box', 'number_box') if p.get(k)}) for p in page.get('problems') or []],
                 pictures=[dict(p, box=turn(p.get('box'))) for p in page.get('pictures') or []])
-    return rgb, page
+    return rgb, page, {'strips': strips, 'paper': paper, 'map': (h0, h1, v0, v1), 'size': (W, H)}
 
 
 def paper_color(img, box):

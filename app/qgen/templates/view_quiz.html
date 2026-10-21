@@ -7,13 +7,13 @@
 <div class="page-head">
   <h1>View: {{ vq.title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
-  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit: Change this quiz's questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
+  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit: Change this quiz’s questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
     {#- Assign from here too (the owner, 2026-10-19), as on the quiz's Edit page #}
     {%- if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %}</span>
   <div class="actions">
     {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
     {#- (grayed out when every student gets the same: the owner, 2026-10-19) #}
-    {% if varies %}<a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" data-reroll title="Draw another student's version">Roll another</a>
+    {% if varies %}<a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" data-reroll title="Draw another student’s version">Roll another</a>
     {%- else %}<button type="button" class="btn" disabled title="Every student gets the same questions">Roll another</button>{% endif %}
   </div>
 </div>

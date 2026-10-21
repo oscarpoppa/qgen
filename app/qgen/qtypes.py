@@ -455,7 +455,7 @@ class Text(QType):
     key = 'text'
     label = 'Short text'
     answer_label = 'Accepted answers (one per line)'
-    answer_help = 'Any of these counts as correct. Capitals and extra spaces are ignored unless you check “Case sensitive”.'
+    answer_help = 'Put each answer you’ll accept on its own line. A student’s answer must match a whole line; capitals, extra spaces and a final period don’t matter. Any other answer comes to you to grade.'
 
     def validate_parts(self, answer, options, known):
         if not [a for a in (answer or '').splitlines() if a.strip()]:
@@ -473,14 +473,10 @@ class Text(QType):
         answers = [normalize_text(a, cs) for a in conc_ansr.splitlines() if a.strip()]
         if got in answers:
             return 1.0
-        #a right answer inside a longer one ("a brown horse" for "horse"): the teacher decides
-        if any(re.search(r'(?<!\w)' + re.escape(a) + r'(?!\w)', got) for a in answers if a):
-            return None
-        #a labeled picture ("what animal is this?"): there are many ways to name what's in it,
-        #so an answer that isn't the label goes to the teacher too, not straight to wrong
-        if picture_labels(options or {}):
-            return None
-        return 0.0
+        #anything else written goes to the teacher, never straight to wrong: it may be a simple
+        #misspelling ("irleand"), a right answer inside a longer one ("a brown horse" for "horse"),
+        #or another way to name a labeled picture (the owner, 2026-10-20)
+        return None
 
     def show_correct(self, conc_ansr, conc_opts):
         return ' or '.join(a for a in conc_ansr.splitlines() if a)

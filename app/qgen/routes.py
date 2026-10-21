@@ -209,6 +209,21 @@ def view_vprob(vpid):
     return render_template('view_problem.html', vp=vp, qt=get_qtype(vp.qtype), samples=samples, error=error,
                            title='View: {}'.format(vp.title))
 
+#one student's version of a problem, for the Problems list's "Question and answer" dialog
+#(static/js/qa.js; the owner, 2026-10-21: an example student's numbers, as View shows them)
+@qgen_bp.route('/quiz/vprob/<int:vpid>/example', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def vprob_example(vpid):
+    vp = db.get_or_404(VProblem, vpid)
+    try:
+        s = S.sample_problem(vp, count=1)[0]
+    except S.ServiceError as exc:
+        return jsonify(ok=False, error=str(exc))
+    return jsonify(ok=True, text=s['text'], choices=s['choices'] or [], right=list(s['right'] or []),
+                   correct=s['correct'] or '', graded_by_teacher=bool(s['essay'] or s['paper']), look=bool(s['look']))
+
 #route to edit a specific virtual problem
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
 @login_required
@@ -550,7 +565,8 @@ def del_vquiz(vqid):
 @admin_only
 @post_form_only
 def copy_item(kind, iid):
-    if kind not in LIST_PAGES:
+    #(only problems and quizzes are copied: pictures and files have no copy)
+    if kind not in ('problems', 'quizzes'):
         abort(404)
     item = db.session.get(S.subject_kind(kind)[1], iid)
     if item is None:
@@ -2064,7 +2080,7 @@ def dashboard_data():
 def dashboard():
     from app import tuning
     from .scan_routes import scan_progress_data
-    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), scans=scan_progress_data(current_user),
+    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), scans=scan_progress_data(current_user, put_away=None),
                            **dashboard_data())
 
 #route to the top bar's "online" list (opened from any teacher page)

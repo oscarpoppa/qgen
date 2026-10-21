@@ -1,6 +1,7 @@
 {# Assign quizzes: pick the people for the quizzes (the Quizzes page's checked bar, any quiz's paper
    plane: static/js/assign_many.js; the owner, 2026-10-15). Included where it's offered. #}
 {% from "_macros.html" import filter_bar with context %}
+{% from "_pick.html" import pick_table %}
 {% set am_people, am_tree = assign_people() %}
 <dialog class="ask ask-many assign-many pick-dialog" id="assign-many-dialog" aria-labelledby="assign-many-head">
   <form method="post" action="{{ url_for('qgen.assign_many') }}">
@@ -17,7 +18,7 @@
     {#- the people: the standard picker, People's folders as the folder list and tabs, the filter,
         and checking on a line of its own, as in "Write to…" (the owner, 2026-10-18) #}
     <div class="field pick-people" id="assign-many-pick">
-      {{ filter_bar('#assign-many-pick .folder-filter-list', 'person', 'people', items='li', id='assign-many-bar') }}
+      {{ filter_bar('#assign-many-pick .folder-filter-list', 'person', 'people', items='tr[data-box]', id='assign-many-bar') }}
       <div class="btn-row small write-to-checks">
         <button type="button" class="btn btn-secondary btn-sm" data-people="all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
         <button type="button" class="btn btn-secondary btn-sm" data-people="none" title="Uncheck everyone">Uncheck all</button>
@@ -27,9 +28,9 @@
            data-unit="person" data-units="people" data-remember="assign-many" data-tools-home="#assign-many-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ am_tree|tojson }}</script>
         <div class="folder-filter-list">
-          <ul class="choice-list pick-list">
-            {% for u in am_people %}<li data-box="user:{{ u.id }}"><input type="checkbox" name="users" value="{{ u.id }}" id="am-{{ u.id }}"><label for="am-{{ u.id }}">{{ u.shown_name }}</label></li>{% endfor %}
-          </ul>
+          {% call pick_table('Name') %}
+            {% for u in am_people %}<tr data-box="user:{{ u.id }}"><td class="tick-col"><input type="checkbox" name="users" value="{{ u.id }}" id="am-{{ u.id }}"></td><td><label for="am-{{ u.id }}">{{ u.shown_name }}</label></td></tr>{% endfor %}
+          {% endcall %}
         </div>
       </div>
     </div>

@@ -116,7 +116,8 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
     # each person a row of the folder's table (People shown as rows)
-    assert page.count('<tr data-box="user:') == 2  # kim, and sam in Period 2
+    #(the page's own rows, each with its name for the filter; the dialogs' pickers list people as rows too)
+    assert len(re.findall(r'<tr data-box="user:\d+" data-name=', page)) == 2  # kim, and sam in Period 2
     assert '<tr data-box="user:{}" data-name="kim'.format(ids('kim')) in page
     # not inside itself
     assert teach.post('/users/folders/move', data={'folder': g7, 'to': p2}, headers=FETCH).get_json()['error'] == \
@@ -205,9 +206,9 @@ def test_assigning_from_the_users_page(app_db):
     #(the checked people get their quizzes from the Assign a quiz dialog, not a trip to Assign)
     assert 'class="pick-person" name="users" value="{}"'.format(ids('kim')) in page
     assert 'id="assign-people-dialog"' in page and '<form method="post" action="/quiz/assignmany">' in page
-    assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'Assign a quiz</span></a>' in page  # (the paper plane: owner 2026-10-14)
+    assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'aria-label="Assign a quiz"' in page  # (the paper plane: owner 2026-10-14)
     #(paper planes, the words for screen readers: owner 2026-10-14)
-    assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'Assign a quiz to this folder</span></a>' in page
+    assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'aria-label="Assign a quiz to this folder"' in page
     assert 'href="/quiz/assign?folder={}"><svg'.format(p2) in no_titles(page)  # the box inside
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
     start = lambda page: re.search(r'data-start="(\w+)"', page[page.index('id="pick-people"'):]).group(1)
@@ -261,7 +262,7 @@ def test_users_page_leads_to_each_student_page(app_db):
     sam = ids('sam')
     #(the person icon: owner 2026-10-14)
     assert ('href="/quiz/listuser/{}" title="Student page: sam&#39;s quizzes, results and awards">'.format(sam) in page
-            or 'href="/quiz/listuser/{}" title="Student page: sam\'s quizzes, results and awards">'.format(sam) in page) and 'Student page</span></a>' in page
+            or 'href="/quiz/listuser/{}" title="Student page: sam\'s quizzes, results and awards">'.format(sam) in page) and 'aria-label="Student page"' in page
     # the name itself is plain text, not a link: only buttons act on a person
     assert '<strong class="box-title">sam</strong>' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page
@@ -284,7 +285,7 @@ def test_taking_people_out_of_their_only_folder(app_db):
     # the bar: the same folder menu, Move to folder and Take out of folder as Problems and Quizzes;
     # each row: Take out of folder (it asks which folder when they're in several)
     assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Move to folder</button>' in page
-    assert page.count('Take out of folder</span></button>') >= 2  # (icon buttons: their words for screen readers)
+    assert page.count('aria-label="Take out of folder"') >= 2  # (icon buttons: their words for screen readers)
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
     assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed

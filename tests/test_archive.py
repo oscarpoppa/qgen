@@ -484,4 +484,4 @@ def test_the_archives_when_column_keeps_each_date_on_one_line(app_db):
     when = re.search(r'<td data-label="When"[^>]*>(.*?)</td>', page, re.S).group(1)
     assert re.search(r'<span class="nowrap">Taken [^<]+</span><br>', when)
     assert re.search(r'<span class="nowrap">Archived [^<]+</span><br>by teach', when)
-    assert 'class="archive-table"' in page
+    assert 'class="archive-table even-cols"' in page

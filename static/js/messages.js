@@ -499,13 +499,8 @@
     if (saved.slice(0, cut) === location.pathname + location.search) window.scrollTo(0, +saved.slice(cut + 1));
   });
 
-  //the tab: the page's name, then 🔵 unfinished quizzes and 🟡 new ones after it, the same colors
-  //as the boxes on My quizzes (a tab's title is plain text; the owner, 2026-10-20)
-  var DOTS = /(?: [\u{1F7E1}\u{1F535}]\d+)+$/u;
-  var baseTitle = document.title.replace(DOTS, '');
-  function tabDots(fresh, started) {
-    document.title = baseTitle + (started ? ' \u{1F535}' + started : '') + (fresh ? ' \u{1F7E1}' + fresh : '');
-  }
+  //the tab's dots (static/js/tabdots.js)
+  function tabDots(fresh, started) { if (window.qgenTabDots) window.qgenTabDots(fresh, started); }
 
   function check() {
     if (document.hidden) return;
@@ -662,7 +657,7 @@
     var shown = e.target.closest('dialog.panel-dialog [data-check-shown]');
     if (shown) {
       shown.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) {
-        var li = c.closest('li');
+        var li = c.closest('tr');
         if (!li.hidden && !li.closest('[hidden]')) c.checked = true;
       });
       countChecked(shown.closest('dialog'));
@@ -679,15 +674,31 @@
     if (c) c.textContent = d.querySelectorAll('input[name=students]:checked').length + ' checked';
   }
   document.addEventListener('change', function (e) {
-    if (e.target.name === 'students') countChecked(e.target.closest('dialog.panel-dialog'));
+    if (e.target.name !== 'students') return;
+    var d = e.target.closest('dialog.panel-dialog');
+    countChecked(d);
+    var said = d && d.querySelector('[data-none-checked]');
+    if (said) said.hidden = true;
   });
-  //nobody checked: say so before sending
+  //nobody checked: say so in the dialog itself, above its buttons (never the browser's alert()
+  //pop-up: the code critic, 2026-10-20)
   document.addEventListener('submit', function (e) {
     var d = e.target.closest('dialog.panel-dialog');
     if (!d || !d.querySelector('input[name=students]')) return;
     if (!d.querySelector('input[name=students]:checked')) {
       e.preventDefault();
-      window.alert('Check at least one student.');
+      var said = d.querySelector('[data-none-checked]');
+      if (!said) {
+        said = document.createElement('p');
+        said.className = 'error small';
+        said.setAttribute('data-none-checked', '');
+        said.setAttribute('role', 'alert');
+        said.textContent = 'Check at least one student.';
+        var rows = d.querySelectorAll('.btn-row');
+        var last = rows[rows.length - 1];
+        if (last) last.parentNode.insertBefore(said, last); else d.appendChild(said);
+      }
+      said.hidden = false;
     }
   });
 

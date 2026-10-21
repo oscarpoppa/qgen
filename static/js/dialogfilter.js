@@ -63,6 +63,14 @@
       records.forEach(function (r) {
         var d = r.target;
         if (r.attributeName === 'open' && d.open && d.matches && d.matches('dialog.put-dialog')) setTimeout(function () { setup(d); }, 0);
+        //every dialog with a filter opens with the cursor in it, ready to type (not on a touch
+        //screen, where that would pop up the keyboard: the user critic, 2026-10-20)
+        if (r.attributeName === 'open' && d.open && d.tagName === 'DIALOG' && !matchMedia('(pointer: coarse)').matches) {
+          setTimeout(function () {
+            var f = d.querySelector('input.filter-list');
+            if (f && f.offsetParent) f.focus();
+          }, 30);
+        }
       });
     }).observe(document.body, { attributes: true, attributeFilter: ['open'], subtree: true });
   }

@@ -400,8 +400,12 @@ def subject_named(kind, name):
     try:
         return create_subject(kind, name)
     except ServiceError:
-        #made by someone else a moment ago
-        return next(g for g in subjects(kind) if (g.title or '').lower() == name.lower())
+        #made by someone else a moment ago (two folder drops at once); any other reason (a name
+        #too long...) is said as it is, not lost in a search that finds nothing (code critic, 2026-10-20)
+        made = next((g for g in subjects(kind) if (g.title or '').lower() == name.lower()), None)
+        if made is None:
+            raise
+        return made
 
 
 def valid_subject_choice(kind, choice):
@@ -1139,8 +1143,12 @@ def ensure_archive_folders():
     by_id = {f.student_id: f for f in ArchiveFolder.query.filter(ArchiveFolder.student_id.isnot(None))}
     names = {}
     for sid, f in by_id.items():
-        names.setdefault((f.name or '').lower(), []).append(f)
-    for old in ArchiveFolder.query.filter(ArchiveFolder.student_id.is_(None)).all():
+        if not f.removed:
+            names.setdefault((f.name or '').lower(), []).append(f)
+    #(never a folder the teacher named or removed: those are the teacher's own, found by the code
+    #critic, 2026-10-20)
+    for old in ArchiveFolder.query.filter(ArchiveFolder.student_id.is_(None), ArchiveFolder.own_name.is_(False),
+                                          ArchiveFolder.removed.is_(False)).all():
         twins = names.get((old.name or '').lower(), [])
         if len(twins) != 1 or ArchiveFolder.query.filter_by(parent_id=old.id).first() is not None:
             continue
@@ -1212,7 +1220,8 @@ def create_archive_folder(name, parent=None):
         folder_tree.check_new(ArchiveFolder, parent)
     except folder_tree.FolderError as exc:
         raise ServiceError(str(exc))
-    folder = ArchiveFolder(name=_folder_name(name), parent_id=parent.id if parent else None)
+    #(own_name: named by the teacher, so it's never merged into a student's folder of the same name)
+    folder = ArchiveFolder(name=_folder_name(name), parent_id=parent.id if parent else None, own_name=True)
     db.session.add(folder)
     db.session.commit()
     return folder

@@ -82,7 +82,7 @@ def test_open_and_close_window(app_db):
     assert 'name="Number1"' not in page  # no questions
     home = sam.get('/mypage').data.decode()
     assert "You can't start this yet. It opens" in home and 'disabled' in home
-    assert 'Start</span></a>' not in home  # no way in
+    assert 'title="Start: begin this quiz"' not in home  # no way in (only the grayed Start)
     # handing in or saving answers early is refused too
     sam.post('/quiz/take/{}'.format(cq.id), data={'Number1': '4'})
     assert sam.post('/quiz/take/{}/save'.format(cq.id), data={'Number1': '4'}).status_code == 409
@@ -500,10 +500,10 @@ def test_attempt_rows_use_the_small_results_button(app_db):
         again = S.retake(cq)
         S.submit(again, {1: '4'})
     home = sam.get('/mypage').data.decode()
-    # several attempts: one line each, each with its own small View (and the row's own View for
-    # the latest: every attempt has its icon, the owner 2026-10-20)
-    assert home.count('class="attempt-row"') == 2 and home.count('class="icon-link" href="/quiz/take/') == 3
-    assert 'View</span></a>' in home and '>View results</a>' not in home
+    # several attempts: one line each, each with its own small View, and none on the quiz's own row
+    # (every button on the attempt it means: the owner, 2026-10-20)
+    assert home.count('class="attempt-row"') == 2 and home.count('class="icon-link" href="/quiz/take/') == 2
+    assert 'aria-label="View"' in home and '>View results</a>' not in home
 
 
 def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
@@ -543,13 +543,13 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('numeric', 'N', 'What is 2 + 2?', '4', []))
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
-    # one not started yet isn't an attempt ("New" says so)
-    assert 'class="badge box-count">' not in sam.get('/mypage').data.decode().split('class="box row-fold quiz-card')[1].split('</summary>')[0]
+    # an attempt is any one copy, a new one not started yet too (the owner, 2026-10-21)
+    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
-    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()  # (one handed in, one new)
     with app.test_request_context():
         S.submit(CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first(), {1: '4'})
     assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()
@@ -858,8 +858,8 @@ def test_results_by_quiz(app_db):
     assert 'Average 0%' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(one quiz's history: a row per student in People's folders, not one box for the quiz)
-    assert '<h1>Quiz history: Settings quiz</h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
-    assert '<tr data-box="student:{}"'.format(student(db, 'sam').id) in one and '<tr data-box="student:{}"'.format(student(db, 'kim').id) in one
+    assert 'Quiz history:</span> <span class="title-name">Settings quiz</span></h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
+    assert 'data-box="student:{}"'.format(student(db, 'sam').id) in one and 'data-box="student:{}"'.format(student(db, 'kim').id) in one
     assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Results by quiz
     # where it's linked from
     assert '/quiz/results' in teacher.get('/dashboard').data.decode()
@@ -996,7 +996,7 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
     card = page[page.index('data-quiz="{}"'.format(vq.id)):]
     card = card[:card.index('</tr>')]
-    assert 'Start</span></a>' in card  # its row offers the try still waiting (quizzes are rows now)
+    assert 'aria-label="Start"' in card  # its row offers the try still waiting (quizzes are rows now)
     results = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'data-state="out"' in results
     student_page = teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()
@@ -1004,5 +1004,5 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     S.submit(older, {1: '4'})  # all handed in: nothing to start, and a retake can be given again
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
     card = page[page.index('data-quiz="{}"'.format(vq.id)):]
-    assert 'Start</span></a>' not in card[:card.index('</tr>')]
+    assert 'aria-label="Start"' not in card[:card.index('</tr>')]
     assert 'Give sam another attempt' in teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()

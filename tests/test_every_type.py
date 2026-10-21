@@ -191,20 +191,28 @@ def test_problem_history(app_db):
         for cq in CQuiz.query.filter_by(assignee=User.query.filter_by(username=name).one().id):
             take_page(s, cq.id)
             s.post('/quiz/take/{}'.format(cq.id), data={'Number1': answers[name] if cq.vquiz.title == 'Geo 1' else 'Paris'})
+    # "Lyon" isn't an accepted answer: it waits for the teacher (it might have been a misspelling:
+    # the owner, 2026-10-20), who marks it wrong
+    for cq in CQuiz.query.filter_by(needs_review=True).all():
+        cp = cq.cproblems[0]
+        teacher.post('/quiz/review/{}'.format(cq.id), data={'items-0-cpid': cp.id, 'items-0-credit': 0, 'finalize': 'Finish'})
     page = teacher.get('/quiz/listvp').data.decode()
     assert 'href="/quiz/problem-results/{}"'.format(vp.id) in page
     page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
     sensible(page, 'problem history')
-    assert '<h1>Problem history: Capital</h1>' in page and 'History</span></a>' in teacher.get('/quiz/listvp').data.decode()  # (an icon button: its words for screen readers)
+    assert 'Problem history:</span> <span class="title-name">Capital</span></h1>' in page  # (two lines: the owner, 2026-10-21)
+    assert 'aria-label="History"' in teacher.get('/quiz/listvp').data.decode()
+    assert True and 'aria-label="History"' in teacher.get('/quiz/listvp').data.decode()  # (an icon button: its words for screen readers)
     # Expand all / Collapse all over its quizzes (the page is laid out in the Quizzes page's folders now)
-    assert 'data-level="open" aria-label="Expand all in Problem history: Capital"' in page
-    assert '<h1>Quiz history: Geo 1</h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
+    assert 'data-level="open" aria-label="Expand all in All quizzes"' in page
+    assert 'Quiz history:</span> <span class="title-name">Geo 1</span></h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
     home = login(app, 'sam').get('/home').data.decode()
     assert 'data-level-of="#home-boxes"' in home and 'id="home-boxes"' in home
     assert '4 answers from 2 students' in page and 'Average 50%' in page and '2 fully right' in page
     #(each answer a row, "student quiz", inside its quiz's box, which is named too)
     assert 'Geo 1' in page and 'Geo 2' in page and page.count('data-name="sam  geo') + page.count('data-name="kim  geo') == 4
-    assert 'data-name="geo 1"' in page and 'data-name="geo 2"' in page
+    #(each quiz a row, named for the filter by its title and the students who answered there: the owner, 2026-10-21)
+    assert 'data-name="geo 1 ' in page and 'data-name="geo 2 ' in page
     assert 'Most common wrong answers' in page and '<strong>Lyon</strong> <span class="muted">(2 times)</span>' in page
     assert teacher.get('/quiz/problem-results/999').status_code == 302  # gone: back to Problems
     assert login(app, 'sam').get('/quiz/problem-results/{}'.format(vp.id)).status_code == 302  # teachers only

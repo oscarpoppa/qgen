@@ -10,8 +10,8 @@
  * list does (data-drop). Works with the name filter: each hides with its own flag (filter.js). */
 (function () {
   var uid = 0;
-  function setUp(box) {
-    if (box.qgenFolderFilter) return;
+  function setUp(box, early) {
+    if (box.qgenFolderFilter) { if (!early && box.qgenAfterRows) box.qgenAfterRows(); return; }
     box.qgenFolderFilter = true;
     var data = box.querySelector('.folder-filter-tree'), list = box.querySelector('.folder-filter-list');
     if (!data || !list) return;
@@ -33,7 +33,12 @@
     }
     var inSome = {};
     tree.forEach(function (n) { if (typeof n.id === 'number') n.keys.forEach(function (k) { inSome[k] = 1; }); });  // (New, In progress: not folders)
-    var loose = weigh(items().filter(function (el) { return !inSome[keyOf(el)]; }));
+    //(drawn early, as soon as the list starts arriving: the counts the rows would give come from the
+    //server, data-total and data-loose, so the tabs show at once instead of after a long list has
+    //all arrived, a second on Problems; the owner, 2026-10-21)
+    var known = early && box.dataset.total !== undefined;
+    function allCount() { return known ? +box.dataset.total : weigh(items()); }
+    var loose = known ? +box.dataset.loose : weigh(items().filter(function (el) { return !inSome[keyOf(el)]; }));
     //(what the counts count: the things, or e.g. Grading's attempts waiting, data-count-unit, each
     //thing then weighing its data-weight: the owner, 2026-10-19)
     var cUnit = box.dataset.countUnit || unit, cUnits = box.dataset.countUnits || units;
@@ -65,13 +70,12 @@
       b.title = 'Show ' + (id === 'all' ? 'everything' : 'what’s in “' + label + '”');
       //(a real folder opens its own page on a double-click: said here, the owner 2026-10-16)
       if (/^\d+$/.test(id) || (byId[id] && byId[id].url)) b.title += ' (double-click: open this folder)';
-      //(nothing in it: grayed; and with no folders inside either, it doesn't open (the folder list
-      //still opens it, for its Folder options); one holding only empty folders opens, to show
-      //them: the owner, 2026-10-14)
+      //(nothing in it: grayed, and it still opens, saying it's empty, from a tab as from the folder
+      //list, on every page: the owner, 2026-10-21; it didn't open from a tab, 2026-10-14)
       if (!n && id !== 'all') {
         b.classList.add('is-empty');
         var kids = byId[id] && byId[id].children;
-        if (!(kids && kids.length)) { b.disabled = true; b.title = 'Nothing in “' + label + '” yet'; }
+        if (!(kids && kids.length)) b.title = 'Nothing in “' + label + '” yet';
       }
       if ('droppable' in box.dataset && id !== 'all' && (id === 'none' || /^\d+$/.test(id))) b.dataset.drop = id === 'none' ? 'top' : id;
       return b;
@@ -80,12 +84,13 @@
     //the page starts on All; only coming back to it from itself (a button here that reloads it,
     //e.g. a move or a drop) keeps the folder that was chosen
     //(data-start: the tab an address asks for, e.g. My quizzes?folder=new from Home)
-    var chosen = box.dataset.start || 'all', fromHere = false;
-    try { fromHere = !!document.referrer && new URL(document.referrer).pathname === location.pathname; } catch (e) {}
-    try { if (fromHere && !box.dataset.start) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
+    var chosen = box.dataset.start || 'all';
+    //(the folder last open here, however the page is reached, the menu too: every page keeps its
+    //state, the owner 2026-10-21; it used to be only when coming from this same page)
+    try { if (!box.dataset.start) chosen = sessionStorage.getItem(memKey) || 'all'; } catch (e) {}
     //a folder page's own list (data-url-tab) keeps its chosen tab in the address (?tab=), so
     //coming back to it (Save in an editor, a Move, a Delete, the browser's Back) opens the same
-    //folder; the menus' links have no ?tab=, so a fresh visit still starts on All
+    //folder, whatever was open last
     var urlTab = 'urlTab' in box.dataset ? new URLSearchParams(location.search).get('tab') : null;
     if (urlTab) chosen = urlTab;
     function keepInAddress() {
@@ -139,7 +144,9 @@
         btn.setAttribute('aria-label', b[1] + ' in ' + label);
         pair.appendChild(btn);
       });
-      span.appendChild(pair);
+      //(not on a picker, a dialog's or the Assign page's list: its rows never fold, so it would only
+      //ever be grayed: the owner, 2026-10-21)
+      if (!list.querySelector('table.pick-table')) span.appendChild(pair);
       var t = box.querySelector('template.folder-filter-tools[data-for="' + id + '"]');
       if (t) span.appendChild(t.content.cloneNode(true));
       var n = byId[id], url = n ? n.url : id === null ? box.dataset.mainUrl : '';
@@ -161,6 +168,33 @@
       }
       return tabs;
     }
+    //a list whose things carry a score (data-score: a quiz's history, each student's score that counts):
+    //each folder tab shows the average of the scores in it, beside its count (the owner, 2026-10-21)
+    function averages() {
+      var scored = items().filter(function (el) { return el.dataset.score !== undefined && el.dataset.score !== ''; });
+      if (!scored.length) return;
+      box.querySelectorAll('.folder-tab').forEach(function (t) {
+        var id = t.dataset.folder;
+        if (id === undefined) return;
+        var keep = id === 'all' ? null : id === 'none' ? 'none' : id.indexOf('self:') === 0 ? own(byId[id.slice(5)]) : byId[id] ? byId[id].keySet : null;
+        if (keep === null && id !== 'all') return;
+        var vals = scored.filter(function (el) { var k = keyOf(el); return keep === null ? true : keep === 'none' ? !inSome[k] : !!keep[k]; })
+          .map(function (el) { return +el.dataset.score; });
+        var old = t.querySelector('.tab-average');
+        if (old) old.remove();
+        if (!vals.length) return;
+        var avg = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+        var b = document.createElement('span');
+        //(green, amber or red as the Score colors say, like every score badge: app/tuning.py score_class)
+        var cut = scored[0].closest('[data-score-green]'), green = cut ? +cut.dataset.scoreGreen : 0, amber = cut ? +cut.dataset.scoreAmber : 0;
+        b.className = 'badge tab-average ' + (avg >= green ? 'badge-ok' : avg >= amber ? 'badge-warn' : 'badge-bad');
+        b.textContent = 'Average ' + Math.round(avg) + '%';
+        b.title = 'The average of the scores that count, for the ' + vals.length + ' ' + (vals.length === 1 ? 'student' : 'students') + ' here with one';
+        var c = t.querySelector('.box-count');
+        if (c) c.after(b); else t.appendChild(b);
+      });
+    }
+
     function draw() {
       rows.textContent = '';
       var p = path();
@@ -227,7 +261,7 @@
           col.appendChild(r);
           return r;
         }
-        var allBtn = button('all', box.dataset.allLabel || 'All', weigh(items()), 'folders');
+        var allBtn = button('all', box.dataset.allLabel || 'All', allCount(), 'folders');
         allBtn.classList.add('folder-tab-all');
         sideRow(allBtn, 1, null);
         (function walk(nodes, depth) {
@@ -267,7 +301,7 @@
             saveFold(); drawFolds();
           });
         });
-        if (!folds.length) levels.querySelectorAll('button').forEach(function (lb) { lb.disabled = true; lb.title = lb.textContent.trim() + ': No folder here has folders inside it'; });
+        if (!folds.length) levels.querySelectorAll('button').forEach(function (lb) { lb.disabled = true; var w = lb.textContent.trim() || ((lb.querySelector('svg[aria-label]') || {}).getAttribute ? lb.querySelector('svg[aria-label]').getAttribute('aria-label') : ''); lb.title = w + ': No folder here has folders inside it'; /* (an icon's words are on its drawing) */ });
         else levels.addEventListener('click', function (e) {
           var lb = e.target.closest('[data-side-level]');
           if (!lb) return;
@@ -298,7 +332,7 @@
         //(My quizzes gives the name as data-tab-name: its empty folder has its own note)
         var plain = box.dataset.allUrl === '' && noFolders && (box.dataset.tabName || box.dataset.name);
         //(data-tab-icon: Uncategorized's tray, New's sparkle...: every open folder has its tab, the owner 2026-10-16)
-        var allTab = button('all', plain || (box.dataset.allLabel || 'All'), weigh(items()), plain ? (box.dataset.tabIcon || 'folder') : 'folders');
+        var allTab = button('all', plain || (box.dataset.allLabel || 'All'), allCount(), plain ? (box.dataset.tabIcon || 'folder') : 'folders');
         allTab.classList.add('folder-tab-all');
         if (plain) { allTab.classList.add('folder-tab-name'); allTab.title = 'Everything in “' + plain + '”'; }
         row.appendChild(allTab);
@@ -310,7 +344,7 @@
         //(a folder's own page with no folders inside: no tabs, just its things, as above)
         if (box.dataset.allUrl === '' && noFolders) row.classList.add('folder-tabs-plain');
         //(a folder's own page, empty: just its folders' tabs, grayed, as in the folder list)
-        else if (box.dataset.allUrl === '' && !items().length) { row.classList.add('folder-tabs-empty'); none.classList.add('folder-tab-self'); }
+        else if (box.dataset.allUrl === '' && !allCount()) { row.classList.add('folder-tabs-empty'); none.classList.add('folder-tab-self'); }
         host.appendChild(row);
         //a row for the folders inside each chosen folder
         p.forEach(function (id) {
@@ -330,7 +364,7 @@
           //last, what's in the folder itself and in none of the folders inside it (like Uncategorized
           //at the top); grayed out when there are no folders inside, since it's the same as All in
           //(no folders inside: nothing is "left over", so it counts 0, not everything in the folder)
-          var mineKeys = n.children.length ? own(n) : {}, mine = weigh(items().filter(function (el) { return mineKeys[keyOf(el)]; }));
+          var mineKeys = n.children.length ? own(n) : {}, mine = known ? Object.keys(mineKeys).length : weigh(items().filter(function (el) { return mineKeys[keyOf(el)]; }));
           var self = button('self:' + n.id, 'Unsorted', mine, 'tray');
           self.classList.add('folder-tab-self');
           self.setAttribute('aria-label', 'Unsorted in “' + n.name + '”');
@@ -587,6 +621,7 @@
       //(how to fill an empty folder, where the page says (My quizzes): the owner, 2026-10-16)
       if (box.dataset.emptyHint && (bare || /^\d+$/.test(chosen)) && /yet\.$/.test(note.textContent)) note.textContent += ' ' + box.dataset.emptyHint;
       oneTab();
+      averages();
       tidy();
       setTimeout(fitHeight, 0);
       document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
@@ -664,22 +699,12 @@
         var lp = box.qgenTabPair, nd = byId[tabEl.dataset.folder];
         if (lp && !tabEl.closest('.folder-filter-side') && !(nd && nd.children && nd.children.length && !tabEl.classList.contains('folder-tab-all')) && !box.querySelector(':scope > .folder-filter-onetab') && tabEl.parentNode && tabEl.nextSibling !== lp) tabEl.parentNode.insertBefore(lp, tabEl.nextSibling);
       }
-      pendingPick = setTimeout(function () { pendingPick = null; if (!leaving) choose(id); }, 300);
+      //(at once: no waiting to see whether a double-click follows, there's none now; the owner,
+      //2026-10-21: the "Open this folder" icon at the end of the open tab's row goes into it)
+      pendingPick = null;
+      if (!leaving) choose(id);
     }
-    box.addEventListener('pointerdown', function (e) {
-      var rowsHit = e.target.closest('.folder-filter-rows');
-      if (e.button || !rowsHit || rowsHit.parentElement !== box) { lastDown = null; return; }
-      var t = e.target.closest('.folder-tab'), now = Date.now();
-      if (lastDown && now - lastDown.t < 600 && Math.abs(e.clientX - lastDown.x) < 8 && Math.abs(e.clientY - lastDown.y) < 8) {
-        var id0 = lastDown.id;
-        lastDown = null;
-        var url0 = byId[id0] && byId[id0].url ? byId[id0].url : id0 === 'none' ? box.dataset.mainUrl : id0 === 'all' ? (box.dataset.allOwnUrl || box.dataset.allUrl) : '';
-        if (url0) { var to0 = new URL(url0, location.href); if (to0.pathname === location.pathname && to0.search === location.search) url0 = ''; }
-        if (url0) { e.preventDefault(); clearTimeout(pendingPick); leaving = true; rememberBack(url0, id0); location.href = url0; }
-        return;
-      }
-      lastDown = t && !t.disabled ? { id: t.dataset.folder, t: now, x: e.clientX, y: e.clientY } : null;
-    });
+    //(no double-click on a tab any more: the owner, 2026-10-21)
     box.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');
       //(a double-click whose first click moved the tab away, to the bottom line: the second
@@ -687,7 +712,7 @@
       var rowsHit = e.target.closest('.folder-filter-rows');
       //(a second click on the same spot within 600ms is a double-click, even when the first one
       //redrew the tabs and the browser started counting again)
-      var again = lastClick && Date.now() - lastClick.t < 600 && Math.abs(e.clientX - lastClick.x) < 8 && Math.abs(e.clientY - lastClick.y) < 8;
+      var again = false;  // (no double-click on a tab any more: the owner, 2026-10-21)
       if (!b && rowsHit && rowsHit.parentElement === box && again) b = { dataset: { folder: lastClick.id }, classList: { contains: function () { return false; } }, closest: function () { return rowsHit; } };
       if (leaving) return;
       if (!b || b.disabled || !b.closest('.folder-filter-rows') || b.closest('.folder-filter-rows').parentElement !== box) return;
@@ -695,7 +720,7 @@
       //double-click a folder's tab: go into that folder (its own page, like "Open this folder");
       //Uncategorized's too (the owner, 2026-10-15). (Counted here, not by dblclick: the first
       //click can move the tab, to the bottom line, so the second lands on another one.)
-      var now = Date.now(), first = again || (lastClick && e.detail >= 2 && now - lastClick.t < 600) ? lastClick.id : null;
+      var now = Date.now(), first = null;
       lastClick = first ? null : { id: id, t: now, x: e.clientX, y: e.clientY };
       if (first) {
         //(the automatic ones too, New and In progress on My quizzes, and All: each opens its own
@@ -720,6 +745,8 @@
       return null;
     }
     function markSide() {
+      //(only the page's own list, the one in the address: never a picker's in a dialog or a card)
+      if (!('urlTab' in box.dataset)) return;
       //(phones: the folded folder list's line names what's open)
       var now = document.querySelector('.folder-side-now');
       if (now && 'urlTab' in box.dataset) now.textContent = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen] ? byId[chosen].name : now.textContent;
@@ -730,7 +757,16 @@
         a.closest('.side-row').classList.toggle('current', on);
         if (on && window.qgenSideReveal) window.qgenSideReveal(id);
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+        if (on) centerSide(a.closest('.side-row'));
       });
+    }
+    //the folder open now sits in the middle of the folder list, by its tab or the list (the owner,
+    //2026-10-20); only the list scrolls, never the page
+    function centerSide(row) {
+      var sc = row.closest('.side-scroll');
+      if (!sc || sc.scrollHeight <= sc.clientHeight + 1) return;
+      var r = row.getBoundingClientRect(), c = sc.getBoundingClientRect();
+      sc.scrollTop += (r.top + r.height / 2) - (c.top + sc.clientHeight / 2);
     }
     document.addEventListener('click', function (e) {
       var a = e.target.closest && e.target.closest('.side-row a[href]');
@@ -743,7 +779,8 @@
     //the page's heading names what's shown: the folder chosen (the All label to begin with)
     //(opened on another tab, e.g. My quizzes' New from Home: the server's heading is that tab's,
     //so All gets the All label)
-    var heading = document.getElementById('folder-title'), startedOnAll = !box.dataset.start || box.dataset.start === 'all';
+    //(only the page's own list names the heading over it; never a picker's, in a dialog or a card)
+    var heading = box.closest('.folder-main') ? document.getElementById('folder-title') : null, startedOnAll = !box.dataset.start || box.dataset.start === 'all';
     var headingWas = heading && startedOnAll ? heading.innerHTML : '';
     //(the owner, 2026-10-14: the heading names the folder chosen, by its tab or the side list,
     //with its whole path from the top: "Science › physics"; "Uncategorized"; a folder's own
@@ -756,10 +793,13 @@
       //(the owner, 2026-10-15) the open folder's name with its path from the top: "Math › Fractions";
       //a folder's own things: "Math › Unsorted"; Uncategorized as is; All: the page's name. On a
       //folder's own page the path starts with that folder's own (the server's heading)
+      //(All: its own name, "All quizzes", like every other folder; not the page's name, which is over
+      //the folder list already: the owner, 2026-10-21)
       function pageName() {
-        if (heading.dataset.pageName) heading.textContent = heading.dataset.pageName;
+        if (box.dataset.allLabel) heading.textContent = box.dataset.allLabel;
+        else if (heading.dataset.pageName) heading.textContent = heading.dataset.pageName;
         else if (headingWas) heading.innerHTML = headingWas;
-        else heading.textContent = box.dataset.allLabel || 'All';
+        else heading.textContent = 'All';
       }
       if (chosen === 'all') { if (inner) heading.innerHTML = headingOwn; else pageName(); return; }
       if (chosen === 'none' && !inner) { heading.textContent = box.dataset.mainLabel || 'Uncategorized'; return; }
@@ -787,15 +827,34 @@
       retitle();
     }
     draw();
-    apply();
-    //what was just saved (?show=, lit up) is in another folder than the tab kept in the address:
-    //open All, so it's in sight
-    var saved = list.querySelector('[data-show]');
-    if (saved && chosen !== 'all' && (saved.hidden || saved.closest('[hidden]'))) { choose('all'); saved.scrollIntoView({ block: 'center' }); }
-    markSide();
-    retitle();
+    //(drawn early: what's shown is sorted out once every row has arrived, the list kept out of
+    //sight meanwhile unless everything shows anyway)
+    function afterRows() {
+      box.qgenAfterRows = null;
+      known = false;
+      apply();
+      list.style.visibility = '';
+      //what was just saved (?show=, lit up) is in another folder than the tab kept in the address:
+      //open All, so it's in sight
+      var saved = list.querySelector('[data-show]');
+      if (saved && chosen !== 'all' && (saved.hidden || saved.closest('[hidden]'))) { choose('all'); saved.scrollIntoView({ block: 'center' }); }
+      markSide();
+      retitle();
+    }
+    if (early) {
+      if (chosen !== 'all') list.style.visibility = 'hidden';
+      markSide();
+      retitle();
+      box.qgenAfterRows = afterRows;
+    } else afterRows();
   }
-  function all() { document.querySelectorAll('[data-folder-filter]').forEach(setUp); }
+  //(called from the page as soon as a list starts arriving: _folders.html)
+  //(only where the server gave the counts, data-total: elsewhere, e.g. Grading's attempts, the tabs
+  //wait for the rows as before)
+  window.qgenFolderFilterEarly = function (box) { if (box && box.dataset.total !== undefined) setUp(box, true); };
+  //(setUp(box), never forEach(setUp): forEach's index would come in as `early` and leave every list
+  //after the first waiting for rows that are already there)
+  function all() { document.querySelectorAll('[data-folder-filter]').forEach(function (box) { setUp(box); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
 })();
 

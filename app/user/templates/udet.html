@@ -16,8 +16,8 @@
 {% macro people_table(people, here) %}
   {% if people %}
   <div class="table-wrap stack">
-    <table class="people-table">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Folders</th><th>Created</th><th></th></tr></thead>
+    <table class="people-table even-cols">
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Created</th><th>Folders</th><th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -25,17 +25,19 @@
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span>
-              {# online now: a green dot after the name; a teacher: the badge right after the name #}
+              {# online now: a green dot on the picture's corner; a teacher: the badge at the right end of
+                 the name cell, so both line up down the column whatever the name's length (the user
+                 critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
-                    title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{{ avatar(item, 28) }}<strong class="box-title">{{ item.shown_name }}</strong>{% if item.is_admin %}<span class="badge badge-accent" title="Teacher">Teacher</span>{% endif %}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span></summary>
+                    title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title">{{ item.shown_name }}</strong>{% if item.is_admin %}<span class="badge badge-accent person-role" title="Teacher">Teacher</span>{% endif %}</span></summary>
             <ul class="quiz-facts small muted">
               <li>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</li>
               <li>Last seen: {% if item.online %}online now{% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>{% else %}<span title="Not since the site began keeping track">never</span>{% endif %}</li>
               {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
             </ul></details></td>
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
-          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td class="actions">
             {% if in_archive %}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
@@ -70,8 +72,9 @@
 {% block content %}
 {% if in_archive %}
 <div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
-<p class="muted page-intro">People moved to the Archive: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
-  They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.</p>
+{#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
+{% set archive_note %}People moved to the Archive: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
+  They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.{% endset %}
 {% else %}
 {# (no Sign-up & site settings button here: it's More › Settings; the owner, 2026-10-16) #}
 <div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}</div>
@@ -79,9 +82,10 @@
 
 {% set actions %}{% if in_archive %}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
 {% if in_archive and not ulst %}
+  <p class="muted page-intro">{{ archive_note }}</p>
   <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>
 {% else %}
-{% call folders_page(fk, actions) %}
+{% call folders_page(fk, actions, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true) }}
       {# the checked people: in a folder, or out of it; the same bar as the Problems and Quizzes
          pages' (grayed until someone is checked: static/js/folders.js; out of someone's only
@@ -117,5 +121,5 @@
 {% include "_dialog_assign_people.html" %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/namewidth.js') }}" defer></script>
 <script src="{{ asset('js/assign_people.js') }}"></script>{% endblock %}

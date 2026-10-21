@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  {# the tab: just the page's name, then 🔵 unfinished quizzes and 🟡 new ones after it, nothing
-     more (the owner, 2026-10-20; static/js/messages.js keeps the counts up to date) #}
+  {# the tab: just the page's name; unfinished quizzes (blue) and new ones (gold) are small dots one
+     above the other on the tab's icon, left of the name (the owner, 2026-10-20: emoji in the title
+     were too big; static/js/messages.js draws them and keeps them up to date) #}
   {% set tab_new, tab_started = tab_counts() %}
-  <title>{{ title or 'Quizzes' }}{% if tab_started %} 🔵{{ tab_started }}{% endif %}{% if tab_new %} 🟡{{ tab_new }}{% endif %}</title>
+  <meta name="tab-counts" content="{{ tab_new or 0 }},{{ tab_started or 0 }}">
+  <title>{{ title or 'Quizzes' }}</title>
   {% if site %}{% set s_icon = site() %}{% if s_icon.icon %}
   <link rel="icon" {% if s_icon.icon_svg %}type="image/svg+xml"{% else %}type="image/png" sizes="32x32"{% endif %} href="{{ url_for('user.site_icon', size=32, v=s_icon.icon) }}">
   <link rel="apple-touch-icon" href="{{ url_for('user.site_icon', size=180, v=s_icon.icon) }}">{% endif %}{% endif %}
@@ -17,7 +19,24 @@
        student can't slip a harmful link into an answer a teacher reads */
     window.MathJax = { loader: { load: ['ui/safe'] } };
   </script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  {#- the math display, only on a page that has math on it (between \( \), \[ \] or $$) or shows it
+      while you type (the problem editor's preview): loading it and having it look through a long
+      list for math took 0.15 s on Problems (the owner, 2026-10-21: page speed). window.qgenNeedMath()
+      loads it for something drawn later. #}
+  <script>
+    (function () {
+      var src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      window.qgenNeedMath = function () {
+        if (document.getElementById('MathJax-script')) return;
+        var s = document.createElement('script');
+        s.id = 'MathJax-script'; s.async = true; s.src = src;
+        document.head.appendChild(s);
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        if (document.querySelector('.math-preview, [data-math]') || /\\\(|\\\[|\$\$/.test(document.body.textContent)) window.qgenNeedMath();
+      });
+    })();
+  </script>
   {% if current_user.is_authenticated %}
   <script>
     /* the side panels are pinned unless someone unpins them (the owner, 2026-10-14): they sit
@@ -46,10 +65,13 @@
   {% endif %}
   {% block head %}{% endblock %}
   {{ icon_script() }}
+  {#- (in the head, not at the end: a folder page's list starts its tabs as soon as it begins to
+      arrive, _folders.html; the owner, 2026-10-21) #}
+  <script src="{{ asset('js/folderfilter.js') }}"></script>
 </head>
 <body{% block body_attrs %}{% endblock %}>
 {{ icon_sprite() }}
-<a class="skip-link" href="#main" title="Jump past the menu to this page's main part">Skip to content</a>
+<a class="skip-link" href="#main" title="Jump past the menu to this page’s main part">Skip to content</a>
 {% if config.SANDBOX %}<div class="sandbox-bar" role="note">{{ icon('warning') }} <strong>SANDBOX</strong> · a practice copy for testing. Nothing here is on the real site.</div>{% endif %}
   <header class="topbar">
     <div class="topbar-inner">
@@ -68,9 +90,9 @@
           {% if current_user.is_admin %}{% set nav_online = online_count() %}
           {# who's on the site (teachers only); the list loads when opened #}
           <details class="menu online-menu" data-url="{{ url_for('qgen.dashboard_online') }}" data-dashboard="{{ url_for('qgen.dashboard') }}">
-            <summary class="online-btn" title="See who's on the site right now"><span class="online-dot" aria-hidden="true"></span>
+            <summary class="online-btn" title="See who’s on the site right now"><span class="online-dot" aria-hidden="true"></span>
               <span class="nav-online">{{ nav_online }}</span><span class="dock-btn-label">online</span></summary>
-            <div class="online-pop" role="region" aria-label="Who's online"><p class="muted small">Loading…</p></div>
+            <div class="online-pop" role="region" aria-label="Who’s online"><p class="muted small">Loading…</p></div>
           </details>
           {% endif %}
           <button type="button" class="dock-btn" data-pane="notices" aria-controls="dock-notices" aria-expanded="false" title="Show or hide the notices panel (news about {{ 'your classes' if current_user.is_admin else 'your quizzes' }})">
@@ -115,9 +137,9 @@
                 {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz'), tip='Browse, edit and organize every quiz') }}
                 {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
                 {{ item('qgen.assign', 'Assign a quiz', tip='Give a quiz to students or groups, with a due date') }}
-                {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student\'s score on it') }}
+                {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student’s score on it') }}
                 {# (the same page as People's Results: the owner, 2026-10-15) #}
-                {{ item('qgen.list_users', 'Results by student', tip='Every student\'s quizzes, attempts and scores') }}
+                {{ item('qgen.list_users', 'Results by student', tip='Every student’s quizzes, attempts and scores') }}
               </div>
             </details>
             {# written answers waiting for grading; kept current by messages.js #}
@@ -141,12 +163,12 @@
                   <div class="menu-list">
                     {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
                     {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
-                    {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren\'t pictures') }}
+                    {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren’t pictures') }}
                   </div>
                 </details>
                 {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
                 {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
-                {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn't have">Scan workbook pages</span>{% endif %}
+                {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan workbook pages</span>{% endif %}
                 <hr class="menu-rule">
                 {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
               </div>
@@ -336,7 +358,6 @@
   <script src="{{ asset('js/foldertabs.js') }}" defer></script>
   <script src="{{ asset('js/place.js') }}" defer></script>
   <script src="{{ asset('js/filter.js') }}" defer></script>
-  <script src="{{ asset('js/folderfilter.js') }}" defer></script>
   <script src="{{ asset('js/dialogfilter.js') }}" defer></script>
   <script src="{{ asset('js/sorttable.js') }}" defer></script>
   <script src="{{ asset('js/dividers.js') }}" defer></script>
@@ -345,7 +366,10 @@
   <script src="{{ asset('js/splitter.js') }}" defer></script>
   <script src="{{ asset('js/trail.js') }}"{% if current_user.is_authenticated %} data-signed-in{% endif %} defer></script>
   <script src="{{ asset('js/keep.js') }}" defer></script>
+  <script src="{{ asset('js/pagefirst.js') }}" defer></script>
+  <script src="{{ asset('js/rowopen.js') }}" defer></script>
   {% if current_user.is_authenticated %}
+  <script src="{{ asset('js/tabdots.js') }}" defer></script>
   <script src="{{ asset('js/messages.js') }}" data-poll="{{ url_for('messages.poll') }}" data-every="{{ tuning_poll_ms() }}"{% if just_signed_in() %} data-welcome{% endif %} defer></script>
   {% if push_on() %}
   {# instant updates (app/push.py); without the library, pages check in as before #}

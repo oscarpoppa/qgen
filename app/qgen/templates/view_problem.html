@@ -6,7 +6,7 @@
 <div class="page-head">
   <h1>View: {{ vp.title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
-  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit: Change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to this problem, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}</span>
+  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit: Change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to this problem, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}</span>
   <div class="actions">
     {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
     <a class="btn" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" data-reroll title="Draw three new versions">Roll another</a>
@@ -14,7 +14,7 @@
 </div>
 <p class="muted">{{ qt.label }}{% if vp.calculator_ok %} · calculator OK{% endif %} · Three versions, as three different students might get it. Nothing is saved.
   {% if vp.vpgroups %}<br>Folders: {{ subject_labels(vp.vpgroups) }}{% endif %}
-  <br>{% if vp.vquizzes %}Used in: {% for q in vp.vquizzes|sort(attribute='title') %}<a href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="See one student's version of this quiz">“{{ q.title }}”</a>{{ ', ' if not loop.last }}{% endfor %}
+  <br>{% if vp.vquizzes %}Used in: {% for q in vp.vquizzes|sort(attribute='title') %}<a href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="See one student’s version of this quiz">“{{ q.title }}”</a>{{ ', ' if not loop.last }}{% endfor %}
   {% else %}Not in any quiz yet.{% endif %}</p>
 {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
 <div class="grid">

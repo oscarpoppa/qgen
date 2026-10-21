@@ -51,8 +51,12 @@ def scan_start():
     #(the folder each scan's pages came from, if any: the owner, 2026-10-19)
     folders = {j.id: SC.get_data(j).get('from_folder') for j in jobs}
     #(each scan's kind, with its mark: the owner, 2026-10-19)
-    kinds = {x['job'].id: x for x in scan_progress_data(current_user)}
-    return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, folders=folders, kinds=kinds, max_pages=SC.MAX_PAGES)
+    kinds = {x['job'].id: x for x in scan_progress_data(current_user, put_away=None)}
+    #(the ones put away have a card of their own, under the others: the owner, 2026-10-20)
+    away = [j for j in jobs if kinds.get(j.id, {}).get('put_away')]
+    jobs = [j for j in jobs if not kinds.get(j.id, {}).get('put_away')]
+    return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
+                           max_pages=SC.MAX_PAGES)
 
 
 def _elapsed(data):
@@ -63,15 +67,18 @@ def _elapsed(data):
         return 0
 
 
-def scan_progress_data(user):
+def scan_progress_data(user, put_away=False):
     """Every teacher's unfinished scans, for the Dashboard's chip and pop-over (all teachers see
     them all: the owner, 2026-10-20; it was this teacher's own): each with how far the reading
-    has got (the owner, 2026-10-18)."""
+    has got (the owner, 2026-10-18). put_away: False leaves out the scans put away (the owner,
+    2026-10-20: they're only in Scan workbook pages' Put away card), None takes them all."""
     out = []
     for job in ScanJob.query.order_by(ScanJob.updated_at.desc()).all():
-        pages = SC.get_data(job).get('pages') or []
-        now = next((p['n'] for p in pages if p.get('state') == 'reading'), None)
         data = SC.get_data(job)
+        if put_away is False and data.get('put_away'):
+            continue
+        pages = data.get('pages') or []
+        now = next((p['n'] for p in pages if p.get('state') == 'reading'), None)
         reading = _reading(job)
         kept = data.get('kept_at')
         #(who started it: every teacher sees every scan; the owner, 2026-10-20)
@@ -86,6 +93,7 @@ def scan_progress_data(user):
                     #(reading, ready, paused, stopped or draft, each with its own mark: the owner, 2026-10-19)
                     'kind': SC.scan_kind(data, reading), 'pausing': reading and bool(data.get('pausing')),
                     'kept_at': SC.datetime.fromisoformat(kept) if kept else None,
+                    'put_away': bool(data.get('put_away')),
                     'kept_today': bool(kept) and kept[:10] == SC.datetime.now().date().isoformat()})
     return out
 
@@ -96,7 +104,8 @@ def scan_progress_data(user):
 @admin_only
 def scan_progress():
     """The Dashboard's scans card, as it stands now (static/js/scanprogress.js asks while reading)."""
-    scans = scan_progress_data(current_user)
+    #(the scans put away too, in their own list under Current scans: the owner, 2026-10-20)
+    scans = scan_progress_data(current_user, put_away=None)
     return jsonify(reading=any(x['reading'] for x in scans), html=render_template('_scan_progress.html', scans=scans))
 
 
@@ -134,7 +143,9 @@ def scan_upload():
     #(Resume from the Dashboard's scans pop-over: back there, the owner 2026-10-19)
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
-    return redirect(url_for('qgen.scan_review', job_id=job.id))
+    #(back on Scan workbook pages, the new scan in its Current scans, which keeps itself up to date
+    #while it's read; its own page opens from there: the owner, 2026-10-20)
+    return redirect(url_for('qgen.scan_start'))
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>', methods=['GET'])
@@ -187,6 +198,9 @@ def scan_read(job_id):
     #(Resume from the Dashboard's scans pop-over: back there, the owner 2026-10-19)
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
+    #(from Scan workbook pages' Current scans: back there, the owner 2026-10-20)
+    if request.args.get('back') == 'scans':
+        return redirect(url_for('qgen.scan_start'))
     return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
@@ -200,11 +214,13 @@ def review_page(job, data, problems=None, status=200):
             for i, item in enumerate(page.get('items') or []):
                 checks[(page['n'], i)] = SC.check_item(item)
     return render_template('scan_review.html', title='Scan: {}'.format(job.name), job=job, data=data, reading=reading,
-                           kind=SC.scan_kind(data, reading),
+                           kind=SC.scan_kind(data, reading), note_longest=SC.NOTE_LONGEST,
                            checks=checks, problems=problems or {},
                            reused=SC.reused_as(data) if not reading else {},
                            matches=SC.reused_as(data, ignore_new=True) if not reading else {}, uses=SC.use_choices(data), leads=SC.lead_of(data),
                            qtypes={k: SC.REGISTRY[k].label for k in SC.QTYPES}, kinds=SC.SCAN_KINDS,
+                           place_of=SC.place_of, label_of=SC.label_of, no_place=SC.NO_PLACE,
+                           missing=SC.missing_places(data) if not reading else [],
                            unread=[p['n'] for p in data['pages'] if p['state'] != 'done']), status
 
 
@@ -215,6 +231,32 @@ def review_page(job, data, problems=None, status=200):
 def scan_review(job_id):
     job = _mine(job_id)
     return review_page(job, SC.get_data(job))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>/again', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_read_again(job_id, n):
+    """Read this page again (the owner, 2026-10-20): the review form is sent with it, so the
+    changes made on the other pages are kept, as Keep draft would; this page's reading and
+    changes are dropped, and it's read from the start with the teacher's note."""
+    job = _mine(job_id)
+    if not _key():
+        return _no_key()
+    if not 1 <= n <= job.pages:
+        abort(404)
+    if _reading(job):
+        flash('Some pages are still being read. Please wait until they’re done.', 'error')
+        return redirect(url_for('qgen.scan_review', job_id=job.id))
+    data = SC.update_from_form(SC.get_data(job), request.form)
+    SC.read_again(data, n, request.form.get('p{}-again_note'.format(n), ''))
+    SC.put_data(job, data)
+    db.session.commit()
+    current_app.logger.info('{} asked for page {} of scan {} "{}" to be read again'.format(current_user.username, n, job.id, job.name))
+    SC.start_reading(job, _key(), current_user.id)
+    return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>', methods=['POST'])
@@ -252,7 +294,8 @@ def scan_save(job_id):
         return review_page(job, data, {}, 400)
     current_app.logger.info('{} saved scan {} "{}": {} quiz(zes), {} problem(s), {} picture(s)'.format(
         current_user.username, job.id, job.name, len(made['quizzes']), made['problems'], len(made['pictures'])))
-    session['scan_done'] = {'name': data.get('name') or job.name, 'quizzes': [q.id for q in made['quizzes']],
+    #(job: the scan's own pages are gone once it's saved, so Back skips them: the owner, 2026-10-20)
+    session['scan_done'] = {'name': data.get('name') or job.name, 'job': job.id, 'quizzes': [q.id for q in made['quizzes']],
                             'problems': made['problems'], 'reused': made.get('reused', 0), 'pictures': made['pictures'], 'folder': data.get('folder')}
     SC.remove_job(job)
     return redirect(url_for('qgen.scan_done'))
@@ -283,12 +326,15 @@ def scan_check(job_id):
 @admin_only
 @post_form_only
 def scan_pause(job_id):
-    """Pause the reading after the page being read; Resume goes on (the owner, 2026-10-19; it was Cancel)."""
+    """Pause the reading after the pages being read; Resume goes on (the owner, 2026-10-19; it was Cancel)."""
     job = _mine(job_id)
     SC.pause_reading(job, _reading(job))
     current_app.logger.info('{} paused reading scan {} "{}"'.format(current_user.username, job.id, job.name))
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
+    #(from Scan workbook pages' Current scans: back there, the owner 2026-10-20)
+    if request.args.get('back') == 'scans':
+        return redirect(url_for('qgen.scan_start'))
     return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
@@ -304,6 +350,41 @@ def scan_discard(job_id):
     flash('Discarded the scan “{}”. Nothing from it was saved.'.format(name), 'success')
     current_app.logger.info('{} discarded scan {} "{}"'.format(current_user.username, job_id, name))
     #(discarded from the Dashboard's scans pop-over: back there, the owner 2026-10-18)
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
+    return redirect(url_for('qgen.scan_start'))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/put-away', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_put_away(job_id):
+    """Put away a paused scan or a draft: out of Current scans into the Put away card (the owner, 2026-10-20)."""
+    job = _mine(job_id)
+    if _reading(job):
+        flash('“{}” is being read. Pause it first, then put it away.'.format(job.name), 'error')
+    else:
+        SC.put_away(job)
+        current_app.logger.info('{} put away scan {} "{}"'.format(current_user.username, job.id, job.name))
+    #(from the Dashboard's scan pop-over: back there, the owner 2026-10-20)
+    if request.args.get('back') == 'dashboard':
+        return redirect(url_for('qgen.dashboard'))
+    return redirect(url_for('qgen.scan_start'))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/take-out', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_take_out(job_id):
+    """Take a scan out of the Put away card, back into Current scans (the owner, 2026-10-20)."""
+    job = _mine(job_id)
+    SC.put_away(job, False)
+    current_app.logger.info('{} took out scan {} "{}"'.format(current_user.username, job.id, job.name))
+    #(from the Dashboard's scan pop-over: back there, the owner 2026-10-20)
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
     return redirect(url_for('qgen.scan_start'))

@@ -64,7 +64,7 @@
   <form method="post" action="{{ url_for('user.create_token') }}" class="btn-row" style="margin-bottom:12px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="text" name="name" maxlength="64" placeholder="Name, e.g. My phone" aria-label="Token name" style="flex:1;min-width:180px">
-    <button class="btn btn-secondary" title="Make a new token with the name typed here; it's shown once">Create token</button>
+    <button class="btn btn-secondary" title="Make a new token with the name typed here; it’s shown once">Create token</button>
   </form>
   {% if tokens %}
   <div class="table-wrap stack">
@@ -75,7 +75,7 @@
         <tr>
           <td data-label="Name">{{ t.name }}</td>
           <td data-label="Starts with"><code>{{ t.prefix }}…</code></td>
-          <td data-label="Last used" class="small">{{ t.last_used|when if t.last_used else 'never' }}</td>
+          <td data-label="Last used" class="small" data-sort="{{ t.last_used.isoformat() if t.last_used else '' }}">{{ t.last_used|when if t.last_used else 'never' }}</td>
           <td data-label="Expires" class="small">{% if t.revoked %}<span class="badge">revoked</span>{% elif not t.active %}<span class="badge">expired</span>{% else %}{{ t.expires_at|when('short') }}{% endif %}</td>
           <td class="actions">{% if t.active %}
             <form method="post" action="{{ url_for('user.revoke_token', token_id=t.id) }}"

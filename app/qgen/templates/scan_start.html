@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-{# reading and forms: lines no wider than is comfortable #}
-{% block main_class %} container-narrow{% endblock %}
+{#- (the usual width: New scan and Current scans side by side, the owner 2026-10-20) #}
 {% from "_macros.html" import back_button, post_button with context %}
 {% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {% block content %}
@@ -10,6 +9,9 @@
 </div>
 <p class="muted">Photograph or scan workbook pages. You check each one before anything is saved.</p>
 
+{#- New scan and Current scans side by side, equal widths; stacked on a narrow screen, and New
+    scan alone takes the row when there are no scans (the owner, 2026-10-20) #}
+<div class="card-grid">
 <div class="card">
   <h2>New scan</h2>
   <form method="post" action="{{ url_for('qgen.scan_upload') }}" enctype="multipart/form-data" id="scan-upload" novalidate>
@@ -27,14 +29,14 @@
         <span class="dz-hint">or click to choose. You can add several at once.</span>
       {#- (no Choose files / Choose a folder buttons: a click or tap on the box chooses files, a
           folder is dropped: the owner, 2026-10-19) #}
-      <input type="file" id="scan-pages" name="pages" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple hidden>
+      <input type="file" id="scan-pages" name="pages" accept="image/*,application/pdf,.pdf,.heic,.heif,.avif,.tif,.tiff,.svg,.svgz,.dng,.cr2,.cr3,.nef,.nrw,.arw,.raf,.orf,.rw2,.pef" multiple hidden>
       <input type="file" id="scan-folder" name="folder_pages" webkitdirectory multiple hidden>
       <input type="hidden" name="from_folder" id="scan-folder-name" value="">
       {#- small pictures of what was dropped or chosen (the owner, 2026-10-19) #}
       <div class="scan-drop-thumbs" id="scan-thumbs" hidden></div>
       </div>
       <div class="small" id="scan-chosen" aria-live="polite" hidden></div>
-      <div class="help">JPG, PNG or PDF, up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
+      <div class="help">Photos, scans or PDFs (any image type), up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
     <div class="btn-row">
       <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" data-back-href title="Leave without uploading anything">Cancel</a>
@@ -45,45 +47,92 @@
   </form>
 </div>
 
-{% if jobs %}
+{#- (always shown, at the right of New scan, saying so when there are none: the owner, 2026-10-20;
+    Put away right under it, in the same column, the owner 2026-10-20) #}
+<div class="card-col">
 <div class="card" id="scan-current">
   {#- ("Current", like the Dashboard's pop-over: finished scans are in it too, the owner 2026-10-19) #}
   <h2>Current scans</h2>
+  {% if jobs %}
   <div class="table-wrap stack">
-    <table>
-      <thead><tr><th>Workbook</th><th>Pages</th><th>Last changed</th><th></th></tr></thead>
+    <table class="even-cols">
+      <thead><tr><th>Workbook</th><th>Last changed</th><th>Pages</th><th></th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>
           <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
             {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}<br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span>{{ scan_working(x) }}</td>
+          <td data-label="Last changed" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
           <td data-label="Pages">{{ j.pages }}</td>
-          <td data-label="Last changed" class="nowrap">{{ j.updated_at|when }}</td>
-          <td>{{ scan_controls(x) }}</td>
+          <td>{{ scan_controls(x, 'scans') }}</td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <p class="empty">No scans yet. Pages you upload show here while they’re read, and stay until you save or discard them.</p>
+  {% endif %}
 </div>
-{% endif %}
+
+{#- paused scans and drafts put away, in a card of their own, always shown, saying so when there
+    are none, like Current scans (the owner, 2026-10-20); each one is as it was left: Resume,
+    Continue, Take out or Discard #}
+<div class="card" id="scan-away">
+  <h2>Put away</h2>
+  {% if away %}
+  <div class="table-wrap stack">
+    <table class="even-cols">
+      <thead><tr><th>Workbook</th><th>Put away</th><th>Pages</th><th></th></tr></thead>
+      <tbody>
+      {% for j in away %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
+        <tr>
+          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
+            {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
+            <br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span></td>
+          <td data-label="Put away" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
+          <td data-label="Pages">{{ j.pages }}</td>
+          <td>{{ scan_controls(x, 'scans') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">Nothing put away. Paused scans and drafts you put away wait here.</p>
+  {% endif %}
+</div>
+</div>
+</div>
 {% endblock %}
 {% block scripts %}<script src="{{ asset('js/scantimer.js') }}" defer></script>
 <script>
-//while a scan is being read, the "Current scans" table keeps itself up to date every few seconds
-//(what it's doing, its controls: the owner, 2026-10-20); nothing else on the page is touched
+//the "Current scans" and "Put away" cards keep themselves up to date (what each scan is doing, its
+//controls: the owner, 2026-10-20); nothing else on the page is touched. With instant updates
+//(static/js/push.js) they redraw the moment the server says something changed; asking every few
+//seconds while a scan is read is only for when that connection is down
 (function () {
+  var timer = null;
   function refresh() {
-    var card = document.getElementById('scan-current');
-    if (!card || !card.querySelector('.scan-working')) return;
+    clearTimeout(timer);
     fetch(location.pathname, { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
-      var fresh = new DOMParser().parseFromString(html, 'text/html').getElementById('scan-current');
-      if (fresh) card.replaceWith(fresh); else card.remove();
-      setTimeout(refresh, 4000);
-    }).catch(function () { setTimeout(refresh, 8000); });
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      ['scan-current', 'scan-away'].forEach(function (id) {
+        var card = document.getElementById(id), fresh = doc.getElementById(id);
+        if (card && fresh) card.replaceWith(fresh);
+      });
+      later();
+    }).catch(later);
   }
-  setTimeout(refresh, 4000);
+  function later() {
+    clearTimeout(timer);
+    var card = document.getElementById('scan-current');
+    if (window.qgenLive || !card || !card.querySelector('.scan-working')) return;
+    timer = setTimeout(refresh, 4000);
+  }
+  document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(refresh, 300); });
+  later();
 })();
 </script>
 <script>
@@ -91,7 +140,12 @@
   //a folder instead of files: every photo and PDF in it, in file-name order (the owner, 2026-10-19)
   var files = document.getElementById('scan-pages'), folder = document.getElementById('scan-folder');
   var chosen = document.getElementById('scan-chosen');
-  var usable = function (f) { return /\.(jpe?g|png|webp|pdf)$/i.test(f.name); };
+  //any image QuizScan reads, or a PDF (the owner, 2026-10-20); the server skips what it can't read
+  var usable = function (f) {
+    return /^image\//.test(f.type) || /\.(pdf|jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif|hif|jp2|jpx|svgz?|psd|tga|pcx|ppm|pgm|pbm|ico|dng|cr[23w]|nef|nrw|arw|srf|sr2|raf|orf|rw2|pef)$/i.test(f.name);
+  };
+  //(pictures a browser can't show get a tile with their kind, like a PDF's)
+  var shown = function (f) { return /\.(jpe?g|png|webp|gif|bmp|avif|svg|ico)$/i.test(f.name); };
   //small pictures of the pages chosen or dropped, in the order they'll be read (file-name order for
   //a folder); a PDF as a tile with its name; the first 12, then how many more (the owner, 2026-10-19)
   var thumbs = document.getElementById('scan-thumbs'), urls = [];
@@ -105,8 +159,8 @@
       var tile = document.createElement('figure');
       tile.className = 'scan-drop-thumb';
       tile.title = f.name;
-      if (/\.pdf$/i.test(f.name)) {
-        var pdf = document.createElement('span'); pdf.className = 'scan-drop-pdf'; pdf.textContent = 'PDF'; tile.appendChild(pdf);
+      if (!shown(f)) {
+        var pdf = document.createElement('span'); pdf.className = 'scan-drop-pdf'; pdf.textContent = (f.name.split('.').pop() || 'file').toUpperCase(); tile.appendChild(pdf);
       } else {
         var img = document.createElement('img'); var u = URL.createObjectURL(f); urls.push(u); img.src = u; img.alt = ''; tile.appendChild(img);
       }

@@ -53,6 +53,9 @@
       if (types.length) el.hidden = types.indexOf('t-' + t) === -1;
     });
     showPaper(t === 'paper');
+    //Short text: an example of one accepted answer per line (the owner, 2026-10-20)
+    var answerBox = form.querySelector('[name=answer]');
+    if (answerBox) answerBox.placeholder = t === 'text' ? 'The third day\nThird day\n3rd day' : '';
   }
 
   //a plain-words line under each value row saying what its kind does

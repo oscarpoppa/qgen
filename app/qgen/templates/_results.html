@@ -1,7 +1,7 @@
 {# One student's attempts at one quiz, as table cells: their attempts (Details, Delete), the
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
-{% from "_macros.html" import post_button, slot with context %}
+{% from "_macros.html" import post_button, slot, box_label, count_of, avatar with context %}
 {# "Archive all (n)": every one of this student's attempts at the quiz. With one attempt it's the
    only archive button (the attempt's own Archive is left out then: the owner, 2026-10-19; it was
    grayed out beside it, 2026-10-16) #}
@@ -22,22 +22,29 @@
 <form method="post" action="{{ url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id) }}" id="{{ form_id }}" class="inline-form" hidden
   data-confirm="{{ archive_all_words(g, student) }}" data-confirm-ok="Archive all ({{ g.attempts|length }})"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
 {%- endmacro %}
-{% macro result_cells(g, student, rules, archive_all=true) %}
-              {#- (sort keys for a sorted column, static/js/sorttable.js: the latest attempt's date; the score) -#}
-              {%- set last = g.latest.compdate or g.latest.startdate or g.latest.create_date %}
-              <td data-label="Attempts" class="attempts" data-sort="{{ last.isoformat() if last else '' }}">
-                {% for cq in g.attempts %}
-                  <div class="btn-row result-attempt">
-                    <span class="nowrap">{{ cq.when_label }}</span>
-                    {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
+{# the pieces of an attempt's line, used by the results tables (result_cells) and by a student page's
+   rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
+{% macro attempt_status(cq, g) -%}
+{% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
                     {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
                     {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
-                  </div>
-                  {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at|when }}</div>{% endif %}
-                {% endfor %}
-              </td>
-              <td data-label="Score counted" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and g.latest.status not in ('new', 'started') else '' }}">
+{%- endmacro %}
+{% macro attempt_buttons(cq, g, student) -%}
+<span class="btn-row result-attempt-buttons">
+                    {#- your own attempts (a teacher's own student page): Start / Continue first, as on My
+                        quizzes, grayed with why once it's handed in, so every line's icons line up (the
+                        owner, 2026-10-21: there was no way to resume from here) #}
+                    {% if student.id == current_user.id %}{% if cq.status == 'started' %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>{% elif cq.status == 'new' and not cq.not_open_yet() %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: begin this quiz">{{ icon_label('lc-play', 'Start') }}</a>{% elif cq.status == 'new' %}{{ slot('Start', 'it isn’t open yet', 'btn btn-sm', icon='lc-play') }}{% else %}{{ slot('Continue', 'already handed in', 'btn btn-sm', icon='lc-play') }}{% endif %}{% endif %}
+                    {% if cq.status == 'review' %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ student.shown_name }}'s written answers for this attempt">{{ icon_label('lc-grade', 'Grade') }}</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}
+                    {% if cq.status in ('completed', 'review') %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s answers and score for this attempt">{{ icon_label('lc-eye', 'View') }}</a>
+                    {% else %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s copy of this quiz, as it is now">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}
+                    <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="Answer key: {{ student.shown_name }}'s questions next to the correct answers">{{ icon_label('lc-answer-key', 'Answer key') }}</a>
+                    {#- (one attempt: its row's Archive all (1) does it, so the attempt's own Archive is grayed,
+                        never left out, so every attempt's icons line up: the owner, 2026-10-19 and 2026-10-20) #}
+                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)', icon='lc-trash') }}{% else %}{{ slot('Archive', 'the only attempt: use Archive all on its row', icon='lc-trash') }}{% endif %}</span>
+{%- endmacro %}
+{% macro score_counted(g, student, rules) -%}
                 {# while the latest attempt is not started or in progress, a dash (as in its heading, which
                    says so); the earlier attempts' score is in the dash's tooltip #}
                 {% if g.latest.status in ('new', 'started') %}<span class="muted"{% if g.combined is not none %} title="Earlier attempts: {{ '%.0f' % g.combined }}%. The score shows here once the latest attempt is handed in."{% endif %}>—</span>
@@ -57,27 +64,103 @@
                 </form>
                 {% if g.overridden %}<div class="small"><span class="badge badge-warn">Just for {{ student.shown_name }}</span>
                   <span class="muted">The quiz's own rule is {{ rules[g.vquiz.retake_rule]|lower }}.</span></div>{% endif %}
+                {% else %}{#- (one attempt: grayed, never left out, so the pencils line up: the user critic, 2026-10-20) #}{{ slot('Change how the score counts', 'only one attempt, so there’s nothing to combine', icon='lc-pencil') }}
                 {% endif %}
+{%- endmacro %}
+{% macro retake_button(g, student) -%}
+{% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Give another attempt', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip=(student.shown_name)|string ~ ' gets new values this time', icon='lc-retake') }}{% else %}{{ slot('Give another attempt', 'A new attempt can be given once the latest one is handed in and graded', icon='lc-retake') }}{% endif %}
+{%- endmacro %}
+{% macro result_cells(g, student, rules, archive_all=true) %}
+              {#- (sort keys for a sorted column, static/js/sorttable.js: the latest attempt's date; the score) -#}
+              {%- set last = g.latest.compdate or g.latest.startdate or g.latest.create_date %}
+              <td data-label="Attempts" class="attempts" data-sort="{{ last.isoformat() if last else '' }}">
+                {% for cq in g.attempts %}
+                  <div class="btn-row result-attempt">
+                    <span class="nowrap">{{ cq.when_label }}</span>
+                    {{ attempt_status(cq, g) }}
+                  </div>
+                  {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note">closes {{ cq.closes_at|when }}</div>{% endif %}
+                {% endfor %}
+              </td>
+              <td data-label="Score counted" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and g.latest.status not in ('new', 'started') else '' }}">
+                {{ score_counted(g, student, rules) }}
               </td>
               {#- each attempt's buttons, after the score (the owner, 2026-10-16); a line for
                   each attempt, level with it in the Attempts cell -#}
               <td class="attempt-buttons" data-label="">
                 {% for cq in g.attempts %}
                   <div class="btn-row result-attempt">
-                    <span class="btn-row result-attempt-buttons">{% if cq.status == 'review' %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ student.shown_name }}'s written answers for this attempt">{{ icon_label('lc-grade', 'Grade') }}</a>{% else %}{{ slot('Grade', 'Nothing to grade: already graded' if cq.status == 'completed' else 'Nothing to grade: not handed in yet', 'btn btn-sm') }}{% endif %}
-                    {% if cq.status in ('completed', 'review') %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s answers and score for this attempt">{{ icon_label('lc-eye', 'View') }}</a>
-                    {% else %}<a class="icon-link attempt-open" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ student.shown_name }}’s copy of this quiz, as it is now">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}
-                    <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="Answer key: {{ student.shown_name }}'s questions next to the correct answers">{{ icon_label('lc-answer-key', 'Answer key') }}</a>
-                    {#- (one attempt: its row's Archive all (1) does it, so no Archive here: the owner, 2026-10-19) #}
-                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)', icon='lc-trash') }}</span>{% endif %}
+                    {{ attempt_buttons(cq, g, student) }}
                   </div>
                   {% if cq.closes_at and not cq.completed %}<div class="small muted result-attempt-note" aria-hidden="true">&nbsp;</div>{% endif %}
                 {% endfor %}
               </td>
               <td class="actions"><div class="btn-stack">
-                {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Give another attempt', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip=(student.shown_name)|string ~ ' gets new values this time', icon='lc-retake') }}{% else %}{{ slot('Give another attempt', 'A new attempt can be given once the latest one is handed in and graded', icon='lc-retake') }}{% endif %}
+                {{ retake_button(g, student) }}
                 {# all of this student's attempts to the Archive at once, beside Retake (no row of its own;
                    a student page's quiz box has it on its heading line instead: archive_all=false) #}
                 {% if archive_all %}{{ archive_all_button(g, student) }}{% endif %}
               </div></td>
+{% endmacro %}
+{# one student's attempts at one quiz inside an open row on Results by quiz or Results by student
+   (rows like My quizzes', the owner, 2026-10-21): a heading line (head: the student, or the quiz)
+   with the score that counts and the group's own icons (Give another attempt, Archive all) at the
+   row's right end, then a line for each attempt with its icons under them. data-state and data-name:
+   for the results pages' Show and name filters (static/js/folders.js) #}
+{% macro result_group(head, g, student, rules, name='') %}
+<div class="result-group" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" data-name="{{ name }}">
+  <div class="attempt-row result-group-head">{{ head }} <span class="result-group-score"><span class="muted">Score counted:</span> {{ score_counted(g, student, rules) }}</span>
+    <span class="attempt-act attempt-act-group"><span class="btn-row result-attempt-buttons">{{ retake_button(g, student) }}{{ archive_all_button(g, student) }}</span></span></div>
+  <ol class="small attempt-list">
+    {% for cq in g.attempts %}
+      <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
+        {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
+        <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, student) }}</span></li>
+    {% endfor %}
+  </ol>
+</div>
+{% endmacro %}
+
+{# one student's attempts at one quiz as a row like My quizzes': a quiz on a student page, or (label,
+   key, open_key, name, icons) a student on a quiz's history (the owner, 2026-10-21). On a student page (the owner, 2026-10-21): its name folds open
+   to its attempts (Grade, View, Answer key, Archive, the score that counts); beside it Latest,
+   Attempts, Status and Score, each sortable, and Archive all #}
+{% macro result_row(g, item, label=none, key=none, open_key=none, name=none, icons='') %}
+    {% set latest = g.latest %}
+    {#- (an attempt is any one copy of the quiz, whatever its status, a new one not started yet too:
+        the owner, 2026-10-21) #}
+    {% set tried = g.attempts|length %}
+    {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
+    {#- (handed in and waiting for grading counts as in progress, as everywhere else) #}
+    {% set has_started = g.attempts|selectattr('status', 'in', ['started', 'review'])|list %}
+    {#- (a new attempt wins: a quiz with both a new and a started one is outlined in gold, the owner 2026-10-20) #}
+    {% set edge = 'row-is-new' if has_new else 'row-is-started' if has_started else '' %}
+    <tr class="{{ edge }}" {{ key or ('data-fkey="q:' ~ g.vquiz.id ~ '"')|safe }} data-name="{{ name or g.vquiz.title|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}">
+      <td data-label="Quiz">
+        <details class="box row-fold" data-box="{{ open_key or 'quiz-row:' ~ item.id ~ '-' ~ g.vquiz.id }}">
+          <summary>{{ label or box_label('note', g.vquiz.title, none, 'span', g.vquiz.title) }}</summary>
+          {{ archive_all_form(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}
+          {#- like My quizzes' open row: the score that counts, then a line for each attempt, its icons
+              at the row's right end, lines end to end; no table inside (the owner, 2026-10-21) #}
+          {#- (a div: the pencil is a form, and a form ends a <p> early, which put it on a line of its own) #}
+          <div class="small student-score-line"><span class="muted">Score counted:</span> {{ score_counted(g, item, rules) }}</div>
+          <ol class="small attempt-list" data-fold-body>
+            {% for cq in g.attempts %}
+              <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
+                {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
+                <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, item) }}</span></li>
+            {% endfor %}
+          </ol>
+        </details></td>
+      {#- the newest thing that happened to any of its attempts: handed in, started, or assigned -#}
+      {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
+      <td data-label="Latest" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
+      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}<span class="badge box-count">{{ count_of(tried, 'attempt', 'attempts') }}</span>{% endif %}</td>
+      {#- (sorted New, In progress, Completed, as on My quizzes) -#}
+      <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}"><span class="btn-row quiz-state-badges">
+        {%- if has_started %}<span class="badge badge-accent badge-status">In progress</span>{% elif has_new %}<span class="badge badge-warn">New</span>{% else %}<span class="badge badge-ok badge-status">Completed</span>{% endif %}
+        {%- if has_new and has_started %}<span class="badge badge-warn">New</span>{% endif %}</span></td>
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}{{ icons }}</span></td>
+    </tr>
 {% endmacro %}

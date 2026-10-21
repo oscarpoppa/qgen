@@ -44,7 +44,7 @@
   //a card's or row's trash can: Move to Archive (kept there, and restorable) or Delete for good,
   //asked first (the owner, 2026-10-16; moving to a folder is the row's own Move icon). A person
   //moved to the Archive: a second question, keep their quiz results or delete them.
-  function removeOne(form) {
+  function removeOne(form) {  // (form: the trash can button, its fields in data-*)
     var label = form.dataset.label, person = form.dataset.kind === 'people';
     var archive = form.dataset.archiveUrl;
     var q = archive ? 'What do you want to do with ' + label + '?' : 'Delete ' + label + ' for good?';
@@ -56,7 +56,10 @@
     function send(url, extra) {
       var f = document.createElement('form');
       f.method = 'post'; f.action = url; f.hidden = true;
-      f.appendChild(form.querySelector('input[name=csrf_token]').cloneNode());
+      var token = document.createElement('input');
+      token.type = 'hidden'; token.name = 'csrf_token';
+      token.value = document.querySelector('meta[name=csrf-token]').content;
+      f.appendChild(token);
       Object.keys(extra || {}).forEach(function (k) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = extra[k]; f.appendChild(i); });
       document.body.appendChild(f);
       f.submit();
@@ -72,10 +75,36 @@
     });
   }
 
+  //(the trash can is a button with its fields on it, not a form: one per row)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('button[data-remove-one]');
+    if (b && !b.disabled) { e.preventDefault(); removeOne(b); }
+  });
+
+  //a folder badge's ✕ (span[data-chip-out]): its take-out form is made only when pressed, then
+  //sent the usual way below (the owner, 2026-10-21: no form in every badge of a long list)
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest && e.target.closest('[data-chip-out] .chip-x');
+    if (!x) return;
+    e.preventDefault();
+    var chip = x.closest('[data-chip-out]'), form = document.createElement('form');
+    chip.querySelectorAll('form').forEach(function (f) { f.remove(); });  // (one left by Cancel before)
+    form.method = 'post';
+    form.setAttribute('action', chip.dataset.chipOut);
+    form.dataset.takeout = '';
+    form.hidden = true;
+    var csrf = document.querySelector('meta[name="csrf-token"]');
+    [['csrf_token', csrf ? csrf.content : ''], ['view', chip.dataset.view], [chip.dataset.what, chip.dataset.ident], ['folder', chip.dataset.folder]].forEach(function (kv) {
+      var i = document.createElement('input'); i.type = 'hidden'; i.name = kv[0]; i.value = kv[1]; form.appendChild(i);
+    });
+    //(inside the badge, so "which folder is this shown in" still finds its place on the page)
+    chip.appendChild(form);
+    form.requestSubmit();
+  });
+
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form.matches || !form.matches('form[data-takeout]')) return;
-    if ('removeOne' in form.dataset) { e.preventDefault(); e.stopImmediatePropagation(); removeOne(form); return; }
     var sub = e.submitter;
     //(both of the bar's buttons) the checked bar: everyone checked (data-takeout-items: which check boxes)
     if (form.dataset.takeoutItems) {

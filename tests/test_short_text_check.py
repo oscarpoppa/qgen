@@ -6,16 +6,17 @@ from test_flow import app_db, login, take_page, problem_form  # noqa: F401  (fix
 def test_grading_rule():
     from app.qgen.qtypes import get_qtype
     qt = get_qtype('text')
-    for typed, credit in (('horse', 1.0), ('Horse.', 1.0), ('  HORSE ', 1.0), ('cow', 0.0), ('', 0.0),
-                          ('a brown horse', None), ('horse!', None), ('seahorse', 0.0), ('horses', 0.0)):
+    # anything written that isn't an accepted answer waits for the teacher (a misspelling, a
+    # longer answer, another word for it: the owner, 2026-10-20); only a blank is simply wrong
+    for typed, credit in (('horse', 1.0), ('Horse.', 1.0), ('  HORSE ', 1.0), ('cow', None), ('', 0.0),
+                          ('a brown horse', None), ('horse!', None), ('seahorse', None), ('horses', None), ('hrose', None)):
         assert qt.grade(typed, 'horse\npony', {}, {}) == credit, typed
     assert qt.grade('a pony', 'horse\npony', {}, {}) is None
-    # a labeled picture: anything but its label waits for the teacher; blank is still wrong
+    # a labeled picture: the same
     pics = {'images': [{'file': 'a.png', 'label': 'dog'}, {'file': 'b.png', 'label': 'cat'}]}
     assert qt.grade('dog', 'dog', {}, pics) == 1.0 and qt.grade('spike', 'dog', {}, pics) is None
     assert qt.grade('', 'dog', {}, pics) == 0.0
-    # pictures without labels: as before
-    assert qt.grade('spike', 'dog', {}, {'images': [{'file': 'a.png', 'label': ''}]}) == 0.0
+    assert qt.grade('spike', 'dog', {}, {'images': [{'file': 'a.png', 'label': ''}]}) is None
 
 
 def test_close_answer_waits_for_the_teacher(app_db):

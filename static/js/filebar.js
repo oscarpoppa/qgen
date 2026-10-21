@@ -354,7 +354,6 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-restore-many]');
     if (!b || b.disabled) return;
-    var form = document.getElementById('file-form');
     var ids = window.qgenCheckedIds ? window.qgenCheckedIds() : [];
     if (!ids.length) return;
     //(asks first: "Restore the 3 checked problems? They go back on the Problems page."; the
@@ -362,13 +361,15 @@
     var q = ids.length === 1 ? 'Restore the checked ' + b.dataset.one + '? ' + b.dataset.thenOne
                              : 'Restore the ' + ids.length + ' checked ' + b.dataset.noun + '? ' + b.dataset.then;
     (window.qgenAsk ? window.qgenAsk(q, 'Restore') : Promise.resolve(true)).then(function (yes) {
-      if (yes) send(ids);
+      if (yes) send(b.dataset.url, ids);
     });
   });
-  function send(ids) {
+  //(the button's address passed in: it was read from a name not in reach here, so Restore never
+  //sent; found by the code critic, 2026-10-20)
+  function send(url, ids) {
     var form = document.getElementById('file-form');
     var f = document.createElement('form');
-    f.method = 'post'; f.action = b.dataset.url; f.hidden = true;
+    f.method = 'post'; f.action = url; f.hidden = true;
     function hidden(k, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); }
     hidden('csrf_token', form.querySelector('input[name=csrf_token]').value);
     var view = form.querySelector('input[name=view]');

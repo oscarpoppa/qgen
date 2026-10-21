@@ -24,9 +24,9 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert back_by_the_trail(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode())
     # one name per action: Grading in the menu
     assert '">Grading' in teach.get('/dashboard').data.decode()
-    # the student page: each quiz a box that folds
+    # the student page: each quiz a row that folds, like My quizzes' (the owner, 2026-10-21; they were boxes)
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'class="box card result-box quiz-is-new" data-list data-quiz-box="{}-{}" data-fkey="q:{}" data-name="week 1">'.format(ids('sam'), vq.id, vq.id) in page
+    assert '<tr class="row-is-new" data-fkey="q:{}" data-name="week 1"'.format(vq.id) in page
     #(one student's page is laid out like the other list pages: its folder list's levels get
     #Expand all / Collapse all from folderfilter.js)
     assert 'data-folder-filter' in page and '<span class="badge badge-warn badge-status">Not started</span>' in page
@@ -48,4 +48,4 @@ def test_the_count_beside_a_name_is_quizzes_not_attempts(app_db):
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
     assert [(t['id'], t['count']) for t in tree if t['id'] == 'new'] == [('new', 2)]
-    assert page.count('class="box card result-box') == 2
+    assert page.count('data-fkey="q:') == 2

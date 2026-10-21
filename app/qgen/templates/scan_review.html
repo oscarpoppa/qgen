@@ -3,7 +3,7 @@
 {# The draft of a scan (app/qgen/scan.py): each page beside its picture, with its quiz
    settings, crop boxes and drafted problems. Nothing is saved until Save. #}
 
-{% macro errs(key) %}{% for e in problems.get(key, []) %}<div class="error">{{ e }}</div>{% endfor %}{% endmacro %}
+{% macro errs(key) %}{% for e in problems.get(key, []) if e != no_place %}<div class="error">{{ e }}</div>{% endfor %}{% endmacro %}
 
 {% macro use_select(name, current, label_text) %}
   <select name="{{ name }}" class="scan-use" aria-label="{{ label_text }}" title="Where this picture goes">
@@ -42,10 +42,17 @@
     <legend class="sr-only">Page {{ n }}, item {{ i + 1 }}</legend>
     <div class="scan-item-head">
       <label class="check" title="Include this one when saving"><input type="checkbox" name="{{ ip }}include" class="scan-include"{% if item.include %} checked{% endif %}> <span class="qnum">{{ i + 1 }}</span></label>
-      <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem's title (only you see it)" class="scan-title">
+      <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem’s title (only you see it)" class="scan-title">
       {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">{{ icon('pencil') }} Paper only</span>{% endif %}
     </div>
     {{ errs(key) }}
+    {#- its place on the page: the blue box over its blank, dragged to fit (the owner, 2026-10-20) #}
+    {% set pl = place_of(page, item) %}
+    {% if pl %}
+      <input type="hidden" name="{{ ip }}place" id="{{ ip }}place" value="{{ pl[0].left }},{{ pl[0].top }},{{ pl[0].right }},{{ pl[0].bottom }}">
+      <input type="hidden" name="{{ ip }}placed" value="{{ '1' if pl[1] else '' }}" data-placed>
+      <p class="error small scan-no-place"{% if pl[1] %} hidden{% endif %}>{{ no_place }}</p>
+    {% endif %}
     {#- the same as a problem already there: used again instead of saved twice (the owner, 2026-10-18) #}
     {% set same = reused.get((n, i)) or matches.get((n, i)) %}
     {% if same %}<div class="scan-reuse small"><span class="scan-reuse-note">{{ icon('note') }} Same as problem “{{ same }}”: reused</span>
@@ -56,7 +63,7 @@
       <label class="label small" for="{{ ip }}question">Instructions</label>
       <textarea id="{{ ip }}question" name="{{ ip }}question" rows="2">{{ item.question }}</textarea>
       <label class="label small" for="{{ ip }}answer">Answer key (optional, only you see it)</label>
-      <input type="text" id="{{ ip }}answer" name="{{ ip }}answer" value="{{ item.answer }}">
+      {#- a box with lines, never a one-line one: a one-line box drops the line breaks between accepted answers and runs them together (the owner, 2026-10-20) #}<textarea id="{{ ip }}answer" name="{{ ip }}answer" rows="{{ [(item.answer or '').count('\n') + 1, 4]|min }}">{{ item.answer }}</textarea>
       <p class="muted small">The orange box on the page is what gets printed. Drag its edges to fit.</p>
     {% else %}
       <div class="btn-row small">
@@ -71,7 +78,7 @@
         <label class="label small" for="{{ ip }}question">Question</label>
         <textarea id="{{ ip }}question" name="{{ ip }}question" rows="2">{{ item.question }}</textarea>
         <label class="label small" for="{{ ip }}answer">Answer</label>
-        <input type="text" id="{{ ip }}answer" name="{{ ip }}answer" value="{{ item.answer }}">
+        {#- a box with lines, never a one-line one: a one-line box drops the line breaks between accepted answers and runs them together (the owner, 2026-10-20) #}<textarea id="{{ ip }}answer" name="{{ ip }}answer" rows="{{ [(item.answer or '').count('\n') + 1, 4]|min }}">{{ item.answer }}</textarea>
         <div class="t-choice"><label class="label small" for="{{ ip }}choices">Choices (one per line, * before the right one)</label>
         <textarea id="{{ ip }}choices" name="{{ ip }}choices" rows="3">{{ item.choices }}</textarea></div>
         {{ value_rows(ip, item['values']) }}
@@ -80,7 +87,7 @@
         <label class="label small" for="{{ ip }}page_question">Question (as on the page)</label>
         <textarea id="{{ ip }}page_question" name="{{ ip }}page_question" rows="2">{{ item.page_question }}</textarea>
         <label class="label small" for="{{ ip }}page_answer">Answer</label>
-        <input type="text" id="{{ ip }}page_answer" name="{{ ip }}page_answer" value="{{ item.page_answer }}">
+        {#- a box with lines, never a one-line one: a one-line box drops the line breaks between accepted answers and runs them together (the owner, 2026-10-20) #}<textarea id="{{ ip }}page_answer" name="{{ ip }}page_answer" rows="{{ [(item.page_answer or '').count('\n') + 1, 4]|min }}">{{ item.page_answer }}</textarea>
         <div class="t-choice"><label class="label small" for="{{ ip }}page_choices">Choices (one per line, * before the right one)</label>
         <textarea id="{{ ip }}page_choices" name="{{ ip }}page_choices" rows="3">{{ item.page_choices }}</textarea></div>
       </div>
@@ -97,7 +104,7 @@
     <input type="hidden" name="{{ key }}box" id="{{ key }}box" value="{{ pic.box.left }},{{ pic.box.top }},{{ pic.box.right }},{{ pic.box.bottom }}">
     <input type="text" name="{{ key }}label" value="{{ pic.label }}" maxlength="64" placeholder="label" aria-label="Picture label" title="A short name for the picture (used in its file name)" size="12">
     {{ use_select(key ~ 'use', pic.use, 'Where the picture ' ~ (pic.label or '') ~ ' goes') }}
-    <label class="check small" title="Save it in Pictures even when it isn't used"><input type="checkbox" name="{{ key }}keep"{% if pic.keep %} checked{% endif %}> save</label>
+    <label class="check small" title="Save it in Pictures even when it isn’t used"><input type="checkbox" name="{{ key }}keep"{% if pic.keep %} checked{% endif %}> save</label>
     <label class="check small" title="Leave this picture out"><input type="checkbox" name="{{ key }}removed" class="scan-pic-remove"> remove</label>
   </div>
 {% endmacro %}
@@ -118,8 +125,8 @@
   <div class="card" id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}">
     <div class="scan-progress-top"><p><strong id="scan-progress-line">Reading the pages…</strong> <span class="scan-timer muted" id="scan-timer" aria-live="off"></span>
       {%- if data.from_folder %}<br><span class="small muted scan-from-folder">{{ icon('folder') }} From the folder “{{ data.from_folder }}”, {{ count_of(data.pages|length, 'page', 'pages') }}</span>{% endif %}</p>
-      {#- (Pause, it was Cancel: the page being read is finished first, the owner 2026-10-19) #}
-      {% if data.pausing %}<span class="muted">Pausing after this page…</span>{% else %}{{ post_button(url_for('qgen.scan_pause', job_id=job.id), 'Pause', tip='Pause after the page being read; Resume goes on with the rest') }}{% endif %}</div>
+      {#- (Pause, it was Cancel: the pages being read are finished first, the owner 2026-10-19) #}
+      {% if data.pausing %}<span class="muted">Pausing after these pages…</span>{% else %}{{ post_button(url_for('qgen.scan_pause', job_id=job.id), 'Pause', tip='Pause after the pages being read; Resume goes on with the rest') }}{% endif %}</div>
     <p class="muted small">About half a minute per page. You can leave this page and come back from “Scan workbook pages”; the reading goes on.</p>
     <ol class="scan-progress-list">
       {% for p in data.pages %}<li data-n="{{ p.n }}"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="" loading="lazy">Page {{ p.n }}: <span class="muted">{{ {'waiting': 'waiting', 'reading': 'reading…', 'done': 'done ✓', 'error': 'couldn’t be read'}[p.state] }}</span></li>{% endfor %}
@@ -176,8 +183,19 @@
               {% for item in page['items'] %}{% if item.kind == 'paper' %}
                 <div class="crop crop-paper" data-for="p{{ n }}i{{ loop.index0 }}-box" title="What gets printed for “{{ item.title }}”: drag to move, drag the corners to resize"><span class="crop-label">{{ icon('pencil') }} {{ item.title }}</span></div>
               {% endif %}{% endfor %}
+              {% for item in page['items'] %}{% set pl = place_of(page, item) %}{% if pl %}{% set lab = label_of(page, item) %}
+                <div class="crop crop-place{% if not pl[1] %} is-missing{% endif %}" data-for="p{{ n }}i{{ loop.index0 }}-place" data-label="{{ lab }}"{% if not item.include %} hidden{% endif %} title="Where “{{ lab }}” is answered: drag to move, drag the corners to resize"><span class="crop-label">{{ lab }}</span></div>
+              {% endif %}{% endfor %}
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
+            {#- the page read again from the start, with what was wrong (the owner, 2026-10-20); sent with
+                the whole form, so the changes on the other pages are kept #}
+            <details class="scan-again">
+              <summary class="btn btn-secondary btn-sm" title="Have the AI read this page again, saying what was wrong">Read this page again</summary>
+              <label class="label small" for="{{ pre }}again_note">What was wrong? (optional)</label>
+              <textarea id="{{ pre }}again_note" name="{{ pre }}again_note" rows="2" maxlength="{{ note_longest }}" placeholder="e.g. Problem 6 is missing; the answers to 4 and 5 are swapped"></textarea>
+              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are." title="Read again: page {{ n }} from the start, with your note">Read again</button>
+            </details>
           </div>
           <div class="scan-right">
             {% if page.notes %}<p class="hint small">{{ icon('note') }} {{ page.notes }}</p>{% endif %}
@@ -188,8 +206,8 @@
                 {{ errs('page:' ~ n ~ ':title') }}
                 {% if page.directions %}<p class="muted small">Directions on the page: {{ page.directions }}</p>{% endif %}
                 <div class="btn-row small">
-                  {% if ns.problems_before %}<label class="check" title="Put this page's problems in the same quiz as the page before"><input type="checkbox" name="{{ pre }}join_prev"{% if page.join_prev %} checked{% endif %}> Join with the page before</label>{% endif %}
-                  <label class="check" title="Each student gets the questions in his/her own order (off keeps the workbook's order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
+                  {% if ns.problems_before %}<label class="check" title="Put this page’s problems in the same quiz as the page before"><input type="checkbox" name="{{ pre }}join_prev"{% if page.join_prev %} checked{% endif %}> Join with the page before</label>{% endif %}
+                  <label class="check" title="Each student gets the questions in his/her own order (off keeps the workbook’s order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
                   <label class="check" title="Students can use the on-screen calculator"><input type="checkbox" name="{{ pre }}calculator"{% if page.calculator %} checked{% endif %}> Calculator</label>
                 </div>
               </div>
@@ -210,7 +228,9 @@
     {% endfor %}
 
     <div class="card btn-row scan-actions">
-      <button class="btn" name="action" value="save" title="Make the problems and quizzes from the checked items, and save the pictures">Save</button>
+      {#- (grayed while a problem has no place on its page, the owner 2026-10-20; scan_review.js keeps it current) #}
+      {% set no_spot = missing|map(attribute=2)|join(', ') %}
+      <button class="btn" name="action" value="save" data-save data-tip="Make the problems and quizzes from the checked items, and save the pictures"{% if missing %} disabled title="Every problem needs its place on the page first ({{ no_spot }})"{% else %} title="Make the problems and quizzes from the checked items, and save the pictures"{% endif %}>Save</button>
       <button class="btn btn-secondary" name="action" value="keep" title="Keep your changes and come back to finish later">Keep draft</button>
       <span class="muted small">Nothing is saved until you press Save.</span>
     </div>

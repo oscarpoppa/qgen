@@ -405,12 +405,17 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('essay', 'Sky', 'Why is the sky blue?', 'Light scatters.'))
     make_problems(teacher, 'Add')
     page = teacher.get('/quiz/listvp').data.decode()
-    assert page.count('<span class="badge">Teacher-graded</span>') == 2
-    assert 'Model answer: Light scatters.' in page
-    # People's Accounts view switches to its Results view, whose students are boxes that open and close
+    #(no Answer column: each row's "Question and answer" dialog says it, from an example version,
+    #the owner 2026-10-21)
+    from app.qgen.models import VProblem
+    sky = VProblem.query.filter_by(title='Sky').one()
+    assert 'data-qa="/quiz/vprob/{}/example"'.format(sky.id) in page
+    ex = teacher.get('/quiz/vprob/{}/example'.format(sky.id)).get_json()
+    assert ex['ok'] and ex['graded_by_teacher'] and ex['correct'] == 'Light scatters.' and ex['text'] == 'Why is the sky blue?'
+    # People's Accounts view switches to its Results view, whose students are rows that open and close (they were boxes: the owner, 2026-10-21)
     assert 'href="/quiz/listuser?folder=all">Results</a>' in no_titles(teacher.get('/userdet').data.decode())
     results = teacher.get('/quiz/listuser').data.decode()
-    assert '<details class="box card subject-box student item-box"' in results
+    assert '<tr class="result-item" id="student-' in results and 'data-box="result-row:student-' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results
 
 
@@ -743,6 +748,7 @@ def test_back_up_to_the_outer_folder_says_where_else_it_is(app_db):
     assert res['message'] == 'Took “Add” out of “Inner”; it’s now in “Outer” (its Unsorted) and still in “Top”.'
     db.session.expire_all()
     assert sorted(g.title for g in db.session.get(type(probs['Add']), probs['Add'].id).vpgroups) == ['Outer', 'Top']
-    # the Remove button's question knows each folder's outer folders, for its hover words
+    # (the trash can no longer carries each folder's outer folders: nothing read them, the code
+    # critic 2026-10-20; the message above names them, from the server)
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'data-chains=' in page
+    assert 'data-chains=' not in page and 'data-remove-one' in page

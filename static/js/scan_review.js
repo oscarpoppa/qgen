@@ -3,7 +3,9 @@
  * - crop boxes over each page picture: drag to move, drag a corner to resize; they
  *   write "left,top,right,bottom" (fractions of the page) into their hidden input
  * - "+ Add a picture", remove, the question kind and "Use the page's numbers" switches
- * - "Check and show examples": the item as it stands, checked by the server (nothing saved) */
+ * - "Check and show examples": the item as it stands, checked by the server (nothing saved)
+ * - each problem's place on the page: a blue box to drag; Save is grayed until every checked
+ *   problem has one */
 (function () {
   function csrf() { return document.querySelector('meta[name=csrf-token]').content; }
 
@@ -40,10 +42,15 @@
           ? 'Reading page ' + now.n + ' of ' + s.pages.length + '…'
           : done + ' of ' + s.pages.length + ' pages read';
         if (!s.reading) location.replace(location.href);
-        else setTimeout(poll, 4000);
-      }).catch(function () { setTimeout(poll, 8000); });
+        else later(4000);
+      }).catch(function () { later(8000); });
     };
-    setTimeout(poll, 2000);
+    //(with instant updates, static/js/push.js, it asks when the server says a page changed;
+    //asking every few seconds is then only a backup: the owner, 2026-10-20)
+    var timer = null;
+    function later(ms) { clearTimeout(timer); timer = setTimeout(poll, window.qgenLive ? 60000 : ms); }
+    document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(poll, 300); });
+    later(2000);
     return;
   }
 
@@ -119,6 +126,36 @@
   }
   form.querySelectorAll('.crop').forEach(setUp);
 
+  /* ---------- each problem's place on its page (the owner, 2026-10-20) ---------- */
+  //a blue box dragged is placed; Save stays grayed while a checked problem has no place
+  var save = form.querySelector('[data-save]');
+  function itemOf(crop) {
+    var m = /^p(\d+)i(\d+)-place$/.exec(crop.dataset.for);
+    return m && form.querySelector('.scan-item[data-page="' + m[1] + '"][data-item="' + m[2] + '"]');
+  }
+  function refreshSave() {
+    if (!save) return;
+    var waiting = [];
+    form.querySelectorAll('.crop-place').forEach(function (crop) {
+      var item = itemOf(crop), placed = item && item.querySelector('[data-placed]');
+      if (!crop.hidden && placed && placed.value !== '1') waiting.push(crop.dataset.label);
+    });
+    save.disabled = waiting.length > 0;
+    save.title = waiting.length ? 'Every problem needs its place on the page first (' + waiting.join(', ') + ')' : save.dataset.tip;
+  }
+  form.querySelectorAll('.crop-place').forEach(function (crop) {
+    crop.addEventListener('pointerdown', function () {
+      var item = itemOf(crop);
+      if (!item) return;
+      item.querySelector('[data-placed]').value = '1';
+      var line = item.querySelector('.scan-no-place');
+      if (line) line.hidden = true;
+      crop.classList.remove('is-missing');
+      refreshSave();
+    });
+  });
+  refreshSave();
+
   //"remove" on a picture hides its box (and puts it back when unchecked)
   form.addEventListener('change', function (e) {
     var t = e.target;
@@ -128,7 +165,13 @@
       if (crop) crop.hidden = t.checked;
       row.classList.toggle('is-off', t.checked);
     }
-    if (t.classList.contains('scan-include')) t.closest('.scan-item').classList.toggle('is-off', !t.checked);
+    if (t.classList.contains('scan-include')) {
+      var it = t.closest('.scan-item');
+      it.classList.toggle('is-off', !t.checked);
+      //(a problem left out needs no place)
+      var place = form.querySelector('.crop-place[data-for="p' + it.dataset.page + 'i' + it.dataset.item + '-place"]');
+      if (place) { place.hidden = !t.checked; refreshSave(); }
+    }
     if (t.classList.contains('scan-use-page')) showFixed(t.closest('.scan-item'));
     if (t.classList.contains('scan-qtype')) showChoices(t.closest('.scan-item'));
     if (t.classList.contains('scan-kind')) showKind(t.closest('.scan-value'));
@@ -206,5 +249,16 @@
       .then(function (res) { if (res.ok) out.innerHTML = res.html; else out.textContent = res.error; })
       .catch(function () { out.textContent = 'Couldn’t check it just now. Please try again.'; })
       .then(function () { btn.disabled = false; });
+  });
+
+  /* ---------- Read this page again: asks first (the owner, 2026-10-20) ---------- */
+  //(sent with the whole form, so the changes on the other pages are kept)
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('button[data-ask]');
+    if (!btn) return;
+    e.preventDefault();
+    window.qgenAsk(btn.dataset.ask, 'Read again', false).then(function (yes) {
+      if (yes) form.requestSubmit(btn);
+    });
   });
 })();

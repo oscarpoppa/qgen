@@ -8,7 +8,7 @@
     'details.item-box > .box-body',
     'details.month-box > .table-wrap',
     '.dash-card .dash-list', 'details.grading-group > .table-wrap',
-    '.pick-list', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list', '.awards-scroll', '#all-problems'
+    '.pick-list', '.pick-wrap', 'details.subject-box > .box-body', '.order-list', 'ol.attempt-list', '.awards-scroll', '#all-problems'
   ];
   var MIN = 96, STEP = 48;
   function store(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
@@ -27,7 +27,9 @@
     //(a panel down to the window's bottom has no drag bar: static/js/fitpanel.js sizes it)
     if (el.dataset.grip || el.hasAttribute('data-fit-window')) return;
     el.dataset.grip = '1';
-    var key = keyOf(el, kind), bar = document.createElement('div');
+    //(a Dashboard list's heights kept before 2026-10-20 are dropped: they could leave a card
+    //showing a cut-off row over empty room; the owner)
+    var key = keyOf(el, kind) + (kind === '.dash-card .dash-list' ? ':2' : ''), bar = document.createElement('div');
     bar.className = 'grip-bar';
     bar.setAttribute('role', 'separator');
     bar.setAttribute('aria-orientation', 'horizontal');
@@ -51,6 +53,9 @@
       if (!scrolls(el)) el.style.maxHeight = '';  // a phone: no height of its own
       if (dragging) return;
       bar.hidden = !(scrolls(el) && el.offsetParent !== null && el.scrollHeight > el.clientHeight + 2);
+      //(a card's own pull bar shows only while its list holds more than shows: elastic.js)
+      var card = el.closest('[data-elastic]');
+      if (card && card._elasticBar) card._elasticBar();
     }
     var saved = parseInt(stored(key), 10);
     if (saved && scrolls(el)) el.style.maxHeight = Math.max(MIN, saved) + 'px';

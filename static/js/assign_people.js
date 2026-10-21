@@ -9,7 +9,7 @@
   try { folders = JSON.parse(document.getElementById('person-folders').textContent); } catch (e) {}
   //(the quizzes: the standard picker, folder list and filter, static/js/folderfilter.js and
   //filter.js; Check all shown / Uncheck all here: the owner, 2026-10-19)
-  var items = Array.prototype.slice.call(dialog.querySelectorAll('#assign-people-pick li[data-box]'));
+  var items = Array.prototype.slice.call(dialog.querySelectorAll('#assign-people-pick tr[data-box]'));
   var boxes = items.map(function (li) { return li.querySelector('input'); });
   var count = dialog.querySelector('[data-pick-count]');
   var error = dialog.querySelector('[data-pick-error]'), full = dialog.querySelector('[data-full-assign]');

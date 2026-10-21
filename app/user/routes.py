@@ -18,7 +18,9 @@ def logout_required(func):
     @wraps(func)
     def inner(*args, **kwargs):
         if current_user.is_authenticated:
-            flash('You’re already logged in.', 'info')
+            #(the site's own address, "/", just goes home, with nothing said: the user critic, 2026-10-20)
+            if request.path != '/':
+                flash('You’re already logged in.', 'info')
             return redirect(home_url())
         return func(*args, **kwargs)
     return inner

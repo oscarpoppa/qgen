@@ -21,8 +21,16 @@
       show(open);
       //(every few seconds while a page is being read; otherwise now and then, so a scan
       //started in another tab shows up)
-      setTimeout(poll, s.reading ? 4000 : 30000);
-    }).catch(function () { setTimeout(poll, 30000); });
+      later(s.reading);
+    }).catch(function () { later(false); });
   }
-  setTimeout(poll, box.dataset.reading ? 3000 : 30000);
+  //with instant updates (static/js/push.js) the server says when a page starts, is read or
+  //fails, so it asks then; asking now and then stays only as a backup (the owner, 2026-10-20)
+  var timer = null;
+  function later(reading) {
+    clearTimeout(timer);
+    timer = setTimeout(poll, window.qgenLive ? 300000 : reading ? 4000 : 30000);
+  }
+  document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(poll, 300); });
+  later(!!box.dataset.reading);
 })();

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
+{% from "_pick.html" import pick_table %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {# the folder list beside the problems needs the room: the whole width of the window #}
@@ -9,8 +10,8 @@
    is where a drag takes a problem out of #}
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
-    <table>
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Question</th><th class="row-more">Answer</th><th>Created</th><th></th></tr></thead>
+    <table class="even-cols">
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -27,37 +28,30 @@
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div></details>
           </td>
-          {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
-          <td data-label="Question" class="row-more"><div class="clamp" title="Click to show all" onclick="this.classList.toggle('open')">{{ item.raw_prob }}</div></td>
-          <td data-label="Answer" class="row-more">
-            {% if item.qtype in qtypes and not qtypes[item.qtype].auto_graded %}
-              {# written answers: no answer key; a model answer, if given, is only a guide #}
-              <span class="badge">Teacher-graded</span>
-              {% if item.raw_ansr %}<div class="clamp small muted" onclick="this.classList.toggle('open')">Model answer: {{ item.raw_ansr }}</div>{% endif %}
-            {% else %}
-              <div class="clamp" onclick="this.classList.toggle('open')">{{ item.raw_ansr or item.options.get('choices') or '' }}</div>
-            {% endif %}
-          </td>
-          {#- when it was made, to sort by (the owner, 2026-10-18) #}
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
+          {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
+          {#- when it was made, to sort by (the owner, 2026-10-18) #}
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {#- the question and answer in a dialog (static/js/qa.js), not as columns that came and went
+                as rows opened and shifted the list (the owner, 2026-10-21) #}
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-qa="{{ url_for('qgen.vprob_example', vpid=item.id) }}" data-qa-title="{{ item.title or 'Untitled' }}" title="Question and answer: see what “{{ item.title or 'Untitled' }}” asks, and its answer">{{ icon_label('lc-answer-key', 'Question and answer') }}</button>
             {% if in_archive %}
             {# the Archive's Problems (the owner, 2026-10-16): Restore, History and Delete for good #}
             <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form"
                   data-confirm="Restore “{{ item.title or 'Untitled' }}”? It goes back on the Problems page." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title or 'Untitled' }}” back on the Problems page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
-            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
             {% if blockers[item.id] %}{{ slot('Delete for good', blockers[item.id], 'btn btn-danger btn-sm', 'lc-trash') }}
             {% else %}{{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id),
                  delete_note=('Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}{% endif %}
             {% else %}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Edit: Change this problem's question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Edit: Change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# a copy, named in a small dialog (static/js/copy.js): the owner, 2026-10-16 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-copy-url="{{ url_for('qgen.copy_item', kind='problems', iid=item.id) }}" data-copy-name="{{ (item.title or 'Untitled') }}" data-copy-kind="problem" title="Copy: Make a new problem from “{{ (item.title or 'Untitled') }}”">{{ icon_label('lc-copy', 'Copy') }}</button>
             {# put it at the end of a quiz (static/js/quiz_pick.js), the owner 2026-10-15 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-add-quiz="{{ item.id }}" data-what="“{{ item.title or 'Untitled' }}”"{% if not quizzes %} disabled title="Add to a quiz: there are no quizzes yet"{% else %} title="Add to a quiz: Put “{{ item.title or 'Untitled' }}” at the end of one of your quizzes"{% endif %}>{{ icon_label('lc-list-plus', 'Add to a quiz') }}</button>
-            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it's been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
             {{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id), archive_url=url_for('qgen.archive_vprob', vpid=item.id),
                  delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}
             {% endif %}
@@ -74,23 +68,27 @@
 {% block content %}
 {% if in_archive %}
 <div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
-<p class="muted page-intro">Problems moved to the Archive: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
-  Quizzes that use one keep it. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.</p>
+{#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
+{% set archive_note %}Problems moved to the Archive: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
+  Quizzes that use one keep it. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.{% endset %}
 {% else %}
 {# (its buttons small, beside the title: the title row only as tall as the title, the owner 2026-10-15) #}
+{#- the page's own buttons at the top, at the open right end of the list's heading row; under the
+    title only when there's no list (the owner, 2026-10-20) #}
+{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}{% endset %}
 <div class="page-head title-inline">
   <h1>{{ title }}</h1>
-  <div class="actions">
-    <a class="btn btn-xs" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-xs" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}</div>
+  {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
 </div>
 
 {% endif %}
 {% if not total and in_archive %}
+  <p class="muted page-intro">{{ archive_note }}</p>
   <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No problems in the Archive. A problem’s trash can has Move to Archive.</div>
 {% elif not total %}
   <div class="card empty"><span class="big">{{ icon('note') }}</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
-  {% call folders_page(fk) %}
+  {% call folders_page(fk, actions=head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='problem:') %}{{ problem_table(n['items'], here=n.folder) }}{% endcall %}
@@ -118,7 +116,7 @@
     </div>
     {% set aq_quizzes, aq_tree = assign_quizzes() %}
     <div class="field pick-people" id="add-quiz-pick">
-      {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='li', id='add-quiz-bar') }}
+      {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
       <div class="btn-row small write-to-checks">
         <button type="button" class="btn btn-secondary btn-sm" data-quizzes="all" title="Check every quiz in the list below (the folder chosen, and the names that match)">Check all shown</button>
         <button type="button" class="btn btn-secondary btn-sm" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
@@ -128,9 +126,9 @@
            data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ aq_tree|tojson }}</script>
         <div class="folder-filter-list">
-          <ul class="choice-list pick-list add-quiz-list">
-            {% for q in aq_quizzes %}<li data-box="quiz:{{ q.id }}"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"><label for="aq-{{ q.id }}">{{ q.title }}</label></li>{% endfor %}
-          </ul>
+          {% call pick_table('Quiz', 'add-quiz-list') %}
+            {% for q in aq_quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label></td></tr>{% endfor %}
+          {% endcall %}
         </div>
       </div>
     </div>
@@ -143,4 +141,4 @@
 </dialog>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script><script src="{{ asset('js/qa.js') }}" defer></script>{% endblock %}

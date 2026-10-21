@@ -131,7 +131,7 @@
       //(like the Assign dialogs: the Quizzes page's folder list and the filter narrow the list
       //(folderfilter.js, filter.js); Check all shown / Uncheck all; as many quizzes as wanted)
       var err = dialog.querySelector('[data-quiz-error]');
-      var rows = Array.prototype.slice.call(dialog.querySelectorAll('.add-quiz-list > li'));
+      var rows = Array.prototype.slice.call(dialog.querySelectorAll('.add-quiz-list tbody > tr'));
       var count = dialog.querySelector('[data-quiz-count]');
       function sync() {
         var n = dialog.querySelectorAll('input[name=quiz]:checked').length;

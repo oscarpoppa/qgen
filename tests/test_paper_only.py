@@ -60,8 +60,10 @@ def test_take_grade_and_print(app_db):
     assert 'sam' in page and 'kim' in page and 'Color the triangles red.' in page and pic in page
     assert 'window.print()' in page
     assert 'href="/quiz/results/{}"'.format(vq.id) in no_titles(page)
-    # and from the quiz's results later
-    assert 'Print paper pages</span></a>' in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()  # (the printer icon: owner 2026-10-14)
+    # and later from Results by quiz's row; not on the quiz's history (it prints a worksheet per student,
+    # not that page: the owner, 2026-10-21)
+    assert 'aria-label="Print paper pages"' in teacher.get('/quiz/results').data.decode()  # (the printer icon: owner 2026-10-14)
+    assert 'aria-label="Print paper pages"' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     # students can't open it
     s = login(app, 'sam')
     assert s.get('/quiz/print/{}'.format(vq.id)).status_code == 302
@@ -113,21 +115,22 @@ def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     s = login(app, 'sam')
     assert '<tr class="row-is-new" data-box="quiz:' in s.get('/mypage').data.decode()
-    # the browser tab: the page's name, then 🟡 new quizzes after it (and the check-in keeps it up to date)
-    assert ' 🟡1</title>' in s.get('/home').data.decode()
+    # the browser tab: the page's name; new quizzes (gold) and started ones (blue) as dots on its icon,
+    # from the counts the page carries (tabdots.js; the check-in keeps them up to date: owner 2026-10-20)
+    assert 'name="tab-counts" content="1,0"' in s.get('/home').data.decode()
     assert s.get('/messages/poll').get_json()['tab'] == [1, 0]
     assert 'class="quiz-is-new"' in s.get('/home').data.decode()
-    assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    assert '<tr class="row-is-new" data-fkey="q:' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
     take_page(s, CQuiz.query.one().id)
     assert '<tr class="row-is-started" data-box="quiz:' in s.get('/mypage').data.decode()
-    assert ' 🔵1</title>' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
+    assert 'name="tab-counts" content="0,1"' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
     # counted by quiz, like the boxes: a second try at the same quiz doesn't add a dot
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert s.get('/messages/poll').get_json()['tab'] == [0, 1]
     assert '<title>Quizzes' in teacher.get('/dashboard').data.decode() or '🟡' not in teacher.get('/dashboard').data.decode().split('</title>')[0]
     assert 'class="quiz-is-started"' in s.get('/home').data.decode()
     # a new attempt and a started one at the same quiz: gold wins (the owner, 2026-10-20)
-    assert 'result-box quiz-is-new' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
+    assert '<tr class="row-is-new" data-fkey="q:' in teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
     assert '<tr class="row-is-new" data-box="quiz:' in s.get('/mypage').data.decode()
 
 
@@ -139,7 +142,7 @@ def test_quiz_without_paper_redirects_as_before(app_db):
     sam = User.query.filter_by(username='sam').one()
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert r.status_code == 302 and '/quiz/print' not in r.headers['Location']
-    page = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    page = teacher.get('/quiz/results').data.decode()
     assert '/quiz/print/' not in page and 'disabled title="Print paper pages: this quiz has no Paper only questions"' in page  # grayed out, not missing
 
 
@@ -178,3 +181,7 @@ def test_my_quizzes_status_column_says_completed(app_db):
     S.submit(CQuiz.query.one(), {})
     db.session.commit()
     assert CQuiz.query.one().completed and '>Completed</span>' in status()
+    # sorted New, In progress, Completed: a quiz with a new and a started attempt sorts as New
+    assert 'data-label="Status" class="quiz-state" data-sort="3' in s.get('/mypage').data.decode()
+    teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
+    assert 'data-label="Status" class="quiz-state" data-sort="1' in s.get('/mypage').data.decode()

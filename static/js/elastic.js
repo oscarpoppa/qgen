@@ -43,6 +43,10 @@
     var extra = parseFloat(stored(key)) || parseFloat(stored('qgen-stretch:' + location.pathname + ':' + card.dataset.elastic)) || 0;
     var rest = null;  // the room it has in the grid
     var tall = parseFloat(stored(key + ':h')) || 0;  // (a card with no list inside: its own extra height)
+    //a card that only gets taller is as tall as what's in it: no extra height of its own, and its
+    //pull bar only while its list holds more than shows (the owner, 2026-10-20: a card that can't
+    //grow has no drag bar; one whose list runs past the window scrolls it)
+    if (tallOnly) { tall = 0; store(key + ':h', null); }
     //its handles: a pull bar along the bottom (taller); a card that also gets wider has a pull
     //bar on its growing side and a corner for both at once (the owner, 2026-10-14)
     var handles = [];
@@ -85,6 +89,7 @@
       if (tallOnly) want = 0;
       if (narrow()) { card.style.width = ''; card.style.marginLeft = ''; handles.forEach(function (h) { h.hidden = true; }); float(); return; }
       handles.forEach(function (h) { h.hidden = false; });
+      if (card._elasticBar) card._elasticBar();
       var g = room();
       extra = Math.max(0, Math.min(want, g.max));
       handles.forEach(function (h) { h.classList.toggle('on-left', g.toLeft); });
@@ -118,6 +123,11 @@
       if (keep) store(key + ':h', tall ? String(Math.round(tall)) : null);
       float();
     }
+    function barShown() {
+      if (!tallOnly) return;
+      var a = area(), more = !!a && a.scrollHeight > a.clientHeight + 2;
+      if (!card._elasticDragging) handles.forEach(function (h) { h.hidden = !more; });
+    }
     card._baseH = card.getBoundingClientRect().height;
     widen(extra, false);
     if (tall) heighten(tall, false);
@@ -125,7 +135,9 @@
     //so nothing is covered when the page opens; only what grows from here on floats)
     rest = null; card.style.marginBottom = ''; float();
     if (window.qgenRelayout) window.qgenRelayout();
-    if (window.ResizeObserver) new ResizeObserver(function () { float(); }).observe(card);
+    if (window.ResizeObserver) new ResizeObserver(function () { float(); barShown(); }).observe(card);
+    card._elasticBar = barShown;
+    barShown();
     card._elasticFloat = float;
     card.addEventListener('toggle', function () { if (card.open) raise(card); });
     function usual() {
@@ -150,13 +162,14 @@
         var t0 = Math.max(0, was - card._baseH);
         heighten(t0, false);
         hd.setPointerCapture(e.pointerId);
+        card._elasticDragging = true;
         document.documentElement.classList.add(!sideways ? 'elastic-sizing-v' : !upDown ? 'elastic-sizing-h' : 'elastic-sizing');
         function move(ev) {
           if (sideways) widen(w0 + (toLeft ? x0 - ev.clientX : ev.clientX - x0), false);
           if (upDown) {
             var dy = ev.clientY - y0, used = 0;
             if (a) { a._gripSet(h0 + dy, false); used = a.getBoundingClientRect().height - h0; }
-            heighten(t0 + Math.max(0, dy - Math.max(0, used)), false);
+            if (!tallOnly) heighten(t0 + Math.max(0, dy - Math.max(0, used)), false);
           }
         }
         function up() {
@@ -164,9 +177,11 @@
           hd.removeEventListener('pointerup', up);
           hd.removeEventListener('pointercancel', up);
           document.documentElement.classList.remove('elastic-sizing', 'elastic-sizing-v', 'elastic-sizing-h');
+          card._elasticDragging = false;
           widen(extra, true);
           if (a) a._gripSet(a.getBoundingClientRect().height, true);
           heighten(tall, true);
+          barShown();
         }
         hd.addEventListener('pointermove', move);
         hd.addEventListener('pointerup', up);
@@ -179,7 +194,7 @@
         if (sideways && e.key === grow) widen(extra + STEP, true);
         else if (sideways && e.key === (grow === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft')) widen(extra - STEP, true);
         else if (upDown && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && a) a._gripSet(a.getBoundingClientRect().height + (e.key === 'ArrowDown' ? STEP : -STEP), true);
-        else if (upDown && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) heighten(tall + (e.key === 'ArrowDown' ? STEP : -STEP), true);
+        else if (upDown && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && !tallOnly) heighten(tall + (e.key === 'ArrowDown' ? STEP : -STEP), true);
         else if (e.key === 'Home') usual();
         else return;
         e.preventDefault();

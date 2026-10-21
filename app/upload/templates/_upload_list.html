@@ -8,8 +8,8 @@
 
 {% macro upload_table(items, here=none) %}
   <div class="table-wrap stack">
-    <table>
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th>Folders</th><th>Created</th><th></th></tr></thead>
+    <table class="even-cols">
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th>Created</th><th>Folders</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}{% set gs = item.picgroups if kind == 'pictures' else item.filegroups %}
         <tr data-item="{{ item.id }}" data-box="{{ what }}:{{ item.id }}" data-name="{{ item.name|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -18,8 +18,8 @@
             {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="Open {{ item.name }} full size in a new tab"><img src="{{ url_for('static', filename='T_' ~ item.name) }}" alt="" loading="lazy"></a>
             {%- else %}<span class="upload-thumb upload-file" aria-hidden="true">{{ icon('file') }}</span>{% endif %}
             <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></td>
-          <td data-label="Folders" class="person-folders">{{ in_folders(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
+          <td data-label="Folders" class="person-folders">{{ in_folders(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</td>
           <td class="actions">
             {%- if kind == 'pictures' %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} full size in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
@@ -39,14 +39,17 @@
 
 {% macro upload_page(upload_label, upload_tip, empty_icon, empty_text) %}
 {# (its buttons small, beside the title, like Problems and Quizzes) #}
+{#- the page's own button at the top, at the open right end of the list's heading row; under the
+    title only when there's no list (the owner, 2026-10-20) #}
+{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('upload.upload') }}" title="{{ upload_tip }}">{{ upload_label }}</a>{% endset %}
 <div class="page-head title-inline">
   <h1>{{ title }}</h1>
-  <div class="actions"><a class="btn btn-xs" href="{{ url_for('upload.upload') }}" title="{{ upload_tip }}">{{ upload_label }}</a></div>
+  {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
 </div>
 {% if not total %}
   <div class="card empty"><span class="big">{{ icon(empty_icon) }}</span>{{ empty_text }}</div>
 {% else %}
-  {% call folders_page(fk) %}
+  {% call folders_page(fk, actions=head_buttons) %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix=what ~ ':') %}{{ upload_table(n['items'], here=n.folder) }}{% endcall %}

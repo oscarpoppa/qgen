@@ -35,7 +35,7 @@
 <div class="page-head">
   <h1>{{ title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
-  <span class="head-icons">{% if vq and vq.id %} <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student's version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a> {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student's attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %} {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %} {% endif %}</span>
+  <span class="head-icons">{% if vq and vq.id %} <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student’s version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a> {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student’s attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %} {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %} {% endif %}</span>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
   <div class="actions">
@@ -76,7 +76,7 @@
   <div class="card">
       <div class="card-head"><h2>Problems</h2>
         {# or go to the Problems page to check them there, and come back with them (static/js/quiz_pick.js) #}
-        {% if has_problems %}<a class="btn btn-secondary btn-sm" id="pick-on-problems" data-keeps-form href="{{ url_for('qgen.list_vprobs') }}" title="Go to the Problems page, check the problems you want there, then come back here with them (what you've filled in here is kept)">Pick on the Problems page</a>{% endif %}</div>
+        {% if has_problems %}<a class="btn btn-secondary btn-sm" id="pick-on-problems" data-keeps-form href="{{ url_for('qgen.list_vprobs') }}" title="Go to the Problems page, check the problems you want there, then come back here with them (what you’ve filled in here is kept)">Pick on the Problems page</a>{% endif %}</div>
       {% if has_problems %}
         <div class="builder-filters">
           {{ filter_bar('#all-problems', 'problem', 'problems', id='problem-filter-bar') }}

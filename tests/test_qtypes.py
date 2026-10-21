@@ -70,9 +70,10 @@ def test_text_grading_ignores_case_spaces_and_period():
     qt, o, (_, ansr, co) = make('text', 'Capital of France?', 'Paris\nParis, France')
     assert qt.grade('  paris. ', ansr, co, o) == 1.0
     assert qt.grade('paris,   france', ansr, co, o) == 1.0
-    assert qt.grade('Lyon', ansr, co, o) == 0.0
+    # (not an accepted answer: the teacher checks it, the owner 2026-10-20)
+    assert qt.grade('Lyon', ansr, co, o) is None
     o['case_sensitive'] = True
-    assert qt.grade('paris', ansr, co, o) == 0.0
+    assert qt.grade('paris', ansr, co, o) is None
 
 
 def test_pick_one_show_n_always_has_one_correct():

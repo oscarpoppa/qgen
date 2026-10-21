@@ -4,17 +4,18 @@ from app import db
 
 def delete_account(usr, by):
     """Delete someone's account: their quiz attempts go to the Archive first, then their
-    picture and unfinished scans, then the account. Returns their username."""
+    picture, then the account; a teacher's unfinished scans go to `by`, the teacher deleting it.
+    Returns their username."""
     from . import avatars
     from app.qgen import services as S
-    from app.qgen.scan import remove_user_jobs
+    from app.qgen.scan import hand_over_jobs
     from .models import User
     name = usr.username
     S.archive_student(usr, by=by)
     #(its Archive folder becomes “ava (deleted)”: a new “ava” gets a folder of her own)
     S.mark_deleted_folder(usr)
     avatars.remove(usr, commit=False)
-    remove_user_jobs(usr)  # their unfinished workbook scans
+    hand_over_jobs(usr, by)  # their unfinished workbook scans
     User.query.filter_by(id=usr.id).delete()
     db.session.commit()
     return name

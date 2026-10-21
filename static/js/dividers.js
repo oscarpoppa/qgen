@@ -46,7 +46,11 @@
     if (!cell || !li.offsetParent) return;
     //(centered under it: the attempts' buttons are smaller than the quiz's; a row with nothing to
     //view has no button of its own, so the place one would be: the cell's right end, inside it)
-    var own = cell.querySelector('.quiz-row-actions > :first-child'), mid;
+    //(the row's own Start / Continue / View if it has one; never its Move control, which is about
+    //the row's folder, not an attempt)
+    //(a group of icons, a student page's attempt line: its right end at the cell's right end, under
+    //the row's own icons; the owner, 2026-10-21)
+    var own = li.querySelector('.attempt-act-group') ? null : cell.querySelector('.quiz-row-actions > :not(.move-mini):not(form):first-child'), mid;
     if (own) { var o = own.getBoundingClientRect(); mid = (o.left + o.right) / 2; }
     else { var c = cell.getBoundingClientRect(); mid = c.right - parseFloat(getComputedStyle(cell).paddingRight) - 17; }
     li.style.setProperty('--act-r', Math.round(li.getBoundingClientRect().right - mid) + 'px');
@@ -62,16 +66,22 @@
     d.style.setProperty('--body-top', Math.round(top - e.top) + 'px');
     //(just inside the row's own outline)
     d.style.setProperty('--body-l', Math.round(r.left + 1 - e.left) + 'px');
-    d.style.setProperty('--body-r', Math.round(e.right - r.right + 1) + 'px');
+    //(what's inside can take its width from this one (an open row's contents run the row's width), so
+    //the row settles only after it's applied: measured again until it stops changing; Problem
+    //history's answers stopped short of the row's end otherwise)
+    var right = Math.round(e.right - r.right + 1) + 'px';
+    if (d.style.getPropertyValue('--body-r') !== right) { d.style.setProperty('--body-r', right); unsettled = true; }
   }
 
-  var queued = false;
+  var queued = false, unsettled = false, again = 0;
   function all() {
     queued = false;
+    unsettled = false;
     document.querySelectorAll('td.attempt-buttons').forEach(function (td) { level(td.closest('tr')); });
     document.querySelectorAll(LINED).forEach(stretch);
     document.querySelectorAll('tr > td > details.row-fold[open]').forEach(foldBody);
-    document.querySelectorAll('ol.attempt-list > li').forEach(underRowButton);
+    document.querySelectorAll('ol.attempt-list > li, .result-group-head').forEach(underRowButton);
+    if (unsettled && again < 3) { again++; soon(); } else again = 0;
   }
   function soon() {
     if (!queued) { queued = true; requestAnimationFrame(all); }

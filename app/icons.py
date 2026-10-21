@@ -157,9 +157,14 @@ BUTTON_ICONS = {'View': 'lc-eye', 'Edit': 'lc-pencil', 'History': 'lc-history', 
 
 
 def icon_label(name, label):
-    """An icon button's inside: the drawing, and its words for screen readers (the button's
-    tooltip starts with the same words). {{ icon_label('lc-eye', 'View') }}"""
-    return Markup('{}<span class="sr-only">{}</span>').format(icon(name), label)
+    """An icon button's inside: the drawing, named with its words for screen readers (the button's
+    tooltip starts with the same words). {{ icon_label('lc-eye', 'View') }}
+    (The words on the drawing itself, not in a hidden <span> beside it: one element fewer per
+    icon, 2,300 on the Problems page; the owner, 2026-10-21.)"""
+    if name not in PATHS:
+        raise KeyError('no icon named {!r}'.format(name))
+    inside = PATHS[name] if name in INLINE else '<use href="#i-{}"/>'.format(name)
+    return Markup('<svg class="ico" viewBox="0 0 24 24" role="img" aria-label="{}" focusable="false">{}</svg>').format(label, Markup(inside))
 
 
 def icon_script():

@@ -18,7 +18,7 @@
     {# before its start time: shown, but it can't be started (the quiz page refuses it too) #}
     {% set opens = cq.opens_at|when %}
     {# (Start and Continue: the play triangle, the owner 2026-10-14) #}
-    <button type="button" class="btn btn-secondary {{ size }} btn-icon" disabled title="Start: you can't start this yet. It opens {{ opens }}.">{{ icon_label('lc-play', 'Start') }}</button>
+    <button type="button" class="btn btn-secondary {{ size }} btn-icon" disabled title="Start: you can’t start this yet. It opens {{ opens }}.">{{ icon_label('lc-play', 'Start') }}</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
     <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>
@@ -42,10 +42,10 @@
 {% macro cards(gs) %}
   {% if gs %}
   <div class="table-wrap stack">
-  <table class="quiz-rows">
+  <table class="quiz-rows even-cols">
     {#- (attempts and status are columns of their own, sortable, and lined up by the table itself
         whatever badges come and go: the owner, 2026-10-20) #}
-    <thead><tr><th>Quiz</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
+    <thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
     <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
@@ -57,7 +57,8 @@
       <td data-label="Quiz">
       <details class="box row-fold quiz-card" data-quiz="{{ g.vquiz.id }}" data-box="quiz-row:{{ g.vquiz.id }}" data-attempts="{{ g.attempts|map(attribute='id')|join(',') }}" data-states="{{ states|join(';') }}">
         <summary class="card-head" data-drag="quiz" data-id="{{ g.vquiz.id }}" data-home="{{ here.id if here else 'top' }}" data-name="{{ g.vquiz.title }}">
-          {% set tried = g.attempts|rejectattr('status', 'equalto', 'new')|list|length %}
+          {#- (an attempt is any one copy of the quiz, whatever its status, a new one too: the owner, 2026-10-21) #}
+          {% set tried = g.attempts|length %}
           {{ box_label('note', g.vquiz.title, none, 'span', g.vquiz.title) }}
           {% set has_new = g.attempts|selectattr('status', 'equalto', 'new')|list %}
           {#- (handed in and waiting for grading counts as in progress, as everywhere else) #}
@@ -80,19 +81,24 @@
           {% endfor %}
         </ol>
       </details></td>
+      {#- the newest thing that happened to any of its attempts: handed in, started, or assigned
+          (sortable; right after the name, as on every list: the owner 2026-10-20) -#}
+      {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
+      <td data-label="Latest" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
       <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}<span class="badge box-count">{{ count_of(tried, 'attempt', 'attempts') }}</span>{% endif %}</td>
       {#- the row's state first (In progress, else New, else Completed), then anything more: Due soon, a second New, a change -#}
-      {#- (Completed: every attempt handed in and graded, the owner 2026-10-20) -#}
-      <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_started else '2' if has_new else '3' }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
+      {#- (Completed: every attempt handed in and graded, the owner 2026-10-20. Sorted New, In progress,
+          Completed, a quiz with more than one at its highest: New with In progress sorts as New) -#}
+      <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
         {%- if has_started %}<span class="badge badge-accent badge-status">In progress</span>{% elif has_new %}<span class="badge badge-warn">New</span>{% else %}<span class="badge badge-ok badge-status">Completed</span>{% endif %}
         {%- if has_new and has_started %}<span class="badge badge-warn">New</span>{% endif %}
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
-      {#- View the latest when nothing is waiting; Start / Continue only on the attempt lines, never
-          here, where it was unclear which attempt it meant (the owner, 2026-10-20); then Move -#}
-      <td class="actions"><span class="btn-row quiz-row-actions">{% if not g.open %}{{ action(latest) }}{% endif %}
+      {#- no Start / Continue / View of its own: they're on each attempt's line, where it's clear which
+          attempt they mean (the owner, 2026-10-20); only Move -#}
+      <td class="actions"><span class="btn-row quiz-row-actions">
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}</span></td>
     </tr>
   {% endfor %}
@@ -110,13 +116,18 @@
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1></div>
+{#- a teacher's way to try a quiz as a student would: always here, empty or not, at the right end of
+    the list's heading row ("My quizzes  15 quizzes"), or of the page's title row when there's no list
+    yet (the owner, 2026-10-20) #}
+{% set assign_me %}{% if current_user.is_admin %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', users=current_user.id) }}" title="Choose a quiz to give yourself, to take it as a student would">Assign a quiz to me</a>{% endif %}{% endset %}
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
+  {% if not (groups or fk.root.folders) and current_user.is_admin %}<div class="actions">{{ assign_me }}</div>{% endif %}</div>
 
 {# the last few handed in, whatever folder they're in, newest first: a pop-over from its button
    under the folder list (the owner, 2026-10-17; static/js/popcard.js) #}
 {% set finished_button %}{% if finished %}<button type="button" class="btn btn-secondary btn-sm side-pop-toggle" data-popcard="#finished-pop" aria-expanded="false" title="The quizzes you handed in last">{{ icon('hourglass') }} Just finished ({{ finished|length }})</button>{% endif %}{% endset %}
 {% if groups or fk.root.folders %}
-{% call folders_page(fk, under_side=finished_button) %}
+{% call folders_page(fk, actions=assign_me, under_side=finished_button) %}
   {# (in the same bar as the other folder pages, so the folder's heading sits in its middle) #}
   {#- (the way back at the filter row's right end, as on the other list pages; one line under the
       row, not two: the owner, 2026-10-17) #}
@@ -163,10 +174,8 @@
 {% if not groups %}
   {% if current_user.is_admin %}
   <div class="card empty"><span class="big">{{ icon('books') }}</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
-    <div class="btn-row" style="justify-content:center;margin-top:12px">
-      <a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_vprobs') }}" title="See all problems, and make quizzes from them">Problems</a>
-      <a class="btn btn-secondary btn-sm" href="{{ url_for('messages.inbox') }}" title="Read and write messages to students">Messages</a></div></div>
+    {#- (no New problem / Problems / Messages here: nothing to do with this card, the owner 2026-10-20;
+        "Assign a quiz to me" is beside the page's title) #}</div>
   {% else %}
   <div class="card empty"><span class="big">{{ icon('books') }}</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}

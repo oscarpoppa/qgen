@@ -39,6 +39,7 @@ window.qgenHideRow = function (row, key, hide) {
     var before = null;  // which folder boxes were open before filtering
     var none = null;  // the "Nothing matches" note
     var touched = false;  // nothing is shown or hidden until someone filters
+    var first = true;  // the run on the page's opening
 
     function things() { return root ? Array.prototype.slice.call(root.querySelectorAll(bar.dataset.items || 'tbody tr')) : []; }
     function words(el) { return (el.dataset.name || el.textContent).toLowerCase(); }
@@ -111,7 +112,11 @@ window.qgenHideRow = function (row, key, hide) {
           none.appendChild(again);
         }
       }
-      input.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true, detail: { active: active } }));
+      //(not on the page's first run with nothing typed or chosen: nothing changed, and the folder
+      //tabs, grids and lists that listen would only lay themselves out again, 0.25 s on Problems in
+      //Firefox; the owner, 2026-10-21)
+      if (!first || active) input.dispatchEvent(new CustomEvent('qgen-filtered', { bubbles: true, detail: { active: active } }));
+      first = false;
     }
 
     input.addEventListener('input', run);

@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar, person_link, quiz_link, box_label, count_of, slot with context %}
-{% from "_results.html" import result_cells with context %}
+{% from "_results.html" import result_cells, result_group, result_row with context %}
 {% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
 {% block body_attrs %}{{ watch('quizresults:%d' % quizzes[0].vquiz.id if single else 'byquiz') }}{% endblock %}
@@ -14,13 +14,13 @@
   <details class="box card subject-box quiz-result item-box" data-list id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
       {{ box_label('note', vq.title if single else quiz_link(vq), count_of(q.students, 'student', 'students')) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
-      {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
+      {% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
       {% if q.waiting %}<span class="badge badge-accent badge-status" title="{{ q.waiting }} handed in and waiting for grading">{{ q.waiting }} in progress</span>{% endif %}
       {# the quiz's own buttons on its heading line (no row of their own) #}
       <span class="box-actions">
       {% if not single %}      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>{% endif %}
-      {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print paper pages: the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">{{ icon_label('lc-printer', 'Print paper pages') }}</a>{% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Print paper pages: {{ 'this quiz has no Paper only questions' if not q.paper else 'no one has this quiz yet' }}">{{ icon_label('lc-printer', 'Print paper pages') }}</button>{% endif %}
+      {#- (no Print paper pages on a quiz's history: the owner, 2026-10-21) #}
       </span>
     </summary>
     <div class="box-body">
@@ -50,30 +50,64 @@
   </details>
 {% endmacro %}
 
-{# one quiz's history: the students in one folder, a table like the quiz box's (the owner,
-   2026-10-17) #}
+{# the quizzes as rows like My quizzes' (the owner, 2026-10-21; each was a box): the name folds the
+   row open to each student's attempts; beside it Students, Average and Status, each sortable; at
+   the row's end View, Edit, History (the name used to go there) and Print paper pages #}
+{% macro quiz_rows(vqs) %}
+  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows">
+    <thead><tr><th>Quiz</th><th>Students</th><th>Average</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for vq in vqs %}{{ quiz_row(results[vq.id]) }}{% endfor %}</tbody>
+  </table></div>
+{% endmacro %}
+{% macro quiz_row(q) %}
+  {% set vq = q.vquiz %}
+  <tr class="result-item" id="quiz-{{ vq.id }}" data-box="quiz:{{ vq.id }}" data-name="{{ vq.title|lower }}"{% if not q.students %} data-empty{% endif %}>
+    <td data-label="Quiz"><details class="box row-fold" data-box="result-row:quiz-{{ vq.id }}">
+      <summary>{{ box_label('note', vq.title, none, 'span', vq.title) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}</summary>
+      <div class="result-groups divided" data-fold-body>
+      {% for student, g in q.rows %}{{ result_group(person_link(student, strong=false), g, student, rules, student.username|lower ~ ' ' ~ (student.nickname or '')|lower) }}
+      {% else %}<p class="muted small box-empty">Not assigned to anyone yet.</p>
+        <div class="btn-row">{% if not vq.removed_at %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give “{{ vq.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}</div>
+      {% endfor %}</div></details></td>
+    <td data-label="Students" class="nowrap" data-sort="{{ '%04d' % q.students }}"><span class="badge box-count">{{ count_of(q.students, 'student', 'students') }}</span></td>
+    <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % q.average if q.average is not none else '' }}">{% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td data-label="Status" class="nowrap" data-sort="{{ '%04d' % q.waiting if q.waiting else '' }}">{% if q.waiting %}<span class="badge badge-accent badge-status" title="{{ q.waiting }} handed in and waiting for grading">{{ q.waiting }} in progress</span>{% endif %}</td>
+    <td class="actions"><span class="btn-row quiz-row-actions">
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
+      {% if q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student’s attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
+      {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print paper pages: the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">{{ icon_label('lc-printer', 'Print paper pages') }}</a>{% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Print paper pages: {{ 'this quiz has no Paper only questions' if not q.paper else 'no one has this quiz yet' }}">{{ icon_label('lc-printer', 'Print paper pages') }}</button>{% endif %}
+    </span></td>
+  </tr>
+{% endmacro %}
+
+{# one quiz's history: the students in one folder, each a row like a student page's quizzes (the owner,
+   2026-10-21; their attempts were crammed into cells): the name folds the row open to the score that
+   counts and a line for each attempt; beside it Latest, Attempts, Status and Score, each sortable; at
+   the row's end Give another attempt, Archive all and Student page (the name used to go there) #}
 {% macro students_table(people) %}
   {% if people %}
-  <div class="table-wrap stack">
-    <table>
-      <thead><tr><th>Student</th><th>Attempts</th><th>Score counted</th><th><span class="sr-only">Each attempt</span></th><th></th></tr></thead>
-      <tbody>
-      {% for person in people %}{% set student, g = rows[person.id] %}
-        <tr data-box="student:{{ student.id }}" data-name="{{ student.username|lower }} {{ (student.nickname or '')|lower }}" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" class="{{ 'row-is-new' if g.attempts|selectattr('status', 'equalto', 'new')|list else 'row-is-started' if g.attempts|selectattr('status', 'in', ['started', 'review'])|list else '' }}">
-          <td data-label="Student" class="nowrap">{{ person_link(student, strong=false) }}</td>
-          {{ result_cells(g, student, rules) }}
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {#- (the Score colors' cut-offs, for the folder tabs' averages: static/js/folderfilter.js) #}
+  <div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-score-green="{{ tuning.get('score_green') }}" data-score-amber="{{ [tuning.get('score_amber'), tuning.get('score_green')]|min }}">
+    <thead><tr><th>Student</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
+    <tbody>
+    {% for person in people %}{% set student, g = rows[person.id] %}
+      {% set page_icon %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Student page: {{ student.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>{% endset %}
+      {{ result_row(g, student, label=box_label(avatar(student, 26), student.shown_name, none, 'span', student.shown_name),
+                    key=('data-box="student:' ~ student.id ~ '"' ~ (' data-score="' ~ g.combined ~ '"' if g.combined is not none else ''))|safe, open_key='history-row:' ~ g.vquiz.id ~ '-' ~ student.id,
+                    name=student.username|lower ~ ' ' ~ (student.nickname or '')|lower, icons=page_icon) }}
+    {% endfor %}
+    </tbody>
+  </table></div>
   {% endif %}
 {% endmacro %}
 
 {% block content %}
 {% set laid_out = single and quizzes[0].rows %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
+  {#- (one quiz's history: "Quiz history:" on the top line, the quiz's name under it, so the words
+      aren't broken across lines and the name has the room: the owner, 2026-10-21) #}
+  {% if single %}<h1 class="title-two"><span class="title-kind">Quiz history:</span> <span class="title-name">{{ quizzes[0].vquiz.title }}</span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   {% if single %}<span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="View quiz: look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Edit quiz: change “{{ quizzes[0].vquiz.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a></span>{% endif %}
   {% if not laid_out %}<div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
@@ -90,15 +124,16 @@
         problem's history (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes', 'btn btn-secondary btn-sm') }}
       {% if vq.removed_at %}{{ slot('Assign it', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% else %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Give “{{ vq.title }}” to students">Assign it</a>{% endif %}</div></div>
-  {#- the quiz at a glance, like a problem's history's summary #}
+  {#- the quiz at a glance, the same card as a problem's history's (removed and put back: the owner, 2026-10-21) #}
   <div class="card problem-summary">
     <div class="btn-row">
       <span class="badge">{{ count_of(q.students, 'student', 'students') }}</span>
       {% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}
-      {% if q.average is not none %}<span class="badge badge-ok" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
+      {% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% endif %}
       {% if q.waiting %}<span class="badge badge-accent badge-status" title="{{ q.waiting }} handed in and waiting for grading">{{ q.waiting }} in progress</span>
         <a class="btn btn-sm" href="{{ url_for('qgen.review_list') }}" title="Answers you still need to grade (on Grading)">Grading</a>{% endif %}
-      {% if q.paper %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print paper pages: the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">{{ icon_label('lc-printer', 'Print paper pages') }}</a>{% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Print paper pages: this quiz has no Paper only questions">{{ icon_label('lc-printer', 'Print paper pages') }}</button>{% endif %}
+      {#- (no Print paper pages here: it prints a worksheet per student, not this page; it's on Results
+          by quiz's rows and after Assign: the owner, 2026-10-21) #}
     </div>
   </div>
   <div id="folder-items">
@@ -119,9 +154,9 @@
     <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=quizzes|map(attribute='vquiz')|list, key_prefix='quiz:') %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{% for vq in n['items'] %}{{ quiz_box(results[vq.id]) }}{% endfor %}{% endcall %}{% else %}
-    {% call named_box(fk, 'quiz:') %}{% for q in quizzes %}{{ quiz_box(q) }}{% endfor %}{% if not quizzes %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {% if fk.view == 'all' and not request.args.get('own') and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=quizzes|map(attribute='vquiz')|list, key_prefix='quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}
+    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
+    {% call named_box(fk, 'quiz:') %}{% if quizzes %}{{ quiz_rows(quizzes|map(attribute='vquiz')|list) }}{% endif %}{% if not quizzes %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
   </div>
 {% endcall %}
 {% endif %}

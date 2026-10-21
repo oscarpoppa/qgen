@@ -46,6 +46,16 @@ def trythumb(path, fname, quiet=False):
         pass
 
 #admin-only upload image or file to server
+#(files a browser runs as part of the site when opened from it: never uploaded, the owner
+#2026-10-20 from the code critic: an uploaded page or drawing could run code with a teacher's sign-in)
+BLOCKED = ('html', 'htm', 'svg', 'js', 'xml')
+BLOCKED_SAY = 'That kind of file can’t be uploaded: it could run code on the site.'
+
+
+def blocked(fname):
+    return fname.rpartition('.')[2].lower() in BLOCKED if '.' in fname else False
+
+
 @upload_bp.route('/upload', methods=['POST','GET'])
 @login_required
 @pw_check
@@ -58,6 +68,9 @@ def upload():
         fname = secure_filename(ufile.filename)
         if not fname:
             flash('That file name can\'t be used. Rename the file and try again.', 'error')
+            return redirect(url_for('upload.upload'))
+        if blocked(fname):
+            flash(BLOCKED_SAY, 'error')
             return redirect(url_for('upload.upload'))
         #never over a file already there (a picture problems use, its thumbnail, or a site folder)
         saved = unique_name(fname)
@@ -171,6 +184,8 @@ def upload_json():
     fname = secure_filename(ufile.filename)
     if not fname:
         return jsonify(ok=False, error='That file name can\'t be used.'), 400
+    if blocked(fname):
+        return jsonify(ok=False, error=BLOCKED_SAY), 400
     #only real pictures, checked by opening them; with ?any=1 (Upload files' one drop box: the
     #owner, 2026-10-19) anything else is kept too, as an other file (no thumbnail)
     anyfile = request.args.get('any') == '1'

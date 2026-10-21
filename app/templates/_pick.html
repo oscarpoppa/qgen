@@ -1,0 +1,10 @@
+{# A picker's list (the Assign, Write to, Choose pictures and Add to a quiz dialogs; the Assign page's
+   cards): square rows with a check (or radio) column and a sortable name column, the same look as the
+   folder pages' rows (the owner, 2026-10-21; they were rounded tiles two to a line). The caller
+   draws the rows: <tr data-box="..."><td class="tick-col"><input ...></td><td><label for=...>...</label></td></tr> #}
+{% macro pick_table(head, extra='', attrs='') %}
+<div class="table-wrap pick-wrap{{ ' ' ~ extra if extra }}"><table class="pick-table"{{ attrs }}>
+  <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>{{ head }}</th></tr></thead>
+  <tbody>{{ caller() }}</tbody>
+</table></div>
+{% endmacro %}

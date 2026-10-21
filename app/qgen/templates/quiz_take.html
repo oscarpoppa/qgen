@@ -37,7 +37,7 @@
   </div>
 
   {# someone else's quiz (a teacher looking): every answer shown, none can be changed (the owner, 2026-10-14) #}
-  {% if preview %}<fieldset class="view-only" disabled title="You're viewing {{ cq.taker.shown_name }}'s quiz: only {{ cq.taker.shown_name }} can answer">{% endif %}
+  {% if preview %}<fieldset class="view-only" disabled title="You’re viewing {{ cq.taker.shown_name }}'s quiz: only {{ cq.taker.shown_name }} can answer">{% endif %}
   {% if page_layout %}
   {#- a quiz made from a scanned page, taken on the page itself (the owner, 2026-10-18): each
       problem's printed numbers covered and this student's written in their place, answered in
@@ -73,8 +73,12 @@
               {%- if style == 'equals' %}{% set parts = words.rsplit('=', 1) %}<span>{{ parts[0].strip() }}</span><span>=</span>
               {%- else %}{% for line in lines %}<span>{{ line }}</span>{% endfor %}{% endif %}</div>
           {% endif %}
-          <div class="pq-answer{% if s.inline %} pq-inline{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.62, (s.char or 0.02) * ratio * 100 / 0.714 * 1.15]|min }}cqw">
-            {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', inputmode='numeric' if it.qtype == 'numeric' else none, **{'aria-label': 'Question ' ~ qlabel(cq.vquiz, it.num) ~ ': ' ~ it.text}) }}</div>
+          <div class="pq-answer{% if s.inline %} pq-inline{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.85, (s.char or 0.02) * ratio * 100 / 0.714]|min }}cqw">
+            {#- (the typed answer the same size as the page's printed words beside it, so the two read
+                as one line: it was smaller and looked out of line, the owner 2026-10-20) #}
+            {#- (inputmode only for numbers: WTForms writes a missing one as inputmode="None", the code critic 2026-10-20) #}
+            {%- set mode = {'inputmode': 'numeric'} if it.qtype == 'numeric' else {} %}
+            {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', **dict(mode, **{'aria-label': 'Question ' ~ qlabel(cq.vquiz, it.num) ~ ': ' ~ it.text})) }}</div>
         </div>
         {% elif s.kind == 'choices' %}
         {%- set mine = co.choices or [] %}
@@ -167,8 +171,8 @@
     {% endfor %}
   </div>
   <div class="btn-row calc-actions">
-    <button type="button" class="btn btn-sm calc-use" title="Put the calculator's answer in your answer box">Use in answer</button>
-    <button type="button" class="btn btn-secondary btn-sm calc-copy" title="Copy the calculator's answer so you can paste it">Copy</button>
+    <button type="button" class="btn btn-sm calc-use" title="Put the calculator’s answer in your answer box">Use in answer</button>
+    <button type="button" class="btn btn-secondary btn-sm calc-copy" title="Copy the calculator’s answer so you can paste it">Copy</button>
   </div>
   <div class="small muted calc-note" aria-live="polite"></div>
 </section>

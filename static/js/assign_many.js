@@ -7,7 +7,7 @@
   var dialog = document.getElementById('assign-many-dialog');
   var btn = document.querySelector('[data-assign-many]');
   if (!dialog) return;
-  var people = Array.prototype.slice.call(dialog.querySelectorAll('.folder-filter-list li[data-box]'));
+  var people = Array.prototype.slice.call(dialog.querySelectorAll('.folder-filter-list tr[data-box]'));
   var boxes = people.map(function (li) { return li.querySelector('input'); });
   //(the folder list and the filter, static/js/folderfilter.js, hide the people not shown)
   function shownNow(li) { return !li.hidden && !li.closest('[hidden]'); }

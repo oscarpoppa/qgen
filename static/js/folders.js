@@ -211,12 +211,15 @@
   //a box's name or a row in it; "Show" keeps only the rows waiting for grading, or not handed
   //in yet (tr[data-state]). Boxes it opened go back as they were when it's cleared.
   var resultsBar = document.getElementById('results-filter');
-  var itemBoxes = Array.prototype.slice.call(document.querySelectorAll('.folder-main details.item-box'));
+  //(a row like My quizzes' (tr.result-item, the owner 2026-10-21): its groups of attempts
+  //(.result-group[data-state]) count as its rows, and its fold opens instead)
+  var itemBoxes = Array.prototype.slice.call(document.querySelectorAll('.folder-main details.item-box, .folder-main tr.result-item'));
+  function foldOf(d) { return d.tagName === 'TR' ? d.querySelector('details.row-fold') : d; }
   if (resultsBar) resultsBar.qgenFilter = function (q) {
     var stateFilter = resultsBar.querySelector('select.state-filter'), st = stateFilter ? stateFilter.value : 'all';
     var active = !!q || st !== 'all';
     itemBoxes.forEach(function (d) {
-      var named = !q || (d.dataset.name || '').indexOf(q) !== -1, rows = d.querySelectorAll('tr[data-state]'), shown = 0;
+      var named = !q || (d.dataset.name || '').indexOf(q) !== -1, rows = d.querySelectorAll('tr[data-state], .result-group[data-state]'), shown = 0;
       rows.forEach(function (r) {
         var ok = (st === 'all' || r.dataset.state === st) && (named || (r.dataset.name || r.textContent).toLowerCase().indexOf(q) !== -1);
         r.hidden = !ok;
@@ -225,8 +228,9 @@
       //(its own flag: a folder button's choice stays, static/js/folderfilter.js)
       var hide = rows.length ? !shown : !(named && st === 'all');
       if (window.qgenHideRow) window.qgenHideRow(d, 'text', hide); else d.hidden = hide;
-      if (active && !d.hidden) d.open = true;
-      else if (!active) restore(d);
+      var fold = foldOf(d);
+      if (fold && active && !d.hidden) fold.open = true;
+      else if (fold && !active) restore(fold);
     });
     var none = document.querySelector('.filter-none');
     //(only for the name and Show filters: an empty folder says so itself, folderfilter.js)

@@ -15,8 +15,8 @@
     <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
     <div class="dash-glance">
-      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every student's account"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
-      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every teacher's account"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
+      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every student’s account"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
+      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every teacher’s account"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
       <a href="{{ url_for('qgen.list_vprobs') }}" title="Open the Problems page"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</a>
       <a href="{{ url_for('qgen.list_vquizzes') }}" title="Open the Quizzes page"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</a>
       <a href="{{ url_for('qgen.archive') }}" title="Open the Archive to view, restore or delete archived attempts"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</a>
@@ -33,7 +33,7 @@
     </div>
   </details>
   <details class="box card dash-card" data-elastic="queue" data-elastic-dir="v" data-box="queue">
-    <summary class="dash-head">{{ box_label('pencil', 'Waiting for grading', count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
+    <summary class="dash-head">{#- (a list cut short says so: the owner, 2026-10-20) #}{{ box_label('pencil', 'Waiting for grading', ('oldest ' ~ queue|length ~ ' of ' ~ waiting) if queue|length < waiting else count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
     {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}" title="Open Grading to see every attempt waiting, oldest first">All {{ waiting }} in Grading →</a></p>{% endif %}
     {% if queue %}
@@ -64,7 +64,7 @@
           <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
                 data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in {{ 'their' if p.to|length > 1 or p.everyone else 'his/her' }} messages, just not at the top." data-confirm-ok="Unpin">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
-            <button class="icon-link" title="Unpin: take this message off the top of students' messages (it isn't deleted)">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
+            <button class="icon-link" title="Unpin: take this message off the top of students' messages (it isn’t deleted)">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
           </form>
           <span class="muted small">{% if p.everyone %}to every student{% elif p.to|length == 1 %}to {{ p.to[0].shown_name }}{% else %}<span title="{{ p.to|map(attribute='shown_name')|join(', ') }}">to {{ p.to|length }} students</span>{% endif %}
             · {% if p.to|length > 1 %}read by {{ p.read }} of {{ p.to|length }}{% else %}{{ 'read' if p.read else 'not read yet' }}{% endif %} · {{ when(p.msg.created) }}{% if p.msg.sender %} · by {{ p.msg.sender.shown_name }}{% endif %}</span></li>
@@ -78,7 +78,7 @@
   <details class="box card dash-card" data-elastic="handins" data-elastic-dir="v" data-box="handins">
     <summary class="dash-head">{{ box_label('tray', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
+    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student’s quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz’s results, student by student">by quiz →</a></span></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
@@ -98,11 +98,11 @@
   {# last, one column wide: it comes in under the shorter column's last box (masonry.js), so no
      hole is left beside a short box; the boxes keep their order, for the keyboard too #}
   <details class="box card dash-card" id="dash-out" data-elastic="out" data-elastic-dir="v" data-box="out">
-    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
-      {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn't handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
+    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', ('newest ' ~ out|length ~ ' of ' ~ out_total) if out|length < out_total else count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
+      {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn’t handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><span class="muted">Newest first.{% if out_total > out|length %} The {{ out|length }} newest of {{ out_total }}.{% endif %}</span>
-      <span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student's quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz's results, student by student">by quiz →</a></span></p>
+    {#- (no "Results by student → · by quiz →" links here: the owner, 2026-10-20) #}
+    <p class="dash-links small"><span class="muted">Newest first.</span>{#- (how many of how many: the heading's count, "newest 10 of 26", the owner 2026-10-20) #}</p>
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}

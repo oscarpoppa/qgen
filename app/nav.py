@@ -195,11 +195,19 @@ def link_label(link, for_student=False):
             return 'See results'
         #(a student's: the quiz while it's still to do, its results once handed in, e.g. a
         #"was graded" notice: the owner, 2026-10-20)
-        from app import db
-        from app.qgen.models import CQuiz
+        #(the student's handed-in attempts looked up once per page, not once per notice: the code
+        #critic, 2026-10-20)
+        from flask import g
+        from flask_login import current_user
+        done = getattr(g, '_done_attempts', None)
+        if done is None:
+            from app.qgen.models import CQuiz
+            uid = getattr(current_user, 'id', None)
+            done = g._done_attempts = {i for (i,) in CQuiz.query.with_entities(CQuiz.id)
+                                       .filter(CQuiz.assignee == uid, CQuiz.completed.is_(True))} if uid else set()
         try:
-            cq = db.session.get(CQuiz, int((args or {}).get('cidx')))
+            cidx = int((args or {}).get('cidx'))
         except (TypeError, ValueError):
-            cq = None
-        return 'See your results' if cq is not None and cq.completed else 'Go to the quiz'
+            cidx = None
+        return 'See your results' if cidx in done else 'Go to the quiz'
     return LINK_LABELS.get(kind, 'Open')

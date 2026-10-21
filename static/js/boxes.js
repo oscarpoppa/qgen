@@ -28,9 +28,9 @@
   var FOLDER = 'details.sub-box[data-sub], details.sub-box[data-folder-box]';
   var memory = {};
   try { memory = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
-  //arriving on a page anew, everything starts as the page draws it (folded): what was opened or
-  //folded before comes back only when returning to the page (Back, Forward, the top bar's arrows)
-  //or reloading it (the owner, 2026-10-19)
+  //the first time on a page, everything starts as the page draws it (folded); after that, what was
+  //opened or folded by hand comes back however the page is reached (the owner, 2026-10-21; it
+  //came back only when returning, 2026-10-19)
   var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
   var going = null;
   try { going = sessionStorage.getItem('qgen-going-back'); } catch (e) {}
@@ -96,7 +96,7 @@
       var row = Array.prototype.filter.call(d.parentElement.children, function (b) {
         return b.matches && b.matches(FOLDER) && !b.hidden;
       });
-      return row[0] === d && !(returning && row.some(function (b) { return idOf(b) in memory; }));
+      return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });
     }
     //(a box in a list starts folded, even the only one: the owner, 2026-10-19; it was open when
     //it was the only one)
@@ -106,7 +106,10 @@
   function restore(d) {
     if (d.closest('[data-keep-open]')) { d.open = true; return; }
     var id = idOf(d);
-    d.open = (returning || touched[id]) && id in memory ? !!memory[id] : starting(d);
+    //(every page keeps its boxes as they were left, however it's reached: starting folded is only
+    //for a box never opened or folded by hand; the owner, 2026-10-21. It used to be kept only
+    //when coming back with Back)
+    d.open = id in memory ? !!memory[id] : starting(d);
   }
 
   var seen = window.WeakSet ? new WeakSet() : { has: function () { return false; }, add: function () {} };
@@ -247,7 +250,7 @@
         pair.querySelectorAll('[data-level]').forEach(function (b) {
           if (!('title0' in b.dataset)) b.dataset.title0 = b.title || '';
           b.disabled = !set.length;
-          b.title = set.length ? b.dataset.title0 : (b.classList.contains('btn-icon') ? b.textContent.trim() + ': ' : '') + 'Nothing here opens or folds';
+          b.title = set.length ? b.dataset.title0 : (b.classList.contains('btn-icon') ? (b.textContent.trim() || (b.querySelector('svg[aria-label]') || { getAttribute: function () { return ''; } }).getAttribute('aria-label')) + ': ' : '') + 'Nothing here opens or folds';
         });
         if (pair.hidden || (pair.parentElement && pair.parentElement.closest('[hidden]'))) return;
         //a grayed pair (nothing to fold) is a copy only of one for the same list (a list's heading

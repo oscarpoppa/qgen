@@ -79,8 +79,8 @@ def record_answers(cquiz, answers=None):
             cprob.submitted = qt.to_stored(None)
         if qt.auto_graded:
             cprob.credit = qt.grade(cprob.submitted, cprob.conc_ansr or '', cprob.conc_opts, cprob.vproblem.options)
-            #None: not on the list, but maybe right (Short text: "a brown horse" for "horse", or a
-            #labeled picture named another way), so the teacher checks it in Grading
+            #None: not on the list, but maybe right (Short text: any wrong answer written, e.g. a
+            #misspelling or "a brown horse" for "horse"), so the teacher checks it in Grading
             opts = cprob.conc_opts
             if cprob.credit is None:
                 cprob.conc_opts = dict(opts, to_check=True)
@@ -161,7 +161,7 @@ class TranscriptItem:
     choices: Optional[list] = None
     paper: bool = False  # done on paper: no typed answer to show
     look: bool = False   # a page to look at: nothing answered, not graded
-    check: bool = False  # an automatic type's answer the teacher checks (Short text that came close)
+    check: bool = False  # an automatic type's answer the teacher checks (Short text not on the list)
 
     @property
     def mark(self):

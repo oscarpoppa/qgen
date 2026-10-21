@@ -2,6 +2,7 @@
 problems and quizzes (the owner, 2026-10-19). The static folder is still the truth: sync() adds
 a row for each file there and drops the rows of files that are gone. A picture is a file with a
 thumbnail (T_<name>), as the Pictures page has always told them apart."""
+import os
 from datetime import datetime
 from os import remove
 from os.path import getmtime
@@ -14,6 +15,9 @@ from .models import UploadFile
 NAME_MAX = 191  # (the column's length: a unique index on MySQL utf8mb4 fits 191 characters)
 
 
+_last_sync = None   # (the folder's change time and the row count, at the last full sync)
+
+
 def sync():
     """Rows for every uploaded file, none for files that are gone. Cheap when nothing changed.
     Call it where files change (upload, delete, a scan's pictures) and when the Pictures / Other
@@ -22,6 +26,15 @@ def sync():
     dropped (the owner, 2026-10-19, from the code critic)."""
     from sqlalchemy.exc import IntegrityError
     from app.upload.routes import static_files, static_dir, trythumb, is_image_name
+    #(nothing to do when the folder and the rows are as they were at the last sync: forms with a
+    #picture picker call this on every visit; the code critic, 2026-10-20)
+    global _last_sync
+    try:
+        key = (os.stat(static_dir()).st_mtime_ns, UploadFile.query.count())
+    except OSError:
+        key = None
+    if key is not None and key == _last_sync:
+        return
     files = static_files()
     thumbs = {f[2:] for f in files if f.startswith('T_')}
     #a picture put there without one (copied in, not uploaded) gets its thumbnail now, so it's
@@ -56,6 +69,11 @@ def sync():
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
+        return
+    try:
+        _last_sync = (os.stat(static_dir()).st_mtime_ns, UploadFile.query.count())
+    except OSError:
+        _last_sync = None
 
 
 def get(name):

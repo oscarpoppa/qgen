@@ -45,7 +45,7 @@
   function setUp(list, key) {
     //(not a table that's part of a form being filled in, like the problem editor's Random values;
     //nor a heading with its own controls, like a ? help button)
-    var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form'); });
+    var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form') || t.classList.contains('pick-table'); });
     if (!tables.length) return;
     tables.forEach(function (table) {
       table.querySelectorAll(':scope > thead > tr > th').forEach(function (th) {
@@ -75,15 +75,25 @@
 
   function all() {
     //(the open folder on a list page; not a picker card or a dialog)
-    document.querySelectorAll('.folder-main .folder-filter-list, .folder-main #folder-items').forEach(function (list) {
+    //(and a student's page, whose quizzes are rows like My quizzes': the owner, 2026-10-21)
+    document.querySelectorAll('.folder-main .folder-filter-list, .folder-main #folder-items, .student-folders .folder-filter-list').forEach(function (list) {
       if (list.closest('dialog') || list.qgenSorts) return;
       list.qgenSorts = true;
       setUp(list, KEY);
     });
+    //a picker's list (a dialog's, the Assign page's cards): its own name column sorts, remembered for
+    //each picker (the owner, 2026-10-21)
+    document.querySelectorAll('table.pick-table').forEach(function (t) {
+      var wrap = t.parentElement;
+      if (wrap.qgenSorts) return;
+      wrap.qgenSorts = true;
+      var ff = t.closest('[data-remember]');
+      setUp(wrap, 'qgen-sort:pick:' + (ff ? ff.dataset.remember : location.pathname));
+    });
     //cards with a table elsewhere (one quiz's results, Grading, a student's page...): each card
     //sorts its own table (the owner, 2026-10-17)
     document.querySelectorAll('main details.box, main .card').forEach(function (card, i) {
-      if (card.closest('dialog') || card.closest('.folder-main') || card.qgenSorts || !card.querySelector('table')) return;
+      if (card.closest('dialog') || card.closest('.folder-main') || card.qgenSorts || !card.querySelector('table:not(.pick-table)')) return;
       if (card.parentElement && card.parentElement.closest('details.box, .card')) return;  // (the outer card does it)
       card.qgenSorts = true;
       //(remembered for each card: by its name on the page, else its place)

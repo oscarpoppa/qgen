@@ -24,7 +24,7 @@
 
   //the page's name: its title without the site's name after it
   //(and without the sandbox's "SANDBOX · " in front)
-  var name = document.title.replace(/(?: [\u{1F7E1}\u{1F535}]\d+)+$/u, '').trim() || 'Back';
+  var name = document.title.replace(/(?: [\u{1F7E1}\u{1F535}•]\d+)+$/u, '').trim() || 'Back';
   //a page with two views at two addresses (People: Accounts and Results) counts as one page
   var here = { k: document.documentElement.dataset.trailKey || location.pathname, p: location.pathname + location.search, t: name };
   //"New examples" / "Roll another": the same page drawn again, in place of this one in the
@@ -36,6 +36,14 @@
     location.replace(a.href);
   });
   var trail = read(KEY, []), going = read(GOING, null);
+  //pages this one says are gone (a saved scan's own pages, removed with it: data-trail-gone, an
+  //address and the addresses under it) leave the trail, so Back and Forward never go to them
+  var gone = document.documentElement.dataset.trailGone;
+  if (gone) {
+    var alive = function (s) { return s.k !== gone && s.k.indexOf(gone + '/') !== 0; };
+    trail = trail.filter(alive);
+    write(AHEAD, read(AHEAD, []).filter(alive));
+  }
   //an error page ("Page not found"): never on the trail; ← goes back to the page before it
   var skip = document.documentElement.hasAttribute('data-no-trail');
   //the pages gone back from, nearest first: where Forward goes (the owner, 2026-10-19)

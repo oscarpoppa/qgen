@@ -73,7 +73,7 @@
       <p class="muted small" style="margin:6px 0 0">To answer one student, press <strong>Reply</strong> on a message or pick him/her above.</p>
     {% else %}
       <div class="btn-row convo-bar">
-        <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student's messages together">← All messages</button>
+        <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student’s messages together">← All messages</button>
         {{ clear_thread(current, items or [], clear_who) }}
         {% if waiting %}
           {# one student: go to that conversation; several: to all messages, where the new ones are marked #}

@@ -1,7 +1,7 @@
 /* "Choose pictures" (templates/_dialog_pick_pictures.html; the owner, 2026-10-19):
  * qgenPickPictures({ single: bool, onPick: function ([{ name, url }]) }).
  * Several: check any number, then Add (the problem editor's card button: a slot each).
- * Single: picking one unchecks the rest, then "Use this picture" (a slot's own button). */
+ * Single: round buttons, one picked, then "Use this picture" (a slot's own button). */
 (function () {
   var box = document.getElementById('pick-pictures-dialog');
   if (!box) return;
@@ -24,7 +24,7 @@
     if (b) {
       boxes().forEach(function (c) {
         if (b.dataset.pics === 'none') c.checked = false;
-        else if (c.closest('li').offsetParent) c.checked = true;  // (only the ones shown)
+        else if (c.closest('tr').offsetParent) c.checked = true;  // (only the ones shown)
       });
       recount();
     }
@@ -42,7 +42,9 @@
     head.textContent = single ? 'Choose a picture' : 'Choose pictures';
     ok.textContent = single ? 'Use this picture' : 'Add';
     box.querySelectorAll('[data-many-only]').forEach(function (el) { el.hidden = single; });
-    boxes().forEach(function (b) { b.checked = false; });
+    //(one picture: round buttons, since only one can be picked; several: check boxes. The user
+    //critic, 2026-10-20)
+    boxes().forEach(function (b) { b.type = single ? 'radio' : 'checkbox'; b.checked = false; });
     err.hidden = true;
     recount();
     box.showModal();

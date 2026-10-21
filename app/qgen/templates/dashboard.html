@@ -12,7 +12,7 @@
     <a class="btn btn-secondary" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
     {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
     {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>
-    {%- else %}<button type="button" class="btn btn-secondary" disabled title="Needs an AI key, which this site doesn't have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}
+    {%- else %}<button type="button" class="btn btn-secondary" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}
     {#- (no "Message students": the top bar's Messages opens the same panel; the owner, 2026-10-19) #}
     <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give a quiz to students, with optional open and close times">Assign a quiz</a>
   </div>
