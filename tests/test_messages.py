@@ -720,6 +720,10 @@ def test_a_pinned_message_shows_once_and_stays_until_unpinned(app_db):
     teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Bring a calculator', 'pin': '1'})
     teacher.post('/messages/send', data={'to': str(sam_id), 'body': 'Nice work today'})
     pin = Message.query.filter_by(body='Bring a calculator').one()
+    #(the teacher's Pinned: the standard dialog for listed things, a filter and the pinned as rows:
+    #the owner, 2026-10-21)
+    tp = teacher.get('/messages/panel').data.decode()
+    assert 'id="pinned-dialog"' in tp and 'class="pick-table pinned-table"' in tp and '<td>Bring a calculator</td>' in tp and 'id="pinned-bar"' in tp
     panel = sam.get('/messages/panel').data.decode()
     assert panel.count('Bring a calculator') == 1 and 'Pinned by your teacher' in panel
     thread = panel.split('class="thread-scroll"')[1]

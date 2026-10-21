@@ -641,6 +641,12 @@
       d.querySelectorAll('[aria-labelledby]').forEach(function (el) { el.setAttribute('aria-labelledby', 'open-' + el.getAttribute('aria-labelledby')); });
       if (d.getAttribute('aria-labelledby')) d.setAttribute('aria-labelledby', 'open-' + d.getAttribute('aria-labelledby'));
       document.body.appendChild(d);
+      //(its filter bar points at the copy's own list, its ids renamed above: Pinned's, the standard
+      //dialog for listed things, the owner 2026-10-21)
+      d.querySelectorAll('[data-filter-bar]').forEach(function (bar) {
+        if (bar.dataset.filter) bar.dataset.filter = bar.dataset.filter.replace(/#(?!open-)/g, '#open-');
+        if (window.qgenFilterBar) window.qgenFilterBar(bar);
+      });
       d.addEventListener('close', function () { d.remove(); b.focus(); });
       d.showModal();
       return;

@@ -1,3 +1,4 @@
+{% from "_macros.html" import filter_bar with context %}
 {# The teacher's Messages panel: what the retired Messages page did (the owner, 2026-10-17).
    Pinned opens from its button above the conversation (static/js/messages.js copies it out of
    the panel, so the panel can reload behind it); Write to… is on every teacher's page
@@ -7,17 +8,32 @@
 <dialog class="ask panel-dialog" id="pinned-dialog" aria-labelledby="pinned-head">
   <p><strong id="pinned-head">Pinned</strong></p>
   {% if not pinned %}<p class="muted small">Nothing is pinned yet. To pin a message, check “Pin it to the top of their messages” when you send it, or press the pin beside a message you’ve already sent.</p>
-  {% else %}<ul class="hints panel-pick">
-    {% for m in pinned %}
-      <li class="hint"><span class="hint-icon" aria-hidden="true">{{ icon('pin') }}</span>
-        <span>{{ m.body }} <span class="small muted">· {{ m.created|when('short') }}{% if m.kind != 'announcement' %} · to {{ m.student.shown_name if m.student else 'someone' }}{% endif %}</span></span>
-        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}"
-              data-confirm="Unpin this message? It stops showing at the top of {{ 'every student’s' if m.kind == 'announcement' else (m.student.shown_name if m.student else 'the student') ~ '’s' }} messages." data-confirm-ok="Unpin">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
-          <button class="icon-link" title="Unpin: stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
-        </form>
-      </li>
-    {% endfor %}
-  </ul>{% endif %}
+  {% else %}
+  {#- the standard dialog for listed things (the owner, 2026-10-21): the filter, a tab naming the list
+      over a framed panel, the pinned messages as square rows under headings, each with Unpin #}
+  <div class="pick-people" id="pinned-pick">
+    {{ filter_bar('#pinned-pick .put-table', 'message', 'messages', items='tbody tr', id='pinned-bar') }}
+    <div class="put-frame">
+      <div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs"><span class="folder-tab folder-tab-name" aria-pressed="true">{{ icon('pin') }}<span class="box-title">All pinned</span><span class="badge box-count" title="{{ pinned|length }} message{{ '' if pinned|length == 1 else 's' }}">{{ pinned|length }}</span></span></div></div>
+      <div class="put-panel"><div class="table-wrap put-table"><table class="pick-table pinned-table">
+        <thead><tr><th>Message</th><th>To</th><th>Sent</th><th><span class="sr-only">Unpin</span></th></tr></thead>
+        <tbody>
+        {% for m in pinned %}
+          <tr data-name="{{ m.body|lower }} {{ (m.student.shown_name if m.student else '')|lower }}">
+            <td>{{ m.body }}</td>
+            <td class="nowrap small">{% if m.kind == 'announcement' %}Every student{% else %}{{ m.student.shown_name if m.student else 'someone' }}{% endif %}</td>
+            <td class="nowrap small muted" data-sort="{{ m.created.isoformat() if m.created else '' }}">{{ m.created|when('short') }}</td>
+            <td class="actions"><form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}"
+                  data-confirm="Unpin this message? It stops showing at the top of {{ 'every student’s' if m.kind == 'announcement' else (m.student.shown_name if m.student else 'the student') ~ '’s' }} messages." data-confirm-ok="Unpin">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
+              <button class="icon-link" title="Unpin: stop keeping this at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
+            </form></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div></div>
+    </div>
+  </div>
+  {% endif %}
   <div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Close</button></div>
 </dialog>
