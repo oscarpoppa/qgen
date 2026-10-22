@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_macros.html" import avatar, count_of, quiz_link with context %}
+{% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
 {% from "_results.html" import result_group with context %}
 {% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {% block body_attrs %}{{ watch('users' if in_archive else 'people') }}{% endblock %}
@@ -42,7 +42,7 @@
               {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
             </ul>
             {% if not in_archive %}<div class="result-groups divided" data-fold-body>
-            {% for g in groups %}{{ result_group(quiz_link(g.vquiz, strong=true), g, item, rules, g.vquiz.title|lower) }}
+            {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{{ result_group(attempt_title(g, item), g, item, rules, g.vquiz.title|lower) }}
             {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>

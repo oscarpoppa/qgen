@@ -278,9 +278,12 @@
         //scroll under them: the owner, 2026-10-21)
         //(grayed only when nothing is in it: with no folders yet it holds everything, and opens, the
         //owner 2026-10-20; it was grayed then, 2026-10-19)
-        var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
-        if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
-        sideRow(noneBtn, 1, null).classList.add('side-auto');
+        //(left out when empty on a page that hides empty folders: a history, the owner 2026-10-22)
+        if (loose || !('hideEmpty' in box.dataset)) {
+          var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
+          if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
+          sideRow(noneBtn, 1, null).classList.add('side-auto');
+        }
         (function walk(nodes, depth) {
           nodes.forEach(function (n) {
             sideRow(button(String(n.id), n.name, n.count, n.icon || 'folder'), depth, n);
@@ -354,7 +357,7 @@
         var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? 0 : loose, 'tray');
         if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
         else if (!loose) { none.disabled = true; none.title = 'Everything is in a folder'; }
-        row.appendChild(none);
+        if (loose || 'noMain' in box.dataset || !('hideEmpty' in box.dataset)) row.appendChild(none);
         //(a folder's own page with no folders inside: no tabs, just its things, as above)
         if (box.dataset.allUrl === '' && noFolders) row.classList.add('folder-tabs-plain');
         //(a folder's own page, empty: just its folders' tabs, grayed, as in the folder list)

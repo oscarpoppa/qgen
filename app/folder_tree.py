@@ -199,6 +199,21 @@ def kit(view, node, root, flat, nodes, page, **words):
     }
     out['main_count'] = root['count']
     out.update(words)
+    #(a page that only shows what's there, with nothing to file or rename (a quiz's or a problem's
+    #history): its empty folders left out, Uncategorized too when empty; the owner, 2026-10-22)
+    if out.get('hide_empty'):
+        def prune(n):
+            n['folders'] = [c for c in n['folders'] if c['count']]
+            for c in n['folders']:
+                prune(c)
+        prune(root)
+        kept = set()
+        def walk(n):
+            for c in n['folders']:
+                kept.add(c['folder'].id if 'folder' in c else c.get('id'))
+                walk(c)
+        walk(root)
+        out['flat'] = [(f, d) for f, d in flat if f.id in kept]
     #the folder buttons over one list (_folders.html all_boxes, folder_items): the folders at the
     #top, or those inside one folder (node)
     out['filter_tree'] = lambda key_prefix, node=None: filter_tree(node or root, out['name'], page, key_prefix)

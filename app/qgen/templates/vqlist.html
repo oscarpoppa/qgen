@@ -11,7 +11,7 @@
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Problems</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more">Problems</th><th>Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -49,6 +49,9 @@
             </ol></details>
           </td>
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
+          {#- how many times it was assigned (retakes too), opening its history (the owner, 2026-10-22) #}
+          {%- set na = (assigned or {}).get(item.id, 0) %}
+          <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na %}<a class="name-link small" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" data-tip="Assigned {{ na }} time{{ '' if na == 1 else 's' }}: open the history of “{{ item.title }}”">{{ na }}</a>{% else %}<span class="muted small" title="Not assigned yet">0</span>{% endif %}</td>
           <td class="actions">
             {% if in_archive %}
             {# the Archive's Quizzes (the owner, 2026-10-16): Restore, View, History and Delete for good #}

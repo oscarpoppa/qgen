@@ -105,6 +105,8 @@
         {% endfor %}
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
         {% set no_folders = not fk.root.folders %}
+        {#- (left out when empty on a page that hides empty folders: a history, the owner 2026-10-22) #}
+        {%- if not (fk.hide_empty and not fk.main_count) %}
         <li class="side-auto" data-auto="none"><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren’t in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
@@ -112,7 +114,7 @@
               everything (2026-10-19), and isn't grayed: it opens like any tab with something in it
               (the owner, 2026-10-20) -#}
           {% if not no_folders %}{{ flag_badges(fk, fk.root, true) }}{% endif %}
-          <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>
+          <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>{% endif %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
@@ -192,7 +194,7 @@
      first, then the folders, then Uncategorized) that show just what's in that folder (and the
      folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
-       data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
+       {%- if fk.hide_empty %} data-hide-empty{% endif %} data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}{{ (':' ~ request.args.get('section')) if request.args.get('section') else '' }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}{% if not fk.count_units %} data-total="{{ every|length }}" data-loose="{{ fk.main_count }}"{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}

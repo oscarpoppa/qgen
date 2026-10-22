@@ -26,7 +26,7 @@
         {% for cq in rows %}
           {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
           <tr>
-            <td data-label="Student">{{ person_link(cq.taker) }}</td>
+            <td data-label="Student">{#- (opens grading this hand-in, like its Grade icon: the owner, 2026-10-22) #}{{ person_name(cq.taker, href=url_for('qgen.review', cqid=cq.id), tip='Grade: ' ~ (cq.taker.shown_name if cq.taker else 'the student') ~ '\'s written answers on this quiz') }}</td>
             <td data-label="Handed in" data-sort="{{ cq.compdate.isoformat() if cq.compdate else '' }}">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
             <td data-label="To grade" data-sort="{{ '%03d' % todo }}">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
             <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">{{ icon_label('lc-grade', 'Grade') }}</a></td>

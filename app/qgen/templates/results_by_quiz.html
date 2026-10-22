@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button with context %}
-{% from "_macros.html" import avatar, person_link, quiz_link, box_label, count_of, slot with context %}
+{% from "_macros.html" import avatar, person_link, person_name, quiz_link, box_label, count_of, slot with context %}
 {% from "_results.html" import result_cells, result_group, result_row with context %}
 {% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
@@ -65,7 +65,7 @@
     <td data-label="Quiz"><details class="box row-fold" data-box="result-row:quiz-{{ vq.id }}">
       <summary>{{ box_label('note', vq.title, none, 'span', vq.title) }}{% if vq.removed_at %}<span class="badge" title="Taken off the Quizzes page; students keep their copies">Removed</span>{% endif %}</summary>
       <div class="result-groups divided" data-fold-body>
-      {% for student, g in q.rows %}{{ result_group(person_link(student, strong=false), g, student, rules, student.username|lower ~ ' ' ~ (student.nickname or '')|lower) }}
+      {% for student, g in q.rows %}{#- (the student's name opens their latest attempt at it: the owner, 2026-10-22) #}{{ result_group(person_name(student, strong=false, href=url_for('qgen.qtake', cidx=g.latest.id) if g.latest else none, tip='View: ' ~ student.shown_name ~ '’s latest attempt at “' ~ q.vquiz.title ~ '”' if q.vquiz else none), g, student, rules, student.username|lower ~ ' ' ~ (student.nickname or '')|lower) }}
       {% else %}<p class="muted small box-empty">Not assigned to anyone yet.</p>
         <div class="btn-row">{% if not vq.removed_at %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give “{{ vq.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}</div>
       {% endfor %}</div></details></td>

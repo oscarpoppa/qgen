@@ -191,7 +191,7 @@ def problem_results(vpid):
         page=lambda v: url_for('qgen.problem_results', vpid=vp.id, folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(vqs), name=lambda f: f.title,
         hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
-        fold_key='qgen-folded-problem-results-folders')
+        fold_key='qgen-folded-problem-results-folders', hide_empty=True)
     return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, answers=answers, shown=shown, fk=fk,
                            summary=summary, common=common, title='Problem history: {}'.format(vp.title or 'Untitled'))
 
@@ -1194,7 +1194,7 @@ def quiz_results_page(vqid):
         page=lambda v: url_for('qgen.quiz_results_page', vqid=vq.id, folder=v),
         unit='student', units='students', all_label='All students', all_count=len(students), name=lambda f: f.name,
         hint=Markup('<a href="{}">People</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
-        fold_key='qgen-folded-quiz-history-folders')
+        fold_key='qgen-folded-quiz-history-folders', hide_empty=True)
     return render_template('results_by_quiz.html', quizzes=[q], rules=RETAKE_RULES, single=True, fk=fk, shown=shown,
                            rows=rows, title='Quiz history: {}'.format(vq.title))
 
@@ -1745,6 +1745,17 @@ def subject_page(kind, template, in_archive=False, **extra):
     if kind == 'problems':
         from .models import CProblem
         extra.setdefault('answered', {pid for (pid,) in db.session.query(CProblem.vproblem_id).distinct()})
+    #how many times each was assigned, a sortable column (the owner, 2026-10-22): a quiz, every
+    #assignment and retake; a problem, the assigned quizzes it's in. One query each.
+    if kind in ('quizzes', 'problems'):
+        from .models import CQuiz, vproblem_vquiz
+        from sqlalchemy import func
+        if kind == 'quizzes':
+            extra.setdefault('assigned', dict(db.session.query(CQuiz.vquiz_id, func.count(CQuiz.id)).group_by(CQuiz.vquiz_id)))
+        else:
+            given = db.session.query(CQuiz.vquiz_id).distinct()
+            extra.setdefault('assigned', dict(db.session.query(vproblem_vquiz.c.vproblem_id, func.count(func.distinct(vproblem_vquiz.c.vquiz_id)))
+                                              .filter(vproblem_vquiz.c.vquiz_id.in_(given)).group_by(vproblem_vquiz.c.vproblem_id)))
     return render_template(template, fk=fk, items=shown, total=len(everything), kind=kind, in_archive=in_archive,
                            moved=request.args.get('moved', ''), show=request.args.get('show', ''), **extra)
 

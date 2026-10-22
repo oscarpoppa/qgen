@@ -304,7 +304,8 @@ def test_names_and_titles_lead_somewhere(app_db):
     S.submit(cq, {1: 'Light makes sugar.'})
     page = teach.get('/quiz/review').data.decode()
     #(Grading: no way off to the quiz's history, it's for grading: the owner, 2026-10-21)
-    assert 'href="/quiz/listuser/{}"'.format(ids('sam')) in page and 'href="/quiz/results/{}"'.format(vq.id) not in page
+    #(the student's name opens grading that hand-in, like its Grade icon: the owner, 2026-10-22)
+    assert 'class="name-link person" href="/quiz/review/{}"'.format(cq.id) in page and 'href="/quiz/results/{}"'.format(vq.id) not in page
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     #(no "Message sam" button: the Messages pop-over does it, the owner 2026-10-21)
     assert 'href="/messages/{}"'.format(ids('sam')) not in page and 'Edit user' in page
@@ -549,9 +550,10 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     page = teach.get('/dashboard').data.decode()
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
-    # the names are plain words (no links on the cards: the owner, 2026-10-21); the eye opens their copy
-    assert '<span class="dash-quiz">“Week 1”</span>' in box and 'data-tip="Open the history of' not in box
-    assert '<span class="person">' in box and 'name-link' not in box and 'href="/quiz/listuser/' not in box
+    # the quiz's name is plain words; the student's name opens what the eye opens, their copy (the owner, 2026-10-22)
+    #(the quiz's title opens their copy too: the owner, 2026-10-22)
+    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/take/{}"'.format(cq.id) in box and 'data-tip="Open the history of' not in box
+    assert '<a class="name-link person" href="/quiz/take/{}"'.format(cq.id) in box and 'href="/quiz/listuser/' not in box
     assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'aria-label="View"' in box
     assert '>Student page</a>' not in box
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
@@ -1028,9 +1030,10 @@ def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db
     S.submit(cq, {1: '4'})
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    #(names on the cards are plain words now, not links: the owner, 2026-10-21; the eye opens the hand-in)
-    assert '<span class="dash-quiz">“Handed”</span>' in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
-    assert '<strong>sam</strong></span>' in row and 'href="/quiz/listuser/' not in row and 'name-link' not in row
+    #(the quiz's name is plain words; the student's name opens the hand-in, like the eye: the owner, 2026-10-22)
+    row = page.split('<a class="name-link person" href="/quiz/take/{}"'.format(cq.id))[1].split('</li>')[0]
+    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/take/{}"'.format(cq.id) in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
+    assert '<strong>sam</strong></a>' in row and 'href="/quiz/listuser/' not in row
     assert '>Student page</a>' not in row
 
 
@@ -1043,10 +1046,10 @@ def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(a
     cq.needs_review, cq.compdate = True, datetime.now()
     db.session.commit()
     page = teach.get('/dashboard').data.decode()
-    row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    #(names on the cards are plain words now, not links: the owner, 2026-10-21; Grade opens the hand-in)
-    assert '<span class="dash-quiz">“Essay week</span>' in row or '<span class="dash-quiz">“Essay week”</span>' in row
-    assert 'href="/quiz/results/{}"'.format(vq.id) not in row and 'name-link' not in row and '>Student page</a>' not in row
+    #(the quiz's name is plain words; the student's name opens the hand-in to grade, like Grade: the owner, 2026-10-22)
+    row = page.split('<a class="name-link person" href="/quiz/review/{}"'.format(cq.id))[1].split('</li>')[0]
+    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/review/{}"'.format(cq.id) in row
+    assert 'href="/quiz/results/{}"'.format(vq.id) not in row and '>Student page</a>' not in row
     # and no "All N in Grading →" link on the card
     assert 'in Grading →' not in page
 
@@ -1327,7 +1330,12 @@ def test_list_items_have_only_buttons(app_db):
             links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link|icon-link)\b', a)]  # (icon-link: a bare icon, the owner 2026-10-14)
             assert not links, (url, links, item[:300])
             names = re.findall(r'<a class="name-link[^"]*" href="([^"]+)" data-tip="([^"]+)"', item)
-            assert all(re.match(r'/(quiz/(listuser|results)|messages)/\d+$', h) and tip.startswith(('Open ', 'Read ')) for h, tip in names), (url, names)
+            #(a Dashboard row's person opens what its icon opens: an attempt, or its grading; the owner, 2026-10-22)
+            assert all((re.match(r'/(quiz/(listuser|results)|messages)/\d+$', h) and tip.startswith(('Open ', 'Read ')))
+                       or (re.match(r'/quiz/(take|review)/\d+$', h) and tip.startswith(('View: ', 'Grade: ')))
+                       #(the Assigned count opens the history: the owner, 2026-10-22)
+                       or (re.match(r'/quiz/(results|problem-results)/\d+$', h) and tip.startswith(('Assigned ', 'In ')))
+                       for h, tip in names), (url, names)
             # a name can be a link on a box's heading (a click there opens the link, the box
             # stays), but not on a folder's heading: that becomes a folder button
             if item.startswith('<summary class="sub-head"'):
@@ -1870,3 +1878,20 @@ def test_folder_pages_open_on_all(app_db):
         page = teach.get(url).data.decode()
         ids = re.findall(r'\sid="([^"]+)"', page)
         assert len(ids) == len(set(ids)), (url, [i for i in ids if ids.count(i) > 1][:3])
+
+
+def test_assigned_counts_on_quizzes_and_problems(app_db):
+    """Quizzes and Problems have a sortable Assigned column (the owner, 2026-10-22): a quiz counts
+    every assignment and retake, a problem the assigned quizzes it's in; a count opens the history."""
+    app, db = app_db
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach, 'Counted')
+    give(vq, 'sam')
+    give(vq, 'sam')
+    page = teach.get('/quiz/listvq?folder=all').data.decode()
+    assert '<th>Assigned</th>' in page
+    cell = page.split('data-label="Assigned"')[1].split('</td>')[0]
+    assert 'data-sort="000002"' in cell and 'href="/quiz/results/{}"'.format(vq.id) in cell and '>2</a>' in cell
+    page = teach.get('/quiz/listvp?folder=all').data.decode()
+    cell = page.split('data-label="Assigned"')[1].split('</td>')[0]
+    assert 'data-sort="000001"' in cell and '>1<' in cell

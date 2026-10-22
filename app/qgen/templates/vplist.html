@@ -11,7 +11,7 @@
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Title</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th>Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -31,6 +31,9 @@
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
+          {#- how many assigned quizzes it's in, opening its history (the owner, 2026-10-22) #}
+          {%- set na = (assigned or {}).get(item.id, 0) %}
+          <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na and item.id in answered %}<a class="name-link small" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" data-tip="In {{ na }} assigned quiz{{ '' if na == 1 else 'zes' }}: open the history of “{{ item.title or 'Untitled' }}”">{{ na }}</a>{% else %}<span class="{{ 'muted ' if not na }}small" title="{{ 'In ' ~ na ~ ' assigned quiz' ~ ('' if na == 1 else 'zes') ~ ', not answered yet' if na else 'Not in any assigned quiz yet' }}">{{ na }}</span>{% endif %}</td>
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
             {% if in_archive %}
