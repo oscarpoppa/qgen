@@ -107,6 +107,13 @@
 
 {# a quiz's title in a teacher's row or a box heading, as a link to its History (everyone's
    attempts and scores); plain (in quotes) when the quiz is gone #}
+{#- a quiz's name as plain words, where a click shouldn't take anyone anywhere (the Dashboard's cards:
+    the owner, 2026-10-21) #}
+{% macro quiz_name(vq, title=none, strong=false) -%}
+  {%- set t = title or (vq.title if vq else '') -%}
+  {%- if strong %}<strong>{{ t }}</strong>{% else %}{{ t }}{% endif -%}
+{%- endmacro %}
+
 {% macro quiz_link(vq, title=none, strong=false) -%}
   {%- set t = title or (vq.title if vq else '') -%}
   {%- if vq -%}<a class="name-link" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" data-tip="Open the history of “{{ t }}”: everyone’s attempts and scores">{% if strong %}<strong>{{ t }}</strong>{% else %}{{ t }}{% endif %}</a>

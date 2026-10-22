@@ -75,6 +75,8 @@
     <td class="actions"><span class="btn-row quiz-row-actions">
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
+      {#- (Assign on every row, in the row icon order: View, Edit, Copy, Assign, History, …; the owner, 2026-10-21) #}
+      {% if vq.removed_at %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first') }}{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give “{{ vq.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>{% endif %}
       {% if q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student’s attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
       {% if q.paper and q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=vq.id, users=q.rows|map('first')|map(attribute='id')|list, next=request.full_path) }}" title="Print paper pages: the Paper only pages of “{{ vq.title }}”, one copy per student with their name on top">{{ icon_label('lc-printer', 'Print paper pages') }}</a>{% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Print paper pages: {{ 'this quiz has no Paper only questions' if not q.paper else 'no one has this quiz yet' }}">{{ icon_label('lc-printer', 'Print paper pages') }}</button>{% endif %}
     </span></td>
@@ -150,7 +152,7 @@
       (the owner, 2026-10-16) -#}
   {#- (its way back first, here too: the owner, 2026-10-16) -#}
   {% set filter_right %}{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}
-    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.list_users') }}" title="See the same results arranged student by student">Results by student</a>
+    {#- (no "Results by student": People shows each person's results, the owner 2026-10-21) #}
     <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">

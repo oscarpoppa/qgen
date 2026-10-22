@@ -11,7 +11,8 @@
       <span class="muted small">Check the people to give them to.</span></p>
     {# what it's given with, said plainly (the owner, 2026-10-15) #}
     <div class="assign-defaults small">
-      <strong>Given with the usual settings:</strong>
+      {#- ("default", and a sign that catches the eye: worth a look before Assign; the owner, 2026-10-21) #}
+      <strong>{{ icon('lc-alert', 'assign-defaults-sign') }}Given with the default settings:</strong>
       <ul><li>Opens now</li><li>No closing time</li><li>No time limit</li><li>Calculator: as each quiz is set (change it in Edit quiz)</li></ul>
       <span class="muted">To set opening and closing times or a time limit, use the Assign page: <a href="{{ url_for('qgen.assign') }}" data-full-assign>open it</a>.</span>
     </div>

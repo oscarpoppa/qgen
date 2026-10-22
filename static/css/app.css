@@ -18,7 +18,8 @@
   --bad-soft: #fbe7e5;
   --warn: #8a5a00;
   --new-edge: #b08300;     /* a new quiz's box: gold (3:1 against the page) */
-  --open-tint: #14b8a6;    /* an open item's wash: soft teal, mixed in lightly (the owner, 2026-10-21) */
+  --open-tint: #c026d3;    /* an open item's wash: plum, mixed in lightly (the owner, 2026-10-21; tried teal #14b8a6, lavender #a78bfa, violet #8b5cf6, cyan #06b6d4, then back to plum) */
+  --open-edge: color-mix(in srgb, var(--open-tint) 45%, var(--border));  /* the line under an open item's colored part */
   --warn-soft: #fdf1d9;
   --info-soft: #e6f0fb;
   --field-border: #7d8695;  /* form fields and checkboxes: 3:1 against the page (WCAG 1.4.11) */
@@ -150,6 +151,8 @@ main:focus { outline: none; }
 .menu-list a { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
 .menu-list a:hover { background: var(--surface-2); }
 .menu-list .menu-disabled { padding: 8px 10px; color: var(--muted); opacity: .6; cursor: not-allowed; }
+/* (grayed on the main menu bar too: Scan workbook pages without an AI key, the owner 2026-10-22) */
+span.menu-disabled { color: var(--muted); opacity: .6; cursor: not-allowed; align-self: center; }
 /* a submenu inside a drop-down (More ▸ Files: the owner, 2026-10-19): a line like the others with
    ▸, its list beside the drop-down; on a phone it opens in place, indented */
 .menu-list .submenu > summary { padding: 8px 10px; border-radius: var(--r-sm); color: var(--text); font-size: inherit;
@@ -1135,10 +1138,11 @@ ol.attempt-list > li + li::before, td.attempts > .result-attempt ~ .result-attem
   content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
   border-top: 1px solid var(--border); pointer-events: none; }
 td.attempt-buttons > .result-attempt ~ .result-attempt { padding-top: 4px; }
-/* ...and a slightly stronger one, also end to end, between a quiz's summary and its attempts */
+/* ...and a slightly stronger one, also end to end, between a quiz's summary and its attempts
+   (lighter, 15%, it was 45%: the owner, 2026-10-21) */
 ol.attempt-list { position: relative; padding-top: 6px; padding-right: 12px; }
 ol.attempt-list::before { content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
-  border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 45%); pointer-events: none; }
+  border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); pointer-events: none; }
 ol.attempt-list > li { padding-bottom: 2px; }
 .not-open-note { overflow-wrap: anywhere; }
 
@@ -1326,8 +1330,7 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
 .dash-people { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .dash-note { margin: 10px 0 0; }
 .dash-glance { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 10px; }
-.dash-glance a { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: 6px; }
-.dash-glance a:hover { color: var(--accent); }
+.dash-glance .dash-glance-item { display: inline-flex; align-items: baseline; gap: 6px; }
 @media (max-width: 760px) {
   .dash-grid { grid-template-columns: minmax(0, 1fr); }
   .dash-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2336,7 +2339,7 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 /* ---- user-critic review fixes, before going live (2026-10-12) ---- */
 /* a phone: the chosen tab's buttons on a line of their own under the tabs */
 .folder-filter-rows > .folder-tools-line { display: flex; justify-content: flex-end; padding: 6px 4px; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; background: var(--tab-open); }
-.folder-filter-rows > .folder-tools-line .folder-filter-tools-now { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.folder-filter-rows > .folder-tools-line .folder-filter-tools-now { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; border-left: 0; }
 /* an empty folder: its icon and count fade, its name stays readable (4.5:1) */
 .folder-tab.is-empty { opacity: 1; }
 .folder-tab.is-empty svg.ico, .folder-tab.is-empty .box-count { opacity: .55; }
@@ -2396,7 +2399,6 @@ table:not(.has-open-row) th.row-more, table:not(.has-open-row) td.row-more { dis
 .card-grid > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }  /* (a last card alone takes the row) */
 /* a column of cards in one grid cell, e.g. Scan workbook pages' Current scans with Put away under it */
 .card-grid > .card-col { display: flex; flex-direction: column; min-width: 0; }
-.scan-pop .scan-pop-away { margin-top: 14px; }
 .form-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 24px; align-items: start; }
 .form-cols > h2, .form-cols > .btn, .form-cols > button, .form-cols > .errors, .form-cols > .alert { grid-column: 1 / -1; justify-self: start; }
 /* Assign: the Quiz card and the Students card side by side, alike (a filter bar, a folder list,
@@ -2688,6 +2690,8 @@ dialog.takeout-dialog .takeout-lines { margin: 0 0 16px; padding-left: 18px; }
 /* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
 dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
 dialog.assign-many .assign-defaults ul { margin: 4px 0 6px; padding-left: 18px; columns: 2 150px; }
+/* the sign before "Given with the default settings:", amber, so it catches the eye (the owner, 2026-10-21) */
+dialog.assign-many .assign-defaults > strong:first-child > svg.ico:first-child, dialog.assign-many .assign-defaults .assign-defaults-sign { width: 18px; height: 18px; color: var(--warn); vertical-align: -4px; margin-right: 6px; stroke-width: 2.25; }
 .folder-icons > .put-in-one { margin: 0; }
 dialog.put-dialog .put-list { columns: 1; }
 /* the score rule's question box (Results' pencil): its choices one per line, round buttons */
@@ -2699,12 +2703,6 @@ dialog.put-dialog .assign-defaults ul { columns: 1; }
 details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
 .move-mini > .move-one { margin: 0; }
 /* the checked things, kept whatever folder is open (static/js/checked.js; the owner, 2026-10-15) */
-.folder-tools-bar > .checked-strip { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding-top: 2px; }
-.folder-tools-bar > .checked-strip[hidden] { display: none; }
-.checked-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border: 1px solid var(--accent);
-  border-radius: 999px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); font-size: var(--fs-xs); }
-.checked-chip .chip-x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: var(--fs-xs); }
-.checked-chip .chip-x:hover { color: var(--bad); }
 /* the quiz editor: "Problems in this quiz" wider, set off, its rows one line each (the owner,
    2026-10-15) */
 @media (min-width: 1101px) {
@@ -2907,8 +2905,11 @@ tr:has(> td > details.row-fold[open]):not([class*="row-is-"]) { --row-edge: var(
    own outline color turned new ones brown) */
 /* (on the row, its cells clear: a cell's own background painted over the contents' shade below, e.g.
    the icons' cell on a results row showed as a box of its own: the owner, 2026-10-21) */
-tr:has(> td > details.row-fold[open]) { background: color-mix(in srgb, var(--open-tint) 14%, var(--surface)); }
+tr:has(> td > details.row-fold[open]) { background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); }
 tr:has(> td > details.row-fold[open]) > td { background: transparent; }
+/* (the colored part ends on a stronger line, in its own color, so it's clear where it stops: the
+   owner, 2026-10-21; every open row and open box on the site) */
+tr:has(> td > details.row-fold[open]) > td { border-bottom: 2px solid var(--open-edge); }
 /* ...and its two parts are told apart: the heading part (the name, and on My quizzes its question
    count and score) on that color, the contents (the attempts) a shade between it and the page's
    rows, end to end across the row (the owner, 2026-10-20). The contents start at [data-fold-body],
@@ -2916,7 +2917,12 @@ tr:has(> td > details.row-fold[open]) > td { background: transparent; }
 details.row-fold[open] { position: relative; z-index: 0; }
 details.row-fold[open]::after { content: ""; position: absolute; z-index: -1; pointer-events: none;
   top: var(--body-top, 100%); bottom: -10px; left: var(--body-l, 0); right: var(--body-r, 0);
-  background: color-mix(in srgb, var(--open-tint) 7%, var(--surface)); }
+  background: color-mix(in srgb, var(--open-tint) 5%, var(--surface));
+  /* (one light line between the heading part and the contents, on every open row of every page,
+     the same everywhere: the owner, 2026-10-21) */
+  border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); }
+/* (the list's own line under a heading would make it two) */
+details.row-fold[open] > ol.attempt-list::before { border-top: 0; }
 .quiz-rows td.quiz-sum { white-space: nowrap; }
 .quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
 /* a button under the folder list that opens a pop-over (Just finished) */
@@ -3023,12 +3029,20 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-t
 .scan-thumb { height: 40px; width: auto; max-width: 40px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; vertical-align: middle; margin-right: 8px; }
 .scan-progress-list li, .scan-unread li { display: flex; align-items: center; gap: 0 6px; margin: 4px 0; }
 .scan-progress-list li .scan-thumb, .scan-unread li .scan-thumb { margin-right: 2px; }
+/* a scan's row on Scan workbook pages: its page's thumbnail left of its name and lines (the owner, 2026-10-22) */
+.scan-row-name { display: flex; align-items: flex-start; gap: 8px; }
+/* a scan draft's page kept back for later (its Save unchecked): its heading dimmed (the owner, 2026-10-22) */
+.scan-page.is-kept-back > summary .box-title { opacity: .55; }
+.scan-page-save-label { cursor: pointer; }
+.scan-row-name > .scan-row-thumb { flex: none; }
+.scan-row-name > .scan-row-thumb .scan-thumb { margin-right: 0; }
 .scan-progress-list, .scan-unread { padding-left: 0; list-style: none; }
 .scan-chip-thumb { height: 18px; width: auto; max-width: 18px; object-fit: cover; object-position: top; border-radius: 0; background: #fff; }
 .scan-pop-name { display: inline-flex; align-items: center; min-width: 0; }
 .scan-pop-name .scan-thumb { height: 32px; max-width: 32px; }
 @media (max-width: 599px) { .scan-pop { position: fixed; left: 16px; right: 16px; top: 120px; width: auto; } }
 /* an answer typed where the page prints "???": a box drawn there, over the question marks (the owner, 2026-10-18) */
+.page-quiz .pq-bare .pq-input { border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
 .page-quiz .pq-inline .pq-input { background: var(--pq-paper, #fff); border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
 /* a question under the page keeps its lines (a puzzle written line by line) */
 .qtext { white-space: pre-line; }
@@ -3090,6 +3104,12 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
    (folders.js, folderfilter.js, folder_checks.js; the owner, 2026-10-19) */
 .side-levels.title-levels { display: inline-flex; gap: 4px; margin: 0 0 0 6px; padding: 0; vertical-align: middle; align-self: center; flex: 0 0 auto; }
 .side-levels.title-levels[hidden] { display: none; }
+/* how many are checked, small, beside the folder list's Expand all / Collapse all (the owner, 2026-10-21) */
+.page-head > .title-checked { align-self: center; margin-left: 2px; font-size: var(--fs-xs); }
+.page-head > .title-checked.is-empty { opacity: .55; }
+.page-head > .title-checked { display: inline-flex; align-items: center; gap: 2px; border: 0; cursor: pointer; font: inherit; font-size: var(--fs-xs); }
+.page-head > .title-checked:hover { color: var(--accent); }
+.page-head > .title-checked .ico { width: 11px; height: 11px; stroke-width: 3; }
 /* (Assign's "Quiz" and "Students" headings: their pair on the same line, then the filter under them) */
 .label.pick-wrap-head:has(+ .title-levels) { display: inline-block; margin-right: 0; }
 .label.pick-wrap-head + .title-levels { margin-bottom: 6px; }
@@ -3232,21 +3252,13 @@ dialog.ask.write-to-dialog[open] { display: flex; flex-direction: column; }
 .scan-again > summary::-webkit-details-marker { display: none; }
 .scan-again[open] > summary { margin-bottom: 8px; }
 .scan-again textarea { width: 100%; margin-bottom: 8px; }
-/* a problem's question and answer, from its row's icon (static/js/qa.js; the owner, 2026-10-21) */
-dialog.ask.qa-dialog { max-width: min(560px, calc(100vw - 32px)); }
-dialog.qa-dialog .qa-title { margin: 0 0 12px; font-size: var(--fs-lg); }
-dialog.qa-dialog .qa-head { margin: 10px 0 4px; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; }
-dialog.qa-dialog p.qa-text { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; }
-dialog.qa-dialog ul.qa-choices { list-style: none; margin: 0 0 8px; padding: 0; }
-dialog.qa-dialog ul.qa-choices li { padding: 2px 0; }
-dialog.qa-dialog .qa-right { font-weight: 600; }
-dialog.qa-dialog .qa-right .qa-mark { color: var(--ok); }
 /* an open box in a list (a student page's quizzes, Results by quiz, People's Results, Grading) gets
    the same very light soft-teal wash as an open row: a little stronger on its heading line, lighter
    on what it holds; never a folder, nor a grouping like the Archive's months (the owner, 2026-10-21) */
-details.result-box[open], details.item-box[open] { background: color-mix(in srgb, var(--open-tint) 7%, var(--surface)); }
+details.result-box[open], details.item-box[open] { background: color-mix(in srgb, var(--open-tint) 5%, var(--surface));
+  border-bottom: 2px solid var(--open-edge); }
 details.result-box[open] > summary, details.item-box[open] > summary {
-  background: color-mix(in srgb, var(--open-tint) 14%, var(--surface)); border-radius: var(--r) var(--r) 0 0; }
+  background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); border-radius: var(--r) var(--r) 0 0; }
 /* a student page's open row (rows like My quizzes', the owner 2026-10-21): each attempt's icons as one
    group at the row's right end, level with its line (static/js/dividers.js gives --act-r) */
 .attempt-act.attempt-act-group { display: block; position: absolute; top: 50%; transform: translateY(-50%); right: calc(var(--act-r, 20px) - 17px); }
@@ -3332,3 +3344,35 @@ dialog.assign-many .put-frame ul.put-list > li { padding: 7px 12px; border-top: 
 dialog.assign-many .put-frame ul.put-list > li:first-child { border-top: 0; }
 dialog.assign-many .put-frame ul.put-list > li:has(input:checked) { background: var(--accent-soft); }
 dialog.assign-many .put-frame ul.put-list > li > label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+/* the automatic folders pinned at the top of every folder list, the folders scrolling under them
+   (static/js/folderfilter.js qgenPinAuto gives each its top; the owner, 2026-10-21) */
+.side-top > li.side-auto, .folder-side-list > .side-row.side-auto { position: sticky; z-index: 2; background: var(--surface); }
+.side-top > li.side-auto-last, .folder-side-list > .side-row.side-auto-last { box-shadow: 0 2px 0 color-mix(in srgb, var(--muted) 55%, var(--border)); padding-bottom: 4px; }  /* (a little heavier: the owner, 2026-10-21) */  /* (padding, not margin: the folders showed through a margin) */
+/* (the space over the first one, the list's own top padding, covered too: the folders scrolled up
+   showed through it) */
+.side-top > li.side-auto:first-child::before, .folder-side-list > .side-row.side-auto:first-of-type::before {
+  content: ""; position: absolute; left: -8px; right: -8px; bottom: 100%; height: 16px; background: var(--surface); }
+/* People (Accounts and Results in one): the status and done badges stacked, one under the other, so
+   the row stays narrow enough for Created and Folders too (the owner, 2026-10-21) */
+.people-table .stacked-sums { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+/* (its Name column narrower than a list's usual 30%, the room going to the columns after it: the
+   owner, 2026-10-21) */
+table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width: 16%; }
+/* an open row's groups (each quiz under a person, each student under a quiz) as bands: the group's
+   heading on its own colored band with a thick line at its left and its name in bold, its attempts
+   indented under a thin line, a little room between groups (the owner, 2026-10-21; it was hard to
+   tell a heading from an attempt, and one group from the next) */
+.result-groups > .result-group { margin: 12px 0 14px; padding: 0; }
+.result-groups .result-group-head { background: color-mix(in srgb, var(--open-tint) 16%, var(--surface)); border-left: 4px solid var(--open-edge);
+  padding: 6px 10px; margin: 0; font-size: var(--fs-md); }
+.result-groups .result-group-head a, .result-groups .result-group-head .person-name { font-weight: 700; }
+.result-groups .result-group > ol.attempt-list { margin: 0 0 0 22px; border-left: 2px solid var(--border); padding-left: 14px; }
+/* the open row's heading stays at the top of the list while its contents scroll under it
+   (static/js/dividers.js: .row-stuck, --thead-h), on its band across the whole row */
+.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { position: sticky; top: calc(var(--thead-h, 40px) - 12px); z-index: 1; }
+.folder-filter-list.folder-scroll details.row-fold > summary.row-stuck::before { content: "" !important;  /* (a row summary's ::before is content: none elsewhere) */
+  position: absolute; z-index: -1; top: -4px; bottom: -4px;
+  left: var(--stuck-l, 0); right: var(--stuck-r, 0); background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); box-shadow: 0 2px 0 var(--open-edge); }
+/* a folder dialog's rows: the round button or check box in one column at the left, the folder's icon
+   and name indented by its depth (--depth-pad), as in the folder list (the owner, 2026-10-21) */
+ul.put-list > li > label > input + svg.ico { margin-left: var(--depth-pad, 0px); }

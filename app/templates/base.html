@@ -138,8 +138,7 @@
                 {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
                 {{ item('qgen.assign', 'Assign a quiz', tip='Give a quiz to students or groups, with a due date') }}
                 {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student’s score on it') }}
-                {# (the same page as People's Results: the owner, 2026-10-15) #}
-                {{ item('qgen.list_users', 'Results by student', tip='Every student’s quizzes, attempts and scores') }}
+                {#- (no "Results by student": People shows each person's results now, the owner 2026-10-21) #}
               </div>
             </details>
             {# written answers waiting for grading; kept current by messages.js #}
@@ -148,9 +147,13 @@
             {% endcall %}
             {# People: Accounts (user.userdet) and Results (qgen.list_users); opens the view used last #}
             {{ item('user.people', 'People', ('user.userdet', 'user.eduser', 'qgen.list_users', 'qgen.list_user'), tip='Everyone: their accounts, folders and quiz results') }}
+            {#- a main link of its own, after People (it was in More: the owner, 2026-10-22); grayed out,
+                not left out, when the site has no AI key (the owner, 2026-10-18) #}
+            {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
+            {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan workbook pages</span>{% endif %}
             {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
-              <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages', 'qgen.scan_start', 'qgen.scan_review', 'qgen.scan_done',
+              <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages',
                                 'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Archive, files and settings">More</summary>
               <div class="menu-list">
                 {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
@@ -166,9 +169,6 @@
                     {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren’t pictures') }}
                   </div>
                 </details>
-                {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
-                {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
-                {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan workbook pages</span>{% endif %}
                 <hr class="menu-rule">
                 {{ item('user.settings', 'Settings', ('user.technical_settings', 'user.save_technical_settings'), tip='Site name, logo and how the site works') }}
               </div>

@@ -238,7 +238,9 @@ def test_whole_school_week(app_db):
 
     # --- home page and lists
     assert '★ 93%' in sam.get('/mypage').data.decode()
-    for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/listuser', '/userdet', '/images', '/nonimages',
+    # (Results by student is the People page now: the owner, 2026-10-21)
+    assert teacher.get('/quiz/listuser').headers['Location'] == '/userdet'
+    for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/images', '/nonimages',
                 '/quiz/listcq/{}'.format(sam_q.id), '/quiz/editvquiz/{}'.format(vq.id), '/quiz/assign?vq={}'.format(vq.id)):
         assert teacher.get(url).status_code == 200, url
 

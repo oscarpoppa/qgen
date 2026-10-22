@@ -269,6 +269,9 @@ def form_from(data, placed=True, **changes):
         pre = 'p{}-'.format(page['n'])
         form[pre + 'shown'] = '1'
         form[pre + 'title'] = page['title']
+        #(each page's "Save" check box, checked unless kept back: the owner, 2026-10-22)
+        if page.get('save') is not False:
+            form[pre + 'save'] = 'y'
         for flag in ('join_prev', 'shuffle', 'calculator'):
             if page.get(flag):
                 form[pre + flag] = 'y'
@@ -484,6 +487,35 @@ def test_joined_across_a_picture_page_keeps_its_problems(app_db, ai):
     assert doubles and doubles[0].id in in_quizzes, 'page 3’s problem was not saved in any quiz'
 
 
+def test_pages_kept_back_stay_stashed_and_the_rest_are_saved(app_db, ai):
+    """Save page by page (the owner, 2026-10-22): page 2 unchecked isn't saved; it stays as a
+    scan of its own, stashed under the same name, renumbered as its page 1, files and all."""
+    app, db = app_db
+    from app.qgen.models import VQuiz, ScanJob
+    from app.qgen import scan as SC
+    ai([QS_ADD, QS_TIMES], [NUM_ADD, NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'page1.png'), (picture(), 'page2.png')])
+    job = job_of(db)
+    data = json.loads(job.data)
+    page2 = open(SC.page_file(job.id, 2), 'rb').read()
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p2-save': None}))
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/scan/done')
+    assert VQuiz.query.count() == 1
+    left = db.session.get(ScanJob, job.id)
+    assert left is not None and left.pages == 1
+    kept = json.loads(left.data)
+    assert [p['n'] for p in kept['pages']] == [1] and kept.get('put_away') and kept['pages'][0]['save'] is True
+    assert open(SC.page_file(job.id, 1), 'rb').read() == page2
+    assert not os.path.exists(SC.page_file(job.id, 2))
+    done = teacher.get('/quiz/scan/done').data.decode()
+    assert '1 page wasn’t saved' in done and 'waiting in “Stashed scans”' in done
+    # it's in Stashed scans, and saving it later makes its quiz and removes the scan
+    assert 'Nothing stashed.' not in teacher.get('/quiz/scan').data.decode()
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(kept, action='save'))
+    assert r.status_code == 302 and VQuiz.query.count() == 2 and db.session.get(ScanJob, job.id) is None
+
+
 def test_one_bad_item_saves_nothing(app_db, ai):
     app, db = app_db
     from app.qgen.models import VProblem, VQuiz, ScanJob
@@ -500,13 +532,15 @@ def test_one_bad_item_saves_nothing(app_db, ai):
     r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p1i0-include': None}))
     assert r.status_code == 400 and 'There’s nothing to save yet' in r.data.decode()
     assert VProblem.query.count() == 0 and VQuiz.query.count() == 0
-    # Keep draft: the title typed is kept, and the scan shows as a kept draft
+    # Stash draft (it was Keep draft: the owner, 2026-10-21): the title typed is kept, the scan is
+    # stashed, and it's back on Scan workbook pages, in Stashed scans
     r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='keep', **{'p1-title': 'Doubles to 20'}))
-    assert r.status_code == 302
+    assert r.status_code == 302 and r.headers['Location'] == '/quiz/scan'
     kept = json.loads(job_of(db).data)
-    assert kept['pages'][0]['title'] == 'Doubles to 20' and kept['kept_at']
-    assert 'Draft kept.' in teacher.get(r.headers['Location']).data.decode()
-    assert 'Math Grade 2' in teacher.get('/quiz/scan').data.decode()
+    assert kept['pages'][0]['title'] == 'Doubles to 20' and kept['kept_at'] and kept['put_away']
+    page = teacher.get(r.headers['Location']).data.decode()
+    assert '“{}” stashed, with your edits.'.format(job_of(db).name) in page
+    assert 'Math Grade 2' in page and 'Stashed scans' in page
     # another teacher can Discard it too
     jid = job_of(db).id
     add_teacher(db)
@@ -661,11 +695,15 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
     assert SC.missing_places(data) == [(1, 0, '1.')]
     html = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     assert 'crop crop-place is-missing' in html and 'data-label="1."' in html and 'Where “1.” is answered' in html
-    assert SC.NO_PLACE in html
+    #(the red line says which box and where it goes, and a notice lists what's still to place: the
+    #owner, 2026-10-22)
+    no_place = 'No place on the page yet. On the page picture, drag its dashed box “1.” onto the circle or blank where the answer goes.'
+    assert no_place in html
+    assert '<span data-place-count>1 problem needs its</span> answer box: <span data-place-list><a href="#scan-item-1-0" data-jump>1.</a></span>' in html
     assert 'disabled title="Every problem needs its place on the page first (1.)"' in html
     # saving anyway is refused, with the red line once, and nothing is made
     r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, placed=False, action='save'))
-    assert r.status_code == 400 and r.data.decode().count(SC.NO_PLACE) == 1 and not VQuiz.query.count()
+    assert r.status_code == 400 and r.data.decode().count(no_place) == 1 and not VQuiz.query.count()
     # left out: it needs no place
     assert not SC.missing_places(dict(data, pages=[dict(page, items=[dict(page['items'][0], include=False)])]))
     # dragged: kept by hand and saved on the page
@@ -673,6 +711,14 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
         data, placed=False, action='keep', **{'p1i0-place': '0.6,0.12,0.85,0.19', 'p1i0-placed': '1'}))
     slot = json.loads(job_of(db).data)['pages'][0]['slots']['q1']
     assert slot['answer'] == {'left': 0.6, 'top': 0.12, 'right': 0.85, 'bottom': 0.19} and slot['by_hand']
+    # ...and kept as a test of the box finder: the page, and where the box was put (the owner, 2026-10-22)
+    fixes = os.path.join(app.config['SCAN_DIR'], 'corrections')
+    #(the newest one: other tests' scans can have the same number)
+    kept = sorted((d for d in os.listdir(fixes) if d.startswith('{}-p1-'.format(job.id))),
+                  key=lambda d: os.path.getmtime(os.path.join(fixes, d)))[-1:]
+    assert len(kept) == 1 and os.path.exists(os.path.join(fixes, kept[0], 'page.jpg'))
+    fixed = json.load(open(os.path.join(fixes, kept[0], 'page.json')))
+    assert fixed['by_hand'] == ['q1'] and fixed['truth']['q1']['answer'] == slot['answer'] and fixed['problems']
     assert 'disabled title="Every problem needs its place' not in teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
 
 
@@ -823,12 +869,13 @@ def own_connections(app_db, tmp_path):
         engines[None] = shared
 
 
-def test_pages_are_read_three_at_once_and_pause_finishes_them(own_connections, ai):
+def test_pages_are_read_three_at_once_and_pause_drops_them(own_connections, ai):
     app, db = own_connections
     import time
     from app.qgen import scan as SC
     from app.qgen.models import ScanJob
-    fakes = ai([QS_TIMES] * 5, [NUM_TIMES] * 5)
+    #(enough for the three dropped pages to be read again on Resume)
+    fakes = ai([QS_TIMES] * 8, [NUM_TIMES] * 8)
     app.config['SCAN_READ_AT_ONCE'] = 3
     started = []
 
@@ -846,8 +893,12 @@ def test_pages_are_read_three_at_once_and_pause_finishes_them(own_connections, a
     job = job_of(db)
     data = json.loads(job.data)
     assert fakes.qs.most_at_once == 3
-    # the three being read were finished (they're paid for); the rest wait for Resume
-    assert [p['state'] for p in data['pages']] == ['done', 'done', 'done', 'waiting', 'waiting']
+    # Pause is at once (the owner, 2026-10-22): the page being read when it was pressed (page 1,
+    # whose reading pressed it) is dropped, even though its reading comes back afterward; nothing
+    # is read after it; every page not read waits for Resume. (Under a busy machine another page
+    # may already have finished before Pause: that one is kept.)
+    states = [p['state'] for p in data['pages']]
+    assert states[0] == 'waiting' and set(states) <= {'waiting', 'done'} and states.count('waiting') >= 3, states
     assert data['pages'][3]['error'] == SC.PAUSED_NOTE and data.get('paused') and job.status == 'ready'
     # Resume reads the rest
     fakes.qs.during = None
@@ -951,25 +1002,32 @@ def test_put_away_and_take_out(app_db, ai):
     teacher = login(app, 'teach')
     upload(teacher, [(picture(), 'p1.png')], name='Week 1')
     job = job_of(db)
-    # a scan read all the way can't be put away (only a paused one or a draft)
+    # a scan read all the way can't be stashed (only a paused one or a draft)
     html = teacher.get('/quiz/scan').data.decode()
-    #(the Put away card is always there, empty with its note: the owner 2026-10-21)
-    assert 'Nothing put away.' in html and 'Week 1' not in html.split('id="scan-away"')[1]
+    #("Put away" is "Stash" everywhere; the Stashed scans card is always there, empty with its note:
+    #the owner 2026-10-21)
+    assert 'Nothing stashed. Paused or stopped scans and drafts you stash wait here.' in html and 'Week 1' not in html.split('id="scan-away"')[1]
+    assert '“Week 1” until you want it again' not in html
+    # Stash draft: the draft is stashed at once
     teacher.post('/quiz/scan/{}'.format(job.id), data=dict(form_from(json.loads(job.data)), action='keep'))
+    assert json.loads(job_of(db).data).get('put_away')
+    teacher.post('/quiz/scan/{}/take-out'.format(job.id))
+    # taken out, a draft has a Stash button in Current scans
     html = teacher.get('/quiz/scan').data.decode()
-    assert '“Week 1” away until you want it again' in html
-    # put away: out of Current scans and the Dashboard, into its own card
+    assert 'aria-label="Stash"' in html and 'Stash “Week 1” until you want it again: out of Current scans and the Dashboard' in html
+    # stashed: out of Current scans and the Dashboard, into its own card
     assert teacher.post('/quiz/scan/{}/put-away'.format(job.id)).headers['Location'].endswith('/quiz/scan')
     html = teacher.get('/quiz/scan').data.decode()
     current, away = html.split('id="scan-away"')
     assert 'Week 1' not in current.split('id="scan-current"')[1] and 'No scans yet.' in current
+    assert '<h2>Stashed scans</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
     assert 'Week 1' in away and 'Take “Week 1” out' in away and 'Continue: go on checking “Week 1”' in away
-    # ...and in the Dashboard's pop-over, under Current scans in a Put away list of its own, with
-    # Take out there too, which comes back to the Dashboard (the owner, 2026-10-20)
-    pop = teacher.get('/quiz/scan/progress').get_json()['html']
-    pop_current, pop_away = pop.split('class="scan-pop-away"')
-    assert 'Week 1' not in pop_current.split('<h2>Current scans</h2>')[1] and 'Week 1' in pop_away
-    assert 'take-out?back=dashboard' in pop_away
+    # ...and never in the Dashboard's pop-over nor on its chip (the owner, 2026-10-21; it had a list
+    # of its own there)
+    pop = teacher.get('/quiz/scan/progress').get_json()
+    assert 'Week 1' not in pop['html'] and 'scan-pop-away' not in pop['html'] and 'take-out' not in pop['html']
+    assert 'Week 1' not in teacher.get('/dashboard').data.decode()
+    # Take out still comes back to where it was asked from
     assert teacher.post('/quiz/scan/{}/take-out?back=dashboard'.format(job.id)).headers['Location'].endswith('/dashboard')
     teacher.post('/quiz/scan/{}/put-away'.format(job.id))
     # opened from there, it's as it was left
@@ -977,7 +1035,7 @@ def test_put_away_and_take_out(app_db, ai):
     # taken out: back in Current scans
     teacher.post('/quiz/scan/{}/take-out'.format(job.id))
     html = teacher.get('/quiz/scan').data.decode()
-    assert 'Nothing put away.' in html and 'Week 1' in html.split('id="scan-current"')[1].split('id="scan-away"')[0]
+    assert 'Nothing stashed.' in html and 'Week 1' in html.split('id="scan-current"')[1].split('id="scan-away"')[0]
     # a paused scan put away and resumed is back in Current scans, read the rest of the way
     data = json.loads(job_of(db).data)
     data['pages'].append({'n': 2, 'state': 'waiting', 'error': SC.PAUSED_NOTE})

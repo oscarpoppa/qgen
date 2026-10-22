@@ -33,9 +33,6 @@
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
           <td class="actions">
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
-            {#- the question and answer in a dialog (static/js/qa.js), not as columns that came and went
-                as rows opened and shifted the list (the owner, 2026-10-21) #}
-            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-qa="{{ url_for('qgen.vprob_example', vpid=item.id) }}" data-qa-title="{{ item.title or 'Untitled' }}" title="Question and answer: see what “{{ item.title or 'Untitled' }}” asks, and its answer">{{ icon_label('lc-answer-key', 'Question and answer') }}</button>
             {% if in_archive %}
             {# the Archive's Problems (the owner, 2026-10-16): Restore, History and Delete for good #}
             <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form"
@@ -110,7 +107,7 @@
     <p id="add-quiz-head"><strong>Add <span data-what></span> to quizzes</strong><br>
       <span class="muted small">Check the quizzes to add to.</span></p>
     <div class="assign-defaults small">
-      <strong>What happens:</strong>
+      <strong>{{ icon('lc-alert', 'assign-defaults-sign') }}What happens:</strong>
       <ul><li>Added at the end of each quiz</li><li>What’s already in a quiz stays as it is</li>
         <li>A problem already in a quiz isn’t added twice</li><li>Quizzes already assigned keep the version they were given</li></ul>
     </div>
@@ -135,10 +132,10 @@
     <p class="error small" data-quiz-error hidden>Check at least one quiz first.</p>
     <div data-problem-ids></div>
     {# or a new quiz with them in it (quiz_pick.js fills in which, and the way back) #}
-    <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make a new quiz with {{ 'them' }} instead</a></p>
+    <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make new quiz</a></p>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Add to the end of the checked quizzes">Add</button></div>
   </form>
 </dialog>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script><script src="{{ asset('js/qa.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script>{% endblock %}

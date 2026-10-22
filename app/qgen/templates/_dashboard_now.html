@@ -1,5 +1,5 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
-{% from "_macros.html" import avatar, person_name, person_link, quiz_link, box_label, count_of with context %}
+{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of with context %}
 <details class="box card dash-card" id="dash-right-now" data-elastic="now" data-elastic-dir="v" data-box="now" open>
   <summary class="dash-head">{{ box_label('lc-activity', 'Right now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
@@ -9,8 +9,8 @@
     <h3 class="dash-sub">Taking a quiz</h3>
     {% if taking %}
       {% macro taking_row(t) %}
-        <li>{{ person_link(t.cq.taker) }}
-          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(t.cq.vquiz) }}</span>
+        <li>{{ person_name(t.cq.taker) }}
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_name(t.cq.vquiz) }}</span>
           <span class="muted small">started {{ when(t.started) }}{% if t.left is not none %} · {{ (t.left.total_seconds() // 60)|int }} min left{% endif %}</span></span>
           {# their quiz as it stands (what they've answered so far); the name opens their student page #}
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=t.cq.id) }}" title="View: {{ t.cq.taker.shown_name if t.cq.taker else 'the student' }}’s questions and answers so far on “{{ t.cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></span></li>

@@ -504,11 +504,10 @@ def eduser(uid):
 @pw_check
 @admin_only
 def people():
-    #Accounts unless ?view=results asks for Results (no longer the one used last: the owner,
-    #2026-10-16)
+    #(one People page: the owner, 2026-10-21; ?view= is ignored, the Results view is gone)
     args = request.args.to_dict()
-    target = 'qgen.list_users' if args.pop('view', None) == 'results' else 'user.userdet'
-    return redirect(url_for(target, **args))
+    args.pop('view', None)
+    return redirect(url_for('user.userdet', **args))
 
 
 @user_bp.route('/userdet', methods=['GET'])
@@ -516,7 +515,6 @@ def people():
 @pw_check
 @admin_only
 def userdet():
-    session['people_view'] = 'accounts'
     return people_page()
 
 
@@ -530,7 +528,11 @@ def people_page(in_archive=False, **extra):
         ulst = sorted(archived_people(), key=lambda u: u.username)
         root, flat, nodes, folders_of = groups.tree(ulst, only={u.id for u in ulst})
     else:
-        ulst = User.query.order_by(User.username).all()
+        #(everyone's quizzes and their quizzes loaded together, not one person at a time: the People
+        #page shows each person's results, the code critic 2026-10-22)
+        from sqlalchemy.orm import selectinload
+        from app.qgen.models import CQuiz
+        ulst = User.query.options(selectinload(User.cquizzes).selectinload(CQuiz.vquiz)).order_by(User.username).all()
         root, flat, nodes, folders_of = groups.tree(ulst)
     #everyone (the default), the people in no folder ('main'), or a folder's id (a gone folder: everyone)
     view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
@@ -558,8 +560,9 @@ def people_page(in_archive=False, **extra):
                                                'Assign a quiz to everyone: every student', 'Assign a quiz to everyone: there are no students yet'),
         main_tools=None if in_archive else lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
                                                 'Assign a quiz to this folder: everyone in Uncategorized (in no folder)', 'Assign a quiz to this folder: nobody is in Uncategorized'))
+    from app.qgen.models import RETAKE_RULES
     return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=shown,
-                           folders_of=folders_of, in_archive=in_archive, **extra)
+                           folders_of=folders_of, in_archive=in_archive, rules=RETAKE_RULES, **extra)
 
 
 def _assign_all_button(people, label, title, empty):

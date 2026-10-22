@@ -65,6 +65,7 @@
   }
   function writeBox(input, b) {
     input.value = [b.l, b.t, b.r, b.b].map(function (v) { return Math.round(v * 10000) / 10000; }).join(',');
+    if (window.qgenChanged) window.qgenChanged();
   }
   function place(crop) {
     var input = document.getElementById(crop.dataset.for);
@@ -135,12 +136,39 @@
   }
   function refreshSave() {
     if (!save) return;
-    var waiting = [];
+    var waiting = [], items = [];
     form.querySelectorAll('.crop-place').forEach(function (crop) {
       var item = itemOf(crop), placed = item && item.querySelector('[data-placed]');
-      if (!crop.hidden && placed && placed.value !== '1') waiting.push(crop.dataset.label);
+      //(a page kept back for later doesn't hold Save up)
+      var page = crop.closest('.scan-page');
+      if (page && page.classList.contains('is-kept-back')) return;
+      if (!crop.hidden && placed && placed.value !== '1') { waiting.push(crop.dataset.label); items.push(item); }
+    });
+    //(the notices at the top and beside Save: how many are left and which, each a link to it)
+    form.querySelectorAll('[data-place-note]').forEach(function (note) {
+      note.hidden = !waiting.length;
+      if (!waiting.length) return;
+      note.querySelector('[data-place-count]').textContent = waiting.length + (waiting.length === 1 ? ' problem needs its' : ' problems need their');
+      var list = note.querySelector('[data-place-list]');
+      list.textContent = '';
+      items.forEach(function (item, k) {
+        if (k) list.appendChild(document.createTextNode(', '));
+        var a = document.createElement('a');
+        a.href = '#' + item.id; a.setAttribute('data-jump', ''); a.textContent = waiting[k];
+        list.appendChild(a);
+      });
     });
     save.disabled = waiting.length > 0;
+    //(each page's green check mark: shown once nothing on it waits for its place, the owner 2026-10-21)
+    form.querySelectorAll('.scan-page').forEach(function (pg) {
+      var ok = pg.querySelector('.scan-page-ok');
+      if (!ok) return;
+      var left = Array.prototype.some.call(pg.querySelectorAll('.crop-place'), function (crop) {
+        var item = itemOf(crop), placed = item && item.querySelector('[data-placed]');
+        return !crop.hidden && placed && placed.value !== '1';
+      });
+      ok.hidden = left || ok.dataset.errors === '1';
+    });
     save.title = waiting.length ? 'Every problem needs its place on the page first (' + waiting.join(', ') + ')' : save.dataset.tip;
   }
   form.querySelectorAll('.crop-place').forEach(function (crop) {
@@ -148,13 +176,53 @@
       var item = itemOf(crop);
       if (!item) return;
       item.querySelector('[data-placed]').value = '1';
+      if (window.qgenChanged) window.qgenChanged();
       var line = item.querySelector('.scan-no-place');
       if (line) line.hidden = true;
       crop.classList.remove('is-missing');
       refreshSave();
     });
   });
+  /* each page's Save check box (the owner, 2026-10-22): a page unchecked is kept in the scan for
+     later; the pages joined to it go with it. In the page's heading, so its click mustn't fold the page. */
+  function keptBack() {
+    form.querySelectorAll('.scan-page-save').forEach(function (box) {
+      if (box.dataset.lead) {
+        var lead = form.querySelector('.scan-page-save[data-page="' + box.dataset.lead + '"]');
+        if (lead) box.checked = lead.checked;
+      }
+      var page = box.closest('.scan-page');
+      if (page) page.classList.toggle('is-kept-back', !box.checked);
+    });
+  }
+  form.addEventListener('click', function (e) {
+    var label = e.target.closest && e.target.closest('.scan-page-save-label');
+    if (!label) return;
+    e.preventDefault();
+    var box = label.querySelector('input');
+    if (box.disabled) return;
+    box.checked = !box.checked;
+    box.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  form.addEventListener('change', function (e) {
+    if (e.target.classList && e.target.classList.contains('scan-page-save')) {
+      keptBack(); refreshSave();
+      if (window.qgenChanged) window.qgenChanged();
+    }
+  });
+  keptBack();
   refreshSave();
+  //a number in the notice: its page opened (pages start folded), then scrolled to
+  form.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-jump]');
+    if (!a) return;
+    var item = document.getElementById(a.getAttribute('href').slice(1));
+    if (!item) return;
+    e.preventDefault();
+    var page = item.closest('details');
+    if (page) page.open = true;
+    item.scrollIntoView({ block: 'center' });
+  });
 
   //"remove" on a picture hides its box (and puts it back when unchecked)
   form.addEventListener('change', function (e) {
@@ -251,13 +319,20 @@
       .then(function () { btn.disabled = false; });
   });
 
+  /* Enter in a one-line box doesn't send the form: it would press the first button in it, a page's
+     "Find the boxes again" (the code critic, 2026-10-22) */
+  form.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !/^(checkbox|radio|button|submit)$/.test(e.target.type)) e.preventDefault();
+  });
+
   /* ---------- Read this page again: asks first (the owner, 2026-10-20) ---------- */
   //(sent with the whole form, so the changes on the other pages are kept)
   form.addEventListener('click', function (e) {
     var btn = e.target.closest && e.target.closest('button[data-ask]');
     if (!btn) return;
     e.preventDefault();
-    window.qgenAsk(btn.dataset.ask, 'Read again', false).then(function (yes) {
+    //(the OK button says that button's own action: the code critic, 2026-10-22)
+    window.qgenAsk(btn.dataset.ask, btn.dataset.ok || btn.textContent.trim(), false).then(function (yes) {
       if (yes) form.requestSubmit(btn);
     });
   });

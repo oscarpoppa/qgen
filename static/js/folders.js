@@ -212,7 +212,7 @@
 
   //the results pages: a box per student (or quiz). The filter bar (static/js/filter.js) matches
   //a box's name or a row in it; "Show" keeps only the rows waiting for grading, or not handed
-  //in yet (tr[data-state]). Boxes it opened go back as they were when it's cleared.
+  //in yet (tr[data-state]), inside each row; the rows themselves stay closed.
   var resultsBar = document.getElementById('results-filter');
   //(a row like My quizzes' (tr.result-item, the owner 2026-10-21): its groups of attempts
   //(.result-group[data-state]) count as its rows, and its fold opens instead)
@@ -231,9 +231,10 @@
       //(its own flag: a folder button's choice stays, static/js/folderfilter.js)
       var hide = rows.length ? !shown : !(named && st === 'all');
       if (window.qgenHideRow) window.qgenHideRow(d, 'text', hide); else d.hidden = hide;
+      //(rows stay closed: a filter or "Show" never opens them, everything starts closed; the owner,
+      //2026-10-21: "Not handed in yet only" used to open every row)
       var fold = foldOf(d);
-      if (fold && active && !d.hidden) fold.open = true;
-      else if (fold && !active) restore(fold);
+      if (fold && !active) restore(fold);
     });
     var none = document.querySelector('.filter-none');
     //(only for the name and Show filters: an empty folder says so itself, folderfilter.js)
@@ -466,7 +467,7 @@
       var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
       r.type = 'radio'; r.name = 'move-to'; r.value = o.value; r.disabled = o.disabled;
       var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
-      li.style.paddingLeft = (depth * 6) + 'px';
+      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
       lab.appendChild(r);
       if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
       lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));

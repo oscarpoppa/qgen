@@ -135,9 +135,11 @@ def test_taking_a_quiz_right_now(app_db):
     sam.get('/messages/poll?watch=attempt:{}'.format(other.id))
     part = teacher.get('/dashboard/now').data.decode()
     assert 'Taking a quiz' in part and '<strong>sam</strong>' in part
-    # the quiz's name opens its history, the student's their student page; "Assigned" opens their quiz as it is now
-    assert 'href="/quiz/take/{}"'.format(other.id) in part and '>Other</a></span>' in part and 'aria-label="View"' in part  # (the eye: the student's copy, owner 2026-10-14)
-    assert 'class="name-link person" href="/quiz/listuser/' in part and '>Student page</a>' not in part
+    # the quiz's and the student's names are plain words (no links on the cards: the owner, 2026-10-21);
+    # the eye opens their quiz as it is now
+    assert 'href="/quiz/take/{}"'.format(other.id) in part and '<span class="dash-quiz">“Other”</span>' in part and 'aria-label="View"' in part  # (the eye: the student's copy, owner 2026-10-14)
+    assert '<span class="person">' in part and 'name-link' not in part and 'href="/quiz/listuser/' not in part
+    assert 'href="/quiz/results/' not in part and '>Student page</a>' not in part
     assert 'data-url="/dashboard/now"' in teacher.get('/dashboard').data.decode()
 
 

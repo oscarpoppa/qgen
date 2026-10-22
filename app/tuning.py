@@ -57,6 +57,10 @@ TUNABLES = [
        'characters', 20000, 1000, 200000),
     _t('max_message', 'quizzes', 'Longest message', 'The most characters one message can have.',
        'characters', 2000, 200, 20000),
+    #(a "Check all" clicked by mistake shouldn't make an enormous quiz: the owner, 2026-10-21)
+    _t('ask_over_problems', 'quizzes', 'Ask first when more problems are checked than',
+       'With more checked than this, “Make new quiz” and “Add to a quiz” ask before going on, in case “Check all” was clicked by mistake.',
+       'problems', 25, 1, 1000),
     _t('score_green', 'scores', 'Green from',
        'A score at least this high shows green, on every page (Dashboard, results, Home, My quizzes...).',
        '%', 70, 1, 100),

@@ -117,8 +117,9 @@ def test_folders_inside_folders_and_removing_them(app_db):
     assert 'aria-label="Expand all in 7th grade"' in page
     # each person a row of the folder's table (People shown as rows)
     #(the page's own rows, each with its name for the filter; the dialogs' pickers list people as rows too)
-    assert len(re.findall(r'<tr data-box="user:\d+" data-name=', page)) == 2  # kim, and sam in Period 2
-    assert '<tr data-box="user:{}" data-name="kim'.format(ids('kim')) in page
+    #(a row opens to the person's results too: one People page, the owner 2026-10-21)
+    assert len(re.findall(r'<tr class="result-item" data-box="user:\d+" data-name=', page)) == 2  # kim, and sam in Period 2
+    assert '<tr class="result-item" data-box="user:{}" data-name="kim'.format(ids('kim')) in page
     # not inside itself
     assert teach.post('/users/folders/move', data={'folder': g7, 'to': p2}, headers=FETCH).get_json()['error'] == \
         'A folder can\'t go inside itself.'
@@ -223,28 +224,28 @@ def test_assigning_from_the_users_page(app_db):
 
 
 def test_results_pages_lead_back_to_users(app_db):
-    """People: Accounts and Results are two views of one page (2026-10-09): each has the
-    switch, keeping the folder; the menu's People opens Accounts (?view=results: Results); one student's
-    page goes Back to People."""
+    """People: one page with each person's results too (the owner, 2026-10-21; Accounts and Results
+    were two views of it, 2026-10-09): no switch; Results by student's old address and the menu's
+    People (whatever ?view= says) open it, keeping the folder; one student's page goes Back to People."""
     app, db = app_db
     teach = login(app, 'teach')
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
     accounts = no_titles(teach.get('/userdet?folder=all').data.decode())
     assert '<h1>People</h1>' in accounts and 'data-trail-key="people"' in accounts
-    assert 'href="/userdet?folder=all" aria-current="page">Accounts</a>' in accounts and 'href="/quiz/listuser?folder=all">Results</a>' in accounts
+    assert '>Accounts</a>' not in accounts and '>Results</a>' not in accounts and 'href="/quiz/listuser?folder=all"' not in accounts
+    # its results are on it: the Quizzes, Status and Done columns, and the results' Show filter
+    assert '<th>Quizzes</th><th>Status</th><th>Done</th>' in accounts and 'id="results-filter"' in accounts
     assert teach.get('/people').headers['Location'] == '/userdet'
-    results = no_titles(teach.get('/quiz/listuser?folder=all').data.decode())
-    assert '<h1>People</h1>' in results and 'href="/quiz/listuser?folder=all" aria-current="page">Results</a>' in results
-    #(the menu's People opens Accounts unless ?view=results asks for Results, no longer the one
-    #used last: the owner, 2026-10-16)
+    assert teach.get('/quiz/listuser?folder=all').headers['Location'] == '/userdet?folder=all'
+    #(the menu's People opens People, whatever ?view= asks: the owner, 2026-10-21)
     assert teach.get('/people?folder=all').headers['Location'] == '/userdet?folder=all'
-    assert teach.get('/people?folder=all&view=results').headers['Location'] == '/quiz/listuser?folder=all'
-    # the menu: one People entry, lit on both views; the Quizzes menu has Results by student too,
-    # under Results by quiz (the owner, 2026-10-15)
-    assert '>People</a>' in results and 'class="active" aria-current="page">People</a>' in results
-    menu = results.split('<main')[0]
-    assert '>Results by student</a>' in menu and menu.index('>Results by quiz</a>') < menu.index('>Results by student</a>')
+    assert teach.get('/people?folder=all&view=results').headers['Location'] == '/userdet?folder=all'
+    # the menu: one People entry, lit; no Results by student in the Quizzes menu (the owner, 2026-10-21),
+    # Results by quiz stays
+    assert '>People</a>' in accounts and 'class="active" aria-current="page">People</a>' in accounts
+    menu = accounts.split('<main')[0]
+    assert '>Results by quiz</a>' in menu and 'Results by student' not in menu
     # one student's page, a quiz's history and Results by quiz: the way back is the top bar's
     # arrows (the trail), no worded back button
     for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results/{}'.format(vq.id), '/quiz/results'):

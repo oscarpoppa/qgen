@@ -17,6 +17,8 @@
       questions it has, and how many problems those questions use (the same problem can be used for
       several questions, each with its own numbers) #}
   <p>Made {{ quizzes|length }} quiz{{ '' if quizzes|length == 1 else 'zes' }} from your pages, and {{ done.problems }} new problem{{ '' if done.problems == 1 else 's' }} for {{ 'it' if quizzes|length == 1 else 'them' }}{% if done.reused %} (and used {{ done.reused }} you already had){% endif %}{% if done.pictures %}; saved {{ done.pictures|length }} picture{{ '' if done.pictures|length == 1 else 's' }}{% endif %}{% if done.folder %}, in the folder “{{ done.folder }}”{% endif %}.</p>
+  {#- (pages not saved this time wait in Stashed scans: the owner, 2026-10-22) #}
+  {% if done.left %}<p><a href="{{ url_for('qgen.scan_start') }}#scan-away">{{ done.left }} page{{ ' wasn’t' if done.left == 1 else 's weren’t' }} saved</a>: {{ 'it’s' if done.left == 1 else 'they’re' }} waiting in “Stashed scans”.</p>{% endif %}
   {% if quizzes %}
   <div class="table-wrap stack">
     <table class="scan-done-table">
@@ -26,7 +28,9 @@
         {% set entries = quiz_layout.parse(q.vpid_lst) %}{% set n = quiz_layout.question_count(entries) %}{% set kinds = q.vproblems|length %}
         {% set L = q.page_layout %}
         <tr>
-          <td>{% if L and L.pages %}<img class="scan-thumb scan-done-thumb" src="{{ url_for('static', filename=L.pages[0].image) }}" alt="The page “{{ q.title }}” was made from">{% endif %}</td>
+          {#- (an Image only quiz has no page layout: its picture is its problem's, the owner 2026-10-21) #}
+          {%- set pic = L.pages[0].image if L and L.pages else (q.vproblems|map(attribute='image')|select|first if q.vproblems else none) %}
+          <td>{% if pic %}<a href="{{ url_for('static', filename=pic) }}" data-page-zoom title="See the page full size"><img class="scan-thumb scan-done-thumb" src="{{ url_for('static', filename=pic) }}" alt="The page “{{ q.title }}” was made from"></a>{% endif %}</td>
           <td data-label="Quiz"><a class="name-link" href="{{ url_for('qgen.view_vquiz', vqid=q.id) }}" title="See “{{ q.title }}” as a student would">{{ q.title }}</a></td>
           <td data-label="Questions">{{ n }}</td>
           <td data-label="Problems used">{{ kinds }}{% if kinds < n %} <span class="muted small">(each used for several questions, with different numbers)</span>{% endif %}</td>
@@ -46,4 +50,4 @@
 {% include "_dialog_assign_quizzes.html" %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/assign_many.js') }}"></script>{% endblock %}
+{% block scripts %}<script src="{{ asset('js/assign_many.js') }}"></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>{% endblock %}

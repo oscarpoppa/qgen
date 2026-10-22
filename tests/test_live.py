@@ -43,7 +43,7 @@ def test_every_page_is_drawn_with_the_fingerprint_its_check_in_gives(app_db):
     from app.qgen.models import ArchivedAttempt
     aid = ArchivedAttempt.query.one().id
     pages = {
-        teacher: ['/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/review', '/quiz/listvq',
+        teacher: ['/userdet?folder=all', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/review', '/quiz/listvq',
                   '/quiz/listcq/{}'.format(done.id), '/quiz/take/{}'.format(later.id),
                   '/quiz/archive', '/quiz/archive/{}'.format(aid), '/userdet',
                   '/messages/{}?show=40'.format(ids('sam'))],  # (the Messages page is retired)

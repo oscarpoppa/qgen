@@ -46,7 +46,7 @@
       var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
       r.type = 'radio'; r.name = 'bar-move-to'; r.value = o.value; r.disabled = o.disabled;
       var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
-      li.style.paddingLeft = (depth * 6) + 'px';
+      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
       lab.appendChild(r);
       if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
       lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));
@@ -201,7 +201,7 @@
   var putBox = document.createElement('dialog');
   putBox.className = 'ask ask-many assign-many put-dialog';
   putBox.innerHTML = '<p><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
-    + '<div class="assign-defaults small"><strong>What happens:</strong><ul><li data-stays></li><li data-several></li></ul>'
+    + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul><li data-stays></li><li data-several></li></ul>'
     + '<label class="put-copy"><input type="checkbox" data-copy> <span data-copy-words></span></label></div>'
     + '<div class="assign-many-tools"><span class="muted small" data-count></span></div>'
     + '<ul class="assign-many-people put-list" data-list></ul>'
@@ -242,7 +242,7 @@
       if (!copy && o.value === onlyIn) { box.disabled = true; lab.title = 'Already in it'; }
       //(a folder inside another: the whole line indented, as in the folder list)
       var text = o.textContent, depth = (text.match(/^ +/) || [''])[0].length;
-      li.style.paddingLeft = (depth * 6) + 'px';
+      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
       lab.appendChild(box);
       //(a folder icon between the box and the name, as in the folder lists: the owner, 2026-10-16)
       if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
@@ -347,7 +347,12 @@
 
   var open = document.createElement('button');
   open.type = 'button'; open.className = 'btn btn-sm with-checked';
-  form.appendChild(open);
+  //(it sits in the Checked folder's header, beside its tab, not in the bar: folderfilter.js puts it
+  //there; the owner, 2026-10-21)
+  window.qgenApplyChecked = open;
+  //(the folder list may have drawn its Checked header before this script ran, e.g. a reload with
+  //Checked open: it's drawn again now, with the button; the code critic, 2026-10-22)
+  document.dispatchEvent(new CustomEvent('qgen-apply-ready'));
   open.addEventListener('click', function () {
     var n = count();
     if (!n) return;

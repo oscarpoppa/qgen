@@ -56,12 +56,12 @@
     {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
     {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
-    {{ field(form.retake_rule, 'Every attempt stays visible, and the one whose score counts is marked ★ (none is marked for an average). You can change this for one student on “Results by student”; changing it here later applies to every student again.') }}
+    {{ field(form.retake_rule, 'Every attempt stays visible, and the one whose score counts is marked ★ (none is marked for an average). You can change this for one student on “People”; changing it here later applies to every student again.') }}
     {% if retake_overrides %}
       {# students given their own rule on "Results by student": this setting doesn't apply to them #}
       <div class="alert alert-info small retake-overrides" role="note">
         <strong>{{ retake_overrides|length }} student{{ '' if retake_overrides|length == 1 else 's' }} {{ 'has' if retake_overrides|length == 1 else 'have' }} a different rule</strong>
-        (set on “Results by student”, so the setting above doesn't apply to {{ 'them' }}).
+        (set on “People”, so the setting above doesn't apply to {{ 'them' }}).
         Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
         <ul>
         {% for student, rule in retake_overrides %}

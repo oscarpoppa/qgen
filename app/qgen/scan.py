@@ -15,6 +15,7 @@ Exercises done on paper (drawing, coloring, circling) become Paper only problems
 their crop as the picture. A page that is only a picture is saved to the pictures folder
 and can go in the picture section of a quiz or problem.
 """
+import hashlib
 import io
 import json
 import os
@@ -295,7 +296,12 @@ def _read_page(app, job_id, n, api_key, user_id, reserved):
             job = db.session.get(ScanJob, job_id)
             if job is None:
                 return None
-            return read_one(job, n, api_key, user_id, reserved)
+            page = read_one(job, n, api_key, user_id, reserved)
+            #(each problem checked now, while it's read, so the draft page opens quickly: the owner, 2026-10-21)
+            if isinstance(page, dict) and page.get('state') == 'done':
+                for item in page.get('items') or []:
+                    checked_item(item)
+            return page
         except Exception as exc:
             db.session.rollback()
             app.logger.exception('reading scan {} page {} failed: {}'.format(job_id, n, exc))
@@ -359,7 +365,8 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                             if data is None:
                                 continue
                             #(read again meanwhile: a page read all the way is kept, it's paid for)
-                            if data.get('run') == run or result.get('state') == 'done':
+                            #(not one paused while it was being read: Pause drops it, the owner 2026-10-22)
+                            if data.get('run') == run or (result.get('state') == 'done' and data.get('dropped_run') != run):
                                 data['pages'][n - 1] = result
                         stop = stop or bool(result.get('stop'))
             if gone:
@@ -416,7 +423,11 @@ PAUSED_NOTE = 'Paused before this page was read.'
 
 
 def _paused(data):
-    """The reading stopped by Pause: the pages not read yet wait, with a note, for Resume."""
+    """The reading stopped by Pause: the pages not read yet wait, with a note, for Resume. The
+    page being read is dropped (its reading still finishing is thrown away: dropped_run), and
+    read again on Resume (the owner, 2026-10-22)."""
+    if data.get('run'):
+        data['dropped_run'] = data['run']
     data['run'] = None
     data.pop('pausing', None)
     data['paused'] = True
@@ -426,17 +437,105 @@ def _paused(data):
 
 
 def pause_reading(job, reading):
-    """Pause (the owner, 2026-10-19; it was Cancel): the pages being read are finished (they're
-    paid for), then the reading stops; Resume goes on with the rest. reading: whether it's still
-    going (when it isn't, e.g. the site restarted meanwhile, it's paused at once)."""
+    """Pause (the owner, 2026-10-19; it was Cancel): at once (the owner, 2026-10-22: it used to
+    finish the pages being read first): the pages read so far are kept, the ones being read go
+    back to waiting and what comes back for them is dropped; Resume goes on with the rest."""
     with page_lock(job.id) as data:
         if data is None:
             return
-        if reading:
-            data['pausing'] = True
-        else:
-            _paused(data)
-            job.status = 'ready'
+        _paused(data)
+        job.status = 'ready'
+
+
+def find_places_again(job_id, page):
+    """Find the answer places on a page that was read again, without the AI (the owner, 2026-10-21:
+    "Find the boxes again", e.g. after the finder was made better): its boxes are put where the
+    finder puts them now; boxes moved by hand on it go back. False when the page has nothing to place."""
+    from PIL import Image
+    from . import pagelayout
+    if page.get('state') != 'done' or page.get('kind') != 'problems' or not page.get('qs') \
+            or not os.path.exists(page_file(job_id, page['n'])):
+        return False
+    flat = Image.open(page_file(job_id, page['n'])).convert('RGB')
+    covered = {item['qs_id'] for item in page.get('items') or [] if item.get('qs_id') and item.get('values') and item.get('page_text')}
+    page['slots'] = pagelayout.find_slots(flat, {'problems': page['qs'], 'pictures': []}, covered)
+    return True
+
+
+def keep_corrections(job, data):
+    """The answer boxes a teacher moved or placed by hand, kept with their page (the owner,
+    2026-10-22: every box fixed by hand becomes a test of the box finder). For each read page with
+    one: SCAN_DIR/corrections/<scan>-p<page>-<time>/ page.jpg (the page as the finder saw it) and
+    page.json (QuizScan's problems, and where every answer box ended up: 'truth', with 'by_hand'
+    naming the ones the teacher moved). tools/scancorpus/build.py takes them in. Private like the
+    scans; never fails a save."""
+    try:
+        stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        for page in data.get('pages') or []:
+            slots = page.get('slots') if isinstance(page.get('slots'), dict) else {}
+            if page.get('state') != 'done' or not any(s.get('by_hand') for s in slots.values()):
+                continue
+            src = page_file(job.id, page['n'])
+            if not os.path.exists(src):
+                continue
+            out = os.path.join(scan_root(), 'corrections', '{}-p{}-{}'.format(int(job.id), int(page['n']), stamp))
+            os.makedirs(out, exist_ok=True)
+            shutil.copyfile(src, os.path.join(out, 'page.jpg'))
+            covered = [it['qs_id'] for it in page.get('items') or [] if it.get('qs_id') and it.get('values') and it.get('page_text')]
+            truth = {k: {'kind': s.get('kind'), 'answer': s.get('answer')} for k, s in slots.items() if s.get('kind') == 'field' and s.get('answer')}
+            with open(os.path.join(out, 'page.json'), 'w') as f:
+                json.dump({'problems': page.get('qs') or [], 'pictures': [], 'covered': covered, 'truth': truth,
+                           'by_hand': sorted(k for k, s in slots.items() if s.get('by_hand')),
+                           'source': 'scan {} “{}” page {}, boxes fixed by hand {}'.format(job.id, data.get('name') or job.name, page['n'], stamp)}, f, indent=1)
+    except Exception as exc:
+        current_app.logger.warning('could not keep the box corrections of scan {}: {}'.format(job.id, exc))
+
+
+def keep_leftovers(job, data):
+    """After Save (the owner, 2026-10-22: save page by page): the pages not saved (kept back,
+    not read yet, or that couldn't be read) stay as a smaller scan of their own, stashed under
+    the same name, numbered 1, 2... again (their files too). Returns how many are left; with
+    none, the caller removes the scan as before."""
+    left = [p for p in data.get('pages') or [] if not (p.get('state') == 'done' and p.get('save') is not False)]
+    if not left:
+        return 0
+    new = {p['n']: k for k, p in enumerate(left, 1)}
+    #(files moved by way of a temporary name, so page 3 becoming 1 never overwrites page 1 first)
+    for name in ('page', 'full', 'orig', 'thumb'):
+        for old, k in new.items():
+            src = os.path.join(job_dir(job.id), '{}-{}.jpg'.format(name, old))
+            if os.path.exists(src):
+                os.replace(src, src + '.moving-{}'.format(k))
+        for old, k in new.items():
+            src = os.path.join(job_dir(job.id), '{}-{}.jpg.moving-{}'.format(name, old, k))
+            if os.path.exists(src):
+                os.replace(src, os.path.join(job_dir(job.id), '{}-{}.jpg'.format(name, k)))
+    for name in os.listdir(job_dir(job.id)):
+        m = re.match(r'^(page|full|orig|thumb)-(\d+)\.jpg$', name)
+        if m and int(m.group(2)) > len(left):
+            os.remove(os.path.join(job_dir(job.id), name))
+    def renumbered(use):
+        m = re.match(r'^(item|quiz):(\d+)(:.*)?$', use or '')
+        if not m:
+            return use
+        return '{}:{}{}'.format(m.group(1), new[int(m.group(2))], m.group(3) or '') if int(m.group(2)) in new else ''
+    for k, page in enumerate(left, 1):
+        page['n'] = k
+        page['save'] = True
+        for pic in page.get('pictures') or []:
+            pic['use'] = renumbered(pic.get('use'))
+    #(the first one left can't be joined to a page that was saved)
+    for page in left:
+        if page.get('state') == 'done' and page.get('kind') == 'problems':
+            page['join_prev'] = False
+            break
+    data['pages'] = left
+    data['put_away'] = datetime.now().isoformat(timespec='seconds')
+    data['kept_at'] = data['put_away']
+    data.pop('_plan', None)
+    job.pages = len(left)
+    put_data(job, data)
+    return len(left)
 
 
 def put_away(job, away=True):
@@ -955,6 +1054,33 @@ def check_item(item, picture_files=('scan.jpg',), samples=3):
     return {'errors': [], 'warnings': warnings, 'samples': shown}
 
 
+def _check_key(item):
+    """What a check depends on: the problem as it would be made, but not its title (a title can
+    follow the workbook's name; it's checked by itself in checked_item)."""
+    qtype, _title, question, answer, options = item_problem(item, ['scan.jpg'] if item.get('kind') == 'paper' else [])
+    return hashlib.sha1(json.dumps([qtype, question, answer, options, item.get('kind'), bool(item.get('answer_whole')),
+                                    bool(item.get('answer_nonnegative')), DRAWS], sort_keys=True, default=str).encode()).hexdigest()
+
+
+def checked_item(item):
+    """check_item, kept on the item ('check') and done again only when its problem changes (the
+    owner, 2026-10-21: the draft page drew every problem's versions again on each load, about 5
+    seconds for 34 problems). "Draw again" (scan_check) still draws new versions."""
+    key = _check_key(item)
+    kept = item.get('check')
+    if not (isinstance(kept, dict) and kept.get('key') == key and isinstance(kept.get('result'), dict)):
+        kept = {'key': key, 'result': check_item(dict(item, title='x'))}
+        item['check'] = kept
+    result = kept['result']
+    title = (item.get('title') or '').strip()
+    errors = [] if title else ['Please give it a short title.']
+    if len(title) > 64:
+        errors.append('The title can be at most 64 characters.')
+    if errors or result['errors']:
+        return {'errors': errors + result['errors'], 'warnings': [], 'samples': []}
+    return result
+
+
 # ---------------------------------------------------------------- the review form
 
 def _f(form, key, default=''):
@@ -976,6 +1102,18 @@ def read_again(data, n, note=''):
     return data
 
 
+def joined_saves(data):
+    """A page joined to the one before it is saved, or kept back, together with it."""
+    lead = True
+    for page in data.get('pages') or []:
+        if page.get('state') != 'done' or page.get('kind') != 'problems':
+            continue
+        if page.get('join_prev'):
+            page['save'] = lead
+        else:
+            lead = page.get('save') is not False
+
+
 def update_from_form(data, form):
     """Take the review page's fields into the draft (only pages that were read)."""
     #(the names as the page showed them, so a title left as shown keeps following the workbook's name)
@@ -995,6 +1133,8 @@ def update_from_form(data, form):
             page['title_auto'] = False  # (typed by hand: kept as typed, the owner 2026-10-19)
         page['title'] = title
         page['join_prev'] = bool(form.get(pre + 'join_prev'))
+        #(saved now, or left in the scan for later: the owner, 2026-10-22)
+        page['save'] = bool(form.get(pre + 'save'))
         page['shuffle'] = bool(form.get(pre + 'shuffle'))
         page['calculator'] = bool(form.get(pre + 'calculator'))
         pics = []
@@ -1076,6 +1216,7 @@ def update_from_form(data, form):
                     row['nonzero'] = True
                 values.append(row)
             item['values'] = values
+    joined_saves(data)
     return data
 
 
@@ -1143,7 +1284,8 @@ def apply_names(data, plan=None):
 def image_page(page):
     """A read page with no questions whose picture is kept: it becomes an Image only quiz of its
     own (the owner, 2026-10-19: "store it as a quiz instead of just storing the image")."""
-    return page.get('state') == 'done' and page.get('kind') != 'problems' and any(p.get('keep') for p in page.get('pictures') or [])
+    return page.get('state') == 'done' and page.get('kind') != 'problems' and page.get('save') is not False \
+        and any(p.get('keep') for p in page.get('pictures') or [])
 
 
 def quiz_groups(data):
@@ -1156,6 +1298,9 @@ def quiz_groups(data):
             groups.append((page, [page]))
             continue
         if page.get('state') != 'done' or page.get('kind') != 'problems' or not any(i['include'] for i in page['items']):
+            continue
+        #(a page kept back for later isn't saved now: the owner, 2026-10-22)
+        if page.get('save') is False:
             continue
         #(joined to the last quiz with problems: an Image only page between them isn't one, and
         #joining to it lost the page's problems; found by the tests, 2026-10-20)
@@ -1216,10 +1361,12 @@ def place_of(page, item):
 
 
 def label_of(page, item):
-    """The page's own number for a drafted problem ("7 b."), else its title."""
+    """The page's own number for a drafted problem ("7 b."), else its page and place on it ("2-6"):
+    short, so a box's label always fits on it (the owner, 2026-10-22; it was the title, cut off)."""
     from .routes import _label
     q = next((q for q in page.get('qs') or [] if q.get('id') == item.get('qs_id')), None)
-    return _label((q or {}).get('number')) or item.get('title') or ''
+    k = next((i for i, x in enumerate(page.get('items') or []) if x is item), None)
+    return _label((q or {}).get('number')) or ('{}-{}'.format(page.get('n'), k + 1) if k is not None else item.get('title') or '')
 
 
 def missing_places(data):
@@ -1255,7 +1402,7 @@ def check_all(data):
             for i, item in enumerate(page['items']):
                 if not item['include']:
                     continue
-                errors = check_item(item, samples=0)['errors']
+                errors = checked_item(item)['errors']
                 if errors:
                     problems['page:{}:item:{}'.format(page['n'], i)] = errors
     for n, i, _label in missing_places(data):
@@ -1357,6 +1504,9 @@ def page_layout_of(job, pages, places, ids, shuffled=False):
             pic, _changed = pagelayout.erase_answers(im.convert('RGB'), page['slots'])
             pic, _changed = pagelayout.clean_answer_key(pic, {'problems': page.get('qs') or []}, page['slots'],
                                                        os.path.join(current_app.static_folder, 'fonts'))
+            #(on the page as students get it: an answer key's erased answers are blank paper there,
+            #the code critic 2026-10-22)
+            pagelayout.mark_bare(pic, [s for s in out['slots'] if s.get('page') == k])
             pic.save(os.path.join(static_dir(), name), 'JPEG', quality=90)
         size = page.get('size') or {}
         #(QuizScan's boxes are kept too, so the places can be found again later without reading the page again)
@@ -1383,7 +1533,7 @@ def reused_as(data, ignore_new=False):
             if not item.get('include') or item.get('kind') == 'paper' or i in linked:
                 continue
             qtype, title, question, answer, options = item_problem(item)
-            if check_item(item, samples=0)['errors']:
+            if checked_item(item)['errors']:
                 continue
             key = S.problem_key(qtype, question, answer, options)
             #(as save_all does: a new one is made, and the same items after it use it)
@@ -1446,9 +1596,9 @@ def _save_all(job, data, author, made_so_far):
     book = _slug(data.get('name') or job.name)
     leads = lead_of(data)
     pictures, for_item, for_quiz, kept_of = made_so_far['pictures'], {}, {}, {}
-    #1. the pictures, cropped into the pictures folder
+    #1. the pictures, cropped into the pictures folder (not a page kept back for later)
     for page in data['pages']:
-        if page.get('state') != 'done':
+        if page.get('state') != 'done' or page.get('save') is False:
             continue
         for pic in page.get('pictures', []):
             if not (pic.get('keep') or pic.get('use')):

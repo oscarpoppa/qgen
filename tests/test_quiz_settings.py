@@ -271,7 +271,9 @@ def test_retake_scoring_rules(app_db):
     assert r.status_code == 302
     page = sam.get('/mypage').data.decode()
     assert 'Your score: 50%' in page and '★ 50%' in page and '★ 0%' not in page
-    ulist = teacher.get('/quiz/listuser').data.decode()
+    #(People shows each person's results now: Results by student is gone, the owner 2026-10-21)
+    ulist = teacher.get('/userdet').data.decode()
+    assert 'Change how the score counts' in ulist
     assert 'selected>The best attempt' in ulist.replace('"selected" ', 'selected').replace('selected ', 'selected') or 'The best attempt' in ulist
     teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': ''})
     assert 'Your score: 25%' in sam.get('/mypage').data.decode()
@@ -864,7 +866,10 @@ def test_results_by_quiz(app_db):
     # where it's linked from
     assert '/quiz/results' in teacher.get('/dashboard').data.decode()
     assert '/quiz/results/{}'.format(vq.id) in teacher.get('/quiz/listvq').data.decode()
-    assert '/quiz/results"' in teacher.get('/quiz/listuser').data.decode()
+    #(People, which shows each person's results now, reaches it from the menu; Results by quiz no longer
+    #links to a "Results by student": the owner, 2026-10-21)
+    assert '/quiz/results"' in teacher.get('/userdet').data.decode()
+    assert '/quiz/listuser"' not in page and '>Results by student<' not in page
     # teachers only
     assert login(app, 'sam').get('/quiz/results').status_code == 302
     # Results by student still draws the same rows

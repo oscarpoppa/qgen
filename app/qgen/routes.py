@@ -209,21 +209,6 @@ def view_vprob(vpid):
     return render_template('view_problem.html', vp=vp, qt=get_qtype(vp.qtype), samples=samples, error=error,
                            title='View: {}'.format(vp.title))
 
-#one student's version of a problem, for the Problems list's "Question and answer" dialog
-#(static/js/qa.js; the owner, 2026-10-21: an example student's numbers, as View shows them)
-@qgen_bp.route('/quiz/vprob/<int:vpid>/example', methods=['GET'])
-@login_required
-@pw_check
-@admin_only
-def vprob_example(vpid):
-    vp = db.get_or_404(VProblem, vpid)
-    try:
-        s = S.sample_problem(vp, count=1)[0]
-    except S.ServiceError as exc:
-        return jsonify(ok=False, error=str(exc))
-    return jsonify(ok=True, text=s['text'], choices=s['choices'] or [], right=list(s['right'] or []),
-                   correct=s['correct'] or '', graded_by_teacher=bool(s['essay'] or s['paper']), look=bool(s['look']))
-
 #route to edit a specific virtual problem
 @qgen_bp.route('/quiz/editvprob/<vpid>', methods=['POST', 'GET'])
 @login_required
@@ -1120,31 +1105,14 @@ def review(cqid):
 
 # ---------------------------------------------------------------- students
 
-#route to list users
+#the old Results by student view: one People page now (user.userdet shows each person's results too:
+#the owner, 2026-10-21); its address, kept for links and bookmarks, opens People in the same folder
 @qgen_bp.route('/quiz/listuser', methods=['GET'])
 @login_required
 @pw_check
 @admin_only
 def list_users():
-    """People's Results view (Results by student), in the user folders: ?folder= all (the
-    default), main (in no folder) or a folder's id. Its other view is Accounts (user.userdet)."""
-    from flask import session
-    session['people_view'] = 'results'
-    from app import folder_tree
-    from app.user import groups
-    from .models import RETAKE_RULES
-    ulst = User.query.order_by(User.username).all()
-    root, flat, nodes, _folders_of = groups.tree(ulst)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['people'] if node else ulst if view == 'all' else root['people']
-    fk = folder_tree.kit(
-        view, node, root, flat, nodes, readonly=True,
-        page=lambda v: url_for('qgen.list_users', folder=v),
-        unit='person', units='people', all_label='All people', all_count=len(ulst), name=lambda f: f.name,
-        hint=Markup('Folders are made and filled in <a href="{}">Accounts</a>.').format(url_for('user.userdet', folder=view)),
-        fold_key='qgen-folded-results-student-folders')
-    return render_template('ulist.html', ulst=ulst, shown=shown, fk=fk, rules=RETAKE_RULES, title='People',
-                           folder_heading='Results by person')  # (the owner, 2026-10-16)
+    return redirect(url_for('user.userdet', **request.args.to_dict()))
 
 #route to list a specific user
 @qgen_bp.route('/quiz/listuser/<uid>', methods=['GET'])
@@ -1277,7 +1245,7 @@ def del_cquiz(cqid):
     flash(Markup('Moved {}\'s attempt at "{}" to the Archive. <a href="{}">View it</a>').format(
         owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
-    return redirect(back_to(url_for('qgen.list_users')))
+    return redirect(back_to(url_for('user.userdet')))
 
 #route to take a quiz away from a student: all their tries at it to the Archive at once
 @qgen_bp.route('/quiz/takeaway/<int:vqid>/<int:uid>', methods=['POST'])
@@ -1288,7 +1256,7 @@ def del_cquiz(cqid):
 def take_away(vqid, uid):
     vq, student = db.session.get(VQuiz, vqid), db.session.get(User, uid)
     if vq is None or student is None:
-        return gone('That quiz or student is gone.', back_to(url_for('qgen.list_users')))
+        return gone('That quiz or student is gone.', back_to(url_for('user.userdet')))
     count = S.take_away(student, vq, by=current_user)
     if count:
         flash(Markup('Archived {}’s {} {} at “{}”. {} in the <a href="{}">Archive</a>, where you can view or restore {}.').format(
@@ -1296,7 +1264,7 @@ def take_away(vqid, uid):
             url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
         current_app.logger.info("{} took VQuiz ({}) '{}' away from {}: {} archived".format(
             current_user.username, vqid, vq.title, student.username, count))
-    return redirect(back_to(url_for('qgen.list_users')))
+    return redirect(back_to(url_for('user.userdet')))
 
 #route to reassign a specific concrete quiz to a user (a fresh copy with new values)
 @qgen_bp.route('/quiz/retcq/<cqid>', methods=['POST'])
@@ -1311,10 +1279,10 @@ def ret_cquiz(cqid):
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         current_app.logger.error(str(exc))
-        return redirect(back_to(url_for('qgen.list_users')))
+        return redirect(back_to(url_for('user.userdet')))
     flash('Assigned a retake of “{}” to {}.'.format(cq.vquiz.title, cq.taker.shown_name), 'success')
     current_app.logger.info('{} assigned retake (of {}) quiz: "{}" ({}) to {}'.format(current_user.username, cqid, cq.vquiz.title, cq.id, cq.taker.username))
-    return redirect(back_to(url_for('qgen.list_users')))
+    return redirect(back_to(url_for('user.userdet')))
 
 
 # ---------------------------------------------------------------- AI helper

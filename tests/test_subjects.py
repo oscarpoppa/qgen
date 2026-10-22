@@ -405,17 +405,20 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     teacher.post('/quiz/makevprob', data=problem_form('essay', 'Sky', 'Why is the sky blue?', 'Light scatters.'))
     make_problems(teacher, 'Add')
     page = teacher.get('/quiz/listvp').data.decode()
-    #(no Answer column: each row's "Question and answer" dialog says it, from an example version,
-    #the owner 2026-10-21)
+    #(no Answer column and no "Question and answer" icon: View shows the question and its answer, the
+    #owner 2026-10-21)
     from app.qgen.models import VProblem
     sky = VProblem.query.filter_by(title='Sky').one()
-    assert 'data-qa="/quiz/vprob/{}/example"'.format(sky.id) in page
-    ex = teacher.get('/quiz/vprob/{}/example'.format(sky.id)).get_json()
-    assert ex['ok'] and ex['graded_by_teacher'] and ex['correct'] == 'Light scatters.' and ex['text'] == 'Why is the sky blue?'
-    # People's Accounts view switches to its Results view, whose students are rows that open and close (they were boxes: the owner, 2026-10-21)
-    assert 'href="/quiz/listuser?folder=all">Results</a>' in no_titles(teacher.get('/userdet').data.decode())
-    results = teacher.get('/quiz/listuser').data.decode()
-    assert '<tr class="result-item" id="student-' in results and 'data-box="result-row:student-' in results
+    assert 'data-qa=' not in page
+    view = teacher.get('/quiz/viewvprob/{}'.format(sky.id)).data.decode()
+    assert 'Why is the sky blue?' in view and 'Light scatters.' in view
+    # one People page (no Accounts | Results switch: the owner, 2026-10-21): its people are rows that open
+    # to show their results (they were boxes: the owner, 2026-10-21)
+    results = no_titles(teacher.get('/userdet').data.decode())
+    assert '>Results</a>' not in results and '>Accounts</a>' not in results and 'people_switch' not in results
+    assert teacher.get('/quiz/listuser').headers['Location'] == '/userdet'
+    assert '<tr class="result-item" data-box="user:' in results and '<details class="box row-fold" data-box="user-row:' in results
+    assert '<div class="result-groups divided" data-fold-body>' in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results
 
 
@@ -576,7 +579,8 @@ def test_with_no_folders_uncategorized_counts_everything_and_opens(app_db):
     make_problems(teacher, 'Add', 'Area')
     page = teacher.get('/quiz/listvp').data.decode()
     at = page.index('title="See the problems that aren’t in any folder"')
-    row = page[page.rindex('<li>', 0, at):page.index('</div></li>', at)]
+    #(pinned with the automatic folders at the top now: the owner, 2026-10-21)
+    row = page[page.rindex('<li class="side-auto" data-auto="none">', 0, at):page.index('</div></li>', at)]
     assert 'is-empty' not in row and '>2</span>' in row
     assert 'There are no folders yet' not in page
     import os

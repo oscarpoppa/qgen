@@ -371,14 +371,15 @@ def move_items(kind, item_ids, subject):
 
 
 def subject_choices(kind):
-    """The folder menu: [(value, label, count)] for All, each folder (indented under the one
-    it's in; counted with the folders inside it), then Uncategorized."""
+    """The folder menu: [(value, label, count)] for All, Uncategorized, then each folder (indented
+    under the one it's in; counted with the folders inside it): Uncategorized right after All, like
+    the side lists (the owner, 2026-10-22; it was last)."""
     _group_cls, item_cls, rel, back = subject_kind(kind)
     _root, flat, counted = subject_tree(kind)
     out = [('all', 'All ' + kind, in_use(kind).count())]  # "All quizzes", like the tabs
+    out.append(('none', 'Uncategorized', in_use(kind).filter(~getattr(item_cls, rel).any()).count()))
     for g, d in flat:
         out.append((str(g.id), '\u00a0\u00a0\u00a0' * (d - 1) + g.title, counted[g.id]['count']))
-    out.append(('none', 'Uncategorized', in_use(kind).filter(~getattr(item_cls, rel).any()).count()))
     return out
 
 

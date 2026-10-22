@@ -331,8 +331,9 @@ def test_nicknames(app_db):
     assert 'sam (' not in teach.get('/userdet').data.decode()
     r = sam.post('/profile/nickname', data={'nickname': '  Sammy   the  Great '})
     assert db.session.get(User, ids('sam')).nickname == 'Sammy the Great'
+    #(/quiz/listuser opens People now: one People page, the owner 2026-10-21)
     for url in ('/userdet', '/quiz/listuser', '/quiz/assign', '/messages/panel', '/quiz/listuser/{}'.format(ids('sam'))):
-        assert 'sam (Sammy the Great)' in teach.get(url).data.decode(), url
+        assert 'sam (Sammy the Great)' in teach.get(url, follow_redirects=True).data.decode(), url
     assert 'Hi, Sammy the Great!' in sam.get('/home').data.decode()  # the nickname, when there is one
     # too long, or someone else's name: refused, nothing changes
     sam.post('/profile/nickname', data={'nickname': 'x' * 33})
@@ -441,17 +442,20 @@ def test_results_by_student_in_the_users_folders(app_db):
     from app.user.models import UserFolder
     g7 = UserFolder.query.one()
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': g7.id})
-    page = teach.get('/quiz/listuser?folder={}'.format(g7.id)).data.decode()
-    assert 'id="student-{}"'.format(ids('sam')) in page and 'id="student-{}"'.format(ids('kim')) not in page
-    # the folders are the Users page's: no making or moving them here
-    assert '+ New folder' not in page and 'Folder options' not in page and 'data-drop=' not in page
-    assert 'class="state-filter"' in page and 'Waiting for grading' in page
-    every = teach.get('/quiz/listuser?folder=all').data.decode()
-    assert 'id="student-{}"'.format(ids('kim')) in every and 'id="student-{}"'.format(ids('sam')) in every
-    # a change to the folders reaches an open Results by student page
-    before = poll(teach, 'students')
+    #(Results by student is the People page now, in the same folder: one People page, the owner 2026-10-21)
+    assert teach.get('/quiz/listuser?folder={}'.format(g7.id)).headers['Location'] == '/userdet?folder={}'.format(g7.id)
+    row = '<tr class="result-item" data-box="user:{}"'
+    page = teach.get('/userdet?folder={}'.format(g7.id)).data.decode()
+    assert row.format(ids('sam')) in page and row.format(ids('kim')) not in page
+    # the folders are made and moved on this same page now
+    assert '+ New folder' in page and 'Folder options' in page and 'data-drop=' in page
+    assert 'id="results-filter"' in page and 'class="state-filter"' in page and 'Waiting for grading only' in page
+    every = teach.get('/userdet?folder=all').data.decode()
+    assert row.format(ids('kim')) in every and row.format(ids('sam')) in every
+    # a change to the folders reaches an open People page
+    before = poll(teach, 'users')
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7.id})
-    assert poll(teach, 'students') != before
+    assert poll(teach, 'users') != before
 
 
 def test_results_by_quiz_in_the_quiz_folders(app_db):
@@ -545,9 +549,11 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     page = teach.get('/dashboard').data.decode()
     box = page[page.index('id="dash-out"'):]
     box = box[:box.index('</details>')]
-    assert '>Week 1</a></span>' in box and 'data-tip="Open the history of “Week 1”' in box  # the name opens its history; the button their copy
+    # the names are plain words (no links on the cards: the owner, 2026-10-21); the eye opens their copy
+    assert '<span class="dash-quiz">“Week 1”</span>' in box and 'data-tip="Open the history of' not in box
+    assert '<span class="person">' in box and 'name-link' not in box and 'href="/quiz/listuser/' not in box
     assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'aria-label="View"' in box
-    assert '>Student page</a>' not in box  # sam's name is the way to their page
+    assert '>Student page</a>' not in box
     # and it opens: the teacher sees sam's questions (only sam can hand it in)
     assert "Only sam can submit it." in teach.get('/quiz/take/{}'.format(cq.id)).data.decode()
 
@@ -663,8 +669,9 @@ def test_folder_pages_start_on_all(app_db):
     assert shown(sam.get('/mypage?folder={}'.format(folder.id)).data.decode()) == 'all'
     # the teacher's folder pages too
     teach.get('/quiz/listvq?folder=main')
+    #(/quiz/listuser opens People now, keeping its folder: one People page, the owner 2026-10-21)
     for url in ('/quiz/listvq', '/quiz/listvp', '/quiz/archive', '/quiz/listuser', '/userdet'):
-        assert shown(teach.get(url).data.decode()) == 'all', url
+        assert shown(teach.get(url, follow_redirects=True).data.decode()) == 'all', url
 
 
 def test_editors_can_start_over(app_db):
@@ -1021,8 +1028,10 @@ def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db
     S.submit(cq, {1: '4'})
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert 'href="/quiz/results/{}" data-tip="Open the history of “Handed”: everyone’s attempts and scores">Handed</a>'.format(vq.id) in row
-    assert 'href="/quiz/listuser/{}" data-tip="Open sam’s student page"'.format(ids('sam')) in row and '>Student page</a>' not in row
+    #(names on the cards are plain words now, not links: the owner, 2026-10-21; the eye opens the hand-in)
+    assert '<span class="dash-quiz">“Handed”</span>' in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
+    assert '<strong>sam</strong></span>' in row and 'href="/quiz/listuser/' not in row and 'name-link' not in row
+    assert '>Student page</a>' not in row
 
 
 def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(app_db):
@@ -1035,7 +1044,11 @@ def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(a
     db.session.commit()
     page = teach.get('/dashboard').data.decode()
     row = page.split('/quiz/review/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
-    assert '>Essay week</a>' in row and 'href="/quiz/results/{}"'.format(vq.id) in row and '>Student page</a>' not in row
+    #(names on the cards are plain words now, not links: the owner, 2026-10-21; Grade opens the hand-in)
+    assert '<span class="dash-quiz">“Essay week</span>' in row or '<span class="dash-quiz">“Essay week”</span>' in row
+    assert 'href="/quiz/results/{}"'.format(vq.id) not in row and 'name-link' not in row and '>Student page</a>' not in row
+    # and no "All N in Grading →" link on the card
+    assert 'in Grading →' not in page
 
 
 def test_an_archive_folder_can_be_deleted_for_good(app_db):
@@ -1201,8 +1214,9 @@ def test_pages_come_back_as_they_were_left(app_db):
     import os
     app, db = app_db
     teach = login(app, 'teach')
+    #(/quiz/listuser opens People now: one People page, the owner 2026-10-21)
     for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/listuser'):
-        assert '/js/keep.js' in teach.get(url).data.decode(), url
+        assert '/js/keep.js' in teach.get(url, follow_redirects=True).data.decode(), url
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     trail = open(os.path.join(root, 'static', 'js', 'trail.js')).read()
     keep = open(os.path.join(root, 'static', 'js', 'keep.js')).read()
@@ -1231,9 +1245,10 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
 
 
 def test_folder_lists_have_one_order(app_db):
-    """Every folder list: All, the automatic ones (New, In progress, Due within...), the
-    folders, then Uncategorized (the user moved it last, 2026-10-09); the student page's
-    boxes, the All views' boxes and the folder menus in the same order."""
+    """Every folder list: the automatic folders pinned at the top (All, then New and In progress
+    on My quizzes, Checked from static/js/folderfilter.js, then Uncategorized: the owner,
+    2026-10-21; it was last, 2026-10-09), then the folders; the student page's boxes in the
+    same order. The folder menus still end with Uncategorized."""
     import re
     app, db = app_db
     teach, sam = login(app, 'teach'), login(app, 'sam')
@@ -1246,12 +1261,16 @@ def test_folder_lists_have_one_order(app_db):
         return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<svg\b[^>]*>.*?</svg>\s*)?(?:<span class="side-name">)?([^<]+)', nav)]
     for who, url in ((teach, '/quiz/listvp'), (teach, '/quiz/listvq'), (teach, '/userdet'), (teach, '/quiz/listuser'),
                      (teach, '/quiz/results'), (teach, '/quiz/archive')):
-        page = who.get(url).data.decode()
+        page = who.get(url, follow_redirects=True).data.decode()
         names = side(page)
-        assert names[0] != 'Uncategorized' and names[-1] == 'Uncategorized', (url, names)  # All (or Everyone) first
+        # All (or Everyone) first, Uncategorized right after it (no automatic ones on a teacher's lists;
+        # Checked is added by the page's script), then the folders
+        assert names[0].startswith(('All', 'Everyone')) and names[1] == 'Uncategorized', (url, names)
+        nav = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
+        assert nav.count('<li class="side-auto"') == 2 and '<li class="side-auto" data-auto="none">' in nav, url
         if url in ('/quiz/listvp', '/quiz/listvq'):
-            nav = page.split('<nav aria-label="Folders">')[1]
-            assert 0 < nav.index('Fall') < nav.index('Uncategorized'), url
+            assert names == [names[0], 'Uncategorized', 'Fall'], (url, names)
+            assert 0 < nav.index('Uncategorized') < nav.index('Fall'), url
     names = side(sam.get('/mypage').data.decode())
     assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3] == 'Uncategorized', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
@@ -1260,7 +1279,7 @@ def test_folder_lists_have_one_order(app_db):
     # the folder menus too: All, the folders, Uncategorized
     from app.qgen import services as S
     with app.test_request_context():
-        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All quizzes', 'Fall', 'Uncategorized']
+        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All quizzes', 'Uncategorized', 'Fall']  # (the side lists' order: the owner, 2026-10-22)
 
 
 def test_one_set_of_sizes_and_accessible_controls():
@@ -1298,7 +1317,7 @@ def test_list_items_have_only_buttons(app_db):
     S.submit(give(vq, 'sam'), {1: 'Light makes sugar.'})
     give(vq, 'kim')
     pages = ['/dashboard', '/dashboard/now', '/quiz/review', '/quiz/listvp?folder=all', '/quiz/listvq?folder=all', '/userdet',
-             '/quiz/listuser', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id), '/messages/panel']
+             '/userdet?folder=all', '/quiz/listuser/{}'.format(ids('sam')), '/quiz/results', '/quiz/results/{}'.format(vq.id), '/messages/panel']
     for url in pages:
         page = teach.get(url).data.decode()
         main = page[page.index('<main'):page.index('</main>')] if '<main' in page else page
@@ -1323,8 +1342,9 @@ def test_folders_on_top_and_their_contents_below(app_db):
     import os
     app, db = app_db
     teach = login(app, 'teach')
+    #(/quiz/listuser opens People now: one People page, the owner 2026-10-21)
     for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/listuser', '/quiz/results', '/quiz/archive', '/mypage'):
-        assert 'js/foldertabs.js' in teach.get(url).data.decode(), url
+        assert 'js/foldertabs.js' in teach.get(url, follow_redirects=True).data.decode(), url
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
     assert "details.sub-box[data-sub], details.sub-box[data-folder-box]" in js
@@ -1515,8 +1535,9 @@ def test_results_rows_are_one_line_tall(app_db):
 
 
 def test_a_folded_student_says_where_they_are(app_db):
-    """Results by student: each student's folded heading shows quizzes done (and the average),
-    to grade, in progress and not started, so the list says something before any click."""
+    """People (Results by student is part of it now: the owner, 2026-10-21): each person's folded
+    row shows quizzes done (and the average), in progress and not started, so the list says
+    something before any click."""
     app, db = app_db
     from test_dashboard import make_quiz, give
     from app.qgen import services as S
@@ -1526,29 +1547,38 @@ def test_a_folded_student_says_where_they_are(app_db):
         S.submit(give(vq, 'sam'), {1: '4'})
         give(vq, 'sam')
         db.session.commit()
-    page = teacher.get('/quiz/listuser').data.decode()
-    #(a row now, its sums in its Done and Status columns: the owner, 2026-10-21)
-    sam = page[page.index('id="student-{}"'.format(ids('sam'))):]
-    head = sam[:sam.index('</tr>')]
-    head = head[head.index('</details>'):]  # (the row's own cells, not its attempts inside)
-    assert '1 done · avg 100%' in head and '1 not started' in head and 'to grade' not in head
+    #(People shows each person's results now: one People page, the owner 2026-10-21; Results by student
+    #is gone)
+    def cells(page, name):
+        # the row's own cells (after its folded name cell and the attempts inside it)
+        row = page[page.index('<tr class="result-item" data-box="user:{}"'.format(ids(name))):]
+        row = row[row.index('</details></td>'):]
+        return row[:row.index('</tr>')]
+    page = teacher.get('/userdet').data.decode()
+    #(a row now, its sums in its Done and Status columns: the owner, 2026-10-21; done and the average
+    #are two badges, stacked)
+    head = cells(page, 'sam')
+    assert '>1 done</span>' in head and '>avg 100%</span>' in head and '>1 not started</span>' in head
+    assert 'to grade' not in head and 'in progress' not in head
     # colored like every other score: green from 70%, amber from 50%, red below
-    assert 'class="badge badge-ok" title="Quizzes with a score that counts' in head
+    assert 'class="badge badge-ok" title="Quizzes with a score that counts, and the average of those scores">1 done</span>' in head
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '5'})
         db.session.commit()
-    page = teacher.get('/quiz/listuser').data.decode()
-    kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert 'class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done · avg 0%' in kim[:kim.index('</tr>')]
-    # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the box
+    page = teacher.get('/userdet').data.decode()
+    assert ('class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done</span>'
+            '<span class="badge badge-bad" title="The average of the scores that count">avg 0%</span>') in cells(page, 'kim')
+    # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the row
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '4'})
         db.session.commit()
-    page = teacher.get('/quiz/listuser').data.decode()
-    kim = page[page.index('id="student-{}"'.format(ids('kim'))):]
-    assert '1 done · avg 100%' in kim[:kim.index('</tr>')]
-    emma = page[page.index('id="student-{}"'.format(ids('teach'))):]
-    assert 'student-sums' not in emma[:emma.index('</summary>')]  # nothing given: nothing to say
+    page = teacher.get('/userdet').data.decode()
+    kim = cells(page, 'kim')
+    assert '>1 done</span>' in kim and '>avg 100%</span>' in kim
+    emma = cells(page, 'teach')
+    emma = emma.split('class="actions"')[0]
+    # nothing given: nothing to say but the count
+    assert '>0 quizzes</span>' in emma and 'badge-status' not in emma and ' done</span>' not in emma and 'avg ' not in emma
 
 
 def test_uncategorized_everywhere(app_db):
@@ -1789,12 +1819,14 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     head = row[:row.index('</summary>')]
     assert 'href="/' not in head and 'aria-label="View quiz"' in row and 'aria-label="Edit quiz"' in row and 'aria-label="History"' in row
     assert 'box-links' not in page[page.index('<main'):]
-    page = teach.get('/quiz/listuser').data.decode()
-    row = page[page.index('id="student-{}"'.format(ids('sam'))):]
-    row = row[:row.index('</tr>')]
+    #(People shows each person's results now, one People page: the owner, 2026-10-21)
+    page = teach.get('/userdet').data.decode()
+    row = page[page.index('<tr class="result-item" data-box="user:{}"'.format(ids('sam'))):]
     head = row[:row.index('</summary>')]
-    #(the name only opens the row; Assign a quiz and Student page are icons at its end: the owner, 2026-10-21)
-    assert 'href="/' not in head and 'aria-label="Assign a quiz"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' not in row  # (icons: owner 2026-10-14; no Message: 2026-10-21)
+    row = row[row.index('<td class="actions">'):]
+    row = row[:row.index('</tr>')]
+    #(the name only opens the row; Assign a quiz, Message and Student page are icons at its end: the owner, 2026-10-21)
+    assert 'href="/' not in head and 'aria-label="Assign a quiz"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()

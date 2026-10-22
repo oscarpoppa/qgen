@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_people.html" import people_switch %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import post_button with context %}
 {% from "_macros.html" import avatar, box_label, count_of, quiz_link, student_link with context %}
@@ -14,42 +13,6 @@
 
 
 {#- (result_row, a quiz as a row like My quizzes', is in _results.html now: a quiz's history uses it too) #}
-
-
-{# Results by student: the students as rows like My quizzes' (the owner, 2026-10-21; each was a box):
-   the name folds the row open to each of their quizzes and its attempts; beside it Quizzes, Done and
-   Status, each sortable; at the row's end Assign a quiz and Student page (the name used to go there) #}
-{% macro student_rows(people) %}
-  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows">
-    <thead><tr><th>Student</th><th>Quizzes</th><th>Done</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for item in people %}{{ student_row(item) }}{% endfor %}</tbody>
-  </table></div>
-{% endmacro %}
-{% macro student_row(item) %}
-  {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
-  {% set groups = attempts_by_quiz(item.cquizzes) %}
-  {% set sum_done = groups|map(attribute='combined')|reject('none')|list %}
-  {% set sum_going = item.cquizzes|selectattr('status', 'in', ['started', 'review'])|list|length %}
-  {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}
-  {% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) if sum_done else none %}
-  <tr class="result-item" id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}>
-    <td data-label="Student"><details class="box row-fold" data-box="result-row:student-{{ item.id }}">
-      <summary>{{ box_label(avatar(item, 30), item.shown_name, none, 'span', item.shown_name) }}</summary>
-      <div class="result-groups divided" data-fold-body>
-      {% for g in groups %}{{ result_group(quiz_link(g.vquiz, strong=true), g, item, rules, g.vquiz.title|lower) }}
-      {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div></details></td>
-    <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}"><span class="badge box-count">{{ count_of(n, 'quiz', 'quizzes') }}</span></td>
-    <td data-label="Done" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="badge {{ score_class(sum_avg) }}" title="Quizzes with a score that counts, and the average of those scores">{{ sum_done|length }} done · avg {{ '%.0f' % sum_avg }}%</span>{% endif %}</td>
-    <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (sum_going, sum_fresh) if sum_going or sum_fresh else '' }}"><span class="btn-row student-sums">
-      {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet, or handed in and waiting for grading">{{ sum_going }} in progress</span>{% endif %}
-      {% if sum_fresh %}<span class="badge badge-warn badge-status" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}</span></td>
-    <td class="actions"><span class="btn-row quiz-row-actions">
-      {#- (the paper plane, then the person, as on People's Accounts rows) #}
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" data-what="{{ item.shown_name }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student page: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>
-    </span></td>
-  </tr>
-{% endmacro %}
 
 
 {# one student's box: their quizzes, attempts and scores #}
@@ -127,7 +90,7 @@
       <a class="btn{{ ' btn-sm' if laid_out }}" href="{{ url_for('qgen.assign', users=ulst[0].id) }}" data-what="{{ ulst[0].shown_name }}" title="Choose a quiz to give {{ ulst[0].shown_name }}">Assign a quiz to {{ ulst[0].shown_name }}</a>{% endif %}{% endset %}
 {% if not laid_out %}
 <div class="page-head">
-  <h1>{{ title }}</h1>{% if not single %}{{ people_switch('results', fk.view) }}{% endif %}
+  <h1>{{ title }}</h1>
   {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
   <div class="actions">{{ single_buttons }}</div>
 </div>
@@ -180,23 +143,10 @@
   {% if awards %}{{ award_list(awards) }}{% else %}<p class="muted small">No awards yet.</p>{% endif %}
 </section>
 {% endif %}
-{% else %}
-{% call folders_page(fk) %}
-  {#- the page's own buttons at the right end of the filter bar, like the Problems page's bar
-      (the owner, 2026-10-16) -#}
-  {% set filter_right %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.results_by_quiz') }}" title="See the same results arranged quiz by quiz">Results by quiz</a>
-    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
-  {% set filter_one, filter_many = 'person', 'people' %}{% include "_results_filter.html" %}
-  <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{{ student_rows(n.people) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'student:') %}{{ student_rows(n.people) }}{% endcall %}{% else %}
-    {% call named_box(fk, 'student:') %}{% if shown %}{{ student_rows(shown) }}{% endif %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
-  </div>
-{% endcall %}
 {% endif %}
 {% include "_dialog_assign_people.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/assign_people.js') }}"></script>
-{% if single %}<script src="{{ asset('js/subjects.js') }}"></script><script src="{{ asset('js/popcard.js') }}"></script>{% else %}<script src="{{ asset('js/folders.js') }}"></script>{% endif %}
+<script src="{{ asset('js/subjects.js') }}"></script><script src="{{ asset('js/popcard.js') }}"></script>
 {% endblock %}

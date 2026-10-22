@@ -25,6 +25,13 @@
     (function index(nodes, parent) {
       nodes.forEach(function (n) { byId[n.id] = n; parentOf[n.id] = parent === null ? null : String(parent); n.keySet = {}; n.keys.forEach(function (k) { n.keySet[k] = 1; }); index(n.children, n.id); });
     })(tree, null);
+    //the Checked folder: an automatic one, first after All, holding whatever is checked in this list
+    //right now, kept up to date as boxes are checked and unchecked (the owner, 2026-10-21); on every
+    //list with check boxes, a folder page's or a picker's
+    var checkedNode = byId.checked = { id: 'checked', name: 'Checked', children: [], keys: [], keySet: {}, count: 0, icon: 'lc-folder-check' };
+    parentOf.checked = null;
+    function tickOf(el) { return (el.closest('tr') || el).querySelector('.tick-col input[type="checkbox"]'); }
+    function hasChecks() { return !!list.querySelector('.tick-col input[type="checkbox"]'); }
 
     function items() {
       return Array.prototype.filter.call(list.querySelectorAll('[' + sel + '^="' + prefix + '"]'), function (el) {
@@ -147,6 +154,8 @@
       //(not on a picker, a dialog's or the Assign page's list: its rows never fold, so it would only
       //ever be grayed: the owner, 2026-10-21)
       if (!list.querySelector('table.pick-table')) span.appendChild(pair);
+      //(the Checked folder's header: "Apply to checked (N)", on the page's own list)
+      if (id === 'checked' && ownList() && window.qgenApplyChecked) span.appendChild(window.qgenApplyChecked);
       var t = box.querySelector('template.folder-filter-tools[data-for="' + id + '"]');
       if (t) span.appendChild(t.content.cloneNode(true));
       var n = byId[id], url = n ? n.url : id === null ? box.dataset.mainUrl : '';
@@ -263,7 +272,15 @@
         }
         var allBtn = button('all', box.dataset.allLabel || 'All', allCount(), 'folders');
         allBtn.classList.add('folder-tab-all');
-        sideRow(allBtn, 1, null);
+        sideRow(allBtn, 1, null).classList.add('side-auto');
+        if (hasChecks()) sideRow(button('checked', checkedNode.name, checkedNode.count, checkedNode.icon), 1, null).classList.add('side-auto');
+        //(the automatic folders pinned at the top, in one order: All, Checked, Uncategorized; the folders
+        //scroll under them: the owner, 2026-10-21)
+        //(grayed only when nothing is in it: with no folders yet it holds everything, and opens, the
+        //owner 2026-10-20; it was grayed then, 2026-10-19)
+        var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
+        if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
+        sideRow(noneBtn, 1, null).classList.add('side-auto');
         (function walk(nodes, depth) {
           nodes.forEach(function (n) {
             sideRow(button(String(n.id), n.name, n.count, n.icon || 'folder'), depth, n);
@@ -272,11 +289,6 @@
             //Problems page, the owner 2026-10-13; Unsorted is the tab inside an open folder)
           });
         })(tree, 1);
-        //(grayed only when nothing is in it: with no folders yet it holds everything, and opens, the
-        //owner 2026-10-20; it was grayed then, 2026-10-19)
-        var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
-        if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
-        sideRow(noneBtn, 1, null);
         //folding: the rows after a folder that are deeper belong to it; the folder picked (and the
         //folders it's in) always stay open
         var rowsAll = Array.prototype.slice.call(col.querySelectorAll('.side-row'));
@@ -310,6 +322,7 @@
         });
         col.qgenFolds = drawFolds;
         rows.appendChild(col);
+        setTimeout(function () { window.qgenPinAuto(col); }, 0);
       }
       //(data-tabs on a list: the folder tabs over the list too, as on a folder page: a student's
       //page, the owner 2026-10-13)
@@ -336,6 +349,7 @@
         allTab.classList.add('folder-tab-all');
         if (plain) { allTab.classList.add('folder-tab-name'); allTab.title = 'Everything in “' + plain + '”'; }
         row.appendChild(allTab);
+        if (hasChecks()) row.appendChild(button('checked', checkedNode.name, checkedNode.count, checkedNode.icon));
         tree.forEach(function (n) { row.appendChild(button(String(n.id), n.name, n.count, n.icon || 'folder')); });
         var none = button('none', box.dataset.mainLabel || 'Uncategorized', 'noMain' in box.dataset ? 0 : loose, 'tray');
         if ('noMain' in box.dataset) { none.disabled = true; none.title = 'There are no folders inside, so this is the same as ' + (box.dataset.allLabel || 'All'); }
@@ -513,6 +527,10 @@
       var tabs = visible();
       var picked = tabs.filter(function (t) { return t.getAttribute('aria-pressed') === 'true'; })[0];
       if (!picked) return;
+      //(its Expand all / Collapse all pair moves with it, so the line is measured with the pair on it:
+      //added afterward, it pushed the line's last tab on to a line of its own, the owner 2026-10-21)
+      var lp = box.qgenTabPair && box.qgenTabPair.parentNode === row ? box.qgenTabPair : null;
+      if (lp) row.insertBefore(lp, picked.nextSibling);
       var tops = tabs.map(function (t) { return t.offsetTop; });
       if (Math.max.apply(null, tops) - Math.min.apply(null, tops) < 3) return;  // (one line: as it is)
       var nextTab = picked.nextElementSibling;
@@ -532,6 +550,7 @@
         var before = bottom.length ? bottom[0] : tabs[tabs.length - 1].nextSibling;
         row.insertBefore(brk, before);
         row.insertBefore(picked, before);
+        if (lp) row.insertBefore(lp, before);
         if (!bottom.length) return;
       }
     }
@@ -543,7 +562,12 @@
       box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(pickedLineLast);
       placeTabPair();
       box.querySelectorAll('.folder-filter-rows > .folder-tabs').forEach(lineRules);
-      if (here && row.scrollWidth > row.clientWidth + 1) {
+      //(too long for the row, or wrapped on to a line of its own under the tabs: that line would sit
+      //between the open tab and its folder, breaking their edge, so it's the line under the row,
+      //part of the open folder: the owner, 2026-10-21)
+      var openTab = here && row.querySelector(':scope > .folder-tab[aria-pressed="true"]');
+      var wrapped = here && openTab && t.offsetTop > openTab.offsetTop + openTab.offsetHeight - 4;
+      if (here && (row.scrollWidth > row.clientWidth + 1 || wrapped)) {
         line = document.createElement('div');
         line.className = 'folder-tools-line';
         line.appendChild(t);
@@ -592,6 +616,7 @@
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
     function apply() {
+      recount();
       box.dataset.shown = chosen;
       var sideCol = rows.querySelector('.folder-side-list');
       if (sideCol && sideCol.qgenFolds) sideCol.qgenFolds();  // (the folder picked stays in view)  // (what's shown, for scripts: takeout.js's "the folder shown")
@@ -739,6 +764,7 @@
     //the folder list down the side picks the same folders here, in place (no new page)
     function same(a, url) { if (!url) return false; var u = new URL(url, location.href); return a.pathname === u.pathname && a.search === u.search; }
     function sideFor(a) {
+      if (a.dataset.sideTab) return a.dataset.sideTab;  // (the Checked folder's row)
       if (same(a, box.dataset.allUrl)) return 'all';
       if (same(a, box.dataset.mainUrl)) return loose ? 'none' : null;
       for (var id in byId) if (byId[id].url && same(a, byId[id].url)) return id;  // (folders, and New / In progress)
@@ -746,7 +772,7 @@
     }
     function markSide() {
       //(only the page's own list, the one in the address: never a picker's in a dialog or a card)
-      if (!('urlTab' in box.dataset)) return;
+      if (!ownList()) return;
       //(phones: the folded folder list's line names what's open)
       var now = document.querySelector('.folder-side-now');
       if (now && 'urlTab' in box.dataset) now.textContent = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized') : chosen.indexOf('self:') === 0 ? byId[base()].name + ': Unsorted' : byId[chosen] ? byId[chosen].name : now.textContent;
@@ -817,6 +843,74 @@
       heading.innerHTML = window.qgenIcon ? window.qgenIcon('folder') + ' ' : '';
       heading.appendChild(document.createTextNode(text));
     }
+    //what's checked now: the Checked folder's things and its count, wherever it's shown
+    function recount() {
+      var ks = {}, n = 0, before = Object.keys(checkedNode.keySet).join(' ');
+      items().forEach(function (el) { var t = tickOf(el); if (t && t.checked) { ks[keyOf(el)] = 1; n += el.dataset.weight ? +el.dataset.weight : 1; } });
+      checkedNode.keySet = ks; checkedNode.count = n;
+      box.querySelectorAll('.folder-tab[data-folder="checked"]').forEach(function (b) {
+        var c = b.querySelector('.box-count');
+        if (c) { c.textContent = n; c.title = count(n); c.dataset.n = n; }
+        b.classList.toggle('is-empty', !n);
+        b.title = n ? 'Show what’s in “Checked”' : 'Nothing in “Checked” yet';
+        var r = b.closest('.side-row'); if (r) r.classList.toggle('is-empty', !n);
+      });
+      if (sideLink) {
+        sideLink.closest('.side-row').classList.toggle('is-empty', !n);
+        sideLink.parentNode.querySelector('.side-count').textContent = n;
+      }
+      //(and small, beside the folder list's Expand all / Collapse all by the page's title: the owner, 2026-10-21)
+      if (ownList() && hasChecks()) {
+        var pair = document.querySelector('main .page-head > .side-levels.title-levels');
+        if (pair && !titleCount) {
+          //(a button: it opens the Checked folder, the owner 2026-10-21)
+          titleCount = document.createElement('button');
+          titleCount.type = 'button';
+          titleCount.className = 'badge box-count title-checked';
+          titleCount.addEventListener('click', function () { if (chosen !== 'checked') choose('checked'); });
+          pair.parentNode.insertBefore(titleCount, pair.nextSibling);
+        }
+        if (titleCount) {
+          //(a check mark before the number, like a tab's icon before its count: the owner, 2026-10-21)
+          titleCount.innerHTML = window.qgenIcon ? window.qgenIcon('lc-check') : '\u2713';
+          titleCount.appendChild(document.createTextNode(String(n)));
+          titleCount.title = n + ' checked';
+          titleCount.classList.toggle('is-empty', !n);
+        }
+      }
+      return Object.keys(ks).join(' ') !== before;
+    }
+    //(a folder page's own folder list: the Checked folder's row right under All)
+    var sideLink = null, titleCount = null;
+    //(the page's own list: in the address, or the one list of a page with no folders yet, Other files)
+    function ownList() { return 'urlTab' in box.dataset || !!(box.closest('.folder-main') && !box.closest('dialog')); }
+    function sideChecked() {
+      if (sideLink || !ownList() || !hasChecks()) return;
+      var top = document.querySelector('.folder-side .side-top > li');
+      if (!top) return;
+      var li = document.createElement('li');
+      li.className = 'side-auto';
+      li.innerHTML = '<div class="side-row"><span class="side-fold-space" aria-hidden="true"></span><a class="side-link" data-side-tab="checked"></a><span class="side-count muted small"></span></div>';
+      sideLink = li.querySelector('a');
+      sideLink.href = location.pathname + '?tab=checked';
+      sideLink.title = 'See what’s checked';
+      sideLink.innerHTML = (window.qgenIcon ? window.qgenIcon(checkedNode.icon) : '') + ' ';
+      sideLink.appendChild(document.createTextNode(checkedNode.name));
+      //(the automatic folders' order, pinned at the top: All, New, In progress, Checked, Uncategorized)
+      var unc = top.parentNode.querySelector(':scope > li[data-auto="none"]');
+      top.parentNode.insertBefore(li, unc || top.nextSibling);
+      if (window.qgenPinAuto) window.qgenPinAuto(top.parentNode);
+    }
+    function soon() {
+      clearTimeout(soon.t);
+      soon.t = setTimeout(function () { if (recount() && chosen === 'checked') apply(); }, 0);
+    }
+    //(checking a box, Check all, a chip's ✕, a dialog's Check all shown: all end in a click or a change)
+    box.addEventListener('change', soon);
+    document.addEventListener('click', soon);
+    document.addEventListener('qgen-checked', soon);
+    //("Apply to checked" made after the Checked folder was first drawn: drawn again with it)
+    document.addEventListener('qgen-apply-ready', function () { if (chosen === 'checked') apply(); });
     function choose(id) {
       chosen = id;
       try { sessionStorage.setItem(memKey, chosen); } catch (err) {}
@@ -832,6 +926,8 @@
     function afterRows() {
       box.qgenAfterRows = null;
       known = false;
+      sideChecked();
+      if (hasChecks() && !box.querySelector('.folder-tab[data-folder="checked"]')) draw();
       apply();
       list.style.visibility = '';
       //what was just saved (?show=, lit up) is in another folder than the tab kept in the address:
@@ -925,4 +1021,29 @@ function rememberBack(url, id) {
     //(the leftmost of its group: before Expand all / Collapse all and Up, the owner 2026-10-15)
     up.parentNode.insertBefore(a, up.parentNode.firstChild);
   });
+})();
+
+/* The automatic folders (All, My quizzes' New and In progress, Checked, Uncategorized) stay pinned
+   at the top of every folder list, a page's and a picker's; the folders scroll under them (the
+   owner, 2026-10-21). Each pinned row sticks at its own place, measured from the first. */
+window.qgenPinAuto = function (list) {
+  if (!list) return;
+  //(measured again whenever the list's size changes: a dialog's list is drawn while the dialog is
+  //closed, and measures nothing until it opens; a folder folding open or shut moves nothing pinned)
+  if (!list.qgenPinWatch && window.ResizeObserver) {
+    list.qgenPinWatch = new ResizeObserver(function () { window.qgenPinAuto(list); });
+    list.qgenPinWatch.observe(list);
+  }
+  var pinned = Array.prototype.filter.call(list.children, function (el) { return el.classList.contains('side-auto') && !el.hidden; });
+  list.querySelectorAll(':scope > .side-auto-last').forEach(function (el) { el.classList.remove('side-auto-last'); });
+  if (!pinned.length || !pinned[0].offsetParent) return;
+  var first = pinned[0].offsetTop;
+  pinned.forEach(function (el) { el.style.top = (el.offsetTop - first) + 'px'; });
+  pinned[pinned.length - 1].classList.add('side-auto-last');
+};
+(function () {
+  function all() { document.querySelectorAll('.folder-side .side-top').forEach(window.qgenPinAuto); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
+  window.addEventListener('load', all);
+  window.addEventListener('resize', function () { clearTimeout(all.t); all.t = setTimeout(function () { all(); document.querySelectorAll('.folder-side-list').forEach(window.qgenPinAuto); }, 100); });
 })();

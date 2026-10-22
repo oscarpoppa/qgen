@@ -15,6 +15,13 @@
   document.addEventListener('input', function (e) { if (e.isTrusted && mine(e.target)) changed = true; }, true);
   document.addEventListener('change', function (e) { if (e.isTrusted && mine(e.target)) changed = true; }, true);
   document.addEventListener('submit', function (e) { if (forms.indexOf(e.target) !== -1) leaving = true; }, true);
+  //a form of its own that leaves the page (data-leaves, e.g. a scan's Discard): only once it's really
+  //sent, not when its "Are you sure?" is canceled (the code critic, 2026-10-22). confirm.js runs after
+  //this, so its asking pass still has no data-confirmed, and the pass after Yes has it.
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f.hasAttribute && f.hasAttribute('data-leaves') && (!f.dataset.confirm || f.dataset.confirmed === '1')) leaving = true;
+  });
   document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('[data-keeps-form]')) leaving = true; }, true);
   window.addEventListener('beforeunload', function (e) {
     if (!changed || leaving) return;
@@ -22,4 +29,6 @@
     e.returnValue = '';
   });
   window.qgenSaved = function () { changed = false; };
+  //(changes made by dragging, not typing, e.g. a scan's boxes: the owner, 2026-10-21)
+  window.qgenChanged = function () { changed = true; };
 })();

@@ -30,8 +30,8 @@ def test_clear_page_names_and_back_buttons(app_db):
     #(one student's page is laid out like the other list pages: its folder list's levels get
     #Expand all / Collapse all from folderfilter.js)
     assert 'data-folder-filter' in page and '<span class="badge badge-warn badge-status">Not started</span>' in page
-    # Results by student (everyone) keeps its table
-    assert 'class="card result-box"' not in teach.get('/quiz/listuser').data.decode()
+    # Results by student (everyone, on People now: the owner, 2026-10-21) keeps its table
+    assert 'class="card result-box"' not in teach.get('/userdet').data.decode()
 
 
 def test_the_count_beside_a_name_is_quizzes_not_attempts(app_db):
@@ -41,8 +41,9 @@ def test_the_count_beside_a_name_is_quizzes_not_attempts(app_db):
     for _ in range(5):
         give(w1, 'sam')  # one quiz, five attempts
     give(w2, 'sam')
-    page = teach.get('/quiz/listuser').data.decode()
-    assert '<span class="badge box-count">2 quizzes</span>' in page
+    #(People's Quizzes column: Results by student is the People page now, the owner 2026-10-21)
+    page = teach.get('/userdet').data.decode()
+    assert '<td data-label="Quizzes" class="nowrap" data-sort="0002"><span class="badge box-count">2 quizzes</span></td>' in page
     #(one student's page has no box round the student: its New folder counts quizzes too)
     import json
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()

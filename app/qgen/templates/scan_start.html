@@ -60,9 +60,11 @@
       <tbody>
       {% for j in jobs %}
         <tr>
-          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
+          {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}
+          <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
+            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{% if x.kind in ('reading', 'paused') %}<span class="muted" title="Opens when every page is read">{{ j.name }}</span>{% else %}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-            {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}<br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span>{{ scan_working(x) }}</td>
+            <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}{{ scan_working(x) }}</div></div></td>
           <td data-label="Last changed" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
           <td data-label="Pages">{{ j.pages }}</td>
           <td>{{ scan_controls(x, 'scans') }}</td>
@@ -80,18 +82,19 @@
     are none, like Current scans (the owner, 2026-10-20); each one is as it was left: Resume,
     Continue, Take out or Discard #}
 <div class="card" id="scan-away">
-  <h2>Put away</h2>
+  <h2>Stashed scans</h2>
   {% if away %}
   <div class="table-wrap stack">
     <table class="even-cols">
-      <thead><tr><th>Workbook</th><th>Put away</th><th>Pages</th><th></th></tr></thead>
+      <thead><tr><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
       <tbody>
       {% for j in away %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
         <tr>
-          <td data-label="Workbook"><a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>
+          <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
+            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{% if x.kind in ('reading', 'paused') %}<span class="muted" title="Opens when every page is read">{{ j.name }}</span>{% else %}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-            <br><span class="small muted">{% include '_scan_kind.html' %}{% if x.by %} · by {{ x.by }}{% endif %}</span></td>
-          <td data-label="Put away" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
+            <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
+          <td data-label="Stashed" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
           <td data-label="Pages">{{ j.pages }}</td>
           <td>{{ scan_controls(x, 'scans') }}</td>
         </tr>
@@ -100,13 +103,13 @@
     </table>
   </div>
   {% else %}
-  <p class="empty">Nothing put away. Paused or stopped scans and drafts you put away wait here.</p>
+  <p class="empty">Nothing stashed. Paused or stopped scans and drafts you stash wait here.</p>
   {% endif %}
 </div>
 </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ asset('js/scantimer.js') }}" defer></script>
+{% block scripts %}<script src="{{ asset('js/scantimer.js') }}" defer></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>
 <script>
 //the "Current scans" and "Put away" cards keep themselves up to date (what each scan is doing, its
 //controls: the owner, 2026-10-20); nothing else on the page is touched. With instant updates

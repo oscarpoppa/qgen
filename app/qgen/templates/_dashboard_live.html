@@ -1,6 +1,6 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
    so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
-{% from "_macros.html" import avatar, person_name, person_link, quiz_link, box_label, count_of with context %}
+{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of with context %}
 {% macro score(value) -%}
   <span class="badge {{ score_class(value) }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
@@ -14,15 +14,17 @@
   <details class="box card dash-card" data-elastic="glance" data-elastic-dir="v" data-box="glance" open>
     <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
     <div class="dash-body">
+    {#- (no links on the cards but Messages: names, quizzes and counts are plain words, so a click never
+        lands somewhere unexpected; the owner, 2026-10-21) #}
     <div class="dash-glance">
-      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every student’s account"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</a>
-      <a href="{{ url_for('user.userdet') }}" title="Open Users to see every teacher’s account"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</a>
-      <a href="{{ url_for('qgen.list_vprobs') }}" title="Open the Problems page"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</a>
-      <a href="{{ url_for('qgen.list_vquizzes') }}" title="Open the Quizzes page"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</a>
-      <a href="{{ url_for('qgen.archive') }}" title="Open the Archive to view, restore or delete archived attempts"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</a>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.students }}</span> student{{ '' if glance.students == 1 else 's' }}</span>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</span>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</span>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</span>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</span>
     </div>
     <p class="small">
-      <a href="{{ url_for('user.settings') }}" title="Open Settings to set or clear the class code students sign up with">Sign-up</a>:
+      Sign-up:
       {% if glance.signup_open %}<span class="badge badge-ok">open</span> <span class="muted">(a class code is set)</span>
       {% else %}<span class="badge">closed</span> <span class="muted">(no class code)</span>{% endif %}
       · AI helper:
@@ -35,13 +37,12 @@
   <details class="box card dash-card" data-elastic="queue" data-elastic-dir="v" data-box="queue">
     <summary class="dash-head">{#- (a list cut short says so: the owner, 2026-10-20) #}{{ box_label('pencil', 'Waiting for grading', ('oldest ' ~ queue|length ~ ' of ' ~ waiting) if queue|length < waiting else count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
-    {% if waiting > queue|length %}<p class="dash-links small"><a href="{{ url_for('qgen.review_list') }}" title="Open Grading to see every attempt waiting, oldest first">All {{ waiting }} in Grading →</a></p>{% endif %}
     {% if queue %}
       <ul class="dash-list">
       {% for cq in queue %}
-        <li>{{ person_link(cq.taker) }}
+        <li>{{ person_name(cq.taker) }}
           {# just the quiz's name: Grade opens this hand-in #}
-          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_name(cq.vquiz) }}</span>
           <span class="muted small">handed in {{ when(cq.compdate) if cq.compdate else '' }}</span></span>
           <span class="btn-row dash-go"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on “{{ cq.vquiz.title }}”">{{ icon_label('lc-grade', 'Grade') }}</a></span></li>
       {% endfor %}
@@ -78,13 +79,12 @@
   <details class="box card dash-card" data-elastic="handins" data-elastic-dir="v" data-box="handins">
     <summary class="dash-head">{{ box_label('tray', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><span class="dash-go-links"><a href="{{ url_for('qgen.list_users') }}" title="Every student’s quizzes, attempts and scores">Results by student →</a> · <a href="{{ url_for('qgen.results_by_quiz') }}" title="Every quiz’s results, student by student">by quiz →</a></span></p>
     {% if handins %}
       <ul class="dash-list">
       {% for cq in handins %}
-        <li>{{ person_link(cq.taker) }}
+        <li>{{ person_name(cq.taker) }}
           {# just the quiz's name: the eye opens this hand-in itself #}
-          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(cq.vquiz) }}</span>
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_name(cq.vquiz) }}</span>
           {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span></span>
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ cq.taker.shown_name if cq.taker else 'the student' }}’s answers and score on “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></span></li>
@@ -106,8 +106,8 @@
     {% if out %}
       <ul class="dash-list">
       {% for o in out %}
-        <li>{{ person_link(o.cq.taker) }}
-          <span class="dash-what"><span class="dash-quiz">{{ quiz_link(o.cq.vquiz) }}</span>
+        <li>{{ person_name(o.cq.taker) }}
+          <span class="dash-what"><span class="dash-quiz">{{ quiz_name(o.cq.vquiz) }}</span>
           {% if o.state == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}

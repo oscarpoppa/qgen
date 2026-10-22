@@ -5,24 +5,25 @@
    and Continue. Kept current by static/js/scanprogress.js while a page is being read. #}
 {% macro scan_row(x) %}{% set j = x.job %}
     <div class="scan-progress-row">
-      <a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>
+      {#- (opens once every page is read; a stopped one still opens: the owner, 2026-10-22) #}
+      {%- if x.kind in ('reading', 'paused') %}<span class="scan-pop-name muted" title="Opens when every page is read"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></span>
+      {%- else %}<a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>{% endif %}
       <div class="progress-bar" role="progressbar" aria-label="Pages read in “{{ j.name }}”" aria-valuemin="0" aria-valuemax="{{ x.total }}" aria-valuenow="{{ x.done }}"><span style="width: {{ (100 * x.done / x.total) if x.total else 0 }}%"></span>{% if x.failed %}<span class="failed" style="width: {{ 100 * x.failed / x.total }}%"></span>{% endif %}</div>
       {#- each scan's kind, with its mark (the owner, 2026-10-19) #}
-      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{% if x.by %} · by {{ x.by }}{% endif %}{{ scan_working(x, bar=false) }}</span>
+      <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{{ scan_working(x, bar=false) }}{% if x.by %}<br>Started by {{ x.by }}{% endif %}</span>
       {#- (a row's controls are bare icons, the words in their tooltips; opening a scan to check it is
           an arrow (not a play button, nor the clipboard that looked like a trash can: the owner, 2026-10-19) #}
       {{ scan_controls(x, 'dashboard') }}
     </div>
 {% endmacro %}
+{#- (scans put away: never in the pop-over nor on the chip, only on Scan workbook pages; the owner, 2026-10-21) #}
+{%- set scans = (scans or [])|rejectattr('put_away')|list %}
 {% if scans %}
-{#- (scans put away: in their own list under Current scans, not counted on the chip; the owner, 2026-10-20) #}
-{%- set away = scans|selectattr('put_away')|list %}
-{%- set scans = scans|rejectattr('put_away')|list %}
 {%- set busy = scans|selectattr('reading')|list %}
 {%- set total = scans|sum(attribute='total') %}{% set done = scans|sum(attribute='done') %}
 <button type="button" class="badge scan-chip" aria-expanded="false" aria-controls="scan-pop" title="Scanner: your scans that aren’t saved yet">
   {#- the page being read, else the newest scan's first page, as a tiny picture (the owner, 2026-10-18) #}
-  {%- set lead = busy[0] if busy else (scans or away)[0] %}
+  {%- set lead = busy[0] if busy else scans[0] %}
   <img class="scan-chip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=lead.job.id, n=lead.now or 1) }}" alt="">
   {#- labeled as the scanner's, and said with marks (the owner, 2026-10-19): while reading, the page;
       then how many of each kind: ready to check (green check mark), paused, stopped on a page that
@@ -41,9 +42,5 @@
   {#- ("Current", not "Unfinished": a scan read all the way is in it too, the owner 2026-10-19) #}
   <h2>Current scans</h2>
   {% for x in scans %}{{ scan_row(x) }}{% endfor %}
-  {%- if away %}
-  <h2 class="scan-pop-away">Put away</h2>
-  {% for x in away %}{{ scan_row(x) }}{% endfor %}
-  {%- endif %}
 </div>
 {% endif %}

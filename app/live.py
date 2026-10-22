@@ -375,6 +375,9 @@ KINDS = {
     'archive': (True, lambda arg, now: _archive(None, now)),
     'archived': (True, _archive),
     'users': (True, lambda arg, now: _users(now)),
+    #(the People page shows each person's results too: hand-ins, grading and new assignments
+    #change it as well as accounts and folders; found by the tests, 2026-10-22)
+    'people': (True, lambda arg, now: (_users(now), _students(None, now))),
     'messages': (True, lambda arg, now: _messages(now)),
     'conversation': (True, _conversation),
     'problem': (True, _problem),

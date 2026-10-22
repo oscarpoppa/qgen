@@ -86,8 +86,10 @@
         <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder (the one you’re in stays in view)">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
       </div>
       <ul class="side-list side-top">
-        {# one order on every page: All, the automatic ones (My quizzes), the folders, then Uncategorized #}
-        <li><div class="side-row{{ ' current' if fk.view == 'all' }}">
+        {# one order on every page: the automatic folders pinned at the top, All, the automatic ones (My
+           quizzes' New, In progress), Checked (static/js/folderfilter.js), Uncategorized, then the
+           folders, scrolling under them (the owner, 2026-10-21) #}
+        <li class="side-auto"><div class="side-row{{ ' current' if fk.view == 'all' }}">
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('all') }}" title="See all your {{ fk.units }}, from every folder" class="side-link"{% if fk.view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} {{ fk.all_label }}</a>
           {% if fk.all_flags %}{{ flag_badges(fk, fk.all_flags) }}{% endif %}
@@ -95,16 +97,15 @@
         {% for av in fk.auto_views %}
           {# automatic (each quiz also stays in its own folder): a badge while there's something
              in it ("1 new", "3 started", "1 due") #}
-          <li><div class="side-row{{ ' current' if fk.view == av.key }}">
+          <li class="side-auto"><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
             {#- (a count like every other row; what it counts in its tooltip: the owner, 2026-10-17) -#}
             <span class="side-count muted small"{% if av.badge_title and av.count %} title="{{ av.badge_title }}"{% endif %}>{{ av.count or 0 }}</span></div></li>
         {% endfor %}
-        {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
         {% set no_folders = not fk.root.folders %}
-        <li><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
+        <li class="side-auto" data-auto="none"><div class="side-row{{ ' current' if fk.view == 'main' }}{{ ' is-empty' if not fk.main_count }}"{% if not fk.readonly %} data-drop="top"{% endif %}>
           <span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ fk.page('main') }}" title="See the {{ fk.units }} that aren’t in any folder" class="side-link"{% if fk.view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} {{ fk.main_label }}</a>
           {#- (no folders yet: it has no flags (the owner, 2026-10-17), counts what's in no folder,
@@ -112,6 +113,7 @@
               (the owner, 2026-10-20) -#}
           {% if not no_folders %}{{ flag_badges(fk, fk.root, true) }}{% endif %}
           <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>
+        {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
       {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
     </nav>
@@ -390,7 +392,7 @@
                     <ul class="assign-many-people put-list">
                       <li><label><input type="radio" name="to" value="top"{% if not f.parent_id %} checked{% endif %}> Not inside another folder</label></li>
                       {% for g, depth in fk.flat if g.id not in skip %}
-                        <li style="padding-left: {{ (depth - 1) * 18 }}px"><label><input type="radio" name="to" value="{{ g.id }}"{% if f.parent_id == g.id %} checked{% endif %}> {{ icon('folder') }} {{ fk.name(g) }}</label></li>
+                        <li><label style="--depth-pad: {{ (depth - 1) * 18 }}px"><input type="radio" name="to" value="{{ g.id }}"{% if f.parent_id == g.id %} checked{% endif %}> {{ icon('folder') }} {{ fk.name(g) }}</label></li>
                       {% endfor %}
                     </ul>
                     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>

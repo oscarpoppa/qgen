@@ -104,4 +104,30 @@
   document.addEventListener('click', function () { setTimeout(soon, 0); }, true);
   //(the page's boxes opened or folded as remembered)
   document.addEventListener('qgen-boxes-ready', soon);
+
+  //an open row's heading (the person, the quiz) stays in sight at the top of its scrolling list while
+  //its contents scroll under it, until the next row comes (the owner, 2026-10-21); .row-stuck gives it
+  //its band, only while it's stuck (in place, the band would cover the row's other cells)
+  function stick() {
+    document.querySelectorAll('.folder-filter-list.folder-scroll').forEach(function (list) {
+      var head = list.querySelector('thead');
+      list.style.setProperty('--thead-h', (head ? head.offsetHeight : 0) + 'px');
+      var lt = list.getBoundingClientRect().top + (head ? head.offsetHeight : 0);
+      list.querySelectorAll('tr > td > details.row-fold > summary').forEach(function (sm) {
+        var d = sm.parentElement, on = false;
+        if (d.open) {
+          var row = d.closest('tr').getBoundingClientRect();
+          on = row.top < lt - 2 && row.bottom > lt + sm.offsetHeight;
+          //(its band from the row's left edge to its right, just inside the row's outline)
+          var e = sm.getBoundingClientRect();
+          sm.style.setProperty('--stuck-l', Math.round(row.left + 1 - e.left) + 'px');
+          sm.style.setProperty('--stuck-r', Math.round(e.right - row.right + 1) + 'px');
+        }
+        sm.classList.toggle('row-stuck', on);
+      });
+    });
+  }
+  document.addEventListener('scroll', function () { requestAnimationFrame(stick); }, true);
+  document.addEventListener('toggle', function () { setTimeout(stick, 0); }, true);
+  window.addEventListener('load', stick);
 })();

@@ -105,6 +105,34 @@
     var fileForm = document.getElementById('file-form');
     if (fileForm) fileForm.addEventListener('change', keepBarBtn);
     ticks.forEach(function (t) { t.addEventListener('change', keepBarBtn); });
+    //"Make new quiz" among the checked bar's actions: New quiz with the checked problems in it, its
+    //Back coming back to this page and tab (the owner, 2026-10-21)
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-make-quiz]');
+      if (!b) return;
+      var ids = window.qgenCheckedIds ? window.qgenCheckedIds() : ticks.filter(function (t) { return t.checked; }).map(function (t) { return t.value; });
+      if (!ids.length) return;
+      askIfMany(b, ids.length, 'Make a quiz with ' + ids.length + ' problems?', function () {
+        location.href = b.dataset.makeQuiz + '?problems=' + ids.join(',') + '&next=' + encodeURIComponent(location.pathname + location.search);
+      });
+    });
+    //more checked than the Technical setting allows without asking (data-ask-over): "Make a quiz
+    //with 254 problems?" Exit / Continue, in case "Check all" was clicked by mistake (the owner, 2026-10-21)
+    function askIfMany(b, n, words, then) {
+      var over = parseInt(b.dataset.askOver, 10);
+      if (!over || n <= over) { then(); return; }
+      var d = document.createElement('dialog');
+      d.className = 'ask ask-many-check';
+      d.innerHTML = '<p><strong></strong></p><div class="btn-row"><button type="button" class="btn btn-secondary" data-exit>Exit</button>'
+        + '<button type="button" class="btn" data-go>Continue</button></div>';
+      d.querySelector('strong').textContent = words;
+      document.body.appendChild(d);
+      d.addEventListener('close', function () { d.remove(); });
+      d.querySelector('[data-exit]').addEventListener('click', function () { d.close(); });
+      d.querySelector('[data-go]').addEventListener('click', function () { d.close(); then(); });
+      d.showModal();
+      d.querySelector('[data-exit]').focus();
+    }
     var fromBar = false;  // (opened by the checked bar's button, not one row's)
     function ask(ids, what) {
       if (!dialog || !ids.length) return;
@@ -119,7 +147,7 @@
       //(the link to a new quiz: these problems in it, and Back comes back to this page and tab)
       var make = dialog.querySelector('[data-new-quiz]');
       if (make) {
-        make.textContent = 'Make a new quiz with ' + (ids.length === 1 ? 'it' : 'them') + ' instead';
+        make.textContent = 'Make new quiz';  // (the owner's words, 2026-10-21)
         make.href = make.getAttribute('href').split('?')[0] + '?problems=' + ids.join(',') + '&next=' + encodeURIComponent(location.pathname + location.search);
       }
       dialog.showModal();
@@ -156,8 +184,10 @@
       if (!b || b.disabled) return;
       if (b.dataset.addQuiz === 'checked') {
         var ids = checkedIds();
-        fromBar = true;
-        ask(ids, ids.length === 1 ? 'the checked problem' : 'the ' + ids.length + ' checked problems');
+        askIfMany(b, ids.length, 'Add ' + ids.length + ' problems?', function () {
+          fromBar = true;
+          ask(ids, ids.length === 1 ? 'the checked problem' : 'the ' + ids.length + ' checked problems');
+        });
       } else { fromBar = false; ask([b.dataset.addQuiz], b.dataset.what); }
     });
 

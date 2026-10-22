@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
-{% from "_people.html" import people_switch %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_macros.html" import avatar with context %}
+{% from "_macros.html" import avatar, count_of, quiz_link with context %}
+{% from "_results.html" import result_group with context %}
 {% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
-{% block body_attrs %}{{ watch('users') }}{% endblock %}
+{% block body_attrs %}{{ watch('users' if in_archive else 'people') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
 
@@ -16,12 +16,18 @@
 {% macro people_table(people, here) %}
   {% if people %}
   <div class="table-wrap stack">
-    <table class="people-table even-cols">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Created</th><th>Folders</th><th></th></tr></thead>
+    <table class="people-table even-cols{% if not in_archive %} result-rows{% endif %}">
+      {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
+          after Folders, in the site's column order; open, a row shows the person and then each of their
+          quizzes with its attempts) #}
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Created</th><th>Folders</th>{% if not in_archive %}<th>Quizzes</th><th>Status</th><th>Done</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
-        <tr data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
+        {% if not in_archive %}{% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}{% set groups = attempts_by_quiz(item.cquizzes) %}
+        {% set sum_done = groups|map(attribute='combined')|reject('none')|list %}{% set sum_going = item.cquizzes|selectattr('status', 'in', ['started', 'review'])|list|length %}
+        {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) if sum_done else none %}{% endif %}
+        <tr{% if not in_archive %} class="result-item"{% endif %} data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span>
@@ -34,9 +40,20 @@
               <li>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</li>
               <li>Last seen: {% if item.online %}online now{% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>{% else %}<span title="Not since the site began keeping track">never</span>{% endif %}</li>
               {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
-            </ul></details></td>
+            </ul>
+            {% if not in_archive %}<div class="result-groups divided" data-fold-body>
+            {% for g in groups %}{{ result_group(quiz_link(g.vquiz, strong=true), g, item, rules, g.vquiz.title|lower) }}
+            {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
+          {% if not in_archive %}
+          <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}"><span class="badge box-count">{{ count_of(n, 'quiz', 'quizzes') }}</span></td>
+          {#- (the status badges stacked, one under the other, to keep the row narrow: the owner, 2026-10-21) #}
+          <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (sum_going, sum_fresh) if sum_going or sum_fresh else '' }}"><span class="student-sums stacked-sums">
+            {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet, or handed in and waiting for grading">{{ sum_going }} in progress</span>{% endif %}
+            {% if sum_fresh %}<span class="badge badge-warn badge-status" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}</span></td>
+          <td data-label="Done" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="student-sums stacked-sums"><span class="badge {{ score_class(sum_avg) }}" title="Quizzes with a score that counts, and the average of those scores">{{ sum_done|length }} done</span><span class="badge {{ score_class(sum_avg) }}" title="The average of the scores that count">avg {{ '%.0f' % sum_avg }}%</span></span>{% endif %}</td>
+          {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">
             {% if in_archive %}
@@ -77,7 +94,8 @@
   They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.{% endset %}
 {% else %}
 {# (no Sign-up & site settings button here: it's More › Settings; the owner, 2026-10-16) #}
-<div class="page-head"><h1>People</h1>{{ people_switch('accounts', fk.view) }}</div>
+{#- (no Accounts | Results switch: one People page, the owner 2026-10-21) #}
+<div class="page-head"><h1>People</h1></div>
 {% endif %}
 
 {% set actions %}{% if in_archive %}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
@@ -86,7 +104,16 @@
   <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>
 {% else %}
 {% call folders_page(fk, actions, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
-    {% if ulst %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true) }}
+    {% if ulst %}<div class="folder-tools-bar{% if not in_archive %} results-filter{% endif %}">{% if in_archive %}{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true) }}{% else %}
+      {#- (with Results' "Show" beside it: one People page, the owner 2026-10-21) #}
+      {% call filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true, id='results-filter') %}
+      <label class="small muted show-pick">Show
+        <select class="state-filter" aria-label="Show which results">
+          <option value="all">All results</option>
+          <option value="review">Waiting for grading only</option>
+          <option value="out">Not handed in yet only</option>
+        </select></label>
+      {% endcall %}{% endif %}
       {# the checked people: in a folder, or out of it; the same bar as the Problems and Quizzes
          pages' (grayed until someone is checked: static/js/folders.js; out of someone's only
          folder: asked first, static/js/takeout.js) #}

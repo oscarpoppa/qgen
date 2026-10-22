@@ -28,8 +28,16 @@
     e.preventDefault();
     var d = box(), body = d.querySelector('.page-zoom-body');
     body.textContent = '';
-    //the same page, its left-out questions covered, only bigger
-    body.appendChild(a.querySelector('.page-thumb-paper').cloneNode(true));
+    //the same page, its left-out questions covered, only bigger; else (a scan's page thumbnail:
+    //the owner, 2026-10-22) the picture it links to
+    var paper = a.querySelector('.page-thumb-paper');
+    if (paper) body.appendChild(paper.cloneNode(true));
+    else {
+      var img = document.createElement('img');
+      img.src = a.href; img.alt = a.title || '';
+      img.className = 'page-zoom-img';
+      body.appendChild(img);
+    }
     d.setAttribute('aria-label', a.title);
     d.showModal();
   });

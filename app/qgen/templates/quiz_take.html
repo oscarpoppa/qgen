@@ -73,7 +73,7 @@
               {%- if style == 'equals' %}{% set parts = words.rsplit('=', 1) %}<span>{{ parts[0].strip() }}</span><span>=</span>
               {%- else %}{% for line in lines %}<span>{{ line }}</span>{% endfor %}{% endif %}</div>
           {% endif %}
-          <div class="pq-answer{% if s.inline %} pq-inline{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.85, (s.char or 0.02) * ratio * 100 / 0.714]|min }}cqw">
+          <div class="pq-answer{% if s.inline %} pq-inline{% elif s.bare %} pq-bare{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.85, (s.char or 0.02) * ratio * 100 / 0.714]|min }}cqw">
             {#- (the typed answer the same size as the page's printed words beside it, so the two read
                 as one line: it was smaller and looked out of line, the owner 2026-10-20) #}
             {#- (inputmode only for numbers: WTForms writes a missing one as inputmode="None", the code critic 2026-10-20) #}

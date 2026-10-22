@@ -84,10 +84,16 @@ def _frame(comps, ink, X0, Y0, box_px, W, H):
         w, h = c - a, d - b
         if w < 0.04 * W or h < 0.5 * (y1 - y0) or h < 0.015 * H or n > 0.35 * w * h:
             continue
-        # empty inside: almost no ink in the middle part
+        # empty inside: almost no ink in the middle part, an oval, so a round answer circle's
+        # own line isn't counted (a square's corners clipped it: the owner, 2026-10-21, Triple Try)
         mx, my = max(2, int(0.18 * w)), max(2, int(0.18 * h))
         inside = ink[b + my:d - my, a + mx:c - mx]
-        if inside.size == 0 or inside.mean() > 0.03:
+        if inside.size == 0:
+            continue
+        iy, ix = np.ogrid[:inside.shape[0], :inside.shape[1]]
+        ry, rx = max(1.0, inside.shape[0] / 2.0), max(1.0, inside.shape[1] / 2.0)
+        oval = ((iy + 0.5 - ry) / ry) ** 2 + ((ix + 0.5 - rx) / rx) ** 2 <= 1
+        if inside[oval].mean() > 0.03:
             continue
         # the frame really goes round: ink near all four edges
         edge = ink[b:d, a:c]
@@ -455,6 +461,28 @@ def _colored_share(rgb, box):
     return float(((part.max(axis=2) - part.min(axis=2)) > 40)[ink].mean())
 
 
+def mark_bare(img, slots):
+    """Answer places on blank paper (no printed box, circle or line there, e.g. under a sum in a
+    column) get 'bare': True, so the quiz draws an outline where the student types; one on the
+    page's own blank stays unmarked and invisible (the owner, 2026-10-21, Triple Try 3: the fields
+    couldn't be seen). slots: a list of slot dicts with 'answer' boxes; changed in place."""
+    full = ink_mask(np.asarray(img.convert('L')))
+    H, W = full.shape
+    for s in slots:
+        a = s.get('answer') if s.get('kind') == 'field' and not s.get('inline') else None
+        if not isinstance(a, dict):
+            continue
+        x0, y0, x1, y1 = px(a, W, H)
+        mx, my = int(0.1 * (x1 - x0)), int(0.1 * (y1 - y0))
+        area = full[max(0, y0 - my):min(H, y1 + my), max(0, x0 - mx):min(W, x1 + mx)]
+        #(a little ink is let through: a page's faint background pattern isn't a printed blank)
+        if area.size and area.mean() < 0.03:
+            s['bare'] = True
+        else:
+            s.pop('bare', None)
+    return slots
+
+
 def erase_answers(img, slots):
     """A page printed with its answers in an answer column (an answer key): each answer erased, in
     the paper's own color, leaving the table's ruled lines (the rows that are mostly ink) as they
@@ -627,6 +655,14 @@ def _drawn_boxes(ink, ch):
                 continue
             out.append((max(0, a - 1), top[0], min(w, b + 1), bot[1]))
     return out
+
+
+def _overlap(a, b):
+    """How much of box b lies in box a (0 to 1)."""
+    w = min(a[2], b[2]) - max(a[0], b[0])
+    h = min(a[3], b[3]) - max(a[1], b[1])
+    area = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+    return max(0, w) * max(0, h) / float(area)
 
 
 def _answer_cell(full, box_px, ch):
@@ -868,7 +904,10 @@ def _wording(ink, full, rgb, number, cut, ch, X0, Y0):
         return None, None
     # (specks left over at the edges are not wording)
     keep = _components(mask)
-    keep = [k for k in keep if ((k[3] - k[1]) >= 0.4 * ch or (k[2] - k[0]) >= 0.4 * ch) and k[4] >= 0.15 * ch * ch]
+    #(a long thin mark, like each bar of "=", is wording too, not a speck: it was left on the page
+    #and written again beside itself, the owner 2026-10-21, Triple Try)
+    keep = [k for k in keep if ((k[3] - k[1]) >= 0.4 * ch or (k[2] - k[0]) >= 0.4 * ch)
+            and (k[4] >= 0.15 * ch * ch or ((k[2] - k[0]) >= 0.4 * ch and k[4] >= 0.04 * ch * ch))]
     #(the words come before the answer place on their line: a mark past its start, e.g. an
     #icon sitting on the line, isn't wording, the owner, 2026-10-20)
     before = [k for k in keep if k[2] <= cut[0] - X0 + 0.2 * ch]
@@ -1110,6 +1149,10 @@ def find_slots(img, page, covered=()):
             cut = frame
         else:
             cell = _answer_cell(full, box_px, ch)
+            #(never another problem's cell: problems side by side in a table, each with its own
+            #circle, the owner 2026-10-21, Triple Try)
+            if cell and any(_overlap(cell, px(o['box'], W, H)) > 0.3 for o in page['problems'] if o is not p):
+                cell = None
             if cell:
                 answer = cut = cell
                 if full[cell[1]:cell[3], cell[0]:cell[2]].any():

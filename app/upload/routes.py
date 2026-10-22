@@ -48,7 +48,7 @@ def trythumb(path, fname, quiet=False):
 #admin-only upload image or file to server
 #(files a browser runs as part of the site when opened from it: never uploaded, the owner
 #2026-10-20 from the code critic: an uploaded page or drawing could run code with a teacher's sign-in)
-BLOCKED = ('html', 'htm', 'svg', 'js', 'xml')
+BLOCKED = ('html', 'htm', 'xhtml', 'shtml', 'mhtml', 'mht', 'svg', 'svgz', 'js', 'mjs', 'xml', 'xsl')  # (more, the code critic 2026-10-22)
 BLOCKED_SAY = 'That kind of file can’t be uploaded: it could run code on the site.'
 
 
