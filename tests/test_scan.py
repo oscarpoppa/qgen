@@ -342,7 +342,7 @@ def test_teachers_only_and_needs_a_key(app_db):
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
     try:
         html = teacher.get('/quiz/listvq').data.decode()
-        assert 'menu-disabled' not in html and '>Scan workbook pages</a>' in no_titles(html)
+        assert 'menu-disabled' not in html and '>Scan pages</a>' in no_titles(html)
         assert '</svg> Scan workbook pages' in html
         assert '</svg> Scan workbook pages' in teacher.get('/quiz/listvp').data.decode()
         assert 'Upload and read' in teacher.get('/quiz/scan').data.decode()

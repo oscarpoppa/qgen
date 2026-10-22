@@ -147,10 +147,10 @@
             {% endcall %}
             {# People: Accounts (user.userdet) and Results (qgen.list_users); opens the view used last #}
             {{ item('user.people', 'People', ('user.userdet', 'user.eduser', 'qgen.list_users', 'qgen.list_user'), tip='Everyone: their accounts, folders and quiz results') }}
-            {#- a main link of its own, after People (it was in More: the owner, 2026-10-22); grayed out,
+            {#- a main link of its own, after People (it was in More), named "Scan pages" (the owner, 2026-10-22); grayed out,
                 not left out, when the site has no AI key (the owner, 2026-10-18) #}
-            {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan workbook pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
-            {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan workbook pages</span>{% endif %}
+            {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
+            {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan pages</span>{% endif %}
             {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
               <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages',
