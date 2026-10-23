@@ -111,24 +111,24 @@
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vprobs') }}" data-back-next>
 
-  {% if ai_enabled %}
-  {# folded until it's wanted: it takes a lot of room (always starts folded: data-fixed) #}
-  <details class="box card ai-box" data-fixed>
-    <summary>{{ box_label('sparkle', 'Describe it in plain English', none, 'h2') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
-    <div class="muted small ai-intro">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</div>
-    <div class="field">
-      <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
-      <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
-      <div class="btn-row" style="margin-top:8px">
-        <button type="button" class="btn ai-go" data-kind="problem" data-src="ai-problem" data-url="{{ url_for('qgen.ai_problem') }}" title="Claude drafts the type, question, values and answer. You check before saving.">Fill in for me</button>
-      </div>
-    </div>
-    <div class="ai-status small" role="status" aria-live="polite"></div>
-  </details>
-  {% endif %}
-
   <div class="card" id="question-card">
     <div class="card-head"><span class="step-num" aria-hidden="true">1</span><h2>The question</h2></div>
+    {% if ai_enabled %}
+    {#- inside the question's card under its numbered heading, like the values' box in Random values
+        (the owner, 2026-10-23: it was a card of its own above); folded until it's wanted (data-fixed) #}
+    <details class="box ai-box ai-problem-field" data-fixed>
+      <summary>{{ box_label('sparkle', 'Describe it in plain English', none, 'h3') }}<span class="badge badge-accent">AI helper</span><span class="badge">optional shortcut</span></summary>
+      <div class="muted small ai-intro">Claude fills in the form below. Nothing is saved until you check it and press “Save problem”. {{ tip('the AI helper', tip_ai) }}</div>
+      <div class="field">
+        <div class="label-line"><label for="ai-problem">Describe the whole problem</label>{{ tip('describing the whole problem', tip_ai_problem) }}</div>
+        <textarea id="ai-problem" placeholder="e.g. A pick-one word problem about a train going between 40 and 80 mph for 2 to 5 hours; how far does it go?"></textarea>
+        <div class="btn-row" style="margin-top:8px">
+          <button type="button" class="btn ai-go" data-kind="problem" data-src="ai-problem" data-url="{{ url_for('qgen.ai_problem') }}" title="Claude drafts the type, question, values and answer. You check before saving.">Fill in for me</button>
+        </div>
+      </div>
+      <div class="ai-status small" role="status" aria-live="polite"></div>
+    </details>
+    {% endif %}
     <div class="form-row">
       {{ field(form.qtype, tip_body=tip_qtype) }}
       {{ field(form.title, attrs={'placeholder': 'e.g. Train distance'}, tip_body=tip_title) }}

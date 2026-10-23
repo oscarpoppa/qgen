@@ -2186,12 +2186,14 @@ details.row-fold > .small { margin: 4px 0 0 13px; }
    reads apart from the rows around it (the owner, 2026-10-20) */
 details.row-fold[open] > :not(summary) { margin-left: 28px; }
 ol.attempt-list { padding-left: 1.2em; margin-top: 0; margin-bottom: 4px; }
-tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
+tr:has(> td > details.row-fold:not([open])) > td.row-more > :not(.row-count) { display: none; }
+/* (Quizzes' Problems column shows its number while the row is folded, its list when open: the owner, 2026-10-23) */
+tr:has(> td > details.row-fold[open]) > td.row-more > .row-count { display: none; }
 @media (prefers-reduced-motion: reduce) { details.row-fold > summary .fold { transition: none; } }
 /* (as cards, a folded row's other parts go altogether, labels too) */
-@media (max-width: 640px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
-@container listarea (max-width: 860px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
-@container page (max-width: 780px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more { display: none; } }
+@media (max-width: 640px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more:not(.row-count-col) { display: none; } }
+@container listarea (max-width: 860px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more:not(.row-count-col) { display: none; } }
+@container page (max-width: 780px) { .stack tr:has(> td > details.row-fold:not([open])) > td.row-more:not(.row-count-col) { display: none; } }
 
 /* ---------- folder pages: file-folder tabs (folderfilter.js) ----------
    The folder buttons are tabs on a file folder: the chosen one joins the panel under it (the
@@ -2351,7 +2353,7 @@ td.tick-col input[type=checkbox]:is(:focus-visible, :checked), th.tick-col input
 /* while every row of a list is folded, the columns only an open row fills go, headings too */
 /* (a class set by static/js/rowopen.js, not :has(): asking "a table with no open row" here made Firefox
    check every row on every change, 1.3 s on Problems; the owner, 2026-10-21) */
-table:not(.has-open-row) th.row-more, table:not(.has-open-row) td.row-more { display: none; }
+table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-row) td.row-more:not(.row-count-col) { display: none; }
 /* phone row cards: the checkbox on the title's line, the "+" beside the folder chips */
 @media (max-width: 640px) {
   .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; }
@@ -3173,9 +3175,9 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 
 /* the problem editor's "Describe the values for your question" (Random values card): the top AI
    box's tint and dashed edge, its title as big as a box title (the owner, 2026-10-20) */
-.ai-values-field.ai-box { padding: 12px 14px; border-radius: var(--r-lg); margin-bottom: 14px; }
-.ai-values-field > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.ai-values-field[open] > summary { margin-bottom: 8px; }
+.ai-values-field.ai-box, .ai-problem-field.ai-box { padding: 12px 14px; border-radius: var(--r-lg); margin-bottom: 14px; }
+.ai-values-field > summary, .ai-problem-field > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.ai-values-field[open] > summary, .ai-problem-field[open] > summary { margin-bottom: 8px; }
 /* (the AI boxes' first line: a div, since its ? tip holds paragraphs a <p> can't; the owner, 2026-10-20) */
 .ai-box .ai-intro { margin: 0 0 10px; }
 
