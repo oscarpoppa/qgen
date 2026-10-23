@@ -645,8 +645,9 @@ def test_assign_with_no_quizzes_says_so_and_a_removed_quizs_link_picks_the_first
 
 
 def test_the_folder_question_folds_like_the_folder_lists(app_db):
-    """The Folder question on the problem form: a fold arrow on a folder with folders inside,
-    Expand all / Collapse all above the list, and each folder's count."""
+    """The Folder question on the problem form is the standard picker (the owner, 2026-10-22): a
+    "Folder" table of check boxes, nested folders indented, drawn by the folder-picker builder (its
+    side list folds like every folder list)."""
     app, db = app_db
     from app.qgen.models import VPGroup
     teacher = login(app, 'teach')
@@ -656,9 +657,10 @@ def test_the_folder_question_folds_like_the_folder_lists(app_db):
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra', 'parent': math.id})
     page = teacher.get('/quiz/makevprob').data.decode()
     q = page[page.index('id="subject-question"'):page.index('</fieldset>', page.index('id="subject-question"'))]
-    assert q.count('class="side-fold"') == 1 and 'aria-label="Show or hide the folders in Math"' in q
-    assert 'data-side-level="open"' in q and 'data-side-level="close"' in q and 'js/folder_checks.js' in q
-    assert 'data-depth="2" data-folder="{}"'.format(VPGroup.query.filter_by(title='Algebra').one().id) in q
+    algebra = VPGroup.query.filter_by(title='Algebra').one()
+    assert 'data-folder-pick' in q and '<th>Folder</th>' in q and 'qgenFolderPick.build' in q
+    assert 'data-box="folder:{}" data-depth="2"'.format(algebra.id) in q and 'name="subjects" value="{}"'.format(algebra.id) in q
+    assert 'padding-left:14px' in q and 'js/folder_checks.js' not in q
 
 
 

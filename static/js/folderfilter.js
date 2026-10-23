@@ -573,7 +573,9 @@
       //part of the open folder: the owner, 2026-10-21)
       var openTab = here && row.querySelector(':scope > .folder-tab[aria-pressed="true"]');
       var wrapped = here && openTab && t.offsetTop > openTab.offsetTop + openTab.offsetHeight - 4;
-      if (here && (row.scrollWidth > row.clientWidth + 1 || wrapped)) {
+      //(the Checked folder's, "Apply to checked", always on that line inside the folder, at its top
+      //right, whatever the width: the owner, 2026-10-22, it moved between the tab row and here)
+      if (here && (row.scrollWidth > row.clientWidth + 1 || wrapped || chosen === 'checked')) {
         line = document.createElement('div');
         line.className = 'folder-tools-line';
         line.appendChild(t);

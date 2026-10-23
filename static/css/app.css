@@ -921,6 +921,7 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
   border-color: transparent transparent transparent var(--muted); transform: rotate(90deg); transition: transform .15s; }
 .side-fold[aria-expanded="false"]::before { transform: none; }
 .folder-side .new-folder { display: block; margin-top: 12px; padding: 0 4px; }
+.folder-side > .side-card-head .new-folder { display: inline-block; margin: 0; padding: 0; }
 .side-hint { margin: 8px 4px 0; }
 /* the small folder dialogs: + New folder, Rename, Move to (static/js/folders.js) */
 dialog.folder-dialog input[type=text] { display: block; width: 100%; margin: 0 0 16px; }
@@ -2523,6 +2524,9 @@ dialog .folder-filter[data-style="list"] > .folder-filter-side { max-height: cal
   --tab-edge: color-mix(in srgb, var(--muted) 40%, var(--border)); }
 .folder-filter.folder-open-empty .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { border-top-color: var(--muted); }
 .folder-filter.folder-open-empty .folder-filter-empty { color: var(--muted); }
+/* an empty folder's panel as tall as it would be with one thing in it (its heading row and one row),
+   not a thin strip, on every folder list and picker (the owner, 2026-10-22) */
+.folder-filter-empty, .folder-main p.card.empty { min-height: 104px; box-sizing: border-box; }
 .folder-filter.folder-open-empty .folder-tabs-inner .box-count { color: var(--muted); }
 /* ...and its row of inner tabs keeps its buttons (Folder options...) (the owner, 2026-10-14) */
 /* (an empty folder with folders inside: just those folders' tabs, grayed, like the folder list;
@@ -2723,6 +2727,9 @@ details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
    its right; stacked when there isn't room (the owner, 2026-10-16) */
 .subject-cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 24px; }
 .subject-cols > .subject-check-list { flex: none; }
+/* the form's Folder question as the standard picker, the new-folder box under it (the owner, 2026-10-22) */
+.subject-cols > .subject-pick { flex: 1 1 100%; max-width: 820px; min-width: 0; }
+.subject-pick .pick-wrap { max-height: 360px; overflow-y: auto; }
 .subject-side { flex: 1 1 18rem; min-width: 0; max-width: 36rem; }
 .subject-side > .subject-new-inline { margin-top: 0; }
 .subject-side > .help:first-of-type { margin-top: 8px; }
@@ -2836,6 +2843,12 @@ td.attempt-buttons { text-align: right; }
   .folder-side { border: 0; padding: 0; background: none; border-radius: 0; overflow: visible; max-height: none; }
   .folder-side > nav { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px; background: var(--surface); }
   .folder-dragging .folder-side > nav { border-color: var(--accent); }
+  /* + New folder: a small icon on a strip at the top of the card, above the part that scrolls, the
+     strip and the list one card (the owner, 2026-10-22) */
+  .folder-side > .side-card-head { display: flex; justify-content: flex-end; border: 1px solid var(--border); border-bottom: 0;
+    border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--surface); padding: 4px 6px 0; }
+  .folder-side > .side-card-head + nav { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 2px; }
+  .folder-dragging .folder-side > .side-card-head { border-color: var(--accent); }
   .folder-side > .side-hint { margin: 8px 4px 0; }
 }
 /* a page's one long list as a panel that scrolls inside itself (static/js/fitpanel.js; the

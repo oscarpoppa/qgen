@@ -190,7 +190,7 @@ def problem_results(vpid):
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.problem_results', vpid=vp.id, folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(vqs), name=lambda f: f.title,
-        hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
+        #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-problem-results-folders', hide_empty=True)
     return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, answers=answers, shown=shown, fk=fk,
                            summary=summary, common=common, title='Problem history: {}'.format(vp.title or 'Untitled'))
@@ -1165,7 +1165,7 @@ def results_by_quiz():
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.results_by_quiz', folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
-        hint=Markup('The <a href="{}">Quizzes page</a>\'s folders: make and fill them there.').format(url_for('qgen.list_vquizzes')),
+        #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-results-quiz-folders')
     return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk,
                            rules=RETAKE_RULES, title='Results by quiz')
@@ -1193,7 +1193,7 @@ def quiz_results_page(vqid):
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.quiz_results_page', vqid=vq.id, folder=v),
         unit='student', units='students', all_label='All students', all_count=len(students), name=lambda f: f.name,
-        hint=Markup('<a href="{}">People</a>\'s folders: make and fill them there.').format(url_for('user.userdet')),
+        #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-quiz-history-folders', hide_empty=True)
     return render_template('results_by_quiz.html', quizzes=[q], rules=RETAKE_RULES, single=True, fk=fk, shown=shown,
                            rows=rows, title='Quiz history: {}'.format(vq.title))
@@ -1712,8 +1712,10 @@ def subject_kit(kind, view, node, root, flat, nodes, in_archive=False):
         add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
         unit=unit, units=units, all_label='All ' + units, all_count=root['all_count'],
         name=lambda f: f.title, placeholder='e.g. ' + first, add_words='+', drag_what='a ' + unit,
-        hint='Your own folders for sorting {}, e.g. {}. A {} can be in several folders. '
+        #(none on Problems, and no drag note either: the owner, 2026-10-22, clutter under the list)
+        hint=None if kind == 'problems' else 'Your own folders for sorting {}, e.g. {}. A {} can be in several folders. '
              'Students never see them.'.format(units, examples, unit),
+        no_side_note=kind == 'problems',
         fold_key='qgen-folded-{}-folders'.format(kind),
         #(no "Delete folder and everything in it" for uploads: deleting files is done one by one)
         purge_url=None if upload else (lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid)),

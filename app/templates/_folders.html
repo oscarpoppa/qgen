@@ -45,9 +45,12 @@
 
 {# + New folder: a small dialog that asks only for the name (Cancel / Make folder), at the top
    level or inside `parent` (the owner, 2026-10-16; static/js/folders.js opens it) #}
-{% macro new_folder(fk, parent=none, size='btn-sm') %}
+{#- as_icon: a small icon (the top of the folder list's card: the owner, 2026-10-22), its words in the tooltip #}
+{% macro new_folder(fk, parent=none, size='btn-sm', as_icon=false) %}
   <span class="new-folder">
-    <button type="button" class="btn btn-secondary {{ size }}" data-fopt="new" title="{{ 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' }}">+ New folder{{ ' inside' if parent }}</button>
+    {% set say = 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' %}
+    {% if as_icon %}<button type="button" class="btn btn-secondary btn-xs btn-icon" data-fopt="new" title="New folder: {{ say }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button>
+    {%- else %}<button type="button" class="btn btn-secondary {{ size }}" data-fopt="new" title="{{ say }}">+ New folder{{ ' inside' if parent }}</button>{% endif %}
     <dialog class="ask folder-dialog" data-fopt-dialog="new" aria-label="{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}">
       <form method="post" action="{{ fk.create_url }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -79,6 +82,10 @@
   <details class="folder-side" open>
     <summary class="folder-side-head"><span class="small muted">Folders</span>
       <span class="folder-side-now">{% set auto_now = fk.auto_views|selectattr('key', 'equalto', fk.view)|first %}{{ fk.name(fk.node.folder) if fk.node else auto_now.label if auto_now else fk.all_label if fk.view == 'all' else fk.main_label }}</span></summary>
+    {#- + New folder: a small icon at the top of the folder list's card, on a strip of the card above the
+        part that scrolls, so it's always in sight (the owner, 2026-10-22: it was the list's last line,
+        then under the card) #}
+    {% if not fk.readonly %}<div class="side-card-head">{{ new_folder(fk, as_icon=true) }}</div>{% endif %}
     <nav aria-label="Folders">
       {# shown (static/js/folders.js) when some folder has folders inside it #}
       <div class="btn-row small side-levels" hidden>
@@ -117,15 +124,14 @@
           <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in no folder">{{ fk.main_count or 0 }}</span></div></li>{% endif %}
         {% for child in fk.root.folders %}{{ side_folder(fk, child) }}{% endfor %}
       </ul>
-      {% if not fk.readonly %}{{ new_folder(fk) }}{% endif %}
     </nav>
     {#- (a page's own piece under the folder list's card, e.g. Grading's oldest waiting button) #}
     {{ under_side }}
     {#- (under the folder list's card, not in it: the owner, 2026-10-17) #}
     {#- (none when the page gives no hint and nothing can be dragged: Grading, the owner 2026-10-21) #}
-    {% set drag_note = fk.flat and not fk.readonly %}
-    {% if fk.hint or drag_note %}<p class="muted small side-hint">{{ fk.hint or '' }}
-      {% if drag_note %}On a computer you can also drag {{ fk.drag_what }} onto a folder.{% endif %}</p>{% endif %}
+    {% set drag_note = fk.flat and not fk.readonly and not fk.no_side_note %}
+    {#- (no note under the folder list on any page, nor the drag note: the owner, 2026-10-22, they were
+        clutter; a page's hint= is no longer shown) #}
   </details>
 
   {# the whole section is one level for Expand all / Collapse all (beside its title) #}

@@ -403,7 +403,7 @@ def test_every_folder_page_is_drawn_the_same_way(app_db):
     for url, who in pages.items():
         page = who.get(url).data.decode()
         assert '<div class="folders-layout"' in page and 'class="folder-side"' in page, url
-        assert '</svg> Uncategorized' in page and ('</svg> All' in page or '</svg> Everyone' in page) and '+ New folder' in page, url
+        assert '</svg> Uncategorized' in page and ('</svg> All' in page or '</svg> Everyone' in page) and 'class="side-card-head"' in page and 'aria-label="New folder"' in page, url
         assert 'data-fold-key="' in page and 'Expand all' in page, url
     # one name for "in no folder" everywhere on screen
     root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app')
@@ -449,7 +449,7 @@ def test_results_by_student_in_the_users_folders(app_db):
     page = teach.get('/userdet?folder={}'.format(g7.id)).data.decode()
     assert row.format(ids('sam')) in page and row.format(ids('kim')) not in page
     # the folders are made and moved on this same page now
-    assert '+ New folder' in page and 'Folder options' in page and 'data-drop=' in page
+    assert 'class="side-card-head"' in page and 'aria-label="New folder"' in page and 'Folder options' in page and 'data-drop=' in page
     assert 'id="results-filter"' in page and 'class="state-filter"' in page and 'Waiting for grading only' in page
     every = teach.get('/userdet?folder=all').data.decode()
     assert row.format(ids('kim')) in every and row.format(ids('sam')) in every

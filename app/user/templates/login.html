@@ -6,7 +6,9 @@
 {% block content %}
 <div class="card card-narrow">
   <h1>Log in</h1>
-  <form method="post" novalidate>
+  {#- (its own address: shown in place of a page whose sign-in ran out, e.g. the Dashboard, a form with
+      none was sent to that page and refused, "Method Not Allowed": the owner, 2026-10-22) #}
+  <form method="post" action="{{ url_for('user.login', next=request.args.get('next') or (request.path if request.path != url_for('user.login') else none)) }}" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.username, attrs={'autocomplete': 'username', 'autofocus': true}) }}
     {{ field(form.password, attrs={'autocomplete': 'current-password'}) }}

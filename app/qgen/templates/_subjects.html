@@ -18,24 +18,32 @@
   {# the folder list on the left, and the new folder box with its notes beside it, on the right
      (under it on a phone) (the owner, 2026-10-16) #}
   <div class="subject-cols">
-  <div class="subject-check-list" data-fold-key="qgen-folded-folder-checks-{{ kind }}">
-  {# Expand all / Collapse all at the top of the list, as in every folder list (static/js/folder_checks.js
-     shows them; grayed, with why, when no folder has folders inside) #}
-  {% if all_subjects %}<div class="btn-row small side-levels subject-levels" hidden>
-    <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="open" title="Expand all: Show the folders inside every folder in this list">{{ icon_label('lc-expand', 'Expand all') }}</button>
-    <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
-  </div>{% endif %}
-    {% for g, depth in all_subjects %}
-      {# a folder with folders inside has the fold arrow of the folder lists #}
-      {% set has_inner = not loop.last and all_subjects[loop.index][1] > depth %}
-      <div class="subject-row" data-depth="{{ depth }}" data-folder="{{ g.id }}"{% if depth > 1 %} style="padding-left:{{ (depth - 1) * 16 }}px"{% endif %}>
-        {% if has_inner %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ g.title }}" title="Show or hide the folders inside"></button>
-        {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
-        <label class="subject-check" title="{{ g.title }}"><input type="checkbox" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}> {{ icon('folder') }} <span class="box-title">{{ g.title }}</span></label>
-      </div>
-    {% endfor %}
+  {#- the standard picker, the same as every folder list and dialog (the owner, 2026-10-22: "when somebody
+      navigates into something folder-like, their eyes should be accustomed to the pattern"): filter,
+      Clear and count, Check all shown / Uncheck all, the side folder list beside a tab over a "Folder"
+      table (static/js/dialogfilter.js qgenFolderPick.build). The rows are drawn here, so the check
+      boxes work without the script too. #}
+  {% if all_subjects %}
+  <div class="field pick-people folder-pick subject-pick" data-folder-pick data-remember="folder-checks-{{ kind }}">
+    <div class="table-wrap pick-wrap"><table class="pick-table">
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Folder</th></tr></thead>
+      <tbody>
+      {% for g, depth in all_subjects %}
+        <tr data-box="folder:{{ g.id }}" data-depth="{{ depth }}" data-folder-name="{{ g.title }}" data-icon="folder">
+          <td class="tick-col"><input type="checkbox" id="subject-{{ g.id }}" name="subjects" value="{{ g.id }}"{% if g.id in ticked %} checked{% endif %}></td>
+          <td><label for="subject-{{ g.id }}"{% if depth > 1 %} style="padding-left:{{ (depth - 1) * 14 }}px"{% endif %}>{{ icon('folder') }}<span>{{ g.title }}</span></label></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
   </div>
-  {% if all_subjects %}<script src="{{ asset('js/folder_checks.js') }}"></script>{% endif %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var h = document.querySelector('.subject-pick');
+    if (h && window.qgenFolderPick && window.qgenFolderPick.build) window.qgenFolderPick.build(h);
+  });
+  </script>
+  {% endif %}
   <div class="subject-side">
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>

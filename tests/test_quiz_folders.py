@@ -31,7 +31,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assign(teach, w1, 'sam', 'kim')
     assign(teach, w2, 'sam')
     page = sam.get('/mypage').data.decode()
-    assert '+ New folder' in page and 'class="move-form"' not in page  # no folders yet: nothing to move to
+    assert 'class="side-card-head"' in page and 'aria-label="New folder"' in page and 'class="move-form"' not in page  # no folders yet: nothing to move to
     r = sam.post('/mypage/folders', data={'name': '  Unit   1 '}, follow_redirects=True)
     assert 'Folder “Unit 1” made.' in r.data.decode()
     unit = folder_id('Unit 1', 'sam')
