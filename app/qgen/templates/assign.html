@@ -43,15 +43,8 @@
   {# the people: one checklist, with the People folders down its side (data-style="list",
      static/js/folderfilter.js): All people, the folders, Uncategorized #}
   <div class="card pick-people-card">
-    {# who gets it, first and in plain sight: the students checked on the People page (or below),
-       each with a ✕ to leave them out; kept up to date as people are checked below #}
-    <div class="field recipients" id="recipients">
-      <span class="label">Assignee</span>
-      <div class="recipient-list" aria-live="polite">
-        {% for u in people if u.id in chosen %}<span class="person-chip" data-user="{{ u.id }}">{{ u.shown_name }}<button type="button" class="chip-x" aria-label="Leave {{ u.shown_name }} out" title="Leave {{ u.shown_name }} out">✕</button></span>
-        {% else %}<span class="muted small recipient-none">Nobody yet: check the students below.</span>{% endfor %}
-      </div>
-    </div>
+    {#- (no "Assignee" block above the students: the checked ones are in the Students card's Checked
+        folder, and both cards start at the top, level: the owner, 2026-10-22) #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# always open, like the Quiz card beside it #}
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
@@ -102,26 +95,6 @@
 
 {% block scripts %}
 <script>
-/* the two cards' headings and filter bars level, side by side (the owner, 2026-10-22): the Students
-   card has "Assignee" above its heading, so the Quiz card's heading moves down to match, and again
-   whenever the Assignee list grows or shrinks; on a phone, where the cards stack, nothing moves */
-(function () {
-  var a = document.querySelector('#pick-quiz > .pick-wrap-head'), b = document.querySelector('#pick-people > .pick-wrap-head');
-  if (!a || !b) return;
-  var ca = a.closest('.card'), cb = b.closest('.card');
-  function level() {
-    //(the card's own top padding grows, so its heading's line, icons and all, moves down as one)
-    ca.style.paddingTop = '';
-    if (Math.abs(ca.getBoundingClientRect().top - cb.getBoundingClientRect().top) > 4) return;
-    var d = b.getBoundingClientRect().top - a.getBoundingClientRect().top;
-    if (d > 0) ca.style.paddingTop = Math.round(parseFloat(getComputedStyle(ca).paddingTop) + d) + 'px';
-  }
-  level();
-  window.addEventListener('resize', level);
-  var r = document.getElementById('recipients');
-  if (r && window.ResizeObserver) new ResizeObserver(level).observe(r);
-})();
-
 /* the Quiz card: the quiz that's checked is always one on screen, so Assign never gives out a
  * quiz the teacher can't see. While a folder or the filter hides the teacher's choice, the first
  * quiz shown is checked (none if nothing is shown); once their choice is in sight again, it's
@@ -174,33 +147,7 @@
     all.disabled = !s.length;
     var picked = people.filter(function (i) { return i.checked; });
     count.textContent = picked.length + ' checked';
-    //"Assignee" at the top: who's checked, each with a ✕
-    var list = document.querySelector('#recipients .recipient-list');
-    if (!list) return;
-    list.textContent = '';
-    picked.forEach(function (i) {
-      var chip = document.createElement('span'), x = document.createElement('button');
-      chip.className = 'person-chip';
-      chip.dataset.user = i.dataset.user;
-      chip.textContent = i.dataset.name;
-      x.type = 'button'; x.className = 'chip-x'; x.textContent = '✕';
-      x.setAttribute('aria-label', 'Leave ' + i.dataset.name + ' out'); x.title = 'Leave ' + i.dataset.name + ' out';
-      chip.appendChild(x);
-      list.appendChild(chip);
-    });
-    if (!picked.length) {
-      var none = document.createElement('span');
-      none.className = 'muted small recipient-none';
-      none.textContent = 'Nobody yet: check the students below.';
-      list.appendChild(none);
-    }
   }
-  document.getElementById('recipients').addEventListener('click', function (e) {
-    var x = e.target.closest('.chip-x');
-    if (!x) return;
-    people.forEach(function (i) { if (i.dataset.user === x.closest('.person-chip').dataset.user) i.checked = false; });
-    refresh();
-  });
   people.forEach(function (i) { i.addEventListener('change', refresh); });
   all.addEventListener('click', function () {
     var on = all.dataset.on === '1';

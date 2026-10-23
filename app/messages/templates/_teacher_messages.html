@@ -5,7 +5,9 @@
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=current) }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
   {% if rows or staff.teachers %}
-    <form method="get" action="{{ url_for('messages.panel') }}" class="convo-pick">
+    {#- the view's drop-down stays, out of sight, for the "Showing…" dialog to set (static/js/messages.js);
+        without students to show it's the only way, and shows (the owner, 2026-10-22) #}
+    <form method="get" action="{{ url_for('messages.panel') }}" class="convo-pick"{% if rows %} hidden{% endif %}>
       <label for="msg-student" class="small muted">Showing</label>
       <select id="msg-student" name="student" data-current="{{ current }}">
         <optgroup label="Students">
@@ -29,7 +31,11 @@
     </form>
     {#- what the Messages page used to do: write to chosen students or a folder, and the pinned
         messages; each opens in a box of its own (static/js/messages.js) #}
+    {#- one line of small buttons: Showing…, Write to…, Pinned (the owner, 2026-10-22: Showing was a
+        big drop-down on a line of its own) #}
+    {% set showing_name = (other.shown_name if other else 'All teachers') if teachers_view else (student.shown_name if student else folder.name if folder else 'All students') %}
     {% if rows %}<div class="btn-row small panel-extras">
+      <button type="button" class="btn btn-secondary btn-sm showing-btn" data-panel-dialog="showing-dialog" title="Showing: {{ showing_name }}. Pick whose messages to see">{{ icon('lc-eye') }} <span class="showing-name">{{ showing_name }}</span></button>
       <button type="button" class="btn btn-secondary btn-sm" data-panel-dialog="write-to-dialog" title="Write to the students you check, or everyone in a folder">{{ icon('lc-message') }} Write to…</button>
       <button type="button" class="btn btn-secondary btn-sm" data-panel-dialog="pinned-dialog" title="The messages pinned to the top of students’ messages; unpin them here">{{ icon('pin') }} Pinned ({{ pinned|length }})</button>
     </div>{% endif %}
@@ -67,10 +73,12 @@
         <input type="hidden" name="to" value="all">
         <label for="reply" class="sr-only">Message to all students</label>
         <textarea id="reply" name="body" rows="2" maxlength="{{ max_len }}" required placeholder="Write to all students…"></textarea>
-        <label class="check small"><input type="checkbox" name="pin" value="1"> Pin it to the top of their messages</label>
-        <button class="btn" title="Send this to every student as an announcement (asks first)">Send to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}</button>
+        {#- the pin, a small icon beside a smaller Send; no note under it (the owner, 2026-10-22) #}
+        <div class="btn-row small reply-send">
+          <label class="pin-toggle" title="Pin it to the top of their messages"><input type="checkbox" name="pin" value="1" class="sr-only"><span aria-hidden="true">{{ icon('pin') }}</span><span class="sr-only">Pin it to the top of their messages</span></label>
+          <button class="btn btn-sm" title="Send this to every student as an announcement (asks first)">Send to all {{ rows|length }} student{{ '' if rows|length == 1 else 's' }}</button>
+        </div>
       </form>
-      <p class="muted small" style="margin:6px 0 0">To answer one student, press <strong>Reply</strong> on a message or pick him/her above.</p>
     {% else %}
       <div class="btn-row convo-bar">
         <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student’s messages together">← All messages</button>

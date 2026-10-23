@@ -107,8 +107,12 @@
           <li class="side-auto"><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
             <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
+            {#- (its badge while something is in it, like a folder's: gold for New, blue for In progress, the
+                owner 2026-10-22) -#}
+            {%- if av.count and av.badge %}<span class="side-flags"><span class="side-dot dot-{{ av.key }}" title="{{ av.badge_title or av.badge }}" role="img" aria-label="{{ av.badge }}">{{ av.count }}</span></span>{% endif %}
             {#- (a count like every other row; what it counts in its tooltip: the owner, 2026-10-17) -#}
-            <span class="side-count muted small"{% if av.badge_title and av.count %} title="{{ av.badge_title }}"{% endif %}>{{ av.count or 0 }}</span></div></li>
+            {#- (the badge or the number, never both saying the same thing: the owner, 2026-10-22) -#}
+            {%- if not (av.count and av.badge) %}<span class="side-count muted small">{{ av.count or 0 }}</span>{% endif %}</div></li>
         {% endfor %}
         {# what's in no folder; dropping something here takes it out of the folder it came from #}
         {% set no_folders = not fk.root.folders %}

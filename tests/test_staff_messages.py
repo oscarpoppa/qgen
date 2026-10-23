@@ -32,7 +32,9 @@ def test_all_teachers_or_chosen_ones(app_db):
     assert 'value="t{}"'.format(ids('lee')) in panel and 'value="t{}"'.format(ids('teach')) not in panel  # not yourself
     # to every teacher: all checked in the "every teacher" view
     view = teach.get('/messages/panel?student=teachers').data.decode()
-    assert view.count('name="to" value=') == 2 and view.count('" checked>') == 2 and 'Students never see' in view
+    #(counted in the Send to list only: the Showing… dialog has its own checked choice, the owner 2026-10-22)
+    sendto = view[view.index('class="send-to"'):view.index('</fieldset>', view.index('class="send-to"'))]
+    assert view.count('name="to" value=') == 2 and sendto.count('" checked>') == 2 and 'Students never see' in view
     assert send(teach, 'Staff meeting at 3', ['lee', 'ray']).get_json() == {'ok': True}
     everyone = StaffMessage.query.filter_by(body='Staff meeting at 3').one()
     assert everyone.to_all  # every other teacher checked = all of them

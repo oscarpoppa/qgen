@@ -7,7 +7,7 @@
 {# Pinned: what's pinned to the top of students' messages, each with Unpin #}
 <dialog class="ask panel-dialog" id="pinned-dialog" aria-labelledby="pinned-head">
   <p><strong id="pinned-head">Pinned</strong></p>
-  {% if not pinned %}<p class="muted small">Nothing is pinned yet. To pin a message, check “Pin it to the top of their messages” when you send it, or press the pin beside a message you’ve already sent.</p>
+  {% if not pinned %}<p class="muted small">Nothing is pinned yet. To pin a message, press the pin beside Send, or the pin beside a message you’ve already sent.</p>
   {% else %}
   {#- the standard dialog for listed things (the owner, 2026-10-21): the filter, a tab naming the list
       over a framed panel, the pinned messages as square rows under headings, each with Unpin #}
@@ -37,3 +37,34 @@
   {% endif %}
   <div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Close</button></div>
 </dialog>
+
+{# Showing…: whose messages the panel shows, picked like Write to… picks students (the owner,
+   2026-10-22; it was a drop-down): the filter, People's folders down the side, a table of the
+   choices with round buttons. Picking one sets the panel's hidden drop-down (static/js/messages.js). #}
+{% from "_pick.html" import pick_table %}
+{% set sh_students, sh_tree = message_students() %}
+{% set unread_of = {} %}{% for r in rows %}{% set _ = unread_of.update({r.student.id: r.unread}) %}{% endfor %}
+<dialog class="ask panel-dialog showing-dialog" id="showing-dialog" aria-labelledby="showing-head">
+  <p><strong id="showing-head">Showing</strong></p>
+  <div class="field pick-people" id="showing-pick">
+    {{ filter_bar('#showing-pick .folder-filter-list', 'name', 'names', items='tr[data-box]', id='showing-bar') }}
+    <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"
+         data-unit="student" data-units="students" data-remember="showing" data-tools-home="#showing-bar" data-style="list">
+      <script type="application/json" class="folder-filter-tree">{{ sh_tree|tojson }}</script>
+      <div class="folder-filter-list">
+        {% call pick_table('Whose messages') %}
+          {% macro choice(value, label, extra='') %}<tr data-box="user:{{ value }}"><td class="tick-col"><input type="radio" name="show-pick" value="{{ value }}" id="sh-{{ value }}"{% if value|string == current|string %} checked{% endif %}></td><td><label for="sh-{{ value }}">{{ label }}{{ extra }}</label></td></tr>{% endmacro %}
+          {{ choice('all', 'All messages (every student)') }}
+          {% for f in folders or [] %}{{ choice('f' ~ f.id, '  ' * (f.depth - 1) ~ f.name ~ ' (its students)', (' (' ~ f.unread ~ ' new)') if f.unread else '') }}{% endfor %}
+          {% for u in sh_students %}{{ choice(u.id, u.shown_name, (' (' ~ unread_of[u.id] ~ ' new)') if unread_of.get(u.id) else '') }}{% endfor %}
+          {% if staff.teachers %}
+            {{ choice('teachers', 'All messages (every teacher)', (' (' ~ staff.unread ~ ' new)') if staff.unread else '') }}
+            {% for t in staff.teachers %}{{ choice('t' ~ t.teacher.id, t.teacher.shown_name ~ (' (online)' if t.online else ''), (' (' ~ t.unread ~ ' new)') if t.unread else '') }}{% endfor %}
+          {% endif %}
+        {% endcall %}
+      </div>
+    </div>
+  </div>
+  <div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Cancel</button></div>
+</dialog>
+

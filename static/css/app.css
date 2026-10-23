@@ -2730,6 +2730,16 @@ details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
 /* the form's Folder question as the standard picker, the new-folder box under it (the owner, 2026-10-22) */
 .subject-cols > .subject-pick { flex: 1 1 100%; max-width: 820px; min-width: 0; }
 .subject-pick .pick-wrap { max-height: 360px; overflow-y: auto; }
+/* the Messages panel (the owner, 2026-10-22): Showing… on the line of small buttons, its name cut
+   short when long; the pin a small icon beside a smaller Send, lit when checked */
+.panel-extras .showing-btn { max-width: 14em; }
+.panel-extras .showing-btn .showing-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-send { justify-content: flex-end; align-items: center; margin-top: 6px; }
+.pin-toggle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: var(--r);
+  color: var(--muted); cursor: pointer; }
+.pin-toggle:hover { background: var(--surface-2, var(--bg)); }
+.pin-toggle:has(input:checked) { color: var(--accent); background: var(--accent-soft); }
+.pin-toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
 .subject-side { flex: 1 1 18rem; min-width: 0; max-width: 36rem; }
 .subject-side > .subject-new-inline { margin-top: 0; }
 .subject-side > .help:first-of-type { margin-top: 8px; }

@@ -655,6 +655,22 @@
         if (bar.dataset.filter) bar.dataset.filter = bar.dataset.filter.replace(/#(?!open-)/g, '#open-');
         if (window.qgenFilterBar) window.qgenFilterBar(bar);
       });
+      //(its folder list, Showing…'s, set up on the copy: the owner, 2026-10-22)
+      d.querySelectorAll('[data-folder-filter]').forEach(function (box) {
+        if (window.qgenFolderFilterSetUp) window.qgenFolderFilterSetUp(box);
+      });
+      //(Showing…: a choice picked switches the panel to it, through its drop-down, and closes the box)
+      //(by its round button, its name, or anywhere on its row: a row click checks it without a change
+      //event, so the click is listened for too)
+      function pickShown() {
+        var r = d.querySelector('input[name="show-pick"]:checked'), sel = document.getElementById('msg-student');
+        if (!r || !sel || r.value === sel.value) return;
+        sel.value = r.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        d.close();
+      }
+      d.addEventListener('change', function (ev) { if (ev.target.name === 'show-pick') pickShown(); });
+      d.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('tbody tr')) setTimeout(pickShown, 0); });
       d.addEventListener('close', function () { d.remove(); b.focus(); });
       d.showModal();
       return;
