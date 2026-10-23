@@ -4,7 +4,7 @@
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
 {% from "_results.html" import result_group with context %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {% block body_attrs %}{{ watch('users' if in_archive else 'people') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}

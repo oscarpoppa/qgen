@@ -50,15 +50,8 @@
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
     {# the same filter bar as the Quiz card's (filter, Clear, how many shown), then the checking on a
        line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
-    {#- (Check all shown / Uncheck all on the filter's line, so the folder tabs below start level
-        with the Quiz card's: the owner, 2026-10-22) #}
-    <div class="pick-top-line">
+    {#- (checking everyone shown: the check box in the list's heading row, static/js/checkall.js; the owner, 2026-10-22) #}
     {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='tr[data-box]', id='people-pick-bar') }}
-    <div class="btn-row small write-to-checks">
-      <button type="button" class="btn btn-secondary btn-sm btn-icon pick-all" title="Check all shown: Check everyone in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
-      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-pick="clear" title="Uncheck all: Uncheck everyone">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
-    </div>
-    </div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
@@ -71,7 +64,7 @@
         {% endcall %}
       </div>
     </div>
-    <div class="help">Only the people checked get the quiz. “Check all shown” checks everyone in the list (pick a folder first to check just them). Each student gets a different random version of the quiz.</div>
+    <div class="help">Only the people checked get the quiz. Each student gets a different random version of the quiz.</div>
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   </div>
@@ -133,44 +126,6 @@
     if (ir.top < lr.top || ir.bottom > lr.bottom) list.scrollTop += ir.top - lr.top - (list.clientHeight - li.offsetHeight) / 2;
   }
   window.addEventListener('load', function () { setTimeout(show, 50); });
-})();
-/* Students: one checklist beside its folder list (static/js/folderfilter.js). "Check all shown"
- * checks (or, when they all are, unchecks) everyone the list shows: the tab chosen, and the
- * names that match the filter box. "Assignee" at the top lists who's checked. */
-(function () {
-  var box = document.getElementById('pick-people');
-  if (!box) return;
-  var people = Array.prototype.slice.call(box.querySelectorAll('input[data-user]'));
-  var count = box.querySelector('.chosen-count'), all = box.querySelector('.pick-all');
-  function shown() { return people.filter(function (i) { var li = i.closest('tr'); return !li.hidden && !li.closest('[hidden]'); }); }
-  function refresh() {
-    var s = shown(), every = s.length > 0 && s.every(function (i) { return i.checked; });
-    all.dataset.on = every ? '0' : '1';
-    //(an icon: a checked box, an empty one once everything shown is checked: the owner, 2026-10-22)
-    var words = (every ? 'Uncheck' : 'Check') + ' all shown';
-    if (all.dataset.words !== words) {
-      all.dataset.words = words;
-      window.qgenIconButton(all, every ? 'lc-check-none' : 'lc-check-all', words, every ? 'Uncheck everyone in the list below' : 'Check everyone in the list below (the folder chosen, and the names that match)');
-    }
-    all.disabled = !s.length;
-    var picked = people.filter(function (i) { return i.checked; });
-    if (count) count.textContent = picked.length + ' checked';
-  }
-  people.forEach(function (i) { i.addEventListener('change', refresh); });
-  all.addEventListener('click', function () {
-    var on = all.dataset.on === '1';
-    shown().forEach(function (i) { i.checked = on; });
-    refresh();
-  });
-  box.querySelector('[data-pick="clear"]').addEventListener('click', function () {
-    people.forEach(function (i) { i.checked = false; });
-    refresh();
-  });
-  //what's shown changed (a folder chosen, a name filtered): what "Check all shown" means changes
-  box.addEventListener('qgen-shown', refresh);
-  box.addEventListener('qgen-filtered', function () { setTimeout(refresh, 0); });
-  box.addEventListener('click', function (e) { if (e.target.closest('.folder-tab')) setTimeout(refresh, 0); });
-  refresh();
 })();
 /* the time limit can't be longer than the time between opening and closing (checked
  * again when assigning): say the most it can be, and warn as soon as it's too long */

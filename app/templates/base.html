@@ -68,6 +68,7 @@
   {#- (in the head, not at the end: a folder page's list starts its tabs as soon as it begins to
       arrive, _folders.html; the owner, 2026-10-21) #}
   <script src="{{ asset('js/folderfilter.js') }}"></script>
+  <script src="{{ asset('js/checkall.js') }}"></script>
 </head>
 <body{% block body_attrs %}{% endblock %}>
 {{ icon_sprite() }}
@@ -357,7 +358,6 @@
   <script src="{{ asset('js/filebar.js') }}" defer></script>
   <script src="{{ asset('js/checked.js') }}" defer></script>
   <script src="{{ asset('js/masonry.js') }}" defer></script>
-  <script src="{{ asset('js/foldertabs.js') }}" defer></script>
   <script src="{{ asset('js/place.js') }}" defer></script>
   <script src="{{ asset('js/filter.js') }}" defer></script>
   <script src="{{ asset('js/sorttable.js') }}" defer></script>

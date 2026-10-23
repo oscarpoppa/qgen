@@ -20,11 +20,6 @@
         and checking on a line of its own, as in "Write to…" (the owner, 2026-10-18) #}
     <div class="field pick-people" id="assign-many-pick">
       {{ filter_bar('#assign-many-pick .folder-filter-list', 'person', 'people', items='tr[data-box]', id='assign-many-bar') }}
-      <div class="btn-row small write-to-checks">
-        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-people="all" title="Check all shown: Check everyone in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
-        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-people="none" title="Uncheck all: Uncheck everyone">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
-        <span class="muted small" data-people-count aria-live="polite" hidden>0 checked</span>
-      </div>
       <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="Everyone" data-main-label="Uncategorized"
            data-unit="person" data-units="people" data-remember="assign-many" data-tools-home="#assign-many-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ am_tree|tojson }}</script>

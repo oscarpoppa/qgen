@@ -8,15 +8,11 @@
   var folders = {};
   try { folders = JSON.parse(document.getElementById('person-folders').textContent); } catch (e) {}
   //(the quizzes: the standard picker, folder list and filter, static/js/folderfilter.js and
-  //filter.js; Check all shown / Uncheck all here: the owner, 2026-10-19)
+  //filter.js; the heading row's check box checks all shown, checkall.js: the owner, 2026-10-22)
   var items = Array.prototype.slice.call(dialog.querySelectorAll('#assign-people-pick tr[data-box]'));
   var boxes = items.map(function (li) { return li.querySelector('input'); });
-  var count = dialog.querySelector('[data-pick-count]');
   var error = dialog.querySelector('[data-pick-error]'), full = dialog.querySelector('[data-full-assign]');
   function shownNow(li) { return !li.hidden && !li.closest('[hidden]'); }
-  var all = dialog.querySelector('[data-quizzes="all"]'), none = dialog.querySelector('[data-quizzes="none"]');
-  if (all) all.addEventListener('click', function () { items.forEach(function (li, i) { if (shownNow(li)) boxes[i].checked = true; }); sync(); });
-  if (none) none.addEventListener('click', function () { boxes.forEach(function (b) { b.checked = false; }); sync(); });
 
   function nameOf(id) {
     var el = document.querySelector('input.pick-person[value="' + id + '"]');
@@ -24,9 +20,7 @@
     return card ? card.querySelector('.box-title').textContent.trim() : '';
   }
   function sync() {
-    var n = boxes.filter(function (b) { return b.checked; }).length;
-    count.textContent = n + ' checked';
-    if (n) error.hidden = true;
+    if (boxes.some(function (b) { return b.checked; })) error.hidden = true;
   }
   dialog.addEventListener('change', sync);
   dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });

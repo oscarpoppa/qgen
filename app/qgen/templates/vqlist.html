@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_archive_sections.html" import archive_switch %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -34,7 +34,7 @@
             </ul></details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
-          <td data-label="Problems" class="row-more">
+          <td data-label="Problems" class="row-more" data-sort="{{ '%04d' % entries|length }}">
             {# the problems fold away (a long quiz would make a tall row) #}
             <details class="box box-mini problem-list" data-box="quiz-items:{{ item.id }}"><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
             <ol class="small" style="margin:0;padding-left:1.2em">

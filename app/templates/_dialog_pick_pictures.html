@@ -10,11 +10,6 @@
   {% if pp_pictures %}
   <div class="field pick-people" id="pick-pictures-pick">
     {{ filter_bar('#pick-pictures-pick .folder-filter-list', 'picture', 'pictures', items='tr[data-box]', id='pick-pictures-bar') }}
-    <div class="btn-row small write-to-checks" data-many-only>
-      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-pics="all" title="Check all shown: Check every picture in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
-      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-pics="none" title="Uncheck all: Uncheck every picture">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
-      <span class="muted small" data-pics-count aria-live="polite" hidden>0 checked</span>
-    </div>
     <div class="folder-filter" data-folder-filter data-prefix="pic:" data-all-label="All pictures" data-main-label="Uncategorized"
          data-unit="picture" data-units="pictures" data-remember="pick-pictures" data-tools-home="#pick-pictures-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pp_tree|tojson }}</script>

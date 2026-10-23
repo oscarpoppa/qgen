@@ -677,36 +677,15 @@
     }
     var x = e.target.closest('dialog.panel-dialog [data-close]');
     if (x) { x.closest('dialog').close(); return; }
-    var set = e.target.closest('dialog.panel-dialog [data-check-set]');
-    if (set) {
-      set.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) { c.checked = set.dataset.checkSet === '1'; });
-      countChecked(set.closest('dialog'));
-      return;
-    }
-    //"Check all shown": the students the folder tab and the name filter leave in the list
-    var shown = e.target.closest('dialog.panel-dialog [data-check-shown]');
-    if (shown) {
-      shown.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) {
-        var li = c.closest('tr');
-        if (!li.hidden && !li.closest('[hidden]')) c.checked = true;
-      });
-      countChecked(shown.closest('dialog'));
-      return;
-    }
     var f = e.target.closest('dialog.panel-dialog [data-check-ids]');
     if (f) {
       var ids = JSON.parse(f.dataset.checkIds).map(String);
       f.closest('dialog').querySelectorAll('input[name=students]').forEach(function (c) { if (ids.indexOf(c.value) !== -1) c.checked = true; });
     }
   });
-  function countChecked(d) {
-    var c = d && d.querySelector('[data-check-count]');
-    if (c) c.textContent = d.querySelectorAll('input[name=students]:checked').length + ' checked';
-  }
   document.addEventListener('change', function (e) {
     if (e.target.name !== 'students') return;
     var d = e.target.closest('dialog.panel-dialog');
-    countChecked(d);
     var said = d && d.querySelector('[data-none-checked]');
     if (said) said.hidden = true;
   });

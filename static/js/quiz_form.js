@@ -206,22 +206,6 @@
 
   if (shuffle) shuffle.addEventListener('change', render);
 
-  //Check all shown (the rows the folder and the filter leave in sight) / Uncheck all
-  var checks = document.getElementById('problem-checks');
-  //(on the filter's line, after "N problems": the owner, 2026-10-22)
-  var fbar = document.getElementById('problem-filter-bar'), fcount = fbar && fbar.querySelector('[data-filter-count]');
-  if (checks && fcount) fcount.after(checks);
-  if (checks) checks.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-prob-check]');
-    if (!b) return;
-    document.querySelectorAll('#all-problems input.pick').forEach(function (c) {
-      var on = b.dataset.probCheck === 'all' ? (c.checked || c.closest('tr').getClientRects().length > 0) : false;
-      if (c.checked === on) return;
-      c.checked = on;
-      c.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  });
-
   Object.keys(boxes).forEach(function (id) {
     boxes[id].forEach(function (box) {
       box.addEventListener('change', function () {

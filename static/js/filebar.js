@@ -344,8 +344,9 @@
   heads.forEach(function (th) {
     var c = document.createElement('input');
     c.type = 'checkbox'; c.className = 'check-all';
-    th.textContent = '';
-    th.appendChild(c);
+    //(only its hidden words go: the list's Expand all / Collapse all may be in this cell already)
+    th.querySelectorAll(':scope > .sr-only').forEach(function (el) { el.remove(); });
+    th.insertBefore(c, th.firstChild);
     c.addEventListener('change', function () {
       var list = ticks().filter(shown);
       var every = list.length && list.every(function (t) { return t.checked; });

@@ -229,8 +229,8 @@ main.container.container-wide { max-width: none; }
 .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
 .empty .big { font-size: var(--fs-3xl); display: block; margin-bottom: 6px; }
 /* inside a list (a folder, a folder page, a box): one short line, not a page-sized message */
-:is(.folder-main, .sub-body, .box-body, .dash-card) .empty { padding: 10px 14px; text-align: left; }
-:is(.folder-main, .sub-body, .box-body, .dash-card) .empty .big { display: inline; font-size: var(--fs-lg); margin: 0 6px 0 0; }
+:is(.folder-main, .box-body, .dash-card) .empty { padding: 10px 14px; text-align: left; }
+:is(.folder-main, .box-body, .dash-card) .empty .big { display: inline; font-size: var(--fs-lg); margin: 0 6px 0 0; }
 /* the site's icons (app/icons.py): line drawings in the text's own color */
 svg.ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: 0 0 auto;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -959,26 +959,18 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 /* a folder inside the one being looked at: a box that opens to its own folders and quizzes */
 .sub-box { border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 14px; margin-bottom: 14px;
   background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.sub-head { display: flex; gap: 8px; align-items: center; list-style: none; cursor: pointer; min-width: 0; border-radius: var(--r); }
-.sub-head::-webkit-details-marker { display: none; }
-.sub-head h3 { margin: 0; font-size: var(--fs-lg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sub-head .fold { display: inline-block; width: 0; height: 0; border-style: solid; flex: 0 0 auto;
-  border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
-.sub-box[open] > .sub-head .fold { transform: rotate(90deg); }
-.sub-body { margin-top: 10px; }
 @media (max-width: 600px) { .sub-box { padding: 8px; } }
 /* folders on top, what's in them below (static/js/foldertabs.js): side-by-side folder boxes
    become one row of folder buttons; the open one's contents show under the whole row */
 .folder-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; padding: 8px 10px;
   border-radius: var(--r-lg); background: var(--surface-2); border: 1px dashed var(--field-border); }
-.folder-tabs-label { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; margin-right: 2px; }
 /* where a folder's own things start, after its folders */
 .folder-items-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0 8px; padding-top: 10px; border-top: 2px solid var(--border); }
 .folder-items-title { margin: 0; font-size: var(--fs-md); color: var(--muted); }
 .folder-items-head .level-buttons { margin-left: auto; display: inline-flex; gap: 6px; }
 .folder-items-head .level-buttons[hidden] { display: none; }
 /* (it stays while the folders show as boxes too: the line between them and the folder's own things) */
-.folder-tabs.tabs-off { display: none; }
+
 /* the Dashboard (static/js/dashchips.js): folded boxes are a row of buttons above the open ones */
 .dash-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; padding: 8px 10px;
   border-radius: var(--r-lg); background: var(--surface-2); border: 1px dashed var(--field-border); }
@@ -1005,13 +997,9 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 .folder-tab:hover { border-color: var(--accent); }
 .folder-tab[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--accent); }
 .folder-tab:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.folder-tabs:not(.tabs-off) ~ details.tab-box > summary { display: none; }
-.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }
 /* the open folder's contents: no box around them (that took width), just a line down the left
    in the open button's color, so it's clear where they end */
-.folder-tabs:not(.tabs-off) ~ details.tab-box[open] { border: 0; border-left: 3px solid var(--accent); border-radius: 0;
-  padding: 2px 0 2px 12px; margin: 0 0 4px 2px; background: none; }
-.folder-tabs:not(.tabs-off) ~ details.tab-box > .sub-body { margin-top: 0; }
+
 .quiz-folder-label { margin: -4px 0 6px; }
 .quiz-folder-label a { color: var(--muted); text-decoration: none; }
 .quiz-folder-label a:hover { text-decoration: underline; }
@@ -1069,7 +1057,7 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 .dragging { opacity: .5; }
 .folder-dragging .folder-side { border-color: var(--accent); }
 .drop-over { outline: 2px dashed var(--accent); outline-offset: 1px; background: var(--accent-soft); }
-@media (prefers-reduced-motion: reduce) { .side-fold::before, .sub-head .fold { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .side-fold::before { transition: none; } }
 /* phones and narrow windows: the folder list sits above the quizzes and folds away */
 @media (max-width: 760px) {
   .folders-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -1425,7 +1413,6 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
   html.dock-notices body, html.dock-messages body { padding-right: 0 !important; }
   .topbar, .dock, .toast, dialog, .no-print, ul.alerts, .archived-banner .btn-row, .calc, .skip-link { display: none !important; }
   /* folder buttons (foldertabs.js): on paper, plain headings */
-  .folder-tabs { display: none !important; } details.tab-box > summary { display: flex !important; }
   .dash-chips { display: none !important; } .dash-grid > details.dash-folded { display: block !important; }
   main.container { max-width: none; padding: 0; margin: 0; }
   .card { box-shadow: none; }
@@ -1582,7 +1569,6 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
 html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-select: none !important; }
 /* My quizzes: how many new (not started) quizzes a folder holds */
 .side-new-badge { flex: 0 0 auto; font-size: var(--fs-xs); padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
-.sub-head .side-new-badge { margin-left: 6px; }
 
 /* the Archive: its Quiz column is just a title; where the row of buttons wouldn't fit beside
    the rest (yet the list isn't cards), they make a column instead, all one width */
@@ -1631,7 +1617,6 @@ td.actions > :first-child, td.actions > :first-child .btn { margin-left: 0; }
 /* boxes that open inside a list (a folder's box, a student's or quiz's results, a month in the
    Archive, Done on My quizzes): a long one scrolls inside itself instead of stretching the page.
    Boxes inside such a box don't scroll again (one scroll at a time). */
-#folder-items > details.sub-box > .sub-body,
 details.item-box > .box-body,
 details.result-folder > .result-folder-body,
 details.month-box > .table-wrap,
@@ -1644,7 +1629,7 @@ details.sub-box details.month-box > .table-wrap,
 details.item-box details.month-box > .table-wrap,
 .student-single details.item-box > .box-body { max-height: none; overflow-y: visible; padding-right: 0; }
 @media print {
-  #folder-items > details.sub-box > .sub-body, details.item-box > .box-body, details.result-folder > .result-folder-body,
+  details.item-box > .box-body, details.result-folder > .result-folder-body,
   details.month-box > .table-wrap, details.done-box > .quiz-grid { max-height: none; overflow: visible; }
 }
 /* more lists that can keep growing scroll inside themselves: Dashboard and Home boxes, the
@@ -1671,7 +1656,7 @@ details.subject-box > .box-body { max-height: min(55vh, 560px); overflow-y: auto
 @media print { .grip-bar { display: none; } }
 /* room between a scroll area's scroll bar and the buttons at the right end of its rows */
 .dash-card .dash-list, details.grading-group > .table-wrap, .pick-list, details.subject-box > .box-body,
-.order-list, #folder-items > details.sub-box > .sub-body, details.item-box > .box-body,
+.order-list, details.item-box > .box-body,
 details.result-folder > .result-folder-body, details.month-box > .table-wrap, details.done-box > .quiz-grid { padding-right: 12px; }
 .student-awards > .box-body, .subject-boxes > details.item-box > .box-body,
 .student-single details.subject-box > .box-body { padding-right: 0; }
@@ -1685,7 +1670,6 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 
 /* My quizzes: the page scrolls, not the list (quiz boxes in a grid, scrolled inside a scrolled
    page, were clumsy and got cut off at the list's edge); only a quiz box's tries keep their own */
-.my-quizzes #folder-items > details.sub-box > .sub-body,
 .my-quizzes details.done-box > .quiz-grid { max-height: none; overflow-y: visible; padding-right: 0; }
 
 /* a quiet line between a page's sections (My quizzes: Just finished | the folders, and
@@ -1734,8 +1718,7 @@ details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
 /* one scroll at a time: on a folder page (whose list scrolls with the page) and in the messages
    list, a folder, a student's or quiz's results, a month or Done just grows when opened, on
    phones too, never a scroll area inside the page */
-.folder-main > #folder-items :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid),
-.folder-main > .list-scroll :is(.sub-body, .box-body, .result-folder-body, .table-wrap, .quiz-grid) { max-height: none !important; }
+.box-body, .result-folder-body, .table-wrap, .quiz-grid), .box-body, .result-folder-body, .table-wrap, .quiz-grid) { max-height: none !important; }
 
 /* back where you were after a button reloaded the page: what happened floats at the top of
    the window for a few seconds (static/js/place.js) */
@@ -1791,7 +1774,6 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .side-dot.dot-started { background: var(--accent); }
 .side-dot.dot-due { background: var(--bad); }
 .side-dot.dot-unread { background: var(--bad); }
-.sub-head .side-flags { margin-left: 6px; }
 
 /* Paper only pages printed for each student (print_paper.html): one per sheet, name on top */
 .paper-sheet { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; margin-bottom: 16px; }
@@ -2064,7 +2046,7 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
 summary > .head-pair { display: contents; }
 summary > .head-pair > .level-buttons { margin-left: 4px; }
 summary > .head-pair > .head-tools { margin-left: auto; }
-@media (max-width: 640px) { .sub-head:has(> .head-pair) { flex-wrap: wrap; row-gap: 6px; } }
+
 
 /* a student page: every quiz box's table has the same columns (see below), so the buttons of quiz boxes at one folder
    level line up under one another */
@@ -2109,8 +2091,7 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 @media print { .link-tip { display: none; } }
 /* a row of folder buttons: the open folder's Expand all / Collapse all at the row's right end */
 /* (the open folder's Expand all / Collapse all right after its tab, not at the row's end: the owner, 2026-10-19) */
-.folder-tabs .tab-pairs { display: inline-flex; flex-wrap: wrap; align-self: center; margin: 0 4px; }
-.folder-tabs .tab-pairs:not(:has(.tab-pair:not([hidden]))) { display: none; }
+
 .folder-tabs .tab-pair[hidden] { display: none; }
 
 /* Assign: who gets the quiz, at the top, one chip per student (✕ leaves them out); the student
@@ -2145,10 +2126,7 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 @media (max-width: 640px) { .wide-only { display: none; } }
 /* a folder heading's buttons on a phone: a line of their own under the name, wrapping inside the
    box rather than pushing the page wider */
-@media (max-width: 640px) {
-  .sub-head > .head-pair { flex: 1 1 100%; min-width: 0; justify-content: flex-start; }
-  .sub-head > .head-pair .level-buttons, .sub-head > .head-pair .head-tools { flex-wrap: wrap; }
-}
+
 /* the Dashboard's rows: the student | the quiz (its whole name, wrapping if need be) with its
    state and time under it | the row's button. The rows share these columns (subgrid), so names,
    quizzes and buttons line up from row to row */
@@ -2177,7 +2155,6 @@ select.add-select option { text-align: left; font-weight: 400; }
    sits just under it, indented; the chosen folder's own buttons at the end of its row */
 .folder-filter-rows { display: grid; gap: 6px; margin: 0 0 12px; }
 .folder-filter-rows .folder-tabs { margin: 0; }
-.folder-tabs-inner { margin-left: 18px !important; border-style: dotted; }
 .folder-filter-tools-now { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--border); }
 .folder-tab:disabled { opacity: .55; cursor: not-allowed; }
 .folder-filter table[hidden], .folder-filter-empty[hidden] { display: none; }
@@ -2224,7 +2201,6 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 .folder-filter-rows > .folder-tabs:first-child { background: none; border: 0; border-radius: 0; box-shadow: inset 0 -1px 0 var(--tab-edge);
   padding: 0 0 0 4px; gap: 4px; align-items: flex-end; flex-wrap: wrap; }
 .folder-filter-rows > .folder-tabs:first-child > * { flex: 0 0 auto; }
-.folder-filter-rows > .folder-tabs:first-child > .folder-tabs-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab { border: 1px solid var(--border); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
   background: var(--bg); color: var(--muted); margin-bottom: 1px; padding: 8px 14px 7px; box-shadow: none; min-height: 40px; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab svg.ico { color: var(--muted); }
@@ -2239,21 +2215,10 @@ tr:has(> td > details.row-fold:not([open])) > td.row-more > * { display: none; }
 /* the open tab's Expand all / Collapse all, right after it (the owner, 2026-10-19) */
 .folder-filter-rows .tab-level-pair { flex: 0 0 auto; align-self: center; margin: 0 4px; padding-bottom: 4px; }
 /* the panel: the chosen folder's own folders (a smaller row of tabs on a line), then the list */
-.folder-filter-rows > .folder-tabs-inner { margin: 0 !important; border: 1px solid var(--tab-edge); border-top: 0; border-bottom: 0; border-radius: 0;
-  background: var(--tab-open); padding: 10px 12px 0; gap: 4px; align-items: flex-end;
-  box-shadow: inset 0 -1px 0 var(--tab-edge); flex-wrap: wrap; }
-.folder-filter-rows > .folder-tabs-inner > * { flex: 0 0 auto; }
+
 /* (like the top row, the owner 2026-10-13: the line under each row of a folder's folders runs under
    its closed tabs, which stop just above it; the open one sits over it, joined to what it shows) */
-.folder-filter-rows > .folder-tabs-inner > .folder-tab { min-height: 32px; padding: 4px 10px; border-radius: var(--r) var(--r) 0 0; border: 1px solid var(--border);
-  border-bottom: 0; background: var(--surface); color: var(--muted); box-shadow: none; font-size: var(--fs-sm); margin-bottom: 1px; }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab:hover { color: var(--text); border-color: var(--tab-edge); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { background: var(--tab-open); border-color: var(--tab-edge); border-top: 3px solid var(--accent);
-  color: var(--text); font-weight: 600; margin-bottom: 0; padding-bottom: 5px; position: relative; z-index: 1; }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] svg.ico { color: var(--accent); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] .box-count { background: var(--accent-soft); color: var(--accent); }
-.folder-filter-rows > .folder-tabs-inner > .folder-tabs-label { align-self: center; padding-bottom: 6px; }
-.folder-filter-rows > .folder-tabs-inner > .folder-filter-tools-now { margin-left: auto; align-self: center; border-left: 0; padding-bottom: 6px; }
+
 .folder-filter .folder-filter-list, .folder-filter .folder-filter-empty { margin: 0; border: 1px solid var(--tab-edge); border-top: 0;
   border-radius: 0 0 var(--r-lg) var(--r-lg); background: var(--tab-open); padding: 12px; }
 .folder-filter .folder-filter-list > .table-wrap { margin: 0; }
@@ -2351,9 +2316,7 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
 .folder-tab.is-empty[aria-pressed="true"] .box-title { color: inherit; }
 /* ...except in an empty folder's own row of tabs ("All 0", "Unsorted 0"): all of it grayed, the
    chosen tab too (the owner, 2026-10-14) */
-.folder-tabs-empty > .folder-tab .box-title, .folder-tabs-empty > .folder-tab[aria-pressed="true"] .box-title { color: var(--muted); font-weight: 500; }
-.folder-tabs-empty > .folder-tab svg.ico, .folder-tabs-empty > .folder-tab .box-count,
-.folder-tabs-empty > .folder-tab[aria-pressed="true"] svg.ico, .folder-tabs-empty > .folder-tab[aria-pressed="true"] .box-count { opacity: .55; }
+
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count { opacity: 1; }
 .side-row.is-empty:not(.current) .side-link { color: var(--muted); font-weight: 500; }  /* (gray, a little heavier: the owner, 2026-10-14) */
 .side-row.is-empty:not(.current) .side-link svg.ico, .side-row.is-empty:not(.current) .side-count { opacity: .55; }
@@ -2486,11 +2449,7 @@ table:not(.has-open-row) th.row-more, table:not(.has-open-row) td.row-more { dis
 .folder-filter-side > .folder-side-list { min-width: 0; width: 100%; flex: 1 1 auto; }
 /* a folder list down the side AND the folder tabs over the list (data-tabs: a student's page),
    laid out like a folder page: the list on the left, the tabs and what they show on the right */
-.folder-filter[data-style="list"][data-tabs] { grid-template-rows: auto 1fr; row-gap: 0; }
-.folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-column: 1; grid-row: 1 / span 2; }
-.folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs { grid-column: 2; grid-row: 1; min-width: 0; }
-.folder-filter[data-style="list"][data-tabs] > .folder-filter-list,
-.folder-filter[data-style="list"][data-tabs] > .folder-filter-empty { grid-column: 2; grid-row: 2; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+
 /* (a side list with no tabs: one tab over the list naming the folder shown, laid out the same:
    the owner, 2026-10-19) */
 .folder-filter[data-style="list"].has-onetab { grid-template-rows: auto 1fr; row-gap: 0; }
@@ -2512,28 +2471,21 @@ dialog .folder-filter[data-style="list"] > .folder-filter-side { max-height: cal
   .folder-filter[data-style="list"].has-onetab > .folder-filter-onetab, .folder-filter[data-style="list"].has-onetab > .folder-filter-list { grid-column: 1; grid-row: auto; }
   .folder-filter[data-style="list"] > .folder-filter-list, .folder-filter[data-style="list"] > .folder-filter-side { max-height: none; overflow: visible; }
 }
-@media (max-width: 640px) {
-  .folder-filter[data-style="list"][data-tabs] > .folder-filter-side { grid-row: auto; }
-  .folder-filter[data-style="list"][data-tabs] > .folder-filter-tabs, .folder-filter[data-style="list"][data-tabs] > .folder-filter-list { grid-column: 1; grid-row: auto; }
-}
+
 
 /* an empty folder open: its tab and panel turn a quiet gray instead of the open folder's blue,
    and the picked inner tab's blue line goes gray too, so nothing there catches the eye
    (static/js/folderfilter.js .folder-open-empty; the owner, 2026-10-14) */
 .folder-filter.folder-open-empty { --tab-open: color-mix(in srgb, var(--muted) 8%, var(--surface));
   --tab-edge: color-mix(in srgb, var(--muted) 40%, var(--border)); }
-.folder-filter.folder-open-empty .folder-filter-rows > .folder-tabs-inner > .folder-tab[aria-pressed="true"] { border-top-color: var(--muted); }
 .folder-filter.folder-open-empty .folder-filter-empty { color: var(--muted); }
 /* an empty folder's panel as tall as it would be with one thing in it (its heading row and one row),
    not a thin strip, on every folder list and picker (the owner, 2026-10-22) */
 .folder-filter-empty, .folder-main p.card.empty { min-height: 104px; box-sizing: border-box; }
-.folder-filter.folder-open-empty .folder-tabs-inner .box-count { color: var(--muted); }
 /* ...and its row of inner tabs keeps its buttons (Folder options...) (the owner, 2026-10-14) */
 /* (an empty folder with folders inside: just those folders' tabs, grayed, like the folder list;
    no All or Unsorted: the owner, 2026-10-14) */
-.folder-filter-rows > .folder-tabs-empty > .folder-tab-all, .folder-filter-rows > .folder-tabs-empty > .folder-tab-self,
-.folder-filter-rows > .folder-tabs-plain > .folder-tab:not(.folder-tab-name) { display: none; }
-.folder-filter-rows > .folder-tabs-plain > .folder-tab-name { cursor: default; }
+
 /* icon buttons (row and card buttons, the folder tools: the owner, 2026-10-14): just the
    drawing, no button around it (no border, no fill: "an icon" always means this, the owner);
    its words in the tooltip and for screen readers (icon_label() in app/icons.py,
@@ -2588,9 +2540,7 @@ fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover high
 
 /* tabs wrapped on to several lines: a line under each but the last, like the one under the
    bottom row (folderfilter.js lineRules; the owner, 2026-10-15) */
-.folder-filter-rows > .folder-tabs { position: relative; }
-.folder-filter-rows > .folder-tabs > .tab-line-rule { position: absolute; left: 0; right: 0; height: 1px; pointer-events: none;
-  background: var(--border); }  /* (the same line as the divider above the tabs: the owner, 2026-10-15) */
+.folder-filter-rows > .folder-tabs { position: relative; }  /* (the same line as the divider above the tabs: the owner, 2026-10-15) */
 /* the folder tabs' edges a little easier to see (the owner, 2026-10-15); the open tab keeps its own */
 .folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]) { border-color: color-mix(in srgb, var(--muted) 65%, var(--border)); }
 /* empty folders: a dimmer gray than other muted text, in the folder lists and on the tabs, so
@@ -2601,7 +2551,7 @@ fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover high
 @media (prefers-color-scheme: dark) { :root { --empty-tab-bg: color-mix(in srgb, var(--bg) 58%, #000); } }
 .side-row.is-empty:not(.current) .side-link, .side-row.is-empty:not(.current) .side-count,
 .folder-side-list > .side-row.is-empty:not(:has(> [aria-pressed="true"])) > .folder-tab,
-.folder-tab.is-empty .box-title, .folder-tabs-empty > .folder-tab .box-title { color: var(--empty-folder); }
+.folder-tab.is-empty .box-title { color: var(--empty-folder); }
 /* an empty folder's tab itself a little darker than the others (the owner, 2026-10-15) */
 .folder-filter-rows > .folder-tabs > .folder-tab.is-empty:not([aria-pressed="true"]) { background: var(--empty-tab-bg); }
 /* folders with something in them: their tab's name a little easier to read than the gray it was
@@ -2610,7 +2560,7 @@ fieldset.view-only label:has(input) { pointer-events: none; }  /* (no hover high
 .folder-filter-rows > .folder-tabs > .folder-tab:not(.is-empty):not([aria-pressed="true"]) .box-title { color: color-mix(in srgb, var(--text) 75%, var(--muted)); }
 
 /* (the line break before the open tab, so it starts the bottom line: folderfilter.js) */
-.folder-filter-rows > .folder-tabs > .tab-break { flex-basis: 100%; height: 0; margin: 0; }
+
 /* the folder's heading between the filter and the checked bar (folderfilter.js; the owner,
    2026-10-15) */
 .folder-tools-bar > .folder-title-row.in-tools-bar { flex: 1 1 auto; justify-content: center; align-self: center; margin: 0; gap: 8px 12px; }
@@ -2785,7 +2735,7 @@ td.actions { padding-top: 4px; padding-bottom: 4px; }
 .order-item { padding: 8px 12px; }
 #quiz-contents .order-item { gap: 4px 12px; }
 .folder-tab { gap: 8px; }
-.folder-filter-rows > .folder-tabs-inner > .folder-tab, .folder-side-list > .side-row > .folder-tab { padding-top: 4px; padding-bottom: 4px; }
+.folder-side-list > .side-row > .folder-tab { padding-top: 4px; padding-bottom: 4px; }
 .dash-head { margin-bottom: 8px; }
 .folder-tools-bar { padding-bottom: 8px; margin-bottom: 12px; }
 .folder-tools-bar .file-bar { column-gap: 4px; }
@@ -2874,15 +2824,18 @@ td.attempt-buttons { text-align: right; }
    filter over the tabs on the right (templates ulist.html; the owner, 2026-10-17) */
 /* (left: the title, the folder list, the Awards button; right: the filter row with the page's
    buttons, the tabs, the list) */
-.student-folders > .folder-filter[data-style="list"][data-tabs] { grid-template-columns: minmax(170px, 260px) minmax(0, 1fr);
+.student-folders > .folder-filter[data-style="list"].has-onetab { grid-template-columns: minmax(170px, 260px) minmax(0, 1fr);
   grid-template-rows: auto auto auto 1fr; column-gap: 16px; row-gap: 0; }
-.student-folders > .folder-filter[data-tabs] > .student-head { grid-column: 1; grid-row: 1; margin: 0 0 8px; }
-.student-folders > .folder-filter[data-tabs] > .folder-filter-side { grid-column: 1; grid-row: 2 / span 2; align-self: start; }
-.student-folders > .folder-filter[data-tabs] > .student-awards-spot { grid-column: 1; grid-row: 4; align-self: start; margin-top: 8px; }
-.student-folders > .folder-filter[data-tabs] > .student-filter { grid-column: 2; grid-row: 1; }
-.student-folders > .folder-filter[data-tabs] > .folder-filter-tabs { grid-column: 2; grid-row: 2; }
-.student-folders > .folder-filter[data-tabs] > .folder-filter-list,
-.student-folders > .folder-filter[data-tabs] > .folder-filter-empty { grid-column: 2; grid-row: 3 / span 2; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .student-head { grid-column: 1; grid-row: 1; margin: 0 0 8px; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .side-list-head { grid-column: 1; grid-row: 2; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 3; align-self: start; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .student-awards-spot { grid-column: 1; grid-row: 4; align-self: start; margin-top: 8px; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .student-filter { grid-column: 2; grid-row: 1; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 2; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-list,
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 3 / span 2; }
+/* (an empty row of tabs a list-style folder list makes for nothing: never shown) */
+
 .student-awards-spot > .awards-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
 /* a card popped over the page from its button (static/js/popcard.js), with the same strong
    edge as Grading's oldest waiting */
@@ -2891,8 +2844,8 @@ td.attempt-buttons { text-align: right; }
 .pop-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
 .pop-card-head { font-size: var(--fs-md); margin: 0; }
 @media (max-width: 640px) {
-  .student-folders > .folder-filter[data-style="list"][data-tabs] { grid-template-columns: minmax(0, 1fr); }
-  .student-folders > .folder-filter[data-tabs] > * { grid-column: 1 !important; grid-row: auto !important; position: static; }
+  .student-folders > .folder-filter[data-style="list"].has-onetab { grid-template-columns: minmax(0, 1fr); }
+  .student-folders > .folder-filter[data-style="list"].has-onetab > * { grid-column: 1 !important; grid-row: auto !important; position: static; }
 }
 /* My quizzes as rows (the owner, 2026-10-17): the row's name folds open; no card inside a row;
    a new or started quiz has its colored edge down the row's left */
@@ -2961,12 +2914,10 @@ dialog.write-to-dialog { width: min(820px, calc(100vw - 32px)); }
 dialog.write-to-dialog form > p { margin: 0 0 8px; }
 dialog.write-to-dialog .pick-people { margin: 0; }
 dialog.write-to-dialog .filter-bar { margin: 0 0 8px; }
-.write-to-checks { margin: 0 0 8px; align-items: center; justify-content: flex-start; gap: 8px; }
 dialog.write-to-dialog .folder-filter { margin: 0 0 8px; }
 dialog.write-to-dialog label[for="wt-body"] { margin: 0 0 4px !important; }
 dialog.write-to-dialog .check.field { margin: 8px 0; }
 dialog.ask.write-to-dialog { width: min(820px, calc(100vw - 32px)); max-width: min(820px, calc(100vw - 32px)); }
-dialog.ask.write-to-dialog .write-to-checks { justify-content: flex-start; }
 dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 /* a quiz taken on its scanned page (templates quiz_take.html, static/js/pagequiz.js; the owner,
    2026-10-18). The page is always white paper, in dark mode too, since it is a picture of paper. */
@@ -3034,7 +2985,6 @@ dialog.ask.pick-dialog { width: min(820px, calc(100vw - 32px)); max-width: min(8
 dialog.pick-dialog .pick-people { margin: 0; }
 dialog.pick-dialog .filter-bar { margin: 0 0 8px; }
 dialog.pick-dialog .folder-filter { margin: 0 0 8px; }
-dialog.ask.pick-dialog .write-to-checks { justify-content: flex-start; }
 /* (one scroll bar: the list of names scrolls, not the box around it) */
 dialog.pick-dialog .pick-people .folder-filter-list > .pick-list, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-list,
 dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-to-dialog .pick-people .folder-filter-list > .pick-wrap { max-height: min(38vh, 22rem); overflow-y: auto; }
@@ -3140,7 +3090,7 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 .topbar .brand:hover { color: var(--accent); filter: brightness(1.15); }
 .topbar .trail-nav { margin-right: 8px; }
 /* (the open tab moved down to the next line with its Expand all / Collapse all, so they stay together) */
-.folder-tabs > .tab-pair-break { flex-basis: 100%; height: 0; margin: 0; padding: 0; border: 0; }
+
 /* Pictures and Other files as rows in folders: a small thumbnail before each name (the owner, 2026-10-19) */
 .upload-name { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .upload-thumb { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
@@ -3153,10 +3103,7 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
    to what it shows; the other folders are picked from the Folders fold above (the owner, 2026-10-19:
    a wall of tabs pushed the list half a screen down, and the open tab wasn't over its folder) */
 @media (max-width: 640px) {
-  .folder-main .folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]),
-  .folder-main .folder-filter-rows > .folder-tabs > .folder-tabs-label,
-  .folder-main .folder-filter-rows > .folder-tabs > .tab-break,
-  .folder-main .folder-filter-rows > .folder-tabs > .tab-line-rule { display: none; }
+  .folder-main .folder-filter-rows > .folder-tabs > .folder-tab:not([aria-pressed="true"]) { display: none; }
 }
 /* phones: a folded row is its check box and title only, one line; its folders, date and icons show
    when it's opened (a folded Problems row was a 295px card, 196 of them 58,000px: the owner,
@@ -3420,14 +3367,35 @@ dialog.who-dialog .pick-table td { padding: 6px 10px; }
 .subject-pick > .folder-filter { flex: 1 1 100%; min-width: 0; }
 /* in the Checked folder the folders stand alone: no indents (the owner, 2026-10-22) */
 .folder-filter[data-chosen="checked"] .pick-table td label { padding-left: 0 !important; }
-/* the Assign page's Students card: the filter, then Check all shown / Uncheck all on the same line */
-.pick-top-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.pick-top-line > .filter-bar, .pick-top-line > .write-to-checks { margin: 0; flex: 0 1 auto; width: auto; }
-.pick-people > .pick-top-line { margin: 0 0 8px; }  /* (its top and bottom level with the Quiz card's filter line) */
 .pick-people > .label.pick-wrap-head { margin-bottom: 8px; }
-/* (a picker's Expand all / Collapse all on its filter line, beside the check icons: the owner, 2026-10-22) */
-.side-levels.bar-levels { margin: 0; align-self: center; }
 /* the one tab over a list: room for a folder's whole path, up to two-thirds of the way across;
    a longer one loses its start, not its end (folderfilter.js fitName; the owner, 2026-10-22) */
 .folder-filter-onetab .folder-tab-name { max-width: 66%; }
 .folder-filter-onetab .folder-tab-name .box-title { max-width: none; text-overflow: clip; }
+/* a picker's folder list: its heading "Folders" with Expand all / Collapse all, level with the tab
+   over the list; the list itself starts level with the list's top (the owner, 2026-10-22) */
+.folder-filter[data-style="list"] > .side-list-head { grid-column: 1; grid-row: 1; align-self: end; display: flex; align-items: center; gap: 6px;
+  min-height: 36px; margin: 0; font-weight: 600; font-size: var(--fs-sm); }
+.folder-filter[data-style="list"] > .side-list-head .side-levels { margin: 0; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: 2; }
+@media (max-width: 640px) {
+  .folder-filter[data-style="list"] > .side-list-head, .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: auto; }
+}
+/* (an open row's other cells that fold, Quizzes' Problems list: above the row's band, which hid
+   their words, the owner 2026-10-22) */
+td.row-more > details { position: relative; z-index: 1; }
+td.row-more > details > summary { align-items: center; min-height: 0; flex-wrap: nowrap; white-space: nowrap; }
+/* the open folder's Expand all / Collapse all in the list's heading row, after the check box (the owner, 2026-10-22) */
+th.tick-col:has(> .tab-level-pair) { width: auto; white-space: nowrap; }
+th.tick-col > .tab-level-pair { display: inline-flex; gap: 2px; margin-left: 6px; vertical-align: middle; }
+/* (a name that checks its row's box: the folder pages' Pictures and Other files, static/js/checkall.js) */
+.folder-main td.tick-col + td:not(:has(details.row-fold)) { cursor: pointer; }
+/* the Messages panel's "Showing" dialog: as wide as "Write to", room for the folder list beside the
+   names (the owner, 2026-10-23: it was crunched) */
+dialog.ask.showing-dialog { width: min(820px, calc(100vw - 32px)); max-width: min(820px, calc(100vw - 32px)); }
+/* the Messages panel's small buttons stay on one line: a long "Showing" name is cut short instead of
+   pushing "Pinned" down (the owner, 2026-10-23) */
+.panel-extras { flex-wrap: nowrap; }
+.panel-extras > .btn { flex: 0 0 auto; white-space: nowrap; }
+.panel-extras > .showing-btn { flex: 0 1 auto; min-width: 0; max-width: none; }
+.panel-extras .showing-btn .showing-name { min-width: 0; }

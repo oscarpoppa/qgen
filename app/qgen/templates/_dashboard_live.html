@@ -56,8 +56,9 @@
   <details class="box card dash-card" data-elastic="pinned" data-elastic-dir="v" data-box="pinned">
     <summary class="dash-head">{{ box_label('pin', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
     <div class="dash-body">
-    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}" title="Open Messages to send, pin or unpin messages">Messages →</a></p>
     {% if pinned %}
+    {#- (only beside a list: with nothing pinned, the note below links to Messages itself; the owner, 2026-10-23) #}
+    <p class="dash-links small"><a href="{{ url_for('messages.inbox') }}" title="Open Messages to send, pin or unpin messages">Messages →</a></p>
       <ul class="dash-list dash-pinned">
       {% for p in pinned %}
         <li>{{ icon('pin') }}

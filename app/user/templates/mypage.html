@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import avatar, box_label, count_of, back_button with context %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, move_mini, move_folders, folder_options, folder_up with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, move_mini, move_folders, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('mine') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
@@ -139,7 +139,7 @@
       {# a folder's own page: what's in it (and in the folders inside it) in one list, with the
          same tabs as every level: All, its folders, Unsorted #}
       {% set name = fk.node.folder.name %}
-      <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="All"
+      <div class="folder-filter" data-folder-filter data-onetab data-url-tab data-prefix="quiz:" data-all-label="All"
            data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
            data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)." data-tab-name="{{ name }}"{% if fk.node.folders %} data-name="{{ name }}"{% endif %}>
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
@@ -152,7 +152,7 @@
       {# every quiz in one list, each once; above it the folder tabs, as on every folder page
          (static/js/folderfilter.js): All quizzes, New, In progress, your folders, Uncategorized.
          An address's ?folder= opens on that tab. #}
-      <div class="folder-filter" data-folder-filter data-url-tab data-prefix="quiz:" data-all-label="{{ fk.all_label }}"
+      <div class="folder-filter" data-folder-filter data-onetab data-url-tab data-prefix="quiz:" data-all-label="{{ fk.all_label }}"
            data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}"
            data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)."
            {% if fk.view != 'all' %}data-start="{{ 'none' if fk.view == 'main' else fk.view }}"{% endif %}>

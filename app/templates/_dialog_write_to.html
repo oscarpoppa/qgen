@@ -13,11 +13,6 @@
     <div class="field pick-people" id="write-to-pick">
       {{ filter_bar('#write-to-pick .folder-filter-list', 'student', 'students', items='tr[data-box]', id='write-to-bar') }}
       {#- (checking on a line of its own, under the filter: the owner, 2026-10-17) #}
-      <div class="btn-row small write-to-checks">
-        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-check-shown title="Check all shown: Check everyone in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
-        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-check-set="0" title="Uncheck all: Uncheck everyone">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
-        <span class="muted small" data-check-count aria-live="polite" hidden>0 checked</span>
-      </div>
       <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"
            data-unit="student" data-units="students" data-remember="write-to" data-tools-home="#write-to-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ wt_tree|tojson }}</script>

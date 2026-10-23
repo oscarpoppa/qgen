@@ -2,7 +2,7 @@
    all draw their folders with these. The page passes a "kit" (app/folder_tree.py, kit()):
    what it shows (view, node, path, the tree), its addresses and its words.
 
-     {% from "_folders.html" import folders_page, sub_box, level_buttons, in_folders with context %}
+     {% from "_folders.html" import folders_page, level_buttons, in_folders with context %}
      {% call folders_page(fk, actions) %} ...what's in the folder being looked at... {% endcall %}
 
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
@@ -175,28 +175,8 @@
 </div>
 {% endmacro %}
 
-{# a folder inside the one being looked at: a box that opens to show its own folders and
-   what's in it (folded to begin with; the open ones are remembered). Drop something on its
-   title to move it in. The caller draws a node's things: {% call(n) sub_box(fk, child) %} #}
-{% macro sub_box(fk, n) %}
-  {% set f = n.folder %}{% set draw = caller %}{# (kept: inside the nested call below, caller is that call's) #}
-  <details class="box sub-box" data-sub="{{ f.id }}" data-list>
-    {# the folder's own controls on its heading line (no row of their own) #}
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="{{ f.id }}"{% endif %}>{{ box_label(fk.folder_icon(f), fk.name(n.folder), count_of(n.count, fk.unit, fk.units), 'h3') }}{{ flag_badges(fk, n) }}
-      <span class="head-pair">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}
-        <span class="head-tools">{{ fk.box_tools(n) if fk.box_tools }}<a class="btn btn-secondary btn-xs btn-icon" href="{{ fk.page(f.id) }}" title="Open this folder: Go into “{{ fk.name(n.folder) }}” to see just what’s in it">{{ icon_label('lc-folder-open', 'Open this folder') }}</a></span></span></summary>
-    <div class="sub-body level" id="folder-body-{{ f.id }}">
-      {% for child in n.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
-      {{ draw(n) }}
-      {% if not n.count %}<p class="muted small">Nothing in “{{ fk.name(n.folder) }}” yet.</p>{% endif %}
-    </div>
-  </details>
-{% endmacro %}
-
-{# the All view: every top folder as a box (its folders inside it as boxes too), then what's
-   in no folder as a box of its own, in the folder list's order, so Expand all / Collapse all opens and folds them all.
-   loose: how many are in no folder. The caller draws a node's things, like sub_box's:
-   {% call(n) all_boxes(fk, loose) %}{% endcall %} (for Uncategorized, n is fk.root) #}
+{# the All view: everything in one list, each once (every=), under one tab naming the folder that's
+   open. The caller draws the list: {% call(n) all_boxes(fk, loose, every=..., key_prefix=...) %} #}
 {% macro all_boxes(fk, loose, every=none, key_prefix='') %}
   {% set draw = caller %}
   {% if every is not none %}
@@ -206,7 +186,7 @@
   {#- (data-onetab: one tab over the list naming the open folder, no rows of folder tabs; the side
       folder list picks: every folder page, the owner 2026-10-22) #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
-       {%- if fk.hide_empty %} data-hide-empty{% endif %} data-onetab data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
+       {%- if fk.hide_empty %} data-hide-empty{% endif %} data-onetab data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}{{ (':' ~ request.args.get('section')) if request.args.get('section') else '' }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}{% if not fk.count_units %} data-total="{{ every|length }}" data-loose="{{ fk.main_count }}"{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
@@ -220,18 +200,6 @@
       {{ draw({'items': every, 'people': every, 'folder': none, 'folders': [], 'count': every|length}) }}
     </div>
   </div>
-  {% else %}
-  {% for child in fk.root.folders %}{% call(c) sub_box(fk, child) %}{{ draw(c) }}{% endcall %}{% endfor %}
-  {% if loose %}
-  <details class="box sub-box" data-sub="none" data-list>
-    <summary class="sub-head"{% if not fk.readonly %} data-drop="top"{% endif %}>{{ box_label('tray', fk.main_label, count_of(loose, fk.unit, fk.units), 'h3') }}
-      <span class="head-pair">{{ level_buttons(fk.main_label, of='#folder-body-none') }}
-        <span class="head-tools"><a class="btn btn-secondary btn-xs btn-icon" href="{{ fk.page('main') }}" title="Open this folder: See just what’s in no folder">{{ icon_label('lc-folder-open', 'Open this folder') }}</a></span></span></summary>
-    <div class="sub-body level" id="folder-body-none">
-      {{ draw(fk.root) }}
-    </div>
-  </details>
-  {% endif %}
   {% endif %}
 {% endmacro %}
 

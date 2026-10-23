@@ -1,22 +1,19 @@
 /* Problems into quizzes from the Problems page (the owner, 2026-10-15):
  *  - Add to a quiz: a row's icon (that problem) or the checked bar's button (the checked ones)
  *    opens a small dialog to choose the quiz; they go at the end of it (/quiz/addtoquiz).
- *  - Picking for the quiz being built: on New quiz / Edit quiz, "Pick on the Problems page"
- *    keeps what's filled in (this tab only) and goes to the Problems page, which then has a
- *    bar "Choosing problems for …" with the quiz's problems already checked; check and uncheck
- *    there (in any folder), then "Add to the quiz" goes back to the quiz with the problems
- *    checked there in it (Cancel: as it was). Nothing is saved until the quiz is. */
+ *  - New quiz / Edit quiz: leaving in any way keeps what's filled in (this browser, 3 hours),
+ *    and coming back to the page puts it back. Nothing is saved until the quiz is. */
 (function () {
   var KEY = 'qgen-quiz-pick', HOURS = 3;
   function get() {
     try {
-      var d = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+      var d = JSON.parse(localStorage.getItem(KEY) || 'null');
       return d && Date.now() - d.at < HOURS * 3600e3 ? d : null;
     } catch (e) { return null; }
   }
   function put(d) {
     try {
-      if (d) { d.at = Date.now(); sessionStorage.setItem(KEY, JSON.stringify(d)); } else sessionStorage.removeItem(KEY);
+      if (d) { d.at = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); } else localStorage.removeItem(KEY);
     } catch (e) {}
   }
   //every problem id in a quiz's list: [4, {"pick": 2, "from": [5, 6]}]
@@ -68,16 +65,19 @@
       hidden.value = merged(d.vplist, d.picked);
       put(null);
     }
-    var go = document.getElementById('pick-on-problems');
-    if (go) go.addEventListener('click', function (e) {
-      e.preventDefault();
+    //(leaving in any way (a link, the browser's Back, a reload, closing the tab) keeps what's filled
+    //in, for coming back to it, so the page doesn't ask "Leave this page?" (no data-unsaved on the
+    //form); Cancel, "Undo changes" / "Start over" and saving keep nothing: the owner, 2026-10-23)
+    var drop = false;
+    form.addEventListener('submit', function () { drop = true; put(null); });
+    document.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('[data-back-href], [data-start-over]')) { drop = true; put(null); }
+    }, true);
+    window.addEventListener('pagehide', function () {
+      if (drop) return;
       var keep = {};
       fields(function (k, el) { keep[k] = el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value; });
-      var title = form.elements.title ? form.elements.title.value.trim() : '';
-      var now = idsOf(hidden.value);
-      put({ url: location.pathname, back: false, picking: true, title: title, fields: keep, vplist: hidden.value,
-            picked: now, was: now });
-      location.href = go.href;
+      put({ url: location.pathname, back: true, fields: keep, vplist: hidden.value, picked: idsOf(hidden.value) });
     });
   }
 
@@ -157,22 +157,13 @@
     if (dialog) {
       dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });
       //(like the Assign dialogs: the Quizzes page's folder list and the filter narrow the list
-      //(folderfilter.js, filter.js); Check all shown / Uncheck all; as many quizzes as wanted)
+      //(folderfilter.js, filter.js); the heading row's check box checks all shown (checkall.js); as many quizzes as wanted)
       var err = dialog.querySelector('[data-quiz-error]');
       var rows = Array.prototype.slice.call(dialog.querySelectorAll('.add-quiz-list tbody > tr'));
-      var count = dialog.querySelector('[data-quiz-count]');
       function sync() {
-        var n = dialog.querySelectorAll('input[name=quiz]:checked').length;
-        if (count) count.textContent = n + ' checked';
-        if (n) err.hidden = true;
+        if (dialog.querySelector('input[name=quiz]:checked')) err.hidden = true;
       }
       dialog.addEventListener('change', sync);
-      dialog.querySelector('[data-quizzes="all"]').addEventListener('click', function () {
-        rows.forEach(function (li) { if (li.offsetParent) li.querySelector('input').checked = true; }); sync();
-      });
-      dialog.querySelector('[data-quizzes="none"]').addEventListener('click', function () {
-        rows.forEach(function (li) { li.querySelector('input').checked = false; }); sync();
-      });
       sync();
       dialog.querySelector('form').addEventListener('submit', function (e) {
         if (!dialog.querySelector('input[name=quiz]:checked')) { e.preventDefault(); err.hidden = false; }

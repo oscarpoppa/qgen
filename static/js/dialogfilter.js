@@ -6,7 +6,7 @@
  * the folders, nested and indented) beside a tab naming what's shown over a framed table, "Folder",
  * one row per folder, indented by its depth just as in the side list (static/js/folderfilter.js
  * draws the side list and the tab). Where folders are checked (Put in folder's "Copy instead"),
- * Check all shown / Uncheck all and "N checked" sit on their own line under the filter. Each
+ * the check box in the table's heading row checks all shown (static/js/checkall.js). Each
  * opening starts with the filter empty and the list on All.
  *
  * window.qgenFolderPick: html() the holder a script-made dialog puts its picker in; fill(holder,
@@ -131,35 +131,8 @@
     bar.innerHTML = '<span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter folders by name" title="Type part of a name to show only the folders that match">'
       + '<button type="button" class="btn btn-secondary btn-sm" data-filter-clear title="Show all the folders again">Clear</button></span>'
       + '<span class="pick-count muted" data-filter-count aria-live="polite"></span>';
-    //(folders to check: the standard Check all shown / Uncheck all, beside "N checked")
-    var checks = document.createElement('div');
-    checks.className = 'btn-row small write-to-checks';
-    checks.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="all"></button>'
-      + '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="none"></button>'
-      + '<span class="muted small" data-pick-count aria-live="polite" hidden></span>';
-    //(a pair of bare icons, the count left out: the owner, 2026-10-22)
-    window.qgenIconButton(checks.firstChild, 'lc-check-all', 'Check all shown', 'Check every folder in the list below (the ones that match the filter)');
-    window.qgenIconButton(checks.children[1], 'lc-check-none', 'Uncheck all', 'Uncheck every folder');
-    holder.appendChild(bar); holder.appendChild(checks); holder.appendChild(box);
+    holder.appendChild(bar); holder.appendChild(box);
     function boxes() { return Array.prototype.slice.call(list.querySelectorAll('tbody input[type=checkbox]')); }
-    //(only while the folders are check boxes: moving picks one, so they'd mean nothing then)
-    function sync() {
-      var all = boxes();
-      checks.hidden = !all.length;
-      checks.querySelector('[data-pick-count]').textContent = all.filter(function (c) { return c.checked && !c.disabled; }).length + ' checked';
-    }
-    checks.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-dlg-check]');
-      if (!b) return;
-      boxes().forEach(function (c) {
-        if (c.disabled) return;
-        var tr = c.closest('tr');
-        if (b.dataset.dlgCheck === 'none') c.checked = false;
-        else if (!tr.hidden && !tr.closest('[hidden]')) c.checked = true;
-        c.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    });
-    holder.addEventListener('change', sync);
     //(the dialog's title: where folderfilter.js puts the side list's Expand all / Collapse all)
     var head = d && d.querySelector('[data-pick-head]');
     if (head) {
@@ -171,19 +144,16 @@
     if (window.qgenFolderFilterSetUp) window.qgenFolderFilterSetUp(box);
     if (window.qgenFilterBar) window.qgenFilterBar(bar);
     var input = bar.querySelector('input.filter-list');
-    sync();
     return (holder.qgenPick = {
       box: box,
       //(rows filled again: counted and filtered again; no Checked folder without check boxes)
       redraw: function () {
-        sync();
         if (!boxes().length && box.dataset.shown === 'checked') box.qgenChoose('all'); else if (box.qgenRedraw) box.qgenRedraw();
       },
       reset: function () {
         input.value = '';
         input.dispatchEvent(new Event('input', { bubbles: true }));
         if (box.qgenChoose) box.qgenChoose('all');
-        sync();
       }
     });
   }

@@ -6,13 +6,11 @@
   var box = document.getElementById('pick-pictures-dialog');
   if (!box) return;
   var head = box.querySelector('[data-head]'), ok = box.querySelector('[data-ok]');
-  var err = box.querySelector('[data-pics-error]'), count = box.querySelector('[data-pics-count]');
+  var err = box.querySelector('[data-pics-error]');
   var single = false, onPick = null;
   function boxes() { return box.querySelectorAll('input[name=pick-pic]'); }
   function recount() {
-    var n = box.querySelectorAll('input[name=pick-pic]:checked').length;
-    if (count) count.textContent = n + ' checked';
-    if (n) err.hidden = true;
+    if (box.querySelector('input[name=pick-pic]:checked')) err.hidden = true;
   }
   box.addEventListener('change', function (e) {
     if (e.target.name !== 'pick-pic') return;
@@ -20,14 +18,6 @@
     recount();
   });
   box.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-pics]');
-    if (b) {
-      boxes().forEach(function (c) {
-        if (b.dataset.pics === 'none') c.checked = false;
-        else if (c.closest('tr').offsetParent) c.checked = true;  // (only the ones shown)
-      });
-      recount();
-    }
     if (e.target.closest('[data-cancel]')) box.close();
   });
   ok.addEventListener('click', function () {

@@ -5,7 +5,7 @@
 {% from "_macros.html" import avatar, box_label, count_of, quiz_link, student_link with context %}
 {% from "_results.html" import result_cells, archive_all_button, archive_all_form, attempt_status, attempt_buttons, score_counted, retake_button, result_group, result_row with context %}
 {% from "_awards.html" import award_list %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
 

@@ -29,6 +29,8 @@
     e.returnValue = '';
   });
   window.qgenSaved = function () { changed = false; };
+  //(a page that keeps what's filled in when it's left, the quiz editor: no question then)
+  window.qgenLeaving = function () { leaving = true; };
   //(changes made by dragging, not typing, e.g. a scan's boxes: the owner, 2026-10-21)
   window.qgenChanged = function () { changed = true; };
 })();

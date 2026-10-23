@@ -3,7 +3,7 @@
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar, person_link, person_name, quiz_link, box_label, count_of, slot with context %}
 {% from "_results.html" import result_cells, result_group, result_row with context %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {# follows every attempt, like Results by student: any change reloads it (or offers to) #}
 {% block body_attrs %}{{ watch('quizresults:%d' % quizzes[0].vquiz.id if single else 'byquiz') }}{% endblock %}
 {% block main_class %}{% if not single or quizzes[0].rows %} container-wide{% endif %}{% endblock %}

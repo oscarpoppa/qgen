@@ -11,7 +11,7 @@
   var boxes = people.map(function (li) { return li.querySelector('input'); });
   //(the folder list and the filter, static/js/folderfilter.js, hide the people not shown)
   function shownNow(li) { return !li.hidden && !li.closest('[hidden]'); }
-  var count = dialog.querySelector('[data-people-count]'), error = dialog.querySelector('[data-people-error]');
+  var error = dialog.querySelector('[data-people-error]');
   function checkedQuizzes() {
     if (window.qgenCheckedIds) return window.qgenCheckedIds();
     var ids = {};
@@ -19,17 +19,9 @@
     return Object.keys(ids);
   }
   function sync() {
-    var n = boxes.filter(function (b) { return b.checked; }).length;
-    count.textContent = n + ' checked';
-    if (n) error.hidden = true;
+    if (boxes.some(function (b) { return b.checked; })) error.hidden = true;
   }
   dialog.addEventListener('change', sync);
-  dialog.querySelector('[data-people="all"]').addEventListener('click', function () {
-    people.forEach(function (li, i) { if (shownNow(li)) boxes[i].checked = true; }); sync();
-  });
-  dialog.querySelector('[data-people="none"]').addEventListener('click', function () {
-    boxes.forEach(function (b) { b.checked = false; }); sync();
-  });
   dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });
   //"open it": the Assign page with what's checked here now, the people (and the quiz, when it's
   //one: Assign gives one quiz at a time) (the owner, 2026-10-15)
