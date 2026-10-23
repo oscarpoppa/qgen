@@ -118,7 +118,11 @@
     tree.textContent = JSON.stringify(treeOf(holder));
     var list = document.createElement('div');
     list.className = 'folder-filter-list'; list.id = 'folder-pick-' + (++n);
+    //(a drag bar static/js/grip.js already put under the table moves with it: on a page, it was left
+    //at the top, beside the filter: the owner, 2026-10-22)
+    var grip = wrap.nextElementSibling && wrap.nextElementSibling.classList.contains('grip-bar') ? wrap.nextElementSibling : null;
     box.appendChild(tree); box.appendChild(list); list.appendChild(wrap);
+    if (grip) list.appendChild(grip);
     //the filter, as filter_bar() draws it
     var bar = document.createElement('div');
     bar.className = 'btn-row small pick-bar filter-bar';

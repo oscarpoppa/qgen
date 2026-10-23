@@ -1050,8 +1050,11 @@ window.qgenPinAuto = function (list) {
     list.qgenPinWatch.observe(list);
   }
   var pinned = Array.prototype.filter.call(list.children, function (el) { return el.classList.contains('side-auto') && !el.hidden; });
-  list.querySelectorAll(':scope > .side-auto-last').forEach(function (el) { el.classList.remove('side-auto-last'); });
+  list.querySelectorAll(':scope > .side-auto-last, :scope > .side-auto-first').forEach(function (el) { el.classList.remove('side-auto-last', 'side-auto-first'); });
   if (!pinned.length || !pinned[0].offsetParent) return;
+  //(the first marked here, not by CSS's first-of-type: a picker's side list has other things before it,
+  //and the cover over its top was missing there, the folders showing through: the owner, 2026-10-22)
+  pinned[0].classList.add('side-auto-first');
   var first = pinned[0].offsetTop;
   pinned.forEach(function (el) { el.style.top = (el.offsetTop - first) + 'px'; });
   pinned[pinned.length - 1].classList.add('side-auto-last');

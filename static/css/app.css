@@ -3349,7 +3349,12 @@ th.tick-col input.check-all { margin: 0; }
 .side-top > li.side-auto-last, .folder-side-list > .side-row.side-auto-last { box-shadow: 0 2px 0 color-mix(in srgb, var(--muted) 55%, var(--border)); padding-bottom: 4px; }  /* (a little heavier: the owner, 2026-10-21) */  /* (padding, not margin: the folders showed through a margin) */
 /* (the space over the first one, the list's own top padding, covered too: the folders scrolled up
    showed through it) */
-.side-top > li.side-auto:first-child::before, .folder-side-list > .side-row.side-auto:first-of-type::before {
+/* (and the 2px gaps between the pinned ones, covered: the folders slid through them) */
+.side-top > li.side-auto + li.side-auto, .folder-side-list > .side-row.side-auto + .side-row.side-auto { box-shadow: 0 -2px 0 var(--surface); }
+.side-top > li.side-auto + li.side-auto-last, .folder-side-list > .side-row.side-auto + .side-row.side-auto-last {
+  box-shadow: 0 -2px 0 var(--surface), 0 2px 0 color-mix(in srgb, var(--muted) 55%, var(--border)); }
+.side-top > li.side-auto:first-child::before, .folder-side-list > .side-row.side-auto:first-of-type::before,
+.side-top > li.side-auto-first::before, .folder-side-list > .side-row.side-auto-first::before {
   content: ""; position: absolute; left: -8px; right: -8px; bottom: 100%; height: 16px; background: var(--surface); }
 /* People (Accounts and Results in one): the status and done badges stacked, one under the other, so
    the row stays narrow enough for Created and Folders too (the owner, 2026-10-21) */

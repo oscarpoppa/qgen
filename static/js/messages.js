@@ -126,7 +126,15 @@
       });
     }
     return fetch(paneUrl(p, markSeen), { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (r) {
+        //(signed out meanwhile: the answer is the login page. The whole page goes there instead,
+        //never the login page inside the panel, where signing in went wrong: the owner, 2026-10-22)
+        if (r.redirected && /\/login(\?|$)/.test(new URL(r.url).pathname + new URL(r.url).search.slice(0, 1))) {
+          window.location.reload();
+          return null;
+        }
+        return r.ok ? r.text() : null;
+      })
       .then(function (html) {
         if (html === null) { body.innerHTML = '<p class="muted small">Couldn\'t load this. Please reload the page.</p>'; return; }
         body.innerHTML = html;
