@@ -113,6 +113,16 @@ def path(nodes, node):
     return out
 
 
+def choice_of(args):
+    """What ?folder= asks for, or else the folder tab an old address asks for (?tab=: a link kept from
+    when a folder page narrowed its list in the browser; "none" was Uncategorized)."""
+    choice = args.get('folder')
+    tab = args.get('tab')
+    if choice is None and tab not in (None, '', 'checked'):
+        choice = 'main' if tab == 'none' else tab
+    return choice
+
+
 def view_of(choice, nodes, default='main', remember=False, extra=()):
     """What a page shows for ?folder=: 'main' (in no folder), 'all', or a folder's id (as
     text), with that folder's node (None for main and all). A folder that's gone: default.

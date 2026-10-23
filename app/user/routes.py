@@ -535,8 +535,7 @@ def people_page(in_archive=False, **extra):
         ulst = User.query.options(selectinload(User.cquizzes).selectinload(CQuiz.vquiz)).order_by(User.username).all()
         root, flat, nodes, folders_of = groups.tree(ulst)
     #everyone (the default), the people in no folder ('main'), or a folder's id (a gone folder: everyone)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['people'] if node else ulst if view == 'all' else root['people']
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
     fk = folder_tree.kit(
         view, node, root, flat, nodes,
         page=(lambda v: url_for('qgen.archive', section='people', folder=v)) if in_archive else (lambda v: url_for('user.userdet', folder=v)),
@@ -561,8 +560,54 @@ def people_page(in_archive=False, **extra):
         main_tools=None if in_archive else lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
                                                 'Assign a quiz to this folder: everyone in Uncategorized (in no folder)', 'Assign a quiz to this folder: nobody is in Uncategorized'))
     from app.qgen.models import RETAKE_RULES
-    return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=shown,
+    pg = _people_page_of(ulst, view, node, root, in_archive)
+    return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=pg.items, pg=pg,
                            folders_of=folders_of, in_archive=in_archive, rules=RETAKE_RULES, **extra)
+
+
+def _people_page_of(ulst, view, node, root, in_archive):
+    """The people to draw: the folder shown (or what's checked, ?checked=), narrowed by the words
+    typed (?q=) and People's Show choice (?state=review or out: someone with an attempt waiting for
+    grading, or not handed in yet), sorted (?sort=), 20 to the page (app/paging.py; the owner,
+    2026-10-23)."""
+    from app import folder_tree, paging
+    from app.qgen.models import attempts_by_quiz
+    checked = request.args.get('checked')
+    if checked is not None:
+        want = {x for x in checked.split(',') if x}
+        listed = [u for u in ulst if str(u.id) in want]
+    elif view == 'all':
+        listed = ulst
+    elif view == 'main':
+        listed = root['people']
+    else:
+        listed = folder_tree.subtree(node)
+    sums = {}
+
+    def facts(u):
+        #(what each column says, worked out once: the same numbers the row shows)
+        if u.id not in sums:
+            groups = attempts_by_quiz(u.cquizzes) if not in_archive else []
+            done = [g['combined'] for g in groups if g['combined'] is not None]
+            sums[u.id] = {
+                'states': {'review' if any(a.status == 'review' for a in g['attempts']) else 'out' if g['open'] else 'done' for g in groups},
+                'quizzes': len({c.vquiz_id for c in u.cquizzes}) if not in_archive else 0,
+                'going': sum(1 for c in u.cquizzes if c.status in ('started', 'review')) if not in_archive else 0,
+                'fresh': sum(1 for c in u.cquizzes if c.status == 'new') if not in_archive else 0,
+                'avg': sum(float(x) for x in done) / len(done) if done else None}
+        return sums[u.id]
+    state = request.args.get('state')
+    if state in ('review', 'out') and not in_archive:
+        listed = [u for u in listed if state in facts(u)['states']]
+    sorts = {'name': lambda u: u.username.lower(),
+             'created': lambda u: u.created_at,
+             'quizzes': lambda u: facts(u)['quizzes'],
+             'status': lambda u: (facts(u)['going'], facts(u)['fresh']) if facts(u)['going'] or facts(u)['fresh'] else None,
+             'done': lambda u: facts(u)['avg']}
+    pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), sorts=sorts, show=request.args.get('show'))
+    if checked is not None:
+        pg.label, pg.icon = 'Checked', 'lc-folder-check'
+    return pg
 
 
 def _assign_all_button(people, label, title, empty):

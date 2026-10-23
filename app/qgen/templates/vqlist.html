@@ -10,8 +10,8 @@
    is where a drag takes a quiz out of #}
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
-    <table class="even-cols">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th>Quiz</th><th>Created</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more row-count-col">Problems</th><th>Assigned</th><th></th></tr></thead>
+    <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more row-count-col" data-sort-key="problems">Problems</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -112,9 +112,8 @@
   {% call folders_page(fk, actions=head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
-      {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='quiz:') %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}
-      {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
-      {% call named_box(fk, 'quiz:') %}{% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
+      {#- one folder's rows, 20 at a time (app/paging.py): the side list's folders are links, each its own page #}
+      {% call named_box(fk, 'quiz:', pg=pg) %}{% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
 {% endif %}

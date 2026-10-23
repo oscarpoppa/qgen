@@ -16,11 +16,11 @@
 {% macro people_table(people, here) %}
   {% if people %}
   <div class="table-wrap stack">
-    <table class="people-table even-cols{% if not in_archive %} result-rows{% endif %}">
+    <table class="people-table even-cols{% if not in_archive %} result-rows{% endif %}" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
       {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
           after Folders, in the site's column order; open, a row shows the person and then each of their
           quizzes with its attempts) #}
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Name</th><th>Created</th><th>Folders</th>{% if not in_archive %}<th>Quizzes</th><th>Status</th><th>Done</th>{% endif %}<th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th>Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="status">Status</th><th data-sort-key="done">Done</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -105,9 +105,9 @@
   <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>
 {% else %}
 {% call folders_page(fk, actions, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
-    {% if ulst %}<div class="folder-tools-bar{% if not in_archive %} results-filter{% endif %}">{% if in_archive %}{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true) }}{% else %}
+    {% if ulst %}<div class="folder-tools-bar{% if not in_archive %} results-filter{% endif %}">{% if in_archive %}{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}{% else %}
       {#- (with Results' "Show" beside it: one People page, the owner 2026-10-21) #}
-      {% call filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', url=true, id='results-filter') %}
+      {% call filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', paged=pg.total, id='results-filter') %}
       <label class="small muted show-pick">Show
         <select class="state-filter" aria-label="Show which results">
           <option value="all">All results</option>
@@ -140,9 +140,8 @@
         {% endif %}
       </form></div>{% endif %}
     <div id="folder-items">
-      {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}
-      {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'user:') %}{{ people_table(n.people, n.folder) }}{% endcall %}{% else %}
-      {% call named_box(fk, 'user:') %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+      {#- one folder's rows, 20 at a time (app/paging.py): the side list's folders are links, each its own page #}
+      {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
     </div>
 {% endcall %}
 {% endif %}

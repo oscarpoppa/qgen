@@ -3418,3 +3418,18 @@ dialog.ask.showing-dialog { width: min(820px, calc(100vw - 32px)); max-width: mi
   .folder-side > .side-list-head .side-list-title { display: none; }
   .folder-side > .side-list-head:not(:has(.side-levels:not([hidden]))) { display: none; }
 }
+
+/* a list shown 20 at a time: the pager under it and, at the right end of the tab's row, over it
+   (app/paging.py, templates/_pager.html; the owner, 2026-10-23) */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 12px 0 4px; }
+.pager-num { min-width: 30px; padding: 4px 8px; text-align: center; border-radius: var(--r-sm); border: 1px solid transparent; color: var(--text); text-decoration: none; font-size: var(--fs-sm); }
+a.pager-num:hover { background: var(--accent-soft); border-color: var(--border); }
+.pager-num.current { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.pager-gap { color: var(--muted); padding: 0 2px; }
+.pager .is-disabled { opacity: .45; cursor: default; }
+.pager-top { margin-left: auto; align-self: center; padding: 0 4px; }
+.pager-top .pager { margin: 0; flex-wrap: nowrap; justify-content: flex-end; }
+@media (max-width: 640px) { .pager-top { margin-left: 0; width: 100%; padding: 6px 0 0; } .pager-top .pager { justify-content: flex-start; flex-wrap: wrap; } }
+.pager-top { display: inline-flex; align-items: center; gap: 8px; }
+.pager-check-all { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.pager-check-all[hidden] { display: none; }

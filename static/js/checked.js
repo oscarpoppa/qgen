@@ -46,6 +46,22 @@
   });
 
   window.qgenCheckedIds = function () { return kept.map(function (k) { return k[0]; }); };
+  //every one of a list at once, on every page (a list shown 20 at a time: "Check all 57"; the owner,
+  //2026-10-23): pairs of [id, name]
+  window.qgenCheckMany = function (pairs, on) {
+    pairs.forEach(function (p) {
+      var id = String(p[0]), i = -1;
+      kept.forEach(function (k, j) { if (k[0] === id) i = j; });
+      if (on && i === -1) kept.push([id, p[1]]);
+      if (!on && i !== -1) kept.splice(i, 1);
+    });
+    save();
+    ticks().forEach(function (t) { t.checked = has(t.value); });
+    document.dispatchEvent(new CustomEvent('qgen-checked'));
+    //(the checked bar and the Checked folder count again)
+    if (ticks()[0]) ticks()[0].dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  window.qgenAllChecked = function (pairs) { return pairs.length > 0 && pairs.every(function (p) { return has(String(p[0])); }); };
   window.qgenCheckedClear = function () {
     kept = []; save();
     ticks().forEach(function (t) { t.checked = false; });

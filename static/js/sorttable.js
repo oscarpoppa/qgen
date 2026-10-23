@@ -46,6 +46,32 @@
     //(not a table that's part of a form being filled in, like the problem editor's Random values;
     //nor a heading with its own controls, like a ? help button)
     var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form') || t.classList.contains('pick-table'); });
+    //a list shown 20 at a time (app/paging.py; the owner, 2026-10-23) sorts the whole folder: its
+    //headings (data-sort-key) ask the server for the sorted pages, from page 1
+    tables.filter(function (t) { return t.hasAttribute('data-paged'); }).forEach(function (table) {
+      var on = table.dataset.sorted || '', dir = table.dataset.sortedDir === 'desc' ? 'desc' : 'asc';
+      table.querySelectorAll(':scope > thead > tr > th[data-sort-key]').forEach(function (th) {
+        var name = label(th), k = th.dataset.sortKey;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'th-sort';
+        b.title = 'Sort by ' + name.toLowerCase() + ' (press again to reverse)';
+        b.innerHTML = '<span></span><span class="th-sort-arrow" aria-hidden="true"></span>';
+        b.firstChild.textContent = name;
+        th.textContent = '';
+        th.appendChild(b);
+        th.setAttribute('aria-sort', k === on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none');
+        b.dataset.dir = k === on ? (dir === 'desc' ? 'down' : 'up') : '';
+        b.addEventListener('click', function () {
+          var u = new URL(location.href);
+          u.searchParams.set('sort', k);
+          u.searchParams.set('dir', k === on && dir === 'asc' ? 'desc' : 'asc');
+          ['page', 'show', 'moved'].forEach(function (x) { u.searchParams.delete(x); });
+          location.assign(u.pathname + u.search + u.hash);
+        });
+      });
+    });
+    tables = tables.filter(function (t) { return !t.hasAttribute('data-paged'); });
     if (!tables.length) return;
     tables.forEach(function (table) {
       table.querySelectorAll(':scope > thead > tr > th').forEach(function (th) {

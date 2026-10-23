@@ -8,8 +8,8 @@
 
 {% macro upload_table(items, here=none) %}
   <div class="table-wrap stack">
-    <table class="even-cols">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th>Created</th><th>Folders</th><th></th></tr></thead>
+    <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="title">{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th data-sort-key="created">Created</th><th>Folders</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}{% set gs = item.picgroups if kind == 'pictures' else item.filegroups %}
         <tr data-item="{{ item.id }}" data-box="{{ what }}:{{ item.id }}" data-name="{{ item.name|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -52,9 +52,8 @@
   {% call folders_page(fk, actions=head_buttons) %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
-      {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix=what ~ ':') %}{{ upload_table(n['items'], here=n.folder) }}{% endcall %}
-      {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, what ~ ':') %}{{ upload_table(n['items'], here=n.folder) }}{% endcall %}{% else %}
-      {% call named_box(fk, what ~ ':') %}{% if items %}{{ upload_table(items, here=fk.node.folder if fk.node else none) }}{% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
+      {#- one folder's rows, 20 at a time (app/paging.py): the side list's folders are links, each its own page #}
+      {% call named_box(fk, what ~ ':', pg=pg) %}{% if items %}{{ upload_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
 {% endif %}

@@ -4,7 +4,7 @@
 {#- (the things' word, for Pictures and Other files too: the owner, 2026-10-19) #}
 {% set one, noun = {'problems': ('problem', 'problems'), 'quizzes': ('quiz', 'quizzes'), 'pictures': ('picture', 'pictures'), 'files': ('file', 'files')}[kind] %}
 <div class="folder-tools-bar">
-  {% if total %}{{ filter_bar('#folder-items', one, noun, url=true, boxes='details.sub-box, details.subject-box') }}{% endif %}
+  {% if total %}{{ filter_bar('#folder-items', one, noun, boxes='details.sub-box, details.subject-box', paged=pg.total if pg else none, url=not pg) }}{% endif %}
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar" data-takeout="remove">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">

@@ -21,6 +21,8 @@ PATHS = {
     'lc-trash': '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
     'lc-list-plus': '<path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 9v6"/><path d="M21 12h-6"/>',
     'lc-arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    'lc-chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    'lc-chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'lc-arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
     'lc-copy': '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     'lc-folder-plus': '<path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',

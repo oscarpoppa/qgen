@@ -148,7 +148,9 @@ def test_quizzes_page_lists_by_folder(app_db):
     assert shown(teacher, 'quizzes') == ['Q2', 'Q1'] and everything(teacher, 'quizzes') == ['Q2', 'Q1']
     page = teacher.get('/quiz/listvq?folder=all').data.decode()
     q2 = VQuiz.query.filter_by(title='Q2').one()
-    assert '"keys": ["quiz:{}"]'.format(q2.id) in page and '"name": "Period 2"' in page and 'data-droppable' in page
+    #(20 to a page, one folder at a time: the folders are links, each its own page: the owner, 2026-10-23)
+    assert 'href="/quiz/listvq?folder={}"'.format(p2.id) in page and 'data-paged' in page
+    assert 'data-box="quiz:{}"'.format(q2.id) in teacher.get('/quiz/listvq?folder={}'.format(p2.id)).data.decode()
 
 
 def test_one_at_a_time_and_dragging(app_db):
@@ -209,7 +211,7 @@ def test_folders_inside_folders(app_db):
     # Math counts what's in Algebra too; one list of both, with a folder button for Algebra (and
     # "Math itself"); the path shows in Algebra
     assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert '"name": "Algebra"' in page and 'data-main-label="Unsorted"' in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
+    assert 'href="/quiz/listvp?folder={}"'.format(alg.id) in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
     #(the path is the heading, "Math › Algebra", with Up going back to Math)
     page = teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     assert ' Math › Algebra</h2>' in page and 'folder-up" href="/quiz/listvp?folder={}"'.format(math.id) in page
@@ -514,7 +516,9 @@ def test_coming_back_to_a_folder_page_keeps_the_folder_tab_open(app_db):
     math = VPGroup.query.one()
     listed = 'http://localhost/quiz/listvp?tab={}'.format(math.id)
     # every folder page's own list keeps its tab in the address
-    assert 'data-url-tab' in teacher.get('/quiz/listvp').data.decode()
+    #(the folder is in the address as ?folder=, and an old ?tab= link opens the same folder: 2026-10-23)
+    assert 'data-paged' in teacher.get('/quiz/listvp').data.decode()
+    assert 'data-box="problem:{}"'.format(probs['Add'].id) not in teacher.get('/quiz/listvp?tab={}'.format(math.id)).data.decode()
     # Save in the editor opened from the Math tab: back to the list on that tab, the problem lit up
     form = problem_form('numeric', 'Add', 'What is 3 + 3?', '6', [], next='/quiz/listvp?tab={}'.format(math.id))
     r = teacher.post('/quiz/editvprob/{}'.format(probs['Add'].id), data=form)
@@ -593,7 +597,9 @@ def test_each_folder_page_keeps_its_own_filter_and_tab_in_the_address(app_db):
     make_problems(teacher, *['P{}'.format(i) for i in range(7)])
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
     page = teacher.get('/quiz/listvp').data.decode()
-    assert page.count('data-url-filter') == 1 and 'data-url-tab' in page
+    #(the words typed go to the server, ?q=, which sends the matching page: the owner, 2026-10-23)
+    assert page.count('data-paged data-matches="7"') == 1 and page.count('data-url-filter') == 0
+    assert page.count('data-box="problem:') == 7 and teacher.get('/quiz/listvp?q=P3').data.decode().count('data-box="problem:') == 1
 
 
 def test_a_student_page_keeps_its_folder_tab_in_the_address(app_db):
@@ -730,9 +736,12 @@ def test_deleting_a_folder_says_what_moved_where(app_db):
     assert 'Deleted the folder “Math”. Moved to Uncategorized: “Add”, “Area”.' in r
     # the delete question says where things go, and the folder tabs carry the Folder options
     teacher.post('/quiz/subjects/problems/new', data={'name': 'Science'})
-    page = teacher.get('/quiz/listvp').data.decode()
+    from app.qgen.models import VPGroup
+    science = VPGroup.query.filter_by(title='Science').one()
+    page = teacher.get('/quiz/listvp?folder={}'.format(science.id)).data.decode()
+    #(the open folder's own options, on its own page: one folder at a time, 2026-10-23)
     assert 'Delete the folder “Science”? Nothing in it is deleted: the problems in it move up to Uncategorized.' in page
-    assert 'class="folder-filter-tools"' in page and 'Folder options' in page
+    assert 'Folder options' in page
 
 
 def test_back_up_to_the_outer_folder_says_where_else_it_is(app_db):

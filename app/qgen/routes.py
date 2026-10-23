@@ -9,6 +9,7 @@ from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
+from urllib.parse import urlencode
 from flask import flash, render_template, redirect, url_for, request, current_app, abort, jsonify
 from app.nav import back_to, safe_next, next_arg, place_name, back_after_save, kept_tab, back_to_list
 from markupsafe import Markup
@@ -1157,17 +1158,37 @@ def results_by_quiz():
     from .models import RETAKE_RULES
     quizzes = VQuiz.query.order_by(VQuiz.title).all()
     root, flat, nodes = S.subject_tree('quizzes', items=quizzes)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['items'] if node else quizzes if view == 'all' else root['items']
-    #each quiz's results, worked out once even if it's in several folders
-    results = {q['vquiz'].id: q for q in quiz_results(quizzes)}
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
+    #each quiz's results, worked out once even if it's in several folders; for the 20 drawn only,
+    #unless the words typed, Show or a sort by what they hold need all of them (app/paging.py)
+    results = {}
+    def work(vqs):
+        todo = [q for q in vqs if q.id not in results]
+        for q in quiz_results(todo):
+            results[q['vquiz'].id] = q
+    state = request.args.get('state')
+    by_results = state in ('review', 'out') or request.args.get('sort') in ('students', 'average', 'status')
+    if by_results:
+        work(listed)
+    if state in ('review', 'out'):
+        listed = [q for q in listed if any(('review' if any(a.status == 'review' for a in g['attempts']) else 'out' if g['open'] else 'done') == state
+                                           for _s, g in results[q.id]['rows'])]
+    from app import paging
+    pg = paging.paginate(listed, name_of=lambda q: q.title, show=request.args.get('show'), sorts={
+        'title': lambda q: (q.title or '').lower(),
+        'students': lambda q: results[q.id]['students'] if q.id in results else 0,
+        'average': lambda q: results[q.id]['average'] if q.id in results else None,
+        'status': lambda q: (results[q.id]['states']['review'], results[q.id]['states']['out']) if q.id in results and (results[q.id]['states']['review'] or results[q.id]['states']['out']) else None})
+    work(pg.items)
+    shown = pg.items
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.results_by_quiz', folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
         #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-results-quiz-folders')
-    return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk,
+    return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk, pg=pg,
                            rules=RETAKE_RULES, title='Results by quiz')
 
 #one quiz's results
@@ -1187,15 +1208,30 @@ def quiz_results_page(vqid):
     students = [student for student, _g in q['rows']]
     rows = {student.id: (student, g) for student, g in q['rows']}
     root, flat, nodes, _folders_of = groups.tree(students, only={u.id for u in students})
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['people'] if node else students if view == 'all' else root['people']
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    listed = students if view == 'all' else root['people'] if view == 'main' else folder_tree.subtree(node)
+    state = request.args.get('state')
+    def group_state(u):
+        g = rows[u.id][1]
+        return 'review' if any(a.status == 'review' for a in g['attempts']) else 'out' if g['open'] else 'done'
+    if state in ('review', 'out'):
+        listed = [u for u in listed if group_state(u) == state]
+    #(20 to the page, app/paging.py; the owner, 2026-10-23)
+    from app import paging
+    pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), show=request.args.get('show'), sorts={
+        'name': lambda u: u.username.lower(),
+        'latest': lambda u: rows[u.id][1]['latest'].id,
+        'attempts': lambda u: len(rows[u.id][1]['attempts']),
+        'status': lambda u: {'review': 2, 'out': 1}.get(group_state(u)),
+        'score': lambda u: rows[u.id][1]['combined']})
+    shown = pg.items
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.quiz_results_page', vqid=vq.id, folder=v),
         unit='student', units='students', all_label='All students', all_count=len(students), name=lambda f: f.name,
         #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-quiz-history-folders', hide_empty=True)
-    return render_template('results_by_quiz.html', quizzes=[q], rules=RETAKE_RULES, single=True, fk=fk, shown=shown,
+    return render_template('results_by_quiz.html', quizzes=[q], rules=RETAKE_RULES, single=True, fk=fk, shown=shown, pg=pg,
                            rows=rows, title='Quiz history: {}'.format(vq.title))
 
 def quiz_results(quizzes):
@@ -1211,7 +1247,11 @@ def quiz_results(quizzes):
         rows = sorted(((attempts[0].taker, attempts_by_quiz(attempts)[0]) for attempts in mine.values()),
                       key=lambda row: row[0].username.lower())
         scores = [g['combined'] for _, g in rows if g['combined'] is not None]
-        out.append({'vquiz': vq, 'rows': rows, 'students': len(rows), 'done': len(scores),
+        #(how many students are in each state, for the Status column: waiting for grading, not handed in yet, done)
+        states = {'review': 0, 'out': 0, 'done': 0}
+        for _s, g in rows:
+            states['review' if any(a.status == 'review' for a in g['attempts']) else 'out' if g['open'] else 'done'] += 1
+        out.append({'vquiz': vq, 'rows': rows, 'states': states, 'students': len(rows), 'done': len(scores),
                     'average': sum(scores) / len(scores) if scores else None,
                     'waiting': sum(1 for _, g in rows for cq in g['attempts'] if cq.status == 'review'),
                     'paper': any(get_qtype(p.qtype).paper for p in vq.vproblems)})
@@ -1735,15 +1775,10 @@ def subject_page(kind, template, in_archive=False, **extra):
         root, flat, nodes = S.subject_tree(kind)
         everything = S.in_use(kind).order_by(*(S.upload_order(kind) if kind in S.UPLOAD_KINDS else (item_cls.id.desc(),))).all()
     root['all_count'] = len(everything)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['items'] if node else everything if view == 'all' else root['items']
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
     fk = subject_kit(kind, view, node, root, flat, nodes, in_archive=in_archive)
     #(speed, the owner 2026-10-20: every row's folders in one query, not one query a row; and for
     #problems, which have any answers at all (History) in one query, not each one's every answer)
-    if everything and kind not in S.UPLOAD_KINDS:
-        from sqlalchemy.orm import selectinload
-        ids = [x.id for x in everything]
-        item_cls.query.options(selectinload(getattr(item_cls, rel))).filter(item_cls.id.in_(ids)).all()
     if kind == 'problems':
         from .models import CProblem
         extra.setdefault('answered', {pid for (pid,) in db.session.query(CProblem.vproblem_id).distinct()})
@@ -1758,8 +1793,43 @@ def subject_page(kind, template, in_archive=False, **extra):
             given = db.session.query(CQuiz.vquiz_id).distinct()
             extra.setdefault('assigned', dict(db.session.query(vproblem_vquiz.c.vproblem_id, func.count(func.distinct(vproblem_vquiz.c.vquiz_id)))
                                               .filter(vproblem_vquiz.c.vquiz_id.in_(given)).group_by(vproblem_vquiz.c.vproblem_id)))
-    return render_template(template, fk=fk, items=shown, total=len(everything), kind=kind, in_archive=in_archive,
-                           moved=request.args.get('moved', ''), show=request.args.get('show', ''), **extra)
+    #the list is paged, 20 at a time (the owner, 2026-10-23): only the rows of the folder shown, the
+    #words typed (?q=), the sort (?sort=, ?dir=) and the page (?page=) asked for are drawn. What's
+    #checked in other folders (?checked=1,2,3, the Checked folder) is listed the same way.
+    from app import paging
+    checked = request.args.get('checked')
+    if checked is not None:
+        want = {x for x in checked.split(',') if x}
+        listed = [x for x in everything if str(x.id) in want]
+    elif view == 'all':
+        listed = everything
+    elif view == 'main':
+        listed = root['items']
+    else:
+        listed = folder_tree.subtree(node)
+    #(a thing that was just saved or opened by a link, ?show=, is in the All list when it isn't here)
+    show = request.args.get('show', '')
+    if show and checked is None and view != 'all' and not any(str(x.id) == show for x in listed) \
+            and any(str(x.id) == show for x in everything):
+        keep = {k: v for k, v in request.args.items() if k in ('section',)}
+        return redirect(request.path + '?' + urlencode(dict(keep, show=show)))
+    assigned = extra.get('assigned') or {}
+    lay = extra.get('layout')
+    sorts = {'title': lambda i: (getattr(i, 'title', None) or getattr(i, 'name', '') or '').lower(),
+             'created': lambda i: i.create_date}
+    if kind in ('quizzes', 'problems'):
+        sorts['assigned'] = lambda i: assigned.get(i.id, 0)
+    if kind == 'quizzes' and lay is not None:
+        sorts['problems'] = lambda i: len(lay.parse(i.vpid_lst))
+    pg = paging.paginate(listed, name_of=lambda i: getattr(i, 'title', None) or getattr(i, 'name', '') or '', sorts=sorts, show=show)
+    if checked is not None:
+        pg.label, pg.icon = 'Checked', 'lc-folder-check'
+    #(only the rows drawn need their folders loaded: one query, not one a row)
+    if pg.items and kind not in S.UPLOAD_KINDS:
+        from sqlalchemy.orm import selectinload
+        item_cls.query.options(selectinload(getattr(item_cls, rel))).filter(item_cls.id.in_([x.id for x in pg.items])).all()
+    return render_template(template, fk=fk, items=pg.items, pg=pg, total=len(everything), kind=kind, in_archive=in_archive,
+                           moved=request.args.get('moved', ''), show=show, **extra)
 
 
 # ---------------------------------------------------------------- the archive

@@ -54,8 +54,8 @@
    row open to each student's attempts; beside it Students, Average and Status, each sortable; at
    the row's end View, Edit, History (the name used to go there) and Print paper pages #}
 {% macro quiz_rows(vqs) %}
-  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows">
-    <thead><tr><th>Quiz</th><th>Students</th><th>Average</th><th>Status</th><th></th></tr></thead>
+  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="students">Students</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_row(results[vq.id]) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -71,7 +71,13 @@
       {% endfor %}</div></details></td>
     <td data-label="Students" class="nowrap" data-sort="{{ '%04d' % q.students }}"><span class="badge box-count">{{ count_of(q.students, 'student', 'students') }}</span></td>
     <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % q.average if q.average is not none else '' }}">{% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td data-label="Status" class="nowrap" data-sort="{{ '%04d' % q.waiting if q.waiting else '' }}">{% if q.waiting %}<span class="badge badge-accent badge-status" title="{{ q.waiting }} handed in and waiting for grading">{{ q.waiting }} in progress</span>{% endif %}</td>
+    <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (q.states.review, q.states.out) if q.states.review or q.states.out else '' }}">
+      {#- (what each student is doing, as counts, stacked like People's Status column; the owner, 2026-10-23: it was blank unless something waited) #}
+      <span class="student-sums stacked-sums">
+        {% if q.states.review %}<span class="badge badge-accent badge-status" title="{{ q.states.review }} student{{ '' if q.states.review == 1 else 's' }} with answers handed in and waiting for grading">{{ q.states.review }} waiting</span>{% endif %}
+        {% if q.states.out %}<span class="badge badge-warn badge-status" title="{{ q.states.out }} student{{ '' if q.states.out == 1 else 's' }} who haven’t handed it in yet">{{ q.states.out }} not handed in</span>{% endif %}
+        {% if q.states.done %}<span class="badge badge-ok badge-status" title="{{ q.states.done }} student{{ '' if q.states.done == 1 else 's' }} with a score">{{ q.states.done }} done</span>{% endif %}
+        {% if not q.students %}<span class="muted small" title="Not assigned to anyone yet">–</span>{% endif %}</span></td>
     <td class="actions"><span class="btn-row quiz-row-actions">
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
@@ -90,8 +96,8 @@
 {% macro students_table(people) %}
   {% if people %}
   {#- (the Score colors' cut-offs, for the folder tabs' averages: static/js/folderfilter.js) #}
-  <div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-score-green="{{ tuning.get('score_green') }}" data-score-amber="{{ [tuning.get('score_amber'), tuning.get('score_green')]|min }}">
-    <thead><tr><th>Student</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
+  <div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}" data-score-green="{{ tuning.get('score_green') }}" data-score-amber="{{ [tuning.get('score_amber'), tuning.get('score_green')]|min }}">
+    <thead><tr><th data-sort-key="name">Student</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
     <tbody>
     {% for person in people %}{% set student, g = rows[person.id] %}
       {% set page_icon %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Student page: {{ student.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>{% endset %}
@@ -121,7 +127,7 @@
 {% if laid_out %}
 {% set q = quizzes[0] %}{% set vq = q.vquiz %}
 {% call folders_page(fk) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'student', 'students', items='tr[data-box]', boxes='details.sub-box', url=true) }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'student', 'students', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}
     {#- the way back and Assign it at the right end of the filter row (View and Edit beside the title), as on a
         problem's history (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes', 'btn btn-secondary btn-sm') }}
@@ -139,9 +145,8 @@
     </div>
   </div>
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root.people|length, every=shown, key_prefix='student:') %}{{ students_table(n.people) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'student:') %}{{ students_table(n.people) }}{% endcall %}{% else %}
-    {% call named_box(fk, 'student:') %}{{ students_table(shown) }}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {#- one folder's students, 20 at a time (app/paging.py) #}
+    {% call named_box(fk, 'student:', pg=pg) %}{% if shown %}{{ students_table(shown) }}{% elif not pg.q %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}
 {% elif single %}
@@ -156,9 +161,8 @@
     <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and quizzes and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=quizzes|map(attribute='vquiz')|list, key_prefix='quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
-    {% call named_box(fk, 'quiz:') %}{% if quizzes %}{{ quiz_rows(quizzes|map(attribute='vquiz')|list) }}{% endif %}{% if not quizzes %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {#- one folder's quizzes, 20 at a time (app/paging.py) #}
+    {% call named_box(fk, 'quiz:', pg=pg) %}{% if quizzes %}{{ quiz_rows(quizzes|map(attribute='vquiz')|list) }}{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}
 {% endif %}

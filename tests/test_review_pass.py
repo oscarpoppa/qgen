@@ -1854,11 +1854,12 @@ def test_folder_pages_open_on_all(app_db):
     filed = VQuiz.query.filter_by(title='Filed one').one()
     teach.post('/quiz/subjects/quizzes/file', data={'subject': day.id, 'items': [filed.id]})
     page = teach.get('/quiz/listvq?folder=all').data.decode()
-    assert 'data-folder-filter data-prefix="quiz:"' in page and 'class="box sub-box' not in page
+    #(20 to a page, one folder at a time: the owner, 2026-10-23; the folders are links to their own pages and
+    #the browser has nothing to narrow, so no tree of keys is sent)
+    assert 'data-folder-filter data-onetab data-prefix="quiz:"' in page and 'data-paged' in page and 'class="box sub-box' not in page
     assert page.count('data-box="quiz:{}"'.format(filed.id)) == 1  # once, though it's in a folder
-    tree = json.loads(re.search(r'<script type="application/json" class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
-    assert [(n['name'], n['keys']) for n in tree] == [('Week 1', ['quiz:{}'.format(filed.id)])]
-    assert [(n['name'], n['keys']) for n in tree[0]['children']] == [('Day 2', ['quiz:{}'.format(filed.id)])]
+    assert 'class="folder-filter-tree">[]</script>' in page
+    assert 'href="/quiz/listvq?folder={}"'.format(week.id) in page
     ids = re.findall(r'\sid="([^"]+)"', page)
     assert len(ids) == len(set(ids))
     for url in ('/quiz/results?folder=all', '/userdet?folder=all', '/quiz/listuser?folder=all', '/quiz/archive?folder=all', '/quiz/listvp?folder=all'):
@@ -1876,7 +1877,7 @@ def test_assigned_counts_on_quizzes_and_problems(app_db):
     give(vq, 'sam')
     give(vq, 'sam')
     page = teach.get('/quiz/listvq?folder=all').data.decode()
-    assert '<th>Assigned</th>' in page
+    assert '<th data-sort-key="assigned">Assigned</th>' in page
     cell = page.split('data-label="Assigned"')[1].split('</td>')[0]
     assert 'data-sort="000002"' in cell and 'href="/quiz/results/{}"'.format(vq.id) in cell and '>2</a>' in cell
     page = teach.get('/quiz/listvp?folder=all').data.decode()

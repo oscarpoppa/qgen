@@ -210,7 +210,8 @@ def test_assigning_from_the_users_page(app_db):
     assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'aria-label="Assign a quiz"' in page  # (the paper plane: owner 2026-10-14)
     #(paper planes, the words for screen readers: owner 2026-10-14)
     assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'aria-label="Assign a quiz to this folder"' in page
-    assert 'href="/quiz/assign?folder={}"><svg'.format(p2) in no_titles(page)  # the box inside
+    #(one folder at a time, 20 to a page: the folder inside has its Assign on its own page; the owner, 2026-10-23)
+    assert 'href="/quiz/assign?folder={}"><svg'.format(p2) in no_titles(teach.get('/userdet?folder={}'.format(p2)).data.decode())
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
     start = lambda page: re.search(r'data-start="(\w+)"', page[page.index('id="pick-people"'):]).group(1)
     # a folder: everyone in it (and in the folders inside it), checked, opening on its tab
@@ -235,7 +236,7 @@ def test_results_pages_lead_back_to_users(app_db):
     assert '<h1>People</h1>' in accounts and 'data-trail-key="people"' in accounts
     assert '>Accounts</a>' not in accounts and '>Results</a>' not in accounts and 'href="/quiz/listuser?folder=all"' not in accounts
     # its results are on it: the Quizzes, Status and Done columns, and the results' Show filter
-    assert '<th>Quizzes</th><th>Status</th><th>Done</th>' in accounts and 'id="results-filter"' in accounts
+    assert '<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="status">Status</th><th data-sort-key="done">Done</th>' in accounts and 'id="results-filter"' in accounts
     assert teach.get('/people').headers['Location'] == '/userdet'
     assert teach.get('/quiz/listuser?folder=all').headers['Location'] == '/userdet?folder=all'
     #(the menu's People opens People, whatever ?view= asks: the owner, 2026-10-21)

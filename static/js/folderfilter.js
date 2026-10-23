@@ -101,6 +101,11 @@
     //folder, whatever was open last
     var urlTab = 'urlTab' in box.dataset ? new URLSearchParams(location.search).get('tab') : null;
     if (urlTab) chosen = urlTab;
+    //a list shown 20 at a time (data-paged, app/paging.py; the owner, 2026-10-23): the server sent just the
+    //folder shown (the side list's folders are links to their own pages), so there's nothing to narrow
+    //here, and only the Checked folder (?checked=, data-start) is ever "chosen"
+    var paged = 'paged' in box.dataset;
+    if (paged) chosen = box.dataset.start === 'checked' ? 'checked' : 'all';
     function keepInAddress() {
       if (!('urlTab' in box.dataset) || !window.history || !history.replaceState) return;
       var q = new URLSearchParams(location.search);
@@ -462,9 +467,9 @@
       box.dataset.shown = chosen;
       var sideCol = rows.querySelector('.folder-side-list');
       if (sideCol && sideCol.qgenFolds) sideCol.qgenFolds();  // (the folder picked stays in view)  // (what's shown, for scripts: takeout.js's "the folder shown")
-      var keep = chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
+      var keep = paged || chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
       items().forEach(function (el) {
-        var k = keyOf(el), hide = chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
+        var k = keyOf(el), hide = paged ? false : chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
         window.qgenHideRow ? window.qgenHideRow(el, 'folder', hide) : (el.hidden = hide);
       });
       //a folder with nothing in it says so (what the name filter hides still counts as in it)
@@ -523,7 +528,7 @@
       var parts = label.split(' \u203a ');
       var icon = chosen === 'all' ? (own ? (box.dataset.tabIcon || 'folder') : 'folders') : chosen === 'none' || self ? 'tray' : (n && n.icon) || 'folder';
       //(what shows: a name typed in the filter counts too, "All people 2": the owner, 2026-10-22)
-      var shown = weigh(items().filter(function (el) { return !el.hidden; }));
+      var shown = paged && box.dataset.shownTotal !== undefined ? +box.dataset.shownTotal : weigh(items().filter(function (el) { return !el.hidden; }));
       var tab = document.createElement('span');
       tab.className = 'folder-tab folder-tab-name';
       tab.setAttribute('aria-pressed', 'true');
@@ -533,6 +538,31 @@
       var c = document.createElement('span'); c.className = 'badge box-count'; c.textContent = shown; c.title = count(shown); tab.appendChild(c);
       tab.title = label;
       var row = wrap.firstElementChild;
+      //(a paged list's page controls, at the right end of this row)
+      var pagerTop = box.querySelector(':scope > .pager-top');
+      if (pagerTop && pagerTop.parentNode !== row) row.appendChild(pagerTop);
+      //("Check all 57": every match on every page, where the list has check boxes; again to uncheck them)
+      var allBtn = box.querySelector('[data-check-all-folder]');
+      if (allBtn) {
+        allBtn.closest('label').hidden = !hasChecks() || !window.qgenCheckMany;
+        if (!allBtn.qgenWired) {
+          allBtn.qgenWired = true;
+          var pairs = [];
+          try { pairs = JSON.parse(allBtn.dataset.keys || '[]'); } catch (err) {}
+          //(checked when every one is checked, half-checked when some are, like the heading row's box)
+          var sync = function () {
+            var some = window.qgenCheckedIds ? pairs.filter(function (p) { return window.qgenCheckedIds().indexOf(String(p[0])) !== -1; }).length : 0;
+            allBtn.checked = pairs.length > 0 && some === pairs.length;
+            allBtn.indeterminate = some > 0 && some < pairs.length;
+            var words = allBtn.closest('label').querySelector('[data-check-words]');
+            if (words) words.textContent = (allBtn.checked ? 'Uncheck all ' : 'Check all ') + pairs.length;
+            allBtn.setAttribute('aria-label', (allBtn.checked ? 'Uncheck all ' : 'Check all ') + pairs.length + ' in this folder');
+          };
+          allBtn.addEventListener('change', function () { window.qgenCheckMany(pairs, allBtn.checked); });
+          document.addEventListener('qgen-checked', sync);
+          sync();
+        }
+      }
       //(only the tab itself replaced: the open folder's buttons after it stay)
       var old = row.querySelector(':scope > .folder-tab-name');
       if (old) row.replaceChild(tab, old); else row.insertBefore(tab, row.firstChild);
@@ -627,6 +657,15 @@
       var id = sideFor(a);
       if (id === null) return;
       e.preventDefault();
+      //(a paged list asks the server for what's checked, in every folder and on every page)
+      if (paged && id === 'checked') {
+        var u = new URLSearchParams(location.search), keep = new URLSearchParams();
+        if (u.get('section')) keep.set('section', u.get('section'));
+        keep.set('checked', (window.qgenCheckedIds ? window.qgenCheckedIds() : []).join(','));
+        location.assign(location.pathname + '?' + keep.toString().replace(/%2C/g, ','));
+        return;
+      }
+      if (paged) return;
       choose(id);
     });
     //the page's heading names what's shown: the folder chosen (the All label to begin with)
@@ -674,6 +713,8 @@
     function recount() {
       var ks = {}, n = 0, before = Object.keys(checkedNode.keySet).join(' ');
       items().forEach(function (el) { var t = tickOf(el); if (t && t.checked) { ks[keyOf(el)] = 1; n += el.dataset.weight ? +el.dataset.weight : 1; } });
+      //(a paged list: everything checked, on every page and in every folder, is what the Checked folder holds)
+      if (paged && window.qgenCheckedIds) n = window.qgenCheckedIds().length;
       checkedNode.keySet = ks; checkedNode.count = n;
       box.querySelectorAll('.folder-tab[data-folder="checked"]').forEach(function (b) {
         var c = b.querySelector('.box-count');

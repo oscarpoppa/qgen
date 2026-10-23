@@ -154,8 +154,9 @@
 {# url: the page's own bar, which keeps its words (?q=) and Show choice (?state=) in the address (filter.js) #}
 {# count_one / count_many: what its count counts when it isn't the things themselves (Grading: the
    attempts waiting, each thing weighing its data-weight; the owner, 2026-10-19) #}
-{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false, count_one=none, count_many=none) -%}
-<div class="btn-row small pick-bar filter-bar" data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if count_many %} data-count-one="{{ count_one }}" data-count-many="{{ count_many }}"{% endif %}{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
+{#- paged: how many match, on a list shown 20 at a time (app/paging.py): the words typed go to the server, which sends the matching page (static/js/filter.js) -#}
+{% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false, count_one=none, count_many=none, paged=none) -%}
+<div class="btn-row small pick-bar filter-bar"{% if paged is not none %} data-paged data-matches="{{ paged }}"{% endif %} data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if count_many %} data-count-one="{{ count_one }}" data-count-many="{{ count_many }}"{% endif %}{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
   {# the box and Clear stay side by side (only the box gets narrower on a small screen) #}
   <span class="filter-box"><input type="search" class="filter-list" placeholder="Filter by name…" aria-label="Filter {{ many }} by name" title="Type part of a name to show only the {{ many }} that match">
   {%- if not compact %}<button type="button" class="btn btn-secondary btn-sm" data-filter-clear title="Show all the {{ many }} again">Clear</button>{% endif %}</span>

@@ -24,6 +24,10 @@ window.qgenHideRow = function (row, key, hide) {
     var input = bar.querySelector('input[type=search]');
     if (!input || bar.dataset.ready) return;
     bar.dataset.ready = '1';
+    //a list shown 20 at a time (app/paging.py; the owner, 2026-10-23): the words typed go to the server,
+    //which sends the page of matches; the count is the server's (data-matches), no row is hidden here
+    var paged = 'paged' in bar.dataset;
+    if (paged) bar.qgenFilter = function () { return +bar.dataset.matches || 0; };
     var count = bar.querySelector('[data-filter-count]'), clear = bar.querySelector('[data-filter-clear]');
     //a folder page's list: the count goes under the page's heading instead (_folders.html)
     var under = bar.dataset.filter === '#folder-items' && document.getElementById('folder-count');
@@ -126,6 +130,36 @@ window.qgenHideRow = function (row, key, hide) {
     }
 
     input.addEventListener('input', run);
+    if (paged) {
+      var pagedChoice = bar.querySelector('select');
+      var go = function () {
+        clearTimeout(go.t);
+        var u = new URL(location.href), v = input.value.trim();
+        if (v) u.searchParams.set('q', v); else u.searchParams.delete('q');
+        //(the results pages' Show choice goes to the server too: ?state=)
+        if (pagedChoice && pagedChoice.selectedIndex > 0) u.searchParams.set('state', pagedChoice.value); else u.searchParams.delete('state');
+        ['page', 'show', 'moved'].forEach(function (k) { u.searchParams.delete(k); });
+        if (u.search === location.search) return;
+        try { sessionStorage.setItem('qgen-refocus-filter', '1'); } catch (e) {}
+        location.assign(u.pathname + u.search + u.hash);
+      };
+      //(after a short pause in typing, or Enter)
+      input.addEventListener('input', function () { clearTimeout(go.t); go.t = setTimeout(go, 500); });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+      if (clear) clear.addEventListener('click', function () { input.value = ''; if (pagedChoice) pagedChoice.selectedIndex = 0; go(); });
+      if (pagedChoice) pagedChoice.addEventListener('change', go);
+      var asked = new URLSearchParams(location.search).get('q');
+      if (asked) input.value = asked;
+      var askedState = new URLSearchParams(location.search).get('state');
+      if (pagedChoice && askedState && Array.prototype.some.call(pagedChoice.options, function (o) { return o.value === askedState; })) pagedChoice.value = askedState;
+      //(the page just reloaded for what was typed: the cursor is back in the box, after the words)
+      try {
+        if (sessionStorage.getItem('qgen-refocus-filter')) {
+          sessionStorage.removeItem('qgen-refocus-filter');
+          input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+        }
+      } catch (e) {}
+    }
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
     bar.querySelectorAll('select').forEach(function (s) { s.addEventListener('change', run); });
     if (clear) clear.addEventListener('click', function () {

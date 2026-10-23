@@ -1,0 +1,18 @@
+{# The pager under a list that shows 20 at a time (app/paging.py; the owner, 2026-10-23): the page
+   numbers, with the first, the last and a few around this one, and Previous / Next as bare icons.
+   Only when the list has more than one page. {% from "_pager.html" import pager %}{{ pager(pg) }} #}
+{% macro pager(pg) %}
+{% if pg and pg.count > 1 %}
+<nav class="pager" aria-label="Pages">
+  {% if pg.number > 1 %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ pg.url(page=pg.number - 1) }}" title="Previous page">{{ icon_label('lc-chevron-left', 'Previous page') }}</a>
+  {% else %}<span class="btn btn-secondary btn-sm btn-icon is-disabled" aria-disabled="true" title="This is the first page">{{ icon_label('lc-chevron-left', 'Previous page') }}</span>{% endif %}
+  {% for n in pg.window() %}
+    {% if n is none %}<span class="pager-gap" aria-hidden="true">…</span>
+    {% elif n == pg.number %}<span class="pager-num current" aria-current="page">{{ n }}</span>
+    {% else %}<a class="pager-num" href="{{ pg.url(page=n) }}" title="Page {{ n }}">{{ n }}</a>{% endif %}
+  {% endfor %}
+  {% if pg.number < pg.count %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ pg.url(page=pg.number + 1) }}" title="Next page">{{ icon_label('lc-chevron-right', 'Next page') }}</a>
+  {% else %}<span class="btn btn-secondary btn-sm btn-icon is-disabled" aria-disabled="true" title="This is the last page">{{ icon_label('lc-chevron-right', 'Next page') }}</span>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
