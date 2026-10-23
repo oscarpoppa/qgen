@@ -50,11 +50,14 @@
     <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
     {# the same filter bar as the Quiz card's (filter, Clear, how many shown), then the checking on a
        line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
+    {#- (Check all shown / Uncheck all on the filter's line, so the folder tabs below start level
+        with the Quiz card's: the owner, 2026-10-22) #}
+    <div class="pick-top-line">
     {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='tr[data-box]', id='people-pick-bar') }}
     <div class="btn-row small write-to-checks">
-      <button type="button" class="btn btn-secondary btn-sm pick-all" title="Check everyone in the list below (the folder chosen, and the names that match)">Check all shown</button>
-      <button type="button" class="btn btn-secondary btn-sm" data-pick="clear" title="Uncheck everyone">Uncheck all</button>
-      <span class="chosen-count muted small" aria-live="polite">{{ chosen|length }} checked</span>
+      <button type="button" class="btn btn-secondary btn-sm btn-icon pick-all" title="Check all shown: Check everyone in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
+      <button type="button" class="btn btn-secondary btn-sm btn-icon" data-pick="clear" title="Uncheck all: Uncheck everyone">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
+    </div>
     </div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
@@ -143,10 +146,15 @@
   function refresh() {
     var s = shown(), every = s.length > 0 && s.every(function (i) { return i.checked; });
     all.dataset.on = every ? '0' : '1';
-    all.textContent = (every ? 'Uncheck' : 'Check') + ' all shown';
+    //(an icon: a checked box, an empty one once everything shown is checked: the owner, 2026-10-22)
+    var words = (every ? 'Uncheck' : 'Check') + ' all shown';
+    if (all.dataset.words !== words) {
+      all.dataset.words = words;
+      window.qgenIconButton(all, every ? 'lc-check-none' : 'lc-check-all', words, every ? 'Uncheck everyone in the list below' : 'Check everyone in the list below (the folder chosen, and the names that match)');
+    }
     all.disabled = !s.length;
     var picked = people.filter(function (i) { return i.checked; });
-    count.textContent = picked.length + ' checked';
+    if (count) count.textContent = picked.length + ' checked';
   }
   people.forEach(function (i) { i.addEventListener('change', refresh); });
   all.addEventListener('click', function () {

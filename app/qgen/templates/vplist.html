@@ -118,9 +118,9 @@
     <div class="field pick-people" id="add-quiz-pick">
       {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
       <div class="btn-row small write-to-checks">
-        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="all" title="Check every quiz in the list below (the folder chosen, and the names that match)">Check all shown</button>
-        <button type="button" class="btn btn-secondary btn-sm" data-quizzes="none" title="Uncheck every quiz">Uncheck all</button>
-        <span class="muted small" data-quiz-count aria-live="polite">0 checked</span>
+        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-quizzes="all" title="Check all shown: Check every quiz in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-icon" data-quizzes="none" title="Uncheck all: Uncheck every quiz">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
+        <span class="muted small" data-quiz-count aria-live="polite" hidden>0 checked</span>
       </div>
       <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
            data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">

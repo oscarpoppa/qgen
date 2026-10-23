@@ -977,8 +977,10 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     page = sam.get('/mypage?folder=started').data.decode()
     assert 'In progress: quizzes you’ve started, or handed in and not graded yet' in page and 'Settings quiz' in page
     row = page[page.index('{} In progress</a>'.format(ico('pencil'))):]
-    #(a count like every other row, what it counts in its tooltip: the owner, 2026-10-17)
-    assert 'class="side-count muted small" title="1 attempt started, or handed in and not graded yet">1</span>' in row[:row.index('</li>')]
+    #(a count like every other row, what it counts in its tooltip: the owner, 2026-10-17; a badge with
+    #the number, not both, the owner 2026-10-22)
+    here = row[:row.index('</li>')]
+    assert 'title="1 attempt started, or handed in and not graded yet"' in here and 'aria-label="1 in progress">1</span>' in here
     # back to My quizzes from the menu starts on All again
     assert 'data-view="all"' in sam.get('/mypage').data.decode()
     S.submit(cq, {1: '4'})

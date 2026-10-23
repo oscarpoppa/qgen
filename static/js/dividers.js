@@ -108,25 +108,26 @@
   //an open row's heading (the person, the quiz) stays in sight at the top of its scrolling list while
   //its contents scroll under it, until the next row comes (the owner, 2026-10-21); .row-stuck gives it
   //its band, only while it's stuck (in place, the band would cover the row's other cells)
+  //(speed, the owner 2026-10-22: only the open rows are measured, and every measurement is taken
+  //before anything is written, so the page is laid out once, not once a row: it took half a second
+  //on Problems' 259 rows, at load and on every scroll)
   function stick() {
     document.querySelectorAll('.folder-filter-list.folder-scroll').forEach(function (list) {
-      var head = list.querySelector('thead');
-      list.style.setProperty('--thead-h', (head ? head.offsetHeight : 0) + 'px');
-      var lt = list.getBoundingClientRect().top + (head ? head.offsetHeight : 0);
-      list.querySelectorAll('tr > td > details.row-fold > summary').forEach(function (sm) {
-        var d = sm.parentElement, on = false;
+      var head = list.querySelector('thead'), hh = head ? head.offsetHeight : 0;
+      var lt = list.getBoundingClientRect().top + hh;
+      var open = Array.prototype.map.call(list.querySelectorAll('tr > td > details.row-fold[open] > summary'), function (sm) {
+        return { sm: sm, h: sm.offsetHeight, row: sm.parentElement.closest('tr').getBoundingClientRect(), e: sm.getBoundingClientRect() };
+      });
+      list.style.setProperty('--thead-h', hh + 'px');
+      list.querySelectorAll('summary.row-stuck').forEach(function (sm) { if (!sm.parentElement.open) sm.classList.remove('row-stuck'); });
+      open.forEach(function (m) {
         //(how tall its heading is: a table inside the open row pins its own headings just under it,
         //the owner 2026-10-22)
-        d.style.setProperty('--sum-h', sm.offsetHeight + 'px');
-        if (d.open) {
-          var row = d.closest('tr').getBoundingClientRect();
-          on = row.top < lt - 2 && row.bottom > lt + sm.offsetHeight;
-          //(its band from the row's left edge to its right, just inside the row's outline)
-          var e = sm.getBoundingClientRect();
-          sm.style.setProperty('--stuck-l', Math.round(row.left + 1 - e.left) + 'px');
-          sm.style.setProperty('--stuck-r', Math.round(e.right - row.right + 1) + 'px');
-        }
-        sm.classList.toggle('row-stuck', on);
+        m.sm.parentElement.style.setProperty('--sum-h', m.h + 'px');
+        //(its band from the row's left edge to its right, just inside the row's outline)
+        m.sm.style.setProperty('--stuck-l', Math.round(m.row.left + 1 - m.e.left) + 'px');
+        m.sm.style.setProperty('--stuck-r', Math.round(m.e.right - m.row.right + 1) + 'px');
+        m.sm.classList.toggle('row-stuck', m.row.top < lt - 2 && m.row.bottom > lt + m.h);
       });
     });
   }

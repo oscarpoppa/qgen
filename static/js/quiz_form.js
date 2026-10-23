@@ -106,6 +106,35 @@
     return btn;
   }
 
+  //the "Who gets it" dialog: every student, or one of the groups (a random pick from it)
+  var whoDialog = null;
+  function askWho(item, title) {
+    if (!whoDialog) {
+      whoDialog = document.createElement('dialog');
+      whoDialog.className = 'ask who-dialog';
+      whoDialog.setAttribute('aria-labelledby', 'who-head');
+      whoDialog.innerHTML = '<p><strong id="who-head"></strong></p><div class="table-wrap pick-table"><table><tbody></tbody></table></div>'
+        + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-close>Cancel</button></div>';
+      whoDialog.querySelector('[data-close]').addEventListener('click', function () { whoDialog.close(); });
+      document.body.appendChild(whoDialog);
+    }
+    whoDialog.querySelector('#who-head').textContent = 'Who gets \u201c' + title + '\u201d';
+    var body = whoDialog.querySelector('tbody');
+    body.innerHTML = '';
+    [''].concat(LETTERS.slice(0, 6)).forEach(function (l) {
+      var tr = document.createElement('tr');
+      var id = 'who-' + (l || 'all');
+      tr.innerHTML = '<td class="tick-col"><input type="radio" name="who-pick"></td><td><label></label></td>';
+      var r = tr.querySelector('input'), lab = tr.querySelector('label');
+      r.id = id; r.value = l; r.checked = item.group === l;
+      lab.htmlFor = id; lab.textContent = l ? 'In group ' + l + ' (random pick)' : 'Every student gets it';
+      r.addEventListener('change', function () { item.group = l; whoDialog.close(); render(); });
+      body.appendChild(tr);
+    });
+    whoDialog.showModal();
+    var on = body.querySelector('input:checked'); if (on) on.focus();
+  }
+
   function render() {
     order = order.filter(function (item) { return boxes[item.id]; });
     var fixed = shuffle && !shuffle.checked;
@@ -123,7 +152,14 @@
       top.className = 'order-top';
       var name = document.createElement('span');
       name.className = 'order-title';
-      name.textContent = (fixed ? (i + 1) + '. ' : '') + title;
+      name.textContent = fixed ? (i + 1) + '. ' : '';
+      //(the name a link to the problem's View page, as in the list on the left: the owner, 2026-10-22)
+      var src = boxes[item.id][0].closest('tr');
+      if (src && src.dataset.viewUrl) {
+        var a = document.createElement('a'); a.href = src.dataset.viewUrl; a.textContent = title;
+        a.title = 'View: See three students\u2019 versions of ' + title; name.appendChild(a);
+      }
+      else name.appendChild(document.createTextNode(title));
       top.appendChild(name);
       //(a bare ✕, as every control on a list item is an icon: the owner, 2026-10-16)
       var rm = smallButton('\u2715', 'Remove \u201c' + title + '\u201d from the quiz', function () {
@@ -138,16 +174,17 @@
 
       var bottom = document.createElement('div');
       bottom.className = 'order-bottom';
-      var sel = document.createElement('select');
-      sel.setAttribute('aria-label', 'Who gets ' + title);
-      [''].concat(LETTERS.slice(0, 6)).forEach(function (l) {
-        var o = document.createElement('option');
-        o.value = l; o.textContent = l ? 'In group ' + l + ' (random pick)' : 'Every student gets it';
-        if (item.group === l) o.selected = true;
-        sel.appendChild(o);
-      });
-      sel.addEventListener('change', function () { item.group = sel.value; render(); });
-      bottom.appendChild(sel);
+      //(who gets it: a bare icon, its group's letter beside it, opening a dialog of the choices, in
+      //place of a dropdown on every problem: the owner, 2026-10-22)
+      var who = document.createElement('button');
+      who.type = 'button'; who.className = 'btn btn-secondary btn-sm btn-icon order-who';
+      var whoWords = item.group ? 'In group ' + item.group + ' (random pick)' : 'Every student gets it';
+      who.innerHTML = window.qgenIcon ? window.qgenIcon('lc-users') : '';
+      if (item.group) { var gl = document.createElement('span'); gl.className = 'order-who-group'; gl.textContent = item.group; who.appendChild(gl); }
+      who.title = 'Who gets it: ' + whoWords;
+      who.setAttribute('aria-label', 'Who gets \u201c' + title + '\u201d: ' + whoWords);
+      who.addEventListener('click', function () { askWho(item, title); });
+      top.insertBefore(who, rm);
       if (fixed) {
         [['↑', -1, 'Move up: '], ['↓', 1, 'Move down: ']].forEach(function (b) {
           var btn = smallButton(b[0], b[2] + title, function () {
@@ -160,7 +197,7 @@
           bottom.appendChild(btn);
         });
       }
-      li.appendChild(bottom);
+      if (bottom.children.length) li.appendChild(bottom);
       list.appendChild(li);
     });
     renderGroups();
@@ -168,6 +205,22 @@
   }
 
   if (shuffle) shuffle.addEventListener('change', render);
+
+  //Check all shown (the rows the folder and the filter leave in sight) / Uncheck all
+  var checks = document.getElementById('problem-checks');
+  //(on the filter's line, after "N problems": the owner, 2026-10-22)
+  var fbar = document.getElementById('problem-filter-bar'), fcount = fbar && fbar.querySelector('[data-filter-count]');
+  if (checks && fcount) fcount.after(checks);
+  if (checks) checks.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-prob-check]');
+    if (!b) return;
+    document.querySelectorAll('#all-problems input.pick').forEach(function (c) {
+      var on = b.dataset.probCheck === 'all' ? (c.checked || c.closest('tr').getClientRects().length > 0) : false;
+      if (c.checked === on) return;
+      c.checked = on;
+      c.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
 
   Object.keys(boxes).forEach(function (id) {
     boxes[id].forEach(function (box) {

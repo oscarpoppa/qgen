@@ -88,7 +88,9 @@ window.qgenHideRow = function (row, key, hide) {
       var cOne = bar.dataset.countOne || one, cMany = bar.dataset.countMany || many;
       if (count) count.textContent = shown + ' ' + (shown === 1 ? cOne : cMany);
       //nothing matches: say so, with a way back (a page with its own note keeps it: the results pages)
-      if (typeof bar.qgenFilter !== 'function' && root) {
+      //(a page with its own way of narrowing too, unless it has its own note: People had nothing at
+      //all to say for 0 matches, the owner 2026-10-22)
+      if (root && !(typeof bar.qgenFilter === 'function' && document.querySelector('.filter-none'))) {
         if (!none) {
           none = document.createElement('p');
           none.className = 'card empty small filter-none-auto';
@@ -102,7 +104,11 @@ window.qgenHideRow = function (row, key, hide) {
         var said = box && box.querySelector('.folder-filter-empty:not([hidden])');
         none.hidden = !(active && shown === 0) || !!said;
         if (!none.hidden) {
-          none.textContent = (q ? 'Nothing matches \u201c' + input.value.trim() + '\u201d. ' : 'Nothing matches. ');
+          //(a "Show" choice in the bar is named too: it may be what leaves nothing, the owner 2026-10-22)
+          var picked = Array.prototype.filter.call(bar.querySelectorAll('select'), function (s) { return s.selectedIndex > 0; })
+            .map(function (s) { return '\u201c' + s.options[s.selectedIndex].text + '\u201d'; });
+          var said = q ? '\u201c' + input.value.trim() + '\u201d' + (picked.length ? ' with ' + picked.join(' and ') : '') : picked.join(' and ');
+          none.textContent = said ? 'Nothing matches ' + said + '. ' : 'Nothing matches. ';
           var again = document.createElement('button');
           again.type = 'button';
           again.className = 'btn btn-link btn-sm';

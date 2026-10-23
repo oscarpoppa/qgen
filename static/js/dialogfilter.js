@@ -134,9 +134,12 @@
     //(folders to check: the standard Check all shown / Uncheck all, beside "N checked")
     var checks = document.createElement('div');
     checks.className = 'btn-row small write-to-checks';
-    checks.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="all" title="Check every folder in the list below (the ones that match the filter)">Check all shown</button>'
-      + '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="none" title="Uncheck every folder">Uncheck all</button>'
-      + '<span class="muted small" data-pick-count aria-live="polite"></span>';
+    checks.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="all"></button>'
+      + '<button type="button" class="btn btn-secondary btn-sm" data-dlg-check="none"></button>'
+      + '<span class="muted small" data-pick-count aria-live="polite" hidden></span>';
+    //(a pair of bare icons, the count left out: the owner, 2026-10-22)
+    window.qgenIconButton(checks.firstChild, 'lc-check-all', 'Check all shown', 'Check every folder in the list below (the ones that match the filter)');
+    window.qgenIconButton(checks.children[1], 'lc-check-none', 'Uncheck all', 'Uncheck every folder');
     holder.appendChild(bar); holder.appendChild(checks); holder.appendChild(box);
     function boxes() { return Array.prototype.slice.call(list.querySelectorAll('tbody input[type=checkbox]')); }
     //(only while the folders are check boxes: moving picks one, so they'd mean nothing then)

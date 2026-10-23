@@ -3412,3 +3412,22 @@ table.people-table td.person-folders { min-width: 0; max-width: 16rem; }
 @container listarea (max-width: 980px) {
   table.even-cols.people-table td.actions { width: 8.5rem; min-width: 8.5rem; }  /* (three to a line) */
 }
+/* (who gets a problem: a bare icon with its group's letter, opening a dialog: the owner, 2026-10-22) */
+.order-who { gap: 2px; }
+.order-who-group { font-size: var(--fs-sm); font-weight: 700; color: var(--accent); }
+dialog.who-dialog .pick-table td { padding: 6px 10px; }
+/* the editors' Folder picker as wide as its card allows, like the Problems picker under it (the owner, 2026-10-22) */
+.subject-pick > .folder-filter { flex: 1 1 100%; min-width: 0; }
+/* in the Checked folder the folders stand alone: no indents (the owner, 2026-10-22) */
+.folder-filter[data-chosen="checked"] .pick-table td label { padding-left: 0 !important; }
+/* the Assign page's Students card: the filter, then Check all shown / Uncheck all on the same line */
+.pick-top-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.pick-top-line > .filter-bar, .pick-top-line > .write-to-checks { margin: 0; flex: 0 1 auto; width: auto; }
+.pick-people > .pick-top-line { margin: 0 0 8px; }  /* (its top and bottom level with the Quiz card's filter line) */
+.pick-people > .label.pick-wrap-head { margin-bottom: 8px; }
+/* (a picker's Expand all / Collapse all on its filter line, beside the check icons: the owner, 2026-10-22) */
+.side-levels.bar-levels { margin: 0; align-self: center; }
+/* the one tab over a list: room for a folder's whole path, up to two-thirds of the way across;
+   a longer one loses its start, not its end (folderfilter.js fitName; the owner, 2026-10-22) */
+.folder-filter-onetab .folder-tab-name { max-width: 66%; }
+.folder-filter-onetab .folder-tab-name .box-title { max-width: none; text-overflow: clip; }

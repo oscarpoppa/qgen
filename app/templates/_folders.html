@@ -203,8 +203,10 @@
   {# the All view: everything in one list, each once; above it a row of folder buttons ("All"
      first, then the folders, then Uncategorized) that show just what's in that folder (and the
      folders inside it), static/js/folderfilter.js. Without the script, the whole list shows. #}
+  {#- (data-onetab: one tab over the list naming the open folder, no rows of folder tabs; the side
+      folder list picks: every folder page, the owner 2026-10-22) #}
   <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ fk.all_label }}"
-       {%- if fk.hide_empty %} data-hide-empty{% endif %} data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
+       {%- if fk.hide_empty %} data-hide-empty{% endif %} data-onetab data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}" data-all-own-url="{{ fk.page('all') ~ ('&' if '?' in fk.page('all') else '?') ~ 'own=1' }}" data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}{{ (':' ~ request.args.get('section')) if request.args.get('section') else '' }}" data-url-tab{% if not fk.readonly %} data-droppable{% endif %}{% if not fk.count_units %} data-total="{{ every|length }}" data-loose="{{ fk.main_count }}"{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix)|tojson }}</script>
     {# each folder's own buttons (Assign a quiz to it...), shown beside the row while it's chosen #}
@@ -240,7 +242,7 @@
 {% macro folder_items(fk, key_prefix) %}
   {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
   {% set name = fk.name(fk.node.folder) %}
-  <div class="folder-filter" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="All"
+  <div class="folder-filter" data-folder-filter data-onetab data-prefix="{{ key_prefix }}" data-all-label="All"
        data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}{{ (':' ~ request.args.get('section')) if request.args.get('section') else '' }}:{{ fk.view }}" data-url-tab data-name="{{ name }}"{% if not fk.readonly %} data-droppable{% endif %}>
     <script type="application/json" class="folder-filter-tree">{{ fk.filter_tree(key_prefix, fk.node)|tojson }}</script>
@@ -261,7 +263,7 @@
   {% set auto = (fk.auto_views|selectattr('key', 'equalto', fk.view)|first) if fk.auto_views else none %}
   {% set label = fk.name(fk.node.folder) if fk.node else auto.label if auto else fk.main_label if fk.view == 'main' else fk.all_label %}
   {% set ic = fk.folder_icon(fk.node.folder) if fk.node else auto.icon if auto else 'tray' if fk.view == 'main' else 'folders' %}
-  <div class="folder-filter named-box" data-folder-filter data-prefix="{{ key_prefix }}" data-all-label="{{ label }}"
+  <div class="folder-filter named-box" data-folder-filter data-onetab data-prefix="{{ key_prefix }}" data-all-label="{{ label }}"
        data-main-label="Unsorted" data-main-url="" data-all-url="" data-no-main data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}:{{ fk.view }}:named" data-tab-name="{{ label }}" data-tab-icon="{{ ic }}">
     <script type="application/json" class="folder-filter-tree">[]</script>

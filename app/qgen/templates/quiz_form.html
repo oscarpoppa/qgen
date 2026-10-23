@@ -14,8 +14,8 @@
     <tbody>
     {% for p in items %}
       {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
-      <tr data-item="{{ p.id }}" data-fkey="p:{{ p.id }}" data-name="{{ (p.title or 'untitled')|lower }}">
-        <td><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}" aria-label="Include “{{ p.title or 'Untitled' }}”"></td>
+      <tr data-item="{{ p.id }}" data-fkey="p:{{ p.id }}" data-view-url="{{ url_for('qgen.view_vprob', vpid=p.id) }}" data-name="{{ (p.title or 'untitled')|lower }}">
+        <td class="tick-col"><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}" aria-label="Include “{{ p.title or 'Untitled' }}”"></td>
         <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
           <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
           <div class="small muted clamp">{{ p.raw_prob }}</div></td>
@@ -52,10 +52,26 @@
   {{ form.hidden_tag() }}
   {# where Save goes back to (trail.js keeps it the page this was opened from) #}
   <input type="hidden" name="next" value="{{ came[0] if came[0] != url_for('qgen.list_vquizzes') }}" data-back-next>
+  {#- one card per question, each with its heading (the owner, 2026-10-22) #}
   <div class="card">
-    {{ field(form.title, attrs={'placeholder': 'e.g. Week 3 practice'}) }}
+    <div class="card-head"><h2>Title</h2></div>
+    {#- (its label only for screen readers: the heading says it, the owner 2026-10-22) #}
+    <div class="field{% if form.title.errors %} has-error{% endif %}">
+      {{ form.title.label(class_='sr-only') }}
+      {{ form.title(placeholder='e.g. Week 3 practice') }}
+      {% for e in form.title.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Calculator</h2></div>
     {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Question order</h2></div>
     {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Retakes</h2></div>
     {{ field(form.retake_rule, 'Every attempt stays visible, and the one whose score counts is marked ★ (none is marked for an average). You can change this for one student on “People”; changing it here later applies to every student again.') }}
     {% if retake_overrides %}
       {# students given their own rule on "Results by student": this setting doesn't apply to them #}
@@ -70,16 +86,18 @@
         </ul>
       </div>
     {% endif %}
-    {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
   </div>
 
   <div class="card">
-      <div class="card-head"><h2>Problems</h2>
-        {# or go to the Problems page to check them there, and come back with them (static/js/quiz_pick.js) #}
-        {% if has_problems %}<a class="btn btn-secondary btn-sm" id="pick-on-problems" data-keeps-form href="{{ url_for('qgen.list_vprobs') }}" title="Go to the Problems page, check the problems you want there, then come back here with them (what you’ve filled in here is kept)">Pick on the Problems page</a>{% endif %}</div>
+      <div class="card-head"><h2>Problems</h2></div>
       {% if has_problems %}
         <div class="builder-filters">
           {{ filter_bar('#all-problems', 'problem', 'problems', id='problem-filter-bar') }}
+        </div>
+        {#- the standard Check all shown / Uncheck all (the owner, 2026-10-22) #}
+        <div class="btn-row small write-to-checks" id="problem-checks">
+          <button type="button" class="btn btn-secondary btn-sm btn-icon" data-prob-check="all" title="Check all shown: Check every problem in the list below (the folder chosen, and the names that match)">{{ icon_label('lc-check-all', 'Check all shown') }}</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-icon" data-prob-check="none" title="Uncheck all: Uncheck every problem">{{ icon_label('lc-check-none', 'Uncheck all') }}</button>
         </div>
         {# every problem once, with the folders down the side of the list (data-style="list"): All
            problems, the folders, Uncategorized; a tab says how many in it are checked #}
@@ -93,7 +111,14 @@
       {% endif %}
   </div>
 
+  {#- the folder in a card of its own, under Problems (the owner, 2026-10-22) #}
   <div class="card">
+    <div class="card-head"><h2>Folder</h2></div>
+    {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error, card_headed=true) }}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Picture</h2></div>
     {{ image_drop(form.image) }}
   </div>
 </form>

@@ -217,12 +217,14 @@
     itemBoxes.forEach(function (d) {
       var named = !q || (d.dataset.name || '').indexOf(q) !== -1, rows = d.querySelectorAll('tr[data-state], .result-group[data-state]'), shown = 0;
       rows.forEach(function (r) {
-        var ok = (st === 'all' || r.dataset.state === st) && (named || (r.dataset.name || r.textContent).toLowerCase().indexOf(q) !== -1);
+        //(the name only, as the box says: a quiz's name inside no longer counts; "is" found "teacher"
+        //through "Christmas Trivia": the owner, 2026-10-22)
+        var ok = (st === 'all' || r.dataset.state === st) && named;
         r.hidden = !ok;
         if (ok) shown++;
       });
       //(its own flag: a folder button's choice stays, static/js/folderfilter.js)
-      var hide = rows.length ? !shown : !(named && st === 'all');
+      var hide = !named || (rows.length ? !shown : st !== 'all');
       if (window.qgenHideRow) window.qgenHideRow(d, 'text', hide); else d.hidden = hide;
       //(rows stay closed: a filter or "Show" never opens them, everything starts closed; the owner,
       //2026-10-21: "Not handed in yet only" used to open every row)

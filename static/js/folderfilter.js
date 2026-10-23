@@ -241,7 +241,26 @@
         //(in a dialog: beside the dialog's own title, "Write to chosen students")
         var dlg = !head && box.closest('dialog'), lab = dlg && document.getElementById(dlg.getAttribute('aria-labelledby') || '');
         if (lab) head = lab.tagName === 'STRONG' ? lab : (lab.querySelector('strong') || lab);
-        if (head) {
+        //(an editor's Folder question: at the end of its heading, "Folder (optional)": the owner, 2026-10-22)
+        var fs = !head && box.closest('fieldset'), legend = fs && fs.querySelector(':scope > legend');
+        //(a picker: on its filter's line, right after Check all shown / Uncheck all, or after the
+        //count where there are none: the owner, 2026-10-22)
+        var area = box.closest('dialog, .field, .card');
+        var checksRow = area && area.querySelector('.write-to-checks, #problem-checks');
+        if (checksRow && (checksRow.hidden || !checksRow.contains(checksRow.querySelector('button')))) checksRow = null;
+        var fbar = !checksRow && ((box.dataset.toolsHome && document.querySelector(box.dataset.toolsHome)) || (area && area.querySelector('[data-filter-bar]')));
+        var fcount = fbar && fbar.querySelector('[data-filter-count]');
+        if (checksRow || fcount) {
+          levels.qgenScope = col;
+          levels.classList.add('title-levels', 'bar-levels');
+          if (checksRow) checksRow.after(levels); else fcount.after(levels);
+          box.qgenSideLevels = levels;
+        } else if (legend) {
+          levels.qgenScope = col;
+          levels.classList.add('title-levels');
+          legend.appendChild(levels);
+          box.qgenSideLevels = levels;
+        } else if (head) {
           levels.qgenScope = col;
           levels.classList.add('title-levels');
           head.parentNode.insertBefore(levels, head.nextSibling);
@@ -332,7 +351,9 @@
       }
       //(data-tabs on a list: the folder tabs over the list too, as on a folder page: a student's
       //page, the owner 2026-10-13)
-      if (box.dataset.style !== 'list' || 'tabs' in box.dataset) {
+      //(data-onetab, a folder page's list (Problems, Quizzes): no rows of tabs, one tab naming the
+      //open folder, the page's own folder list beside it picks: the owner, 2026-10-22)
+      if ((box.dataset.style !== 'list' && !('onetab' in box.dataset)) || 'tabs' in box.dataset) {
         var host = box.dataset.style === 'list' ? tabsBox() : rows;
         host.textContent = '';
         //the top row: All, the folders, Uncategorized
@@ -413,6 +434,11 @@
       var t = tools(chosen === 'none' ? null : base());
       //(its Expand all / Collapse all right after the open tab, beside the folder's name; the other
       //buttons stay at the row's end: the owner, 2026-10-19)
+      //(the one tab's row: last time's buttons and lines out, the tab stays)
+      if ('onetab' in box.dataset) {
+        var ow = oneWrap();
+        Array.prototype.slice.call(ow.querySelectorAll(':scope > .folder-tabs > :not(.folder-tab-name), :scope > .folder-tools-line')).forEach(function (el) { el.remove(); });
+      }
       box.qgenTabPair = null;
       if (!box.dataset.toolsHome) {
         var lp = t.querySelector('.level-buttons');
@@ -424,7 +450,7 @@
       if (home) { home.querySelectorAll('.folder-filter-tools-here').forEach(function (old) { old.remove(); }); }
       //(a card whose buttons go on its filter bar makes no row for them: a side list's empty row
       //would take the list's place beside it)
-      var where = home ? null : box.dataset.style === 'list' ? tabsBox() : rows;
+      var where = home ? null : 'onetab' in box.dataset ? oneWrap() : box.dataset.style === 'list' ? tabsBox() : rows;
       var row = where && where.lastElementChild;
       //(a folder with no folders inside has no tabs of its own: no empty row for it; its buttons
       //go at the end of the row above, like every other folder's: the owner, 2026-10-14)
@@ -624,6 +650,7 @@
     if (narrow && narrow.addEventListener) narrow.addEventListener('change', function () { draw(); });
 
     function apply() {
+      box.dataset.chosen = chosen;  // (for the styles: the Checked folder's rows not indented, the owner 2026-10-22)
       recount();
       box.dataset.shown = chosen;
       var sideCol = rows.querySelector('.folder-side-list');
@@ -664,8 +691,7 @@
     //a folder list down the side (and no row of tabs over the list): one tab over the list naming
     //the folder it shows, joined to it, like the open tab on every folder page (the owner,
     //2026-10-19). A label, not a button: the folder is picked in the list beside it.
-    function oneTab() {
-      if (box.dataset.style !== 'list' || 'tabs' in box.dataset) return;
+    function oneWrap() {
       var wrap = box.querySelector(':scope > .folder-filter-onetab');
       if (!wrap) {
         wrap = document.createElement('div');
@@ -674,11 +700,23 @@
         box.insertBefore(wrap, list);
         box.classList.add('has-onetab');
       }
+      return wrap;
+    }
+    function oneTab() {
+      if ((box.dataset.style !== 'list' && !('onetab' in box.dataset)) || 'tabs' in box.dataset) return;
+      var wrap = oneWrap();
       var n = byId[base()], self = chosen.indexOf('self:') === 0;
-      var label = chosen === 'all' ? (box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized')
-        : self ? 'Unsorted in \u201c' + (n ? n.name : '') + '\u201d' : n ? n.name : chosen;
-      var icon = chosen === 'all' ? 'folders' : chosen === 'none' || self ? 'tray' : (n && n.icon) || 'folder';
-      var shown = weigh(items().filter(function (el) { return (el.dataset.hiddenBy || '').split(' ').indexOf('folder') === -1; }));
+      //(a folder's own page: its All is the folder itself, named)
+      var own = box.dataset.allUrl === '' && (box.dataset.tabName || box.dataset.name);
+      var label = chosen === 'all' ? (own || box.dataset.allLabel || 'All') : chosen === 'none' ? (box.dataset.mainLabel || 'Uncategorized')
+        : self ? 'Unsorted in \u201c' + (n ? n.name : '') + '\u201d'
+        //(a folder inside others: its whole path, "7th Grade › AT", so the same name in two places
+        //can't be mixed up: the owner, 2026-10-22)
+        : n ? path().filter(function (id) { return isFolder(id); }).map(function (id) { return byId[id].name; }).join(' \u203a ') || n.name : chosen;
+      var parts = label.split(' \u203a ');
+      var icon = chosen === 'all' ? (own ? (box.dataset.tabIcon || 'folder') : 'folders') : chosen === 'none' || self ? 'tray' : (n && n.icon) || 'folder';
+      //(what shows: a name typed in the filter counts too, "All people 2": the owner, 2026-10-22)
+      var shown = weigh(items().filter(function (el) { return !el.hidden; }));
       var tab = document.createElement('span');
       tab.className = 'folder-tab folder-tab-name';
       tab.setAttribute('aria-pressed', 'true');
@@ -686,11 +724,33 @@
       if (window.qgenIcon) tab.insertAdjacentHTML('beforeend', window.qgenIcon(icon));
       var nm = document.createElement('span'); nm.className = 'box-title'; nm.textContent = label; tab.appendChild(nm);
       var c = document.createElement('span'); c.className = 'badge box-count'; c.textContent = shown; c.title = count(shown); tab.appendChild(c);
+      tab.title = label;
       var row = wrap.firstElementChild;
-      row.textContent = '';
-      row.appendChild(tab);
-      if (box.qgenTabPair) row.appendChild(box.qgenTabPair);
+      //(only the tab itself replaced: the open folder's buttons after it stay)
+      var old = row.querySelector(':scope > .folder-tab-name');
+      if (old) row.replaceChild(tab, old); else row.insertBefore(tab, row.firstChild);
+      if (box.qgenTabPair && box.qgenTabPair.parentNode !== row) tab.after(box.qgenTabPair);
+      fitName(nm, parts);
+      oneTab.fit = function () { fitName(nm, parts); };
     }
+    //(a name too long for its tab loses its start, never its end: "… › Dans Workbook1 1", the folder
+    //that's open always in sight; the owner, 2026-10-22)
+    function fitName(nm, parts) {
+      nm.textContent = parts.join(' \u203a ');
+      if (!nm.offsetParent || nm.scrollWidth <= nm.clientWidth + 1) return;
+      for (var k = 1; k < parts.length; k++) {
+        nm.textContent = '\u2026 \u203a ' + parts.slice(k).join(' \u203a ');
+        if (nm.scrollWidth <= nm.clientWidth + 1) return;
+      }
+      //(the open folder's own name still too long: its end kept)
+      //(one "…" only, at the start: "…Workbook1 1")
+      var last = parts[parts.length - 1];
+      for (var c = parts.length > 1 ? 0 : 1; c < last.length; c++) {
+        nm.textContent = '\u2026' + last.slice(c);
+        if (nm.scrollWidth <= nm.clientWidth + 1) return;
+      }
+    }
+    window.addEventListener('resize', function () { if (oneTab.fit) oneTab.fit(); });
 
     //a table whose rows are all hidden (by a tab or the name filter) goes, heading and all; while
     //a filter matches nothing here, the empty frame goes too (the filter bar says so)
@@ -710,6 +770,7 @@
       if (!over || !(over.contains(list) || box.contains(over))) return;
       filtering = !!(e.detail && e.detail.active);
       tidy();
+      oneTab();
     });
 
     //(the folder list down the side, and the tabs over the list: data-tabs)
