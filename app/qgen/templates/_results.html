@@ -49,6 +49,9 @@
                    says so); the earlier attempts' score is in the dash's tooltip #}
                 {% if g.latest.status in ('new', 'started') %}<span class="muted"{% if g.combined is not none %} title="Earlier attempts: {{ '%.0f' % g.combined }}%. The score shows here once the latest attempt is handed in."{% endif %}>—</span>
                 {% elif g.combined is not none %}<strong>{{ '%.0f' % g.combined }}%</strong>{% else %}<span class="muted">—</span>{% endif %}
+                {#- the rule in use, in small muted words after the score: (best), (average)... on every row, even one with a
+                    single attempt (the owner, 2026-10-23); the full rule is its tooltip #}
+                <span class="muted small score-rule" title="{{ rules.get(g.rule_key, g.rule_key) }}">({{ short_rules.get(g.rule_key, g.rule_key)|lower }})</span>
                 {% if g.attempts|length > 1 or g.overridden %}
                 {#- a pencil that opens "How should ava’s score on “Quiz 1” count?" (static/js/retakerule.js),
                     never a drop-down that saves the moment it's picked (the owner, 2026-10-19); the
