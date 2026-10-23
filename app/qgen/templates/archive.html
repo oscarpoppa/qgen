@@ -72,7 +72,7 @@
 
 {% call folders_page(fk, under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
   <div class="folder-tools-bar">
-    {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box', url=true) }}{% endif %}
+    {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box', paged=pg.total) }}{% endif %}
     {% if total %}
     <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -90,12 +90,11 @@
     {% endif %}
   </div>
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and items and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=items, key_prefix='attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'attempt:') %}{{ archive_table(n['items'], here=n.folder) }}{% endcall %}{% elif not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>{% else %}{% call named_box(fk, 'attempt:') %}
-    {% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
-    {% elif fk.node and fk.node.folder.student_id %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
-    {% elif not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
-    {% else %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
+    {#- one folder's attempts, 20 at a time (app/paging.py); still in month boxes #}
+    {% if not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
+    {% else %}{% call named_box(fk, 'attempt:', pg=pg) %}{% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
+    {% elif fk.node and fk.node.folder.student_id and not pg.q %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
+    {% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
   </div>
 {% endcall %}
 {% endblock %}

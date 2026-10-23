@@ -185,15 +185,26 @@ def problem_results(vpid):
     vqs = [vq for vq, _rows in quizzes]
     answers = {vq.id: r for vq, r in quizzes}
     root, flat, nodes = S.subject_tree('quizzes', items=vqs)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['items'] if node else vqs if view == 'all' else root['items']
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    listed = vqs if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
+    #(20 quizzes to a page, app/paging.py; the counts count answers, like the rows' data-weight)
+    from app import paging
+    def names(vq):
+        return (vq.title or '') + ''.join(' {} {}'.format(r['student'].username, r['student'].nickname or '') for r in answers[vq.id] if r['student'])
+    pg = paging.paginate(listed, name_of=names, show=request.args.get('show'), sorts={
+        'title': lambda vq: (vq.title or '').lower(),
+        'answers': lambda vq: len(answers[vq.id]),
+        'average': lambda vq: (lambda g: sum(g) / len(g) if g else None)([r['item'].credit for r in answers[vq.id] if r['item'].credit is not None]),
+        'status': lambda vq: sum(1 for r in answers[vq.id] if r['cq'].needs_review and r['item'].credit is None) or None},
+        weight_of=lambda vq: len(answers[vq.id]))
+    shown = pg.items
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.problem_results', vpid=vp.id, folder=v),
         unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(vqs), name=lambda f: f.title,
         #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-problem-results-folders', hide_empty=True)
-    return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, answers=answers, shown=shown, fk=fk,
+    return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, answers=answers, shown=shown, pg=pg, fk=fk,
                            summary=summary, common=common, title='Problem history: {}'.format(vp.title or 'Untitled'))
 
 #route to view a problem as students get it (three sample versions), without editing
@@ -1027,8 +1038,20 @@ def review_list():
             weigh(c)
     for c in root['folders']:
         weigh(c)
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['items'] if node else quizzes if view == 'all' else root['items']
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
+    #(20 quizzes to a page, app/paging.py; the counts still count attempts waiting: the owner, 2026-10-19)
+    from app import paging
+    def todo(cq):
+        return sum(1 for cp in cq.cproblems if cp.credit is None)
+    pg = paging.paginate(listed, name_of=lambda q: q.title + ''.join(' {} {}'.format(cq.taker.username, cq.taker.nickname or '') for cq in by_quiz[q.id] if cq.taker),
+                         show=request.args.get('show'), sorts={
+        'title': lambda q: (q.title or '').lower(),
+        'attempts': lambda q: len(by_quiz[q.id]),
+        'to_grade': lambda q: sum(todo(cq) for cq in by_quiz[q.id]),
+        'oldest': lambda q: min((cq.compdate for cq in by_quiz[q.id] if cq.compdate), default=None)},
+                         weight_of=lambda q: weight.get(q.id, 0))
+    shown = pg.items
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.review_list', folder=v),
@@ -1037,7 +1060,7 @@ def review_list():
         all_label='All quizzes', all_count=len(waiting), name=lambda f: f.title,
         hint=None,  # (no note under the folder list: clutter, the owner 2026-10-21)
         fold_key='qgen-folded-grading-folders')
-    return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, fk=fk, title='Grading')
+    return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, pg=pg, fk=fk, title='Grading')
 
 #route to grade the essay answers of one quiz
 @qgen_bp.route('/quiz/review/<cqid>', methods=['GET', 'POST'])
@@ -1145,8 +1168,46 @@ def list_user(uid):
                    {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None}]
     if quiz_tree:
         quiz_filter += some(folder_tree.filter_tree(quiz_tree, lambda f: f.title, lambda fid: None, 'q:'))
+    #one folder's quizzes at a time, 20 to a page (app/paging.py; the owner, 2026-10-23): the side list's
+    #folders are what the page asks for (?folder= all, none (Uncategorized), new, started, or a folder's id)
+    from app import paging
+    folder_keys = {}
+    def collect(nodes):
+        for n in nodes:
+            if isinstance(n['id'], int):
+                folder_keys[n['id']] = {int(k[2:]) for k in n['keys']}
+            collect(n['children'])
+    collect(quiz_filter)
+    in_some = set().union(*folder_keys.values()) if folder_keys else set()
+    ask = folder_tree.choice_of(request.args)
+    ask = 'none' if ask == 'main' else ask
+    if ask == 'new':
+        listed = fresh
+    elif ask == 'started':
+        listed = working
+    elif ask == 'none':
+        listed = [g for g in groups if g['vquiz'].id not in in_some]
+    elif ask and str(ask).isdigit() and int(ask) in folder_keys:
+        listed = [g for g in groups if g['vquiz'].id in folder_keys[int(ask)]]
+    else:
+        ask, listed = 'all', groups
+    rank = {'new': 3, 'started': 2, 'review': 2}
+    pg = paging.paginate(listed, name_of=lambda g: g['vquiz'].title or '', sorts={
+        'title': lambda g: (g['vquiz'].title or '').lower(),
+        'latest': lambda g: g['latest'].id,
+        'attempts': lambda g: len(g['attempts']),
+        'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
+        'score': lambda g: g['combined']})
+    def strip(nodes):
+        #(the browser has nothing to narrow, so the tree carries names and counts only)
+        for n in nodes:
+            n['keys'] = []
+            strip(n['children'])
+    strip(quiz_filter)
     return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}’s student page".format(ulst.shown_name),
-                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter)
+                           awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter,
+                           pg=pg, shown_groups=pg.items, server_view=str(ask), groups_total=len(groups),
+                           groups_loose=len([g for g in groups if g['vquiz'].id not in in_some]))
 
 #Results by quiz: each quiz with its students' attempts (the other way round from Results by student)
 @qgen_bp.route('/quiz/results', methods=['GET'])
@@ -1928,19 +1989,27 @@ def archive():
         return people_page(in_archive=True, section=section, counts=counts)
     from app import folder_tree
     root, flat, nodes, attempts = S.archive_tree()
-    view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all')
-    shown = node['items'] if node else attempts if view == 'all' else root['items']
-    #whether each attempt shown (here or in the folder boxes) can be put back
-    showing = list(shown)
-    if node:
-        todo = list(node['folders'])
-        while todo:
-            n = todo.pop()
-            showing += n['items']
-            todo += n['folders']
-    blockers = {a.id: S.restore_blocker(a) for a in showing}
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    #(20 attempts to a page, one folder at a time, app/paging.py; the owner, 2026-10-23)
+    from app import paging
+    checked = request.args.get('checked')
+    if checked is not None:
+        want = {x for x in checked.split(',') if x}
+        listed = [a for a in attempts if str(a.id) in want]
+    elif view == 'all':
+        listed = attempts
+    elif view == 'main':
+        listed = root['items']
+    else:
+        listed = folder_tree.subtree(node)
+    pg = paging.paginate(listed, name_of=lambda a: '{} {}'.format(a.student_name or '', a.quiz_title or ''), show=request.args.get('show'))
+    if checked is not None:
+        pg.label, pg.icon = 'Checked', 'lc-folder-check'
+    shown = pg.items
+    #whether each attempt shown can be put back
+    blockers = {a.id: S.restore_blocker(a) for a in shown}
     fk = archive_kit(view, node, root, flat, nodes, len(attempts))
-    return render_template('archive.html', fk=fk, items=shown, blockers=blockers, total=len(attempts), title='Archive',
+    return render_template('archive.html', fk=fk, items=shown, pg=pg, blockers=blockers, total=len(attempts), title='Archive',
                            section='attempts', counts=counts,
                            moved=request.args.get('moved', ''))
 

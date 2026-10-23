@@ -4,7 +4,9 @@
  *  - folder pages: between the folder list and the list (one width for every folder page)
  *  - the Notices / Messages panel: its left edge
  *  - the scan draft: between each page's picture and its problems (one width for them all)
- *  - Grading: between a written answer and its grade (one width for them all) */
+ *  - Grading: between a written answer and its grade (one width for them all)
+ *  - every picker's folder list (the Assign, Write to, Move... dialogs and the cards that pick from folders):
+ *    between the folder list and the table beside it (one width for them all; the owner, 2026-10-23) */
 (function () {
   var STEP = 16, root = document.documentElement;
   function stored(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
@@ -85,6 +87,30 @@
         1, pair[3]);
     });
   });
+
+  //3. every picker's folder list, in a dialog or a card: a bar between it and the table beside it. The lists are
+  //built when a dialog opens, so they're looked for again whenever something is added to the page
+  function pickBar(box) {
+    if (box.qgenPickSplit || box.closest('.student-folders')) return;
+    var side = box.querySelector(':scope > .folder-filter-side');
+    if (!side) return;
+    box.qgenPickSplit = true;
+    var bar = document.createElement('div');
+    bar.className = 'vsplit pick-split';
+    box.appendChild(bar);
+    divider(bar, 'qgen-pick-side-width', function () { return side.getBoundingClientRect().width; },
+      function (px) { if (px) root.style.setProperty('--pick-side-w', px + 'px'); else root.style.removeProperty('--pick-side-w'); },
+      function () { return 170; }, function () { return Math.max(170, Math.min(480, box.getBoundingClientRect().width * 0.5)); },
+      1, 'Make the folder list wider or narrower');
+  }
+  function pickBars() { document.querySelectorAll('.folder-filter[data-style="list"]').forEach(pickBar); }
+  pickBars();
+  if (window.MutationObserver) {
+    var later = null;
+    new MutationObserver(function () { clearTimeout(later); later = setTimeout(pickBars, 50); })
+      .observe(document.body, { childList: true, subtree: true });
+  }
+  document.addEventListener('DOMContentLoaded', pickBars);
 
   //4. the Notices / Messages panel
   var dock = document.getElementById('dock');

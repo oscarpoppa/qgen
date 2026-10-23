@@ -42,10 +42,10 @@
 {% macro cards(gs) %}
   {% if gs %}
   <div class="table-wrap stack">
-  <table class="quiz-rows even-cols">
+  <table class="quiz-rows even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
     {#- (attempts and status are columns of their own, sortable, and lined up by the table itself
         whatever badges come and go: the owner, 2026-10-20) #}
-    <thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
     <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
@@ -131,42 +131,18 @@
   {# (in the same bar as the other folder pages, so the folder's heading sits in its middle) #}
   {#- (the way back at the filter row's right end, as on the other list pages; one line under the
       row, not two: the owner, 2026-10-17) #}
-  {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', url=true) }}
+  {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}
     <div class="btn-row results-filter-right">{{ back_button(url_for('user.home'), 'Home', 'btn btn-secondary btn-sm') }}</div></div>{% endif %}
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
-    {% if showing or fk.view == 'main' %}{% call named_box(fk, 'quiz:') %}{{ quiz_cards(shown, fk.view) }}{% endcall %}
-    {% elif fk.node %}
-      {# a folder's own page: what's in it (and in the folders inside it) in one list, with the
-         same tabs as every level: All, its folders, Unsorted #}
-      {% set name = fk.node.folder.name %}
-      <div class="folder-filter" data-folder-filter data-onetab data-url-tab data-prefix="quiz:" data-all-label="All"
-           data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %}
-           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}:{{ fk.view }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)." data-tab-name="{{ name }}"{% if fk.node.folders %} data-name="{{ name }}"{% endif %}>
-        <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
-        {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
-        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
-        <template class="folder-filter-tools" data-for="all">{{ folder_up(fk) }}</template>
-        <div class="folder-filter-list">{{ quiz_cards(shown, fk.view) }}</div>
-      </div>
-    {% elif groups %}
-      {# every quiz in one list, each once; above it the folder tabs, as on every folder page
-         (static/js/folderfilter.js): All quizzes, New, In progress, your folders, Uncategorized.
-         An address's ?folder= opens on that tab. #}
-      <div class="folder-filter" data-folder-filter data-onetab data-url-tab data-prefix="quiz:" data-all-label="{{ fk.all_label }}"
-           data-main-label="{{ fk.main_label }}" data-main-url="{{ fk.page('main') }}" data-all-url="{{ fk.page('all') }}"
-           data-unit="quiz" data-units="quizzes" data-remember="{{ request.endpoint }}" data-droppable data-empty-hint="Use a quiz's Move icon (or, on a computer, drag it onto the folder)."
-           {% if fk.view != 'all' %}data-start="{{ 'none' if fk.view == 'main' else fk.view }}"{% endif %}>
-        <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
-        {# each folder's tab: its Folder options (rename, move, delete), as on every folder page #}
-        {% for f, depth in fk.flat %}<template class="folder-filter-tools" data-for="{{ f.id }}">{{ folder_options(fk, fk.nodes[f.id], 'btn-xs') }}</template>{% endfor %}
-        <div class="folder-filter-list">{{ quiz_cards(groups, 'all') }}</div>
-      </div>
-    {% endif %}
+    {#- one folder's quizzes, 20 at a time (app/paging.py): the side list's folders and New / In progress are links, each its own page #}
+    {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ cards(shown) }}{% endif %}{% endcall %}
   </div>
-  {% if showing and not shown %}
+  {% if showing and not shown and not pg.q %}
     <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
   {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
-  {% elif not shown and ((fk.node and not fk.node.folders) or fk.view == 'main') %}
+  {% elif not shown and not pg.q and fk.view in ('new', 'started') %}
+    <p class="card empty small">{{ nothing }}</p>
+  {% elif not shown and not pg.q and ((fk.node and not fk.node.folders) or fk.view == 'main') %}
     <p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
   {% endif %}
 {% endcall %}

@@ -74,7 +74,7 @@ def mypage():
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(request.args.get('folder'), nodes, default='all', extra=('new', 'started'))
+        view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all', extra=('new', 'started'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet, or handed in and waiting to be graded
@@ -151,8 +151,20 @@ def mypage():
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
     #the try that's due soon, by quiz (its badge says when)
     due_by_quiz = {cq.vquiz_id: cq for cq in waiting if cq.id in due_ids}
+    #20 quizzes to a page (app/paging.py; the owner, 2026-10-23): the ones that still need the student first
+    #(a try new or started, not only the latest), then the rest, each in the usual order (newest first)
+    from app import paging
+    ordered = [g for g in shown if g['open']] + [g for g in shown if not g['open']]
+    rank = {'new': 3, 'started': 2, 'review': 2}
+    pg = paging.paginate(ordered, name_of=lambda g: g['vquiz'].title or '', sorts={
+        'title': lambda g: (g['vquiz'].title or '').lower(),
+        'latest': lambda g: g['latest'].id,
+        'attempts': lambda g: len(g['attempts']),
+        'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
+        'score': lambda g: g['combined']})
+    shown = pg.items
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
-                           due_by_quiz=due_by_quiz,
+                           due_by_quiz=due_by_quiz, pg=pg,
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
                            showing=showing, nothing=nothing, quiz_filter=quiz_filter)
 

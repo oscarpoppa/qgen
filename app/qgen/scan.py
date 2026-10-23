@@ -23,13 +23,14 @@ import random
 import re
 import shutil
 import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from flask import current_app
 
 from . import db
-from .models import ScanJob, VProblem, VQuiz, AICall
+from .models import ScanJob, ScanFolder, VProblem, VQuiz, AICall
 from .qtypes import get_qtype, REGISTRY
 from . import friendly as F
 
@@ -252,6 +253,13 @@ def start_reading(job, api_key, user_id):
     return True
 
 
+#a page whose reading runs longer than this is stopped, and the scan goes on with the next one (the owner, 2026-10-23: the
+#site's SCAN_PAGE_MINUTES setting, when set, instead); at the end the pages that didn't make it say why
+PAGE_MINUTES = 10
+PAGE_TOO_SLOW = ('This page took longer than {} minutes to read, so it was stopped and the scan went on with the next one. '
+                 'Press \u201cRead the rest\u201d to try it again, or photograph just this page, closer up.')
+
+
 READ_AT_ONCE = 3   # pages read at the same time (each takes a minute or so of AI calls: the owner, 2026-10-20);
                    # the site's SCAN_READ_AT_ONCE setting, when set, instead
 
@@ -289,14 +297,15 @@ PAGE_TOO_LONG = ('The AI\u2019s answer for this page ran too long, so the page w
                  'closer up, and scan that photo as a new scan.')
 
 
-def _read_page(app, job_id, n, api_key, user_id, reserved):
-    """One page read in its own thread (read_one), with its own database session."""
+def _read_page(app, job_id, n, api_key, user_id, reserved, cancel=None):
+    """One page read in its own thread (read_one), with its own database session. cancel: set when
+    the page ran over its time limit; the reading stops at its next step."""
     with app.app_context():
         try:
             job = db.session.get(ScanJob, job_id)
             if job is None:
                 return None
-            page = read_one(job, n, api_key, user_id, reserved)
+            page = read_one(job, n, api_key, user_id, reserved, cancel)
             #(each problem checked now, while it's read, so the draft page opens quickly: the owner, 2026-10-21)
             if isinstance(page, dict) and page.get('state') == 'done':
                 for item in page.get('items') or []:
@@ -316,10 +325,19 @@ def _read_all(app, job_id, api_key, user_id, run=None):
     may still make. Pause (or the hourly limit) starts no more pages; those being read finish."""
     from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
     at_once = max(1, int(app.config.get('SCAN_READ_AT_ONCE') or READ_AT_ONCE))
+
+    class NoWaitPool(ThreadPoolExecutor):
+        def __exit__(self, *exc):
+            #(a page that ran over its time may still be finishing: the scan is done without waiting for it)
+            self.shutdown(wait=False)
+            return False
+
     with app.app_context():
-        running = {}    # future -> (page n, AI calls it may make)
+        running = {}    # future -> (page n, AI calls it may make, when it started, its cancel flag)
+        limit = float(app.config.get('SCAN_PAGE_MINUTES') or PAGE_MINUTES) * 60
         try:
-            with ThreadPoolExecutor(max_workers=at_once) as pool:
+            #(room for a few pages that ran over their time and are still finishing, unnoticed, behind the ones being read)
+            with NoWaitPool(max_workers=at_once + 8) as pool:
                 stop = False      # the hourly limit was reached: no more pages start
                 gone = False      # read again since (or stopped)
                 while True:
@@ -337,11 +355,11 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                                 gone = False
                                 page = None
                                 if not (stop or data.get('pausing')) and len(running) < at_once:
-                                    busy = {n for n, _need in running.values()}
+                                    busy = {v[0] for v in running.values()}
                                     page = next((p for p in data['pages'] if p['state'] in ('waiting', 'reading') and p['n'] not in busy), None)
                                 if page is not None:
                                     need = calls_for(page)
-                                    reserved = sum(k for _n, k in running.values())
+                                    reserved = sum(v[1] for v in running.values())
                                     #(no room beside the pages being read: wait for them; with none
                                     #being read, read_one says it's waiting for the hourly limit)
                                     if not running or ai_room(user_id, need, reserved):
@@ -351,14 +369,21 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                     if start:
                         #(started once the page is marked as being read, and that's saved)
                         n, need, reserved = start
-                        running[pool.submit(_read_page, app, job_id, n, api_key, user_id, reserved)] = (n, need)
+                        cancel = threading.Event()
+                        running[pool.submit(_read_page, app, job_id, n, api_key, user_id, reserved, cancel)] = (n, need, time.monotonic(), cancel)
                         continue
                     if not running:
                         break
-                    done, _ = wait(list(running), return_when=FIRST_COMPLETED)
-                    for f in done:
-                        n, _need = running.pop(f)
-                        result = f.result()
+                    done, _ = wait(list(running), timeout=min(15, max(limit / 4, 0.05)), return_when=FIRST_COMPLETED)
+                    finished = [(running.pop(f)[0], f.result()) for f in done]
+                    #a page over its time limit is stopped (its reading ends at its next step) and the scan
+                    #goes on: it's marked with why, and the pages that didn't make it are listed at the end
+                    for f in [f for f, v in running.items() if time.monotonic() - v[2] > limit]:
+                        n, _need, began, cancel = running.pop(f)
+                        cancel.set()
+                        app.logger.warning('scan {} page {} ran over {:.0f} minutes and was stopped'.format(job_id, n, limit / 60))
+                        finished.append((n, {'n': n, 'state': 'error', 'timed_out': True, 'error': PAGE_TOO_SLOW.format(int(round(limit / 60)))}))
+                    for n, result in finished:
                         if result is None:
                             continue
                         with page_lock(job_id) as data:
@@ -491,14 +516,9 @@ def keep_corrections(job, data):
         current_app.logger.warning('could not keep the box corrections of scan {}: {}'.format(job.id, exc))
 
 
-def keep_leftovers(job, data):
-    """After Save (the owner, 2026-10-22: save page by page): the pages not saved (kept back,
-    not read yet, or that couldn't be read) stay as a smaller scan of their own, stashed under
-    the same name, numbered 1, 2... again (their files too). Returns how many are left; with
-    none, the caller removes the scan as before."""
-    left = [p for p in data.get('pages') or [] if not (p.get('state') == 'done' and p.get('save') is not False)]
-    if not left:
-        return 0
+def _renumber_pages(job, left):
+    """The pages in `left` numbered 1, 2... again, their files too (a page 3 that becomes 1 never overwrites page 1
+    first); pictures' "item:N" / "quiz:N" uses follow."""
     new = {p['n']: k for k, p in enumerate(left, 1)}
     #(files moved by way of a temporary name, so page 3 becoming 1 never overwrites page 1 first)
     for name in ('page', 'full', 'orig', 'thumb'):
@@ -521,9 +541,21 @@ def keep_leftovers(job, data):
         return '{}:{}{}'.format(m.group(1), new[int(m.group(2))], m.group(3) or '') if int(m.group(2)) in new else ''
     for k, page in enumerate(left, 1):
         page['n'] = k
-        page['save'] = True
         for pic in page.get('pictures') or []:
             pic['use'] = renumbered(pic.get('use'))
+
+
+def keep_leftovers(job, data):
+    """After Save (the owner, 2026-10-22: save page by page): the pages not saved (kept back,
+    not read yet, or that couldn't be read) stay as a smaller scan of their own, stashed under
+    the same name, numbered 1, 2... again (their files too). Returns how many are left; with
+    none, the caller removes the scan as before."""
+    left = [p for p in data.get('pages') or [] if not (p.get('state') == 'done' and p.get('save') is not False)]
+    if not left:
+        return 0
+    _renumber_pages(job, left)
+    for page in left:
+        page['save'] = True
     #(the first one left can't be joined to a page that was saved)
     for page in left:
         if page.get('state') == 'done' and page.get('kind') == 'problems':
@@ -536,6 +568,62 @@ def keep_leftovers(job, data):
     job.pages = len(left)
     put_data(job, data)
     return len(left)
+
+
+def drop_page(job, data, n):
+    """Discard one page that didn't make it through (the owner, 2026-10-23): it leaves the scan, with its
+    files, and the pages after it are numbered on again. Returns how many pages are left (0: the caller removes the scan)."""
+    left = [p for p in data.get('pages') or [] if p['n'] != int(n)]
+    if len(left) == len(data.get('pages') or []):
+        return len(left)
+    if not left:
+        return 0
+    _renumber_pages(job, left)
+    data['pages'] = left
+    data.pop('_plan', None)
+    job.pages = len(left)
+    put_data(job, data)
+    return len(left)
+
+
+def helper_hints(job, data, urls):
+    """What the Helper on the review page says (the owner, 2026-10-23: like New problem's): what stops quizzes being
+    made, and for each page that didn't make it, the choices: Try again, Keep as it is, or Discard it.
+    urls: {'again': f(n), 'drop': f(n)} -> the addresses the choices go to."""
+    hints = []
+    pages = data.get('pages') or []
+    for p in pages:
+        if p.get('state') == 'done':
+            continue
+        why = p.get('error') or ('Not read yet.' if p.get('state') == 'waiting' else 'It couldn\u2019t be read.')
+        hints.append({'level': 'error' if p.get('state') == 'error' else 'warn', 'key': 'page-{}'.format(p['n']),
+                      'text': 'Page {} didn\u2019t make it: {}'.format(p['n'], why),
+                      'actions': [
+                          {'label': 'Try again', 'url': urls['again'](p['n']), 'tip': 'Have the AI read this page again from the start (it uses a few AI calls)'},
+                          {'label': 'Keep as it is', 'dismiss': True, 'tip': 'Leave this page out for now: it stays in the stash and the other pages can still be made into quizzes'},
+                          {'label': 'Discard page', 'url': urls['drop'](p['n']), 'ask': 'Discard page {} of this scan? It can\u2019t be undone.'.format(p['n']), 'ok': 'Discard',
+                           'tip': 'Take this page out of the scan for good'}]})
+    from . import services as S
+    if data.get('folder'):
+        err = S.new_subject_name_error('problems', data['folder'])
+        if err:
+            hints.append({'level': 'error', 'text': err})
+    seen = {}
+    for lead, _group in quiz_groups(data):
+        title = ' '.join((lead.get('title') or '').split())
+        if not title:
+            hints.append({'level': 'error', 'text': 'Page {}: give its quiz a title.'.format(lead['n'])})
+        elif S.quiz_name_taken(title) or title.lower() in seen:
+            hints.append({'level': 'error', 'text': 'Page {}: a quiz is already called \u201c{}\u201d. Give this one a different title.'.format(lead['n'], title)})
+        seen[title.lower()] = lead['n']
+    gaps = missing_places(data)
+    if gaps:
+        hints.append({'level': 'warn', 'text': '{} problem{} still need{} an answer box on the page: {}.'.format(
+            len(gaps), '' if len(gaps) == 1 else 's', 's' if len(gaps) == 1 else '', ', '.join(g[2] for g in gaps))})
+    if not hints:
+        made = len(quiz_groups(data))
+        hints.append({'level': 'ok', 'text': 'Ready: {} quiz{} will be made.'.format(made, '' if made == 1 else 'zes')})
+    return hints
 
 
 def put_away(job, away=True):
@@ -649,7 +737,7 @@ def calls_for(page):
     return (0 if (page or {}).get('qs_reading') is not None else QS_CALLS) + 1
 
 
-def read_one(job, n, api_key, user_id, reserved=0):
+def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
     """Read page n: QuizScan reads the page (exactly, and where everything is), then the AI
     gives its problems random numbers, then the page picture is leveled and searched for the
     places students answer (pagelayout.py), then the AI checks those places (check_places).
@@ -659,6 +747,16 @@ def read_one(job, n, api_key, user_id, reserved=0):
     from app import tuning
     from . import ai_helper, pagelayout
     hourly = tuning.get('ai_hourly')
+    #(how long each step takes goes in the log, and a page over its time limit stops at its next step: the owner, 2026-10-23)
+    began = [time.monotonic(), time.monotonic()]
+
+    def step(name):
+        now = time.monotonic()
+        current_app.logger.info('scan {} page {}: {} took {:.1f}s ({:.1f}s in all)'.format(job.id, n, name, now - began[1], now - began[0]))
+        began[1] = now
+        return cancel is not None and cancel.is_set()
+
+    stopped = {'n': n, 'state': 'error', 'timed_out': True, 'error': PAGE_TOO_SLOW.format(PAGE_MINUTES)}
     #(read before, and only the numbers failed: QuizScan's reading is kept, so it isn't paid for twice)
     qs = (get_data(job)['pages'][n - 1] or {}).get('qs_reading')
     if not ai_room(user_id, calls_for({'qs_reading': qs}), reserved):
@@ -685,6 +783,8 @@ def read_one(job, n, api_key, user_id, reserved=0):
                                         **({'note': note} if note else {}))[0]
         except quizscan.QuizScanError as exc:
             return {'n': n, 'state': 'error', 'error': str(exc)}
+        if step('QuizScan reading'):
+            return stopped
         #the page as QuizScan read it: flattened and leveled, so every box is a place on it; then
         #made truly level (its rows straight across, its margins straight down, the paper's dark
         #edge painted out) and QuizScan's boxes laid on its own printed lines (the owner, 2026-10-20).
@@ -695,6 +795,8 @@ def read_one(job, n, api_key, user_id, reserved=0):
         small.thumbnail((LONG_SIDE, LONG_SIDE))
         small, qs, full = pagelayout.level_page(small, qs, full=full)
         qs = pagelayout.snap_boxes(small, qs)
+        if step('flattening and leveling the page'):
+            return stopped
         qs['size'] = {'width': small.size[0], 'height': small.size[1]}
         full.save(full_file(job.id, n), 'JPEG', quality=90)
         small.save(path, 'JPEG', quality=90)
@@ -704,6 +806,8 @@ def read_one(job, n, api_key, user_id, reserved=0):
             if data is not None:
                 data['pages'][n - 1]['qs_reading'] = qs
     from PIL import Image
+    if cancel is not None and cancel.is_set():
+        return stopped
     flat = Image.open(path).convert('RGB')
     numbers = {}
     call = AICall(user_id=user_id, created=datetime.now(), kind='scan', request='Scan {} page {}: numbers'.format(job.id, n), ok=False)
@@ -721,16 +825,23 @@ def read_one(job, n, api_key, user_id, reserved=0):
         db.session.commit()
         current_app.logger.info('scan {} page {} read (numbers ok={}, tokens in/out {}/{})'.format(
             job.id, n, call.ok, call.input_tokens, call.output_tokens))
+    if step('the AI\u2019s numbers'):
+        return stopped
     covered = {pid for pid, item in numbers.items() if item.get('values') and item.get('page_text')}
     slots = pagelayout.find_slots(flat, qs, covered)
+    if step('finding the answer places'):
+        return stopped
     #(the AI looks at the page as a student will see it, and the places it moves are checked here)
     slots, checked = check_places(job, n, flat, qs, slots, covered, api_key, user_id)
+    if step('checking the answer places'):
+        return stopped
     samples = {}
     for p in qs['problems']:
         if p['id'] in covered:
             words = p['text'][len(p.get('number') or ''):] if p['text'].startswith(p.get('number') or '\0') else p['text']
             samples[p['id']] = words.replace('_', '').strip()
     font = pagelayout.pick_font(flat, qs, slots, samples, os.path.join(current_app.static_folder, 'fonts'))
+    step('choosing the font')
     page = draft_page(n, quizscan_raw(qs, numbers))
     page.update(size=qs['size'], slots=slots, font=font, checked=checked,
                 qs=[{k: p.get(k) for k in ('id', 'type', 'box', 'choices', 'text', 'number')} for p in qs['problems']])
@@ -1703,3 +1814,55 @@ def _save_all(job, data, author, made_so_far):
         rows = [uploads.get(f) for f in dict.fromkeys(pictures)]
         S.file_items('pictures', [u.id for u in rows if u is not None], home)
     return {'quizzes': quizzes, 'problems': len(made), 'reused': len(reused), 'pictures': pictures}
+
+
+# ---------------------------------------------------------------- the stash's folders
+
+def _stash_name_taken(name, parent_id, ignore=None):
+    low = name.lower()
+    return any(f.name.lower() == low and f.id != ignore for f in ScanFolder.query.filter_by(parent_id=parent_id))
+
+
+def create_folder(name, parent_id=None):
+    """A stash folder (the owner, 2026-10-23), at the top or inside another; FolderError says what's wrong."""
+    from app import folder_tree as FT
+    name = FT.clean_name(name)
+    parent = db.session.get(ScanFolder, parent_id) if parent_id else None
+    FT.check_new(ScanFolder, parent)
+    if _stash_name_taken(name, parent.id if parent else None):
+        raise FT.FolderError('There’s already a folder called “{}” here.'.format(name))
+    folder = ScanFolder(name=name, parent_id=parent.id if parent else None)
+    db.session.add(folder)
+    db.session.commit()
+    return folder
+
+
+def rename_folder(folder, name):
+    from app import folder_tree as FT
+    name = FT.clean_name(name)
+    if _stash_name_taken(name, folder.parent_id, ignore=folder.id):
+        raise FT.FolderError('There’s already a folder called “{}” here.'.format(name))
+    folder.name = name
+    db.session.commit()
+    return folder
+
+
+def delete_folder(folder):
+    """Nothing in it is deleted: its scans and folders move up a level (the top: Uncategorized). Returns how many
+    scans and folders moved."""
+    scans = ScanJob.query.filter_by(folder_id=folder.id).all()
+    inner = ScanFolder.query.filter_by(parent_id=folder.id).all()
+    for job in scans:
+        job.folder_id = folder.parent_id
+    for sub in inner:
+        sub.parent_id = folder.parent_id
+    db.session.flush()
+    db.session.delete(folder)
+    db.session.commit()
+    return len(scans), len(inner)
+
+
+def move_scan(job, folder_id):
+    """A stashed scan into a folder (None: Uncategorized)."""
+    job.folder_id = int(folder_id) if folder_id else None
+    db.session.commit()

@@ -240,13 +240,13 @@
   <div class="folder-filter named-box" data-folder-filter data-onetab data-prefix="{{ key_prefix }}" data-all-label="{{ label }}"
        data-main-label="Unsorted" data-main-url="" data-all-url="" data-no-main data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}
        data-remember="{{ request.endpoint }}:{{ fk.view }}:named" data-tab-name="{{ label }}" data-tab-icon="{{ ic }}"
-       {%- if pg %} data-paged data-shown-total="{{ pg.total }}"{% if pg.label == 'Checked' %} data-start="checked"{% endif %}{% endif %}>
+       {%- if pg %} data-paged data-shown-total="{{ pg.weight if pg.weight is not none else pg.total }}"{% if pg.label == 'Checked' %} data-start="checked"{% endif %}{% endif %}>
     <script type="application/json" class="folder-filter-tree">[]</script>
     {# Up (and the Back beside it, static/js/folderfilter.js): a folder's to the folder it's in;
        Uncategorized's, New's and All's own page to the All page with its tabs (the owner, 2026-10-16) #}
     {#- (and the folder's own buttons, People's Assign a quiz to everyone / to this folder: the same ones a folder had on its tab) #}
     {% if fk.node %}<template class="folder-filter-tools" data-for="all">{{ folder_up(fk) }}{{ fk.box_tools(fk.node) if fk.box_tools }}</template>
-    {% else %}<template class="folder-filter-tools" data-for="all">{% if fk.view != 'all' or request.args.get('own') %}<a class="btn btn-secondary btn-xs btn-icon folder-up" href="{{ fk.page('all') }}" title="Up: back to “{{ fk.all_label }}”">{{ icon_label('lc-folder-up', 'Up') }}</a>{% endif %}{% if pg and fk.view == 'all' and fk.all_tools %}{{ fk.all_tools(fk.root) }}{% elif pg and fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root) }}{% endif %}</template>{% endif %}
+    {% else %}<template class="folder-filter-tools" data-for="all">{% if fk.view != 'all' or request.args.get('own') %}<a class="btn btn-secondary btn-xs btn-icon folder-up" href="{{ fk.page('all') }}" title="Up: back to “{{ fk.all_label }}”">{{ icon_label('lc-folder-up', 'Up') }}</a>{% endif %}{#- (no Assign a quiz to everyone beside the All tab: the owner, 2026-10-23) #}{% if pg and fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root) }}{% endif %}</template>{% endif %}
     {#- the pager at the top too (folderfilter.js moves it to the right end of the tab's row), so the
         page controls are never a scroll away: the owner, 2026-10-23 #}
     {#- (and "Check all 57": every match on every page, for a list with check boxes; folderfilter.js shows it only there: the owner, 2026-10-23) #}

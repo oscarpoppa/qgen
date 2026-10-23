@@ -155,6 +155,9 @@
   {% endif %}
   {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
 
+  {#- the Helper, as on New problem: what stops quizzes being made, and the choices for a page that didn't make it (the owner, 2026-10-23) #}
+  {% with form_id='scan-form', check_url=url_for('qgen.scan_helper', job_id=job.id) %}{% include "_helper.html" %}{% endwith %}
+
   <form method="post" id="scan-form" data-fresh-page data-unsaved novalidate data-check="{{ url_for('qgen.scan_check', job_id=job.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {{ place_note() }}
@@ -251,8 +254,10 @@
       {{ place_note() }}
       {#- (grayed while a problem has no place on its page, the owner 2026-10-20; scan_review.js keeps it current) #}
       {% set no_spot = missing|map(attribute=2)|join(', ') %}
-      <button class="btn" name="action" value="save" data-save data-tip="Make the problems and quizzes from the checked items, and save the pictures"{% if missing %} disabled title="Every problem needs its place on the page first ({{ no_spot }})"{% else %} title="Make the problems and quizzes from the checked items, and save the pictures"{% endif %}>Save</button>
-      <button class="btn btn-secondary" name="action" value="keep" title="Keep your changes and stash this scan until you come back to it">Stash draft</button>
+      <button class="btn" name="action" value="save" data-save data-tip="Make the problems and quizzes from the checked items, and save the pictures"{% if missing %} disabled title="Every problem needs its place on the page first ({{ no_spot }})"{% else %} title="Make the problems and quizzes from the checked items, and save the pictures"{% endif %}>Generate quiz(zes)</button>
+      {#- (in the stash: Unstash draft, out of it: Stash draft; the owner, 2026-10-23) #}
+      {% if data.put_away %}<button class="btn btn-secondary" name="action" value="unstash" title="Keep your changes and move this scan back to Current scans">Unstash draft</button>
+      {% else %}<button class="btn btn-secondary" name="action" value="keep" title="Keep your changes and stash this scan until you come back to it">Stash draft</button>{% endif %}
       {#- (Discard beside Save and Keep draft, not in the heading, the owner 2026-10-21; it sends its own
           form below, so none of the draft's fields go with it. Not while it's being read: Pause is on
           the reading card, the owner 2026-10-18) #}
@@ -278,6 +283,7 @@
 
 {% block scripts %}
 <script src="{{ asset('js/pagezoom.js') }}" defer></script>
+<script src="{{ asset('js/helper.js') }}"></script>
 {#- ("Leave this page?" with edits not stashed or saved yet: the owner, 2026-10-21) #}
 <script src="{{ asset('js/unsaved.js') }}"></script>
 <script src="{{ asset('js/scan_review.js') }}"></script>

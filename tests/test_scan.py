@@ -627,6 +627,93 @@ def test_errors_limits_and_retry(app_db, ai):
     assert len(fakes.qs.calls) == 1 and len(fakes.api.calls) == 1
 
 
+def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
+    """The review page's Helper names the pages that didn't make it with Try again / Keep as it is / Discard page;
+    Discard takes just that page out and numbers the rest on; Save says Generate quiz(zes); the stash button says
+    Stash draft in Current scans and Unstash draft in the stash (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    from app.qgen.models import ScanJob
+    teacher = login(app, 'teach')
+    ai([QS_TIMES] * 2, [NUM_TIMES] * 2)
+    upload(teacher, [(picture(), 'p{}.png'.format(i)) for i in (1, 2)])
+    job = job_of(db)
+    #(page 2 did not make it)
+    data = json.loads(job.data)
+    data['pages'][1] = {'n': 2, 'state': 'error', 'error': 'This page took longer than 10 minutes to read, so it was stopped.'}
+    job.data = json.dumps(data)
+    db.session.commit()
+    page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert 'Generate quiz(zes)' in page and '>Save</button>' not in page
+    assert 'value="keep"' in page and 'Stash draft' in page and 'Unstash draft' not in page
+    assert 'id="helper"' in page and 'js/helper.js' in page
+    hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
+    mine = [h for h in hints if h.get('key') == 'page-2'][0]
+    assert 'Page 2 didn’t make it: This page took longer than 10 minutes' in mine['text']
+    assert [a['label'] for a in mine['actions']] == ['Try again', 'Keep as it is', 'Discard page']
+    assert mine['actions'][2]['url'].endswith('/page/2/drop') and mine['actions'][1]['dismiss']
+    #(in the stash: Unstash draft)
+    SC.put_away(job)
+    db.session.commit()
+    stashed = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert 'Unstash draft' in stashed and 'value="unstash"' in stashed and 'value="keep"' not in stashed
+    # Discard page: just that page goes
+    r = teacher.post('/quiz/scan/{}/page/2/drop'.format(job.id))
+    assert r.status_code == 302
+    db.session.expire_all()
+    left = json.loads(db.session.get(ScanJob, job.id).data)['pages']
+    assert [p['n'] for p in left] == [1] and left[0]['state'] == 'done'
+    # a page that was read can't be discarded this way
+    assert teacher.post('/quiz/scan/{}/page/1/drop'.format(job.id)).status_code == 404
+
+
+def test_the_stash_has_folders(app_db, ai):
+    """Real folders for stashed scans (the owner, 2026-10-23): shared by teachers, seen only on Scan workbook pages;
+    a scan goes in one (none: Uncategorized); deleting a folder moves what's in it up a level."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    from app.qgen.models import ScanFolder, ScanJob
+    teacher = login(app, 'teach')
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')], name='Workbook A')
+    job = job_of(db)
+    SC.put_away(job)
+    db.session.commit()
+    page = teacher.get('/quiz/scan').data.decode()
+    assert 'Stashed scans' in page and 'Workbook A' in page and 'id="stash-new"' in page and 'Uncategorized' in page
+    # the stashed scan keeps its controls: continue, take out, discard
+    assert 'aria-label="Continue"' in page and 'aria-label="Take out"' in page and 'aria-label="Discard"' in page
+    # make a folder, then one inside it
+    assert teacher.post('/quiz/scan/folders/new', data={'name': 'Fractions'}).status_code == 302
+    top = ScanFolder.query.filter_by(name='Fractions').one()
+    teacher.post('/quiz/scan/folders/new', data={'name': 'Grade 2', 'parent': top.id})
+    inner = ScanFolder.query.filter_by(name='Grade 2').one()
+    assert inner.parent_id == top.id
+    # the same name twice at one level is refused, with why
+    r = teacher.post('/quiz/scan/folders/new', data={'name': 'fractions'}, follow_redirects=True).data.decode()
+    assert 'There’s already a folder called' in r
+    # move the scan into the inner folder: it shows there, and in the folder around it, not in Uncategorized
+    teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': inner.id})
+    db.session.expire_all()
+    assert db.session.get(ScanJob, job.id).folder_id == inner.id
+    assert 'Workbook A' in teacher.get('/quiz/scan?stash={}'.format(top.id)).data.decode()
+    assert 'Workbook A' in teacher.get('/quiz/scan?stash={}'.format(inner.id)).data.decode()
+    assert 'Workbook A' not in teacher.get('/quiz/scan?stash=main').data.decode().split('id="scan-away"')[1]
+    # rename; delete the outer folder: the inner one and the scan move up (the scan stays in the inner folder)
+    teacher.post('/quiz/scan/folders/{}/rename'.format(top.id), data={'name': 'Maths'})
+    assert ScanFolder.query.get(top.id).name == 'Maths'
+    teacher.post('/quiz/scan/folders/{}/delete'.format(top.id))
+    db.session.expire_all()
+    assert ScanFolder.query.get(top.id) is None and ScanFolder.query.get(inner.id).parent_id is None
+    assert db.session.get(ScanJob, job.id).folder_id == inner.id
+    # delete the inner one: the scan is Uncategorized again
+    teacher.post('/quiz/scan/folders/{}/delete'.format(inner.id))
+    db.session.expire_all()
+    assert db.session.get(ScanJob, job.id).folder_id is None
+    # a folder that isn't there
+    assert teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': 9999}).status_code == 404
+
+
 def test_upload_checks(app_db, ai):
     app, db = app_db
     from app.qgen.models import ScanJob
@@ -904,6 +991,35 @@ def test_pages_are_read_three_at_once_and_pause_drops_them(own_connections, ai):
     fakes.qs.during = None
     assert teacher.post('/quiz/scan/{}/read'.format(job.id)).status_code == 302
     assert [p['state'] for p in json.loads(job_of(db).data)['pages']] == ['done'] * 5
+
+
+def test_a_page_over_its_time_limit_is_stopped_and_the_scan_goes_on(own_connections, ai):
+    """A page whose reading runs over its time limit is marked with why and the scan goes on with the next
+    pages (the owner, 2026-10-23); the scan is ready at the end, not stuck reading."""
+    app, db = own_connections
+    import time
+    from app.qgen import scan as SC
+    fakes = ai([QS_TIMES] * 3, [NUM_TIMES] * 3)
+    app.config['SCAN_PAGE_MINUTES'] = 0.02   # 1.2 seconds
+    started = []
+
+    def during(path):
+        started.append(path)
+        if len(started) == 1:
+            time.sleep(2.5)   # the first page takes far too long
+    fakes.qs.during = during
+    try:
+        teacher = login(app, 'teach')
+        upload(teacher, [(picture(), 'p{}.png'.format(i)) for i in range(1, 4)])
+        time.sleep(3.0)   # (the page that ran over finishes unnoticed)
+        job = job_of(db)
+        data = json.loads(job.data)
+        states = [p['state'] for p in data['pages']]
+        assert states == ['error', 'done', 'done'], states
+        assert data['pages'][0]['timed_out'] and 'longer than' in data['pages'][0]['error']
+        assert job.status == 'ready'
+    finally:
+        app.config.pop('SCAN_PAGE_MINUTES', None)
 
 
 def test_pages_side_by_side_keep_the_hourly_limit(own_connections, ai):

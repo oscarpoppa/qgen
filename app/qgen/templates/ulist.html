@@ -5,6 +5,7 @@
 {% from "_macros.html" import avatar, box_label, count_of, quiz_link, student_link with context %}
 {% from "_results.html" import result_cells, archive_all_button, archive_all_form, attempt_status, attempt_buttons, score_counted, retake_button, result_group, result_row with context %}
 {% from "_awards.html" import award_list %}
+{% from "_pager.html" import pager %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('student:%d' % ulst[0].id if single else 'students') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
@@ -116,10 +117,11 @@
 {% if item.cquizzes %}
 <div class="student-single student-folders" id="student-{{ item.id }}">
   <div class="folder-filter" data-folder-filter data-prefix="q:" data-key-attr="fkey" data-all-label="All quizzes"
-       data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-url-tab data-style="list">
+       data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-style="list"
+       data-paged data-server-view="{{ server_view }}" data-total="{{ groups_total }}" data-loose="{{ groups_loose }}" data-shown-total="{{ pg.total }}">
     {#- the title over the folder list, as on the other list pages (the owner, 2026-10-17) #}
     <div class="page-head student-head"><h1>{{ title }}</h1></div>
-    <div class="folder-tools-bar student-filter">{{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='tr[data-fkey]', url=true, id='student-filter-bar') }}
+    <div class="folder-tools-bar student-filter">{{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='tr[data-fkey]', paged=pg.total, id='student-filter-bar') }}
       <div class="btn-row results-filter-right">{{ single_buttons }}</div></div>
     {#- Awards: a button under the folder list that opens them as a pop-over (the owner, 2026-10-17) #}
     <div class="student-awards-spot">
@@ -127,10 +129,12 @@
     </div>
     <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
     {#- (rows like My quizzes', sortable by every column: the owner, 2026-10-21; they were boxes) #}
-    <div class="folder-filter-list"><div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows">
-      <thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
-      <tbody>{% for g in attempts_by_quiz(item.cquizzes) %}{{ result_row(g, item) }}{% endfor %}</tbody>
-    </table></div></div>
+    {#- the pager at the top too (folderfilter.js moves it to the right end of the tab's row) and under the list, 20 quizzes at a time (app/paging.py) #}
+    {% if pg.count > 1 %}<div class="pager-top">{{ pager(pg) }}</div>{% endif %}
+    <div class="folder-filter-list"><div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+      <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
+      <tbody>{% for g in shown_groups %}{{ result_row(g, item) }}{% endfor %}</tbody>
+    </table></div>{{ pager(pg) }}</div>
   </div>
 </div>
 {% else %}

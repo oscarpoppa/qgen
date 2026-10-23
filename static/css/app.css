@@ -2426,7 +2426,7 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 /* experiment: a picking card's folders as a list down its side (data-style="list"), like the
    folder list on a folder page, instead of tabs */
 /* the folder column is as wide as its names need (up to 320px), never narrower than 170px */
-.folder-filter[data-style="list"] { display: grid; grid-template-columns: fit-content(320px) minmax(0, 1fr); gap: 12px; align-items: start; }
+.folder-filter[data-style="list"] { display: grid; grid-template-columns: var(--pick-side-w, fit-content(320px)) minmax(0, 1fr); gap: 12px; align-items: start; }
 .folder-filter[data-style="list"] > .folder-filter-side { min-width: 170px; }
 .folder-filter[data-style="list"] > .folder-filter-side { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: 10px 8px; }
 .folder-filter[data-style="list"] > .folder-filter-list { min-width: 0; }
@@ -3433,3 +3433,27 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .pager-top { display: inline-flex; align-items: center; gap: 8px; }
 .pager-check-all { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .pager-check-all[hidden] { display: none; }
+
+/* Scan workbook pages: the right-hand cards (Current scans, Stashed scans) get the larger share of the width, so each
+   scan's row (picture, name, when, pages, icons) lays out on one line (the owner, 2026-10-23); stacked on a narrow window */
+.scan-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+@media (max-width: 900px) { .scan-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* the stash's folders on Scan workbook pages (the owner, 2026-10-23): the folder list beside the scans, stacked when narrow */
+.stash-split { display: grid; grid-template-columns: minmax(140px, 28%) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 700px) { .stash-split { grid-template-columns: minmax(0, 1fr); } }
+.stash-folders .side-list, .stash-sub { list-style: none; margin: 0; padding: 0; }
+.stash-sub { padding-left: 14px; }
+.stash-folders .side-link { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
+.stash-folders .side-link:hover, .stash-folders .side-link.current { background: var(--accent-soft); }
+.stash-folders .side-link span:nth-of-type(1) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stash-tab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.stash-tab .btn-row { margin-left: auto; }
+ul.stash-pick { list-style: none; margin: 8px 0 12px; padding: 0; max-height: 40vh; overflow-y: auto; }
+ul.stash-pick li { padding: 4px 0; }
+ul.stash-pick label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* a picker's bar between its folder list and the table beside it (static/js/splitter.js): in the gap between them,
+   the full height of the list; hidden when the two are stacked (the owner, 2026-10-23) */
+.folder-filter[data-style="list"] > .pick-split { grid-column: 1; grid-row: 1 / -1; justify-self: end; align-self: stretch; width: 12px; margin-right: -12px; z-index: 2; min-height: 120px; }
+@media (max-width: 640px) { .folder-filter[data-style="list"] > .pick-split { display: none; } }

@@ -8,8 +8,8 @@
    rounded box): the name folds the row open to every answer to the problem there; beside it Answers,
    Average and Status, each sortable; at the row's end History (on the quiz's name before) #}
 {% macro quiz_rows(vqs) %}
-  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows problem-history-rows">
-    <thead><tr><th>Quiz</th><th>Answers</th><th>Average</th><th>Status</th><th></th></tr></thead>
+  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows problem-history-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="answers">Answers</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_answers(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -66,7 +66,7 @@
   <div class="card empty"><span class="big">{{ icon('chart') }}</span>Nobody has handed in an answer to “{{ vp.title or 'Untitled' }}” yet.</div>
 {% else %}
 {% call folders_page(fk) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'answer', 'answers', items='tr.result-item', boxes='details.sub-box', url=true) }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'answer', 'answers', items='tr.result-item', boxes='details.sub-box', paged=(pg.weight if pg.weight is not none else pg.total)) }}
     {#- the way back at the right end of the filter row (View and Edit beside the title), as on Results by quiz
         (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vprobs'), 'Problems', 'btn btn-secondary btn-sm') }}</div></div>
@@ -88,9 +88,8 @@
   </div>
 
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=shown, key_prefix='quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
-    {% call named_box(fk, 'quiz:') %}{% if shown %}{{ quiz_rows(shown) }}{% endif %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {#- one folder's quizzes, 20 at a time (app/paging.py) #}
+    {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ quiz_rows(shown) }}{% elif not pg.q %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}
 {% endif %}

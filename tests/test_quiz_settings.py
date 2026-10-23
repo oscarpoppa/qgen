@@ -971,7 +971,7 @@ def test_my_quizzes_has_an_in_progress_folder(app_db):
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
     page = sam.get('/mypage?folder=started').data.decode()
     # the page opens on its In progress tab (static/js/folderfilter.js), with nothing in it yet
-    assert '</svg> In progress</a>' in page and 'data-start="started"' in page and '"id": "started"' in page
+    assert '</svg> In progress</a>' in page and 'data-paged' in page and 'href="/mypage?folder=started"' in page
     assert page.index('{} New</a>'.format(ico('sparkle'))) < page.index('{} In progress</a>'.format(ico('pencil')))
     take_page(sam, cq.id)
     page = sam.get('/mypage?folder=started').data.decode()

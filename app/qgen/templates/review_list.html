@@ -9,8 +9,8 @@
    To grade, Grade); beside it Attempts, To grade (answers waiting in all of them) and Oldest (the longest-waiting hand-in),
    sortable #}
 {% macro quiz_rows(vqs) %}
-  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows">
-    <thead><tr><th>Quiz</th><th>Attempts</th><th>To grade</th><th>Oldest</th><th></th></tr></thead>
+  <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="to_grade">To grade</th><th data-sort-key="oldest">Oldest</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_group(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -54,13 +54,12 @@
 {% if waiting %}
 {#- (no "Waiting for grading" button or its pop-over of the oldest five here: the owner, 2026-10-21) #}
 {% call folders_page(fk) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', url=true, count_one='attempt', count_many='attempts') }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', paged=(pg.weight if pg.weight is not none else pg.total), count_one='attempt', count_many='attempts') }}
     {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
   <div id="folder-items">
-    {% if fk.view == 'all' and not request.args.get('own') and shown and fk.root.folders %}{% call(n) all_boxes(fk, fk.root['items']|length, every=shown, key_prefix='quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}
-    {% elif fk.node and (fk.subtree(fk.node) or fk.node.folders) %}{% call(n) folder_items(fk, 'quiz:') %}{{ quiz_rows(n['items']) }}{% endcall %}{% else %}
-    {% call named_box(fk, 'quiz:') %}{% if shown %}{{ quiz_rows(shown) }}{% endif %}{% if not shown %}{{ empty_note(fk) }}{% endif %}{% endcall %}{% endif %}
+    {#- one folder's quizzes, 20 at a time (app/paging.py) #}
+    {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ quiz_rows(shown) }}{% elif not pg.q %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}
 {% else %}

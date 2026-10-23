@@ -20,6 +20,7 @@ class Page:
         self.keys = list(keys)  # [id, name] of every match, on every page: "Check all 57" (static/js/checked.js)
         self.number, self.count, self.q, self.sort, self.dir, self.size = number, count, q, sort, dirn, size
         self.label = self.icon = None  # (the Checked folder's own words, set by the page)
+        self.weight = None  # what the counts count when it isn't the things (Grading: attempts waiting), set by the page
 
     @property
     def first(self):
@@ -54,7 +55,7 @@ class Page:
         return out
 
 
-def paginate(items, name_of=None, sorts=None, show=None, size=PAGE_SIZE, args=None):
+def paginate(items, name_of=None, sorts=None, show=None, size=PAGE_SIZE, args=None, weight_of=None):
     """The page of items the address asks for. items: the folder's things, in their usual order.
     name_of(item) -> the words ?q= is looked for in; sorts: {'title': key function...} (a key of None
     or '' goes last, either way); show: the id of a thing to land on (?show=, lit up on arrival)."""
@@ -86,4 +87,7 @@ def paginate(items, name_of=None, sorts=None, show=None, size=PAGE_SIZE, args=No
                 break
     number = min(max(number, 1), count)
     keys = [[getattr(i, 'id', None), (name_of(i) if name_of else '') or ''] for i in items] if count > 1 else ()
-    return Page(items[(number - 1) * size:number * size], total, everything, number, count, q, sort, dirn, size, keys)
+    page = Page(items[(number - 1) * size:number * size], total, everything, number, count, q, sort, dirn, size, keys)
+    if weight_of:
+        page.weight = sum(weight_of(i) for i in items)  # (what the counts count, e.g. attempts, over every match)
+    return page

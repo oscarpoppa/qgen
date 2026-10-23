@@ -544,6 +544,16 @@ class ArchivedAttempt(db.Model):
         return '<Archived attempt {}: {} : {}>'.format(self.original_id, self.student_name, self.quiz_title)
 
 
+#a folder for stashed scans (the owner, 2026-10-23): shared by all teachers, folders inside folders, and
+#seen only on Scan workbook pages' Stashed scans card; a scan in none is Uncategorized
+class ScanFolder(db.Model):
+    __tablename__ = 'scan_folder'
+    id = db.Column(db.Integer, primary_key=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('scan_folder.id', ondelete='CASCADE'), nullable=True, index=True)
+    name = db.Column(db.String(64), nullable=False)
+    created = db.Column(db.DateTime, default=datetime.now, nullable=False)
+
+
 #workbook pages being turned into problems and quizzes (app/qgen/scan.py): the page
 #pictures sit in a private folder, the AI's reading and the teacher's edits in `data`
 #(JSON) until Save makes the real problems and quizzes, or Discard drops it
@@ -558,6 +568,8 @@ class ScanJob(db.Model):
     #'new' (pictures in, not read yet), 'reading', 'ready' (every page read or failed)
     status = db.Column(db.String(16), nullable=False, default='new')
     data = db.Column(LongText)
+    #the stash folder it's in (None: Uncategorized)
+    folder_id = db.Column(db.Integer, db.ForeignKey('scan_folder.id', ondelete='SET NULL'), nullable=True, index=True)
 
     author = db.relationship('User', lazy=True)
 

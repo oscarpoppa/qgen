@@ -13,6 +13,8 @@
   function render(target, hints) {
     target.innerHTML = '';
     hints.forEach(function (h) {
+      //(a choice already made, Keep as it is, stays hidden while this page is open)
+      try { if (h.key && sessionStorage.getItem('qgen-helper-dismissed:' + form.id + ':' + h.key)) return; } catch (e) {}
       var li = document.createElement('li');
       li.className = 'hint hint-' + h.level;
       var icon = document.createElement('span');
@@ -22,6 +24,28 @@
       var text = document.createElement('span');
       text.textContent = h.text;
       li.appendChild(icon); li.appendChild(text);
+      //(several choices, each a button: a page that didn't make it gets Try again / Keep as it is / Discard page. One with a
+      //url goes to it with the form's other changes kept, asking first when it says to; "dismiss" hides the hint for now)
+      (h.actions || []).forEach(function (a) {
+        var c = document.createElement('button');
+        c.type = 'button'; c.className = 'btn btn-secondary btn-sm';
+        c.textContent = a.label;
+        if (a.tip) c.title = a.tip;
+        c.addEventListener('click', function () {
+          if (a.dismiss) {
+            try { sessionStorage.setItem('qgen-helper-dismissed:' + form.id + ':' + h.key, '1'); } catch (e) {}
+            li.remove();
+            return;
+          }
+          var go = document.createElement('button');
+          go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
+          go.setAttribute('formaction', a.url);
+          if (a.ask) { go.dataset.ask = a.ask; go.dataset.ok = a.ok || 'OK'; }
+          form.appendChild(go);
+          go.click();
+        });
+        li.appendChild(c);
+      });
       if (h.action) {
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'btn btn-secondary btn-sm';

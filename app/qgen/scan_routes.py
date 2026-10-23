@@ -9,7 +9,7 @@ from markupsafe import Markup
 
 from . import db, qgen_bp
 from . import scan as SC
-from .models import ScanJob, VQuiz, RETAKE_RULES
+from .models import ScanJob, ScanFolder, VQuiz, RETAKE_RULES
 from app.user.routes import admin_only, pw_check
 from app.jsoncsrf import json_csrf_ok, post_form_only
 
@@ -56,8 +56,15 @@ def scan_start():
     #(the ones put away have a card of their own, under the others: the owner, 2026-10-20)
     away = [j for j in jobs if kinds.get(j.id, {}).get('put_away')]
     jobs = [j for j in jobs if not kinds.get(j.id, {}).get('put_away')]
+    #the stash's folders (the owner, 2026-10-23): shared by all teachers, seen only here; one open at a time (?stash=)
+    from app import folder_tree as FT
+    stash_folders = ScanFolder.query.order_by(ScanFolder.name).all()
+    root, flat, nodes = FT.tree(stash_folders, lambda f: f.name, away, {j.id: [j.folder_id] for j in away if j.folder_id})
+    view, node = FT.view_of(request.args.get('stash'), nodes, default='all')
+    shown = away if view == 'all' else root['items'] if view == 'main' else FT.subtree(node)
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
-                           max_pages=SC.MAX_PAGES)
+                           max_pages=SC.MAX_PAGES, stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
+                           stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [])
 
 
 def _elapsed(data):
@@ -314,6 +321,16 @@ def scan_save(job_id):
     data = SC.update_from_form(SC.get_data(job), request.form)
     SC.put_data(job, data)
     db.session.commit()
+    if request.form.get('action') == 'unstash':
+        #(a stashed draft: the edits kept, and the scan back in Current scans: the owner, 2026-10-23)
+        data['kept_at'] = SC.datetime.now().isoformat(timespec='seconds')
+        SC.put_data(job, data)
+        db.session.commit()
+        SC.keep_corrections(job, data)
+        SC.put_away(job, False)
+        current_app.logger.info('{} unstashed the draft of scan {} "{}"'.format(current_user.username, job.id, job.name))
+        flash('“{}” is back in Current scans, with your edits.'.format(job.name), 'success')
+        return redirect(url_for('qgen.scan_start'))
     if request.form.get('action') != 'save':
         #(a draft the teacher kept, shown as such among the scans: the owner, 2026-10-19; Stash draft
         #keeps the edits and stashes it in one go, back on Scan workbook pages: the owner, 2026-10-21)
@@ -352,6 +369,49 @@ def scan_save(job_id):
     else:
         SC.remove_job(job)
     return redirect(url_for('qgen.scan_done'))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/helper', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def scan_helper(job_id):
+    """The Helper card's hints for the draft as it is in the form now (nothing is saved)."""
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='Your session expired. Please reload the page.'), 400
+    job = _mine(job_id)
+    data = SC.update_from_form(SC.get_data(job), request.form)
+    hints = SC.helper_hints(job, data, {'again': lambda n: url_for('qgen.scan_read_again', job_id=job.id, n=n),
+                                        'drop': lambda n: url_for('qgen.scan_drop_page', job_id=job.id, n=n)})
+    return jsonify(hints=hints)
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>/drop', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_drop_page(job_id, n):
+    """Discard one page that didn't make it (the owner, 2026-10-23); the review form is sent with it, so the
+    changes made on the other pages are kept."""
+    job = _mine(job_id)
+    if _reading(job):
+        flash('Some pages are still being read. Please wait until they’re done.', 'error')
+        return redirect(url_for('qgen.scan_review', job_id=job.id))
+    data = SC.update_from_form(SC.get_data(job), request.form)
+    page = next((p for p in data.get('pages') or [] if p['n'] == n), None)
+    if page is None or page.get('state') == 'done':
+        abort(404)
+    left = SC.drop_page(job, data, n)
+    db.session.commit()
+    current_app.logger.info('{} discarded page {} of scan {} "{}"'.format(current_user.username, n, job.id, job.name))
+    if not left:
+        SC.remove_job(job)
+        db.session.commit()
+        flash('That was the last page, so the scan “{}” is gone.'.format(job.name), 'success')
+        return redirect(url_for('qgen.scan_start'))
+    flash('Page {} was discarded.'.format(n), 'success')
+    return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/check', methods=['POST'])
@@ -425,6 +485,77 @@ def scan_put_away(job_id):
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
     return redirect(url_for('qgen.scan_start'))
+
+
+def _stash_back(folder_id=None):
+    """Back to the Stashed scans card, on the folder that was open."""
+    return redirect(url_for('qgen.scan_start', stash=folder_id) + '#scan-away' if folder_id else url_for('qgen.scan_start') + '#scan-away')
+
+
+@qgen_bp.route('/quiz/scan/folders/new', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_new_folder():
+    """A folder in the stash, inside the one open (the owner, 2026-10-23)."""
+    from app import folder_tree as FT
+    parent = request.form.get('parent') or None
+    try:
+        folder = SC.create_folder(request.form.get('name'), int(parent) if parent and parent.isdigit() else None)
+    except FT.FolderError as exc:
+        flash(str(exc), 'error')
+        return _stash_back(parent)
+    flash('Folder “{}” made.'.format(folder.name), 'success')
+    return _stash_back(folder.id)
+
+
+@qgen_bp.route('/quiz/scan/folders/<int:fid>/rename', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_rename_folder(fid):
+    from app import folder_tree as FT
+    folder = db.get_or_404(ScanFolder, fid)
+    try:
+        SC.rename_folder(folder, request.form.get('name'))
+    except FT.FolderError as exc:
+        flash(str(exc), 'error')
+        return _stash_back(folder.id)
+    flash('Folder renamed to “{}”.'.format(folder.name), 'success')
+    return _stash_back(folder.id)
+
+
+@qgen_bp.route('/quiz/scan/folders/<int:fid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_delete_folder(fid):
+    folder = db.get_or_404(ScanFolder, fid)
+    name, up = folder.name, folder.parent_id
+    scans, inner = SC.delete_folder(folder)
+    bits = [x for x in ('{} scan{}'.format(scans, '' if scans == 1 else 's') if scans else '',
+                        '{} folder{}'.format(inner, '' if inner == 1 else 's') if inner else '') if x]
+    flash('Deleted the folder “{}”.{}'.format(name, ' {} moved up.'.format(' and '.join(bits)) if bits else ''), 'success')
+    return _stash_back(up)
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_move(job_id):
+    """A stashed scan into a folder, or out to Uncategorized (the owner, 2026-10-23)."""
+    job = db.get_or_404(ScanJob, job_id)
+    to = request.form.get('to') or ''
+    if to and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
+        abort(404)
+    SC.move_scan(job, to)
+    flash('“{}” moved to {}.'.format(job.name, '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'), 'success')
+    return _stash_back(to or None)
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/take-out', methods=['POST'])

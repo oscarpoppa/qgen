@@ -45,8 +45,10 @@
     //server, data-total and data-loose, so the tabs show at once instead of after a long list has
     //all arrived, a second on Problems; the owner, 2026-10-21)
     var known = early && box.dataset.total !== undefined;
-    function allCount() { return known ? +box.dataset.total : weigh(items()); }
-    var loose = known ? +box.dataset.loose : weigh(items().filter(function (el) { return !inSome[keyOf(el)]; }));
+    //(a list shown 20 at a time has only its page's rows: the counts come from the server then too, data-total and data-loose)
+    var serverCounts = 'paged' in box.dataset && box.dataset.total !== undefined && box.dataset.loose !== undefined;
+    function allCount() { return known || serverCounts ? +box.dataset.total : weigh(items()); }
+    var loose = known || serverCounts ? +box.dataset.loose : weigh(items().filter(function (el) { return !inSome[keyOf(el)]; }));
     //(what the counts count: the things, or e.g. Grading's attempts waiting, data-count-unit, each
     //thing then weighing its data-weight: the owner, 2026-10-19)
     var cUnit = box.dataset.countUnit || unit, cUnits = box.dataset.countUnits || units;
@@ -105,7 +107,7 @@
     //folder shown (the side list's folders are links to their own pages), so there's nothing to narrow
     //here, and only the Checked folder (?checked=, data-start) is ever "chosen"
     var paged = 'paged' in box.dataset;
-    if (paged) chosen = box.dataset.start === 'checked' ? 'checked' : 'all';
+    if (paged) chosen = box.dataset.serverView || (box.dataset.start === 'checked' ? 'checked' : 'all');
     function keepInAddress() {
       if (!('urlTab' in box.dataset) || !window.history || !history.replaceState) return;
       var q = new URLSearchParams(location.search);
@@ -616,6 +618,14 @@
     box.addEventListener('click', function (e) {
       var b = e.target.closest('.folder-tab');
       if (!b || b.disabled || !b.closest('.folder-side-list') || b.closest('.folder-filter') !== box) return;
+      //(a paged list's folders are other pages: the server sends the folder asked for, from its first page)
+      if (paged) {
+        var u = new URL(location.href), f = b.dataset.folder;
+        u.searchParams.set('folder', f === 'none' ? 'main' : f);
+        ['page', 'q', 'tab', 'show', 'moved'].forEach(function (k) { u.searchParams.delete(k); });
+        location.assign(u.pathname + u.search + u.hash);
+        return;
+      }
       choose(b.dataset.folder);
     });
     //the folder list down the side picks the same folders here, in place (no new page)

@@ -88,8 +88,8 @@ def test_folders_inside_folders_and_removing_them(app_db):
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     # Math's page: everything in it in one list, with the tabs every level has (All,
     # Algebra, Uncategorized: static/js/folderfilter.js)
-    assert '+ New folder inside' in page and 'data-all-label="All"' in page and 'data-main-label="Unsorted"' in page
-    assert '"id": {}'.format(algebra) in page and 'data-no-main' not in page
+    #(20 to a page, one folder at a time: the folders are links, each its own page; the owner, 2026-10-23)
+    assert '+ New folder inside' in page and 'data-paged' in page and 'href="/mypage?folder={}"'.format(algebra) in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
     #(the path is the heading, "Math › Algebra", with Up going back to Math)
     assert ' Math › Algebra</h2>' in page and 'folder-up" href="/mypage?folder={}"'.format(math) in page
@@ -220,8 +220,6 @@ def test_a_folder_page_lists_everything_in_it_with_tabs_for_its_folders(app_db):
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     # Math's quiz and Algebra's, each once, in one list
     assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', page)) == ['Week 1', 'Week 2']
-    # the tabs: Algebra holds Week 2 (what's in Math and not in Algebra is its Uncategorized)
-    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
-    assert [(t['id'], t['name'], t['keys']) for t in tree] == [(algebra, 'Algebra', ['quiz:{}'.format(w2.id)])]
-    # a tab takes a drop (data-droppable), and Expand all / Collapse all for the page
-    assert 'data-droppable' in page and 'aria-label="Expand all in Math"' in page
+    # Algebra's own page holds Week 2 only (the side list's folders are links to their own pages)
+    assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', sam.get('/mypage?folder={}'.format(algebra)).data.decode())) == ['Week 2']
+    assert 'aria-label="Expand all in Math"' in page

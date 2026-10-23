@@ -11,7 +11,7 @@
 
 {#- New scan and Current scans side by side, equal widths; stacked on a narrow screen, and New
     scan alone takes the row when there are no scans (the owner, 2026-10-20) #}
-<div class="card-grid">
+<div class="card-grid scan-grid">
 <div class="card">
   <h2>New scan</h2>
   <form method="post" action="{{ url_for('qgen.scan_upload') }}" enctype="multipart/form-data" id="scan-upload" novalidate>
@@ -82,34 +82,94 @@
     are none, like Current scans (the owner, 2026-10-20); each one is as it was left: Resume,
     Continue, Take out or Discard #}
 <div class="card" id="scan-away">
-  <h2>Stashed scans</h2>
-  {% if away %}
-  <div class="table-wrap stack">
-    <table class="even-cols">
-      <thead><tr><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
-      <tbody>
-      {% for j in away %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
-        <tr>
-          <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
-            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{% if x.kind in ('reading', 'paused') %}<span class="muted" title="Opens when every page is read">{{ j.name }}</span>{% else %}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
-            {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-            <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
-          <td data-label="Stashed" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
-          <td data-label="Pages">{{ j.pages }}</td>
-          <td>{{ scan_controls(x, 'scans') }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  {#- the stash's real folders, shared by all teachers and seen only here (the owner, 2026-10-23): the folder list down the
+      side, one folder open at a time (?stash=), a folder inside folders; a scan in none is Uncategorized #}
+  {% macro stash_tree(nodes) %}{% for n in nodes %}
+    <li><a class="side-link{{ ' current' if stash_node and stash_node.folder.id == n.folder.id }}" href="{{ url_for('qgen.scan_start', stash=n.folder.id) }}#scan-away">{{ icon('folder') }} <span>{{ n.name }}</span> <span class="side-count muted small">{{ n.count }}</span></a>
+      {% if n.folders %}<ul class="stash-sub">{{ stash_tree(n.folders) }}</ul>{% endif %}</li>
+  {% endfor %}{% endmacro %}
+  <div class="card-head"><h2>Stashed scans</h2>
+    <span class="right"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your scans into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></span></div>
+  {% if away or stash_flat %}
+  <div class="stash-split">
+    <nav class="stash-folders" aria-label="Folders">
+      <ul class="side-list">
+        <li><a class="side-link{{ ' current' if stash_view == 'all' }}" href="{{ url_for('qgen.scan_start') }}#scan-away">{{ icon('folders') }} <span>All scans</span> <span class="side-count muted small">{{ away|length }}</span></a></li>
+        <li><a class="side-link{{ ' current' if stash_view == 'main' }}" href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away">{{ icon('tray') }} <span>Uncategorized</span> <span class="side-count muted small">{{ stash_root['items']|length }}</span></a></li>
+        {{ stash_tree(stash_root.folders) }}
+      </ul>
+    </nav>
+    <div class="stash-main">
+      <div class="stash-tab">
+        <strong>{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% else %}All scans{% endif %}</strong>
+        <span class="badge box-count">{{ stash_shown|length }}</span>
+        {% if stash_node %}<span class="btn-row">
+          <button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-rename" data-url="{{ url_for('qgen.scan_rename_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}" title="Rename: change this folder's name">{{ icon_label('lc-pencil', 'Rename') }}</button>
+          {{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', icon='lc-trash', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its scans and folders move up a level.', tip='Delete the folder; what’s in it moves up') }}</span>{% endif %}
+      </div>
+      {% if stash_shown %}
+      <div class="table-wrap stack">
+        <table class="even-cols">
+          <thead><tr><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
+          <tbody>
+          {% for j in stash_shown %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
+            <tr>
+              <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
+                <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""></a>
+                <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
+                {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
+                <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
+              <td data-label="Stashed" class="nowrap" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
+              <td data-label="Pages">{{ j.pages }}</td>
+              <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans') }}
+                <button type="button" class="btn btn-secondary btn-sm btn-icon" data-stash-dialog="stash-move" data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-here="{{ j.folder_id or '' }}" title="Move: put “{{ j.name }}” in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button></span></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every scan is in a folder.{% else %}Nothing stashed.{% endif %}</p>
+      {% endif %}
+    </div>
   </div>
   {% else %}
   <p class="empty">Nothing stashed. Paused or stopped scans and drafts you stash wait here.</p>
   {% endif %}
+
+  <dialog class="ask folder-dialog" id="stash-new" aria-label="New folder">
+    <form method="post" action="{{ url_for('qgen.scan_new_folder') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="parent" value="{{ stash_node.folder.id if stash_node else '' }}">
+      <p><strong>{{ 'New folder inside “' ~ stash_node.folder.name ~ '”' if stash_node else 'New folder' }}</strong></p>
+      <input type="text" name="name" maxlength="64" required placeholder="e.g. Fractions" aria-label="New folder’s name">
+      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Make the folder with the name you typed">Make folder</button></div>
+    </form>
+  </dialog>
+  <dialog class="ask folder-dialog" id="stash-rename" aria-label="Rename folder">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p><strong>Rename “<span data-stash-name></span>”</strong></p>
+      <input type="text" name="name" maxlength="64" required aria-label="Folder name">
+      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Save the new name you typed for this folder">Rename</button></div>
+    </form>
+  </dialog>
+  <dialog class="ask folder-dialog" id="stash-move" aria-label="Move scan to a folder">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p><strong>Move “<span data-stash-name></span>”</strong><br><span class="muted small">Choose a folder.</span></p>
+      <ul class="stash-pick">
+        <li><label><input type="radio" name="to" value=""> {{ icon('tray') }} Uncategorized</label></li>
+        {% for f, depth in stash_flat %}<li style="padding-left: {{ (depth - 1) * 18 }}px"><label><input type="radio" name="to" value="{{ f.id }}"> {{ icon('folder') }} {{ f.name }}</label></li>{% endfor %}
+      </ul>
+      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Put the scan in the folder chosen">Move</button></div>
+    </form>
+  </dialog>
 </div>
 </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ asset('js/scantimer.js') }}" defer></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>
+{% block scripts %}<script src="{{ asset('js/scanstash.js') }}" defer></script><script src="{{ asset('js/scantimer.js') }}" defer></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>
 <script>
 //the "Current scans" and "Put away" cards keep themselves up to date (what each scan is doing, its
 //controls: the owner, 2026-10-20); nothing else on the page is touched. With instant updates

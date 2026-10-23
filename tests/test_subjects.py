@@ -610,7 +610,8 @@ def test_a_student_page_keeps_its_folder_tab_in_the_address(app_db):
     give(make_quiz(app, teacher), 'sam')
     sam = User.query.filter_by(username='sam').one()
     page = teacher.get('/quiz/listuser/{}'.format(sam.id)).data.decode()
-    assert 'data-remember="student-page" data-url-tab' in page and 'data-url-filter' in page
+    #(the folder is ?folder= and the words ?q=, sent to the server, which pages the quizzes: the owner, 2026-10-23)
+    assert 'data-remember="student-page" data-style="list"' in page and 'data-paged' in page and 'data-url-filter' not in page
 
 
 def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db):

@@ -199,11 +199,12 @@ def test_my_quizzes_badge_stays_until_the_quiz_is_handed_in(app_db):
 # ---------------------------------------------------------------- finding your way
 
 def student_filter(page):
-    """A student page's folder buttons (folderfilter.js data): [(name, [vquiz ids], children)]."""
+    """A student page's folder list (folderfilter.js data): [(name, how many quizzes, children)]. One folder at
+    a time, 20 to a page (the owner, 2026-10-23): the server sends the names and counts, not which quiz is in which."""
     import json
     raw = page.split('<script type="application/json" class="folder-filter-tree">')[1].split('</script>')[0]
     def one(n):
-        return (n['name'], sorted(int(k[2:]) for k in n['keys']), [one(c) for c in n['children']])
+        return (n['name'], n['count'], [one(c) for c in n['children']])
     return [one(n) for n in json.loads(raw)]
 
 
@@ -585,8 +586,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
         assert page.count('data-fkey="q:{}"'.format(q.id)) == 1
     tree = student_filter(page)
     assert [t[0] for t in tree] == ['New', 'In progress', 'Math']
-    assert tree[2][1] == sorted([a.id, b.id]) and tree[2][2] == [('Fractions', [b.id], [])]
-    assert all(c.id not in t[1] for t in tree[2:])
+    assert tree[2][1] == 2 and tree[2][2] == [('Fractions', 1, [])]
     # no quiz folders at all: just the automatic New and In progress
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
@@ -728,8 +728,8 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     # New and In progress open My quizzes on the tab of the same name; Due, its quizzes due soon
     assert 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
     assert 'href="/mypage?show=soon"' in home and 'href="/mypage?folder=soon"' not in home
-    assert 'data-start="new"' in sam.get('/mypage?folder=new').data.decode()
     new = sam.get('/mypage?folder=new').data.decode()
+    assert 'data-paged' in new and 'New: quizzes you haven’t started' in new
     assert '“New one”' in new or 'New one' in new
     assert 'Begun' in sam.get('/mypage?folder=started').data.decode()
     assert 'href="#waiting"' not in home
@@ -909,16 +909,15 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert 'side-flag"' not in page
     page = sam.get('/mypage?folder=new').data.decode()
     # the New tab holds just it (static/js/folderfilter.js), and its card names its folder
-    import json
-    tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
-    assert [t['keys'] for t in tree if t['id'] == 'new'] == [['quiz:{}'.format(fresh.id)]] and 'data-start="new"' in page
+    #(20 to a page, one folder at a time: the server sends just what's in New, the owner 2026-10-23)
+    assert page.count('data-box="quiz:') == 1 and 'data-box="quiz:{}"'.format(fresh.id) in page and 'data-paged' in page
     assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
     # the teacher's student page: a New folder button with the same quiz, and In progress beside it
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = dict((t[0], t[1]) for t in student_filter(page))
-    assert tree['New'] == [fresh.id] and tree['In progress'] == [begun.id]
+    assert tree['New'] == 1 and tree['In progress'] == 1
     # started: no longer new, no badge
     for c in fresh.cquizzes:
         c.startdate = datetime.now()
@@ -929,7 +928,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     assert 'No new quizzes right now.' in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = dict((t[0], t[1]) for t in student_filter(page))
-    assert tree['New'] == [] and tree['In progress'] == sorted([fresh.id, begun.id])
+    assert tree['New'] == 0 and tree['In progress'] == 2
 
 
 def test_a_teacher_taking_a_quiz_gets_the_students_pages(app_db):
@@ -1500,7 +1499,8 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     page = login(app, 'teach').get('/dashboard').data.decode()
     assert page.count('class="dock-pin"') == 2 and 'aria-pressed="false"' in page
     start = page[page.index('/* the side panels are pinned unless'):page.index('})();', page.index('/* the side panels are pinned unless'))]
-    assert "localStorage.getItem('qgen-dock-pinned') !== '0'" in start and 'roomy' not in start  # (pinned unless unpinned: owner 2026-10-14)
+    #(each panel has its own pin, pinned unless unpinned: the owner 2026-10-14 and 2026-10-23; the old shared one counts for both)
+    assert "localStorage.getItem('qgen-dock-pinned-' + p)" in start and "localStorage.getItem('qgen-dock-pinned')" in start and 'roomy' not in start
     assert "if (pinned && wide) {" in start  # only pinned panels open by themselves
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     #(wide screens: the panels are cards over the page, pinned or not, so the page keeps its whole
@@ -1509,9 +1509,9 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     assert 'border-radius: var(--r-lg)' in wide[:wide.index('}\n}')]
     assert 'padding-right: var(--dock-w)' not in css
     js = open(os.path.join(here, 'static', 'js', 'messages.js')).read()
-    assert "if (pinned()) store('qgen-dock-' + p, open ? 'open' : 'closed');" in js
+    assert "if (pinned(p)) store('qgen-dock-' + p, open ? 'open' : 'closed');" in js
     # a click on the page closes them, but not the click that opened them (e.g. "Message students")
-    assert 'if (justOpened || pinned() ||' in js and "if (e.key !== 'Escape' || pinned()) return;" in js
+    assert 'if (justOpened || !PANES.some(function (q) { return isOpen(q) && !pinned(q); })' in js and 'if (inPane && !pinned(inPane.id.replace' in js
     # ...nor a click in the top menus, and Messages stays open while a reply is half-written;
     # loaded again (reopened, a new message), it shows what's new and puts the reply back, as long
     # as it's the same conversation; a pop-up switching to another conversation asks first
@@ -1737,7 +1737,7 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert 'class="icon-link attempt-open"' in page and 'aria-label="View"' in page
     #(a student page's quizzes are rows like My quizzes', each attempt's icons one group at the row's
     #right end: the owner, 2026-10-21)
-    assert '<thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>' in page
+    assert '<thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>' in page
     assert 'class="attempt-act attempt-act-group"' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
