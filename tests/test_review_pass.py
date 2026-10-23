@@ -1127,10 +1127,13 @@ def test_a_quiz_can_be_moved_from_its_heading_any_time_and_stays_in_the_automati
     #(quizzes are rows now: the Move icon is in the row's buttons, at its end)
     head = page[page.index('data-quiz="{}"'.format(fresh.id)):]
     head = head[:head.index('</tr>')]
-    assert 'class="move-form move-mini"' in head and 'data-move-one' in head and 'Uncategorized (here now)' in head
+    #(the folder it's in now is the row's "from"; the dialog grays it, "(here now)": static/js/folders.js)
+    assert 'class="move-form move-mini"' in head and 'data-move-one' in head and 'name="from" value="top"' in head
+    assert 'id="move-folders"' in page and '"main": "Uncategorized"' in page
     r = sam.post('/mypage/move', data={'quiz': fresh.id, 'to': wk.id, 'view': 'new', 'from': 'top'}, follow_redirects=True)
     page = r.data.decode()
-    assert 'Fresh' in page and '>Week 1 (here now)</option>' in page  # still in New, now in Week 1
+    head = page[page.index('data-quiz="{}"'.format(fresh.id)):]
+    assert 'Fresh' in page and 'name="from" value="{}"'.format(wk.id) in head[:head.index('</tr>')]  # still in New, now in Week 1
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(wk.id)).data.decode()
 
 

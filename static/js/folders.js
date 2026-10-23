@@ -90,13 +90,6 @@
   //Collapse all work, in static/js/boxes.js
   function restore(d) { if (window.qgenBoxes) window.qgenBoxes.restore(d); }
 
-  //"Move to" / "Add to" lists act as soon as a folder is picked
-  document.querySelectorAll('.move-select').forEach(function (sel) {
-    sel.addEventListener('change', function () {
-      if (!sel.value) return;
-      sel.form.requestSubmit ? sel.form.requestSubmit() : sel.form.submit();
-    });
-  });
   //+ New folder, and Folder options' Rename / Move to / + New folder inside: each opens its own
   //small dialog (the owner, 2026-10-16). The dialog moves to the page's end the first time, so a
   //closed Folder options (or a folder tab's copy of it) doesn't hide it; Folder options closes.
@@ -435,18 +428,30 @@
 
 /* My quizzes: a quiz's Move (a bare folder icon) opens a dialog to choose the folder, like the
    other folder dialogs; the folder it's in now is shown grayed; Move sends the quiz's own small
-   form (the owner, 2026-10-15). */
+   form (the owner, 2026-10-15). The Archive's attempts too.
+   Laid out like the Assign dialogs (the owner, 2026-10-22): 820px wide, the title and a short line,
+   what moving does in the amber "What happens:" box, then the standard picker (side folder list,
+   Uncategorized right after All, beside a tab over the folders' table): static/js/dialogfilter.js.
+   The folders are the page's one list (_folders.html move_folders). */
 (function () {
-  var box = document.createElement('dialog');
-  box.className = 'ask ask-many assign-many put-dialog move-dialog';
-  box.innerHTML = '<p><strong data-head></strong><br><span class="muted small" data-one></span></p>'
-    + '<ul class="assign-many-people put-list" data-list></ul>'
-    + '<p class="error small" data-err hidden>Choose a folder first.</p>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Move</button></div>';
-  document.body.appendChild(box);
-  var list = box.querySelector('[data-list]'), err = box.querySelector('[data-err]');
-  box.querySelector('[data-no]').addEventListener('click', function () { box.close(); });
-  box.addEventListener('change', function () { err.hidden = true; });
+  var data = document.getElementById('move-folders');
+  if (!data) return;
+  var page = JSON.parse(data.textContent), box = null, list, err;
+  var folders = page.folders.map(function (f) { return { id: String(f[0]), name: f[1], depth: f[2], icon: f[3] }; });
+  //(made the first time it's wanted: this file runs before the deferred dialogfilter.js)
+  function make() {
+    box = document.createElement('dialog');
+    box.className = 'ask ask-many assign-many pick-dialog put-dialog move-dialog';
+    box.innerHTML = '<p data-pick-head><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
+      + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul data-happens></ul></div>'
+      + window.qgenFolderPick.html()
+      + '<p class="error small" data-err hidden>Choose a folder first.</p>'
+      + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Move</button></div>';
+    document.body.appendChild(box);
+    list = box.querySelector('[data-folder-pick]'); err = box.querySelector('[data-err]');
+    box.querySelector('[data-no]').addEventListener('click', function () { box.close(); });
+    box.addEventListener('change', function () { err.hidden = true; });
+  }
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-move-one]');
     if (!b) return;
@@ -457,28 +462,26 @@
   //(also the Archive's Remove, "Move from …": the row's own Move form, static/js/takeout.js)
   window.qgenMoveOne = openMove;
   function openMove(form, label) {
-    var sel = form.querySelector('select.move-select');
+    if (!box) make();
+    var here = form.querySelector('input[name=from]').value;
     box.querySelector('[data-head]').textContent = 'Move ' + (label || 'it') + ' to a folder';
-    //(an Archive attempt or a My quizzes quiz: each is in one folder at a time)
-    box.querySelector('[data-one]').textContent = 'It leaves the folder it\u2019s in now. ' + (form.querySelector('input[name=attempt]') ? 'An attempt' : 'A quiz') + ' is in one folder at a time.';
-    list.innerHTML = '';
-    Array.prototype.forEach.call(sel.options, function (o) {
-      if (!o.value) return;
-      var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
-      r.type = 'radio'; r.name = 'move-to'; r.value = o.value; r.disabled = o.disabled;
-      var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
-      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
-      lab.appendChild(r);
-      if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
-      lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));
-      li.appendChild(lab);
-      list.appendChild(li);
-    });
+    box.querySelector('[data-sub]').textContent = 'Choose the folder to move it to.';
+    //(an Archive attempt or a My quizzes quiz: each is in one folder at a time; said in the amber
+    //box, not as a gray line under the title: the owner, 2026-10-22)
+    window.qgenFolderPick.happens(box.querySelector('[data-happens]'), ['It leaves the folder it\u2019s in now',
+      (form.querySelector('input[name=attempt]') ? 'An attempt' : 'A quiz') + ' is in one folder at a time']);
+    //(the folder it's in now: grayed, "(here now)")
+    window.qgenFolderPick.fill(list, folders, { type: 'radio', name: 'move-to', top: page.main,
+      each: function (f, r, lab) {
+        if (String(f.id) !== here) return;
+        r.disabled = true;
+        lab.lastChild.textContent += ' (here now)';
+      } });
     err.hidden = true;
     box.querySelector('[data-ok]').onclick = function () {
-      var r = list.querySelector('input:checked');
+      var r = list.querySelector('input[name=move-to]:checked');
       if (!r) { err.hidden = false; return; }
-      sel.value = r.value;
+      form.querySelector('input[name=to]').value = r.value;
       box.close();
       form.submit();
     };

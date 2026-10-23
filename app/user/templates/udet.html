@@ -35,7 +35,8 @@
                  the name cell, so both line up down the column whatever the name's length (the user
                  critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
-                    title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title">{{ item.shown_name }}</strong>{% if item.is_admin %}<span class="badge badge-accent person-role" title="Teacher">Teacher</span>{% endif %}</span></summary>
+                    title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
+                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title">{{ item.shown_name }}</strong></span>{% if item.is_admin %}<span class="badge badge-accent person-role" title="Teacher">Teacher</span>{% endif %}</span></summary>
             <ul class="quiz-facts small muted">
               <li>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</li>
               <li>Last seen: {% if item.online %}online now{% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>{% else %}<span title="Not since the site began keeping track">never</span>{% endif %}</li>
@@ -44,7 +45,7 @@
             {% if not in_archive %}<div class="result-groups divided" data-fold-body>
             {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{{ result_group(attempt_title(g, item), g, item, rules, g.vquiz.title|lower) }}
             {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
-          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{{ item.created_at|when('date') if item.created_at else '' }}</td>
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           {% if not in_archive %}
           <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}"><span class="badge box-count">{{ count_of(n, 'quiz', 'quizzes') }}</span></td>

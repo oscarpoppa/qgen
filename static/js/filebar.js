@@ -16,43 +16,32 @@
   var dialog = document.createElement('dialog');
   //(it looks and works like a row's Move dialog: the folders as a list to choose from, never a
   //drop-down: the owner, 2026-10-20; the bar's list stays hidden in it, only to be sent)
-  dialog.className = 'ask ask-many assign-many put-dialog move-dialog folder-dialog';
+  //(laid out like the Assign dialogs, 820px wide, the standard picker with its side folder list:
+  //the owner, 2026-10-22; static/js/dialogfilter.js)
+  dialog.className = 'ask ask-many assign-many pick-dialog put-dialog move-dialog';
   dialog.id = 'folder-dialog';
-  var head = document.createElement('p');
-  head.id = 'folder-dialog-head';
-  dialog.setAttribute('aria-labelledby', head.id);
-  var strong = document.createElement('strong');
-  head.appendChild(strong);
-  dialog.appendChild(head);
+  //(a short line under the title; what moving does is in the amber "What happens:" box, as in the
+  //Assign dialogs: the owner, 2026-10-22, it was a gray line under the title)
+  dialog.innerHTML = '<p id="folder-dialog-head" data-pick-head><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
+    + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul data-happens></ul></div>';
+  dialog.setAttribute('aria-labelledby', 'folder-dialog-head');
+  var strong = dialog.querySelector('[data-head]'), sub = dialog.querySelector('[data-sub]'), happens = dialog.querySelector('[data-happens]');
   if (label) { label.classList.add('sr-only'); dialog.appendChild(label); }
   sel.setAttribute('form', form.id);
   dialog.appendChild(sel);
   sel.hidden = true;
-  var one = document.createElement('span');
-  one.className = 'muted small';
-  head.appendChild(document.createElement('br')); head.appendChild(one);
-  var list = document.createElement('ul');
-  list.className = 'assign-many-people put-list';
-  dialog.appendChild(list);
+  dialog.insertAdjacentHTML('beforeend', window.qgenFolderPick.html());
+  var holder = dialog.querySelector('[data-folder-pick]');
   var err = document.createElement('p');
   err.className = 'error small'; err.hidden = true; err.textContent = 'Choose a folder first.';
   dialog.appendChild(err);
-  list.addEventListener('change', function () { err.hidden = true; });
-  //the bar's folders as round buttons, indented as in the folder list
+  holder.addEventListener('change', function () { err.hidden = true; });
+  //the bar's folders as round buttons, indented as in the folder list; "out of every folder"
+  //(Uncategorized) first
   function fillList() {
-    list.innerHTML = '';
-    Array.prototype.forEach.call(sel.options, function (o) {
-      if (!o.value) return;
-      var li = document.createElement('li'), lab = document.createElement('label'), r = document.createElement('input');
-      r.type = 'radio'; r.name = 'bar-move-to'; r.value = o.value; r.disabled = o.disabled;
-      var text = o.textContent, depth = (text.match(/^\u00a0+/) || [''])[0].length;
-      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
-      lab.appendChild(r);
-      if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
-      lab.appendChild(document.createTextNode(' ' + text.replace(/^\u00a0+/, '')));
-      li.appendChild(lab);
-      list.appendChild(li);
-    });
+    var got = window.qgenFolderPick.fromSelect(sel);
+    window.qgenFolderPick.fill(holder, got.folders, { type: 'radio', name: 'bar-move-to', top: got.top,
+      each: function (f, r) { r.disabled = !!f.disabled; } });
   }
   var row = document.createElement('div');
   row.className = 'btn-row';
@@ -67,7 +56,7 @@
   document.body.appendChild(dialog);
   //(sent: the dialog steps aside, so takeout.js's question, if any, shows alone)
   go.addEventListener('click', function (e) {
-    var r = list.querySelector('input:checked');
+    var r = holder.querySelector('input:checked');
     if (!r) { e.preventDefault(); err.hidden = false; return; }
     sel.value = r.value;
     //(what's checked in other folders goes too: static/js/checked.js)
@@ -110,12 +99,12 @@
       if (b.name) { go.name = b.name; go.value = b.value; } else { go.removeAttribute('name'); go.removeAttribute('value'); }
       //(the bar grays its list out while nothing is checked: here something is)
       sel.disabled = false; sel.removeAttribute('title');
+      sub.textContent = 'Choose the folder to move ' + (n === 1 ? 'it' : 'them') + ' to.';
       //(the same words as a row's Move: the Archive's attempts)
-      one.textContent = units === 'attempts' ? 'It leaves the folder it\u2019s in now. An attempt is in one folder at a time.' : '';
+      window.qgenFolderPick.happens(happens, [n === 1 ? 'It leaves the folder it\u2019s in now' : 'They leave the folders they\u2019re in now',
+        units === 'attempts' ? 'An attempt is in one folder at a time' : '']);
       fillList(); err.hidden = true;
       dialog.showModal();
-      var first = list.querySelector('input:not(:disabled)');
-      if (first) first.focus();
     });
   });
 
@@ -199,23 +188,22 @@
      folders they're in now. "Copy instead" keeps them where they are too, and then several
      folders can be checked (folders they're in already shown checked and grayed). */
   var putBox = document.createElement('dialog');
-  putBox.className = 'ask ask-many assign-many put-dialog';
-  putBox.innerHTML = '<p><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
-    + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul><li data-stays></li><li data-several></li></ul>'
-    + '<label class="put-copy"><input type="checkbox" data-copy> <span data-copy-words></span></label></div>'
-    + '<div class="assign-many-tools"><span class="muted small" data-count></span></div>'
-    + '<ul class="assign-many-people put-list" data-list></ul>'
+  //(laid out like the Assign dialogs, 820px wide, the standard picker with its side folder list:
+  //static/js/dialogfilter.js; "Copy instead" on its own line under the amber box, which keeps only
+  //its lines: the owner, 2026-10-22)
+  putBox.className = 'ask ask-many assign-many pick-dialog put-dialog';
+  putBox.innerHTML = '<p data-pick-head><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
+    + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul><li data-stays></li><li data-several></li></ul></div>'
+    + '<label class="put-copy"><input type="checkbox" data-copy> <span data-copy-words></span></label>'
+    + window.qgenFolderPick.html()
     + '<p class="error small" data-err hidden></p>'
     + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok></button></div>';
   document.body.appendChild(putBox);
-  var putList = putBox.querySelector('[data-list]'), copyBox = putBox.querySelector('[data-copy]');
+  var putList = putBox.querySelector('[data-folder-pick]'), copyBox = putBox.querySelector('[data-copy]');
   putBox.querySelector('[data-no]').addEventListener('click', function () { putBox.close(); });
-  function putCount() {
-    var n = putList.querySelectorAll('input:checked:not(:disabled)').length;
-    putBox.querySelector('[data-count]').textContent = copyBox.checked ? n + ' checked' : '';
-    if (n) putBox.querySelector('[data-err]').hidden = true;
-  }
-  putBox.addEventListener('change', function (e) { if (e.target !== copyBox) putCount(); });
+  putBox.addEventListener('change', function (e) {
+    if (e.target !== copyBox && putList.querySelector('input:checked:not(:disabled)')) putBox.querySelector('[data-err]').hidden = true;
+  });
   var putState = null;
   function putDraw() {
     var d = putState, n = d.ids.length, copy = copyBox.checked;
@@ -232,25 +220,14 @@
     putBox.querySelector('[data-ok]').textContent = copy ? 'Put in folder' : 'Move';
     putBox.querySelector('[data-err]').textContent = copy ? 'Check at least one folder first.' : 'Choose a folder first.';
     putBox.querySelector('[data-err]').hidden = true;
-    putList.innerHTML = '';
     var onlyIn = d.from || (n === 1 && d.already.length === 1 ? d.already[0] : null);
-    Array.prototype.forEach.call(sel.options, function (o) {
-      if (!o.value) return;
-      var li = document.createElement('li'), lab = document.createElement('label'), box = document.createElement('input');
-      box.type = copy ? 'checkbox' : 'radio'; box.name = 'put-to'; box.value = o.value;
-      if (copy && d.already.indexOf(o.value) !== -1) { box.checked = true; box.disabled = true; lab.title = 'Already in it'; }
-      if (!copy && o.value === onlyIn) { box.disabled = true; lab.title = 'Already in it'; }
-      //(a folder inside another: the whole line indented, as in the folder list)
-      var text = o.textContent, depth = (text.match(/^ +/) || [''])[0].length;
-      lab.style.setProperty('--depth-pad', (depth * 6) + 'px');  // (the folder's icon and name indented, the button stays in the left column: the owner, 2026-10-21)
-      lab.appendChild(box);
-      //(a folder icon between the box and the name, as in the folder lists: the owner, 2026-10-16)
-      if (window.qgenIcon) lab.insertAdjacentHTML('beforeend', ' ' + window.qgenIcon('folder'));
-      lab.appendChild(document.createTextNode(' ' + text.replace(/^ +/, '')));
-      li.appendChild(lab);
-      putList.appendChild(li);
-    });
-    putCount();
+    //(a folder inside another indented as in the folder list; a folder icon between the box and the
+    //name: the owner, 2026-10-16; no "out of every folder" here, so no Uncategorized)
+    window.qgenFolderPick.fill(putList, window.qgenFolderPick.fromSelect(sel).folders, { type: copy ? 'checkbox' : 'radio', name: 'put-to',
+      each: function (f, box, lab) {
+        if (copy && d.already.indexOf(f.id) !== -1) { box.checked = true; box.disabled = true; lab.title = 'Already in it'; }
+        if (!copy && f.id === onlyIn) { box.disabled = true; lab.title = 'Already in it'; }
+      } });
   }
   copyBox.addEventListener('change', putDraw);
   putBox.querySelector('[data-ok]').addEventListener('click', function () {

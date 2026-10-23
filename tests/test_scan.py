@@ -875,7 +875,7 @@ def test_pages_are_read_three_at_once_and_pause_drops_them(own_connections, ai):
     from app.qgen import scan as SC
     from app.qgen.models import ScanJob
     #(enough for the three dropped pages to be read again on Resume)
-    fakes = ai([QS_TIMES] * 8, [NUM_TIMES] * 8)
+    fakes = ai([QS_TIMES] * 15, [NUM_TIMES] * 15)
     app.config['SCAN_READ_AT_ONCE'] = 3
     started = []
 

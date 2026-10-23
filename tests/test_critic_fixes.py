@@ -65,8 +65,10 @@ def test_move_dialog_counts_each_level_of_indent():
     """The Move dialog's folder list reads the indent folder_tree.indent writes: non-breaking
     spaces only, three per level (the critic thought plain spaces were mixed in; they aren't)."""
     from app.folder_tree import indent
-    js = open(os.path.join(ROOT, 'static', 'js', 'filebar.js')).read()
-    assert "text.match(/^\\u00a0+/)" in js
+    #(read in one place since the folder dialogs share the standard picker: static/js/dialogfilter.js,
+    #the owner 2026-10-22; three a level, so depth = spaces / 3 + 1)
+    js = open(os.path.join(ROOT, 'static', 'js', 'dialogfilter.js')).read()
+    assert "text.match(/^\\u00a0+/)" in js and 'Math.floor(pad / 3) + 1' in js
     assert indent(1) == '' and indent(3) == '\u00a0' * 6
 
 

@@ -115,6 +115,9 @@
       var lt = list.getBoundingClientRect().top + (head ? head.offsetHeight : 0);
       list.querySelectorAll('tr > td > details.row-fold > summary').forEach(function (sm) {
         var d = sm.parentElement, on = false;
+        //(how tall its heading is: a table inside the open row pins its own headings just under it,
+        //the owner 2026-10-22)
+        d.style.setProperty('--sum-h', sm.offsetHeight + 'px');
         if (d.open) {
           var row = d.closest('tr').getBoundingClientRect();
           on = row.top < lt - 2 && row.bottom > lt + sm.offsetHeight;

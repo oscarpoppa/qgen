@@ -30,8 +30,11 @@
     //list with check boxes, a folder page's or a picker's
     var checkedNode = byId.checked = { id: 'checked', name: 'Checked', children: [], keys: [], keySet: {}, count: 0, icon: 'lc-folder-check' };
     parentOf.checked = null;
-    function tickOf(el) { return (el.closest('tr') || el).querySelector('.tick-col input[type="checkbox"]'); }
-    function hasChecks() { return !!list.querySelector('.tick-col input[type="checkbox"]'); }
+    //(a list of round buttons can have its Checked folder too, showing the one picked, when it asks for
+    //it with data-checked-radios: the Assign page's Quiz card, the owner 2026-10-22)
+    var TICK = '.tick-col input[type="checkbox"]' + ('checkedRadios' in box.dataset ? ', .tick-col input[type="radio"]' : '');
+    function tickOf(el) { return (el.closest('tr') || el).querySelector(TICK); }
+    function hasChecks() { return !!list.querySelector(TICK); }
 
     function items() {
       return Array.prototype.filter.call(list.querySelectorAll('[' + sel + '^="' + prefix + '"]'), function (el) {
@@ -75,8 +78,8 @@
       b.appendChild(name);
       b.appendChild(c);
       b.title = 'Show ' + (id === 'all' ? 'everything' : 'what’s in “' + label + '”');
-      //(a real folder opens its own page on a double-click: said here, the owner 2026-10-16)
-      if (/^\d+$/.test(id) || (byId[id] && byId[id].url)) b.title += ' (double-click: open this folder)';
+      //(no "(double-click: open this folder)" any more: double-click to open went site-wide on
+      //2026-10-21, "Open this folder" is the icon at the open tab's row's end; the owner, 2026-10-22)
       //(nothing in it: grayed, and it still opens, saying it's empty, from a tab as from the folder
       //list, on every page: the owner, 2026-10-21; it didn't open from a tab, 2026-10-14)
       if (!n && id !== 'all') {
@@ -923,6 +926,11 @@
       markSide();
       retitle();
     }
+    //(for a list whose rows a script changes in place: a folder dialog's round buttons turned into
+    //check boxes by "Copy instead" (the Checked folder comes and goes with them), and opening it
+    //again on All; static/js/dialogfilter.js, the owner 2026-10-22)
+    box.qgenRedraw = function () { draw(); apply(); };
+    box.qgenChoose = choose;
     draw();
     //(drawn early: what's shown is sorted out once every row has arrived, the list kept out of
     //sight meanwhile unless everything shows anyway)
@@ -951,6 +959,8 @@
   //(only where the server gave the counts, data-total: elsewhere, e.g. Grading's attempts, the tabs
   //wait for the rows as before)
   window.qgenFolderFilterEarly = function (box) { if (box && box.dataset.total !== undefined) setUp(box, true); };
+  //(a list a script builds later: the folder dialogs' pickers, static/js/dialogfilter.js; the owner, 2026-10-22)
+  window.qgenFolderFilterSetUp = function (box) { setUp(box); };
   //(setUp(box), never forEach(setUp): forEach's index would come in as `early` and leave every list
   //after the first waiting for rows that are already there)
   function all() { document.querySelectorAll('[data-folder-filter]').forEach(function (box) { setUp(box); }); }

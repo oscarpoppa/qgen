@@ -112,6 +112,10 @@
     if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
     e.preventDefault();
     e.stopImmediatePropagation();
+    //(asked from a pop-over, Folder options' "Delete folder": the pop-over closes first, so it isn't
+    //left open behind the question; the owner, 2026-10-22)
+    var pop = form.closest('details.folder-tools[open]');
+    if (pop) pop.open = false;
     var submitter = e.submitter;
     //(no data-confirm-ok: the button that was pressed names the action, its words or its
     //tooltip's first part, e.g. "Archive" from "Archive: move it to the Archive")

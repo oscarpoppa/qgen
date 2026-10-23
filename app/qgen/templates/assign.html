@@ -26,7 +26,7 @@
     {% else %}
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='quiz-filter-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
-         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
+         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list" data-checked-radios>
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
         {% call pick_table('Quiz', 'quiz-pick-list', (' role="radiogroup" aria-label="' ~ form.vquiz.label.text ~ '"')|safe) %}
@@ -102,6 +102,26 @@
 
 {% block scripts %}
 <script>
+/* the two cards' headings and filter bars level, side by side (the owner, 2026-10-22): the Students
+   card has "Assignee" above its heading, so the Quiz card's heading moves down to match, and again
+   whenever the Assignee list grows or shrinks; on a phone, where the cards stack, nothing moves */
+(function () {
+  var a = document.querySelector('#pick-quiz > .pick-wrap-head'), b = document.querySelector('#pick-people > .pick-wrap-head');
+  if (!a || !b) return;
+  var ca = a.closest('.card'), cb = b.closest('.card');
+  function level() {
+    //(the card's own top padding grows, so its heading's line, icons and all, moves down as one)
+    ca.style.paddingTop = '';
+    if (Math.abs(ca.getBoundingClientRect().top - cb.getBoundingClientRect().top) > 4) return;
+    var d = b.getBoundingClientRect().top - a.getBoundingClientRect().top;
+    if (d > 0) ca.style.paddingTop = Math.round(parseFloat(getComputedStyle(ca).paddingTop) + d) + 'px';
+  }
+  level();
+  window.addEventListener('resize', level);
+  var r = document.getElementById('recipients');
+  if (r && window.ResizeObserver) new ResizeObserver(level).observe(r);
+})();
+
 /* the Quiz card: the quiz that's checked is always one on screen, so Assign never gives out a
  * quiz the teacher can't see. While a folder or the filter hides the teacher's choice, the first
  * quiz shown is checked (none if nothing is shown); once their choice is in sight again, it's

@@ -2,7 +2,7 @@
    all draw their folders with these. The page passes a "kit" (app/folder_tree.py, kit()):
    what it shows (view, node, path, the tree), its addresses and its words.
 
-     {% from "_folders.html" import folders_page, sub_box, level_buttons, in_folders, move_menu with context %}
+     {% from "_folders.html" import folders_page, sub_box, level_buttons, in_folders with context %}
      {% call folders_page(fk, actions) %} ...what's in the folder being looked at... {% endcall %}
 
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
@@ -302,46 +302,26 @@
   {% endfor %}
 {% endmacro %}
 
-{# for things that are in one place only: a "Move to…" list that moves as soon as a folder
-   is picked. here: the folder it's in now (None: in no folder) #}
-{% macro move_menu(fk, what, ident, label, here) %}
-  <form method="post" action="{{ fk.move_url }}" class="move-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="{{ what }}" value="{{ ident }}">
-    <input type="hidden" name="view" value="{{ fk.view }}">
-    <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
-    <label class="small muted">Move to
-      <select name="to" class="move-select" aria-label="Move {{ label }} to a folder" title="Pick a folder to move {{ label }} into; it moves right away">
-        {# the folders, then Uncategorized: the order of every folder list #}
-        {% for f, depth in fk.flat %}
-          <option value="{{ f.id }}"{% if here and here.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>
-        {% endfor %}
-        <option value="top"{% if not here %} selected{% endif %}>{{ fk.main_label }}</option>
-      </select></label>
-    <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
-  </form>
-{% endmacro %}
-
-{# the same, small enough for a box's heading (My quizzes): "Move… ▾", whose list moves the
-   thing at once; the folder it's in now is marked and can't be picked #}
+{# A Move icon for things that are in one place only (the Archive's attempts, My quizzes' quizzes):
+   a bare folder icon that opens the Move dialog (static/js/folders.js; the owner, 2026-10-15).
+   here: the folder it's in now (None: in no folder). The dialog's folders are the page's one
+   move_folders list, not a hidden drop-down in every row (the owner, 2026-10-22). #}
 {% macro move_mini(fk, what, ident, label, here) %}
   <form method="post" action="{{ fk.move_url }}" class="move-form move-mini">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
     <input type="hidden" name="from" value="{{ here.id if here else 'top' }}">
-    {#- a bare folder icon that opens a Move dialog (static/js/folders.js; the owner, 2026-10-15):
-        the list below is only where its choices come from #}
+    <input type="hidden" name="to" value="">
     <button type="button" class="btn btn-secondary btn-sm btn-icon move-one" data-move-one data-label="{{ label }}" title="Move: put {{ label }} in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button>
-    <select name="to" class="move-select" hidden aria-label="Move {{ label }} to a folder">
-      <option value="" selected>Move…</option>
-      {% for f, depth in fk.flat %}
-        <option value="{{ f.id }}"{% if here and here.id == f.id %} disabled{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}{{ ' (here now)' if here and here.id == f.id }}</option>
-      {% endfor %}
-      <option value="top"{% if not here %} disabled{% endif %}>{{ fk.main_label }}{{ ' (here now)' if not here }}</option>
-    </select>
-    <noscript><button class="btn btn-secondary btn-xs" title="Move it to the folder you picked">Move</button></noscript>
   </form>
+{% endmacro %}
+
+{# The folders a page's Move icons (move_mini) offer, once for the page: each [id, name, depth, icon] in
+   the folder list's order, and the words for "out of every folder" (static/js/folders.js) #}
+{% macro move_folders(fk) %}
+{%- set ns = namespace(rows=[]) %}{% for f, depth in fk.flat %}{% set ns.rows = ns.rows + [[f.id, fk.name(f), depth, fk.folder_icon(f)]] %}{% endfor %}
+<script type="application/json" id="move-folders">{{ {'main': fk.main_label, 'folders': ns.rows}|tojson }}</script>
 {% endmacro %}
 
 {# The trash can on a card or row: "What do you want to do with X?" (with delete_note, what
@@ -385,18 +365,26 @@
               {% set skip = fk.inside(n) %}
               <span class="folder-opt">
                 <button type="button" class="btn btn-secondary btn-xs" data-fopt="move">Move to</button>
-                <dialog class="ask ask-many assign-many put-dialog folder-dialog" data-fopt-dialog="move" aria-label="Move “{{ fk.name(n.folder) }}” to another folder">
+                {#- laid out like the Assign dialogs, 820px wide: the title and a short line, the amber
+                    "What happens:" box, then the standard picker, a side folder list beside a tab over
+                    the folders' table, each folder indented by its depth as in the side list
+                    (static/js/dialogfilter.js builds it when it opens; the owner, 2026-10-22) #}
+                <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" data-fopt-dialog="move" aria-label="Move “{{ fk.name(n.folder) }}” to another folder">
                   <form method="post" action="{{ fk.move_url }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="view" value="{{ fk.view }}">
                     <input type="hidden" name="folder" value="{{ f.id }}">
-                    <p><strong>Move “{{ fk.name(n.folder) }}” to another folder</strong></p>
-                    <ul class="assign-many-people put-list">
-                      <li><label><input type="radio" name="to" value="top"{% if not f.parent_id %} checked{% endif %}> Not inside another folder</label></li>
-                      {% for g, depth in fk.flat if g.id not in skip %}
-                        <li><label style="--depth-pad: {{ (depth - 1) * 18 }}px"><input type="radio" name="to" value="{{ g.id }}"{% if f.parent_id == g.id %} checked{% endif %}> {{ icon('folder') }} {{ fk.name(g) }}</label></li>
-                      {% endfor %}
-                    </ul>
+                    <p data-pick-head><strong>Move “{{ fk.name(n.folder) }}” to another folder</strong><br>
+                      <span class="muted small">Choose the folder to move it to.</span></p>
+                    <div class="assign-defaults small"><strong>{{ icon('lc-alert', 'assign-defaults-sign') }}What happens:</strong>
+                      <ul><li>Everything in it moves with it</li></ul></div>
+                    {#- ("Not inside another folder" first, and pinned under All in the side list; the rows are
+                        drawn when it opens, so a copy of these options on a folder tab adds no rows to the
+                        page's own list) #}
+                    {%- set ns = namespace(rows=[]) %}{% for g, depth in fk.flat if g.id not in skip %}{% set ns.rows = ns.rows + [[g.id, fk.name(g), depth, fk.folder_icon(g)]] %}{% endfor %}
+                    <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="to" data-checked="{{ f.parent_id or 'top' }}">
+                      <script type="application/json" data-pick-rows>{{ ns.rows|tojson }}</script>
+                    </div>
                     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
                       <button class="btn" title="Move it to the folder you picked">Move</button></div>
                   </form>

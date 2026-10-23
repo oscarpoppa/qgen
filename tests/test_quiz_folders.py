@@ -36,7 +36,8 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert 'Folder “Unit 1” made.' in r.data.decode()
     unit = folder_id('Unit 1', 'sam')
     page = sam.get('/mypage').data.decode()
-    assert page.count('aria-label="Move “Week 1” to a folder"') == 1 and '>Unit 1</option>' in page
+    #(each quiz's Move icon; the page's folders listed once for its Move dialog: the owner, 2026-10-22)
+    assert page.count('data-move-one data-label="“Week 1”"') == 1 and '"Unit 1", 1, "folder"' in page
     # the Move to list
     assert sam.post('/mypage/move', data={'quiz': w1.id, 'to': unit}, headers=FETCH).get_json() == \
         {'ok': True, 'message': 'Moved “Week 1” to “Unit 1”.'}

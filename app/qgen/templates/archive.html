@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_archive_sections.html" import archive_switch %}
-{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, move_menu, move_mini, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, sub_box, all_boxes, folder_items, empty_note, move_mini, move_folders, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
 {% block body_attrs %}{{ watch('archive') }}{% endblock %}
 {# the folder list beside the attempts needs the room: the whole width of the window #}
@@ -82,7 +82,7 @@
       <label class="small" for="move-folder">Move them to</label>
       <select id="move-folder" name="folder">
         <option value="" selected>Choose a folder…</option>
-        {% for f, depth in fk.flat %}<option value="{{ f.id }}">{{ fk.indent(depth) }}{{ f.name }}</option>{% endfor %}
+        {% for f, depth in fk.flat %}<option value="{{ f.id }}" data-icon="{{ fk.folder_icon(f) }}">{{ fk.indent(depth) }}{{ f.name }}</option>{% endfor %}
         <option value="top">{{ fk.main_label }}</option>
       </select>
       <button class="btn btn-sm" title="Move the checked attempts to the folder chosen at left">Move</button>
@@ -100,4 +100,4 @@
 {% endcall %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
+{% block scripts %}{{ move_folders(fk) }}<script src="{{ asset('js/folders.js') }}"></script>{% endblock %}
