@@ -4,7 +4,10 @@
  *  - New quiz / Edit quiz: leaving in any way keeps what's filled in (this browser, 3 hours),
  *    and coming back to the page puts it back. Nothing is saved until the quiz is. */
 (function () {
-  var KEY = 'qgen-quiz-pick', HOURS = 3;
+  //(one kept quiz per account: another teacher on this browser never gets it)
+  var who = document.querySelector('meta[name="qgen-user"]');
+  var KEY = 'qgen-quiz-pick:' + (who ? who.content : ''), HOURS = 3;
+  try { localStorage.removeItem('qgen-quiz-pick'); } catch (e) {}  // (the old shared one)
   function get() {
     try {
       var d = JSON.parse(localStorage.getItem(KEY) || 'null');
@@ -56,7 +59,7 @@
       });
     }
     var d = get();
-    if (d && d.back && d.url === location.pathname) {
+    if (d && d.back && d.url === location.pathname && !/[?&]problems=/.test(location.search)) {
       fields(function (k, el) {
         if (!(k in d.fields)) return;
         if (el.type === 'checkbox' || el.type === 'radio') el.checked = d.fields[k];
@@ -71,8 +74,9 @@
     var drop = false;
     form.addEventListener('submit', function () { drop = true; put(null); });
     document.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('[data-back-href], [data-start-over]')) { drop = true; put(null); }
+      if (e.target.closest && e.target.closest('[data-back-href]')) { drop = true; put(null); }
     }, true);
+    document.addEventListener('qgen-start-over', function () { drop = true; put(null); });
     window.addEventListener('pagehide', function () {
       if (drop) return;
       var keep = {};

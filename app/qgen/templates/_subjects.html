@@ -9,12 +9,16 @@
   {% for g in groups|sort(attribute='title') %}<span class="badge subject-label">{{ g.title }}</span>{% endfor %}
 {% endmacro %}
 
+{# "(optional)" and its ⓘ, beside a card's heading "Folder" (the owner, 2026-10-23) #}
+{% macro subject_optional() %}<span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}{% endmacro %}
+
 {# the Folder question on the problem and quiz forms; a new one must be put somewhere #}
 {% macro subject_checks(kind, all_subjects, ticked, new_item, unsorted_ticked, new_subject_name, error, card_headed=false) %}
 {% set noun = 'problem' if kind == 'problems' else 'quiz' %}
 <fieldset class="subject-checks{{ ' has-error' if error }}" id="subject-question">
   {#- (under a card heading "Folder", only the rest: the owner, 2026-10-22; "Folder" kept for screen readers) #}
-  <legend>{% if card_headed %}<span class="sr-only">Folder</span>{% else %}Folder {% endif %}<span class="muted small">(optional)</span> {{ tip('subjects', subjects_help) }}</legend>
+  {%- if card_headed %}<legend class="sr-only">Folder (optional)</legend>
+  {%- else %}<legend>Folder {{ subject_optional() }}</legend>{% endif %}
   <input type="hidden" name="subjects_shown" value="1">
   {# the folder list on the left, and the new folder box with its notes beside it, on the right
      (under it on a phone) (the owner, 2026-10-16) #}

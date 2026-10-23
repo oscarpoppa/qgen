@@ -101,7 +101,9 @@
     var btn = e.target.closest && e.target.closest('[data-start-over]');
     if (!btn) return;
     window.qgenAsk(btn.dataset.ask, btn.dataset.ok, true).then(function (yes) {
-      if (yes) location.replace(btn.dataset.startOver);
+      if (!yes) return;
+      document.dispatchEvent(new CustomEvent('qgen-start-over'));  // (static/js/quiz_pick.js keeps nothing)
+      location.replace(btn.dataset.startOver);
     });
   });
 

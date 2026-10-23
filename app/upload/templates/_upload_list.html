@@ -15,7 +15,7 @@
         <tr data-item="{{ item.id }}" data-box="{{ what }}:{{ item.id }}" data-name="{{ item.name|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           <td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.name }}”"></td>
           <td data-label="{{ 'Picture' if kind == 'pictures' else 'File' }}"><span class="upload-name">
-            {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="Open {{ item.name }} full size in a new tab"><img src="{{ url_for('static', filename='T_' ~ item.name) }}" alt="" loading="lazy"></a>
+            {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ url_for('static', filename=item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ url_for('static', filename='T_' ~ item.name) }}" alt="" loading="lazy"></a>
             {%- else %}<span class="upload-thumb upload-file" aria-hidden="true">{{ icon('file') }}</span>{% endif %}
             <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>

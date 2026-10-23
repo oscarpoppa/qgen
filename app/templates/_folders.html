@@ -85,6 +85,9 @@
     {#- + New folder: a small icon at the top of the folder list's card, on a strip of the card above the
         part that scrolls, so it's always in sight (the owner, 2026-10-22: it was the list's last line,
         then under the card) #}
+    {#- the heading over the folder list, "Folders", with its Expand all / Collapse all beside it (moved
+        here by static/js/folders.js), as on every picker's folder list (the owner, 2026-10-23: X8) #}
+    <div class="side-list-head"><span class="side-list-title">Folders</span></div>
     {% if not fk.readonly %}<div class="side-card-head">{{ new_folder(fk, as_icon=true) }}</div>{% endif %}
     <nav aria-label="Folders">
       {# shown (static/js/folders.js) when some folder has folders inside it #}

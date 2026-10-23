@@ -844,6 +844,8 @@ dialog.ask.ask-many { max-width: min(560px, calc(100vw - 32px)); }  /* (three an
 dialog.ask::backdrop { background: rgba(10, 14, 22, .45); }
 dialog.ask p { margin: 0 0 16px; font-size: var(--fs-md); }
 dialog.ask .btn-row { justify-content: flex-end; }
+/* a dialog's "Filter by name…" starts at the left, over the folder list (the owner, 2026-10-23: W3) */
+dialog.ask .btn-row.filter-bar { justify-content: flex-start; }
 dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color: var(--on-bad); }
 
 /* My quizzes: each quiz folds down to its title and score */
@@ -1718,7 +1720,8 @@ details.box-mini > summary > .fold { border-width: 4px 0 4px 6px; }
 /* one scroll at a time: on a folder page (whose list scrolls with the page) and in the messages
    list, a folder, a student's or quiz's results, a month or Done just grows when opened, on
    phones too, never a scroll area inside the page */
-.box-body, .result-folder-body, .table-wrap, .quiz-grid), .box-body, .result-folder-body, .table-wrap, .quiz-grid) { max-height: none !important; }
+.folder-main > #folder-items :is(.box-body, .result-folder-body, .table-wrap, .quiz-grid),
+.folder-main > .list-scroll :is(.box-body, .result-folder-body, .table-wrap, .quiz-grid) { max-height: none !important; }
 
 /* back where you were after a button reloaded the page: what happened floats at the top of
    the window for a few seconds (static/js/place.js) */
@@ -3399,3 +3402,17 @@ dialog.ask.showing-dialog { width: min(820px, calc(100vw - 32px)); max-width: mi
 .panel-extras > .btn { flex: 0 0 auto; white-space: nowrap; }
 .panel-extras > .showing-btn { flex: 0 1 auto; min-width: 0; max-width: none; }
 .panel-extras .showing-btn .showing-name { min-width: 0; }
+
+/* the Checked folder's name is green while anything is checked (the owner, 2026-10-23) */
+.side-row.has-checked :is(.folder-tab, .side-link), .side-row.has-checked :is(.folder-tab, .side-link) .box-title { color: var(--ok); }
+
+/* a folder page's folder list: the heading "Folders" with Expand all / Collapse all, over the list's
+   card, as on every picker (the owner, 2026-10-23: X8). On a phone the folding "Folders" line
+   above says it already: only the pair shows */
+.folder-side > .side-list-head { display: flex; align-items: center; gap: 6px; min-height: 36px; margin: 0 0 4px;
+  font-weight: 600; font-size: var(--fs-sm); }
+.folder-side > .side-list-head .side-levels { margin: 0; }
+@media (max-width: 760px) {
+  .folder-side > .side-list-head .side-list-title { display: none; }
+  .folder-side > .side-list-head:not(:has(.side-levels:not([hidden]))) { display: none; }
+}

@@ -680,15 +680,18 @@
         if (c) { c.textContent = n; c.title = count(n); c.dataset.n = n; }
         b.classList.toggle('is-empty', !n);
         b.title = n ? 'Show what’s in “Checked”' : 'Nothing in “Checked” yet';
-        var r = b.closest('.side-row'); if (r) r.classList.toggle('is-empty', !n);
+        //(green while anything is checked, to catch the eye: the owner, 2026-10-23)
+        var r = b.closest('.side-row'); if (r) { r.classList.toggle('is-empty', !n); r.classList.toggle('has-checked', !!n); }
       });
       if (sideLink) {
         sideLink.closest('.side-row').classList.toggle('is-empty', !n);
+        sideLink.closest('.side-row').classList.toggle('has-checked', !!n);
         sideLink.parentNode.querySelector('.side-count').textContent = n;
       }
       //(and small, beside the folder list's Expand all / Collapse all by the page's title: the owner, 2026-10-21)
       if (ownList() && hasChecks()) {
-        var pair = document.querySelector('main .page-head > .side-levels.title-levels');
+        //(beside the page's title, where the folder list's pair used to be: 2026-10-23)
+        var pair = document.querySelector('main .page-head > h1');
         if (pair && !titleCount) {
           //(a button: it opens the Checked folder, the owner 2026-10-21)
           titleCount = document.createElement('button');

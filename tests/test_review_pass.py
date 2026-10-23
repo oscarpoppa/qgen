@@ -536,7 +536,8 @@ def test_a_folder_is_optional_when_making_a_problem_or_quiz(app_db):
     teach.post('/quiz/makevquiz', data=data)
     assert VQuiz.query.one().vqgroups == []
     page = teach.get('/quiz/makevquiz').data.decode()
-    assert 'Folder <span class="muted small">(optional)</span>' in page and 'name="unsorted"' not in page
+    #(beside the card's heading "Folder": the owner, 2026-10-23)
+    assert '<h2>Folder</h2><span class="muted small">(optional)</span>' in page and 'name="unsorted"' not in page
     # a bad new folder name is still caught before saving
     hints = teach.post('/quiz/checkvprob', data=dict(form, new_subject='x' * 65)).get_json()['hints']
     assert any('64 characters' in h['text'] for h in hints)
@@ -899,7 +900,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     sam.post('/mypage/move', data={'quiz': fresh.id, 'to': folder.id})
     page = sam.get('/mypage?folder=main').data.decode()
     # in the side list, with a count like every other row, what it counts in its tooltip (the owner, 2026-10-17)
-    assert 'href="/mypage?folder=new"' in page and 'class="side-count muted small" title="1 attempt not started yet">1</span>' in page
+    assert 'href="/mypage?folder=new"' in page and 'title="1 attempt not started yet" role="img" aria-label="1 new">1</span>' in page
     # the folder it's filed in says so too, with a small dot (it may be out of sight in another folder)
     assert '<span class="side-dot dot-new" title="1 new attempt" role="img" aria-label="1 new attempt">1</span>' in page
     # and Uncategorized has the started one
@@ -924,7 +925,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     db.session.commit()
     mine = sam.get('/mypage').data.decode()
     side = mine.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
-    assert 'not started yet">' not in side and 'title="2 attempts started, or handed in and not graded yet">2</span>' in side
+    assert 'class="side-dot dot-new"' not in side and 'title="2 attempts started, or handed in and not graded yet" role="img" aria-label="2 in progress">2</span>' in side
     assert 'No new quizzes right now.' in sam.get('/mypage?folder=new').data.decode()
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     tree = dict((t[0], t[1]) for t in student_filter(page))
@@ -1183,7 +1184,7 @@ def test_folder_numbers_count_tries_not_quizzes(app_db):
     page = sam.get('/mypage?folder=main').data.decode()
     assert '<span class="side-dot dot-new" title="2 new attempts" role="img" aria-label="2 new attempts">2</span>' in page
     # the New row: its number and its tooltip (what it counts) say the same
-    assert 'class="side-count muted small" title="2 attempts not started yet">2</span>' in page
+    assert 'title="2 attempts not started yet" role="img" aria-label="2 new">2</span>' in page
 
 
 def test_standard_wording_and_history_buttons(app_db):
@@ -1207,8 +1208,9 @@ def test_standard_wording_and_history_buttons(app_db):
     # unchecking everyone says so (Clear is the filter box's)
     #(People's own "Assign a quiz to them" bar, with its Uncheck all, is gone: the checked people
     #use the folder bar, and its dialogs say Uncheck all)
-    assert 'data-pick="clear">Uncheck all</button>' in no_titles(teach.get('/quiz/assign').data.decode())
-    assert 'data-check-set="0">Uncheck all</button>' in no_titles(teach.get('/userdet').data.decode())
+    #(one check box in the list's heading row now, static/js/checkall.js: the owner, 2026-10-23)
+    page = teach.get('/quiz/assign').data.decode()
+    assert 'data-pick="clear"' not in page and 'js/checkall.js' in page
     # the teachers' messages page: one name, and the way back is the top bar's arrows
     page = teach.get('/messages/teachers').data.decode()
     assert 'Teachers’ messages' in page and back_by_the_trail(page) and 'Messages with' not in page
@@ -1347,22 +1349,20 @@ def test_list_items_have_only_buttons(app_db):
 
 
 def test_folders_on_top_and_their_contents_below(app_db):
-    """Side-by-side folder boxes become one row of folder buttons (static/js/foldertabs.js),
-    so a folder is never listed below another folder's things (the user, 2026-10-09). Every
-    folder list page loads it; folder boxes start closed; Expand all leaves the rows alone."""
+    """One folder at a time (the owner, 2026-10-22): every folder list page shows the folder list
+    down the side and ONE tab over the list (data-onetab, static/js/folderfilter.js), so a folder is
+    never listed below another folder's things. The old row of folder buttons (foldertabs.js) is gone."""
     import os
     app, db = app_db
     teach = login(app, 'teach')
     #(/quiz/listuser opens People now: one People page, the owner 2026-10-21)
     for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/quiz/listuser', '/quiz/results', '/quiz/archive', '/mypage'):
-        assert 'js/foldertabs.js' in teach.get(url, follow_redirects=True).data.decode(), url
+        page = teach.get(url, follow_redirects=True).data.decode()
+        assert 'js/foldertabs.js' not in page and 'js/folderfilter.js' in page, url
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    js = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
-    assert "details.sub-box[data-sub], details.sub-box[data-folder-box]" in js
-    assert "'qgen-filtered'" in js and 'tabs-off' in js and "data-drop" in js
-    # where the folders end and the folder's own things begin (the user, 2026-10-09): the row
-    # is labeled "Folders", and a heading ("Problems in “Arithmetic” itself") comes after it
-    assert "folder-tabs-label" in js and "folder-items-head" in js and ": Unsorted'" in js
+    assert not os.path.exists(os.path.join(here, 'static', 'js', 'foldertabs.js'))
+    folders = open(os.path.join(here, 'app', 'templates', '_folders.html')).read()
+    assert 'data-onetab' in folders and 'macro sub_box' not in folders
     assert 'data-units="' in teach.get('/userdet').data.decode()
     boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
     # folders wait to be picked, except the first in a top-level row, while nothing about that row
@@ -1370,9 +1370,6 @@ def test_folders_on_top_and_their_contents_below(app_db):
     assert "if (d.matches(FOLDER)) {" in boxes and "if (d.parentElement.closest(FOLDER)) return false;" in boxes
     #(what's remembered counts only when coming back to the page: trail.js's return)
     assert "return row[0] === d && !row.some(function (b) { return idOf(b) in memory; });" in boxes  # (remembered however the page is reached: owner 2026-10-21)
-    assert "row.qgenExpanded = true" in js  # Expand all shows every folder open; Collapse all brings the buttons back
-    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert '.folder-tabs:not(.tabs-off) ~ details.tab-box:not([open]) { display: none; }' in css
 
 
 def test_drawn_icons_everywhere_and_no_emoji():
@@ -1702,8 +1699,7 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     """A folder box holding boxes of its own (sub-folders, quizzes, attempts) gets Expand all /
     Collapse all for what's inside it, on its heading line (boxes.js adds the pair where the page
     drew none; it shows only with two or more boxes inside). A click there doesn't fold the box,
-    and Expand all opens it too. In a row of folder buttons the open folder's pair sits at the
-    row's right end (foldertabs.js). One student's page gets its pairs from folderfilter.js."""
+    and Expand all opens it too. One student's page gets its pairs from folderfilter.js."""
     import os
     app, db = app_db
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1714,9 +1710,6 @@ def test_every_folder_with_boxes_inside_has_its_own_expand_collapse(app_db):
     assert "bar.className = 'head-pair';" in js and "head.insertBefore(bar, first || null);" in js
     assert "open.dataset.levelOf = close.dataset.levelOf = '#' + body.id;" in js
     assert "var head = btn.closest('summary');" in js and "e.preventDefault();" in js and "head.parentElement.open = true;" in js
-    tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
-    assert "c.classList.contains('head-pair')" in tabs and "pairsOf(row).appendChild(c);" in tabs
-    assert "pair.hidden = searching ? false : !(d.open && !d.hidden);" in tabs
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
     give(vq, 'sam')
@@ -1769,38 +1762,28 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
 
 
 def test_assign_says_who_gets_the_quiz(app_db):
-    """Coming from People with students checked, Assign names them at the top of the Students card
-    ("Assignee", one chip each with a ✕); the list itself never folds, like the Quiz card's."""
+    """Coming from People with students checked, Assign starts with them checked in the Students
+    card (no list of names above it any more); the list itself never folds, like the Quiz card's."""
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/assign?users={}&users={}'.format(ids('sam'), ids('kim'))).data.decode()
-    top = page[page.index('id="recipients"'):page.index('id="pick-people"')]
-    assert '<span class="label">Assignee</span>' in top
-    assert '<span class="person-chip" data-user="{}">sam<button type="button" class="chip-x" aria-label="Leave sam out"'.format(ids('sam')) in top
-    assert 'data-user="{}">kim<'.format(ids('kim')) in top and 'recipient-none' not in top
+    for who in ('sam', 'kim'):
+        assert re.search(r'name="users" value="{}"[^>]*\bchecked'.format(ids(who)), page), who
     assert 'class="pick-wrap' not in page and 'change who gets it' not in page
     page = teach.get('/quiz/assign').data.decode()
-    assert 'Nobody yet: check the students below.' in page
-    # "below" is true: Assignee sits above the student list, in the same card
-    assert page.index('id="recipients"') < page.index('id="pick-people"') < page.index('name="users"')
+    assert not re.search(r'name="users"[^>]*\bchecked', page)
 
 
-def test_a_folders_own_things_have_a_divider_and_their_own_expand_collapse():
-    """Where a folder's folders end and its own things begin there's a line ("People in “8th
-    Grade” itself"), also while the folders show as boxes; on it, Expand all / Collapse all for
-    just those things (not the folders above), which leaves the folder rows alone."""
+def test_the_tabs_expand_collapse_sits_in_the_lists_heading_row():
+    """The one tab's Expand all / Collapse all (for the rows that open) sits in the list's heading
+    row, beside its check box, not by the tab (the owner, 2026-10-22); redrawn, it's never doubled."""
     import os
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    tabs = open(os.path.join(here, 'static', 'js', 'foldertabs.js')).read()
-    boxes = open(os.path.join(here, 'static', 'js', 'boxes.js')).read()
-    css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert "btn.dataset.levelItems = '';" in tabs and "head.appendChild(pair);" in tabs
-    assert "if (!btn || 'levelItems' in btn.dataset) return;" in tabs
-    assert "if ('levelItems' in btn.dataset) {" in boxes and "var list = [], head = btn.closest('.folder-items-head');" in boxes
-    assert '.folder-tabs.tabs-off ~ .folder-items-head { display: none; }' not in css
-    assert '.folder-items-head .level-buttons { margin-left: auto;' in css
-    # a tabbed folder's pair goes back on its own heading while the folders show as boxes
-    assert "if (searching && pair.parentElement !== head) head.appendChild(pair);" in tabs
+    js = open(os.path.join(here, 'static', 'js', 'folderfilter.js')).read()
+    assert 'function placeTabPair()' in js and "list.querySelector('table > thead > tr > th.tick-col')" in js
+    assert "box.querySelectorAll('.tab-level-pair').forEach(function (old) { if (old !== lp) old.remove(); });" in js
+    #(only where rows open)
+    assert "list.querySelector('details.box')" in js
 
 
 def test_set_wide_controls_sit_on_the_heading_line(app_db):
@@ -1839,7 +1822,8 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     #(the name only opens the row; Assign a quiz, Message and Student page are icons at its end: the owner, 2026-10-21)
     assert 'href="/' not in head and 'aria-label="Assign a quiz"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
-    assert "<span class=\"head-pair\">{{ level_buttons(fk.name(n.folder), of='#folder-body-' ~ f.id) }}" in folders and 'sub-tools' not in folders
+    #(no folder boxes inside the list any more: one folder at a time, the owner 2026-10-22)
+    assert 'macro sub_box' not in folders and 'sub-tools' not in folders
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'boxes.js')).read()
     assert 'if (same) pair.hidden = true;' in js  # a pair for the same boxes as one before it is left out
     assert "setTimeout(function () { if (d.open !== was) d.open = was; }, 0);" in js  # heading buttons don't fold the box

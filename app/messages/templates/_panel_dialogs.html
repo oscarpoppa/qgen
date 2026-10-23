@@ -45,7 +45,8 @@
 {% set sh_students, sh_tree = message_students() %}
 {% set unread_of = {} %}{% for r in rows %}{% set _ = unread_of.update({r.student.id: r.unread}) %}{% endfor %}
 <dialog class="ask panel-dialog showing-dialog" id="showing-dialog" aria-labelledby="showing-head">
-  <p><strong id="showing-head">Showing</strong></p>
+  <p><strong id="showing-head">Showing</strong><br>
+    <span class="muted small">Choose whose messages to show.</span></p>
   <div class="field pick-people" id="showing-pick">
     {{ filter_bar('#showing-pick .folder-filter-list', 'name', 'names', items='tr[data-box]', id='showing-bar') }}
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"

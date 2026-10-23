@@ -21,7 +21,7 @@
     head.checked = !!list.length && on === list.length;
     head.indeterminate = on > 0 && on < list.length;
     head.disabled = !list.length;
-    var words = head.checked ? 'Uncheck all' : 'Check all shown';
+    var words = head.checked ? 'Uncheck all shown' : 'Check all shown';
     head.title = words; head.setAttribute('aria-label', words);
   }
 

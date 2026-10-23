@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_button, slot with context %}
 {% from "_macros.html" import field, check, image_drop %}
-{% from "_subjects.html" import subject_checks, subject_labels with context %}
+{% from "_subjects.html" import subject_checks, subject_labels, subject_optional with context %}
 {% from "_macros.html" import box_label, count_of %}
 
 {# editing: another tab's changes are offered, never reloaded under the typing #}
@@ -108,7 +108,7 @@
 
   {#- the folder in a card of its own, under Problems (the owner, 2026-10-22) #}
   <div class="card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">6</span><h2>Folder</h2></div>
+    <div class="card-head"><span class="step-num" aria-hidden="true">6</span><h2>Folder</h2>{{ subject_optional() }}</div>
     {{ subject_checks('quizzes', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error, card_headed=true) }}
   </div>
 

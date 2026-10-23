@@ -8,7 +8,8 @@
   <form method="post" action="{{ url_for('messages.send') }}" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="to" value="chosen">
-    <p><strong id="write-to-head">Write to chosen students</strong></p>
+    <p><strong id="write-to-head">Write to chosen students</strong><br>
+      <span class="muted small">Check the students to write to.</span></p>
     {% if wt_students %}
     <div class="field pick-people" id="write-to-pick">
       {{ filter_bar('#write-to-pick .folder-filter-list', 'student', 'students', items='tr[data-box]', id='write-to-bar') }}

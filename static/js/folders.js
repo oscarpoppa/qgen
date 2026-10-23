@@ -58,13 +58,13 @@
   //Expand all / Collapse all above the list (the folders above the one you're in stay open)
   //(always there: grayed out, with why, when no folder in the list has folders inside it)
   var levels = document.querySelector('.side-levels');
-  //(beside the page's title, not on top of the folder list: the owner, 2026-10-19; it still opens
-  //and folds the list's folders)
-  var title = levels && document.querySelector('main .page-head > h1');
-  if (title) {
+  //(beside the folder list's heading "Folders", as on every picker: the owner, 2026-10-23; it was
+  //beside the page's title. It still opens and folds the list's folders)
+  var sideHead = levels && document.querySelector('.folder-side > .side-list-head');
+  if (sideHead) {
     levels.qgenScope = levels.parentElement;
     levels.classList.add('title-levels');
-    title.parentNode.insertBefore(levels, title.nextSibling);
+    sideHead.appendChild(levels);
   }
   if (levels) levels.hidden = false;
   if (levels && !shows.length) levels.querySelectorAll('[data-side-level]').forEach(function (b) {

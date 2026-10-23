@@ -350,10 +350,8 @@
     c.addEventListener('change', function () {
       var list = ticks().filter(shown);
       var every = list.length && list.every(function (t) { return t.checked; });
-      if (every) {
-        set(ticks(), false);
-        if (window.qgenCheckedClear) { window.qgenCheckedClear(); form.dispatchEvent(new Event('change')); }
-      } else set(list, true);
+      //(only what shows, both ways: what's checked in other folders stays; the owner, 2026-10-23)
+      set(list, !every);
       setTimeout(sync, 0);
     });
   });
@@ -368,7 +366,7 @@
       c.checked = !!list.length && on === list.length;
       c.indeterminate = on > 0 && on < list.length;
       c.disabled = !list.length;
-      var words = c.checked ? 'Uncheck all' : 'Check all shown';
+      var words = c.checked ? 'Uncheck all shown' : 'Check all shown';
       c.title = words; c.setAttribute('aria-label', words);
     });
   }

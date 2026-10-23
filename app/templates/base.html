@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  {% if current_user.is_authenticated %}<meta name="qgen-user" content="{{ current_user.id }}">{% endif %}
   {# the tab: just the page's name; unfinished quizzes (blue) and new ones (gold) are small dots one
      above the other on the tab's icon, left of the name (the owner, 2026-10-20: emoji in the title
      were too big; static/js/messages.js draws them and keeps them up to date) #}
