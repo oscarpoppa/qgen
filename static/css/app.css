@@ -3308,13 +3308,12 @@ th.tick-col input.check-all { margin: 0; }
 /* (its Name column narrower than a list's usual 30%, the room going to the columns after it: the
    owner, 2026-10-21) */
 table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width: 16%; }
-/* an open row's groups (each quiz under a person, each student under a quiz) as bands: the group's
-   heading on its own colored band with a thick line at its left and its name in bold, its attempts
-   indented under a thin line, a little room between groups (the owner, 2026-10-21; it was hard to
-   tell a heading from an attempt, and one group from the next) */
-.result-groups > .result-group { margin: 12px 0 14px; padding: 0; }
-.result-groups .result-group-head { background: color-mix(in srgb, var(--open-tint) 16%, var(--surface)); border-left: 4px solid var(--open-edge);
-  padding: 6px 10px; margin: 0; font-size: var(--fs-md); }
+/* an open row's groups (each quiz under a person, each student under a quiz): the group's heading flush left with its name in bold,
+   its attempts indented under a thin line, and a hairline between groups: nothing colored or at an odd edge (the owner, 2026-10-24:
+   the bands and the thick colored line made the left edge zigzag; they were the 2026-10-21 look) */
+.result-groups > .result-group { margin: 0; padding: 8px 0; }
+.result-groups > .result-group + .result-group { border-top: 1px solid var(--border); }
+.result-groups .result-group-head { background: none; border-left: 0; padding: 2px 0; margin: 0; font-size: var(--fs-md); }
 .result-groups .result-group-head a, .result-groups .result-group-head .person-name { font-weight: 700; }
 .result-groups .result-group > ol.attempt-list { margin: 0 0 0 22px; border-left: 2px solid var(--border); padding-left: 14px; }
 /* the open row's heading stays at the top of the list while its contents scroll under it
