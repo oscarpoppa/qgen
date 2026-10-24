@@ -95,6 +95,24 @@ def read_numbers(text):
     return out
 
 
+#"Answer must be a plain number" (the owner, 2026-10-24: "8 · 48" was taken for 48 × 8 = ?): whole or decimal
+#numbers only, several separated by commas (a pair may be in brackets); 1,250 is one number when one is wanted
+#(a $ before it, or a % or a word or two after it, counts too: "$5", "50%", "40 mph", "384 apples"; the owner, 2026-10-24)
+_PLAIN_NUM = r'\$?\s*[-+]?\s*\$?\s*(?:\d+(?:\.\d*)?|\.\d+)(?:\s*%|\s+[A-Za-z]+(?:\s+[A-Za-z]+)?)?'
+_PLAIN = re.compile(r'\s*\(?\s*{0}(?:\s*,\s*{0})*\s*\)?\s*'.format(_PLAIN_NUM))
+_THOUSANDS = re.compile(r'\s*-?\d{1,3}(?:,\d{3})+(?:\.\d+)?\s*')
+
+
+def plain_numbers_only(options):
+    """The problem wants just the number(s), never a formula: on unless the teacher unchecked it, and never
+    for complex numbers (3 + 2i is how those are written)."""
+    return options.get('plain', True) and not uses_complex(options)
+
+
+def is_plain(text):
+    return bool(_PLAIN.fullmatch(text or ''))
+
+
 def school_round(x, places=0):
     """Round halves up (away from zero), the way it's taught: 6.5 -> 7."""
     q = Decimal(1).scaleb(-places)
@@ -428,6 +446,15 @@ class Numeric(QType):
         ordered = bool(options.get('ordered'))
         if uses_complex(options):
             return 1.0 if complex_match(stored, conc_ansr, precision, ordered) else 0.0
+        if plain_numbers_only(options):
+            #just the number(s): a formula never counts; "1,250" is one number when the answer is one
+            text = (stored or '').strip()
+            if _THOUSANDS.fullmatch(text) and len(F.split_list(F.worked_answer(conc_ansr) or '')[0]) == 1:
+                text = text.replace(',', '')
+            if not is_plain(text):
+                return 0.0
+            #(a $ is only how money is written: "-$3" is -3)
+            return 1.0 if numbers_match(text.replace('$', ''), F.worked_answer(conc_ansr), precision, ordered) else 0.0
         #math the student typed (2√3, π/2) is worked out first; so is a saved answer like sqrt(3)
         worked = student_numbers(stored)
         return 1.0 if numbers_match(worked if worked is not None else stored, F.worked_answer(conc_ansr),

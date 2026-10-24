@@ -26,24 +26,33 @@
     }
   }
 
-  function stretch(el) {
-    if (!el.offsetParent) return;
-    //(a table row first, whatever's inside it, e.g. the folded box a quiz's attempts are in)
-    var holder = el.closest('tr') || (el.parentElement && el.parentElement.closest(HOLDER));
-    if (!holder) return;
-    var r = holder.getBoundingClientRect(), e = el.getBoundingClientRect();
-    //(a row: just inside its edges; a card or pop-over: to the edges of its padding)
-    var cs = getComputedStyle(holder);
-    var padL = holder.tagName === 'TR' ? 12 : parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
-    var padR = holder.tagName === 'TR' ? 12 : parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth);
-    el.style.setProperty('--line-l', Math.round(r.left + padL - e.left) + 'px');
-    el.style.setProperty('--line-r', Math.round(e.right - r.right + padR) + 'px');
+  //(in a folded box: nothing shows, so nothing is measured; found without laying the page out. Measuring a
+  //hundred folded rows one after another, each after a change, took a fifth of a second on People: the owner, 2026-10-24)
+  function folded(el) { return !!el.closest('details:not([open])'); }
+
+  //(every line measured first, then all of them set: the page is laid out once)
+  function stretchAll(els) {
+    var seen = [];
+    els.forEach(function (el) {
+      if (folded(el) || !el.offsetParent) return;
+      //(a table row first, whatever's inside it, e.g. the folded box a quiz's attempts are in)
+      var holder = el.closest('tr') || (el.parentElement && el.parentElement.closest(HOLDER));
+      if (!holder) return;
+      var r = holder.getBoundingClientRect(), e = el.getBoundingClientRect();
+      //(a row: just inside its edges; a card or pop-over: to the edges of its padding)
+      var cs = getComputedStyle(holder);
+      var padL = holder.tagName === 'TR' ? 12 : parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+      var padR = holder.tagName === 'TR' ? 12 : parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth);
+      seen.push([el, Math.round(r.left + padL - e.left) + 'px', Math.round(e.right - r.right + padR) + 'px']);
+    });
+    seen.forEach(function (s) { s[0].style.setProperty('--line-l', s[1]); s[0].style.setProperty('--line-r', s[2]); });
   }
 
   //a quiz's attempts: each one's button right under the quiz's own button, at the row's right end
+  //(measures only; gives back what to set, so every attempt is measured before any is changed)
   function underRowButton(li) {
     var row = li.closest('tr'), cell = row && row.querySelector('td.actions');
-    if (!cell || !li.offsetParent) return;
+    if (!cell || folded(li) || !li.offsetParent) return null;
     //(centered under it: the attempts' buttons are smaller than the quiz's; a row with nothing to
     //view has no button of its own, so the place one would be: the cell's right end, inside it)
     //(the row's own Start / Continue / View if it has one; never its Move control, which is about
@@ -53,7 +62,8 @@
     var own = li.querySelector('.attempt-act-group') ? null : cell.querySelector('.quiz-row-actions > :not(.move-mini):not(form):first-child'), mid;
     if (own) { var o = own.getBoundingClientRect(); mid = (o.left + o.right) / 2; }
     else { var c = cell.getBoundingClientRect(); mid = c.right - parseFloat(getComputedStyle(cell).paddingRight) - 17; }
-    li.style.setProperty('--act-r', Math.round(li.getBoundingClientRect().right - mid) + 'px');
+    var v = Math.round(li.getBoundingClientRect().right - mid) + 'px';
+    return function () { li.style.setProperty('--act-r', v); };
   }
 
   //an open row's table (Grading's students, a problem's answers) takes its column edges from the
@@ -89,35 +99,45 @@
   }
 
   //an open row's contents (after its heading part) on their own shade, end to end across the row
+  //(measures only; gives back what to set: every open row measured before any is changed, one layout for Expand all's 33
+  //rows instead of one a row; the owner, 2026-10-24)
   function foldBody(d) {
     var row = d.closest('tr');
-    if (!row || !d.open || !d.offsetParent) return;
+    if (!row || !d.open || !d.offsetParent) return null;
     var r = row.getBoundingClientRect(), e = d.getBoundingClientRect();
     var start = d.querySelector('[data-fold-body]'), sum = d.querySelector(':scope > summary');
     var top = start ? start.getBoundingClientRect().top : sum ? sum.getBoundingClientRect().bottom : e.top;
-    d.style.setProperty('--body-top', Math.round(top - e.top) + 'px');
+    var set = {};
+    set['--body-top'] = Math.round(top - e.top) + 'px';
     //(just inside the row's own outline)
-    d.style.setProperty('--body-l', Math.round(r.left + 1 - e.left) + 'px');
+    set['--body-l'] = Math.round(r.left + 1 - e.left) + 'px';
     //(how far the row's name cell is from the row's left edge: a list with a check column starts its cell after it; an open row's groups
     //start the same distance in from the row's edge on every list, People's as Results by quiz's: the owner, 2026-10-24)
     var cell = d.closest('td');
-    if (cell) d.style.setProperty('--cell-offset', Math.max(0, Math.round(cell.getBoundingClientRect().left - r.left)) + 'px');
+    if (cell) set['--cell-offset'] = Math.max(0, Math.round(cell.getBoundingClientRect().left - r.left)) + 'px';
     //(what's inside can take its width from this one (an open row's contents run the row's width), so
     //the row settles only after it's applied: measured again until it stops changing; Problem
     //history's answers stopped short of the row's end otherwise)
     var right = Math.round(e.right - r.right + 1) + 'px';
-    if (d.style.getPropertyValue('--body-r') !== right) { d.style.setProperty('--body-r', right); unsettled = true; }
+    return function () {
+      for (var k in set) d.style.setProperty(k, set[k]);
+      if (d.style.getPropertyValue('--body-r') !== right) { d.style.setProperty('--body-r', right); unsettled = true; }
+    };
+  }
+  function batch(els, measure) {
+    var sets = Array.prototype.map.call(els, measure);
+    sets.forEach(function (f) { if (f) f(); });
   }
 
   var queued = false, unsettled = false, again = 0;
   function all() {
     queued = false;
     unsettled = false;
-    document.querySelectorAll('td.attempt-buttons').forEach(function (td) { level(td.closest('tr')); });
-    document.querySelectorAll(LINED).forEach(stretch);
-    document.querySelectorAll('tr > td > details.row-fold[open]').forEach(foldBody);
+    document.querySelectorAll('td.attempt-buttons').forEach(function (td) { if (!folded(td)) level(td.closest('tr')); });
+    stretchAll(Array.prototype.slice.call(document.querySelectorAll(LINED)));
+    batch(document.querySelectorAll('tr > td > details.row-fold[open]'), foldBody);
     document.querySelectorAll('tr > td > details.row-fold[open]').forEach(alignColumns);
-    document.querySelectorAll('ol.attempt-list > li, .result-group-head').forEach(underRowButton);
+    batch(document.querySelectorAll('ol.attempt-list > li, .result-group-head'), underRowButton);
     if (unsettled && again < 3) { again++; soon(); } else again = 0;
   }
   function soon() {
@@ -169,6 +189,7 @@
     });
   }
   document.addEventListener('scroll', function () { requestAnimationFrame(stick); }, true);
-  document.addEventListener('toggle', function () { setTimeout(stick, 0); }, true);
+  //(once for a burst of rows opening, Expand all: not once a row, the owner 2026-10-24)
+  document.addEventListener('toggle', function () { clearTimeout(stick._t); stick._t = setTimeout(stick, 0); }, true);
   window.addEventListener('load', stick);
 })();

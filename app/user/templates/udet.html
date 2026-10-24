@@ -87,7 +87,9 @@
 {% block html_attrs %} data-trail-key="people"{% endblock %}
 {% block content %}
 {% if in_archive %}
-<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+{#- (the Archive's Attempts / Quizzes / Problems / People in the open folder's title row, at its right end: the folder list then starts
+    high, level with the open folder; the owner, 2026-10-24) #}
+<div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
 {% set archive_note %}People moved to the Archive: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
   They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.{% endset %}
@@ -97,7 +99,7 @@
 <div class="page-head"><h1>People</h1></div>
 {% endif %}
 
-{% set actions %}{% if in_archive %}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
+{% set actions %}{% if in_archive %}{{ archive_switch(section, counts) }}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
 {% if in_archive and not ulst %}
   <p class="muted page-intro">{{ archive_note }}</p>
   <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>

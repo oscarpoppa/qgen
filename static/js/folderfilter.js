@@ -468,10 +468,23 @@
       var sideCol = rows.querySelector('.folder-side-list');
       if (sideCol && sideCol.qgenFolds) sideCol.qgenFolds();  // (the folder picked stays in view)  // (what's shown, for scripts: takeout.js's "the folder shown")
       var keep = paged || chosen === 'all' || chosen === 'none' ? null : chosen.indexOf('self:') === 0 ? own(byId[base()]) : byId[chosen].keySet;
+      //(a list a page at a time shows the Checked folder the server sent, ?checked=: a row unchecked there leaves it at
+      //once, and the address forgets it, so a reload doesn't bring it back; the owner, 2026-10-24)
+      var unchecked = paged && chosen === 'checked' ? function (el) {
+        var t = el.querySelector('input[name="items"], input.pick-person');
+        return !!t && !t.checked;
+      } : null;
       items().forEach(function (el) {
-        var k = keyOf(el), hide = paged ? false : chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
+        var k = keyOf(el), hide = unchecked ? unchecked(el) : paged ? false : chosen === 'none' ? !!inSome[k] : keep ? !keep[k] : false;
         window.qgenHideRow ? window.qgenHideRow(el, 'folder', hide) : (el.hidden = hide);
       });
+      if (unchecked && window.qgenCheckedIds) {
+        var addr = new URL(location.href), ids = window.qgenCheckedIds().join(',');
+        if ((addr.searchParams.get('checked') || '') !== ids) {
+          addr.searchParams.set('checked', ids);
+          try { history.replaceState(history.state, '', addr.pathname + addr.search.replace(/%2C/g, ',') + addr.hash); } catch (err) {}
+        }
+      }
       //a folder with nothing in it says so (what the name filter hides still counts as in it)
       var shown = items().some(function (el) { return (el.dataset.hiddenBy || '').split(' ').indexOf('folder') === -1; });
       var note = box.querySelector('.folder-filter-empty');
@@ -528,7 +541,9 @@
       var parts = label.split(' \u203a ');
       var icon = chosen === 'all' ? (own ? (box.dataset.tabIcon || 'folder') : 'folders') : chosen === 'none' || self ? 'tray' : (n && n.icon) || 'folder';
       //(what shows: a name typed in the filter counts too, "All people 2": the owner, 2026-10-22)
-      var shown = paged && box.dataset.shownTotal !== undefined ? +box.dataset.shownTotal : weigh(items().filter(function (el) { return !el.hidden; }));
+      //(the Checked folder of a list a page at a time: what's still checked, not the server's count from when it was sent)
+      var shown = paged && chosen === 'checked' && window.qgenCheckedIds ? window.qgenCheckedIds().length
+        : paged && box.dataset.shownTotal !== undefined ? +box.dataset.shownTotal : weigh(items().filter(function (el) { return !el.hidden; }));
       var tab = document.createElement('span');
       tab.className = 'folder-tab folder-tab-name';
       tab.setAttribute('aria-pressed', 'true');
@@ -702,6 +717,8 @@
         else heading.textContent = 'All';
       }
       if (chosen === 'all') { if (inner) heading.innerHTML = headingOwn; else pageName(); return; }
+      //(the Checked folder, also when the page opens on it: "Checked", never the server's "All quizzes"; the owner, 2026-10-24)
+      if (chosen === 'checked') { heading.textContent = byId.checked ? byId.checked.name : 'Checked'; return; }
       if (chosen === 'none' && !inner) { heading.textContent = box.dataset.mainLabel || 'Uncategorized'; return; }
       //(My quizzes' New and In progress aren't folders: opened on one, the server's heading says
       //what it shows, "New: quizzes you haven't started"; chosen afterward, the tab's name)

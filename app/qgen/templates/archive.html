@@ -65,12 +65,14 @@
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+{#- (the Archive's Attempts / Quizzes / Problems / People in the open folder's title row, at its right end: the folder list then starts
+    high, level with the open folder; the owner, 2026-10-24) #}
+<div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
 {% set archive_note %}Attempts you archived, and the quiz results of deleted student accounts. Students don't see any of this.
   You can look at each attempt, put it back, or delete it for good.{% endset %}
 
-{% call folders_page(fk, under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
+{% call folders_page(fk, actions=archive_switch(section, counts), under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
   <div class="folder-tools-bar">
     {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box', paged=pg.total) }}{% endif %}
     {% if total %}

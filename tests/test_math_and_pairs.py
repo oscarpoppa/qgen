@@ -1,4 +1,5 @@
 """Answers with several numbers ("x, y", "(x, y)") and math that looks like math."""
+import os
 from app.qgen import friendly as F
 from app.qgen.friendly import tidy
 from app.qgen.qtypes import get_qtype, numbers_match, complex_match
@@ -177,12 +178,13 @@ def test_students_may_type_math_answers():
     # math that can't be worked out is never right (√-4 isn't read as -4)
     assert student_numbers('√-4') == '' and student_numbers('√(x)') == '' and student_numbers('9^9^9') == ''
     qt = get_qtype('numeric')
-    assert qt.grade('2√3', '3.4641', {}, {}) == 1.0 and qt.grade('√-4', '-4', {}, {}) == 0.0
-    assert qt.grade('3.46', '3.4641', {}, {}) == 1.0 and qt.grade('3/4', '0.75', {}, {}) == 1.0
+    FORMULA = {'plain': False}  # ("Answer must be a plain number" unchecked: math is worked out)
+    assert qt.grade('2√3', '3.4641', {}, FORMULA) == 1.0 and qt.grade('√-4', '-4', {}, FORMULA) == 0.0
+    assert qt.grade('3.46', '3.4641', {}, FORMULA) == 1.0 and qt.grade('3/4', '0.75', {}, FORMULA) == 1.0
     # a times sign from the math keys (×), or typed as x, ·, ÷ between numbers
     for typed in ('6×2', '6 × 2', '6x2', '6 X 2', '4·3', '24÷2', '3×(2+2)'):
-        assert qt.grade(typed, '12', {}, {}) == 1.0, typed
-    assert qt.grade('6×3', '12', {}, {}) == 0.0
+        assert qt.grade(typed, '12', {}, FORMULA) == 1.0, typed
+    assert qt.grade('6×3', '12', {}, FORMULA) == 0.0
     # drawn as real math (a full root sign), built from the formula, not the typed text
     assert qt.show_submitted('2√3', {}) == r'\( 2 \sqrt{3} \)  (= 3.4641)' and qt.show_submitted('3/4', {}) == '3/4'
     from app.qgen.qtypes import student_math
@@ -331,3 +333,28 @@ def test_every_bar_of_math_keys_looks_the_same(app_db):
     shared = ['x²', 'xⁿ', '√', 'ⁿ√', 'a⁄b', '×', '÷', 'π', '|x|', '±']
     for target, (opened, keys) in found.items():
         assert keys[:len(shared)] == shared, target
+
+
+def test_a_plain_number_answer_never_takes_a_formula(app_db):
+    """"Answer must be a plain number" (on unless unchecked; the owner, 2026-10-24): "8 · 48" for 48 × 8 = ? is
+    wrong; whole and decimal numbers and lists are fine; the take page stops a formula and has no Math keys."""
+    from app.qgen.qtypes import is_plain, plain_numbers_only
+    qt = get_qtype('numeric')
+    for typed in ('8 · 48', '8*48', '8×48', '8 x 48', '400-16', '3/4', '2√3'):
+        assert not is_plain(typed) and qt.grade(typed, '384', {}, {}) == 0.0, typed
+    for typed, want in (('384', '384'), (' -3.5 ', '-3.5'), ('.5', '0.5'), ('3, 5', '5, 3'), ('(3, 5)', '3, 5'), ('1,250', '1250'),
+                       ('+3', '3'), ('- 3', '-3'), ('40 mph', '40'), ('50%', '50'), ('$5', '5'), ('-$3', '-3'),
+                       ('384 apples', '384'), ('3 cm, 4 cm', '3, 4')):
+        assert is_plain(typed) and qt.grade(typed, want, {}, {}) == 1.0, typed
+    # unchecked: math is worked out as before; complex numbers are never held to it
+    assert qt.grade('8 · 48', '384', {}, {'plain': False}) == 1.0
+    assert plain_numbers_only({}) and not plain_numbers_only({'plain': False}) and not plain_numbers_only({'complex': True})
+    # the editor: checked on a new problem and on one saved before the setting, saved when unchecked
+    from app.qgen.forms import ProblemForm
+    app, db = app_db
+    with app.test_request_context():
+        f = ProblemForm(meta={'csrf': False})
+        assert f.plain.data is True and f.options()['plain'] is True
+    # the take page: data-plain on the box, no Math keys, the message and the check before handing in
+    take = open(os.path.join(os.path.dirname(__file__), '..', 'app', 'qgen', 'templates', 'quiz_take.html')).read()
+    assert "and not it.plain %}" in take and "'Type just the number.'" in take and "[data-plain]" in take

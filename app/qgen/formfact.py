@@ -13,7 +13,7 @@ from flask_wtf import FlaskForm
 from markupsafe import Markup
 from wtforms import SubmitField
 
-from .qtypes import get_qtype
+from .qtypes import get_qtype, plain_numbers_only
 
 fieldname_base = 'Number{}'
 
@@ -57,12 +57,14 @@ class QuizItem:
     field: Any
     qtype: str
     complex: bool = False
+    plain: bool = False  # a number answer that must be just the number(s): no formula (the owner, 2026-10-24)
 
 
 def quiz_items(cquiz, form):
     return [QuizItem(num=cp.ordinal, text=cp.conc_prob, image=problem_image(cp),
                      field=form[fieldname_base.format(cp.ordinal)], qtype=qtype_of(cp).key,
-                     complex=bool(cp.conc_opts.get('complex')))
+                     complex=bool(cp.conc_opts.get('complex')),
+                     plain=qtype_of(cp).key == 'numeric' and plain_numbers_only(cp.vproblem.options or {}))
             for cp in cquiz.cproblems]
 
 

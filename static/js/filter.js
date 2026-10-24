@@ -27,7 +27,11 @@ window.qgenHideRow = function (row, key, hide) {
     //a list shown a page at a time (app/paging.py; the owner, 2026-10-23): the words typed go to the server,
     //which sends the page of matches; the count is the server's (data-matches), no row is hidden here
     var paged = 'paged' in bar.dataset;
-    if (paged) bar.qgenFilter = function () { return +bar.dataset.matches || 0; };
+    //(the Checked folder open: how many are still checked, not the server's count from when the page was sent; the owner, 2026-10-24)
+    if (paged) bar.qgenFilter = function () {
+      var open = document.querySelector('.folder-main .folder-filter[data-chosen="checked"]');
+      return open && window.qgenCheckedIds ? window.qgenCheckedIds().length : +bar.dataset.matches || 0;
+    };
     var count = bar.querySelector('[data-filter-count]'), clear = bar.querySelector('[data-filter-clear]');
     //a folder page's list: the count goes under the page's heading instead (_folders.html)
     var under = bar.dataset.filter === '#folder-items' && document.getElementById('folder-count');

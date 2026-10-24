@@ -46,6 +46,7 @@ class ProblemForm(FlaskForm):
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
     precision = SelectField('How close must the answer be?', choices=list(PRECISIONS.items()), default='close')
     ordered = BooleanField('Order matters (like a point (x, y))')
+    plain = BooleanField('Answer must be a plain number', default=True)
     answer_display = StringField('Show the correct answer as (optional)')
     complex = BooleanField('Use complex numbers (i = √−1)')
     grading_notes = TextAreaField('Grading notes (only you see these)')
@@ -81,6 +82,7 @@ class ProblemForm(FlaskForm):
             'case_sensitive': bool(self.case_sensitive.data),
             'precision': self.precision.data or 'close',
             'ordered': bool(self.ordered.data),
+            'plain': bool(self.plain.data),
             'answer_display': (self.answer_display.data or '').strip(),
             'complex': bool(self.complex.data),
             'grading_notes': self.grading_notes.data or '',
@@ -101,6 +103,7 @@ class ProblemForm(FlaskForm):
         self.case_sensitive.data = opts.get('case_sensitive', False)
         self.precision.data = opts.get('precision', 'close')
         self.ordered.data = opts.get('ordered', False)
+        self.plain.data = opts.get('plain', True)  # (on unless unchecked: problems saved before it count as on)
         self.answer_display.data = opts.get('answer_display', '')
         self.complex.data = opts.get('complex', False)
         self.grading_notes.data = opts.get('grading_notes', '')

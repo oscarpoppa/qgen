@@ -124,9 +124,19 @@ def svg(name, cls=None):
     """The drawing named name, as markup (decorative: screen readers skip it): a small <use> of
     the page's one copy of it (icon_sprite in base.html), so a page with many icons stays light
     (the Problems page: 1,600 icons; the owner, 2026-10-20)."""
-    inside = PATHS[name] if name in INLINE else '<use href="#i-{}"/>'.format(name)
-    return Markup('<svg class="ico{}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{}</svg>'.format(
-        ' ' + escape(cls) if cls else '', inside))
+    return Markup('<svg class="ico{}"{} aria-hidden="true">{}</svg>'.format(
+        ' ' + escape(cls) if cls else '', _box(name), _inside(name)))
+
+
+#(a <use> copy takes its size from its drawing's own viewBox in the page's one copy, so only a drawing in full
+#needs one; and no focusable="false", which only Internet Explorer needed: about half of each icon's markup,
+#a hundred kilobytes on People's 1,638 icons; the owner, 2026-10-24)
+def _box(name):
+    return ' viewBox="0 0 24 24"' if name in INLINE else ''
+
+
+def _inside(name):
+    return PATHS[name] if name in INLINE else '<use href="#i-{}"/>'.format(name)
 
 
 def icon_sprite():
@@ -173,8 +183,7 @@ def icon_label(name, label):
     icon, 2,300 on the Problems page; the owner, 2026-10-21.)"""
     if name not in PATHS:
         raise KeyError('no icon named {!r}'.format(name))
-    inside = PATHS[name] if name in INLINE else '<use href="#i-{}"/>'.format(name)
-    return Markup('<svg class="ico" viewBox="0 0 24 24" role="img" aria-label="{}" focusable="false">{}</svg>').format(label, Markup(inside))
+    return Markup('<svg class="ico"{} role="img" aria-label="{}">{}</svg>').format(Markup(_box(name)), label, Markup(_inside(name)))
 
 
 def icon_script():

@@ -2460,11 +2460,14 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 
 /* (a side list with no tabs: one tab over the list naming the folder shown, laid out the same:
    the owner, 2026-10-19) */
-.folder-filter[data-style="list"].has-onetab { grid-template-rows: auto 1fr; row-gap: 0; }
-.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 1 / span 2; }
-.folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 1; min-width: 0; }
+.folder-filter[data-style="list"].has-onetab { grid-template-rows: auto auto 1fr; row-gap: 0; }
+/* (laid out like a folder page, All problems the model: the heading "Folders" alone in the first row, the folder list
+   starting level with the tab, its first row, All, level with the tab's name: static/js/levelfolders.js measures the
+   last few pixels; the owner, 2026-10-24, To do 32) */
+.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 2 / span 2; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 2; min-width: 0; }
 .folder-filter[data-style="list"].has-onetab > .folder-filter-list,
-.folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 2; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 3; border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); }
 .folder-filter-onetab .folder-tab { cursor: default; }
 .folder-filter-onetab > .folder-tabs { align-items: flex-end; }
 .folder-filter-onetab .tab-level-pair { align-self: center; margin: 0 6px; padding-bottom: 4px; }
@@ -2833,15 +2836,17 @@ td.attempt-buttons { text-align: right; }
 /* (left: the title, the folder list, the Awards button; right: the filter row with the page's
    buttons, the tabs, the list) */
 .student-folders > .folder-filter[data-style="list"].has-onetab { grid-template-columns: var(--side-w, minmax(170px, 260px)) minmax(0, 1fr);
-  grid-template-rows: auto auto auto 1fr; column-gap: 16px; row-gap: 0; }
+  grid-template-rows: auto auto auto auto auto 1fr; column-gap: 16px; row-gap: 0; }
+/* (the folder list starts level with the tab, its All row level with the tab's name, as on every folder page: the
+   heading "Folders" in a row of its own over it; static/js/levelfolders.js measures the last few pixels; the owner, 2026-10-24) */
 .student-folders > .folder-filter[data-style="list"].has-onetab > .student-head { grid-column: 1; grid-row: 1; margin: 0 0 8px; }
 .student-folders > .folder-filter[data-style="list"].has-onetab > .side-list-head { grid-column: 1; grid-row: 2; }
-.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 3; align-self: start; }
-.student-folders > .folder-filter[data-style="list"].has-onetab > .student-awards-spot { grid-column: 1; grid-row: 4; align-self: start; margin-top: 8px; }
-.student-folders > .folder-filter[data-style="list"].has-onetab > .student-filter { grid-column: 2; grid-row: 1; }
-.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 2; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-column: 1; grid-row: 3 / span 2; align-self: start; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .student-awards-spot { grid-column: 1; grid-row: 5; align-self: start; margin-top: 8px; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .student-filter { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-onetab { grid-column: 2; grid-row: 3; }
 .student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-list,
-.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 3 / span 2; }
+.student-folders > .folder-filter[data-style="list"].has-onetab > .folder-filter-empty { grid-column: 2; grid-row: 4 / span 3; }
 /* (an empty row of tabs a list-style folder list makes for nothing: never shown) */
 
 .student-awards-spot > .awards-toggle { display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
@@ -3369,12 +3374,12 @@ dialog.who-dialog .pick-table td { padding: 6px 10px; }
    a longer one loses its start, not its end (folderfilter.js fitName; the owner, 2026-10-22) */
 .folder-filter-onetab .folder-tab-name { max-width: 66%; }
 .folder-filter-onetab .folder-tab-name .box-title { max-width: none; text-overflow: clip; }
-/* a picker's folder list: its heading "Folders" with Expand all / Collapse all, level with the tab
-   over the list; the list itself starts level with the list's top (the owner, 2026-10-22) */
+/* a picker's folder list: its heading "Folders" with Expand all / Collapse all over it, in a row of its own; the list
+   starts level with the tab (the owner, 2026-10-24; was: the heading level with the tab, 2026-10-22) */
 .folder-filter[data-style="list"] > .side-list-head { grid-column: 1; grid-row: 1; align-self: end; display: flex; align-items: center; gap: 6px;
   min-height: 36px; margin: 0; font-weight: 600; font-size: var(--fs-sm); }
 .folder-filter[data-style="list"] > .side-list-head .side-levels { margin: 0; }
-.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: 2; }
+.folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: 2 / span 2; }
 @media (max-width: 640px) {
   .folder-filter[data-style="list"] > .side-list-head, .folder-filter[data-style="list"].has-onetab > .folder-filter-side { grid-row: auto; }
 }
@@ -3557,3 +3562,16 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .tip-wrap.tip-moved { display: contents; }
 .has-tip { text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent); text-underline-offset: 3px; cursor: help; }
 .has-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+
+/* until the page's scripts have drawn the folder pages (the tab, the checked bar, the rows): invisible, room kept
+   (base.html's html.js-setup, gone right after the scripts run; the owner, 2026-10-24: old controls flashed) */
+html.js-setup .folders-layout, html.js-setup .student-folders, html.js-setup .stash-split { visibility: hidden; }
+
+/* a box with no .field of its own, given one for its message (static/js/fielderror.js): no gap added under it */
+.field.field-bare { margin: 0; }
+/* a box on a scanned page with something wrong in it ("Type just the number."): the red outline on the box, and the
+   message just under it on its own small backing, never over what's typed (the critic, 2026-10-24) */
+.pq-answer.has-error .pq-input { outline: 2px solid var(--bad); outline-offset: 1px; }
+.pq-answer > .error[data-said] { position: absolute; top: calc(100% + 3px); left: 0; z-index: 3; white-space: nowrap;
+  font-size: var(--fs-sm); line-height: 1.3; padding: 2px 6px; border-radius: var(--r-sm); background: var(--surface);
+  color: var(--bad); box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }

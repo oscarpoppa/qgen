@@ -67,7 +67,9 @@
 
 {% block content %}
 {% if in_archive %}
-<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+{#- (the Archive's Attempts / Quizzes / Problems / People in the open folder's title row, at its right end: the folder list then starts
+    high, level with the open folder; the owner, 2026-10-24) #}
+<div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
 {% set archive_note %}Problems moved to the Archive: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
   Quizzes that use one keep it. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.{% endset %}
@@ -88,7 +90,7 @@
 {% elif not total %}
   <div class="card empty"><span class="big">{{ icon('note') }}</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
-  {% call folders_page(fk, actions=head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
+  {% call folders_page(fk, actions=archive_switch(section, counts) if in_archive else head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}

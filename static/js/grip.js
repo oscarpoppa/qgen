@@ -22,6 +22,9 @@
   }
   //it scrolls inside itself here (not on a phone, where the page scrolls instead)
   function scrolls(el) { return getComputedStyle(el).overflowY === 'auto'; }
+  //(in a folded box: nothing to show, and nothing measured, so a page of a hundred folded boxes opens quickly:
+  //measuring each one laid the whole page out again, about a second on People; the owner, 2026-10-24)
+  function folded(el) { return !!el.closest('details:not([open])'); }
 
   function attach(el, kind) {
     //(a panel down to the window's bottom has no drag bar: static/js/fitpanel.js sizes it)
@@ -49,16 +52,25 @@
     //fits (a short list has nothing to drag open, so no bar dangling under it); kept while
     //it's being dragged
     var dragging = false;
-    function show() {
-      if (!scrolls(el)) el.style.maxHeight = '';  // a phone: no height of its own
+    //(measured first, then changed: scan() measures every area before changing any, so the page is laid out once)
+    function measure() {
+      if (folded(el)) return { folded: true };
+      var sc = scrolls(el);
+      return { scrolls: sc, more: sc && el.offsetParent !== null && el.scrollHeight > el.clientHeight + 2 };
+    }
+    function apply(m) {
+      if (m.folded) { if (!dragging) bar.hidden = true; return; }
+      if (!m.scrolls) el.style.maxHeight = '';  // a phone: no height of its own
+      else if (saved) { el.style.maxHeight = Math.max(MIN, saved) + 'px'; saved = 0; }  // (its ResizeObserver redoes the bar)
       if (dragging) return;
-      bar.hidden = !(scrolls(el) && el.offsetParent !== null && el.scrollHeight > el.clientHeight + 2);
+      bar.hidden = !m.more;
       //(a card's own pull bar shows only while its list holds more than shows: elastic.js)
       var card = el.closest('[data-elastic]');
       if (card && card._elasticBar) card._elasticBar();
     }
+    function show() { apply(measure()); }
+    //(the kept height goes on once the area is measured and found to scroll inside itself: not on a phone)
     var saved = parseInt(stored(key), 10);
-    if (saved && scrolls(el)) el.style.maxHeight = Math.max(MIN, saved) + 'px';
 
     bar.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
@@ -89,19 +101,23 @@
     //double-click: back to the usual height
     bar.addEventListener('dblclick', function () { el.style.maxHeight = ''; store(key, null); show(); });
     el._gripShow = show;
+    el._gripMeasure = measure;
+    el._gripApply = apply;
     el._gripSet = function (h, keep) { set(h, keep); };  // (a card's corner sizes it too: elastic.js)
     el._gripReset = function () { el.style.maxHeight = ''; store(key, null); show(); };
     //its room changes without the window changing (a side panel opening, rows becoming cards)
-    if (window.ResizeObserver) new ResizeObserver(function () { show(); }).observe(el);
-    show();
+    if (window.ResizeObserver) new ResizeObserver(function () { if (!folded(el)) show(); }).observe(el);
   }
 
   function scan() {
     AREAS.forEach(function (sel) { document.querySelectorAll(sel).forEach(function (el) { attach(el, sel); }); });
-    document.querySelectorAll('[data-grip]').forEach(function (el) { if (el._gripShow) el._gripShow(); });
+    var all = Array.prototype.filter.call(document.querySelectorAll('[data-grip]'), function (el) { return el._gripMeasure; });
+    var seen = all.map(function (el) { return el._gripMeasure(); });
+    all.forEach(function (el, i) { el._gripApply(seen[i]); });
   }
   //boxes opening and closing, searches, the window's size and pages that redraw parts of themselves
-  document.addEventListener('toggle', function () { setTimeout(scan, 0); }, true);
+  //(once for a burst of boxes opening or folding, Expand all: not once a box)
+  document.addEventListener('toggle', function () { clearTimeout(scan._g); scan._g = setTimeout(scan, 0); }, true);
   document.addEventListener('qgen-filtered', function () { setTimeout(scan, 0); });
   window.addEventListener('resize', function () { clearTimeout(scan._t); scan._t = setTimeout(scan, 150); });
   if (window.MutationObserver) new MutationObserver(function () { clearTimeout(scan._m); scan._m = setTimeout(scan, 100); })

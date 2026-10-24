@@ -152,7 +152,7 @@ def test_the_assigned_notice_shows_the_students_picture(app_db):
     # several students: a group icon
     assign(teach, vq, 'sam', 'kim')
     assert shared().student_id == ids('teach')
-    assert '<span class="notice-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-users"/>' in teach.get('/messages/notices').data.decode()
+    assert '<span class="notice-icon" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-users"/>' in teach.get('/messages/notices').data.decode()
 
 
 def test_the_dots_by_the_name_count_new_started_and_due_soon(app_db):

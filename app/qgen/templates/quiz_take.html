@@ -78,6 +78,7 @@
                 as one line: it was smaller and looked out of line, the owner 2026-10-20) #}
             {#- (inputmode only for numbers: WTForms writes a missing one as inputmode="None", the code critic 2026-10-20) #}
             {%- set mode = {'inputmode': 'numeric'} if it.qtype == 'numeric' else {} %}
+            {%- if it.plain %}{% set mode = dict(mode, **{'data-plain': ''}) %}{% endif %}
             {{ it.field(id='pq-' ~ it.field.id, class='pq-input', autocomplete='off', **dict(mode, **{'aria-label': 'Question ' ~ qlabel(cq.vquiz, it.num) ~ ': ' ~ it.text})) }}</div>
         </div>
         {% elif s.kind == 'choices' %}
@@ -122,9 +123,10 @@
       {% elif it.qtype == 'essay' %}
         {{ it.field(rows=8, **{'aria-label': 'Your answer to question ' ~ it.num}) }}
       {% else %}
-        {{ it.field(autocomplete='off', **{'aria-label': 'Your answer to question ' ~ it.num}) }}
+        {{ it.field(autocomplete='off', **dict({'aria-label': 'Your answer to question ' ~ it.num}, **({'data-plain': ''} if it.plain else {}))) }}
+        {#- (just the number: no Math keys, they'd only write what isn't allowed; the owner, 2026-10-24) #}
         {% if it.complex %}<div class="small muted" style="margin-top:4px">Write complex numbers like 3 + 2i (use i for √−1). Separate several answers with commas.</div>
-        {% elif it.qtype == 'numeric' and not preview %}
+        {% elif it.qtype == 'numeric' and not preview and not it.plain %}
           {# math keys for a number answer: worked out when graded (2√3, π/2, 3^2) #}
           <div class="keypad" role="group" aria-label="Math keys for question {{ it.num }}">
             {% for key, title, tip in [('√', 'Square root', 'Type a square root'), ('π', 'Pi', 'Type pi (about 3.14)'), ('×', 'Times', 'Type a times sign, like 6 × 2'), ('^', 'Power', 'Type a power, like 3^2 for 3 squared'), ('(', 'Open bracket', 'Type a left parenthesis'), (')', 'Close bracket', 'Type a right parenthesis'), ('/', 'Divided by (fraction)', 'Type a divide sign, or a fraction like 1/2'), (',', 'Comma (several answers)', 'Type a comma between answers')] %}
@@ -227,8 +229,21 @@
   var submitting = false;
   //always asked first (inside the page: the browser's own pop-ups can be switched off), so
   //a slip of the finger never hands it in; the time running out hands it in without asking
+  //a number answer that must be just the number: a formula ("8 · 48") is stopped with a message under its box
+  //(the owner, 2026-10-24); the same rule as the server's (qtypes.is_plain), which grades one wrong anyway
+  var N = '\\$?\\s*[-+]?\\s*\\$?\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:\\s*%|\\s+[A-Za-z]+(?:\\s+[A-Za-z]+)?)?';
+  var PLAIN = new RegExp('^\\s*\\(?\\s*' + N + '(?:\\s*,\\s*' + N + ')*\\s*\\)?\\s*$');
+  function notPlain(el) { return el.value.trim() !== '' && !PLAIN.test(el.value); }
+  function checkPlain(el) {
+    if (notPlain(el)) { if (window.qgenFieldError) window.qgenFieldError(el, 'Type just the number.'); return false; }
+    if (window.qgenFieldOk) window.qgenFieldOk(el);
+    return true;
+  }
+  form.addEventListener('change', function (e) { if (e.target.matches && e.target.matches('[data-plain]')) checkPlain(e.target); });
   form.addEventListener('submit', function (e) {
     if (submitting) return;
+    var wrong = Array.prototype.filter.call(form.querySelectorAll('[data-plain]'), function (el) { return !checkPlain(el); });
+    if (wrong.length) { e.preventDefault(); wrong[0].focus(); return; }
     if (form.dataset.askedOk === '1') { submitting = true; return; }
     e.preventDefault();
     var blank = update(), question, ok, back;

@@ -6,11 +6,11 @@
   //(a box with no .field around it, e.g. a dialog's name box right in its form: one is put around it, so the
   //message sits right under the box and the red outline shows)
   function holder(el) {
-    var f = el.closest('.field');
+    var f = el.closest('.field, .pq-answer');  // (a box on a scanned page: its own spot on the page)
     if (f) return f;
     if (el.type === 'radio' || el.type === 'checkbox') return el.parentElement;
     f = document.createElement('div');
-    f.className = 'field';
+    f.className = 'field field-bare';  // (no gap of its own under the box: app.css)
     el.parentNode.insertBefore(f, el);
     f.appendChild(el);
     return f;

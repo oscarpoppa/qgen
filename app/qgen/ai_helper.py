@@ -116,6 +116,7 @@ Unused fields are null (choices null unless a choice type; show_n null unless as
 - Values can come in matched pairs: a "list" named "country = capital" with items "France = Paris, Japan = Tokyo"; then [country] and [capital] always match.
 - Keep the question text natural and student-facing. Math may use LaTeX between \\( and \\).
 - Always use American (US customary) units, even if the description uses metric ones: speeds in miles per hour (mph); distances in miles, yards, feet or inches; weights in pounds or ounces; volumes in gallons, quarts, pints, cups or fluid ounces; temperatures in degrees Fahrenheit; areas in square feet, square miles or acres. Pick the unit that fits the size of the thing. Times stay in hours, minutes and seconds.
+- American words, not just American spelling, in everything you write, accepted answers and choices included: gasoline or gas (not petrol), truck (not lorry), cookie (not biscuit), apartment (not flat), sidewalk (not pavement), fall (not autumn), soccer (not football), math (not maths), grade (not mark), color, favorite, center, meter, liter.
 """
 
 
@@ -264,6 +265,7 @@ Rules for the items:
 - When the value has matched columns (named like "country = capital"), each item gives one entry per column in the same order, separated by " = ", for example "France = Paris". Never use "=" inside an entry.
 - At most """ + str(MAX_LIST) + """ items. If the description needs more, or is impossible or unclear, return the items you can and explain briefly in cannot_do (else null).
 - Always use American (US customary) units when units come up: miles, miles per hour (mph), feet, inches, pounds, ounces, gallons, cups, degrees Fahrenheit.
+- American words, not just American spelling, in everything you write, accepted answers and choices included: gasoline or gas (not petrol), truck (not lorry), cookie (not biscuit), apartment (not flat), sidewalk (not pavement), fall (not autumn), soccer (not football), math (not maths), grade (not mark), color, favorite, center, meter, liter.
 - You may be shown the problem's question (where [name] marks a random value) and its other random values with their settings. Use them to understand the list: "every whole number between a's from and to" means the numbers from that value's "from" to its "to"; "names for the person in the question" should fit the question.
 - The list is fixed: the same for every student, chosen before any value is drawn. It can't depend on what another value turns out to be for a particular student (like "multiples of whatever a is"). If the description needs that, return no items and say in cannot_do that a list can't follow another value's draw, and that a calculated value (a formula such as a * k) can do it instead.
 - This is only for school quiz content. If the request isn't something a teacher would put in a quiz (or asks for anything harmful), set off_topic to true and return no items."""
@@ -401,7 +403,7 @@ Replace the page's numbers with random values whenever it makes sense, so the ex
 - Never use complex or imaginary values for workbook pages.
 
 # Spelling and units
-American spelling and US customary units (inches, feet, miles, pounds, ounces, cups, gallons, °F), as in the rules below. If the page uses metric units, keep the exercise's numbers but say in notes that the page uses metric.
+American spelling and US customary units (inches, feet, miles, pounds, ounces, cups, gallons, °F), as in the rules below. American words, not just American spelling, in everything you write, accepted answers and choices included: gasoline or gas (not petrol), truck (not lorry), cookie (not biscuit), apartment (not flat), sidewalk (not pavement), fall (not autumn), soccer (not football), math (not maths), grade (not mark), color, favorite, center, meter, liter. If the page uses metric units, keep the exercise's numbers but say in notes that the page uses metric.
 
 # The app's problem form (each item's fields follow these rules)
 """ + SYSTEM_PROMPT[SYSTEM_PROMPT.index('# Random values'):].replace(
@@ -485,7 +487,7 @@ Replace the page's numbers with random values whenever it makes sense, so the pr
 - Never use complex or imaginary values.
 
 # Spelling and units
-American spelling and US customary units in anything you write (titles). The page's own wording is kept exactly.
+American spelling and US customary units in anything you write (titles). American words, not just American spelling, in everything you write, accepted answers and choices included: gasoline or gas (not petrol), truck (not lorry), cookie (not biscuit), apartment (not flat), sidewalk (not pavement), fall (not autumn), soccer (not football), math (not maths), grade (not mark), color, favorite, center, meter, liter. The page's own wording is kept exactly.
 
 # The app's problem form (each item's fields follow these rules)
 """ + SYSTEM_PROMPT[SYSTEM_PROMPT.index('# Random values'):].replace(
