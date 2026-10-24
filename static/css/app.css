@@ -3424,15 +3424,11 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 @media (max-width: 900px) { .scan-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* the stash's folders on Scan workbook pages (the owner, 2026-10-23): the folder list beside the scans, stacked when narrow */
-.stash-split { display: grid; grid-template-columns: minmax(140px, 28%) minmax(0, 1fr); gap: 14px; align-items: start; }
-.stash-split.has-vsplit { grid-template-columns: var(--stash-side-w, minmax(140px, 28%)) 12px minmax(0, 1fr); column-gap: 4px; }
+/* three columns (the list, the drag bar, the scans) from the first paint, so nothing moves when the page's script wires the bar up
+   or puts back the width kept in this browser (the owner, 2026-10-23: the list jumped from side to side on reload) */
+.stash-split { display: grid; grid-template-columns: var(--stash-side-w, minmax(140px, 28%)) 12px minmax(0, 1fr); gap: 14px 4px; align-items: start; }
 .stash-split .stash-bar { align-self: stretch; min-height: 120px; }
 @media (max-width: 700px) { .stash-split, .stash-split.has-vsplit { grid-template-columns: minmax(0, 1fr); } .stash-split .stash-bar { display: none; } }
-.stash-folders .side-list, .stash-sub { list-style: none; margin: 0; padding: 0; }
-.stash-sub { padding-left: 14px; }
-.stash-folders .side-link { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
-.stash-folders .side-link:hover, .stash-folders .side-link.current { background: var(--accent-soft); }
-.stash-folders .side-link span:nth-of-type(1) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stash-tab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .stash-tab .btn-row { margin-left: auto; }
 
@@ -3497,3 +3493,12 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 }
 /* a column's icons end on one vertical line, rows with fewer icons too (the owner, 2026-10-23: everything stays vertically aligned) */
 #scan-current td:last-child .btn-row, .stash-main td:last-child .btn-row { justify-content: flex-end; }
+
+/* the stash's folder list as the other folder pages draw it (the owner, 2026-10-23): "Folders", then one card whose strip at the top
+   holds the small New folder icon at its right end, the list under it */
+.stash-folders > .side-card-head { display: flex; justify-content: flex-end; border: 1px solid var(--border); border-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--surface); padding: 4px 6px 0; margin: 0; }
+.stash-folders > .side-card-head .btn { margin: 0; }
+.stash-folders > .side-card-head { position: relative; z-index: 3; }  /* (above the cover the pinned rows draw over the space above them, which cut the icon off: the owner, 2026-10-23) */
+.stash-folders > .side-list { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--surface); padding: 2px 8px 10px; }

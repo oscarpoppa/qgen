@@ -45,12 +45,13 @@
       <div class="small" id="scan-chosen" aria-live="polite" hidden></div>
       <div class="help">Photos, scans or PDFs (any image type), up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
-    <div class="btn-row">
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" data-back-href title="Leave without uploading anything">Cancel</a>
-      {#- back where you came from, like the ← arrow; nothing is uploaded (the owner, 2026-10-20) #}
-      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
-      <span class="muted small" id="scan-wait" hidden>Uploading…</span>
     </div>
+    {#- the buttons just under the Images card, not inside it (the owner, 2026-10-23) #}
+    <div class="btn-row">
+      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
+      {#- Cancel last: back where you came from, like the ← arrow; nothing is uploaded (the owner, 2026-10-20; last, 2026-10-23) #}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" data-back-href title="Leave without uploading anything">Cancel</a>
+      <span class="muted small" id="scan-wait" hidden>Uploading…</span>
     </div>
   </form>
 
@@ -91,28 +92,60 @@
 <div class="card" id="scan-away">
   {#- the stash's real folders, shared by all teachers and seen only here (the owner, 2026-10-23): the folder list down the
       side, one folder open at a time (?stash=), a folder inside folders; a scan in none is Uncategorized #}
+  {#- the same rows as every other folder list (static/js/scanstash.js folds them, remembers it, and does Expand all / Collapse all) #}
   {% macro stash_tree(nodes) %}{% for n in nodes %}
-    <li><a class="side-link{{ ' current' if stash_node and stash_node.folder.id == n.folder.id }}" data-stash-drop="{{ n.folder.id }}" href="{{ url_for('qgen.scan_start', stash=n.folder.id) }}#scan-away">{{ icon('folder') }} <span>{{ n.name }}</span> <span class="side-count muted small">{{ n.count }}</span></a>
-      {% if n.folders %}<ul class="stash-sub">{{ stash_tree(n.folders) }}</ul>{% endif %}</li>
+    <li class="side-item" data-folder="{{ n.folder.id }}" data-box="folder:{{ n.folder.id }}">
+      <div class="side-row{{ ' current' if stash_node and stash_node.folder.id == n.folder.id }}{{ ' is-empty' if not n.count }}" data-stash-drop="{{ n.folder.id }}">
+        {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ n.folder.name }}" title="Show or hide the folders inside"></button>
+        {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
+        <a href="{{ url_for('qgen.scan_start', stash=n.folder.id) }}#scan-away" title="Open the folder “{{ n.folder.name }}”" draggable="false" class="side-link"{% if stash_node and stash_node.folder.id == n.folder.id %} aria-current="page"{% endif %}>
+          {{ icon('folder') }} <span class="side-name">{{ n.name }}</span></a>
+        <span class="side-count muted small" title="Scans in it, and in the folders inside it">{{ n.count or 0 }}</span>
+      </div>
+      {% if n.folders %}<ul class="side-list">{{ stash_tree(n.folders) }}</ul>{% endif %}
+    </li>
   {% endfor %}{% endmacro %}
   <div class="card-head"><h2>Stashed scans</h2>
-    <span class="right"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your scans into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></span></div>
+</div>
   {% if away or stash_flat %}
+  {#- the width kept in this browser is put on the page before the list is drawn (static/js/splitter.js keeps it after), so the list doesn't move when the page's script runs #}
+  <script>try { var w = parseInt(localStorage.getItem('qgen-stash-side-width'), 10); if (w) document.documentElement.style.setProperty('--stash-side-w', w + 'px'); } catch (e) {}</script>
   <div class="stash-split">
-    <nav class="stash-folders" aria-label="Folders">
-      <ul class="side-list">
-        <li><a class="side-link{{ ' current' if stash_view == 'all' }}" data-stash-drop="all" href="{{ url_for('qgen.scan_start') }}#scan-away">{{ icon('folders') }} <span>All scans</span> <span class="side-count muted small">{{ away|length }}</span></a></li>
-        <li><a class="side-link{{ ' current' if stash_view == 'main' }}" data-stash-drop="main" href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away">{{ icon('tray') }} <span>Uncategorized</span> <span class="side-count muted small">{{ stash_root['items']|length }}</span></a></li>
+    <nav class="stash-folders" aria-label="Folders" data-path='{{ stash_path_ids|tojson }}'>
+      <div class="side-list-head"><span class="side-list-title">Folders</span>
+        {#- Expand all / Collapse all beside the heading, as on every folder list (grayed out, with why, when nothing nests) #}
+        <div class="btn-row small side-levels title-levels">
+          <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="open" title="Expand all: Show the folders inside every folder in this list">{{ icon_label('lc-expand', 'Expand all') }}</button>
+          <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder (the one you’re in stays in view)">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
+        </div></div>
+      <div class="side-card-head"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your scans into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></div>
+      <ul class="side-list side-top">
+        <li class="side-auto side-auto-first"><div class="side-row{{ ' current' if stash_view == 'all' }}" data-stash-drop="all"><span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed scans, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All scans</a>
+          <span class="side-count muted small">{{ away|length }}</span></div></li>
+        <li class="side-auto side-auto-last" data-auto="none"><div class="side-row{{ ' current' if stash_view == 'main' }}{{ ' is-empty' if not stash_root['items'] }}" data-stash-drop="main"><span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away" title="See the scans that aren’t in any folder" class="side-link"{% if stash_view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Uncategorized</a>
+          <span class="side-count muted small" title="Scans in no folder">{{ stash_root['items']|length }}</span></div></li>
         {{ stash_tree(stash_root.folders) }}
       </ul>
     </nav>
+    <div class="vsplit stash-bar"></div>
     <div class="stash-main">
       <div class="stash-tab">
         <strong>{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% else %}All scans{% endif %}</strong>
         <span class="badge box-count">{{ stash_shown|length }}</span>
+        {#- the folder's own actions in the standard Folder options menu, as on every other folder page (the owner, 2026-10-23) #}
         {% if stash_node %}<span class="btn-row">
-          <button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-rename" data-url="{{ url_for('qgen.scan_rename_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}" title="Rename: change this folder’s name">{{ icon_label('lc-pencil', 'Rename') }}</button>
-          {{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', icon='lc-trash', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its scans and folders move up a level.', tip='Delete the folder; what’s in it moves up') }}</span>{% endif %}
+          <details class="folder-tools">
+            <summary class="btn btn-secondary btn-xs btn-icon" title="Folder options: Rename, make a folder inside, or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
+            <div class="folder-tools-box folder-menu">
+              <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-rename" data-url="{{ url_for('qgen.scan_rename_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}">Rename</button></span>
+              <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-move-folder" data-url="{{ url_for('qgen.scan_move_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}" data-here="{{ stash_node.folder.parent_id or '' }}">Move to</button></span>
+              {% if stash_node.depth < tuning.get('folder_depth') %}<span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-new">+ New folder inside</button></span>{% endif %}
+              <span class="folder-opt">{{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', cls='btn btn-secondary btn-xs', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its scans and folders move up a level.', tip='Delete just the folder; what’s in it moves up a level') }}</span>
+            </div>
+          </details>
+        </span>{% endif %}
       </div>
       {% if stash_shown %}
       <div class="table-wrap stack">
@@ -151,7 +184,7 @@
       <input type="hidden" name="parent" value="{{ stash_node.folder.id if stash_node else '' }}">
       <p><strong>{{ 'New folder inside “' ~ stash_node.folder.name ~ '”' if stash_node else 'New folder' }}</strong></p>
       <input type="text" name="name" maxlength="{{ tuning.get('folder_name') }}" required placeholder="e.g. Fractions" aria-label="New folder’s name">
-      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Make the folder with the name you typed">Make folder</button></div>
+      <div class="btn-row"><button class="btn" title="Make the folder with the name you typed">Make folder</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
   <dialog class="ask folder-dialog" id="stash-rename" aria-label="Rename folder">
@@ -159,7 +192,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p><strong>Rename “<span data-stash-name></span>”</strong></p>
       <input type="text" name="name" maxlength="{{ tuning.get('folder_name') }}" required aria-label="Folder name">
-      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Save the new name you typed for this folder">Rename</button></div>
+      <div class="btn-row"><button class="btn" title="Save the new name you typed for this folder">Rename</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
   {#- the standard folder dialog, as every Move on the other folder pages (static/js/dialogfilter.js draws the picker when it
@@ -167,13 +200,28 @@
   <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move" aria-label="Move scan to a folder">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {#- (the folder open now stays open, as after a drag: the owner, 2026-10-23) #}
+      <input type="hidden" name="stay" value="{{ request.args.get('stash') or '' }}">
       <p data-pick-head><strong>Move “<span data-stash-name></span>”</strong><br><span class="muted small">Choose a folder.</span></p>
       <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to" data-checked="top">
         <script type="application/json" data-pick-rows>{{ stash_pick_rows|tojson }}</script>
       </div>
-      <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Put the scan in the folder chosen">Move</button></div>
+      <div class="btn-row"><button class="btn" title="Put the scan in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
+  {#- a folder's own Move to, the standard dialog as on the other folder pages (what the open folder can go inside: not itself, not what's in it) #}
+  {% if stash_node %}<dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move-folder" aria-label="Move “{{ stash_node.folder.name }}” to another folder">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p data-pick-head><strong>Move “<span data-stash-name></span>” to another folder</strong><br><span class="muted small">Choose the folder to move it to.</span></p>
+      <div class="assign-defaults small"><strong>{{ icon('lc-alert', 'assign-defaults-sign') }}What happens:</strong>
+        <ul><li>Everything in it moves with it</li></ul></div>
+      <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="to" data-checked="top">
+        <script type="application/json" data-pick-rows>{{ stash_move_rows|tojson }}</script>
+      </div>
+      <div class="btn-row"><button class="btn" title="Move it to the folder you picked">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+    </form>
+  </dialog>{% endif %}
 </div>
 </div>
 </div>
@@ -194,6 +242,7 @@
         var card = document.getElementById(id), fresh = doc.getElementById(id);
         if (card && fresh) card.replaceWith(fresh);
       });
+      document.dispatchEvent(new Event('qgen-stash-redrawn'));
       later();
     }).catch(later);
   }

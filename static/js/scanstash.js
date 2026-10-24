@@ -9,6 +9,8 @@
     if (!b) return;
     var d = document.getElementById(b.dataset.stashDialog);
     if (!d) return;
+    var menu = b.closest('details.folder-tools');  // (a choice in the Folder options menu closes the menu)
+    if (menu) menu.removeAttribute('open');
     var form = d.querySelector('form');
     if (b.dataset.url) form.action = b.dataset.url;
     d.querySelectorAll('[data-stash-name]').forEach(function (el) { el.textContent = b.dataset.name || ''; });
@@ -50,7 +52,11 @@
     var row = e.target.closest && e.target.closest('tr[data-stash-drag]');
     if (!row || e.button !== 0 || e.target.closest('button, input, select, textarea, label')) return;
     pending = { row: row, x: e.clientX, y: e.clientY, url: row.dataset.url, name: row.dataset.name, home: row.dataset.home || 'main' };
+    //(no text selection and no browser drag of the picture or the name link: either one takes over the mouse, so nothing
+    //followed the pointer until it was let go; a click still goes through, as on the other folder pages)
+    e.preventDefault();
   });
+  document.addEventListener('dragstart', function (e) { if (pending || dragging) e.preventDefault(); });
   document.addEventListener('mousemove', function (e) {
     if (pending && !dragging) {
       if (Math.abs(e.clientX - pending.x) + Math.abs(e.clientY - pending.y) < 6) return;
@@ -84,9 +90,73 @@
     var to = document.createElement('input');
     to.type = 'hidden'; to.name = 'to'; to.value = t.dataset.stashDrop === 'main' ? '' : t.dataset.stashDrop;
     f.appendChild(to);
+    //(the folder open now stays open: drag the next one)
+    var stay = document.createElement('input');
+    stay.type = 'hidden'; stay.name = 'stay'; stay.value = new URLSearchParams(location.search).get('stash') || '';
+    f.appendChild(stay);
     document.body.appendChild(f);
     f.submit();
   });
   document.addEventListener('click', function (e) { if (swallow) { e.preventDefault(); e.stopPropagation(); } }, true);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (pending || dragging)) stop(); });
 })();
+
+
+/* The stash's folder list folds like every other folder list (static/js/folders.js): the arrow shows or hides the folders
+ * inside a folder, it's remembered in this browser, the folders above the one open stay open, and Expand all / Collapse all
+ * (beside "Folders") do all of them; grayed out, with why, when no folder in the list has folders inside it. */
+function foldList() {
+  var nav = document.querySelector('.stash-folders');
+  if (!nav) return;
+  var KEY = 'qgen-folded-stash', path = [], folded = {}, shows = [];
+  try { path = JSON.parse(nav.dataset.path || '[]'); } catch (e) {}
+  try { (JSON.parse(localStorage.getItem(KEY) || '[]') || []).forEach(function (id) { folded[id] = true; }); } catch (e) {}
+  path.forEach(function (id) { delete folded[id]; });
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(Object.keys(folded))); } catch (e) {} }
+  nav.querySelectorAll('.side-item').forEach(function (li) {
+    var btn = li.querySelector(':scope > .side-row > .side-fold');
+    if (!btn) return;
+    function show(open) {
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      li.classList.toggle('side-folded', !open);
+      if (open) delete folded[li.dataset.folder]; else folded[li.dataset.folder] = true;
+    }
+    shows.push({ id: li.dataset.folder, show: show });
+    show(!folded[li.dataset.folder]);
+    //(a folder above the one open can't be folded: the folder you're in always shows)
+    if (path.slice(0, -1).map(String).indexOf(String(li.dataset.folder)) !== -1) {
+      btn.disabled = true;
+      btn.title = 'You\u2019re in a folder inside this one, so it stays open';
+      return;
+    }
+    btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); save(); });
+  });
+  save();
+  var levels = nav.querySelector('.side-levels');
+  if (!levels) return;
+  levels.qgenScope = nav;  // (static/js/boxes.js keeps the one-toggle in step with the arrows in this list: it looks in here, as it does for the other lists)
+  //(one toggle, as on every folder list: only one of the two shows, Expand all while anything is folded, else Collapse all: static/js/boxes.js)
+  function sync() {
+    var open = levels.querySelector('[data-side-level="open"]'), close = levels.querySelector('[data-side-level="close"]');
+    var all = nav.querySelectorAll('.side-fold');
+    var anyShut = !all.length || Array.prototype.some.call(all, function (f) { return f.getAttribute('aria-expanded') === 'false'; });
+    open.classList.toggle('lvl-off', !anyShut);
+    close.classList.toggle('lvl-off', anyShut);
+  }
+  sync();
+  nav.addEventListener('click', function () { setTimeout(sync, 0); });
+  if (!shows.length) {
+    levels.querySelectorAll('[data-side-level]').forEach(function (b) { b.disabled = true; b.title = 'No folder here has folders inside it'; });
+    return;
+  }
+  levels.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-side-level]');
+    if (!b) return;
+    var open = b.dataset.sideLevel === 'open';
+    shows.forEach(function (s) { s.show(open || path.slice(0, -1).map(String).indexOf(String(s.id)) !== -1); });
+    save();
+  });
+}
+foldList();
+//(the page redraws its cards now and then, new rows each time: the arrows are hooked up again)
+document.addEventListener('qgen-stash-redrawn', foldList);

@@ -9,7 +9,7 @@
   box.className = 'ask rule-dialog';
   box.innerHTML = '<p><strong data-head></strong></p>'
     + '<ul class="rule-list" data-list></ul>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Save</button></div>';
+    + '<div class="btn-row"><button type="button" class="btn" data-ok>Save</button><button type="button" class="btn btn-secondary" data-no>Cancel</button></div>';
   document.body.appendChild(box);
   var list = box.querySelector('[data-list]');
   box.querySelector('[data-no]').addEventListener('click', function () { box.close(); });

@@ -8,8 +8,8 @@
     + '<p><strong data-head></strong><br><span class="muted small" data-sub></span></p>'
     + '<label class="small" for="copy-name">Name of the copy</label>'
     + '<input type="text" id="copy-name" name="title" maxlength="64" required>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>'
-    + '<button class="btn" title="Make the copy and open it, to change what you like">Make copy</button></div></form>';
+    + '<div class="btn-row"><button class="btn" title="Make the copy and open it, to change what you like">Make copy</button>'
+    + '<button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div></form>';
   document.body.appendChild(box);
   var form = box.querySelector('form'), name = box.querySelector('#copy-name');
   box.querySelector('[data-cancel]').addEventListener('click', function () { box.close(); });

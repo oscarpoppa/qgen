@@ -450,7 +450,7 @@
       + '<div class="assign-defaults small"><strong>' + (window.qgenIcon ? window.qgenIcon('lc-alert') : '') + 'What happens:</strong><ul data-happens></ul></div>'
       + window.qgenFolderPick.html()
       + '<p class="error small" data-err hidden>Choose a folder first.</p>'
-      + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Move</button></div>';
+      + '<div class="btn-row"><button type="button" class="btn" data-ok>Move</button><button type="button" class="btn btn-secondary" data-no>Cancel</button></div>';
     document.body.appendChild(box);
     list = box.querySelector('[data-folder-pick]'); err = box.querySelector('[data-err]');
     box.querySelector('[data-no]').addEventListener('click', function () { box.close(); });

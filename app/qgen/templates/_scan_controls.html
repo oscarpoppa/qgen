@@ -15,10 +15,8 @@
   {%- else -%}
     {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}
     {%- elif x.kind == 'stopped' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Read the rest', icon='lc-resume', tip='Have the AI read the pages that are missing (each page uses a few AI calls)') }}{% endif %}
-    {#- (the scan's own page opens once every page is read; a stopped one still opens, to deal with
-        the page that failed: the owner, 2026-10-22) #}
-    {%- if x.kind == 'paused' %}<button type="button" class="btn btn-sm btn-icon" disabled title="Continue: opens when every page is read">{{ icon_label('lc-arrow-right', 'Continue') }}</button>
-    {%- else %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>{% endif %}
+    {#- (the scan's own page opens whatever state the scan is in, like its name: the owner, 2026-10-23; it was grayed out while paused) #}
+    <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>
     {%- if x.put_away %}{{ post_button(url_for('qgen.scan_take_out', job_id=j.id, back=back or none), 'Take out', icon='lc-folder-up', tip='Take “' ~ j.name ~ '” out, back into Current scans') }}
     {%- elif x.kind in ('paused', 'stopped', 'draft') %}{{ post_button(url_for('qgen.scan_put_away', job_id=j.id, back=back or none), 'Stash', icon='lc-folder-input', tip='Stash “' ~ j.name ~ '” until you want it again: out of Current scans and the Dashboard') }}{% endif %}
     {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Discard', icon='lc-trash', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}

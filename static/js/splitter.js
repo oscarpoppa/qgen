@@ -92,11 +92,15 @@
   //for again whenever something is added to the page, like the pickers' (the card can be redrawn)
   function stashBar(box) {
     var first = box.firstElementChild;
-    if (!first || box.querySelector(':scope > .stash-bar')) return;
+    var bar = box.querySelector(':scope > .stash-bar');
+    if (!first || (bar && bar.qgenWired)) return;
     box.classList.add('has-vsplit');
-    var bar = document.createElement('div');
-    bar.className = 'vsplit stash-bar';
-    first.insertAdjacentElement('afterend', bar);
+    if (!bar) {  // (the page draws it itself; this is for one that's missing)
+      bar = document.createElement('div');
+      bar.className = 'vsplit stash-bar';
+      first.insertAdjacentElement('afterend', bar);
+    }
+    bar.qgenWired = true;
     divider(bar, 'qgen-stash-side-width', function () { return first.getBoundingClientRect().width; },
       function (px) { if (px) root.style.setProperty('--stash-side-w', px + 'px'); else root.style.removeProperty('--stash-side-w'); },
       function () { return 140; }, function () { return Math.min(480, box.getBoundingClientRect().width * 0.5); },

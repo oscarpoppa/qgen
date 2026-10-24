@@ -59,8 +59,8 @@
         {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
         <p><strong>{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}</strong></p>
         <input type="text" name="name" maxlength="{{ fk.max_name }}" required placeholder="{{ fk.placeholder }}" aria-label="New folder’s name">
-        <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
-          <button class="btn" title="Make the folder with the name you typed">Make folder</button></div>
+        <div class="btn-row"><button class="btn" title="Make the folder with the name you typed">Make folder</button>
+          <button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
       </form>
     </dialog>
   </span>
@@ -351,8 +351,8 @@
                     <input type="hidden" name="view" value="{{ fk.view }}">
                     <p><strong>Rename “{{ fk.name(n.folder) }}”</strong></p>
                     <input type="text" name="name" value="{{ fk.name(n.folder) }}" maxlength="{{ fk.max_name }}" required aria-label="Folder name">
-                    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
-                      <button class="btn" title="Save the new name you typed for this folder">Rename</button></div>
+                    <div class="btn-row"><button class="btn" title="Save the new name you typed for this folder">Rename</button>
+                      <button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
                   </form>
                 </dialog>
               </span>
@@ -379,8 +379,8 @@
                     <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="to" data-checked="{{ f.parent_id or 'top' }}">
                       <script type="application/json" data-pick-rows>{{ ns.rows|tojson }}</script>
                     </div>
-                    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button>
-                      <button class="btn" title="Move it to the folder you picked">Move</button></div>
+                    <div class="btn-row"><button class="btn" title="Move it to the folder you picked">Move</button>
+                      <button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
                   </form>
                 </dialog>
               </span>

@@ -636,10 +636,11 @@ def helper_hints(job, data, urls):
             continue
         why = p.get('error') or ('Not read yet.' if p.get('state') == 'waiting' else 'It couldn\u2019t be read.')
         hints.append({'level': 'error' if p.get('state') == 'error' else 'warn', 'key': 'page-{}'.format(p['n']),
-                      'text': 'Page {} didn\u2019t make it: {}'.format(p['n'], why),
+                      #(a page not read yet hasn't failed: the owner, 2026-10-23)
+                      'text': 'Page {} {}: {}'.format(p['n'], 'hasn\u2019t been read yet' if p.get('state') == 'waiting' else 'didn\u2019t make it', why),
                       'actions': [
                           {'label': 'Try again', 'url': urls['again'](p['n']), 'tip': 'Have the AI read this page again from the start (it uses a few AI calls)'},
-                          {'label': 'Keep as it is', 'dismiss': True, 'tip': 'Leave this page out for now: it stays in the stash and the other pages can still be made into quizzes'},
+                          {'label': 'Keep as it is', 'dismiss': True, 'tip': 'Leave this page out for now: the other pages can still be made into quizzes'},
                           {'label': 'Discard page', 'url': urls['drop'](p['n']), 'ask': 'Discard page {} of this scan? It can\u2019t be undone.'.format(p['n']), 'ok': 'Discard',
                            'tip': 'Take this page out of the scan for good'}]})
     from . import services as S
@@ -1884,6 +1885,20 @@ def rename_folder(folder, name):
     if _stash_name_taken(name, folder.parent_id, ignore=folder.id):
         raise FT.FolderError('There’s already a folder called “{}” here.'.format(name))
     folder.name = name
+    db.session.commit()
+    return folder
+
+
+def move_folder(folder, to_id):
+    """A stash folder inside another (None, or "top": the top), with the folders inside it; FolderError says what's wrong."""
+    from app import folder_tree as FT
+    target = db.session.get(ScanFolder, int(to_id)) if to_id and str(to_id) != 'top' else None
+    if (target.id if target else None) == folder.parent_id:
+        return folder
+    FT.check_move(ScanFolder, folder, target)
+    if _stash_name_taken(folder.name, target.id if target else None, ignore=folder.id):
+        raise FT.FolderError('There’s already a folder called “{}” there.'.format(folder.name))
+    folder.parent_id = target.id if target else None
     db.session.commit()
     return folder
 

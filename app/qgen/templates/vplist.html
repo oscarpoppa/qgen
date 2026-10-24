@@ -130,7 +130,7 @@
     <div data-problem-ids></div>
     {# or a new quiz with them in it (quiz_pick.js fills in which, and the way back) #}
     <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make new quiz</a></p>
-    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button><button class="btn" title="Add to the end of the checked quizzes">Add</button></div>
+    <div class="btn-row"><button class="btn" title="Add to the end of the checked quizzes">Add</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
   </form>
 </dialog>
 {% endif %}

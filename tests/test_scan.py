@@ -654,6 +654,11 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     mine = [h for h in hints if h.get('key') == 'page-2'][0]
     assert 'Page 2 didn’t make it: This page took longer than 10 minutes' in mine['text']
     assert [a['label'] for a in mine['actions']] == ['Try again', 'Keep as it is', 'Discard page']
+    assert 'stays in the stash' not in mine['actions'][1]['tip']
+    #(a page not read yet hasn't failed: the owner, 2026-10-23)
+    data['pages'].append({'n': 3, 'state': 'waiting', 'error': SC.PAUSED_NOTE})
+    waiting = SC.helper_hints(job, data, {'again': lambda n: '/a/{}'.format(n), 'drop': lambda n: '/d/{}'.format(n)})
+    assert 'Page 3 hasn’t been read yet: Paused before this page was read.' in [h['text'] for h in waiting]
     assert mine['actions'][2]['url'].endswith('/page/2/drop') and mine['actions'][1]['dismiss']
     #(in the stash: Unstash draft)
     SC.put_away(job)
@@ -1318,7 +1323,73 @@ def test_the_stash_move_dialog_is_the_standard_folder_dialog(app_db, ai):
     dialog = html.split('id="stash-move"')[1].split('</dialog>')[0]
     assert 'pick-dialog put-dialog' in html.split('id="stash-move"')[0].rsplit('<dialog', 1)[1] and 'data-folder-pick' in dialog
     assert '[[{}, "Fractions", 1, "folder"]]'.format(fid) in dialog.replace('\n', '')
+    assert 'name="stay" value=""' in dialog and 'name="stay" value="{}"'.format(fid) in teacher.get('/quiz/scan?stash={}'.format(fid)).data.decode().split('id="stash-move"')[1]
     assert teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': str(fid)}).status_code == 302
     assert job_of(db).folder_id == fid
     assert teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': 'top'}).status_code == 302
     assert job_of(db).folder_id is None
+
+
+def test_a_dragged_scan_leaves_the_view_where_it_was(app_db, ai):
+    """Dragging a scan onto a folder sends 'stay' with the folder open now, and the page comes back to it, not to the
+    folder the scan went to (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.qgen.models import ScanFolder
+    from app.qgen import scan as SC
+    teacher = login(app, 'teach')
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    SC.put_away(job)
+    teacher.post('/quiz/scan/folders/new', data={'name': 'A'})
+    teacher.post('/quiz/scan/folders/new', data={'name': 'B'})
+    a, b = (ScanFolder.query.filter_by(name=n).one().id for n in 'AB')
+    teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': str(a)})
+    r = teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': str(b), 'stay': str(a)})
+    assert r.headers['Location'].endswith('/quiz/scan?stash={}#scan-away'.format(a)) and job_of(db).folder_id == b
+    r = teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': '', 'stay': ''})
+    assert r.headers['Location'].endswith('/quiz/scan#scan-away') and job_of(db).folder_id is None
+    r = teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': str(a)})  # (the Move dialog: goes to where it went)
+    assert r.headers['Location'].endswith('stash={}#scan-away'.format(a))
+
+
+def test_the_continue_arrow_works_on_a_paused_scan_like_its_name(app_db, ai):
+    """A paused scan's name and its Continue arrow both open the scan's page (the arrow was grayed out; the owner, 2026-10-23)."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    html = teacher.get('/quiz/scan').data.decode()
+    assert 'Paused' not in html or 'disabled title="Continue' not in html
+    assert 'href="/quiz/scan/{}"'.format(job.id) in html and 'aria-label="Continue"' in html
+    assert teacher.get('/quiz/scan/{}'.format(job.id)).status_code == 200
+
+
+def test_stash_folders_move_into_each_other_and_the_list_is_the_standard_one(app_db, ai):
+    """A stash folder can be moved inside another (or out to the top) from the open folder's Folder options menu, the
+    list is drawn with the standard rows and Expand all / Collapse all, and a move that can't be done says why
+    (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.qgen.models import ScanFolder
+    teacher = login(app, 'teach')
+    teacher.post('/quiz/scan/folders/new', data={'name': 'A'})
+    a = ScanFolder.query.filter_by(name='A').one().id
+    teacher.post('/quiz/scan/folders/new', data={'name': 'B', 'parent': str(a)})
+    b = ScanFolder.query.filter_by(name='B').one().id
+    teacher.post('/quiz/scan/folders/new', data={'name': 'C'})
+    c = ScanFolder.query.filter_by(name='C').one().id
+    html = teacher.get('/quiz/scan?stash={}'.format(a)).data.decode()
+    away = html.split('id="scan-away"')[1]
+    for needle in ('class="side-item"', 'class="side-fold"', 'class="side-row current', 'data-side-level="open"', 'data-side-level="close"', 'side-auto-first', 'data-stash-drop="{}"'.format(b)):
+        assert needle in away, needle
+    assert 'data-stash-dialog="stash-move-folder"' in away and 'id="stash-move-folder"' in away
+    rows = away.split('data-pick-rows>')[2].split('</script>')[0]   # (the folder's own Move to: not itself, not what's in it)
+    assert '"C"' in rows and '"A"' not in rows and '"B"' not in rows
+    #(B moves out to the top, then A inside C; A can't go inside what's in it)
+    assert teacher.post('/quiz/scan/folders/{}/move'.format(b), data={'to': 'top'}).status_code == 302
+    assert db.session.get(ScanFolder, b).parent_id is None
+    assert teacher.post('/quiz/scan/folders/{}/move'.format(a), data={'to': str(c)}).status_code == 302
+    assert db.session.get(ScanFolder, a).parent_id == c
+    r = teacher.post('/quiz/scan/folders/{}/move'.format(c), data={'to': str(a)})   # (C into A, which is inside C)
+    assert r.status_code == 302 and db.session.get(ScanFolder, c).parent_id is None

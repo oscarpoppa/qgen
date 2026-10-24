@@ -250,10 +250,11 @@
 <div class="side-col">
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="editor-go">
-    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
     {{ form.submit(class='btn btn-big', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
     {# beside Save (the owner, 2026-10-16); the examples still show under the form #}
     <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show me 3 examples</button>
+    {#- (Cancel last: the main button first, discard last, the owner 2026-10-23) #}
+    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
   </div>
 </div>
 </div>

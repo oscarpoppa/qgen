@@ -17,10 +17,10 @@
     box = document.createElement('dialog');
     box.className = 'ask';
     box.setAttribute('aria-labelledby', 'ask-text');
-    //(Cancel first, the answer on the right, as in every dialog: the owner, 2026-10-20)
+    //(the answer first, Cancel last, as in every dialog: the owner, 2026-10-23; the focus stays on Cancel, the safe one)
     box.innerHTML = '<p id="ask-text"></p><div class="btn-row">'
-      + '<button type="button" class="btn btn-secondary ask-cancel" title="Don\'t do it; nothing changes">Cancel</button>'
-      + '<button type="button" class="btn ask-ok"></button></div>';
+      + '<button type="button" class="btn ask-ok"></button>'
+      + '<button type="button" class="btn btn-secondary ask-cancel" title="Don\'t do it; nothing changes">Cancel</button></div>';
     document.body.appendChild(box);
   }
 
@@ -77,8 +77,8 @@
     return new Promise(function (resolve) {
       function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(v); }
       function esc(e) { e.preventDefault(); done(null); }
-      //(Cancel first, then the answers: the owner, 2026-10-20)
-      [{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }].concat(choices).forEach(function (c) {
+      //(the answers first, Cancel last: the owner, 2026-10-23)
+      choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {
         var b = document.createElement('button');
         b.type = 'button';
         //(only a dangerous answer is filled in: the others are plain, like Cancel)
@@ -91,7 +91,7 @@
       });
       many.addEventListener('cancel', esc);
       many.showModal();
-      row.firstChild.focus();
+      row.lastChild.focus();  // (Cancel)
     });
   };
 

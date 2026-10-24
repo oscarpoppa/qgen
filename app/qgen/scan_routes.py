@@ -66,7 +66,18 @@ def scan_start():
                            max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
                            stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [],
                            #(the Move dialog's folders, each [id, name, depth, icon], in the side list's order)
-                           stash_pick_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat])
+                           stash_pick_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat],
+                           #(the open folder's own Move to: every folder but itself and the ones inside it)
+                           stash_move_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat if not node or f.id not in _folder_ids(node)],
+                           stash_path_ids=[f.id for f in FT.path(nodes, node)] if node else [])
+
+
+def _folder_ids(node):
+    """The ids of a stash folder and of every folder inside it."""
+    ids = {node['folder'].id}
+    for child in node['folders']:
+        ids |= _folder_ids(child)
+    return ids
 
 
 def _elapsed(data):
@@ -535,6 +546,27 @@ def scan_rename_folder(fid):
     return _stash_back(folder.id)
 
 
+@qgen_bp.route('/quiz/scan/folders/<int:fid>/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_move_folder(fid):
+    """A stash folder inside another, or out to the top (the owner, 2026-10-23: the standard folder menu's Move to)."""
+    from app import folder_tree as FT
+    folder = db.get_or_404(ScanFolder, fid)
+    to = request.form.get('to') or ''
+    if to and to != 'top' and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
+        abort(404)
+    try:
+        SC.move_folder(folder, to)
+    except FT.FolderError as exc:
+        flash(str(exc), 'error')
+        return _stash_back(folder.id)
+    flash('Moved “{}” to {}.'.format(folder.name, '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to.isdigit() else 'the top'), 'success')
+    return _stash_back(folder.id)
+
+
 @qgen_bp.route('/quiz/scan/folders/<int:fid>/delete', methods=['POST'])
 @login_required
 @pw_check
@@ -564,6 +596,9 @@ def scan_move(job_id):
         abort(404)
     SC.move_scan(job, to)
     flash('“{}” moved to {}.'.format(job.name, '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'), 'success')
+    #(dragged onto a folder: the view stays where it was, so scans can be dragged one after another out of the folder open: the owner, 2026-10-23)
+    if 'stay' in request.form:
+        return _stash_back(request.form.get('stay') or None)
     return _stash_back(to or None)
 
 

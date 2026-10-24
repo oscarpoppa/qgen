@@ -51,7 +51,7 @@
   var go = document.createElement('button');
   go.type = 'submit'; go.className = 'btn';
   go.setAttribute('form', form.id);
-  row.appendChild(cancel); row.appendChild(go);
+  row.appendChild(go); row.appendChild(cancel);
   dialog.appendChild(row);
   document.body.appendChild(dialog);
   //(sent: the dialog steps aside, so takeout.js's question, if any, shows alone)
@@ -114,7 +114,7 @@
   var confirmBox = document.createElement('dialog');
   confirmBox.className = 'ask ask-many takeout-dialog';
   confirmBox.innerHTML = '<p><strong data-head></strong></p><ul class="takeout-lines small" data-lines></ul>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok>Take out</button></div>';
+    + '<div class="btn-row"><button type="button" class="btn" data-ok>Take out</button><button type="button" class="btn btn-secondary" data-no>Cancel</button></div>';
   document.body.appendChild(confirmBox);
   confirmBox.querySelector('[data-no]').addEventListener('click', function () { confirmBox.close(); });
   function openFolder() {
@@ -197,7 +197,7 @@
     + '<label class="put-copy"><input type="checkbox" data-copy> <span data-copy-words></span></label>'
     + window.qgenFolderPick.html()
     + '<p class="error small" data-err hidden></p>'
-    + '<div class="btn-row"><button type="button" class="btn btn-secondary" data-no>Cancel</button><button type="button" class="btn" data-ok></button></div>';
+    + '<div class="btn-row"><button type="button" class="btn" data-ok></button><button type="button" class="btn btn-secondary" data-no>Cancel</button></div>';
   document.body.appendChild(putBox);
   var putList = putBox.querySelector('[data-folder-pick]'), copyBox = putBox.querySelector('[data-copy]');
   putBox.querySelector('[data-no]').addEventListener('click', function () { putBox.close(); });
