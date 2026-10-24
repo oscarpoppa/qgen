@@ -12,10 +12,12 @@ FETCH = {'X-Requested-With': 'fetch'}
 
 
 def badge(page):
-    """The count next to "My quizzes" in the menu, or None when it's hidden."""
-    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="count nav-quizzes"[^>]*? aria-label="(\d+) to do" (hidden)?', page)
-    assert m, 'no My quizzes badge'
-    return None if m.group(2) else int(m.group(1))
+    """The dots next to "My quizzes" in the menu (gold new, blue in progress, red due soon): how many are
+    new or in progress, or None when there are none (the owner, 2026-10-23: they replaced the red number)."""
+    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="nav-dots"[^>]*? aria-label="(\d+) new, (\d+) in progress, (\d+) due soon"', page)
+    assert m, 'no My quizzes dots'
+    n = int(m.group(1)) + int(m.group(2))
+    return n or None
 
 
 def assign(teacher, vq, *names):
@@ -151,3 +153,24 @@ def test_the_assigned_notice_shows_the_students_picture(app_db):
     assign(teach, vq, 'sam', 'kim')
     assert shared().student_id == ids('teach')
     assert '<span class="notice-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-users"/>' in teach.get('/messages/notices').data.decode()
+
+
+def test_the_dots_by_the_name_count_new_started_and_due_soon(app_db):
+    """Gold = new, blue = in progress, red = due soon, each only above 0; the poll sends the same numbers
+    (the owner, 2026-10-23)."""
+    from datetime import datetime, timedelta
+    from app.qgen.models import CQuiz
+    app, db = app_db
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teach)
+    assert sam.get('/messages/poll').get_json()['dots'] == [0, 0, 0]
+    assign(teach, vq, 'sam')
+    assert sam.get('/messages/poll').get_json()['dots'] == [1, 0, 0]
+    with app.app_context():
+        cq = CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).one()
+        cq.closes_at = datetime.now() + timedelta(hours=2)
+        db.session.commit()
+    assert sam.get('/messages/poll').get_json()['dots'] == [1, 0, 1]
+    page = sam.get('/profile').data.decode()
+    assert '1 new, 0 in progress, 1 due soon' in page and 'class="side-dot dot-due" data-dot="2" title="1 due soon">1<' in page
+    assert 'class="count nav-quizzes"' not in page

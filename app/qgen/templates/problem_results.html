@@ -88,7 +88,7 @@
   </div>
 
   <div id="folder-items">
-    {#- one folder's quizzes, 20 at a time (app/paging.py) #}
+    {#- one folder's quizzes, a page at a time (app/paging.py) #}
     {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ quiz_rows(shown) }}{% elif not pg.q %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}

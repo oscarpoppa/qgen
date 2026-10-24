@@ -270,3 +270,39 @@ def test_score_colors_are_a_setting(app_db):
     with app.test_request_context():
         assert tuning.get('score_green') == 70 and tuning.get('score_amber') == 90
         assert tuning.score_class(75) == 'badge-ok' and tuning.score_class(60) == 'badge-bad'
+
+
+def test_rows_per_page_is_a_setting(app_db):
+    """Long lists show 35 rows a page, and "Rows per page" under Lists & pages changes it (the owner, 2026-10-23)."""
+    from app import tuning
+    from app.paging import paginate
+    app, db = app_db
+    assert tuning.get('page_size') == 35
+    with app.test_request_context('/'):
+        assert paginate(list(range(100))).count == 3 and len(paginate(list(range(100))).items) == 35
+        set_values(page_size=10)
+        assert paginate(list(range(100))).count == 10 and len(paginate(list(range(100))).items) == 10
+    teacher = login(app, 'teach')
+    page = teacher.get(PAGE).data.decode()
+    assert 'Lists &amp; pages' in page and 'Rows per page' in page
+
+
+def test_the_other_new_settings_and_their_defaults(app_db):
+    """Lists, scanning and limits settings (the owner, 2026-10-23): defaults are what the site used, and the folder
+    ones change what folders accept."""
+    from app import tuning
+    from test_quiz_folders import FETCH
+    app, db = app_db
+    v = tuning.values()
+    assert (v['recent_days'], v['recent_max'], v['online_names'], v['filter_over']) == (14, 10, 8, 8)
+    assert (v['scan_pages'], v['scan_long_side'], v['scan_keep_days'], v['scan_page_minutes']) == (30, 1600, 30, 10)
+    assert (v['max_upload_mb'], v['folder_depth'], v['folder_name']) == (16, 6, 64)
+    sam = login(app, 'sam')
+    set_values(folder_name=10, folder_depth=2)
+    assert sam.post('/mypage/folders', data={'name': 'x' * 11}, headers=FETCH).get_json()['error'] == 'Please keep folder names under 10 characters.'
+    ok = sam.post('/mypage/folders', data={'name': 'Top'}, headers=FETCH).get_json()
+    assert ok['ok']
+    from test_quiz_folders import folder_id
+    assert sam.post('/mypage/folders', data={'name': 'Inner', 'parent': folder_id('Top', 'sam')}, headers=FETCH).get_json()['ok']
+    err = sam.post('/mypage/folders', data={'name': 'Third', 'parent': folder_id('Inner', 'sam')}, headers=FETCH).get_json()['error']
+    assert err == 'Folders can go only 2 levels deep.'

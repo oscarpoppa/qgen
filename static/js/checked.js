@@ -46,7 +46,7 @@
   });
 
   window.qgenCheckedIds = function () { return kept.map(function (k) { return k[0]; }); };
-  //every one of a list at once, on every page (a list shown 20 at a time: "Check all 57"; the owner,
+  //every one of a list at once, on every page (a list shown a page at a time: "Check all 57"; the owner,
   //2026-10-23): pairs of [id, name]
   window.qgenCheckMany = function (pairs, on) {
     pairs.forEach(function (p) {

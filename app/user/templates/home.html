@@ -51,7 +51,8 @@
     {% if recent %}
       <ul class="dash-list">
       {% for cq in recent %}
-        <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+        {#- (the quiz's name opens the same place as its eye icon: the owner, 2026-10-23) #}
+        <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”"><strong>“{{ cq.vquiz.title }}”</strong></a></span>
           {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
           {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">In progress</span>{% endif %}
           <span class="small muted">{{ cq.compdate|when }}</span>

@@ -283,7 +283,6 @@ def move_to_folder():
     return _folder_done('Moved “{}” to {}.'.format(what, where), moved=moved)
 
 #Home's "Just finished" (was "Recently completed"): how far back, and how many at most
-RECENT_DAYS, RECENT_MAX = 14, 10
 #how many of the latest handed-in quizzes My quizzes lists at the top
 LATEST_FINISHED = 3
 #My quizzes ?show=: Home's counters open it showing only these (the page otherwise looks as usual)
@@ -304,10 +303,10 @@ def home():
     soon = [cq for cq in waiting if cq.closes_at and now <= cq.closes_at <= now + tuning.due_soon()]
     have = awards.earned(current_user)
     #handed in during the last two weeks, newest first (at most 10); being graded included
-    since = now - timedelta(days=RECENT_DAYS)
+    since = now - timedelta(days=tuning.get('recent_days'))
     recent = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate and cq.compdate >= since),
-                    key=lambda cq: cq.compdate, reverse=True)[:RECENT_MAX]
-    return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon, recent=recent, recent_days=RECENT_DAYS,
+                    key=lambda cq: cq.compdate, reverse=True)[:tuning.get('recent_max')]
+    return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon, recent=recent, recent_days=tuning.get('recent_days'),
                            todo=sum(1 for cq in waiting if cq.status == 'new'),
                            started=sum(1 for cq in current_user.cquizzes if cq.status in ('started', 'review')),
                            awards=have, to_earn=awards.still_to_earn(current_user, have))

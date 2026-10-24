@@ -71,14 +71,13 @@ def _home(now):
     "due soon" and "recently completed" now, so the page moves on as time passes."""
     from app import tuning
     from app.qgen.models import CQuiz
-    from app.user.routes import RECENT_DAYS
     rows, quizzes = _attempts(CQuiz.query.filter_by(assignee=current_user.id), now)
     q = CQuiz.query.filter_by(assignee=current_user.id)
     soon = [r[0] for r in q.filter(CQuiz.completed.is_(False), CQuiz.needs_review.is_(False),
                                    CQuiz.closes_at >= now, CQuiz.closes_at <= now + tuning.due_soon())
             .with_entities(CQuiz.id).order_by(CQuiz.id)]
     recent = [r[0] for r in q.filter(db.or_(CQuiz.completed.is_(True), CQuiz.needs_review.is_(True)),
-                                     CQuiz.compdate >= now - timedelta(days=RECENT_DAYS))
+                                     CQuiz.compdate >= now - timedelta(days=tuning.get('recent_days')))
               .with_entities(CQuiz.id).order_by(CQuiz.id)]
     return rows, quizzes, soon, recent
 

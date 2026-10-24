@@ -45,7 +45,7 @@
     //server, data-total and data-loose, so the tabs show at once instead of after a long list has
     //all arrived, a second on Problems; the owner, 2026-10-21)
     var known = early && box.dataset.total !== undefined;
-    //(a list shown 20 at a time has only its page's rows: the counts come from the server then too, data-total and data-loose)
+    //(a list shown a page at a time has only its page's rows: the counts come from the server then too, data-total and data-loose)
     var serverCounts = 'paged' in box.dataset && box.dataset.total !== undefined && box.dataset.loose !== undefined;
     function allCount() { return known || serverCounts ? +box.dataset.total : weigh(items()); }
     var loose = known || serverCounts ? +box.dataset.loose : weigh(items().filter(function (el) { return !inSome[keyOf(el)]; }));
@@ -103,7 +103,7 @@
     //folder, whatever was open last
     var urlTab = 'urlTab' in box.dataset ? new URLSearchParams(location.search).get('tab') : null;
     if (urlTab) chosen = urlTab;
-    //a list shown 20 at a time (data-paged, app/paging.py; the owner, 2026-10-23): the server sent just the
+    //a list shown a page at a time (data-paged, app/paging.py; the owner, 2026-10-23): the server sent just the
     //folder shown (the side list's folders are links to their own pages), so there's nothing to narrow
     //here, and only the Checked folder (?checked=, data-start) is ever "chosen"
     var paged = 'paged' in box.dataset;

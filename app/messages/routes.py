@@ -13,7 +13,7 @@ from . import services as M
 from .models import (Message, NOT_NOTICE, IS_NOTICE, for_teacher, unread_for_student, unread_for_teachers,
                      unread_notices_for_student, unread_notices_for_teachers, seen_by, cleared_by,
                      unread_messages_for_teacher, own_notices, teacher_notices, unread_teacher_notices)
-from app.qgen.models import new_quizzes, quiz_counts
+from app.qgen.models import new_quizzes, quiz_counts, quiz_dots
 
 
 # ---------------------------------------------------------------- teachers
@@ -481,12 +481,13 @@ def poll():
         latest_id = '{}-{}'.format(latest_id, newest_staff.id if newest_staff else 0)
         if new_staff and (new_msg is None or new_staff.created >= new_msg.created):
             msg_preview = staff_preview(new_staff)
+    dots = quiz_dots(current_user.id)  # (new, in progress, due soon: once, for the dots, the tab and the count)
     return jsonify(unread=unread, notices=notices,
                    latest=latest_id, latest_notice=latest_notice.id if latest_notice else 0,
                    message_preview=msg_preview, notice_preview=preview(new_notice),
                    messages_state=messages_state(), notices_state=notices_state(),
                    watch=live.state(request.args.get('watch')), review=review_waiting(), online=online_now(),
-                   quizzes=new_quizzes(current_user.id), tab=quiz_counts(current_user.id))
+                   quizzes=dots[0] + dots[1], tab=list(dots[:2]), dots=list(dots))
 
 
 def online_now():

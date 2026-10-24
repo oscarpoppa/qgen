@@ -24,7 +24,7 @@ window.qgenHideRow = function (row, key, hide) {
     var input = bar.querySelector('input[type=search]');
     if (!input || bar.dataset.ready) return;
     bar.dataset.ready = '1';
-    //a list shown 20 at a time (app/paging.py; the owner, 2026-10-23): the words typed go to the server,
+    //a list shown a page at a time (app/paging.py; the owner, 2026-10-23): the words typed go to the server,
     //which sends the page of matches; the count is the server's (data-matches), no row is hidden here
     var paged = 'paged' in bar.dataset;
     if (paged) bar.qgenFilter = function () { return +bar.dataset.matches || 0; };

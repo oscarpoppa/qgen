@@ -52,7 +52,7 @@
   <div class="subject-side">
   <div class="subject-new-inline">
     <label for="new-subject-inline">{{ 'Or a new folder' if all_subjects else 'A new folder' }}:</label>
-    <input id="new-subject-inline" name="new_subject" maxlength="64" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
+    <input id="new-subject-inline" name="new_subject" maxlength="{{ tuning.get('folder_name') }}" value="{{ new_subject_name }}" placeholder="e.g. Algebra">
   </div>
   {# where the new folder will be made, said as it's typed: inside the one folder checked, at the
      top with none (the owner, 2026-10-16) #}

@@ -234,7 +234,7 @@
     var none = document.querySelector('.filter-none');
     //(only for the name and Show filters: an empty folder says so itself, folderfilter.js)
     if (none) none.hidden = !active || itemBoxes.some(function (d) { return !d.hidden; });
-    //(a list shown 20 at a time: the count is the server's, all the pages' worth; app/paging.py)
+    //(a list shown a page at a time: the count is the server's, all the pages' worth; app/paging.py)
     if ('paged' in resultsBar.dataset) return +resultsBar.dataset.matches || 0;
     return itemBoxes.filter(function (d) { return !d.hidden; }).length;
   };

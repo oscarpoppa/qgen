@@ -521,7 +521,6 @@
       if (!res) return;
       var counts = [['.nav-unread', res.unread], ['.nav-notices', res.notices]];
       if (typeof res.review === 'number') counts.push(['.nav-review', res.review]);  // teachers: Grading
-      if (typeof res.quizzes === 'number') counts.push(['.nav-quizzes', res.quizzes]);  // not done yet, under My quizzes
       if (typeof res.online === 'number') {  // teachers: who's online (always shown, never hidden)
         document.querySelectorAll('.nav-online').forEach(function (b) { b.textContent = res.online; });
       }
@@ -530,7 +529,6 @@
           b.textContent = pair[1];
           b.hidden = !pair[1];
           if (pair[0] === '.nav-review') b.setAttribute('aria-label', pair[1] + ' waiting for grading');
-          if (pair[0] === '.nav-quizzes') b.setAttribute('aria-label', pair[1] + ' to do');
         });
       });
       if (welcome) {
@@ -538,6 +536,17 @@
         welcomeBack(isOpen('messages') ? 0 : res.unread, isOpen('notices') ? 0 : res.notices);
       }
       if (res.tab) tabDots(res.tab[0], res.tab[1]);
+      //the small circles by the name: new (gold), in progress (blue), due soon (red), each only above 0
+      if (res.dots) {
+        document.querySelectorAll('.nav-dots').forEach(function (box) {
+          box.setAttribute('aria-label', res.dots[0] + ' new, ' + res.dots[1] + ' in progress, ' + res.dots[2] + ' due soon');
+          box.querySelectorAll('[data-dot]').forEach(function (d) {
+            var n = res.dots[+d.dataset.dot];
+            d.textContent = n; d.hidden = !n;
+            d.title = n + [' new', ' in progress', ' due soon'][+d.dataset.dot];
+          });
+        });
+      }
 
       [['messages', res.latest, res.message_preview, res.unread, res.messages_state],
        ['notices', res.latest_notice, res.notice_preview, res.notices, res.notices_state]].forEach(function (x) {

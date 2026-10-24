@@ -1,14 +1,12 @@
 {% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {% from "_macros.html" import post_button with context %}
-{# the Dashboard's unfinished scans (the owner, 2026-10-18): a small chip beside the heading,
-   with a thin bar while a page is being read; it opens a pop-over with each scan, its progress
-   and Continue. Kept current by static/js/scanprogress.js while a page is being read. #}
+{# the Dashboard's Scanner card's rows (the owner, 2026-10-23; it was a chip with a pop-over): each unfinished scan,
+   its progress and its icons. Kept current by static/js/scanprogress.js while a page is being read. #}
 {% macro scan_row(x) %}{% set j = x.job %}
     <div class="scan-progress-row">
-      {#- (opens once every page is read; a stopped one still opens: the owner, 2026-10-22) #}
-      {%- if x.kind in ('reading', 'paused') %}<span class="scan-pop-name muted" title="Opens when every page is read"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></span>
-      {%- else %}<a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>{% endif %}
-      <div class="progress-bar" role="progressbar" aria-label="Pages read in “{{ j.name }}”" aria-valuemin="0" aria-valuemax="{{ x.total }}" aria-valuenow="{{ x.done }}"><span style="width: {{ (100 * x.done / x.total) if x.total else 0 }}%"></span>{% if x.failed %}<span class="failed" style="width: {{ 100 * x.failed / x.total }}%"></span>{% endif %}</div>
+      {#- (the name opens the scan's page: its draft, or while it's being read its progress; the owner, 2026-10-23) #}
+      <a class="name-link scan-pop-name" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="{{ 'See how far “' ~ j.name ~ '” has got' if x.kind in ('reading', 'paused') else 'Go on checking “' ~ j.name ~ '”' }}"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""><span class="scan-pop-label">{{ j.name }}</span></a>
+      <div class="progress-bar" role="progressbar" aria-label="Pages read in “{{ j.name }}”" aria-valuemin="0" aria-valuemax="{{ x.total }}" aria-valuenow="{{ x.done }}"><span style="width: {{ (100 * x.done / x.total) if x.total else 0 }}%"></span>{% if x.kind == 'reading' and x.total %}<span class="scan-chip-now" style="width: {{ 100 / x.total }}%"></span>{% endif %}{% if x.failed %}<span class="failed" style="width: {{ 100 * x.failed / x.total }}%"></span>{% endif %}</div>
       {#- each scan's kind, with its mark (the owner, 2026-10-19) #}
       <span class="small muted nowrap">{% include '_scan_kind.html' %}{% if x.from_folder %} · {{ icon('folder') }} “{{ x.from_folder }}”{% endif %}{{ scan_working(x, bar=false) }}{% if x.by %}<br>Started by {{ x.by }}{% endif %}</span>
       {#- (a row's controls are bare icons, the words in their tooltips; opening a scan to check it is
@@ -16,31 +14,7 @@
       {{ scan_controls(x, 'dashboard') }}
     </div>
 {% endmacro %}
-{#- (scans put away: never in the pop-over nor on the chip, only on Scan workbook pages; the owner, 2026-10-21) #}
+{#- (scans put away: never here, only on Scan workbook pages; the owner, 2026-10-21) #}
 {%- set scans = (scans or [])|rejectattr('put_away')|list %}
-{% if scans %}
-{%- set busy = scans|selectattr('reading')|list %}
-{%- set total = scans|sum(attribute='total') %}{% set done = scans|sum(attribute='done') %}
-<button type="button" class="badge scan-chip" aria-expanded="false" aria-controls="scan-pop" title="Scanner: your scans that aren’t saved yet">
-  {#- the page being read, else the newest scan's first page, as a tiny picture (the owner, 2026-10-18) #}
-  {%- set lead = busy[0] if busy else scans[0] %}
-  <img class="scan-chip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=lead.job.id, n=lead.now or 1) }}" alt="">
-  {#- labeled as the scanner's, and said with marks (the owner, 2026-10-19): while reading, the page;
-      then how many of each kind: ready to check (green check mark), paused, stopped on a page that
-      couldn't be read, and drafts kept #}
-  {%- set kinds = scans|map(attribute='kind')|list %}
-  <span class="scan-chip-label">Scanner</span>
-  {%- if busy and busy[0].now %} reading page {{ busy[0].now }} of {{ busy[0].total }}…{% if busy[0].from_folder %} <span class="scan-chip-folder" title="From the folder “{{ busy[0].from_folder }}”">{{ icon('folder') }}</span>{% endif %}{% endif %}
-  {%- set n = kinds|select('equalto', 'ready')|list|length %}{% if n %} <span class="scan-chip-done" title="{{ n }} ready to check">✓ {{ n }}</span>{% endif %}
-  {%- set n = kinds|select('equalto', 'paused')|list|length %}{% if n %} <span class="scan-chip-wait" title="{{ n }} paused">{{ icon('lc-pause') }} {{ n }}</span>{% endif %}
-  {%- set n = kinds|select('equalto', 'stopped')|list|length %}{% if n %} <span class="scan-chip-stopped" title="{{ n }} stopped: a page couldn’t be read">{{ icon('lc-alert') }} {{ n }}</span>{% endif %}
-  {%- set n = kinds|select('equalto', 'draft')|list|length %}{% if n %} <span class="scan-chip-draft" title="{{ n }} draft{{ '' if n == 1 else 's' }} you kept">{{ icon('lc-pencil') }} {{ n }}</span>{% endif %}
-  {#- (the page being read moves, so the bar shows it's working even before a page is done) #}
-  {%- if busy %}<span class="scan-chip-bar" aria-hidden="true"><span style="width: {{ (100 * busy[0].done / busy[0].total) if busy[0].total else 0 }}%"></span><span class="scan-chip-now" style="width: {{ (100 / busy[0].total) if busy[0].total else 100 }}%"></span></span>{% endif %}
-</button>
-<div class="card scan-pop" id="scan-pop" hidden>
-  {#- ("Current", not "Unfinished": a scan read all the way is in it too, the owner 2026-10-19) #}
-  <h2>Current scans</h2>
-  {% for x in scans %}{{ scan_row(x) }}{% endfor %}
-</div>
-{% endif %}
+{% if scans %}{% for x in scans %}{{ scan_row(x) }}{% endfor %}
+{% else %}<p class="muted small">No scans waiting.</p>{% endif %}

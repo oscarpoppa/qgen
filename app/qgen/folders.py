@@ -6,13 +6,23 @@ the Archive (a teacher can bring them back)."""
 from app import db
 from .models import QuizFolder, QuizPlacement, CQuiz
 
-MAX_NAME = 64
-MAX_DEPTH = 6  # folders inside folders, at most this many levels
 
 
 class FolderError(ValueError):
     """Can't do it, worded for people."""
 
+
+
+def _max_name():
+    """Longest folder name (Settings > Technical settings > Limits; the database column holds 64)."""
+    from app import tuning
+    return tuning.get('folder_name')
+
+
+def _max_depth():
+    """Folders inside folders, at most this many levels (a setting)."""
+    from app import tuning
+    return tuning.get('folder_depth')
 
 def folders_of(user):
     return QuizFolder.query.filter_by(owner_id=user.id).order_by(QuizFolder.name, QuizFolder.id).all()
@@ -35,8 +45,8 @@ def _clean_name(name):
     name = ' '.join((name or '').split())
     if not name:
         raise FolderError('Please give the folder a name.')
-    if len(name) > MAX_NAME:
-        raise FolderError('Please keep folder names under {} characters.'.format(MAX_NAME))
+    if len(name) > _max_name():
+        raise FolderError('Please keep folder names under {} characters.'.format(_max_name()))
     return name
 
 
@@ -57,8 +67,8 @@ def _height(user, f):
 
 def create_folder(user, name, parent_id=None):
     parent = _folder(user, parent_id)
-    if parent is not None and _depth(parent) >= MAX_DEPTH:
-        raise FolderError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+    if parent is not None and _depth(parent) >= _max_depth():
+        raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
     f = QuizFolder(owner_id=user.id, parent_id=parent.id if parent else None, name=_clean_name(name))
     db.session.add(f)
     db.session.commit()
@@ -194,8 +204,8 @@ def move_folder(user, folder_id, to_id):
             if up.id == f.id:
                 raise FolderError('A folder can\'t go inside itself.')
             up = db.session.get(QuizFolder, up.parent_id) if up.parent_id else None
-        if _depth(target) + _height(user, f) > MAX_DEPTH:
-            raise FolderError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+        if _depth(target) + _height(user, f) > _max_depth():
+            raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
     f.parent_id = target.id if target else None
     db.session.commit()
     return target

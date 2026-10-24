@@ -524,7 +524,9 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 @media (max-width: 960px) { .editor { grid-template-columns: minmax(0, 1fr); } .editor > .helper { position: static; max-height: none; order: -1; } }
 .hints { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .hint { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; font-size: var(--fs-sm); padding: 8px 10px; border-radius: var(--r); background: var(--surface-2); }
-.hint > span:nth-child(2) { flex: 1 1 180px; }
+.hint { display: grid; grid-template-columns: 1.2em minmax(0, 1fr); gap: 6px 8px; }  /* (the mark, then the words; each choice under the words, all the same width and left edge: the owner, 2026-10-23) */
+.hint > span:nth-child(2) { flex: none; }
+.hint > .btn { grid-column: 2; justify-self: start; min-width: 9rem; justify-content: center; }
 .hint-icon { font-weight: 800; width: 1.2em; text-align: center; }
 .hint-error { background: var(--bad-soft); } .hint-error .hint-icon { color: var(--bad); }
 .hint-warn { background: var(--warn-soft); } .hint-warn .hint-icon { color: var(--warn); }
@@ -1002,9 +1004,6 @@ dialog.folder-dialog p { margin-bottom: 12px; }
 /* the open folder's contents: no box around them (that took width), just a line down the left
    in the open button's color, so it's clear where they end */
 
-.quiz-folder-label { margin: -4px 0 6px; }
-.quiz-folder-label a { color: var(--muted); text-decoration: none; }
-.quiz-folder-label a:hover { text-decoration: underline; }
 .move-form { margin-top: 8px; }
 .move-form select { width: auto; max-width: 100%; padding: 2px 6px; font-size: var(--fs-sm); }
 .quiz-card > summary[data-drag] { touch-action: auto; }
@@ -2960,17 +2959,12 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 .scan-reuse:has(input:checked) .scan-reuse-note { text-decoration: line-through; opacity: .6; }
 
 /* the Dashboard's unfinished scans: a chip beside the heading and its pop-over (the owner, 2026-10-18) */
-#scan-progress-box { position: relative; align-self: center; }
-.scan-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid var(--border); font: inherit; font-size: var(--fs-sm); }
-.scan-chip:hover { background: var(--surface-2); }
 .scan-chip-bar { display: inline-block; width: 48px; height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .scan-chip-bar { display: inline-flex; }
 .scan-chip-bar > span { display: block; height: 100%; background: var(--accent); }
 .scan-chip-bar > .scan-chip-now { background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
 @keyframes scan-chip-now { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .scan-chip-bar > .scan-chip-now { animation: none; opacity: .5; } }
-.scan-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: min(560px, calc(100vw - 32px)); box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.35)); }
-.scan-pop h2 { margin: 0 0 8px; font-size: var(--fs-md); }
 .scan-progress-row { display: grid; grid-template-columns: minmax(8rem, 13rem) minmax(5rem, 1fr) auto auto; align-items: center; gap: 6px 12px; padding: 4px 0; }
 /* (the name with its picture stays in its own column: a long one is cut short with "…", never under the bar) */
 .scan-progress-row .scan-pop-name { min-width: 0; overflow: hidden; }
@@ -2979,7 +2973,7 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 .scan-progress-row .progress-bar { display: flex; }
 .scan-progress-row .progress-bar > span.failed { background: var(--bad); }
 @media (max-width: 599px) { .scan-progress-row { grid-template-columns: 1fr auto; } .scan-progress-row .progress-bar { grid-column: 1 / -1; grid-row: 2; } }
-.scan-progress-row .btn-row { flex-wrap: nowrap; gap: 2px; }
+.scan-progress-row .btn-row { flex-wrap: nowrap; gap: 6px; }
 
 /* the Dashboard's boxes, until they're in their places (static/js/masonry.js) */
 .dash-settling { visibility: hidden; }
@@ -3008,25 +3002,16 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-t
 .scan-row-name > .scan-row-thumb { flex: none; }
 .scan-row-name > .scan-row-thumb .scan-thumb { margin-right: 0; }
 .scan-progress-list, .scan-unread { padding-left: 0; list-style: none; }
-.scan-chip-thumb { height: 18px; width: auto; max-width: 18px; object-fit: cover; object-position: top; border-radius: 0; background: #fff; }
 .scan-pop-name { display: inline-flex; align-items: center; min-width: 0; }
 .scan-pop-name .scan-thumb { height: 32px; max-width: 32px; }
-@media (max-width: 599px) { .scan-pop { position: fixed; left: 16px; right: 16px; top: 120px; width: auto; } }
 /* an answer typed where the page prints "???": a box drawn there, over the question marks (the owner, 2026-10-18) */
 .page-quiz .pq-bare .pq-input { border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
 .page-quiz .pq-inline .pq-input { background: var(--pq-paper, #fff); border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
 /* a question under the page keeps its lines (a puzzle written line by line) */
 .qtext { white-space: pre-line; }
-.scan-chip-done { color: var(--ok, #2e9d5b); font-weight: 700; }
 .scan-done-thumb { height: 64px; max-width: 64px; }
 /* the scanner chip: room after the heading, and its label (the owner, 2026-10-19) */
-#scan-progress-box { margin-left: 14px; }
-.scan-chip-label { font-weight: 700; }
-.scan-chip-wait { color: var(--warn, #b7791f); font-weight: 600; }
 /* the scans' other kinds: stopped on a page that couldn't be read, and drafts kept (the owner, 2026-10-19) */
-.scan-chip-stopped { color: var(--bad); font-weight: 600; }
-.scan-chip-draft { color: var(--accent-text, var(--accent)); font-weight: 600; }
-.scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.125em; }
 /* a picked lettered choice ("b. Red"): a pencil-thin circle around its letter, not over it (the owner, 2026-10-19) */
 .page-quiz .pq-choice input:checked + .pq-tick.pq-letter::after { width: 100%; border-width: 0.22cqw; }
 .scan-drop { cursor: pointer; }
@@ -3043,7 +3028,6 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-t
 .scan-drop-thumb img, .scan-drop-pdf { width: 64px; height: 84px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
 .scan-drop-pdf { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #b42318; font-size: var(--fs-sm); }
 .scan-drop-thumb figcaption { font-size: var(--fs-xs); color: var(--muted); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scan-chip-folder { display: inline-flex; color: var(--muted); }
 
 /* a quiz made from scanned pages: a small picture of each page, shown large in a pop-over when
    clicked (templates/_page_thumbs.html, js/pagezoom.js; the owner, 2026-10-19) */
@@ -3431,17 +3415,19 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .pager-top .pager { margin: 0; flex-wrap: nowrap; justify-content: flex-end; }
 @media (max-width: 640px) { .pager-top { margin-left: 0; width: 100%; padding: 6px 0 0; } .pager-top .pager { justify-content: flex-start; flex-wrap: wrap; } }
 .pager-top { display: inline-flex; align-items: center; gap: 8px; }
-.pager-check-all { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.pager-check-all { display: inline-flex; flex-direction: row-reverse; align-items: center; gap: 4px; cursor: pointer; }  /* (the words on the box's left, so a longer number grows leftward: the owner, 2026-10-23) */
 .pager-check-all[hidden] { display: none; }
 
 /* Scan workbook pages: the right-hand cards (Current scans, Stashed scans) get the larger share of the width, so each
    scan's row (picture, name, when, pages, icons) lays out on one line (the owner, 2026-10-23); stacked on a narrow window */
-.scan-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.scan-grid { grid-template-columns: minmax(320px, 7fr) minmax(0, 13fr); }  /* (the New scan cards a little narrower, the scans wider: the owner, 2026-10-23) */
 @media (max-width: 900px) { .scan-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* the stash's folders on Scan workbook pages (the owner, 2026-10-23): the folder list beside the scans, stacked when narrow */
 .stash-split { display: grid; grid-template-columns: minmax(140px, 28%) minmax(0, 1fr); gap: 14px; align-items: start; }
-@media (max-width: 700px) { .stash-split { grid-template-columns: minmax(0, 1fr); } }
+.stash-split.has-vsplit { grid-template-columns: var(--stash-side-w, minmax(140px, 28%)) 12px minmax(0, 1fr); column-gap: 4px; }
+.stash-split .stash-bar { align-self: stretch; min-height: 120px; }
+@media (max-width: 700px) { .stash-split, .stash-split.has-vsplit { grid-template-columns: minmax(0, 1fr); } .stash-split .stash-bar { display: none; } }
 .stash-folders .side-list, .stash-sub { list-style: none; margin: 0; padding: 0; }
 .stash-sub { padding-left: 14px; }
 .stash-folders .side-link { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: var(--r-sm); color: var(--text); text-decoration: none; }
@@ -3449,11 +3435,65 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .stash-folders .side-link span:nth-of-type(1) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stash-tab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .stash-tab .btn-row { margin-left: auto; }
-ul.stash-pick { list-style: none; margin: 8px 0 12px; padding: 0; max-height: 40vh; overflow-y: auto; }
-ul.stash-pick li { padding: 4px 0; }
-ul.stash-pick label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
 /* a picker's bar between its folder list and the table beside it (static/js/splitter.js): in the gap between them,
    the full height of the list; hidden when the two are stacked (the owner, 2026-10-23) */
 .folder-filter[data-style="list"] > .pick-split { grid-column: 1; grid-row: 1 / -1; justify-self: end; align-self: stretch; width: 12px; margin-right: -12px; z-index: 2; min-height: 120px; }
 @media (max-width: 640px) { .folder-filter[data-style="list"] > .pick-split { display: none; } }
+
+/* the tab row's tools (Up, Assign a quiz to everyone...) and the pager both sit at the row's right end,
+   side by side, the tools first; never one in the middle (the owner, 2026-10-23) */
+.folder-tabs > .folder-filter-tools-now ~ .pager-top, .folder-tabs > .pager-top ~ .folder-filter-tools-now { margin-left: 12px; }
+.folder-tabs > .pager-top:has(~ .folder-filter-tools-now) { order: 2; margin-left: 12px; }
+.folder-tabs > .pager-top ~ .folder-filter-tools-now { order: 1; margin-left: auto; }
+.folder-tabs > .folder-filter-tools-now:has(~ .pager-top) { margin-left: auto; }
+
+/* a scan's icons are 40px apart (34px icons, 6px between) in the Scanner pop-over and the Current scans
+   table alike, with room before them from the progress text (the owner, 2026-10-23: they were jammed) */
+.scan-controls, .scan-progress-row .scan-controls { gap: 6px; }
+.scan-progress-row { column-gap: 16px; }
+
+/* the small circles by the name in the top bar (the owner, 2026-10-23): the same size and colors as the folder
+   list's, side by side; a hidden one takes no room */
+.nav-dots { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.nav-dots > .side-dot { border-radius: 999px; }
+.nav-dots > .side-dot[hidden] { display: none; }
+.nav-dots:not(:has(> .side-dot:not([hidden]))) { display: none; }
+/* a scan's kind marks (templates/_scan_kind.html): in the Scanner card and Current scans */
+.scan-chip-done { color: var(--ok, #2e9d5b); font-weight: 700; }
+.scan-chip-wait { color: var(--warn, #b7791f); font-weight: 600; }
+.scan-chip-stopped { color: var(--bad); font-weight: 600; }
+.scan-chip-draft { color: var(--accent-text, var(--accent)); font-weight: 600; }
+.scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.125em; }
+
+/* the page being read moves along its scan's bar, so the bar shows it's working even before a page is done (the owner, 2026-10-23: the shimmer the chip had) */
+.scan-progress-row .progress-bar > .scan-chip-now { background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .scan-progress-row .progress-bar > .scan-chip-now { animation: none; opacity: .5; } }
+/* in the Dashboard's Scanner card the row is two lines, so nothing is squeezed (the owner, 2026-10-23: the icons looked jammed):
+   the name, what it's doing and its icons on the first, the bar across the whole row under them */
+.dash-card .scan-progress-row { grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 20px; row-gap: 8px; }
+.dash-card .scan-progress-row .progress-bar { grid-column: 1 / -1; grid-row: 2; }
+.dash-card .scan-progress-row > .nowrap { white-space: nowrap; text-align: right; }
+.dash-card .scan-progress-row .scan-controls { margin-right: -4px; }
+/* a scan's icons never shrink, however narrow the row (a squeezed Continue was 8px wide and jammed against the next icon) */
+.scan-controls > * { flex: 0 0 auto; }
+
+/* the number boxes' Reset buttons in one column down Technical settings, whatever the unit's word (the critic, 2026-10-23) */
+.tech-input .tech-unit { display: inline-block; min-width: 6.5rem; }
+/* a stashed scan's icons on one line (five of them), like Current scans' */
+.stash-main td .btn-row.nowrap { flex-wrap: nowrap; }
+.stash-main td:last-child { white-space: nowrap; width: 1%; }
+/* Current scans: the icons' column is as wide as its icons, so no empty space follows the last one */
+#scan-current td:last-child .btn-row, #scan-current .scan-controls, .stash-main td:last-child .btn-row { flex-wrap: nowrap; }
+/* both scan tables: the Workbook column takes the room, the columns after it are only as wide as what's in them and sit at the right
+   (the owner, 2026-10-23: a lot of room was left beside the rightmost columns) */
+#scan-current table th:nth-child(n+2), #scan-current table td:nth-child(n+2),
+.stash-main table th:nth-child(n+2), .stash-main table td:nth-child(n+2) { width: 1%; white-space: nowrap; padding-left: 20px; }
+/* a tight list (the window under about 1450px wide): a little less room inside each cell, so the icons at the row's end aren't cut off */
+@container listarea (max-width: 1100px) {
+  .folder-filter-list table.even-cols th, .folder-filter-list table.even-cols td { padding-left: 6px; padding-right: 6px; }
+  /* (and a row's many icons go four to a line, as the same rule at 1080 does, so the table fits its panel) */
+  .folder-filter-list table.even-cols td.actions { white-space: normal; width: 11.5rem; }
+}
+/* a column's icons end on one vertical line, rows with fewer icons too (the owner, 2026-10-23: everything stays vertically aligned) */
+#scan-current td:last-child .btn-row, .stash-main td:last-child .btn-row { justify-content: flex-end; }

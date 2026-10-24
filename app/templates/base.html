@@ -91,7 +91,10 @@
         <a class="trail-btn" id="trail-back" role="button" aria-disabled="true" aria-label="Back" title="Nothing to go back to">{{ icon('lc-arrow-left') }}</a>
         <a class="trail-btn" id="trail-fwd" role="button" aria-disabled="true" aria-label="Forward" title="Nothing to go forward to">{{ icon('lc-arrow-right') }}</a></span>{% endif %}
       {% if current_user.is_authenticated %}
-        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}{% set nav_new_quizzes = new_quiz_count() %}
+      {#- the quizzes for you to do as small circles, gold new / blue in progress / red due soon, each with its
+          count and shown only above 0 (the owner, 2026-10-23: they replaced the red number; messages.js keeps them current) #}
+      {% macro quiz_dots_here(tip='Quizzes for you to do') %}{% set d = nav_dots() %}<span class="nav-dots" title="{{ tip }}" aria-label="{{ d[0] }} new, {{ d[1] }} in progress, {{ d[2] }} due soon"><span class="side-dot dot-new" data-dot="0" title="{{ d[0] }} new"{% if not d[0] %} hidden{% endif %}>{{ d[0] }}</span><span class="side-dot dot-started" data-dot="1" title="{{ d[1] }} in progress"{% if not d[1] %} hidden{% endif %}>{{ d[1] }}</span><span class="side-dot dot-due" data-dot="2" title="{{ d[2] }} due soon"{% if not d[2] %} hidden{% endif %}>{{ d[2] }}</span></span>{% endmacro %}
+        {% set nav_unread = unread_messages() %}{% set nav_notices = unread_notices() %}
         <div class="dock-buttons">
           {% if current_user.is_admin %}{% set nav_online = online_count() %}
           {# who's on the site (teachers only); the list loads when opened #}
@@ -110,7 +113,7 @@
         </div>
       {% endif %}
       <button type="button" class="btn btn-secondary btn-sm nav-toggle{{ ' nav-few-toggle' if current_user.is_authenticated and not current_user.is_admin }}" aria-controls="nav" aria-expanded="false" title="Show or hide the menu"
-              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}<span class="count nav-quizzes" title="Quizzes for you to do (under My quizzes)" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</button>
+              onclick="var n=document.getElementById('nav');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">Menu{% if current_user.is_authenticated and current_user.is_admin %}{% set nav_review_waiting = review_count() %}<span class="count nav-review" title="Waiting for grading (under Grading)" aria-label="{{ nav_review_waiting }} waiting for grading" {% if not nav_review_waiting %}hidden{% endif %}>{{ nav_review_waiting }}</span>{% endif %}{% if current_user.is_authenticated %}{{ quiz_dots_here('Quizzes for you to do (under My quizzes)') }}{% endif %}</button>
       {# the menu marks the page you're on (and the drop-down it's under) #}
       {% set here = request.endpoint or '' %}
       {% macro item(endpoint, label, also=(), tip=none) -%}
@@ -126,7 +129,7 @@
           {% if not current_user.is_admin %}
           {{ item('user.home', 'Home', tip='Your start page: quizzes to do and your awards') }}
           {% call item('user.mypage', 'My quizzes', tip='All the quizzes your teacher gave you, in folders') %}
-            <span class="count nav-quizzes" title="Quizzes for you to do" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
+            {{ quiz_dots_here('Quizzes for you to do') }}{% endcall %}
           {% endif %}
           {% if current_user.is_admin %}
             <details class="menu">
@@ -183,12 +186,12 @@
           <div class="nav-right">
             <details class="menu">
               <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') or (current_user.is_admin and here in ('user.home', 'user.mypage')) }}" title="{{ 'Your own quizzes, your profile, password and logging out' if current_user.is_admin else 'Your profile, password and logging out' }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}
-                {%- if current_user.is_admin %}<span class="count nav-quizzes" title="Quizzes for you to do (My quizzes, in this menu)" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endif %}</summary>
+                {%- if current_user.is_admin %}{{ quiz_dots_here('Quizzes for you to do (My quizzes, in this menu)') }}{% endif %}</summary>
               <div class="menu-list">
                 {% if current_user.is_admin %}
                 {# a teacher's own quizzes (teachers take quizzes too, and see them as students do) #}
                 {% call item('user.mypage', 'My quizzes', tip='Quizzes given to you, to take like a student') %}
-                  <span class="count nav-quizzes" title="Quizzes for you to do" aria-label="{{ nav_new_quizzes }} to do" {% if not nav_new_quizzes %}hidden{% endif %}>{{ nav_new_quizzes }}</span>{% endcall %}
+                  {{ quiz_dots_here('Quizzes for you to do') }}{% endcall %}
                 {{ item('user.home', 'Home', tip='Your student start page: quizzes to do and your awards') }}
                 {% endif %}
                 {{ item('user.profile', 'My profile', tip='Change your nickname and picture') }}

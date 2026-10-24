@@ -56,6 +56,38 @@
     li.style.setProperty('--act-r', Math.round(li.getBoundingClientRect().right - mid) + 'px');
   }
 
+  //an open row's table (Grading's students, a problem's answers) takes its column edges from the
+  //list's own columns, so Handed in sits under Attempts, To grade under To grade (the owner, 2026-10-23:
+  //"line up in a columnar fashion across the site"); a stacked (phone) list keeps its own widths
+  function alignColumns(d) {
+    var outer = d.closest('table'), inner = d.querySelector(':scope > .answer-rows > table');
+    if (!outer || !inner || !d.open || !d.offsetParent) return;
+    var oh = outer.querySelector(':scope > thead'), ih = inner.querySelectorAll(':scope > thead th');
+    var ot = oh ? oh.querySelectorAll('th') : [];
+    if (!oh || getComputedStyle(oh).display === 'none' || !ot.length || !ih.length) {
+      ih.forEach(function (th) { th.style.width = ''; });
+      return;
+    }
+    inner.style.tableLayout = 'fixed';
+    var n = ih.length, m = ot.length, start = ih[0].getBoundingClientRect().left;
+    var mapped = Math.min(n, m) - 1, edge = start;
+    for (var i = 0; i < n; i++) {
+      var w = '';
+      if (i < mapped) {
+        //(the words line up, not the cells' edges: a cell's own padding counts)
+        var next = ot[i + 1].getBoundingClientRect().left + (parseFloat(getComputedStyle(ot[i + 1]).paddingLeft) || 0) - (parseFloat(getComputedStyle(ih[i + 1]).paddingLeft) || 0);
+        w = Math.round(next - edge) + 'px'; edge = next;
+      }
+      else if (i === n - 1 && n >= m) w = Math.round(ot[m - 1].getBoundingClientRect().width) + 'px';
+      if (ih[i].style.width !== w) { ih[i].style.width = w; unsettled = true; }
+    }
+    //(the last column takes what's left, so a table wider than its fixed columns doesn't spread the extra over all of them)
+    var total = inner.getBoundingClientRect().width, used = 0;
+    for (var k = 0; k < n - 1; k++) used += parseFloat(ih[k].style.width) || 0;
+    var rest = Math.max(0, Math.round(total - used)) + 'px';
+    if (n - 1 === mapped && ih[n - 1].style.width !== rest) { ih[n - 1].style.width = rest; unsettled = true; }
+  }
+
   //an open row's contents (after its heading part) on their own shade, end to end across the row
   function foldBody(d) {
     var row = d.closest('tr');
@@ -80,6 +112,7 @@
     document.querySelectorAll('td.attempt-buttons').forEach(function (td) { level(td.closest('tr')); });
     document.querySelectorAll(LINED).forEach(stretch);
     document.querySelectorAll('tr > td > details.row-fold[open]').forEach(foldBody);
+    document.querySelectorAll('tr > td > details.row-fold[open]').forEach(alignColumns);
     document.querySelectorAll('ol.attempt-list > li, .result-group-head').forEach(underRowButton);
     if (unsettled && again < 3) { again++; soon(); } else again = 0;
   }

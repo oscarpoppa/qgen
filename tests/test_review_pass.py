@@ -554,7 +554,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     box = box[:box.index('</details>')]
     # the quiz's name is plain words; the student's name opens what the eye opens, their copy (the owner, 2026-10-22)
     #(the quiz's title opens their copy too: the owner, 2026-10-22)
-    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/take/{}"'.format(cq.id) in box and 'data-tip="Open the history of' not in box
+    assert '<span class="dash-quiz">“' in box and '<span class="dash-quiz"><a' not in box and 'data-tip="Open the history of' not in box
     assert '<a class="name-link person" href="/quiz/take/{}"'.format(cq.id) in box and 'href="/quiz/listuser/' not in box
     assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'aria-label="View"' in box
     assert '>Student page</a>' not in box
@@ -911,7 +911,7 @@ def test_new_folder_on_my_quizzes_and_the_student_page(app_db):
     # the New tab holds just it (static/js/folderfilter.js), and its card names its folder
     #(20 to a page, one folder at a time: the server sends just what's in New, the owner 2026-10-23)
     assert page.count('data-box="quiz:') == 1 and 'data-box="quiz:{}"'.format(fresh.id) in page and 'data-paged' in page
-    assert '>New: quizzes you haven’t started</h2>' in page and '</svg> Math</a>' in page
+    assert '>New: quizzes you haven’t started</h2>' in page and 'quiz-folder-label' not in page  # (no folder chip under a quiz's name: the owner, 2026-10-23)
     # still in its own folder
     assert 'Fresh' in sam.get('/mypage?folder={}'.format(folder.id)).data.decode()
     # the teacher's student page: a New folder button with the same quiz, and In progress beside it
@@ -1032,7 +1032,7 @@ def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
     #(the quiz's name is plain words; the student's name opens the hand-in, like the eye: the owner, 2026-10-22)
     row = page.split('<a class="name-link person" href="/quiz/take/{}"'.format(cq.id))[1].split('</li>')[0]
-    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/take/{}"'.format(cq.id) in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
+    assert '<span class="dash-quiz">“' in row and '<span class="dash-quiz"><a' not in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
     assert '<strong>sam</strong></a>' in row and 'href="/quiz/listuser/' not in row
     assert '>Student page</a>' not in row
 
@@ -1048,7 +1048,7 @@ def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(a
     page = teach.get('/dashboard').data.decode()
     #(the quiz's name is plain words; the student's name opens the hand-in to grade, like Grade: the owner, 2026-10-22)
     row = page.split('<a class="name-link person" href="/quiz/review/{}"'.format(cq.id))[1].split('</li>')[0]
-    assert '<span class="dash-quiz"><a class="name-link" href="/quiz/review/{}"'.format(cq.id) in row
+    assert '<span class="dash-quiz">“' in row and '<span class="dash-quiz"><a' not in row  # (plain words: the owner, 2026-10-23)
     assert 'href="/quiz/results/{}"'.format(vq.id) not in row and '>Student page</a>' not in row
     # and no "All N in Grading →" link on the card
     assert 'in Grading →' not in page
@@ -1428,7 +1428,7 @@ def test_teacher_menu_fits_one_line(app_db):
     more = top.split('>More</summary>')[1]
     for label in ('>Archive</a>', '>Upload files</a>', '>Pictures</a>', '>Other files</a>', '>Settings</a>'):
         assert label in more, label
-    assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="count nav-quizzes"' in name_menu.split('</summary>')[0]
+    assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="nav-dots"' in name_menu.split('</summary>')[0]
     student = no_titles(sam.get('/home').data.decode()).split('<nav class="nav')[1].split('<div class="nav-right">')[0]
     assert '>Home</a>' in student and 'My quizzes' in student and '>More</summary>' not in student
 

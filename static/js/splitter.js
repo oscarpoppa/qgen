@@ -88,6 +88,23 @@
     });
   });
 
+  //2b. the stash's folder list beside its scans, on Scan workbook pages (the owner, 2026-10-23): the same bar. Looked
+  //for again whenever something is added to the page, like the pickers' (the card can be redrawn)
+  function stashBar(box) {
+    var first = box.firstElementChild;
+    if (!first || box.querySelector(':scope > .stash-bar')) return;
+    box.classList.add('has-vsplit');
+    var bar = document.createElement('div');
+    bar.className = 'vsplit stash-bar';
+    first.insertAdjacentElement('afterend', bar);
+    divider(bar, 'qgen-stash-side-width', function () { return first.getBoundingClientRect().width; },
+      function (px) { if (px) root.style.setProperty('--stash-side-w', px + 'px'); else root.style.removeProperty('--stash-side-w'); },
+      function () { return 140; }, function () { return Math.min(480, box.getBoundingClientRect().width * 0.5); },
+      1, 'Make the folder list wider or narrower');
+  }
+  function stashBars() { document.querySelectorAll('.stash-split').forEach(stashBar); }
+  stashBars();
+
   //3. every picker's folder list, in a dialog or a card: a bar between it and the table beside it. The lists are
   //built when a dialog opens, so they're looked for again whenever something is added to the page
   function pickBar(box) {
@@ -103,7 +120,7 @@
       function () { return 170; }, function () { return Math.max(170, Math.min(480, box.getBoundingClientRect().width * 0.5)); },
       1, 'Make the folder list wider or narrower');
   }
-  function pickBars() { document.querySelectorAll('.folder-filter[data-style="list"]').forEach(pickBar); }
+  function pickBars() { document.querySelectorAll('.folder-filter[data-style="list"]').forEach(pickBar); stashBars(); }
   pickBars();
   if (window.MutationObserver) {
     var later = null;

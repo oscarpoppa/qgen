@@ -91,7 +91,7 @@
   {% call folders_page(fk, actions=head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
-      {#- one folder's rows, 20 at a time (app/paging.py): the side list's folders are links, each its own page #}
+      {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
       {% call named_box(fk, 'problem:', pg=pg) %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}

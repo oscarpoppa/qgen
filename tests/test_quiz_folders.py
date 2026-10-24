@@ -48,7 +48,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     assert sorted(cards(sam, 'none')) == ['Week 1', 'Week 2']  # an old address: All
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
-    assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and '</svg> Unit 1</a></p>' in all_page
+    assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and 'quiz-folder-label' not in all_page  # (no folder chip under a quiz's name: the owner, 2026-10-23)
     assert 'aria-current="page">{} All quizzes'.format(ico('folders')) in all_page
     import re
     assert re.search(r'aria-current="page">\s*<svg class="ico"[^>]*>.*?</svg> <span class="side-name">Unit 1',
@@ -120,15 +120,16 @@ def test_folders_inside_folders_and_removing_them(app_db):
 
 def test_how_deep_folders_go(app_db):
     app, db = app_db
-    from app.qgen import folders
+    from app import tuning
+    depth = tuning.get('folder_depth')
     sam = login(app, 'sam')
     parent = None
-    for n in range(folders.MAX_DEPTH):
+    for n in range(depth):
         r = sam.post('/mypage/folders', data={'name': 'L{}'.format(n), 'parent': parent or ''}, headers=FETCH).get_json()
         assert r['ok'], r
         parent = folder_id('L{}'.format(n), 'sam')
     assert sam.post('/mypage/folders', data={'name': 'too deep', 'parent': parent}, headers=FETCH).get_json()['error'] == \
-        'Folders can go only {} levels deep.'.format(folders.MAX_DEPTH)
+        'Folders can go only {} levels deep.'.format(depth)
     # nor by moving a folder with folders in it under another
     sam.post('/mypage/folders', data={'name': 'X'})
     sam.post('/mypage/folders', data={'name': 'Y', 'parent': folder_id('X', 'sam')})

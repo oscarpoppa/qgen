@@ -5,6 +5,7 @@ import copy
 import io
 import json
 import os
+import re
 import sys
 import types
 from types import SimpleNamespace
@@ -578,8 +579,9 @@ def test_errors_limits_and_retry(app_db, ai):
     job = job_of(db)
     page = json.loads(job.data)['pages'][0]
     assert page['state'] == 'error' and page['error'] == 'That photo is too blurry to read.'
-    html = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'That photo is too blurry to read.' in html and 'Read the rest' in html
+    #(the old yellow card with its Read the rest button is gone: the Helper says it, with Try again, 2026-10-23)
+    hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
+    assert any('That photo is too blurry to read.' in h['text'] and h['actions'][0]['label'] == 'Try again' for h in hints)
     assert AICall.query.filter_by(kind='scan', ok=False).count() == 1
     # QuizScan reads it, but the numbers call fails: left to read again, QuizScan's reading kept
     import anthropic
@@ -588,15 +590,15 @@ def test_errors_limits_and_retry(app_db, ai):
     page = json.loads(job_of(db).data)['pages'][0]
     assert page['state'] == 'error' and 'Couldn' in page['error'] and page['qs_reading']['title'] == 'Doubles'
     assert len(fakes.qs.calls) == 1
-    html = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'Couldn' in html and 'Read the rest' in html
+    hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
+    assert any('Couldn' in h['text'] for h in hints)
     # Read the rest: only the numbers are asked for again (QuizScan's reading isn't paid for twice)
     fakes = ai([QS_TIMES], [NUM_TIMES])
     assert teacher.post('/quiz/scan/{}/read'.format(job.id)).status_code == 302
     page = json.loads(job_of(db).data)['pages'][0]
     assert page['state'] == 'done' and page['title'] == 'Doubles' and len(page['items']) == 1
     assert not fakes.qs.calls and len(fakes.api.calls) == 1
-    assert 'Read the rest' not in teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert not [h for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1']
     # the hourly limit: a page needs room for its three AI calls (QuizScan's photo check and
     # reading, then the numbers)
     from datetime import datetime
@@ -612,7 +614,8 @@ def test_errors_limits_and_retry(app_db, ai):
     second = ScanJob.query.filter_by(name='Second').one()
     page = json.loads(second.data)['pages'][0]
     assert page['state'] == 'waiting' and 'in the last hour' in page['error'] and not fakes.qs.calls and not fakes.api.calls
-    assert 'Resume' in teacher.get('/quiz/scan/{}'.format(second.id)).data.decode()
+    #(the review page's yellow Resume card is gone: the waiting page is in the Helper with Try again, 2026-10-23)
+    assert any('in the last hour' in h['text'] for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
     # with room for two, it still waits; with room for three, it's read
     AICall.query.filter_by(kind='problem').limit(1).one().created = datetime(2000, 1, 1)
     db.session.commit()
@@ -1172,3 +1175,150 @@ def test_put_away_and_take_out(app_db, ai):
     db.session.commit()
     teacher.post('/quiz/scan/{}/put-away'.format(job.id))
     assert not json.loads(job_of(db).data).get('put_away') and ScanJob.query.count() == 1
+
+
+def test_finished_notice_and_row_say_why_pages_didnt_make_it(app_db, ai):
+    """The "scan finished" notice and the stopped scan's row say how many pages didn't make it and how many
+    took too long (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.messages.models import Message
+    from app.qgen import scan as SC
+    teacher = login(app, 'teach')
+    ai([QS_TIMES] * 3, [NUM_TIMES] * 3)
+    upload(teacher, [(picture(), 'p{}.png'.format(i)) for i in (1, 2, 3)])
+    job = job_of(db)
+    data = json.loads(job.data)
+    data['pages'][1] = {'n': 2, 'state': 'error', 'timed_out': True, 'error': 'too slow'}
+    data['pages'][2] = {'n': 3, 'state': 'error', 'error': 'blurry'}
+    job.data = json.dumps(data)
+    db.session.commit()
+    Message.query.delete()
+    SC._tell_done(job)
+    db.session.commit()
+    body = Message.query.order_by(Message.id.desc()).first().body
+    assert '1 of 3 pages are ready to check; 2 didn’t make it (1 took too long).' in body
+    page = teacher.get('/quiz/scan').data.decode()
+    assert 'Stopped: 2 pages didn’t make it (1 took too long)' in page
+
+
+def test_the_dashboard_has_a_scanner_card_not_a_chip(app_db, ai):
+    """The Dashboard's Scanner card (the owner, 2026-10-23): first, with its count; "No scans waiting." when
+    empty, a row for each scan otherwise; no chip or pop-over."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    html = teacher.get('/dashboard').data.decode()
+    assert 'id="scan-card"' in html and '>Scanner</h2>' in html and '0 scans' in html and 'No scans waiting.' in html
+    assert 'scan-chip"' not in html and 'id="scan-pop"' not in html
+    assert html.index('id="scan-card"') < html.index('id="dash-right-now"') and 'id="scan-card" data-elastic="scanner" data-elastic-dir="v" data-box="scanner" data-url' in html
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')])
+    html = teacher.get('/dashboard').data.decode()
+    assert '1 scan<' in html and 'scan-progress-row' in html and 'No scans waiting.' not in html
+    assert ' open' in html.split('id="scan-card"')[1].split('>')[0]
+    #(the workbook's name opens its scan page, even while it's waiting or being read; a bar's moving part shows while reading)
+    assert 'class="name-link scan-pop-name" href="/quiz/scan/{}"'.format(job_of(db).id) in html
+    assert teacher.get('/quiz/scan/progress').get_json()['count'] == '1 scan'
+
+
+def test_stashed_scans_can_be_dragged_onto_folders(app_db, ai):
+    """The stash's scans have drag handles and its folder list has drop places (static/js/scanstash.js), and the
+    folder card has the vertical bar (static/js/splitter.js) (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    teacher = login(app, 'teach')
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    SC.put_away(job)
+    teacher.post('/quiz/scan/folders/new', data={'name': 'Fractions'})
+    html = teacher.get('/quiz/scan').data.decode()
+    away = html.split('id="scan-away"')[1]
+    assert 'tr data-stash-drag data-url="/quiz/scan/{}/move"'.format(job.id) in away
+    assert 'data-stash-drop="all"' in away and 'data-stash-drop="main"' in away and re.search(r'data-stash-drop="\d+"', away)
+    assert 'class="stash-split"' in away and 'js/splitter.js' in html
+
+
+def _spread_photo():
+    """A photo-like picture of two facing pages: paper on a desk, each side with ruled lines of ink, and a shadow
+    down the spine in the middle, darkest at the fold."""
+    import numpy as np
+    from PIL import Image
+    h, w = 800, 1000
+    a = np.full((h, w), 214.0)                      # the desk
+    a[120:700, 80:920] = 238.0                      # the two pages
+    for x in range(480, 521):                       # the shadow: gradual, down the whole height of the pages
+        a[120:700, x] -= 60 * (1 - abs(x - 500) / 20.0)
+    for y in range(180, 640, 36):                   # lines of text on each page
+        a[y:y + 6, 120:450] = 70
+        a[y:y + 6, 560:880] = 70
+    im = Image.fromarray(a.astype('uint8')).convert('RGB')
+    buf = io.BytesIO()
+    im.save(buf, 'JPEG', quality=92)
+    buf.seek(0)
+    return buf
+
+
+def test_a_photo_of_two_pages_becomes_two_scan_pages(app_db, ai):
+    """A spread (two facing pages, a shadow down the spine) is cut at the spine into two pages, left then right,
+    each marked as from one photo (the owner, 2026-10-23); a single page isn't touched."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    ai([QS_TIMES] * 3, [NUM_TIMES] * 3)
+    upload(teacher, [(_spread_photo(), 'spread.jpg'), (picture(), 'single.png')])
+    data = json.loads(job_of(db).data)
+    assert [p.get('spread', False) for p in data['pages']] == [True, True, False] and len(data['pages']) == 3
+    from PIL import Image
+    from app.qgen import scan as SC
+    left, right = (Image.open(SC.full_file(job_of(db).id, n)) for n in (1, 2))
+    assert 400 < left.width < 600 and 400 < right.width < 600 and left.width + right.width == 1000
+
+
+def test_the_open_stash_folder_stays_open_when_the_page_redraws(app_db, ai):
+    """The scans page redraws its cards now and then (while a scan is read, or when something changes) by asking for
+    its own address: with ?stash=<folder> it must ask for that folder, or the list jumped back to All scans (the owner, 2026-10-23)."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    html = teacher.get('/quiz/scan?stash=1').data.decode()
+    assert "fetch(location.pathname + location.search" in html and "fetch(location.pathname, " not in html
+
+
+def test_single_pages_are_never_cut_in_two(app_db):
+    """A page that only looks like it could be two (a hard gray divider down the middle, a plain page, a soft shadow
+    along only one edge) stays one page (the owner, 2026-10-23)."""
+    import numpy as np
+    from PIL import Image
+    from app.qgen import spread
+    h, w = 800, 1000
+    plain = np.full((h, w), 238.0)
+    for y in range(180, 640, 36):
+        plain[y:y + 6, 120:880] = 70
+    divider = plain.copy()
+    divider[100:700, 497:503] = 120                      # a hard line, not a soft shadow
+    edge = plain.copy()
+    for x in range(0, 60):                               # shading along the left edge only
+        edge[:, x] -= 60 * (1 - x / 60.0)
+    for a in (plain, divider, edge):
+        assert spread.find(Image.fromarray(a.astype('uint8')).convert('RGB')) is None
+
+
+def test_the_stash_move_dialog_is_the_standard_folder_dialog(app_db, ai):
+    """A scan's Move dialog is the standard folder picker (put-dialog, rows drawn when it opens), and its Uncategorized row
+    ("top") moves a scan out of its folder (the owner, 2026-10-23)."""
+    app, db = app_db
+    from app.qgen.models import ScanFolder
+    from app.qgen import scan as SC
+    teacher = login(app, 'teach')
+    ai([QS_TIMES], [NUM_TIMES])
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    SC.put_away(job)
+    teacher.post('/quiz/scan/folders/new', data={'name': 'Fractions'})
+    fid = ScanFolder.query.filter_by(name='Fractions').one().id
+    html = teacher.get('/quiz/scan').data.decode()
+    dialog = html.split('id="stash-move"')[1].split('</dialog>')[0]
+    assert 'pick-dialog put-dialog' in html.split('id="stash-move"')[0].rsplit('<dialog', 1)[1] and 'data-folder-pick' in dialog
+    assert '[[{}, "Fractions", 1, "folder"]]'.format(fid) in dialog.replace('\n', '')
+    assert teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': str(fid)}).status_code == 302
+    assert job_of(db).folder_id == fid
+    assert teacher.post('/quiz/scan/{}/move'.format(job.id), data={'to': 'top'}).status_code == 302
+    assert job_of(db).folder_id is None

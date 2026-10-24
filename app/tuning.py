@@ -19,7 +19,7 @@ AI_MODELS = [('claude-opus-5', 'Claude Opus 5 (the one used so far)'),
              ('claude-sonnet-5-5', 'Claude Sonnet 5.5 (faster, about half the price)')]
 
 GROUPS = [('online', 'Online & refresh'), ('quizzes', 'Quizzes & messages'), ('scores', 'Score colors'),
-          ('ai', 'AI helper'), ('security', 'Sign-in & security')]
+          ('lists', 'Lists & pages'), ('scans', 'Scanning'), ('limits', 'Limits'), ('ai', 'AI helper'), ('security', 'Sign-in & security')]
 
 
 def _t(key, group, label, help, unit, default, low=None, high=None, choices=None):
@@ -67,6 +67,28 @@ TUNABLES = [
     _t('score_amber', 'scores', 'Amber from',
        'A score at least this high (and below green) shows amber; anything lower shows red.',
        '%', 50, 0, 100),
+    #(the owner, 2026-10-23: 35 instead of 20, and a setting)
+    _t('page_size', 'lists', 'Rows per page', 'How many rows a long list (Problems, Quizzes, People, the results pages...) shows on a page.',
+       'rows', 35, 10, 200),
+    _t('recent_days', 'lists', 'Home: “Just finished” looks back', 'How many days back a student’s “Just finished” list goes.',
+       'days', 14, 1, 90),
+    _t('recent_max', 'lists', 'Home: “Just finished” shows', 'The most quizzes “Just finished” lists.', 'items', 10, 1, 50),
+    _t('online_names', 'lists', 'Online list shows', 'How many names the online lists show before “+N more”.', 'names', 8, 3, 50),
+    _t('filter_over', 'lists', 'Results: a filter box above', 'A quiz’s students on the results pages get their own filter box when there are more than this many.',
+       'students', 8, 2, 100),
+    _t('scan_pages', 'scans', 'Pages in one scan', 'The most pages one scan batch can hold.', 'pages', 30, 1, 100),
+    _t('scan_long_side', 'scans', 'Page picture size', 'The longest side of the page picture the AI reads and the review page shows (pictures are cut from the full-size page).',
+       'pixels', 1600, 800, 3000),
+    _t('scan_keep_days', 'scans', 'Unfinished scans are kept', 'An unfinished scan nobody touches for this long is removed by the nightly cleanup.',
+       'days', 30, 1, 365),
+    _t('scan_page_minutes', 'scans', 'Longest time for one page', 'A page that takes longer is stopped, marked, and the scan goes on with the next one.',
+       'minutes', 10, 1, 60),
+    _t('max_upload_mb', 'limits', 'Largest upload', 'The most one upload (pictures, scans, files) can be. The web server in front of the site may have a limit of its own.',
+       'MB', 16, 1, 100),
+    _t('folder_depth', 'limits', 'Folder depth', 'How many levels deep folders can go, on every folder page. Folders already deeper stay.',
+       'levels', 6, 2, 12),
+    _t('folder_name', 'limits', 'Longest folder name', 'The most characters in a folder’s name (the database holds at most 64).',
+       'characters', 64, 10, 64),
     _t('ai_hourly', 'ai', 'Requests per teacher per hour',
        'How many times each teacher can use the AI helper in an hour.', 'requests', 30, 1, 500),
     _t('ai_model', 'ai', 'Claude model', 'Which Claude model the AI helper uses.', 'choice', 'claude-opus-5',

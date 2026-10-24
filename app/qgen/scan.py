@@ -29,15 +29,35 @@ from datetime import datetime, timedelta
 
 from flask import current_app
 
+from app import tuning
 from . import db
 from .models import ScanJob, ScanFolder, VProblem, VQuiz, AICall
 from .qtypes import get_qtype, REGISTRY
 from . import friendly as F
+from . import spread
 
-MAX_PAGES = 30          # pages in one batch
-LONG_SIDE = 1600        # pixels: the page shown and searched for answer places (pictures are cut from the full-size one)
 STALE = timedelta(minutes=10)   # a page "reading" longer than this was cut off (the site restarted)
-KEEP = timedelta(days=30)       # unfinished scans untouched this long are removed
+#(Settings > Technical settings > Scanning, the owner 2026-10-23)
+def max_pages():
+    """Pages in one batch."""
+    return tuning.get('scan_pages')
+
+
+def long_side():
+    """Pixels: the page shown and searched for answer places (pictures are cut from the full-size one)."""
+    return tuning.get('scan_long_side')
+
+
+def keep_for():
+    """Unfinished scans untouched this long are removed."""
+    return timedelta(days=tuning.get('scan_keep_days'))
+
+
+def page_minutes():
+    """How long one page may take before it's stopped (the site's SCAN_PAGE_MINUTES config, when set, instead)."""
+    return float(current_app.config.get('SCAN_PAGE_MINUTES') or tuning.get('scan_page_minutes'))
+
+
 DRAWS = 200             # versions drawn to check a problem's random values
 QTYPES = ('numeric', 'text', 'choice_one', 'choice_many', 'truefalse', 'essay')  # typed kinds a scanned item can be
 VALUE_KEYS = ('name', 'kind', 'min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'different_from', 'nonzero')
@@ -100,12 +120,19 @@ def _jpeg(im, quality=90):
 
 
 def save_page(job_id, n, im):
-    """Page n's picture, kept twice: full size, and scaled down to LONG_SIDE for showing."""
+    """Page n's picture, kept twice: full size, and scaled down to long_side() for showing."""
     im = im.convert('RGB')
     im.save(full_file(job_id, n), 'JPEG', quality=90)
     small = im.copy()
-    small.thumbnail((LONG_SIDE, LONG_SIDE))
+    small.thumbnail((long_side(), long_side()))
     small.save(page_file(job_id, n), 'JPEG', quality=85)
+
+
+class Pages(list):
+    """The page pictures of an upload (JPEG bytes); .spreads: the (0-based) places of the ones that are half of a photo of two pages."""
+    def __init__(self):
+        super().__init__()
+        self.spreads = set()
 
 
 def load_pages(files, folder=False):
@@ -119,13 +146,13 @@ def load_pages(files, folder=False):
     import tempfile
     from werkzeug.utils import secure_filename
     from quizscan import images
-    pages, skipped = [], []
+    pages, skipped = Pages(), []
     if folder:
         files = sorted(files, key=lambda f: _natural(f.filename))
 
     def room(more=1):
-        if len(pages) + more > MAX_PAGES:
-            raise ScanError('That’s more than {} pages. Please scan them in smaller batches.'.format(MAX_PAGES))
+        if len(pages) + more > max_pages():
+            raise ScanError('That’s more than {} pages. Please scan them in smaller batches.'.format(max_pages()))
 
     #(QuizScan opens files by path, and tells many kinds apart by their names: each upload is
     #written under its own name in a private folder that's removed afterwards)
@@ -145,7 +172,15 @@ def load_pages(files, folder=False):
                 count = images.page_count(path)
                 room(count)
                 for n in range(1, count + 1):
-                    pages.append(_jpeg(images.load_full_page(path, n)))
+                    im = images.load_full_page(path, n)
+                    #(a photo of two facing pages is cut at the spine into two pages, left then right: the owner, 2026-10-23)
+                    halves = spread.split(im)
+                    if halves:
+                        room(len(halves) - 1)
+                        pages.spreads.update(range(len(pages), len(pages) + len(halves)))
+                        pages.extend(_jpeg(half) for half in halves)
+                    else:
+                        pages.append(_jpeg(im))
             except images.QuizScanError as exc:
                 if folder:
                     skipped.append(name)
@@ -169,7 +204,8 @@ def create_job(author, name, pages):
     """A new scan with these page pictures (JPEG bytes, full size), nothing read yet."""
     from PIL import Image
     job = ScanJob(author_id=author.id, name=(name or '').strip()[:128] or 'Workbook', pages=len(pages), status='new',
-                  data=json.dumps({'pages': [{'n': i + 1, 'state': 'waiting'} for i in range(len(pages))]}))
+                  data=json.dumps({'pages': [dict({'n': i + 1, 'state': 'waiting'}, **({'spread': True} if i in getattr(pages, 'spreads', ()) else {}))
+                                          for i in range(len(pages))]}))
     db.session.add(job)
     db.session.commit()
     #(a new scan's folder starts empty: anything left under its number from before, such as a page
@@ -203,7 +239,7 @@ def hand_over_jobs(user, to):
 def remove_old_jobs(now=None):
     """Unfinished scans nobody has touched for a month. Returns how many."""
     now = now or datetime.now()
-    old = ScanJob.query.filter(ScanJob.updated_at < now - KEEP).all()
+    old = ScanJob.query.filter(ScanJob.updated_at < now - keep_for()).all()
     for job in old:
         remove_job(job)
     return len(old)
@@ -255,9 +291,8 @@ def start_reading(job, api_key, user_id):
 
 #a page whose reading runs longer than this is stopped, and the scan goes on with the next one (the owner, 2026-10-23: the
 #site's SCAN_PAGE_MINUTES setting, when set, instead); at the end the pages that didn't make it say why
-PAGE_MINUTES = 10
 PAGE_TOO_SLOW = ('This page took longer than {} minutes to read, so it was stopped and the scan went on with the next one. '
-                 'Press \u201cRead the rest\u201d to try it again, or photograph just this page, closer up.')
+                 'Press \u201cTry again\u201d on it to read it again, or photograph just this page, closer up.')
 
 
 READ_AT_ONCE = 3   # pages read at the same time (each takes a minute or so of AI calls: the owner, 2026-10-20);
@@ -293,7 +328,7 @@ def page_lock(job_id):
 
 #a page whose reading ran too long: what to do next, step by step (the owner, 2026-10-21)
 PAGE_TOO_LONG = ('The AI\u2019s answer for this page ran too long, so the page wasn\u2019t read. '
-                 'Press \u201cRead the rest\u201d to try it again. If it stops again, photograph just this page, '
+                 'Press \u201cTry again\u201d on it to read it again. If it stops again, photograph just this page, '
                  'closer up, and scan that photo as a new scan.')
 
 
@@ -334,7 +369,7 @@ def _read_all(app, job_id, api_key, user_id, run=None):
 
     with app.app_context():
         running = {}    # future -> (page n, AI calls it may make, when it started, its cancel flag)
-        limit = float(app.config.get('SCAN_PAGE_MINUTES') or PAGE_MINUTES) * 60
+        limit = page_minutes() * 60
         try:
             #(room for a few pages that ran over their time and are still finishing, unnoticed, behind the ones being read)
             with NoWaitPool(max_workers=at_once + 8) as pool:
@@ -392,6 +427,8 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                             #(read again meanwhile: a page read all the way is kept, it's paid for)
                             #(not one paused while it was being read: Pause drops it, the owner 2026-10-22)
                             if data.get('run') == run or (result.get('state') == 'done' and data.get('dropped_run') != run):
+                                if data['pages'][n - 1].get('spread'):
+                                    result['spread'] = True  # (from a photo of two pages: kept through the reading)
                                 data['pages'][n - 1] = result
                         stop = stop or bool(result.get('stop'))
             if gone:
@@ -438,7 +475,9 @@ def _tell_done(job):
     if not failed:
         body = 'Your scan “{}” has been read and is ready to check.'.format(job.name)
     elif done:
-        body = 'Your scan “{}” has been read: {} of {} pages are ready to check; {} couldn’t be read.'.format(job.name, done, len(pages), failed)
+        slow = sum(1 for p in pages if p.get('timed_out'))
+        body = 'Your scan “{}” has been read: {} of {} pages are ready to check; {} didn’t make it{}.'.format(
+            job.name, done, len(pages), failed, ' ({} took too long)'.format(slow) if slow else '')
     else:
         body = 'Your scan “{}” couldn’t be read. Open it to try again.'.format(job.name)
     notify(job.author_id, body, '/quiz/scan/{}'.format(job.id))
@@ -756,13 +795,13 @@ def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
         began[1] = now
         return cancel is not None and cancel.is_set()
 
-    stopped = {'n': n, 'state': 'error', 'timed_out': True, 'error': PAGE_TOO_SLOW.format(PAGE_MINUTES)}
+    stopped = {'n': n, 'state': 'error', 'timed_out': True, 'error': PAGE_TOO_SLOW.format(int(round(page_minutes())))}
     #(read before, and only the numbers failed: QuizScan's reading is kept, so it isn't paid for twice)
     qs = (get_data(job)['pages'][n - 1] or {}).get('qs_reading')
     if not ai_room(user_id, calls_for({'qs_reading': qs}), reserved):
         return {'n': n, 'state': 'waiting', 'stop': True,
                 'error': 'You’ve used the AI helper {} times in the last hour, so this page is waiting. '
-                         'Press “Read the rest” in a while.'.format(hourly)}
+                         'Press “Try again” on it in a while.'.format(hourly)}
     try:
         import quizscan
     except ImportError:
@@ -792,7 +831,7 @@ def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
         #page made level the same way, for cutting pictures from (the owner, 2026-10-20)
         full = quizscan.flat_page(src, qs).convert('RGB')
         small = full.copy()
-        small.thumbnail((LONG_SIDE, LONG_SIDE))
+        small.thumbnail((long_side(), long_side()))
         small, qs, full = pagelayout.level_page(small, qs, full=full)
         qs = pagelayout.snap_boxes(small, qs)
         if step('flattening and leveling the page'):
@@ -1206,6 +1245,8 @@ def read_again(data, n, note=''):
     and the teacher's changes to it are dropped; note, what was wrong with it, goes to the AI
     with the page. The other pages stay as they are."""
     page = {'n': int(n), 'state': 'waiting'}
+    if data['pages'][int(n) - 1].get('spread'):
+        page['spread'] = True
     note = ' '.join((note or '').split())[:NOTE_LONGEST]
     if note:
         page['note'] = note

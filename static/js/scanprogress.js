@@ -1,24 +1,22 @@
-/* The Dashboard's unfinished scans (templates _scan_progress.html): the chip opens and closes its
- * pop-over (Esc or a click elsewhere closes it too); while a page is being read, ask every few
- * seconds how far it has got, keeping the pop-over open if it was, and stop when nothing is. */
+/* The Dashboard's Scanner card (templates _scan_progress.html, in _dashboard_live.html): while a page is
+ * being read, ask every few seconds how far it has got and redraw the card's rows and count (the card itself,
+ * open or folded, stays as it is); when nothing is being read, ask now and then. The Dashboard's own
+ * refresh redraws the whole card too. */
 (function () {
-  var box = document.getElementById('scan-progress-box');
-  if (!box) return;
-  function chip() { return box.querySelector('.scan-chip'); }
-  function pop() { return box.querySelector('.scan-pop'); }
-  function show(open) {
-    if (!pop()) return;
-    pop().hidden = !open;
-    chip().setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-  box.addEventListener('click', function (e) { if (e.target.closest('.scan-chip')) show(pop().hidden); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && pop() && !pop().hidden) { show(false); chip().focus(); } });
-  document.addEventListener('mousedown', function (e) { if (pop() && !pop().hidden && !box.contains(e.target)) show(false); });
+  function card() { return document.getElementById('scan-card'); }
+  if (!card()) return;
   function poll() {
-    fetch(box.dataset.url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
-      var open = pop() && !pop().hidden;
-      box.innerHTML = s.html;
-      show(open);
+    var c = card();
+    if (!c) { later(false); return; }
+    fetch(c.dataset.url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
+      c = card();
+      if (!c) { later(false); return; }
+      var body = c.querySelector('#scan-card-body'), count = c.querySelector('summary .box-count');
+      if (body) body.innerHTML = s.html;
+      if (count) count.textContent = s.count;
+      if (s.reading) c.dataset.reading = '1'; else delete c.dataset.reading;
+      //(the card's height changed: the Dashboard lays its cards out again)
+      window.dispatchEvent(new Event('resize'));
       //(every few seconds while a page is being read; otherwise now and then, so a scan
       //started in another tab shows up)
       later(s.reading);
@@ -32,5 +30,5 @@
     timer = setTimeout(poll, window.qgenLive ? 300000 : reading ? 4000 : 30000);
   }
   document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(poll, 300); });
-  later(!!box.dataset.reading);
+  later(!!card().dataset.reading);
 })();

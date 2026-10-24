@@ -46,7 +46,7 @@
     //(not a table that's part of a form being filled in, like the problem editor's Random values;
     //nor a heading with its own controls, like a ? help button)
     var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form') || t.classList.contains('pick-table'); });
-    //a list shown 20 at a time (app/paging.py; the owner, 2026-10-23) sorts the whole folder: its
+    //a list shown a page at a time (app/paging.py; the owner, 2026-10-23) sorts the whole folder: its
     //headings (data-sort-key) ask the server for the sorted pages, from page 1
     tables.filter(function (t) { return t.hasAttribute('data-paged'); }).forEach(function (table) {
       var on = table.dataset.sorted || '', dir = table.dataset.sortedDir === 'desc' ? 'desc' : 'asc';

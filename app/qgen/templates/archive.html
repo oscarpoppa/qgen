@@ -90,7 +90,7 @@
     {% endif %}
   </div>
   <div id="folder-items">
-    {#- one folder's attempts, 20 at a time (app/paging.py); still in month boxes #}
+    {#- one folder's attempts, a page at a time (app/paging.py); still in month boxes #}
     {% if not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
     {% else %}{% call named_box(fk, 'attempt:', pg=pg) %}{% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
     {% elif fk.node and fk.node.folder.student_id and not pg.q %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>

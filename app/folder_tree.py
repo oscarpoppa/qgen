@@ -8,20 +8,30 @@ quiz on My quizzes); others can be in several (a person, a quiz on the Quizzes p
 Removing a folder never removes what's in it: it moves up a level."""
 from app import db
 
-MAX_NAME = 64
-MAX_DEPTH = 6
 
 
 class FolderError(ValueError):
     """Can't do it, worded for people."""
 
 
+
+def _max_name():
+    """Longest folder name (Settings > Technical settings > Limits; the database column holds 64)."""
+    from app import tuning
+    return tuning.get('folder_name')
+
+
+def _max_depth():
+    """Folders inside folders, at most this many levels (a setting)."""
+    from app import tuning
+    return tuning.get('folder_depth')
+
 def clean_name(name):
     name = ' '.join((name or '').split())
     if not name:
         raise FolderError('Please give the folder a name.')
-    if len(name) > MAX_NAME:
-        raise FolderError('Please keep folder names under {} characters.'.format(MAX_NAME))
+    if len(name) > _max_name():
+        raise FolderError('Please keep folder names under {} characters.'.format(_max_name()))
     return name
 
 
@@ -43,8 +53,8 @@ def height(model, f, scope=None):
 
 
 def check_new(model, parent):
-    if parent is not None and depth(model, parent) >= MAX_DEPTH:
-        raise FolderError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+    if parent is not None and depth(model, parent) >= _max_depth():
+        raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
 
 
 def check_move(model, f, target, scope=None):
@@ -54,8 +64,8 @@ def check_move(model, f, target, scope=None):
         if up.id == f.id:
             raise FolderError('A folder can\'t go inside itself.')
         up = db.session.get(model, up.parent_id) if up.parent_id else None
-    if target is not None and depth(model, target) + height(model, f, scope) > MAX_DEPTH:
-        raise FolderError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+    if target is not None and depth(model, target) + height(model, f, scope) > _max_depth():
+        raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
 
 
 def tree(folders, name, items, homes, key=lambda item: item.id):
@@ -191,7 +201,7 @@ def kit(view, node, root, flat, nodes, page, **words):
     out = {
         'view': view, 'node': node, 'root': root, 'flat': flat, 'nodes': nodes, 'page': page,
         'path': path(nodes, node), 'inside': inside, 'indent': indent,
-        'max_name': MAX_NAME, 'max_depth': MAX_DEPTH,
+        'max_name': _max_name(), 'max_depth': _max_depth(),
         'main_label': 'Uncategorized',
         'name': lambda f: getattr(f, 'name', None) or getattr(f, 'title', ''),
         'folder_icon': lambda f: 'folder', 'add_url': None, 'remove_url': None, 'box_tools': None, 'readonly': False,

@@ -5,13 +5,23 @@ never removes anyone: its people and folders move up a level."""
 from app import db
 from .models import User, UserFolder, UserFolderMember
 
-MAX_NAME = 64
-MAX_DEPTH = 6
 
 
 class GroupError(ValueError):
     """Can't do it, worded for people."""
 
+
+
+def _max_name():
+    """Longest folder name (Settings > Technical settings > Limits; the database column holds 64)."""
+    from app import tuning
+    return tuning.get('folder_name')
+
+
+def _max_depth():
+    """Folders inside folders, at most this many levels (a setting)."""
+    from app import tuning
+    return tuning.get('folder_depth')
 
 def all_folders():
     return UserFolder.query.order_by(UserFolder.name, UserFolder.id).all()
@@ -45,8 +55,8 @@ def _clean_name(name):
     name = ' '.join((name or '').split())
     if not name:
         raise GroupError('Please give the folder a name.')
-    if len(name) > MAX_NAME:
-        raise GroupError('Please keep folder names under {} characters.'.format(MAX_NAME))
+    if len(name) > _max_name():
+        raise GroupError('Please keep folder names under {} characters.'.format(_max_name()))
     return name
 
 
@@ -65,8 +75,8 @@ def _height(f):
 
 def create(name, parent_id=None):
     parent = get(parent_id)
-    if parent is not None and _depth(parent) >= MAX_DEPTH:
-        raise GroupError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+    if parent is not None and _depth(parent) >= _max_depth():
+        raise GroupError('Folders can go only {} levels deep.'.format(_max_depth()))
     f = UserFolder(parent_id=parent.id if parent else None, name=_clean_name(name))
     db.session.add(f)
     db.session.commit()
@@ -112,8 +122,8 @@ def move_folder(folder_id, to_id):
             if up.id == f.id:
                 raise GroupError('A folder can\'t go inside itself.')
             up = db.session.get(UserFolder, up.parent_id) if up.parent_id else None
-        if _depth(target) + _height(f) > MAX_DEPTH:
-            raise GroupError('Folders can go only {} levels deep.'.format(MAX_DEPTH))
+        if _depth(target) + _height(f) > _max_depth():
+            raise GroupError('Folders can go only {} levels deep.'.format(_max_depth()))
     f.parent_id = target.id if target else None
     db.session.commit()
     return target

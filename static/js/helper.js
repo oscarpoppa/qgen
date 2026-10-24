@@ -14,7 +14,7 @@
     target.innerHTML = '';
     hints.forEach(function (h) {
       //(a choice already made, Keep as it is, stays hidden while this page is open)
-      try { if (h.key && sessionStorage.getItem('qgen-helper-dismissed:' + form.id + ':' + h.key)) return; } catch (e) {}
+      try { if (h.key && sessionStorage.getItem('qgen-helper-dismissed:' + location.pathname + ':' + form.id + ':' + h.key)) return; } catch (e) {}
       var li = document.createElement('li');
       li.className = 'hint hint-' + h.level;
       var icon = document.createElement('span');
@@ -33,7 +33,7 @@
         if (a.tip) c.title = a.tip;
         c.addEventListener('click', function () {
           if (a.dismiss) {
-            try { sessionStorage.setItem('qgen-helper-dismissed:' + form.id + ':' + h.key, '1'); } catch (e) {}
+            try { sessionStorage.setItem('qgen-helper-dismissed:' + location.pathname + ':' + form.id + ':' + h.key, '1'); } catch (e) {}
             li.remove();
             return;
           }

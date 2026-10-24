@@ -423,6 +423,18 @@ def quiz_counts(user_id):
     return len(fresh), len(started)
 
 
+def quiz_dots(user_id):
+    """(new, in progress, due soon) for the dots by the name in the top bar (the owner, 2026-10-23): new and
+    in progress are counted by quiz, like the gold and blue boxes (quiz_counts); due soon counts the
+    unfinished attempts closing within the "due soon" days, like the red Due soon on My quizzes."""
+    from app import tuning
+    fresh, started = quiz_counts(user_id)
+    now = datetime.now()
+    due = CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.completed.is_(False), CQuiz.needs_review.is_(False),
+                             CQuiz.closes_at >= now, CQuiz.closes_at <= now + tuning.due_soon()).count()
+    return fresh, started, due
+
+
 def waiting_quizzes(user, now=None):
     """What someone still has to do (new or started), in the order to do them: the ones
     closing soonest first, then the rest, oldest first (their Home's "Waiting for you")."""

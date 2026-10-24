@@ -63,8 +63,10 @@ def scan_start():
     view, node = FT.view_of(request.args.get('stash'), nodes, default='all')
     shown = away if view == 'all' else root['items'] if view == 'main' else FT.subtree(node)
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
-                           max_pages=SC.MAX_PAGES, stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
-                           stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [])
+                           max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
+                           stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [],
+                           #(the Move dialog's folders, each [id, name, depth, icon], in the side list's order)
+                           stash_pick_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat])
 
 
 def _elapsed(data):
@@ -101,6 +103,7 @@ def scan_progress_data(user, put_away=False):
                     'from_folder': data.get('from_folder'),
                     'done': sum(1 for p in pages if p.get('state') == 'done'),
                     'failed': sum(1 for p in pages if p.get('state') == 'error'),
+                    'slow': sum(1 for p in pages if p.get('state') == 'error' and p.get('timed_out')),
                     #(reading, ready, paused, stopped or draft, each with its own mark: the owner, 2026-10-19)
                     'kind': SC.scan_kind(data, reading), 'pausing': reading and bool(data.get('pausing')),
                     'kept_at': SC.datetime.fromisoformat(kept) if kept else None,
@@ -116,8 +119,13 @@ def scan_progress_data(user, put_away=False):
 def scan_progress():
     """The Dashboard's scans card, as it stands now (static/js/scanprogress.js asks while reading)."""
     #(the scans put away too, in their own list under Current scans: the owner, 2026-10-20)
-    scans = scan_progress_data(current_user, put_away=None)
-    return jsonify(reading=any(x['reading'] for x in scans), html=render_template('_scan_progress.html', scans=scans))
+    scans = [x for x in scan_progress_data(current_user, put_away=None) if not x['put_away']]
+    return jsonify(reading=any(x['reading'] for x in scans), count=_count_words(len(scans)),
+                   html=render_template('_scan_progress.html', scans=scans))
+
+
+def _count_words(n):
+    return '{} scan{}'.format(n, '' if n == 1 else 's')
 
 
 @qgen_bp.route('/quiz/scan/new', methods=['POST'])
@@ -551,6 +559,7 @@ def scan_move(job_id):
     """A stashed scan into a folder, or out to Uncategorized (the owner, 2026-10-23)."""
     job = db.get_or_404(ScanJob, job_id)
     to = request.form.get('to') or ''
+    to = '' if to == 'top' else to  # (the dialog's Uncategorized row)
     if to and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
         abort(404)
     SC.move_scan(job, to)

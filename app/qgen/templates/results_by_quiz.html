@@ -26,7 +26,7 @@
     <div class="box-body">
     {% if q.rows %}
       {# a long class: find a student in this quiz #}
-      {% if q.students > 8 %}{{ filter_bar('#quiz-' ~ vq.id, 'student', 'students', compact=true) }}{% endif %}
+      {% if q.students > tuning.get('filter_over') %}{{ filter_bar('#quiz-' ~ vq.id, 'student', 'students', compact=true) }}{% endif %}
       {#- (one quiz's own page: its students as a panel down to the window's bottom, under the
           name filter: the owner, 2026-10-17) #}
       <div class="table-wrap stack"{% if single %} data-fit-window{% endif %}>
@@ -145,7 +145,7 @@
     </div>
   </div>
   <div id="folder-items">
-    {#- one folder's students, 20 at a time (app/paging.py) #}
+    {#- one folder's students, a page at a time (app/paging.py) #}
     {% call named_box(fk, 'student:', pg=pg) %}{% if shown %}{{ students_table(shown) }}{% elif not pg.q %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}
@@ -161,7 +161,7 @@
     <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose a quiz and give it to students">Assign a quiz</a>{% endset %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
-    {#- one folder's quizzes, 20 at a time (app/paging.py) #}
+    {#- one folder's quizzes, a page at a time (app/paging.py) #}
     {% call named_box(fk, 'quiz:', pg=pg) %}{% if quizzes %}{{ quiz_rows(quizzes|map(attribute='vquiz')|list) }}{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
   </div>
 {% endcall %}

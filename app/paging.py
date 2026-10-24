@@ -1,4 +1,4 @@
-"""Long lists, 20 at a time (the owner, 2026-10-23): any list that can grow without end (Problems,
+"""Long lists, a page at a time (the owner, 2026-10-23; 35 rows, a setting): any list that can grow without end (Problems,
 Quizzes, Pictures, Other files, People, the results pages) sends the page only the rows to show,
 for the folder, the typed words (?q=), the sort (?sort= and ?dir=) and the page (?page=) asked for.
 The pager under the list (templates/_pager.html) links to the other pages; nothing else about a
@@ -8,7 +8,8 @@ from urllib.parse import urlencode
 
 from flask import request
 
-PAGE_SIZE = 20
+from app import tuning
+
 
 
 class Page:
@@ -55,11 +56,12 @@ class Page:
         return out
 
 
-def paginate(items, name_of=None, sorts=None, show=None, size=PAGE_SIZE, args=None, weight_of=None):
+def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, weight_of=None):
     """The page of items the address asks for. items: the folder's things, in their usual order.
     name_of(item) -> the words ?q= is looked for in; sorts: {'title': key function...} (a key of None
     or '' goes last, either way); show: the id of a thing to land on (?show=, lit up on arrival)."""
     args = request.args if args is None else args
+    size = size or tuning.get('page_size')  # (Settings > Technical settings > Lists & pages)
     everything = len(items)
     q = (args.get('q') or '').strip()
     if q and name_of:

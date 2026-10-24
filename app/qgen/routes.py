@@ -1854,7 +1854,7 @@ def subject_page(kind, template, in_archive=False, **extra):
             given = db.session.query(CQuiz.vquiz_id).distinct()
             extra.setdefault('assigned', dict(db.session.query(vproblem_vquiz.c.vproblem_id, func.count(func.distinct(vproblem_vquiz.c.vquiz_id)))
                                               .filter(vproblem_vquiz.c.vquiz_id.in_(given)).group_by(vproblem_vquiz.c.vproblem_id)))
-    #the list is paged, 20 at a time (the owner, 2026-10-23): only the rows of the folder shown, the
+    #the list is paged, a page at a time (the owner, 2026-10-23): only the rows of the folder shown, the
     #words typed (?q=), the sort (?sort=, ?dir=) and the page (?page=) asked for are drawn. What's
     #checked in other folders (?checked=1,2,3, the Checked folder) is listed the same way.
     from app import paging
@@ -2184,13 +2184,16 @@ def purge_archived(aid):
 def dashboard_data():
     """Everything the Dashboard shows, fresh."""
     from . import dashboard as D
+    from .scan_routes import scan_progress_data
     now = datetime.now()
     queue, waiting = D.grading_queue()
     out, out_total = D.out_now(now)
     return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
             'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
             'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now),
-            'pinned': D.pinned()}
+            'pinned': D.pinned(),
+            #(the Scanner card: this teacher's scans, not the stashed ones; the owner, 2026-10-23)
+            'scans': [x for x in scan_progress_data(current_user, put_away=None) if not x['put_away']]}
 
 #route to the administrators' landing page: what needs doing and what's going on
 @qgen_bp.route('/dashboard', methods=['GET'])
@@ -2199,9 +2202,7 @@ def dashboard_data():
 @admin_only
 def dashboard():
     from app import tuning
-    from .scan_routes import scan_progress_data
-    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), scans=scan_progress_data(current_user, put_away=None),
-                           **dashboard_data())
+    return render_template('dashboard.html', title='Dashboard', refresh_ms=tuning.dashboard_ms(), **dashboard_data())
 
 #route to the top bar's "online" list (opened from any teacher page)
 @qgen_bp.route('/dashboard/online', methods=['GET'])

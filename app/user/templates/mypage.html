@@ -65,7 +65,7 @@
           {% set has_started = g.attempts|selectattr('status', 'in', ['started', 'review'])|list %}
           {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
         </summary>
-        {% if here %}<p class="small quiz-folder-label"><a class="btn btn-secondary btn-xs" href="{{ url_for('user.mypage', folder=here.id) }}" title="See all the quizzes in your folder “{{ here.name }}”">{{ icon('folder') }} {{ here.name }}</a></p>{% endif %}
+        {#- (no folder chip under the quiz name: the owner, 2026-10-23; the row's Move icon shows the folder) #}
         {% set ahead = g.open or latest %}
         <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
           {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
@@ -134,17 +134,15 @@
   {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}
     <div class="btn-row results-filter-right">{{ back_button(url_for('user.home'), 'Home', 'btn btn-secondary btn-sm') }}</div></div>{% endif %}
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
-    {#- one folder's quizzes, 20 at a time (app/paging.py): the side list's folders and New / In progress are links, each its own page #}
-    {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ cards(shown) }}{% endif %}{% endcall %}
+    {#- one folder's quizzes, a page at a time (app/paging.py): the side list's folders and New / In progress are links, each its own page #}
+    {#- (an empty list says so inside its framed panel, one card, as on the other folder pages: the owner, 2026-10-23) #}
+    {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ cards(shown) }}
+      {% elif showing and not pg.q %}<p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
+      {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
+      {% elif not pg.q and fk.view in ('new', 'started') %}<p class="card empty small">{{ nothing }}</p>
+      {% elif not pg.q and ((fk.node and not fk.node.folders) or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+      {% endif %}{% endcall %}
   </div>
-  {% if showing and not shown and not pg.q %}
-    <p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
-  {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
-  {% elif not shown and not pg.q and fk.view in ('new', 'started') %}
-    <p class="card empty small">{{ nothing }}</p>
-  {% elif not shown and not pg.q and ((fk.node and not fk.node.folders) or fk.view == 'main') %}
-    <p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
-  {% endif %}
 {% endcall %}
 {% endif %}
 {% if not groups %}

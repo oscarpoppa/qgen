@@ -140,7 +140,7 @@
         {% endif %}
       </form></div>{% endif %}
     <div id="folder-items">
-      {#- one folder's rows, 20 at a time (app/paging.py): the side list's folders are links, each its own page #}
+      {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
       {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
     </div>
 {% endcall %}

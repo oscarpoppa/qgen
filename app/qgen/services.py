@@ -57,7 +57,6 @@ UPLOAD_KINDS = ('pictures', 'files')
 def item_word(kind, n=1):
     one, many = ITEM_WORDS.get(kind, ('thing', 'things'))
     return one if n == 1 else many
-SUBJECT_NAME_MAX = 64
 
 
 def subject_kind(kind):
@@ -76,8 +75,8 @@ def _subject_name(kind, name, subject=None):
     name = ' '.join((name or '').split())
     if not name:
         raise ServiceError('Please give the folder a name.')
-    if len(name) > SUBJECT_NAME_MAX:
-        raise ServiceError('Folder names can be at most {} characters.'.format(SUBJECT_NAME_MAX))
+    if len(name) > tuning.get('folder_name'):
+        raise ServiceError('Folder names can be at most {} characters.'.format(tuning.get('folder_name')))
     for other in subjects(kind):
         if other is not subject and (other.title or '').lower() == name.lower():
             raise ServiceError('There\'s already a folder called “{}”.'.format(other.title))
@@ -387,8 +386,8 @@ def new_subject_name_error(kind, name):
     """For the "or make a new subject" box on the edit forms: a problem with the name,
     or None. A name that is already a subject (in any case) is fine: that one is used."""
     name = ' '.join((name or '').split())
-    if name and len(name) > SUBJECT_NAME_MAX:
-        return 'Folder names can be at most {} characters.'.format(SUBJECT_NAME_MAX)
+    if name and len(name) > tuning.get('folder_name'):
+        return 'Folder names can be at most {} characters.'.format(tuning.get('folder_name'))
     return None
 
 
@@ -1078,7 +1077,6 @@ def archived_attempts(subject='all'):
     return q.order_by(ArchivedAttempt.archived_at.desc(), ArchivedAttempt.id.desc()).all()
 
 
-FOLDER_NAME_MAX = 64
 UNSORTED = 'Uncategorized'
 
 
@@ -1105,7 +1103,7 @@ def _deleted_name(name, folder):
     n = 1
     while True:
         mark = DELETED_MARK if n == 1 else ' (deleted {})'.format(n)
-        cand = (name or '')[:FOLDER_NAME_MAX - len(mark)] + mark
+        cand = (name or '')[:tuning.get('folder_name') - len(mark)] + mark
         if cand.lower() not in taken:
             return cand
         n += 1
