@@ -3502,3 +3502,7 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .stash-folders > .side-card-head { position: relative; z-index: 3; }  /* (above the cover the pinned rows draw over the space above them, which cut the icon off: the owner, 2026-10-23) */
 .stash-folders > .side-list { border: 1px solid var(--border); border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg);
   background: var(--surface); padding: 2px 8px 10px; }
+
+/* a row in a folder's list is clickable all along: it opens or goes where its name does (static/js/rowclick.js; the owner, 2026-10-23) */
+:is(.folder-filter-list, #scan-away, #scan-current) tbody > tr:has(> td > details.row-fold),
+:is(.folder-filter-list, #scan-away, #scan-current) tbody > tr:has(> td a.name-link[href]) { cursor: pointer; }

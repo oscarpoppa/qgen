@@ -174,3 +174,21 @@ def test_the_dots_by_the_name_count_new_started_and_due_soon(app_db):
     page = sam.get('/profile').data.decode()
     assert '1 new, 0 in progress, 1 due soon' in page and 'class="side-dot dot-due" data-dot="2" title="1 due soon">1<' in page
     assert 'class="count nav-quizzes"' not in page
+
+
+def test_score_badges_are_colored_by_the_score_not_always_green(app_db):
+    """A 0% on My quizzes is red, not green: every score badge follows the green / amber / red settings
+    (the owner, 2026-10-23)."""
+    import re
+    app, db = app_db
+    from app.qgen.models import CQuiz
+    from app.qgen import services as S
+    teach, sam = login(app, 'teach'), login(app, 'sam')
+    vq = make_quiz(app, teach)
+    assign(teach, vq, 'sam')
+    cq = CQuiz.query.filter_by(assignee=ids('sam')).one()
+    sam.post('/quiz/take/{}/start'.format(cq.id))
+    S.submit(cq, {})
+    page = sam.get('/mypage').data.decode()
+    badges = re.findall(r'<span class="badge ([^"]*)"[^>]*>(?:★ )?0%</span>', page)
+    assert badges and all('badge-ok' not in b and 'badge-bad' in b for b in badges), badges

@@ -29,7 +29,7 @@
 
 {# counted: this attempt's score is the one that counts (by the retake rule) #}
 {% macro status(cq, counted=false) %}
-  {% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if counted else '' }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
+  {% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
   {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">In progress</span>
   {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
   {# assigned and not opened yet: new to the student #}
@@ -95,7 +95,7 @@
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
-      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge badge-ok">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       {#- no Start / Continue / View of its own: they're on each attempt's line, where it's clear which
           attempt they mean (the owner, 2026-10-20); only Move -#}
       <td class="actions"><span class="btn-row quiz-row-actions">

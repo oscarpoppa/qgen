@@ -1393,3 +1393,14 @@ def test_stash_folders_move_into_each_other_and_the_list_is_the_standard_one(app
     assert db.session.get(ScanFolder, a).parent_id == c
     r = teacher.post('/quiz/scan/folders/{}/move'.format(c), data={'to': str(a)})   # (C into A, which is inside C)
     assert r.status_code == 302 and db.session.get(ScanFolder, c).parent_id is None
+
+
+def test_every_page_loads_the_whole_row_click_script(app_db):
+    """The click-anywhere-on-a-row script (static/js/rowclick.js) is on every page, and the scanned quiz's boxes start from what the
+    server sent (the owner, 2026-10-23)."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    assert 'js/rowclick.js' in teacher.get('/quiz/listvq').data.decode()
+    import os
+    js = open(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'pagequiz.js')).read()
+    assert 'el.value = el.defaultValue' in js

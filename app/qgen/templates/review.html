@@ -46,13 +46,14 @@
               <button type="button" class="btn btn-sm btn-secondary btn-icon hl-clear" title="Clear highlights: remove every right and wrong highlight from this answer">{{ icon_label('lc-eraser', 'Clear highlights') }}</button>
             </div>
             {% endif %}
+            {#- the correct answer right under what the student wrote, to compare at a glance (the owner, 2026-10-23: it was at the bottom of the right column) #}
+            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Accepted answers' if it.check else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
           </div>
           <div>
             {{ row.form.cpid() }}{{ row.form.highlights() }}
             {{ field(row.form.credit, '0 = no credit, 100 = full credit.', attrs={'type': 'number', 'min': 0, 'max': 100, 'step': 5}) }}
             {{ field(row.form.feedback, attrs={'rows': 4}) }}
             {% if row.notes %}<div class="feedback"><strong>Your grading notes:</strong> {{ row.notes }}</div>{% endif %}
-            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Accepted answers' if it.check else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
           </div>
         </div>
       {% else %}

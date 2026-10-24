@@ -25,7 +25,7 @@
 {# the pieces of an attempt's line, used by the results tables (result_cells) and by a student page's
    rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
 {% macro attempt_status(cq, g) -%}
-{% if cq.status == 'completed' %}<span class="badge {{ 'badge-ok' if cq in g.counted else '' }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
+{% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
                     {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
                     {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
                     {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}

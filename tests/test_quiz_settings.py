@@ -715,7 +715,7 @@ def test_the_attempts_that_count_are_the_ones_marked(app_db):
         S.submit(first, {1: '4'})
         second = S.retake(first)
         S.submit(second, {1: '5'})
-    stars = lambda html: re.findall(r'<span class="badge badge-ok"[^>]*>★ (\d+)%', html)
+    stars = lambda html: re.findall(r'<span class="badge [^"]*"[^>]*>★ (\d+)%', html)
     sam = login(app, 'sam')
     assert stars(sam.get('/mypage').data.decode()) == ['0']
     assert stars(teacher.get('/quiz/listuser/{}'.format(sam_id)).data.decode()) == ['0']

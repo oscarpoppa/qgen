@@ -25,6 +25,11 @@
     });
   }
 
+  //(a browser can put text it remembers back in the boxes when a page opens again; what's in a box at the start is only what the server sent)
+  function fresh() { fields(form).forEach(function (el) { if (el.type === 'text' || el.tagName === 'TEXTAREA') el.value = el.defaultValue; }); }
+  fresh();
+  window.addEventListener('pageshow', function (e) { if (e.persisted) fresh(); });
+
   var onPage = null;
   function apply() {
     var want = !phone.matches;
