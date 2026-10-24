@@ -236,7 +236,7 @@ def test_results_pages_lead_back_to_users(app_db):
     assert '<h1>People</h1>' in accounts and 'data-trail-key="people"' in accounts
     assert '>Accounts</a>' not in accounts and '>Results</a>' not in accounts and 'href="/quiz/listuser?folder=all"' not in accounts
     # its results are on it: the Quizzes, Status and Done columns, and the results' Show filter
-    assert '<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="status">Status</th><th data-sort-key="done">Done</th>' in accounts and 'id="results-filter"' in accounts
+    assert '<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>' in accounts and 'id="results-filter"' in accounts
     assert teach.get('/people').headers['Location'] == '/userdet'
     assert teach.get('/quiz/listuser?folder=all').headers['Location'] == '/userdet?folder=all'
     #(the menu's People opens People, whatever ?view= asks: the owner, 2026-10-21)
@@ -266,7 +266,7 @@ def test_users_page_leads_to_each_student_page(app_db):
     assert ('href="/quiz/listuser/{}" title="Student page: sam&#39;s quizzes, results and awards">'.format(sam) in page
             or 'href="/quiz/listuser/{}" title="Student page: sam\'s quizzes, results and awards">'.format(sam) in page) and 'aria-label="Student page"' in page
     # the name itself is plain text, not a link: only buttons act on a person
-    assert '<strong class="box-title">sam</strong>' in page and 'class="person-link"' not in page
+    assert '>sam</strong>' in page and 'class="box-title" title="Student · Last seen:' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page
 
 

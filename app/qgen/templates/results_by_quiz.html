@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, count_badge, count_dot with context %}
 {% from "_macros.html" import back_button with context %}
 {% from "_macros.html" import avatar, person_link, person_name, quiz_link, box_label, count_of, slot with context %}
 {% from "_results.html" import result_cells, result_group, result_row with context %}
@@ -69,14 +69,15 @@
       {% else %}<p class="muted small box-empty">Not assigned to anyone yet.</p>
         <div class="btn-row">{% if not vq.removed_at %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give “{{ vq.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}</div>
       {% endfor %}</div></details></td>
-    <td data-label="Students" class="nowrap" data-sort="{{ '%04d' % q.students }}"><span class="badge box-count">{{ count_of(q.students, 'student', 'students') }}</span></td>
-    <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % q.average if q.average is not none else '' }}">{% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">Average {{ '%.0f' % q.average }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td data-label="Students" class="nowrap" data-sort="{{ '%04d' % q.students }}">{{ count_badge(q.students, 'student', 'students') }}</td>
+    <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % q.average if q.average is not none else '' }}">{% if q.average is not none %}<span class="badge {{ score_class(q.average) }}" title="The average of the scores that count, for the {{ q.done }} student{{ '' if q.done == 1 else 's' }} with one">{{ '%.0f' % q.average }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
     <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (q.states.review, q.states.out) if q.states.review or q.states.out else '' }}">
       {#- (what each student is doing, as counts, stacked like People's Status column; the owner, 2026-10-23: it was blank unless something waited) #}
-      <span class="student-sums stacked-sums">
-        {% if q.states.review %}<span class="badge badge-accent badge-status" title="{{ q.states.review }} student{{ '' if q.states.review == 1 else 's' }} with answers handed in and waiting for grading">{{ q.states.review }} waiting</span>{% endif %}
-        {% if q.states.out %}<span class="badge badge-warn badge-status" title="{{ q.states.out }} student{{ '' if q.states.out == 1 else 's' }} who haven’t handed it in yet">{{ q.states.out }} not handed in</span>{% endif %}
-        {% if q.states.done %}<span class="badge badge-ok badge-status" title="{{ q.states.done }} student{{ '' if q.states.done == 1 else 's' }} with a score">{{ q.states.done }} done</span>{% endif %}
+      {#- (as small numbered circles, the words in their tooltips: the owner, 2026-10-24) #}
+      <span class="status-sums">
+        {% if q.states.out %}{{ count_dot(q.states.out, 'new', 'not handed in') }}{% endif %}
+        {% if q.states.review %}{{ count_dot(q.states.review, 'started', 'waiting for grading') }}{% endif %}
+        {% if q.states.done %}{{ count_dot(q.states.done, 'done', 'done') }}{% endif %}
         {% if not q.students %}<span class="muted small" title="Not assigned to anyone yet">–</span>{% endif %}</span></td>
     <td class="actions"><span class="btn-row quiz-row-actions">
       <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>

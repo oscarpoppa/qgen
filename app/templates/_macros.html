@@ -184,3 +184,12 @@
 {%- endmacro %}
 {# "1 quiz", "3 quizzes" #}
 {% macro count_of(n, one, many) %}{{ n }} {{ one if n == 1 else many }}{% endmacro %}
+{# a count in a column whose heading already names the things ("Attempts"): just the number, its words in the tooltip
+   (the owner, 2026-10-24: "21 attempts" took room the heading already says) #}
+{% macro count_badge(n, one, many, cls='box-count') %}<span class="badge {{ cls }}" title="{{ count_of(n, one, many) }}" aria-label="{{ count_of(n, one, many) }}">{{ n }}</span>{% endmacro %}
+{# a status count as a small numbered circle, gold (not started / not handed in), blue (in progress / waiting), green (done), like
+   the top bar's and the folder list's (the owner, 2026-10-24); its words in the tooltip #}
+{% macro count_dot(n, kind, words) %}<span class="side-dot dot-{{ kind }}" title="{{ n }} {{ words }}" role="img" aria-label="{{ n }} {{ words }}">{{ n }}</span>{% endmacro %}
+{# a status as a small mark (the owner, 2026-10-24): done, a green check; in progress, a blue half circle; new / not started, a gold
+   circle; ready to finish (graded, waiting to be finished), a green clipboard with a check #}
+{% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check'}[kind]) }}</span>{% endmacro %}

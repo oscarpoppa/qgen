@@ -131,7 +131,7 @@ def test_recently_completed(app_db):
     page = sam.get('/home').data.decode()
     part = page.split('class="box-title">Just finished</h2>')[1].split('</details>')[0]
     assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
-    assert 'title="Handed in; your teacher is checking your written answers">In progress</span>' in part and '>85%</span>' in part and part.count('aria-label="View"') == 2  # (the eye for both: owner 2026-10-14)
+    assert 'title="In progress: handed in; your teacher is checking your written answers" role="img" aria-label="In progress"' in part and '>85%</span>' in part and part.count('aria-label="View"') == 2  # (the eye for both: owner 2026-10-14)
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))

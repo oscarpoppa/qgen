@@ -1,7 +1,7 @@
 {# One student's attempts at one quiz, as table cells: their attempts (Details, Delete), the
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
-{% from "_macros.html" import post_button, slot, box_label, count_of, avatar with context %}
+{% from "_macros.html" import post_button, slot, box_label, count_of, avatar, count_badge, status_icon with context %}
 {# "Archive all (n)": every one of this student's attempts at the quiz. With one attempt it's the
    only archive button (the attempt's own Archive is left out then: the owner, 2026-10-19; it was
    grayed out beside it, 2026-10-16) #}
@@ -26,9 +26,9 @@
    rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
 {% macro attempt_status(cq, g) -%}
 {% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
-                    {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
-                    {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
+                    {% elif cq.status == 'review' %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}
+                    {% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
+                    {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}
 {%- endmacro %}
 {% macro attempt_buttons(cq, g, student) -%}
 <span class="btn-row result-attempt-buttons">
@@ -158,11 +158,12 @@
       {#- the newest thing that happened to any of its attempts: handed in, started, or assigned -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
       <td data-label="Latest" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
-      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}<span class="badge box-count">{{ count_of(tried, 'attempt', 'attempts') }}</span>{% endif %}</td>
+      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}{{ count_badge(tried, 'attempt', 'attempts') }}{% endif %}</td>
       {#- (sorted New, In progress, Completed, as on My quizzes) -#}
       <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}"><span class="btn-row quiz-state-badges">
-        {%- if has_started %}<span class="badge badge-accent badge-status">In progress</span>{% elif has_new %}<span class="badge badge-warn">New</span>{% else %}<span class="badge badge-ok badge-status">Completed</span>{% endif %}
-        {%- if has_new and has_started %}<span class="badge badge-warn">New</span>{% endif %}</span></td>
+        {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
+        {%- if has_started %}{{ status_icon('going', 'In progress') }}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
+        {%- if has_new and has_started %}{{ status_icon('fresh', 'New') }}{% endif %}</span></td>
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}{{ icons }}</span></td>
     </tr>

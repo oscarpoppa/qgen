@@ -2372,15 +2372,16 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 /* Assign: the Quiz card and the Students card side by side, alike (a filter bar, a folder list,
    then the list), and the dates and Assign button in a card across both, below */
 .assign-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
-.assign-form > .card { margin: 0; }
+.assign-form > .card, .assign-side > .card { margin: 0; }
 @container page (min-width: 960px) {
   .assign-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr; }  /* the Quiz and Students cards share the width equally; (the last row takes what the dates card needs past the Students card, so Assign sits right under that card) */
   /* the dates under the Quiz card; the Assign button in the right column, under the Students
      card and level with the dates (the owner, 2026-10-14) */
   .assign-form > .pick-quiz { grid-column: 1; grid-row: 1; }
   .assign-form > .assign-when { grid-column: 1; grid-row: 2 / span 2; }
-  .assign-form > .pick-people-card { grid-column: 2; grid-row: 1 / span 2; }
-  .assign-form > .assign-go { grid-column: 2; grid-row: 3; margin: 0; }
+  /* the Students card and Assign right under it, together in the right-hand column (the owner, 2026-10-24) */
+  .assign-form > .assign-side { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+  .assign-form > .assign-side > .pick-people-card { align-self: stretch; }
   .pick-people .folder-filter-list > .pick-list, .pick-people .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); }
 }
 .pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
@@ -2388,7 +2389,10 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .pick-quiz .quiz-pick-list > li { margin: 0; min-width: 0; }
 .pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
 .pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
-.assign-form > .assign-go { margin: 0; }
+.assign-form .assign-go { margin: 0; }
+/* (narrower: the right-hand column's two parts join the page's one column; Assign last, after When) */
+.assign-side { display: contents; }
+.assign-side > .assign-go { order: 1; }
 /* (a bigger button: the page's one main action) */
 .btn.btn-big { font-size: var(--fs-lg); padding: 10px 32px; min-height: 48px; }
 .assign-when .dates { max-width: 760px; }
@@ -2828,7 +2832,7 @@ td.attempt-buttons { text-align: right; }
    filter over the tabs on the right (templates ulist.html; the owner, 2026-10-17) */
 /* (left: the title, the folder list, the Awards button; right: the filter row with the page's
    buttons, the tabs, the list) */
-.student-folders > .folder-filter[data-style="list"].has-onetab { grid-template-columns: minmax(170px, 260px) minmax(0, 1fr);
+.student-folders > .folder-filter[data-style="list"].has-onetab { grid-template-columns: var(--side-w, minmax(170px, 260px)) minmax(0, 1fr);
   grid-template-rows: auto auto auto 1fr; column-gap: 16px; row-gap: 0; }
 .student-folders > .folder-filter[data-style="list"].has-onetab > .student-head { grid-column: 1; grid-row: 1; margin: 0 0 8px; }
 .student-folders > .folder-filter[data-style="list"].has-onetab > .side-list-head { grid-column: 1; grid-row: 2; }
@@ -3243,6 +3247,11 @@ details.result-box[open] > summary, details.item-box[open] > summary {
 table.pick-table { width: 100%; border-collapse: collapse; }
 table.pick-table > thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2, var(--surface)); }
 table.pick-table > tbody > tr > td { padding: 6px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+/* a folder that can't be chosen here (a New folder dialog's folders already as deep as folders go): grayed, its why in the tooltip */
+table.pick-table > tbody > tr.pick-off > td { color: var(--muted); }
+table.pick-table > tbody > tr.pick-off label { cursor: not-allowed; opacity: .6; }
+/* a New folder dialog's name box: the full width, over the picker */
+dialog.folder-dialog[data-fopt-dialog="new"] input[name="name"], dialog#stash-new input[name="name"] { width: 100%; margin: 0 0 10px; }
 table.pick-table > tbody > tr > td.tick-col { width: 36px; padding-right: 0; }
 table.pick-table td.tick-col input { opacity: 1; }
 table.pick-table label { display: flex; align-items: center; gap: 8px; cursor: pointer; overflow-wrap: anywhere; }
@@ -3428,8 +3437,6 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .stash-split { display: grid; grid-template-columns: var(--stash-side-w, minmax(140px, 28%)) 12px minmax(0, 1fr); gap: 14px 4px; align-items: start; }
 .stash-split .stash-bar { align-self: stretch; min-height: 120px; }
 @media (max-width: 700px) { .stash-split, .stash-split.has-vsplit { grid-template-columns: minmax(0, 1fr); } .stash-split .stash-bar { display: none; } }
-.stash-tab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.stash-tab .btn-row { margin-left: auto; }
 
 /* a picker's bar between its folder list and the table beside it (static/js/splitter.js): in the gap between them,
    the full height of the list; hidden when the two are stacked (the owner, 2026-10-23) */
@@ -3505,3 +3512,48 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 /* a row in a folder's list is clickable all along: it opens or goes where its name does (static/js/rowclick.js; the owner, 2026-10-23) */
 :is(.folder-filter-list, #scan-away, #scan-current) tbody > tr:has(> td > details.row-fold),
 :is(.folder-filter-list, #scan-away, #scan-current) tbody > tr:has(> td a.name-link[href]) { cursor: pointer; }
+/* an open row's groups start the same distance in from the row's left edge on every list: a list with a check column has its name cell
+   further in, so the groups are pulled back by that much (static/js/dividers.js sets --cell-offset); People's look as Results by quiz's
+   (the owner, 2026-10-24: People's were indented so far they were hard on the eyes) */
+.result-rows details.row-fold[open] > .result-groups { margin-left: calc(28px - var(--cell-offset, 0px)); }
+/* a list with check boxes: the row's fold arrow 12px after the check box, the same room Results by quiz leaves before its arrow
+   (the owner, 2026-10-24: there was twice that between the box and the arrow) */
+.folder-filter-list table.even-cols :is(th, td).tick-col { padding-right: 0; }
+.folder-filter-list table.even-cols :is(th.tick-col + th, td.tick-col + td) { padding-left: 9px; }
+/* (the cell after the check box has 9px of room inside instead of 12px: its groups still start 40px in from the row's edge) */
+.result-rows td.tick-col + td > details.row-fold[open] > .result-groups { margin-left: calc(30px - var(--cell-offset, 0px)); }
+/* One row height on every folder list (the owner, 2026-10-24): a folded row is 46px, as on Results by quiz (text with 10px above and
+   below, 34px icons with 4px or 6px). People's were 59-91px: its Folders cell held 34px icons with 10px of room, the picture made the
+   name line 32px, and the Status badges and folder chips wrapped. */
+.folder-filter-list table.even-cols > tbody > tr > td.person-folders { padding-top: 6px; padding-bottom: 5px; }
+.people-table > tbody > tr > td[data-label="Name"] { padding-top: 4px; padding-bottom: 4px; }
+.people-table td[data-label="Status"] .student-sums { flex-wrap: nowrap; margin-left: 0; }
+@container listarea (min-width: 1101px) {
+  .folder-filter-list td.person-folders, .folder-filter-list td.person-folders .move-form { flex-wrap: nowrap; white-space: nowrap; }
+  .folder-filter-list td.person-folders .folder-icons { margin-bottom: 0; }  /* (its 4px under it is for chips that wrap; here they don't) */
+}
+.folder-filter-list td.person-folders > * { vertical-align: middle; }  /* (the chips beside the folder icons, centered on them, one line) */
+
+.field.has-error .scan-drop { border-color: var(--bad); }  /* (no pages chosen when Upload and read was pressed) */
+/* a teacher's small icon beside the name on People (the owner, 2026-10-24: the word badge made the row two lines) */
+.person-role-icon { display: inline-flex; align-items: center; color: var(--accent); margin-left: 6px; vertical-align: middle; }
+.person-role-icon svg.ico { width: 18px; height: 18px; }
+/* a student's page: the drag bar in the gap between the folder list and the open folder, the whole height (static/js/splitter.js) */
+.student-folders > .folder-filter[data-style="list"] > .student-split { grid-column: 1; grid-row: 1 / -1; justify-self: end; align-self: stretch;
+  width: 12px; margin-right: -14px; z-index: 2; min-height: 120px; }
+@media (max-width: 640px) { .student-folders > .folder-filter[data-style="list"] > .student-split { display: none; } }
+
+/* shorter statuses (the owner, 2026-10-24): status counts as small numbered circles, single statuses as small marks */
+.side-dot.dot-done { background: var(--ok); }
+.status-sums { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.status-icon { display: inline-flex; align-items: center; vertical-align: middle; }
+.status-icon svg.ico { width: 20px; height: 20px; }
+.status-icon.status-done svg.ico, .status-icon.status-ready svg.ico { color: var(--ok); }
+.status-icon.status-going svg.ico { color: var(--accent); }
+.status-icon.status-fresh svg.ico { color: var(--warn); }
+
+/* help on the label itself, no "?" circle (the owner, 2026-10-24; static/js/tips.js): a faint dotted underline says there's help */
+.tip-wrap.tip-moved > button.tip { display: none; }
+.tip-wrap.tip-moved { display: contents; }
+.has-tip { text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent); text-underline-offset: 3px; cursor: help; }
+.has-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }

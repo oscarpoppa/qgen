@@ -124,7 +124,7 @@ def test_people_fits_a_laptops_window(app_db):
     page = teacher.get('/userdet').data.decode()
     row = page[page.index('data-box="user:{}"'.format(ids('teach'))):]
     row = row[:row.index('</tr>')]
-    assert '<span class="person-line"><span class="avatar-wrap">' in row and '<strong class="box-title">teach</strong></span>' in row
+    assert '<span class="person-line"><span class="avatar-wrap">' in row and '>teach</strong></span>' in row
     made = User.query.filter_by(username='teach').one().created_at
     if made:
         from app import when_filter
@@ -134,3 +134,76 @@ def test_people_fits_a_laptops_window(app_db):
     assert '.people-table .person .box-title { overflow-wrap: normal; word-break: normal; }' in css
     assert 'table.people-table td.person-folders { min-width: 0; max-width: 16rem; }' in css
     assert 'table.even-cols.people-table td.actions { white-space: normal;' in css
+
+
+def _new_box(page, nth=0):
+    at = [m.start() for m in re.finditer('data-fopt-dialog="new"', page)][nth]
+    head = page[at - 120:at]
+    box = page[at:]
+    return head, box[:box.index('</dialog>')]
+
+
+def test_new_folder_asks_where_it_goes(app_db):
+    """New folder: the name and the standard picker, laid out like Move to; it starts on the folder looked
+    at (or the top), and a folder already as deep as folders go is grayed with why (the owner, 2026-10-24)."""
+    from test_tuning import set_values
+    app, db = app_db
+    teacher = login(app, 'teach')
+    a, term, week = archived(app, db, teacher)
+    head, box = _new_box(teacher.get('/quiz/archive').data.decode())
+    assert 'pick-dialog put-dialog' in head
+    assert '<strong>New folder</strong><br>' in box and 'Type its name and choose where it goes.' in box
+    assert 'name="name"' in box and not re.search(r'<input[^>]* name="parent"', box)  # (the picker's round buttons are named parent)
+    holder = re.search(r'<div class="field pick-people folder-pick" data-folder-pick ([^>]*)>', box).group(1)
+    assert 'data-name="parent"' in holder and 'data-main-label="Not inside another folder"' in holder
+    assert 'data-checked="top"' in holder
+    assert box.index('Make folder') < box.index('data-cancel')
+    # inside Term 1: it starts there; one dialog on the page, and each folder's "+ New folder inside" opens it
+    # on that folder (static/js/folders.js), not a copy of the folder list per folder
+    page = teacher.get('/quiz/archive?folder={}'.format(term.id)).data.decode()
+    assert page.count('data-fopt-dialog="new"') == 1
+    assert 'data-checked="{}"'.format(term.id) in _new_box(page)[1]
+    assert 'data-new-at="{}"'.format(term.id) in page
+    js = read('static', 'js', 'folders.js')
+    assert "b.dataset.newAt || holder.dataset.home" in js
+    # two levels at most: Week A (level 2) is grayed with why, and can't be the start
+    set_values(folder_depth=2)
+    page = teacher.get('/quiz/archive?folder={}'.format(week.id)).data.decode()
+    box = _new_box(page)[1]
+    rows = {r[1]: r for r in json.loads(re.search(r'<script type="application/json" data-pick-rows>(.*?)</script>', box, re.S).group(1))}
+    assert rows['Week A'][4] == 'Folders can go only 2 levels deep.' and rows['Term 1'][4] == ''
+    assert 'data-checked="top"' in box
+    # the chosen place is where it's made
+    from app.qgen.models import ArchiveFolder
+    teacher.post('/quiz/archive/folders/new', data={'name': 'Week B', 'parent': term.id})
+    teacher.post('/quiz/archive/folders/new', data={'name': 'Loose', 'parent': 'top'})
+    assert ArchiveFolder.query.filter_by(name='Week B').one().parent_id == term.id
+    assert ArchiveFolder.query.filter_by(name='Loose').one().parent_id is None
+
+
+def test_the_picker_grays_a_folder_that_cant_be_chosen():
+    pick = read('static', 'js', 'dialogfilter.js')
+    assert "off: f[4] || ''" in pick and 'i.disabled = true' in pick and "tr.title = f.off" in pick
+    # a New folder dialog opens with the cursor in its name box, not the filter
+    assert "d.querySelector('input[name=name]') || d.querySelector('input.filter-list')" in pick
+
+
+def test_the_stashs_new_folder_is_the_same_dialog(app_db):
+    app, db = app_db
+    app.config['ANTHROPIC_API_KEY'] = 'test-key'  # (Scan workbook pages needs a key)
+    teacher = login(app, 'teach')
+    # (the stash's card shows once it has something: a folder made from it)
+    from app.qgen.models import ScanFolder
+    r = teacher.post('/quiz/scan/folders/new', data={'name': 'Book 1'})
+    top = ScanFolder.query.filter_by(name='Book 1').one()
+    assert top.parent_id is None and 'stash=' not in r.headers['Location']
+    page = teacher.get('/quiz/scan').data.decode()
+    at = page.index('id="stash-new"')
+    assert 'pick-dialog put-dialog' in page[at - 120:at]
+    box = page[at:page.index('</dialog>', at)]
+    assert 'Type its name and choose where it goes.' in box and 'data-name="parent"' in box and 'data-checked="top"' in box
+    assert 'data-checked="{}"'.format(top.id) in teacher.get('/quiz/scan?stash={}'.format(top.id)).data.decode()
+    # made where chosen, and the stash stays where it was
+    r = teacher.post('/quiz/scan/folders/new', data={'name': 'Ch 1', 'parent': top.id, 'view': 'main'})
+    assert ScanFolder.query.filter_by(name='Ch 1').one().parent_id == top.id and 'stash=main' in r.headers['Location']
+    app.config['ANTHROPIC_API_KEY'] = None

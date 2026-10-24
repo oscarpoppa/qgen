@@ -1,19 +1,76 @@
-/* Help tips: a small "?" button next to a label (see the tip macro).
- * Hovering or focusing it shows the explanation; clicking or tapping keeps it
- * open (touch screens have no hover); Esc, the button again, or a click
- * elsewhere closes it. Works for rows added to the page later, too. */
+/* Help tips: the label a tip macro sits beside shows its help (see below). */
 (function () {
-  var open = null;      // the button whose tip is showing
+  /* (the owner, 2026-10-24: no "?" circles; the label, heading or words the help is about show it, with a faint dotted underline.
+   * Each tip macro's "?" is turned into that here: the label just before it, the words just before it, or the heading of the box
+   * it's in. Hovering or focusing the label shows the help; a click or tap keeps it open; Esc, the label again or a click elsewhere
+   * closes it.) */
+  var open = null;      // the label whose tip is showing
   var pinned = false;   // opened by a click/tap, so hover-out doesn't close it
   var hideTimer = null;
   var uid = 0;
+  var SKIP = '.badge, .muted, .sr-only, script, template';
+  var STOP = 'button, input, select, textarea';
 
-  function bodyOf(btn) { return btn.nextElementSibling; }
+  //the label a tip belongs to: the nearest thing before its "?" that names something (a label, a heading, some words),
+  //else the heading of the box it's in
+  function hostFor(wrap) {
+    for (var n = wrap.previousSibling; n; n = n.previousSibling) {
+      if (n.nodeType === 3) {
+        var t = n.textContent;
+        if (!t.trim()) continue;
+        var span = document.createElement('span');
+        var lead = t.match(/^\s*/)[0], trail = t.match(/\s*$/)[0];
+        span.textContent = t.trim();
+        var frag = document.createDocumentFragment();
+        if (lead) frag.appendChild(document.createTextNode(lead));
+        frag.appendChild(span);
+        if (trail) frag.appendChild(document.createTextNode(trail));
+        n.parentNode.replaceChild(frag, n);
+        return span;
+      }
+      if (n.nodeType !== 1) continue;
+      if (n.matches(STOP)) break;
+      if (n.matches(SKIP)) continue;
+      return n;
+    }
+    var d = wrap.closest('details');
+    var sum = d && d.querySelector(':scope > summary');
+    if (sum) return sum.querySelector('.box-title') || sum;
+    return null;
+  }
 
-  function place(btn) {
-    var body = bodyOf(btn);
+  function setUp(root) {
+    (root || document).querySelectorAll('.tip-wrap:not(.tip-moved)').forEach(function (wrap) {
+      var body = wrap.querySelector('.tip-body'), host = hostFor(wrap);
+      if (!body || !host) return;
+      wrap.classList.add('tip-moved');
+      host.classList.add('has-tip');
+      //(a title it had goes first in the help: one tooltip, not two)
+      if (host.title) { var p = document.createElement('p'); p.textContent = host.title; body.insertBefore(p, body.firstChild); host.removeAttribute('title'); }
+      //(a label too: the keyboard reaches its help as it reached the "?" button, Enter or Space opening it)
+      if (!host.matches('a, button, summary, input, [tabindex]')) host.tabIndex = 0;
+      host._tipBody = body;
+    });
+  }
+  setUp();
+  //(rows added to the page later: the values table, a dialog)
+  if (window.MutationObserver) {
+    var later = null;
+    new MutationObserver(function (records) {
+      //(only when something with a tip came in: cheap otherwise)
+      var any = records.some(function (r) { return Array.prototype.some.call(r.addedNodes, function (n) { return n.nodeType === 1 && (n.matches('.tip-wrap') || n.querySelector('.tip-wrap')); }); });
+      if (any) { clearTimeout(later); later = setTimeout(function () { setUp(); }, 50); }
+    })
+      .observe(document.body, { childList: true, subtree: true });
+  }
+
+  function hostOf(el) { var h = el && el.closest && el.closest('.has-tip'); return h && h._tipBody ? h : null; }
+  function bodyOf(host) { return host._tipBody; }
+
+  function place(host) {
+    var body = bodyOf(host);
     var gap = 8, margin = 12;
-    var r = btn.getBoundingClientRect();
+    var r = host.getBoundingClientRect();
     body.style.left = '0px';
     body.style.top = '0px';
     var w = body.offsetWidth, h = body.offsetHeight;
@@ -24,25 +81,22 @@
     body.style.top = top + 'px';
   }
 
-  function show(btn, pin) {
+  function show(host, pin) {
     clearTimeout(hideTimer);
-    if (open && open !== btn) hide();
-    var body = bodyOf(btn);
-    if (!body || !body.classList.contains('tip-body')) return;
+    if (open && open !== host) hide();
+    var body = bodyOf(host);
     if (!body.id) body.id = 'tip-' + (++uid);
-    btn.setAttribute('aria-describedby', body.id);
+    host.setAttribute('aria-describedby', body.id);
     body.hidden = false;
-    btn.setAttribute('aria-expanded', 'true');
-    open = btn;
+    open = host;
     pinned = pinned || !!pin;
-    place(btn);
+    place(host);
   }
 
   function hide() {
     clearTimeout(hideTimer);
     if (!open) return;
     bodyOf(open).hidden = true;
-    open.setAttribute('aria-expanded', 'false');
     open = null;
     pinned = false;
   }
@@ -54,39 +108,52 @@
   }
 
   document.addEventListener('click', function (e) {
-    var btn = e.target.closest('button.tip');
-    if (btn) {
-      e.preventDefault();
-      if (open === btn && pinned) hide(); else show(btn, true);
+    if (e.target.closest('.tip-body')) return;
+    var host = hostOf(e.target);
+    //(a label that's also a fold or a box's heading still does that; its help shows on hover and focus)
+    //(on a touch screen there's no hover: a tap on a fold's heading also opens its help, and the fold still opens)
+    if (host && (host.matches('summary') || host.closest('summary')) && matchMedia('(hover: none)').matches) {
+      if (open === host && pinned) hide(); else show(host, true);
+      return;
+    }
+    if (host && !host.matches('summary') && !host.closest('summary')) {
+      if (open === host && pinned) hide(); else show(host, true);
       return;
     }
     if (open && !e.target.closest('.tip-body')) hide();
   });
 
   document.addEventListener('mouseover', function (e) {
-    var btn = e.target.closest('button.tip');
-    if (btn) { if (!pinned) show(btn, false); return; }
+    var host = hostOf(e.target);
+    if (host) { if (!pinned) show(host, false); return; }
     if (open && e.target.closest('.tip-body') === bodyOf(open)) clearTimeout(hideTimer);
   });
   document.addEventListener('mouseout', function (e) {
     if (!open || pinned) return;
-    var from = e.target.closest('button.tip, .tip-body');
-    var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('button.tip, .tip-body');
-    if (from && to !== open && to !== bodyOf(open)) hideSoon();
+    var to = e.relatedTarget;
+    if (to && (open.contains(to) || bodyOf(open).contains(to))) return;
+    hideSoon();
   });
 
   document.addEventListener('focusin', function (e) {
-    if (e.target.matches('button.tip') && !pinned) show(e.target, false);
+    var host = hostOf(e.target);
+    if (host && host === e.target && !pinned) show(host, false);
   });
   document.addEventListener('focusout', function (e) {
-    if (e.target.matches('button.tip') && !pinned) hideSoon();
+    if (hostOf(e.target) && !pinned) hideSoon();
   });
 
   document.addEventListener('keydown', function (e) {
+    var host = hostOf(e.target);
+    if ((e.key === 'Enter' || e.key === ' ') && host && host === e.target && !host.matches('a, button, summary, input')) {
+      e.preventDefault();
+      if (open === host && pinned) hide(); else show(host, true);
+      return;
+    }
     if (e.key === 'Escape' && open) {
-      var btn = open;
+      var host = open;
       hide();
-      btn.focus();
+      if (host.focus) host.focus();
     }
   });
 

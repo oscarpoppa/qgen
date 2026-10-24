@@ -96,14 +96,27 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-fopt]');
     if (!b) return;
-    var box = b._dialog || b.parentElement.querySelector(':scope > dialog[data-fopt-dialog]');
+    //(a folder's "+ New folder inside" has no dialog of its own: it opens the page's one New folder dialog)
+    var box = b._dialog || b.parentElement.querySelector(':scope > dialog[data-fopt-dialog]')
+      || (b.dataset.fopt === 'new' ? document.querySelector('dialog[data-fopt-dialog="new"]') : null);
     if (!box) return;
     e.preventDefault();
-    if (!b._dialog) {
-      b._dialog = box;
+    b._dialog = box;
+    if (!box._wired) {
+      box._wired = true;
       document.body.appendChild(box);
       box.querySelector('[data-cancel]').addEventListener('click', function () { box.close(); });
       box.addEventListener('close', function () { box.querySelector('form').reset(); });
+    }
+    //(New folder starts on that folder, or the one being looked at; its picker is drawn again from there)
+    var holder = b.dataset.fopt === 'new' && box.querySelector('[data-folder-pick]');
+    if (holder) {
+      var at = b.dataset.newAt || holder.dataset.home;
+      if (holder.dataset.checked !== at) {
+        holder.dataset.checked = at;
+        var old = holder.querySelector('table');
+        if (old) old.remove();
+      }
     }
     var menu = b.closest('details.folder-tools');
     if (menu) menu.open = false;

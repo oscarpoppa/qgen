@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, status_icon with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, move_mini, move_folders, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
@@ -39,9 +39,9 @@
                 <span class="nowrap">{{ fk.name(home) if home else fk.main_label }}</span></span></td>
               <td data-label="Result" data-sort="{{ '%06.1f' % a.score if a.completed and a.score is not none else '' }}">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
-                {% elif a.needs_review %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>
-                {% elif a.startdate %}<span class="badge badge-accent badge-status">In progress</span>
-                {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}</td>
+                {% elif a.needs_review %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}
+                {% elif a.startdate %}{{ status_icon('going', 'In progress') }}
+                {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}</td>
               <td class="actions">
                 <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when archived">{{ icon_label('lc-eye', 'View') }}</a>
                 {% if blocker %}

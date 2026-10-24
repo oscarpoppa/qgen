@@ -29,7 +29,7 @@
     var data = holder.querySelector('script[data-pick-rows]');
     if (!data || holder.querySelector('table')) return;
     holder.insertAdjacentHTML('beforeend', TABLE);
-    var rows = JSON.parse(data.textContent).map(function (f) { return { id: String(f[0]), name: f[1], depth: f[2], icon: f[3] }; });
+    var rows = JSON.parse(data.textContent).map(function (f) { return { id: String(f[0]), name: f[1], depth: f[2], icon: f[3], off: f[4] || '' }; });
     pick.fill(holder, rows, { type: 'radio', name: holder.dataset.name, top: holder.dataset.mainLabel,
       each: function (f, r) { if (String(f.id) === holder.dataset.checked) r.defaultChecked = r.checked = true; } });
   }
@@ -46,6 +46,8 @@
       c.className = 'tick-col';
       var i = document.createElement('input');
       i.type = o.type || 'radio'; i.name = o.name; i.value = f.id; i.id = 'folder-pick-row-' + (++n);
+      //(a folder that can't be chosen here, e.g. too deep for a new folder inside it: grayed, with why)
+      if (f.off) { i.disabled = true; tr.classList.add('pick-off'); tr.title = f.off; }
       c.appendChild(i);
       var lab = document.createElement('label');
       lab.htmlFor = i.id;
@@ -173,7 +175,7 @@
         //screen, where that would pop up the keyboard: the user critic, 2026-10-20)
         if (r.attributeName === 'open' && d.open && d.tagName === 'DIALOG' && !matchMedia('(pointer: coarse)').matches) {
           setTimeout(function () {
-            var f = d.querySelector('input.filter-list');
+            var f = d.querySelector('input[name=name]') || d.querySelector('input.filter-list');  // (a New folder dialog: its name first)
             if (f && f.offsetParent) f.focus();
           }, 30);
         }

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, count_badge, status_icon with context %}
 {% from "_macros.html" import avatar, box_label, count_of, back_button with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, move_mini, move_folders, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
@@ -30,10 +30,10 @@
 {# counted: this attempt's score is the one that counts (by the retake rule) #}
 {% macro status(cq, counted=false) %}
   {% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-  {% elif cq.status == 'review' %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">In progress</span>
-  {% elif cq.status == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
+  {% elif cq.status == 'review' %}{{ status_icon('going', 'In progress', tip='handed in; your teacher is checking your written answers') }}
+  {% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
   {# assigned and not opened yet: new to the student #}
-  {% else %}<span class="badge badge-warn">New</span>{% endif %}
+  {% else %}{{ status_icon('fresh', 'New') }}{% endif %}
 {% endmacro %}
 
 {# the quizzes as rows, like the teachers' list pages (the owner, 2026-10-17): each row's
@@ -85,13 +85,14 @@
           (sortable; right after the name, as on every list: the owner 2026-10-20) -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
       <td data-label="Latest" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
-      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}<span class="badge box-count">{{ count_of(tried, 'attempt', 'attempts') }}</span>{% endif %}</td>
+      <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}{{ count_badge(tried, 'attempt', 'attempts') }}{% endif %}</td>
       {#- the row's state first (In progress, else New, else Completed), then anything more: Due soon, a second New, a change -#}
       {#- (Completed: every attempt handed in and graded, the owner 2026-10-20. Sorted New, In progress,
           Completed, a quiz with more than one at its highest: New with In progress sorts as New) -#}
       <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
-        {%- if has_started %}<span class="badge badge-accent badge-status">In progress</span>{% elif has_new %}<span class="badge badge-warn">New</span>{% else %}<span class="badge badge-ok badge-status">Completed</span>{% endif %}
-        {%- if has_new and has_started %}<span class="badge badge-warn">New</span>{% endif %}
+        {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
+        {%- if has_started %}{{ status_icon('going', 'In progress') }}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
+        {%- if has_new and has_started %}{{ status_icon('fresh', 'New') }}{% endif %}
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
@@ -138,9 +139,10 @@
     {#- (an empty list says so inside its framed panel, one card, as on the other folder pages: the owner, 2026-10-23) #}
     {% call named_box(fk, 'quiz:', pg=pg) %}{% if shown %}{{ cards(shown) }}
       {% elif showing and not pg.q %}<p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
-      {# (an empty folder with folders inside says so itself, under its folders' tabs, as on the teachers' pages) #}
+      {#- (an empty folder says so even with folders inside it: the old rows of folder tabs that said it are gone; the
+          owner, 2026-10-24: two rows deep, with its message, on every folder page) #}
       {% elif not pg.q and fk.view in ('new', 'started') %}<p class="card empty small">{{ nothing }}</p>
-      {% elif not pg.q and ((fk.node and not fk.node.folders) or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+      {% elif not pg.q and (fk.node or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
       {% endif %}{% endcall %}
   </div>
 {% endcall %}

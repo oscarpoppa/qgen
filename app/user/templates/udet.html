@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, count_badge, count_dot with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
@@ -20,7 +20,7 @@
       {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
           after Folders, in the site's column order; open, a row shows the person and then each of their
           quizzes with its attempts) #}
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th>Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="status">Status</th><th data-sort-key="done">Done</th>{% endif %}<th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th>Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -36,24 +36,22 @@
                  critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
-                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title">{{ item.shown_name }}</strong></span>{% if item.is_admin %}<span class="badge badge-accent person-role" title="Teacher">Teacher</span>{% endif %}</span></summary>
-            <ul class="quiz-facts small muted">
-              <li>{% if item.is_admin %}Teacher{% else %}Student{% endif %}</li>
-              <li>Last seen: {% if item.online %}online now{% elif item.last_seen %}<span title="{{ item.last_seen|when }}">{{ item.seen_label() }}</span>{% else %}<span title="Not since the site began keeping track">never</span>{% endif %}</li>
-              {% if in_archive %}<li>Archived {{ item.archived_at|when('date') }}</li>{% endif %}
-            </ul>
+                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · Archived {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong></span>{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></summary>
             {% if not in_archive %}<div class="result-groups divided" data-fold-body>
-            {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{{ result_group(attempt_title(g, item), g, item, rules, g.vquiz.title|lower) }}
+            {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{% set head %}<span class="box-icon" aria-hidden="true">{{ icon('note') }}</span>{{ attempt_title(g, item) }}{% endset %}{#- (the quiz icon before its name, as on Results by quiz's quiz rows: the owner, 2026-10-24) #}{{ result_group(head, g, item, rules, g.vquiz.title|lower) }}
             {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '' }}</td>
           <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           {% if not in_archive %}
-          <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}"><span class="badge box-count">{{ count_of(n, 'quiz', 'quizzes') }}</span></td>
-          {#- (the status badges stacked, one under the other, to keep the row narrow: the owner, 2026-10-21) #}
-          <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (sum_going, sum_fresh) if sum_going or sum_fresh else '' }}"><span class="student-sums stacked-sums">
-            {% if sum_going %}<span class="badge badge-accent badge-status" title="Attempts started and not handed in yet, or handed in and waiting for grading">{{ sum_going }} in progress</span>{% endif %}
-            {% if sum_fresh %}<span class="badge badge-warn badge-status" title="Quizzes given and not started yet">{{ sum_fresh }} not started</span>{% endif %}</span></td>
-          <td data-label="Done" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="student-sums stacked-sums"><span class="badge {{ score_class(sum_avg) }}" title="Quizzes with a score that counts, and the average of those scores">{{ sum_done|length }} done</span><span class="badge {{ score_class(sum_avg) }}" title="The average of the scores that count">avg {{ '%.0f' % sum_avg }}%</span></span>{% endif %}</td>
+          <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}">{{ count_badge(n, 'quiz', 'quizzes') }}</td>
+          {#- (laid out as Results by quiz's rows, the owner 2026-10-24: Average in its own column, in the same badge; then one Status
+              column with the badges side by side, not started / in progress / done; there was a Done column) #}
+          <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="badge {{ score_class(sum_avg) }}" title="The average of the scores that count, for the {{ sum_done|length }} quiz{{ '' if sum_done|length == 1 else 'zes' }} with one">{{ '%.0f' % sum_avg }}%</span>{% endif %}</td>
+          <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (sum_going, sum_fresh) if sum_going or sum_fresh else '' }}"><span class="status-sums">
+            {#- (as small numbered circles, the words in their tooltips: the owner, 2026-10-24) #}
+            {% if sum_fresh %}{{ count_dot(sum_fresh, 'new', 'not started') }}{% endif %}
+            {% if sum_going %}{{ count_dot(sum_going, 'started', 'in progress') }}{% endif %}
+            {% if sum_done %}{{ count_dot(sum_done|length, 'done', 'done') }}{% endif %}</span></td>
           {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">

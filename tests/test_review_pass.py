@@ -387,7 +387,7 @@ def test_student_wording(app_db):
     page = take_page(sam, cq.id).data.decode()
     assert 'value="Hand it in"' in page and "Once you hand it in, you can't change your answers." in page
     mine = sam.get('/mypage').data.decode()
-    assert '1 attempt</span>' in mine
+    assert 'aria-label="1 attempt">1</span>' in mine
     # the teacher's pages keep their own words
     assert 'Hand it in' not in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
 
@@ -1167,8 +1167,8 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
         row = cards[cards.index('data-quiz="{}"'.format(quiz.id)):]
         row = row[row.index('data-label="Status"'):]
         return row[:row.index('</td>')]
-    assert '>In progress</span>' in status_of(begun)
-    assert '>Due soon</span>' in status_of(soon) and '>New</span>' in status_of(soon) and 'Hand it in by' in status_of(soon)
+    assert 'aria-label="In progress"' in status_of(begun)
+    assert '>Due soon</span>' in status_of(soon) and 'aria-label="New"' in status_of(soon) and 'Hand it in by' in status_of(soon)
 
 
 def test_folder_numbers_count_tries_not_quizzes(app_db):
@@ -1566,27 +1566,28 @@ def test_a_folded_student_says_where_they_are(app_db):
     #(a row now, its sums in its Done and Status columns: the owner, 2026-10-21; done and the average
     #are two badges, stacked)
     head = cells(page, 'sam')
-    assert '>1 done</span>' in head and '>avg 100%</span>' in head and '>1 not started</span>' in head
+    assert 'aria-label="1 done"' in head and '>100%</span>' in head and 'aria-label="1 not started"' in head
     assert 'to grade' not in head and 'in progress' not in head
     # colored like every other score: green from 70%, amber from 50%, red below
-    assert 'class="badge badge-ok" title="Quizzes with a score that counts, and the average of those scores">1 done</span>' in head
+    assert 'class="side-dot dot-done" title="1 done" role="img" aria-label="1 done">1</span>' in head
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '5'})
         db.session.commit()
     page = teacher.get('/userdet').data.decode()
-    assert ('class="badge badge-bad" title="Quizzes with a score that counts, and the average of those scores">1 done</span>'
-            '<span class="badge badge-bad" title="The average of the scores that count">avg 0%</span>') in cells(page, 'kim')
+    #(Average in its own column, colored by the score; "1 done" in Status, like Results by quiz: the owner, 2026-10-24)
+    assert '<span class="badge badge-bad" title="The average of the scores that count, for the 1 quiz with one">0%</span>' in cells(page, 'kim')
+    assert 'aria-label="1 done">1</span>' in cells(page, 'kim')
     # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the row
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '4'})
         db.session.commit()
     page = teacher.get('/userdet').data.decode()
     kim = cells(page, 'kim')
-    assert '>1 done</span>' in kim and '>avg 100%</span>' in kim
+    assert 'aria-label="1 done"' in kim and '>100%</span>' in kim
     emma = cells(page, 'teach')
     emma = emma.split('class="actions"')[0]
     # nothing given: nothing to say but the count
-    assert '>0 quizzes</span>' in emma and 'badge-status' not in emma and ' done</span>' not in emma and 'avg ' not in emma
+    assert 'aria-label="0 quizzes">0</span>' in emma and 'side-dot' not in emma and 'done"' not in emma and '%</span>' not in emma
 
 
 def test_uncategorized_everywhere(app_db):
@@ -1628,7 +1629,7 @@ def test_where_an_attempt_is_stands_out(app_db):
         give(vq, 'sam')
         db.session.commit()
     page = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert '<span class="badge badge-warn badge-status">Not started</span>' in page
+    assert 'aria-label="Not started"' in page
 
 
 def test_unused_buttons_are_grayed_out_not_missing(app_db):
@@ -1775,12 +1776,13 @@ def test_assign_says_who_gets_the_quiz(app_db):
 
 
 def test_the_tabs_expand_collapse_sits_in_the_lists_heading_row():
-    """The one tab's Expand all / Collapse all (for the rows that open) sits in the list's heading
-    row, beside its check box, not by the tab (the owner, 2026-10-22); redrawn, it's never doubled."""
+    """The one tab's Expand all / Collapse all (for the rows that open) sits right after the tab on every list,
+    check boxes or not (the owner, 2026-10-24; it was in the heading row beside the check box from
+    2026-10-22); redrawn, it's never doubled."""
     import os
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'folderfilter.js')).read()
-    assert 'function placeTabPair()' in js and "list.querySelector('table > thead > tr > th.tick-col')" in js
+    assert 'function placeTabPair()' in js and "var to = one;" in js and "th.tick-col') ||" not in js
     assert "box.querySelectorAll('.tab-level-pair').forEach(function (old) { if (old !== lp) old.remove(); });" in js
     #(only where rows open)
     assert "list.querySelector('details.box')" in js

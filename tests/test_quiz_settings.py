@@ -437,11 +437,11 @@ def test_a_newly_assigned_quiz_says_new(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Fresh', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     home = sam.get('/mypage').data.decode()
-    assert '<span class="badge badge-warn">New</span>' in home and 'Not started' not in home
+    assert 'aria-label="New"' in home and 'Not started' not in home
     # opened: no longer new
     take_page(sam, CQuiz.query.one().id)
     home = sam.get('/mypage').data.decode()
-    assert '<span class="badge badge-warn">New</span>' not in home and 'In progress</span>' in home
+    assert 'aria-label="New"' not in home and 'aria-label="In progress"' in home
 
 
 def test_view_problems_and_quizzes_without_editing(app_db):
@@ -526,13 +526,13 @@ def test_new_badge_stays_on_the_box_until_the_quiz_is_started(app_db):
     # in the row's Status, however often the page is opened, and shown once
     for _ in range(2):
         home = sam.get('/mypage').data.decode()
-        assert status(home).count('>New</span>') == 1 and home.count('>New</span>') == 2  # the row's, and the attempt's
+        assert status(home).count('aria-label="New"') == 1 and home.count('aria-label="New"') == 2  # the row's (a mark now: the owner, 2026-10-24), and the attempt's
     take_page(sam, cq.id)  # started
-    assert '>New</span>' not in status(sam.get('/mypage').data.decode())
+    assert 'aria-label="New"' not in status(sam.get('/mypage').data.decode())
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)  # a new attempt in the same row
-    assert status(sam.get('/mypage').data.decode()).count('>New</span>') == 1
+    assert status(sam.get('/mypage').data.decode()).count('aria-label="New"') == 1
 
 
 def test_quiz_box_says_how_many_attempts_it_holds(app_db):
@@ -546,15 +546,15 @@ def test_quiz_box_says_how_many_attempts_it_holds(app_db):
     teacher.post('/quiz/makevquiz', data={'title': 'Count', 'vplist': str(VProblem.query.one().id)})
     teacher.post('/quiz/assign', data={'vquiz': VQuiz.query.one().id, 'users': [sam_id]})
     # an attempt is any one copy, a new one not started yet too (the owner, 2026-10-21)
-    assert '<span class="badge box-count">1 attempt</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count" title="1 attempt" aria-label="1 attempt">1</span>' in sam.get('/mypage').data.decode()
     cq = CQuiz.query.filter_by(assignee=sam_id).one()
     with app.test_request_context():
         S.submit(cq, {1: '4'})
         S.retake(cq)
-    assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()  # (one handed in, one new)
+    assert '<span class="badge box-count" title="2 attempts" aria-label="2 attempts">2</span>' in sam.get('/mypage').data.decode()  # (one handed in, one new)
     with app.test_request_context():
         S.submit(CQuiz.query.filter_by(assignee=sam_id).order_by(CQuiz.id.desc()).first(), {1: '4'})
-    assert '<span class="badge box-count">2 attempts</span>' in sam.get('/mypage').data.decode()
+    assert '<span class="badge box-count" title="2 attempts" aria-label="2 attempts">2</span>' in sam.get('/mypage').data.decode()
 
 
 def test_every_attempt_on_my_quizzes_shows_its_date(app_db):
@@ -857,7 +857,7 @@ def test_results_by_quiz(app_db):
     box = page.split('id="quiz-{}"'.format(vq.id))[1]
     assert box.index('kim</a>') < box.index('sam</a>')  # students by name (each a link to their student page)
     assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Archive' in box
-    assert 'Average 0%' in box  # sam's score counts; kim has none yet
+    assert '>0%</span>' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(one quiz's history: a row per student in People's folders, not one box for the quiz)
     assert 'Quiz history:</span> <span class="title-name">Settings quiz</span></h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one

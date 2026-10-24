@@ -124,7 +124,26 @@
       function () { return 170; }, function () { return Math.max(170, Math.min(480, box.getBoundingClientRect().width * 0.5)); },
       1, 'Make the folder list wider or narrower');
   }
-  function pickBars() { document.querySelectorAll('.folder-filter[data-style="list"]').forEach(pickBar); stashBars(); }
+  //3b. a student's page: its folder list down the left like a folder page's, so the same bar and the same width as the
+  //folder pages (the owner, 2026-10-24: every folder list and its open folder have the bar)
+  function studentBar(box) {
+    if (box.qgenStudentSplit) return;
+    var side = box.querySelector(':scope > .folder-filter-side');
+    if (!side) return;
+    box.qgenStudentSplit = true;
+    var bar = document.createElement('div');
+    bar.className = 'vsplit folder-split student-split';
+    box.appendChild(bar);
+    divider(bar, 'qgen-side-width', function () { return side.getBoundingClientRect().width; },
+      function (px) { if (px) box.style.setProperty('--side-w', px + 'px'); else box.style.removeProperty('--side-w'); },
+      function () { return 160; }, function () { return Math.min(480, box.getBoundingClientRect().width * 0.45); },
+      1, 'Make the folder list wider or narrower');
+  }
+  function pickBars() {
+    document.querySelectorAll('.folder-filter[data-style="list"]').forEach(pickBar);
+    document.querySelectorAll('.student-folders > .folder-filter[data-style="list"]').forEach(studentBar);
+    stashBars();
+  }
   pickBars();
   if (window.MutationObserver) {
     var later = null;

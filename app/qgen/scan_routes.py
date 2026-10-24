@@ -61,6 +61,8 @@ def scan_start():
     stash_folders = ScanFolder.query.order_by(ScanFolder.name).all()
     root, flat, nodes = FT.tree(stash_folders, lambda f: f.name, away, {j.id: [j.folder_id] for j in away if j.folder_id})
     view, node = FT.view_of(request.args.get('stash'), nodes, default='all')
+    from app import tuning
+    deep = tuning.get('folder_depth')
     shown = away if view == 'all' else root['items'] if view == 'main' else FT.subtree(node)
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
                            max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
@@ -69,6 +71,11 @@ def scan_start():
                            stash_pick_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat],
                            #(the open folder's own Move to: every folder but itself and the ones inside it)
                            stash_move_rows=[[f.id, f.name, depth, 'folder'] for f, depth in flat if not node or f.id not in _folder_ids(node)],
+                           #(New folder's folders: one already as deep as folders go is grayed, with why)
+                           stash_new_rows=[[f.id, f.name, depth, 'folder',
+                                            'Folders can go only {} levels deep.'.format(deep) if depth >= deep else '']
+                                           for f, depth in flat],
+                           stash_new_at=node['folder'].id if node and node['depth'] < deep else 'top',
                            stash_path_ids=[f.id for f in FT.path(nodes, node)] if node else [])
 
 
@@ -517,16 +524,16 @@ def _stash_back(folder_id=None):
 @admin_only
 @post_form_only
 def scan_new_folder():
-    """A folder in the stash, inside the one open (the owner, 2026-10-23)."""
+    """A folder in the stash, where New folder's picker says (at the top, or inside a folder: the owner, 2026-10-24)."""
     from app import folder_tree as FT
     parent = request.form.get('parent') or None
     try:
         folder = SC.create_folder(request.form.get('name'), int(parent) if parent and parent.isdigit() else None)
     except FT.FolderError as exc:
         flash(str(exc), 'error')
-        return _stash_back(parent)
+        return _stash_back(request.form.get('view') or None)
     flash('Folder “{}” made.'.format(folder.name), 'success')
-    return _stash_back(folder.id)
+    return _stash_back(request.form.get('view') or None)  # (stay where you were, as on the folder pages)
 
 
 @qgen_bp.route('/quiz/scan/folders/<int:fid>/rename', methods=['POST'])

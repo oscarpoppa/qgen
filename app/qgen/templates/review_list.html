@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, filter_bar, slot, back_button with context %}
+{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, filter_bar, slot, back_button, count_badge, status_icon with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
@@ -27,8 +27,8 @@
           {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
           <tr>
             <td data-label="Student">{#- (opens grading this hand-in, like its Grade icon: the owner, 2026-10-22) #}{{ person_name(cq.taker, href=url_for('qgen.review', cqid=cq.id), tip='Grade: ' ~ (cq.taker.shown_name if cq.taker else 'the student') ~ '\'s written answers on this quiz') }}</td>
-            <td data-label="Handed in" data-sort="{{ cq.compdate.isoformat() if cq.compdate else '' }}">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
-            <td data-label="To grade" data-sort="{{ '%03d' % todo }}">{% if todo %}<span class="badge badge-warn">{{ todo }} answer{{ '' if todo == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
+            <td data-label="Handed in" class="nowrap small muted" data-sort="{{ cq.compdate.isoformat() if cq.compdate else '' }}">{{ cq.compdate|when('date') if cq.compdate else '' }}</td>
+            <td data-label="To grade" data-sort="{{ '%03d' % todo }}">{% if todo %}{{ count_badge(todo, 'answer', 'answers', 'badge-warn') }}{% else %}{{ status_icon('ready', 'Ready to finish') }}{% endif %}</td>
             <td class="actions"><a class="btn btn-sm btn-icon" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade: {{ cq.taker.shown_name if cq.taker else 'the student' }}'s written answers on this quiz">{{ icon_label('lc-grade', 'Grade') }}</a></td>
           </tr>
         {% endfor %}
@@ -36,10 +36,10 @@
       </table>
     </div>
     </details></td>
-    <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}"><span class="badge box-count">{{ count_of(rows|length, 'attempt', 'attempts') }}</span></td>
+    <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}">{{ count_badge(rows|length, 'attempt', 'attempts') }}</td>
     {#- (how many answers wait for grading in all its attempts, in the words its lines use: the owner, 2026-10-21) -#}
     {%- set ns_t = namespace(n=0) %}{% for cq in rows %}{% set ns_t.n = ns_t.n + cq.cproblems|selectattr('credit', 'none')|list|length %}{% endfor %}
-    <td data-label="To grade" class="nowrap" data-sort="{{ '%05d' % ns_t.n }}">{% if ns_t.n %}<span class="badge badge-warn">{{ ns_t.n }} answer{{ '' if ns_t.n == 1 else 's' }}</span>{% else %}<span class="badge badge-ok">Ready to finish</span>{% endif %}</td>
+    <td data-label="To grade" class="nowrap" data-sort="{{ '%05d' % ns_t.n }}">{% if ns_t.n %}{{ count_badge(ns_t.n, 'answer', 'answers', 'badge-warn') }}{% else %}{{ status_icon('ready', 'Ready to finish') }}{% endif %}</td>
     {#- (the hand-in that has waited longest here, sortable: the owner, 2026-10-21) -#}
     {%- set old = rows|map(attribute='compdate')|reject('none')|min if rows|map(attribute='compdate')|reject('none')|list else none %}
     <td data-label="Oldest" class="nowrap small muted" data-sort="{{ old.isoformat() if old else '' }}">{{ old|when if old else '' }}</td>

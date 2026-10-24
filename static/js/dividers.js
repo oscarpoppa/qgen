@@ -98,6 +98,10 @@
     d.style.setProperty('--body-top', Math.round(top - e.top) + 'px');
     //(just inside the row's own outline)
     d.style.setProperty('--body-l', Math.round(r.left + 1 - e.left) + 'px');
+    //(how far the row's name cell is from the row's left edge: a list with a check column starts its cell after it; an open row's groups
+    //start the same distance in from the row's edge on every list, People's as Results by quiz's: the owner, 2026-10-24)
+    var cell = d.closest('td');
+    if (cell) d.style.setProperty('--cell-offset', Math.max(0, Math.round(cell.getBoundingClientRect().left - r.left)) + 'px');
     //(what's inside can take its width from this one (an open row's contents run the row's width), so
     //the row settles only after it's applied: measured again until it stops changing; Problem
     //history's answers stopped short of the row's end otherwise)

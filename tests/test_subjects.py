@@ -627,7 +627,7 @@ def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db)
     assert 'data-remember="write-to" data-tools-home="#write-to-bar" data-style="list"' in page
     assert page.count('data-style="list"') == 3
     assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
-    assert page.index('id="pick-quiz"') < page.index('id="pick-people"') < page.index('class="card assign-when"') < page.index('class="assign-go"')
+    assert page.index('id="pick-quiz"') < page.index('class="assign-side"') < page.index('id="pick-people"') < page.index('class="assign-go"') < page.index('class="card assign-when"')
     assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()
 
 

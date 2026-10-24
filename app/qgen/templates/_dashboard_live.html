@@ -1,6 +1,6 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
    so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
-{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of with context %}
+{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of, status_icon with context %}
 {% macro score(value) -%}
   <span class="badge {{ score_class(value) }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
@@ -92,7 +92,7 @@
         <li>{{ person_name(cq.taker, href=url_for('qgen.qtake', cidx=cq.id), tip='View: ' ~ (cq.taker.shown_name if cq.taker else 'the student') ~ '’s answers and score on “' ~ cq.vquiz.title ~ '”') }}
           {# just the quiz's name, plain words (the owner, 2026-10-23): the person's name and the eye open this hand-in #}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_name(cq.vquiz) }}</span>
-          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">In progress</span>{% endif %}
+          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span></span>
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ cq.taker.shown_name if cq.taker else 'the student' }}’s answers and score on “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></span></li>
       {% endfor %}
@@ -115,9 +115,9 @@
       {% for o in out %}
         <li>{{ person_name(o.cq.taker, href=url_for('qgen.qtake', cidx=o.cq.id), tip='View: ' ~ (o.cq.taker.shown_name if o.cq.taker else 'the student') ~ '’s copy of “' ~ o.cq.vquiz.title ~ '”, as it is now') }}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_name(o.cq.vquiz) }}</span>
-          {% if o.state == 'started' %}<span class="badge badge-accent badge-status">In progress</span>
+          {% if o.state == 'started' %}{{ status_icon('going', 'In progress') }}
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
-          {% else %}<span class="badge badge-warn badge-status">Not started</span>{% endif %}
+          {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}
           <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span></span>
           {# this student's own copy of the quiz (their questions and answers so far); the name opens it too (the owner, 2026-10-22) #}
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="View: {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}’s copy of “{{ o.cq.vquiz.title }}”, as it is now">{{ icon_label('lc-eye', 'View') }}</a></span></li>

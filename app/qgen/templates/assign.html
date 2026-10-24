@@ -42,6 +42,9 @@
   </div>
   {# the people: one checklist, with the People folders down its side (data-style="list",
      static/js/folderfilter.js): All people, the folders, Uncategorized #}
+  {#- the Students card with Assign right under it, in the right-hand column (the owner, 2026-10-24: it
+      sat a row lower, under the Quiz card's height); on a phone Assign is last, after When #}
+  <div class="assign-side">
   <div class="card pick-people-card">
     {#- (no "Assignee" block above the students: the checked ones are in the Students card's Checked
         folder, and both cards start at the top, level: the owner, 2026-10-22) #}
@@ -68,6 +71,8 @@
     {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   </div>
+  <div class="assign-go">{{ form.submit(class='btn btn-big', title='Give the quiz to the checked students') }}</div>
+  </div>
   {# when: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">
   <fieldset>
@@ -84,8 +89,6 @@
     <div class="help">Giving everyone the same window makes it harder to pass answers along. When time runs out, the student's saved answers are submitted.</div>
   </fieldset>
   </div>
-  {# Assign: under the Students card, level with the dates (the owner, 2026-10-14); on a phone, last #}
-  <div class="assign-go">{{ form.submit(class='btn btn-big', title='Give the quiz to the checked students') }}</div>
 </form>
 {% endblock %}
 

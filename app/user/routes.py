@@ -614,7 +614,8 @@ def _people_page_of(ulst, view, node, root, in_archive):
              'created': lambda u: u.created_at,
              'quizzes': lambda u: facts(u)['quizzes'],
              'status': lambda u: (facts(u)['going'], facts(u)['fresh']) if facts(u)['going'] or facts(u)['fresh'] else None,
-             'done': lambda u: facts(u)['avg']}
+             'average': lambda u: facts(u)['avg'],
+             'done': lambda u: facts(u)['avg']}  # (an old address's ?sort=done: the same as Average)
     pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), sorts=sorts, show=request.args.get('show'))
     if checked is not None:
         pg.label, pg.icon = 'Checked', 'lc-folder-check'

@@ -388,13 +388,11 @@
     function placeTabPair() {
       var lp = box.qgenTabPair;
       if (!lp) return;
-      //(a side list's one tab over the list: the pair in the list's heading row, right after its check
-      //box (the owner, 2026-10-22: it was beside the tab); after the tab where the list has no such row)
+      //(a side list's one tab over the list: the pair right after the tab, on every list, with check boxes or
+      //without (the owner, 2026-10-24; from 2026-10-22 a list with check boxes had it in its heading row)
       var one = box.querySelector(':scope > .folder-filter-onetab > .folder-tabs');
       if (one) {
-        var th = list.querySelector('table > thead > tr > th.tick-col') ||
-          (list.querySelector('tbody td.tick-col') && list.querySelector('table > thead > tr > th:first-child'));
-        var to = th || one;
+        var to = one;
         //(last time's pair out: the cell outlives the redraws)
         box.querySelectorAll('.tab-level-pair').forEach(function (old) { if (old !== lp) old.remove(); });
         if (lp.parentNode !== to) to.appendChild(lp);

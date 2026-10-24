@@ -438,7 +438,7 @@ def test_student_pages_refresh_when_graded(app_db):
     waiting = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert 'data-watch="{}"'.format(key) in waiting and 'data-watch-ask' not in waiting
     home = sam.get('/mypage').data.decode()
-    assert 'data-watch="mine"' in home and 'your teacher is checking your written answers">In progress</span>' in home
+    assert 'data-watch="mine"' in home and 'your teacher is checking your written answers" role="img" aria-label="In progress"' in home
     assert 'data-watch="mine"' in teacher.get('/mypage').data.decode()  # a teacher's own quizzes (none here)
     # graded: what both pages show changes, so they reload and show the result
     before = watch(sam, key), watch(sam, 'mine')

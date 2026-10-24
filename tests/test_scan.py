@@ -1384,7 +1384,7 @@ def test_stash_folders_move_into_each_other_and_the_list_is_the_standard_one(app
     for needle in ('class="side-item"', 'class="side-fold"', 'class="side-row current', 'data-side-level="open"', 'data-side-level="close"', 'side-auto-first', 'data-stash-drop="{}"'.format(b)):
         assert needle in away, needle
     assert 'data-stash-dialog="stash-move-folder"' in away and 'id="stash-move-folder"' in away
-    rows = away.split('data-pick-rows>')[2].split('</script>')[0]   # (the folder's own Move to: not itself, not what's in it)
+    rows = away.split('id="stash-move-folder"')[1].split('data-pick-rows>')[1].split('</script>')[0]   # (the folder's own Move to: not itself, not what's in it)
     assert '"C"' in rows and '"A"' not in rows and '"B"' not in rows
     #(B moves out to the top, then A inside C; A can't go inside what's in it)
     assert teacher.post('/quiz/scan/folders/{}/move'.format(b), data={'to': 'top'}).status_code == 302

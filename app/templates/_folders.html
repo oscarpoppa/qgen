@@ -44,25 +44,38 @@
   </li>
 {% endmacro %}
 
-{# + New folder: a small dialog that asks only for the name (Cancel / Make folder), at the top
-   level or inside `parent` (the owner, 2026-10-16; static/js/folders.js opens it) #}
+{# + New folder: the name, and where it goes, picked in the standard folder picker (the owner, 2026-10-24:
+   "ask the user where they want to put the folder"), laid out like a folder's Move to dialog. It starts
+   on `parent` (Folder options' "+ New folder inside"), else the folder being looked at, else the top;
+   folders already as deep as folders go are grayed with why (static/js/folders.js opens it,
+   static/js/dialogfilter.js draws the picker) #}
 {#- as_icon: a small icon (the top of the folder list's card: the owner, 2026-10-22), its words in the tooltip #}
 {% macro new_folder(fk, parent=none, size='btn-sm', as_icon=false) %}
   <span class="new-folder">
     {% set say = 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' %}
     {% if as_icon %}<button type="button" class="btn btn-secondary btn-xs btn-icon" data-fopt="new" title="New folder: {{ say }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button>
-    {%- else %}<button type="button" class="btn btn-secondary {{ size }}" data-fopt="new" title="{{ say }}">+ New folder{{ ' inside' if parent }}</button>{% endif %}
-    <dialog class="ask folder-dialog" data-fopt-dialog="new" aria-label="{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}">
+    {%- else %}<button type="button" class="btn btn-secondary {{ size }}" data-fopt="new"{% if parent %} data-new-at="{{ parent.id }}"{% endif %} title="{{ say }}">+ New folder{{ ' inside' if parent }}</button>{% endif %}
+    {#- (one dialog on the page, with the icon over the folder list; a folder's "+ New folder inside" opens that
+        one on its folder, static/js/folders.js: a copy of the folder list per folder made big pages slow) #}
+    {%- if not parent %}
+    {%- set here = fk.node.folder if fk.node else none %}
+    {%- set deep = 'Folders can go only ' ~ fk.max_depth ~ ' levels deep.' %}
+    {%- set ns = namespace(rows=[], start='top') %}{% for g, depth in fk.flat %}{% set ns.rows = ns.rows + [[g.id, fk.name(g), depth, fk.folder_icon(g), deep if depth >= fk.max_depth else '']] %}{% if here and g.id == here.id and depth < fk.max_depth %}{% set ns.start = g.id %}{% endif %}{% endfor %}
+    <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" data-fopt-dialog="new" aria-label="New folder">
       <form method="post" action="{{ fk.create_url }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="view" value="{{ fk.view }}">
-        {% if parent %}<input type="hidden" name="parent" value="{{ parent.id }}">{% endif %}
-        <p><strong>{{ 'New folder inside “' ~ fk.name(parent) ~ '”' if parent else 'New folder' }}</strong></p>
+        <p data-pick-head><strong>New folder</strong><br>
+          <span class="muted small">Type its name and choose where it goes.</span></p>
         <input type="text" name="name" maxlength="{{ fk.max_name }}" required placeholder="{{ fk.placeholder }}" aria-label="New folder’s name">
-        <div class="btn-row"><button class="btn" title="Make the folder with the name you typed">Make folder</button>
+        <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="parent" data-checked="{{ ns.start }}" data-home="{{ ns.start }}">
+          <script type="application/json" data-pick-rows>{{ ns.rows|tojson }}</script>
+        </div>
+        <div class="btn-row"><button class="btn" title="Make the folder with the name you typed, where you chose">Make folder</button>
           <button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
       </form>
     </dialog>
+    {%- endif %}
   </span>
 {% endmacro %}
 
@@ -265,7 +278,8 @@
 
 {# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
-  <p class="card empty small">{% if fk.node %}Nothing {{ 'uncategorized ' if has_folders }}in this folder yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
+  {#- (a list that's only looked at here, Grading and the results lists: nothing to move in from this page; the owner, 2026-10-24) #}
+  <p class="card empty small">{% if fk.node and fk.readonly %}No {{ fk.units }} in this folder.{% elif fk.node %}Nothing {{ 'uncategorized ' if has_folders }}in this folder yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
   {% elif fk.view == 'main' %}Everything is in a folder. Pick a folder, or {{ fk.all_label }}.{% else %}Nothing here yet.{% endif %}</p>
 {% endmacro %}
 
