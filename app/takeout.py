@@ -141,7 +141,7 @@ def question(kind, folder, p):
     q = '{} {} only in “{}”. Do you want me to permanently delete {} or put {} in Uncategorized?'.format(
         ', '.join(item_name(kind, i) for i in left), 'is' if one else 'are', folder_name(kind, folder), it, it)
     if kind == 'people':
-        q += ' Deleting an account sends its quiz attempts to the Archive.'
+        q += ' Deleting an account sends its quiz attempts to the Trash.'
     elif kind == 'quizzes':
         q += ' A quiz students have taken goes to Removed quizzes instead, where you can restore it.'
     elif p['delete'] and kind == 'problems':

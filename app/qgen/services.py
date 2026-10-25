@@ -1432,7 +1432,7 @@ def archive_warning(count, what):
     """For the delete question of a quiz or problem that archived attempts use."""
     if not count:
         return ''
-    return ' {} archived attempt{} use{} this {}; after deleting it {} can still be viewed but not restored.'.format(
+    return ' {} attempt{} in the Trash use{} this {}; after deleting it {} can still be viewed but not restored.'.format(
         count, '' if count == 1 else 's', 's' if count == 1 else '', what, 'it' if count == 1 else 'they')
 
 
@@ -1657,6 +1657,60 @@ def grade_essays(cq, grades, finish=False, grader_id=None):
     finalize(cq)
     notify(cq.assignee, 'Your written answers in “{}” have been graded: {:.0f}%.'.format(cq.vquiz.title, cq.score),
            url_for('qgen.qtake', cidx=cq.id))
+    cq.save()
+    return []
+
+
+def change_grades(cq, grades, changer_id=None):
+    """A finished attempt's grades changed by a teacher (the owner, 2026-10-25, CP9): the student's answers stay
+    as they are; each graded question's credit and comment (and a written answer's highlights) can change.
+    grades: as grade_essays. The score is worked out again. Returns the question numbers left without a credit
+    (nothing is saved then); [] when saved."""
+    from .formfact import qtype_of, quiz_score, build_transcript, TRANSCRIPT_V2
+    if not cq.completed:
+        raise ServiceError('That quiz hasn\'t been submitted yet.')
+    by_id = {cp.id: cp for cp in cq.cproblems if not qtype_of(cp).look}
+    missing, changed = [], False
+    for cpid, g in (grades or {}).items():
+        cp = by_id.get(int(cpid))
+        if not cp:
+            raise ServiceError('Answer {} isn\'t a graded answer in this quiz.'.format(cpid))
+        credit = g.get('credit')
+        if credit is None:
+            missing.append(cp.ordinal)
+            continue
+        if not 0 <= float(credit) <= 100:
+            raise ServiceError('Credit must be between 0 and 100.')
+        if cp.credit is None or round(cp.credit * 100) != round(float(credit)):
+            cp.credit = float(credit) / 100.0
+            changed = True
+            #the teacher's grade now, not the AI's or the automatic one
+            cp.conc_opts = {k: v for k, v in cp.conc_opts.items() if k not in ('ai_right', 'to_check')}
+        if 'feedback' in g and ((g['feedback'] or '').strip() or None) != cp.feedback:
+            cp.feedback = (g['feedback'] or '').strip() or None
+            changed = True
+        if 'highlights' in g and not qtype_of(cp).auto_graded:
+            spans = []
+            for s in g['highlights'] or []:
+                try:
+                    if s[2] in ('right', 'wrong'):
+                        spans.append([int(s[0]), int(s[1]), s[2]])
+                except (TypeError, ValueError, IndexError):
+                    continue
+            if spans != cp.highlights:
+                cp.highlights = spans
+                changed = True
+    if missing:
+        db.session.rollback()
+        return sorted(missing)
+    if not changed:
+        return []
+    cq.score = quiz_score(cq)
+    cq.changed_by = changer_id
+    cq.changed_date = datetime.now()
+    cq.transcript = TRANSCRIPT_V2 + build_transcript(cq)
+    notify(cq.assignee, 'Your teacher changed the grades on “{}”: now {:.0f}%.'.format(cq.vquiz.title, cq.score),
+           _link('qgen.qtake', cidx=cq.id))
     cq.save()
     return []
 

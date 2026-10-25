@@ -59,6 +59,8 @@ PATHS = {
     'lc-image-minus': '<path d="M21 9v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="M16 5h6"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
     'lc-restore': '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
     'lc-check': '<path d="M20 6 9 17l-5-5"/>',
+    #(two pages made one quiz, on a workbook's thumbnails: the owner, 2026-10-25)
+    'lc-link': '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     'lc-x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
     'lc-eraser': '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
     'lc-printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
@@ -171,7 +173,7 @@ FOR_SCRIPTS = FOR_SCRIPTS + tuple(k for k in PATHS if k.startswith('lc-'))
 BUTTON_ICONS = {'View': 'lc-eye', 'Edit': 'lc-pencil', 'History': 'lc-history', 'Remove': 'lc-trash', 'Assign': 'lc-send',
                 'Expand all': 'lc-expand', 'Collapse all': 'lc-collapse', 'Open this folder': 'lc-folder-open',
                 'Folder options': 'lc-folder-cog', 'Unpin': 'lc-pin-off', 'Message': 'lc-message', 'Start': 'lc-play', 'Continue': 'lc-play',
-                'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Archive': 'lc-trash', 'Retake': 'lc-retake',
+                'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Move to Trash': 'lc-trash', 'Retake': 'lc-retake',
                 'Student page': 'lc-user', 'Reset password': 'lc-key', 'Remove picture': 'lc-image-minus', 'Restore': 'lc-restore',
                 'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil', 'Add to a quiz': 'lc-list-plus'}
 

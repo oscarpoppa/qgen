@@ -14,9 +14,11 @@ CACHE = 'qgen.tuning'
 
 #the AI helper's requests use adaptive thinking and the "default" refusal fallback;
 #these models accept both and answer within the helper's time limit
-AI_MODELS = [('claude-opus-5', 'Claude Opus 5 (the one used so far)'),
-             ('claude-opus-5-5', 'Claude Opus 5.5 (newer, a little cheaper)'),
-             ('claude-sonnet-5-5', 'Claude Sonnet 5.5 (faster, about half the price)')]
+#the stronger models: the scanner gets only these (the owner, 2026-10-25, CU2); the helper may also use Haiku
+SCAN_MODELS = [('claude-opus-5', 'Claude Opus 5 (the one used so far)'),
+               ('claude-opus-5-5', 'Claude Opus 5.5 (newer, a little cheaper)'),
+               ('claude-sonnet-5-5', 'Claude Sonnet 5.5 (faster, about half the price)')]
+AI_MODELS = SCAN_MODELS + [('claude-haiku-5-5', 'Claude Haiku 5.5 (fastest and cheapest)')]
 
 GROUPS = [('online', 'Online & refresh'), ('quizzes', 'Quizzes & messages'), ('scores', 'Score colors'),
           ('lists', 'Lists & pages'), ('scans', 'Scanning'), ('limits', 'Limits'), ('ai', 'AI helper'), ('security', 'Sign-in & security')]
@@ -76,12 +78,12 @@ TUNABLES = [
     _t('online_names', 'lists', 'Online list shows', 'How many names the online lists show before “+N more”.', 'names', 8, 3, 50),
     _t('filter_over', 'lists', 'Results: a filter box above', 'A quiz’s students on the results pages get their own filter box when there are more than this many.',
        'students', 8, 2, 100),
-    _t('scan_pages', 'scans', 'Pages in one scan', 'The most pages one scan batch can hold.', 'pages', 30, 1, 100),
+    _t('scan_pages', 'scans', 'Pages in one workbook', 'The most pages one workbook can hold.', 'pages', 30, 1, 100),
     _t('scan_long_side', 'scans', 'Page picture size', 'The longest side of the page picture the AI reads and the review page shows (pictures are cut from the full-size page).',
        'pixels', 1600, 800, 3000),
-    _t('scan_keep_days', 'scans', 'Unfinished scans are kept', 'An unfinished scan nobody touches for this long is removed by the nightly cleanup.',
+    _t('scan_keep_days', 'scans', 'Unfinished workbooks are kept', 'An unfinished workbook nobody touches for this long is removed by the nightly cleanup (not one in the Trash).',
        'days', 30, 1, 365),
-    _t('scan_page_minutes', 'scans', 'Longest time for one page', 'A page that takes longer is stopped, marked, and the scan goes on with the next one.',
+    _t('scan_page_minutes', 'scans', 'Longest time for one page', 'A page that takes longer is stopped, marked, and the workbook goes on with the next page.',
        'minutes', 10, 1, 60),
     _t('max_upload_mb', 'limits', 'Largest upload', 'The most one upload (pictures, scans, files) can be. The web server in front of the site may have a limit of its own.',
        'MB', 16, 1, 100),
@@ -91,8 +93,16 @@ TUNABLES = [
        'characters', 64, 10, 64),
     _t('ai_hourly', 'ai', 'Requests per teacher per hour',
        'How many times each teacher can use the AI helper in an hour.', 'requests', 30, 1, 500),
-    _t('ai_model', 'ai', 'Claude model', 'Which Claude model the AI helper uses.', 'choice', 'claude-opus-5',
+    #(Haiku: the owner, 2026-10-25)
+    _t('ai_model', 'ai', 'Claude model', 'Which Claude model the AI helper uses to write problems.', 'choice', 'claude-haiku-5-5',
        choices=AI_MODELS),
+    _t('scan_model', 'ai', 'Claude model for scanning',
+       'Which Claude model reads scanned workbook pages and checks the quizzes made from them.', 'choice', 'claude-opus-5-5',
+       choices=SCAN_MODELS),
+    _t('ai_short_answers', 'ai', 'AI checks short answers',
+       'When a Short text answer doesn’t match an accepted answer, a fast AI model checks whether it has the key items. '
+       'If it’s sure, it marks the answer right; if not, the answer comes to you.', 'choice', 'on',
+       choices=[('on', 'On'), ('off', 'Off')]),
     _t('min_password', 'security', 'Shortest password', 'For new passwords (existing ones keep working).',
        'characters', 8, 6, 64),
     _t('lockout_tries', 'security', 'Wrong passwords before a pause',

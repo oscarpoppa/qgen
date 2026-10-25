@@ -10,6 +10,11 @@ app = Flask(__name__, static_folder=Config.STATIC_DIR)
 app.config.from_object(Config)
 #uploads (pictures, files) are refused above this size
 app.config.setdefault('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)
+#a workbook's page sends every field of every problem at once: two pages of "colorful" were 1,045, over
+#the 1,000 a form may have by default, so its Helper, Generate and Stash were refused (2026-10-25); a
+#30-page workbook can send twenty times that
+#(set, not setdefault: Flask already has MAX_FORM_PARTS = 1000 among its own defaults)
+app.config['MAX_FORM_PARTS'] = 50000
 #a form's security token lasts as long as the sign-in, not just an hour: a quiz left open a long
 #time can still be handed in (the October 7 review's bug; the owner, 2026-10-16)
 app.config.setdefault('WTF_CSRF_TIME_LIMIT', None)
@@ -103,6 +108,18 @@ def page_helpers():
     from app import assign_dialogs
     def review_count():
         return CQuiz.query.filter_by(needs_review=True, completed=False).count()
+    def scan_counts():
+        """The menu's Scan pages badges (the owner, 2026-10-24): scans being read, paused and stopped; stashed ones not counted."""
+        out = {'reading': 0, 'paused': 0, 'stopped': 0}
+        try:
+            from flask_login import current_user
+            from app.qgen.scan_routes import scan_progress_data
+            for x in scan_progress_data(current_user, put_away=False):
+                if x.get('kind') in out:
+                    out[x['kind']] += 1
+        except Exception:
+            pass
+        return out
     def site():
         try:
             from app import site_icon
@@ -162,7 +179,7 @@ def page_helpers():
     from app import tuning, live, nav
     from app.qgen.models import RETAKE_RULES_SHORT
     return dict(push_on=lambda: bool(app.config.get('PUSH')), short_rules=RETAKE_RULES_SHORT, watch=live.watch, back=nav.back, link_label=nav.link_label, link_kind=nav.link_kind, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, tab_counts=tab_counts, nav_dots=nav_dots, tuning=tuning,
-                tuning_poll_ms=tuning.poll_ms, review_count=review_count, now=datetime.now,
+                tuning_poll_ms=tuning.poll_ms, review_count=review_count, scan_counts=scan_counts, now=datetime.now,
                 attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color,
                 people_choices=assign_dialogs.people_choices, quiz_choices=assign_dialogs.quiz_choices, assign_quizzes=assign_dialogs.assign_quizzes,

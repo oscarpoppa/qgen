@@ -83,18 +83,49 @@ def record_answers(cquiz, answers=None):
             cprob.credit = qt.grade(cprob.submitted, cprob.conc_ansr or '', cprob.conc_opts, cprob.vproblem.options)
             #None: not on the list, but maybe right (Short text: any wrong answer written, e.g. a
             #misspelling or "a brown horse" for "horse"), so the teacher checks it in Grading
-            opts = cprob.conc_opts
+            opts = {k: v for k, v in cprob.conc_opts.items() if k not in ('to_check', 'ai_right')}
             if cprob.credit is None:
-                cprob.conc_opts = dict(opts, to_check=True)
+                opts['to_check'] = True
                 needs_review = True
-            elif opts.get('to_check'):
-                cprob.conc_opts = {k: v for k, v in opts.items() if k != 'to_check'}
+            cprob.conc_opts = opts
         else:
             #a blank essay needs no reading: it's simply 0
             cprob.credit = 0.0 if qt.is_blank(cprob.submitted) else None
             needs_review = needs_review or cprob.credit is None
+    #the Short text answers still to check: a small AI model looks first, and marks right only the ones
+    #it's sure have the key items (the owner, 2026-10-25, CP4); the rest stay with the teacher
+    if needs_review and ai_check_answers(cquiz):
+        needs_review = any(cp.credit is None for cp in cquiz.cproblems)
     cquiz.compdate = datetime.now()
     return needs_review
+
+
+def ai_check_answers(cquiz):
+    """Ask the AI about this attempt's Short text answers waiting to be checked (one call for them all).
+    Returns True when any was marked right. Any trouble leaves them for the teacher."""
+    from flask import current_app
+    from app import db, tuning
+    from .models import AICall
+    from . import ai_helper
+    key = current_app.config.get('ANTHROPIC_API_KEY')
+    waiting = [cp for cp in cquiz.cproblems if cp.credit is None and cp.conc_opts.get('to_check')]
+    if not waiting or not key or tuning.get('ai_short_answers') != 'on':
+        return False
+    items = [{'n': cp.ordinal, 'question': cp.conc_prob or '', 'answer': cp.submitted or '',
+              'accepted': [a.strip() for a in (cp.conc_ansr or '').splitlines() if a.strip()]} for cp in waiting]
+    log = AICall(user_id=cquiz.assignee, kind='grade', request='{} short answer(s) in attempt {}'.format(len(items), cquiz.id))
+    try:
+        right, usage = ai_helper.check_short_answers(key, items)
+        log.ok, log.input_tokens, log.output_tokens = True, usage.get('input_tokens'), usage.get('output_tokens')
+    except Exception as exc:  # never let the check stop a hand-in
+        current_app.logger.warning('AI short-answer check failed: {}'.format(exc))
+        right = {}
+    db.session.add(log)
+    for cp in waiting:
+        if right.get(cp.ordinal):
+            cp.credit = 1.0
+            cp.conc_opts = dict({k: v for k, v in cp.conc_opts.items() if k != 'to_check'}, ai_right=True)
+    return bool(right)
 
 
 def form_answers(cquiz, form):
@@ -164,6 +195,7 @@ class TranscriptItem:
     paper: bool = False  # done on paper: no typed answer to show
     look: bool = False   # a page to look at: nothing answered, not graded
     check: bool = False  # an automatic type's answer the teacher checks (Short text not on the list)
+    ai_right: bool = False  # Short text marked right by the AI check (shown to teachers only)
 
     @property
     def mark(self):
@@ -197,6 +229,7 @@ def transcript_item(cp):
         choices=transcript_choices(qt, cp),
         paper=qt.paper, look=qt.look,
         check=qt.auto_graded and bool((cp.conc_opts or {}).get('to_check')),
+        ai_right=bool((cp.conc_opts or {}).get('ai_right')),
     )
 
 

@@ -12,13 +12,13 @@
   {#- the student's name in the heading (the owner, 2026-10-17) #}
   <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}’s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz’s history: every student’s attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
-  <div class="actions">{{ back_button(url_for('qgen.review_list'), 'Grading') }}</div>
+  <div class="actions">{{ back_button(came_from, 'Quiz results') if changing else back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
 {#- a quiz from scanned pages: the page, small, at the top in the middle; a click shows it large (the owner, 2026-10-19) #}
 <div class="page-thumbs-top">{{ page_thumbs(cq.vquiz) }}</div>
 <p class="muted">Type each score in <strong>Credit</strong>. If you like, you can also highlight an answer for the student: select words, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> (with nothing selected, the whole answer is highlighted). Click a highlight to remove it.</p>
 
-<form method="post" id="review-form" data-unsaved novalidate>
+<form method="post" id="review-form" data-unsaved novalidate{% if changing %} data-confirm="Change the grades on this attempt? Its score will be worked out again." data-confirm-ok="Save changes"{% endif %}>
   {{ form.hidden_tag() }}{% if came_from %}<input type="hidden" name="back" value="{{ came_from }}">{% endif %}
   {% for row in items %}
     {% set it = row.item %}
@@ -27,16 +27,23 @@
         {% set lab = qlabel(cq.vquiz, it.num) %}<span class="qnum{% if lab != it.num %} qnum-label{% endif %}">{{ lab }}</span>
         {% if not (it.essay or it.check) %}
           <span class="mark mark-{{ it.mark }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
-          <span class="muted small">graded automatically</span>
+          {% if it.ai_right %}<span class="muted small" title="An AI model found the key items in this answer.">marked right by AI</span>
+          {% else %}<span class="muted small">graded automatically</span>{% endif %}
         {% elif it.check %}<span class="badge badge-warn" title="Not one of your answers exactly: you decide how much it gets">Check this answer</span>
         {% else %}<span class="badge badge-warn">Needs your grade</span>{% endif %}
       </div>
       {% if it.image %}<img class="qimg" src="{{ url_for('static', filename=it.image) }}" alt="">{% endif %}
       <div class="qtext">{{ it.text }}</div>
-      {% if (it.essay or it.check) and row.form %}
+      {% if (it.essay or it.check or changing) and row.form %}
         <div class="split">
           <div>
-            {% if it.paper %}
+            {% if changing and not (it.essay or it.check) %}
+            {#- (a finished attempt's grades being changed, CP9: the answer as it was, never editable) #}
+            <dl class="answer-row">
+              <dt>Answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
+              <dt>Correct answer</dt><dd>{{ it.correct }}</dd>
+            </dl>
+            {% elif it.paper %}
             <p class="paper-note">{{ icon('pencil') }} Done on paper. Score it from {{ cq.taker.shown_name }}’s paper.</p>
             {% else %}
             <div class="essay-text hl-area" data-text="{{ row.raw }}" data-for="{{ row.form.highlights.id }}"></div>
@@ -47,7 +54,7 @@
             </div>
             {% endif %}
             {#- the correct answer right under what the student wrote, to compare at a glance (the owner, 2026-10-23: it was at the bottom of the right column) #}
-            {% if it.correct %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Accepted answers' if it.check else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
+            {% if it.correct and (it.essay or it.check) %}<div class="feedback"><strong>{{ 'Answer key' if it.paper else 'Accepted answers' if it.check else 'Model answer' }}:</strong> {{ it.correct }}</div>{% endif %}
           </div>
           <div>
             {{ row.form.cpid() }}{{ row.form.highlights() }}
@@ -65,12 +72,17 @@
     </section>
   {% endfor %}
   <div class="card btn-row">
+    {% if changing %}
+    <button type="submit" class="btn" title="Save the new grades and tell the student">Save changes</button>
+    <a class="btn btn-secondary" href="{{ came_from }}" data-back-href>Cancel</a>
+    {% else %}
     {% if others %}{{ form.finalize_next(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and open the next one waiting') }}
     {{ form.finalize(class='btn btn-secondary', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% else %}{{ form.finalize(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% endif %}
     {{ form.save(class='btn btn-secondary', title='Keep your grades so far without finishing; ' ~ cq.taker.shown_name ~ ' sees nothing yet') }}
     {#- (every page that fills in a form has a Cancel, last: the owner, 2026-10-24) #}
     <a class="btn btn-secondary" href="{{ came_from or url_for('qgen.review_list') }}" data-back-href title="Leave without saving these grades">Cancel</a>
     <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
+    {% endif %}
   </div>
 </form>
 {% endblock %}

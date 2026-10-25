@@ -172,7 +172,7 @@ document.addEventListener('qgen-stash-redrawn', foldList);
   function boxes() { return Array.prototype.slice.call(document.querySelectorAll('input.stash-pick')); }
   function show() {
     document.querySelectorAll('[data-stash-checked-count]').forEach(function (el) { el.textContent = kept.length; });
-    var words = kept.length === 1 ? 'checked scan' : kept.length + ' checked scans';
+    var words = kept.length === 1 ? 'checked workbook' : kept.length + ' checked workbooks';
     document.querySelectorAll('[data-stash-checked-words]').forEach(function (el) { el.textContent = words; });
     var link = document.querySelector('[data-stash-checked-link]');
     if (link) link.href = link.getAttribute('href').split('?')[0].split('#')[0] + '?stash=checked&checked=' + kept.join(',') + '#scan-away';
@@ -230,8 +230,8 @@ document.addEventListener('qgen-stash-redrawn', foldList);
     }
     if (e.target.closest('[data-stash-apply-discard]')) {
       apply.close();
-      var q = 'Discard the ' + (kept.length === 1 ? 'checked scan' : kept.length + ' checked scans') + '? Their pages and drafts are removed; nothing from them is saved.';
-      (window.qgenAsk ? window.qgenAsk(q, 'Discard', true) : Promise.resolve(window.confirm(q))).then(function (yes) {
+      var q = 'Move the ' + (kept.length === 1 ? 'checked workbook' : kept.length + ' checked workbooks') + ' to the Trash? You can restore ' + (kept.length === 1 ? 'it' : 'them') + ' there.';
+      (window.qgenAsk ? window.qgenAsk(q, 'Move to Trash', true) : Promise.resolve(window.confirm(q))).then(function (yes) {
         if (!yes) return;
         fill(gone); done(); gone.submit();
       });

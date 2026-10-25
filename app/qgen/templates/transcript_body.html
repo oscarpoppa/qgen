@@ -14,6 +14,7 @@
         {% if cq.startdate %}Started {{ cq.startdate|when }} · {% endif %}
         {% if cq.compdate %}Handed in {{ cq.compdate|when }}{% else %}Not handed in{% endif %}
         {% if cq.graded_date %} · Graded {{ cq.graded_date|when('short') }}{% endif %}
+        {% if cq.changed_date %} · Grades changed{% if cq.changer %} by {{ cq.changer.shown_name }}{% endif %} on {{ cq.changed_date|when('short') }}{% endif %}
       </div>
     </div>
   </div>
@@ -28,6 +29,7 @@
       <span class="right badge">not graded</span>
       {% else %}
       <span class="mark mark-{{ it.mark }}" aria-label="{{ {'ok': 'correct', 'bad': 'incorrect', 'partial': 'partly correct'}[it.mark] }}">{{ {'ok': '✓', 'bad': '✗', 'partial': '◐'}[it.mark] }}</span>
+      {%- if it.ai_right and current_user.is_admin %} <span class="muted small" title="An AI model found the key items in this answer.">marked right by AI</span>{% endif %}
       {#- (the percent only where it says more than the ✓ or ✗: a teacher-graded answer, or part credit;
           a true/false or a typed number right is simply right: the owner, 2026-10-19) #}
       {% if it.essay or it.paper or it.mark == 'partial' %}<span class="right badge {{ 'badge-ok' if it.mark == 'ok' else 'badge-bad' if it.mark == 'bad' else 'badge-warn' }}">{{ '%.0f' % ((it.credit or 0) * 100) }}%</span>{% endif %}

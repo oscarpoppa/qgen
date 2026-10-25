@@ -2,7 +2,7 @@
 {# Add to quizzes: problems on the left (the Problems page's folders, the ones checked there already
    checked), the quizzes on the right, like the Assign page; the checked ones as chips on both sides
    (static/js/pickchips.js). They go at the end of each quiz checked (the owner, 2026-10-24: it was a dialog) #}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, scan_mark with context %}
 {% from "_pick.html" import pick_table %}
 
 {% block content %}
@@ -25,7 +25,7 @@
         <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Problem', 'add-problem-list') %}
-            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}</label></td></tr>{% endfor %}
+            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}</label>{{ scan_mark(p) }}</td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>
@@ -41,7 +41,7 @@
         <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Quiz', 'add-quiz-list') %}
-            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label></td></tr>{% endfor %}
+            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label>{{ scan_mark(q) }}</td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>

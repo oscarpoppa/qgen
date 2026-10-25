@@ -140,10 +140,11 @@
 
 {# Expand all / Collapse all for a list of boxes that fold (target: what holds them; what: the
    boxes, in words). Shown only when there are two or more to fold (static/js/boxes.js). #}
-{% macro expand_collapse(target, what) -%}
+{#- fixed: the boxes also start as drawn and aren't remembered (data-fixed), as a workbook's pages (the owner, 2026-10-25) #}
+{% macro expand_collapse(target, what, fixed=false) -%}
 <span class="level-buttons">
-  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="open" data-level-of="{{ target }}" aria-label="Expand all {{ what }}" title="Expand all: Open every one of the {{ what }}">{{ icon_label('lc-expand', 'Expand all') }}</button>
-  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="close" data-level-of="{{ target }}" aria-label="Collapse all {{ what }}" title="Collapse all: Fold every one of the {{ what }} down to its heading">{{ icon_label('lc-collapse', 'Collapse all') }}</button></span>
+  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="open" data-level-of="{{ target }}"{% if fixed %} data-level-fixed{% endif %} aria-label="Expand all {{ what }}" title="Expand all: Open every one of the {{ what }}">{{ icon_label('lc-expand', 'Expand all') }}</button>
+  <button type="button" class="btn btn-secondary btn-sm btn-icon" data-level="close" data-level-of="{{ target }}"{% if fixed %} data-level-fixed{% endif %} aria-label="Collapse all {{ what }}" title="Collapse all: Fold every one of the {{ what }} down to its heading">{{ icon_label('lc-collapse', 'Collapse all') }}</button></span>
 {%- endmacro %}
 
 {# The filter bar, the same on every page (static/js/filter.js): a "Filter by name…" box, how
@@ -165,6 +166,8 @@
 </div>
 {%- endmacro %}
 
+{# a small camera after the name of a quiz, problem or folder the scanner made (the owner, 2026-10-25); x: anything with from_scan #}
+{% macro scan_mark(x, tip='Made from a scanned page') %}{% if x and x.from_scan %}<span class="scan-mark" title="{{ tip }}" role="img" aria-label="{{ tip }}">{{ icon('camera') }}</span>{% endif %}{% endmacro %}
 {% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none, icon=none) %}
   <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

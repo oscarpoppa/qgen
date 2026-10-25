@@ -172,14 +172,21 @@
             {% endcall %}
             {#- a main link of its own, after Grading (it was in More; after People until 2026-10-24), named "Scan pages" (the owner, 2026-10-22); grayed out,
                 not left out, when the site has no AI key (the owner, 2026-10-18) #}
-            {% if config.ANTHROPIC_API_KEY %}{{ item('qgen.scan_start', 'Scan pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') }}
+            {#- (its badges: green the scans being read, blue the paused ones, red the ones that stopped by themselves; stashed scans
+                not counted: the owner, 2026-10-24) #}
+            {% if config.ANTHROPIC_API_KEY %}{% call item('qgen.scan_start', 'Scan pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') %}
+              {%- set sc = scan_counts() %}
+              {%- if sc.reading %}<span class="count count-ok" aria-label="{{ sc.reading }} being read" title="{{ sc.reading }} being read">{{ sc.reading }}</span>{% endif %}
+              {%- if sc.paused %}<span class="count count-blue" aria-label="{{ sc.paused }} paused" title="{{ sc.paused }} paused">{{ sc.paused }}</span>{% endif %}
+              {%- if sc.stopped %}<span class="count" aria-label="{{ sc.stopped }} stopped" title="{{ sc.stopped }} stopped">{{ sc.stopped }}</span>{% endif %}
+            {%- endcall %}
             {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan pages</span>{% endif %}
             {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
               <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages',
-                                'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Archive, files and settings">More</summary>
+                                'user.settings', 'user.technical_settings', 'user.save_technical_settings')) }} title="Trash, files and settings">More</summary>
               <div class="menu-list">
-                {{ item('qgen.archive', 'Archive', ('qgen.archived',), tip='Archived quizzes and attempts; restore or delete them here') }}
+                {{ item('qgen.archive', 'Trash', ('qgen.archived',), tip='Quizzes and attempts in the Trash; restore or delete them here') }}
                 {# the Messages page: every conversation, by folder (the owner, 2026-10-16) #}
                 {#- (no Messages page: it's the Messages panel now, from the Messages button: the owner, 2026-10-17) #}
                 <hr class="menu-rule">

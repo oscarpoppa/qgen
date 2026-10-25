@@ -2,7 +2,7 @@
 {% from "_macros.html" import back_button with context %}
 {#- the saved scan's own pages are removed: taken off the Back trail (static/js/trail.js), so ← goes
     to the page before them, not to "Page not found" (the owner, 2026-10-20) #}
-{% block html_attrs %}{% if done.job %} data-trail-gone="/quiz/scan/{{ done.job }}"{% endif %}{% endblock %}
+{% block html_attrs %}{% if done.job and not done.reading %} data-trail-gone="/quiz/scan/{{ done.job }}"{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>Scanned: {{ done.name }}</h1>
@@ -18,7 +18,9 @@
       several questions, each with its own numbers) #}
   <p>Made {{ quizzes|length }} quiz{{ '' if quizzes|length == 1 else 'zes' }} from your pages, and {{ done.problems }} new problem{{ '' if done.problems == 1 else 's' }} for {{ 'it' if quizzes|length == 1 else 'them' }}{% if done.reused %} (and used {{ done.reused }} you already had){% endif %}{% if done.pictures %}; saved {{ done.pictures|length }} picture{{ '' if done.pictures|length == 1 else 's' }}{% endif %}{% if done.folder %}, in the folder “{{ done.folder }}”{% endif %}.</p>
   {#- (pages not saved this time wait in Stashed scans: the owner, 2026-10-22) #}
-  {% if done.left %}<p><a href="{{ url_for('qgen.scan_start') }}#scan-away">{{ done.left }} page{{ ' wasn’t' if done.left == 1 else 's weren’t' }} saved</a>: {{ 'it’s' if done.left == 1 else 'they’re' }} waiting in “Stashed scans”.</p>{% endif %}
+  {#- (saved while the rest were still being read: they go on in Current scans, the owner 2026-10-24, CA9) #}
+  {% if done.left and done.reading %}<p><a href="{{ url_for('qgen.scan_review', job_id=done.job) }}">{{ done.left }} page{{ ' wasn’t' if done.left == 1 else 's weren’t' }} saved</a>: {{ 'it’s' if done.left == 1 else 'they’re' }} still in “Current workbooks”, and the pages not read yet are still being read.</p>
+  {% elif done.left %}<p><a href="{{ url_for('qgen.scan_start') }}#scan-away">{{ done.left }} page{{ ' wasn’t' if done.left == 1 else 's weren’t' }} saved</a>: {{ 'it’s' if done.left == 1 else 'they’re' }} waiting in “Stashed workbooks”.</p>{% endif %}
   {% if quizzes %}
   <div class="table-wrap stack">
     <table class="scan-done-table">

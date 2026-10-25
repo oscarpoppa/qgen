@@ -297,6 +297,39 @@ def normalize_text(text, case_sensitive=False):
     return text if case_sensitive else text.casefold()
 
 
+def _list_items(text):
+    """'Matthew, Mark, Luke, and John' -> [['matthew'], ['mark'], ['luke'], ['john']]: an accepted answer
+    that's a list (commas, semicolons or "and" between its items), each item as its words; None if it isn't one."""
+    parts = [p for p in re.split(r'\s*[,;]\s*|\s+(?:and|&)\s+', text) if p.strip()]
+    if len(parts) < 2:
+        return None
+    return [_words(p) for p in parts]
+
+
+def _words(text):
+    return [w for w in re.findall(r"[^\W_]+(?:['’][^\W_]+)*", text) if w not in ('and', '&')]
+
+
+def list_match(got, accepted):
+    """True when the student's answer has the accepted list's items, each once, in any order, with any
+    commas, "and"s or spaces between them ("Matthew Luke Mark John" for "Matthew, Mark, Luke, and John").
+    Both are already normalized (normalize_text). An item of several words must keep its words together."""
+    items = _list_items(accepted)
+    if not items:
+        return False
+    words = _words(got)
+    if sum(len(i) for i in items) != len(words):
+        return False
+    def fits(at, left):
+        if not left:
+            return at == len(words)
+        for k, item in enumerate(left):
+            if words[at:at + len(item)] == item and fits(at + len(item), left[:k] + left[k + 1:]):
+                return True
+        return False
+    return fits(0, items)
+
+
 def parse_choices(text):
     """'*Right\\nWrong' -> [('Right', True), ('Wrong', False)]"""
     out = []
@@ -499,6 +532,9 @@ class Text(QType):
             return 0.0
         answers = [normalize_text(a, cs) for a in conc_ansr.splitlines() if a.strip()]
         if got in answers:
+            return 1.0
+        #a list in another order, or with other commas and "and"s, is right too (the owner, 2026-10-25, CP3)
+        if any(list_match(got, a) for a in answers):
             return 1.0
         #anything else written goes to the teacher, never straight to wrong: it may be a simple
         #misspelling ("irleand"), a right answer inside a longer one ("a brown horse" for "horse"),

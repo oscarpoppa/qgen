@@ -6,7 +6,7 @@
      {% call folders_page(fk, actions) %} ...what's in the folder being looked at... {% endcall %}
 
    static/js/folders.js does the folding, dragging and the "Moved ... to ..." banner. #}
-{% from "_macros.html" import box_label, count_of, slot %}
+{% from "_macros.html" import box_label, count_of, slot, scan_mark with context %}
 
 {# what in a folder needs the student (My quizzes): new, started and due soon, here and in the
    folders inside (here=true: here only, for Uncategorized), as small colored circles with how many tries, in the
@@ -35,7 +35,7 @@
       {% if n.folders %}<button type="button" class="side-fold" aria-expanded="true" aria-label="Show or hide the folders in {{ fk.name(n.folder) }}" title="Show or hide the folders inside"></button>
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(n.folder) }}”" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
-        {{ draw_icon(fk.folder_icon(f)) }} <span class="side-name">{{ fk.name(n.folder) }}</span></a>
+        {{ draw_icon(fk.folder_icon(f)) }} <span class="side-name">{{ fk.name(n.folder) }}</span>{{ scan_mark(f, 'Made by the scanner') }}</a>
       {# quizzes that need the student in it, or in a folder inside it #}
       {{ flag_badges(fk, n) }}
       <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in it, and in the folders inside it">{{ n.count or 0 }}</span>

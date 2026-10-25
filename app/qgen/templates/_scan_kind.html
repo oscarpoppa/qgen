@@ -7,6 +7,10 @@
   <span class="scan-chip-wait" aria-hidden="true">{{ icon('lc-pause') }}</span> Paused: {{ x.done }} of {{ x.total }} pages read
 {%- elif x.kind == 'stopped' -%}
   <span class="scan-chip-stopped" aria-hidden="true">{{ icon('lc-alert') }}</span> Stopped: {{ x.failed }} page{{ '' if x.failed == 1 else 's' }} didn’t make it{% if x.slow %} ({{ x.slow }} took too long){% endif %}
-{%- else -%}
+{%- endif -%}
+{#- (a paused or stopped one whose edits were kept says so too: "draft" only showed when every page was read, the owner
+    2026-10-25) #}
+{%- if x.kind in ('paused', 'stopped') and x.kept_at %} · your edits are saved{% endif -%}
+{%- if x.kind not in ('reading', 'ready', 'paused', 'stopped') -%}
   <span class="scan-chip-draft" aria-hidden="true">{{ icon('lc-pencil') }}</span> Draft, kept {% if x.kept_today %}{{ '{}:{:%M} {:%p}'.format(x.kept_at.hour % 12 or 12, x.kept_at, x.kept_at) }}{% else %}{{ x.kept_at|when('date') }}{% endif %}
 {%- endif -%}

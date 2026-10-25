@@ -17,7 +17,7 @@
   <h2>Sign-up</h2>
   {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
   {#- (every page that fills in a form has a Cancel, last: the owner, 2026-10-24) #}
-  <div class="btn-row">{{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}<a class="btn btn-secondary" href="{{ home_url() }}" data-back-href title="Leave without saving">Cancel</a></div>
+  <div class="btn-row">{{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}<a class="btn btn-secondary" href="{{ request.path }}" title="Undo the changes not saved yet">Cancel</a></div>{#- (Cancel on a page of its own reloads it, throwing away what's typed; only a page opened from another to do one thing goes back there: the owner, 2026-10-24) #}
 </form>
 {#- the logo's and tab picture's "Choose one already uploaded": the same dialog as the problem
     editor's (the owner, 2026-10-19) #}

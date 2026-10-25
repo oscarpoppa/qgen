@@ -1,5 +1,6 @@
 /* Scan workbook pages: the review page (app/qgen/templates/scan_review.html).
- * - while the AI reads, check on it and reload when it's done
+ * - while the AI reads, check on it and show each page as it's read (drawn again only when
+ *   nothing has been changed yet: the pages read so far can be edited meanwhile, CA9)
  * - crop boxes over each page picture: drag to move, drag a corner to resize; they
  *   write "left,top,right,bottom" (fractions of the page) into their hidden input
  * - "+ Add a picture", remove, the question kind and "Use the page's numbers" switches
@@ -12,46 +13,90 @@
   /* ---------- reading progress ---------- */
   var progress = document.getElementById('scan-progress');
   if (progress) {
-    var words = { waiting: 'waiting', reading: 'reading…', done: 'done ✓', error: 'couldn’t be read' };
-    //the timer (the owner, 2026-10-18): this page so far, and the whole reading so far, counted from
-    //the server's times (skew: how far this computer's clock is off) and ticking every second
-    var timer = document.getElementById('scan-timer'), skew = 0, pageSince = null, allSince = null;
+    var words = { waiting: 'not read yet', reading: 'reading…', done: 'done ✓', error: 'didn’t make it', saved: 'generated' };  // (the thumbnails' tooltips)
+    var steps = {};
+    try { steps = JSON.parse(progress.dataset.steps || '{}'); } catch (x) {}
+    //Pause: a plain button, sent by its own click
+    var pause = document.querySelector('[data-scan-pause]');
+    if (pause) pause.addEventListener('click', function () {
+      var f = document.getElementById('scan-form'), go = document.createElement('button');
+      go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
+      go.setAttribute('formaction', pause.dataset.scanPause);
+      f.appendChild(go); f.requestSubmit(go);
+    });
+    //(how each page stood when the page was drawn: a change is drawn again, unless something's been edited)
+    var was = {};
+    Array.prototype.forEach.call(document.querySelectorAll('.scan-strip li[data-n]'), function (li) {
+      was[li.dataset.n] = (li.className.match(/scan-strip-(waiting|reading|done|error)/) || [])[1];
+    });
+    function edited() { return window.qgenIsChanged ? window.qgenIsChanged() : false; }
+    //the timers (the owner, 2026-10-18): each page being read, its own time so far, and the whole reading so far in the
+    //workbook's card, counted from the server's times (skew: how far this computer's clock is off), ticking every second
+    var skew = 0, since = {}, allSince = null;
     function when(iso) { return iso ? new Date(iso).getTime() : null; }
     function mmss(ms) { var s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
     function showTime() {
-      if (!timer || allSince === null) return;
       var now = Date.now() + skew;
-      timer.textContent = (pageSince !== null ? 'this page ' + mmss(now - pageSince) + ' · ' : '') + 'in all ' + mmss(now - allSince);
+      document.querySelectorAll('.scan-timer[data-timer-page]').forEach(function (t) {
+        var at = since[t.dataset.timerPage];
+        t.textContent = at ? mmss(now - at) : '';
+      });
+      var all = document.querySelector('.scan-timer[data-timer-all]');
+      if (all && allSince !== null) all.textContent = 'in all ' + mmss(now - allSince);
     }
     setInterval(showTime, 1000);
     var poll = function () {
       fetch(progress.dataset.status, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
         if (s.now) skew = when(s.now) - Date.now();
         allSince = when(s.since);
-        var reading = s.pages.filter(function (p) { return p.state === 'reading'; })[0];
-        pageSince = reading ? when(reading.since) : null;
+        since = {};
+        s.pages.forEach(function (p) { if (p.state === 'reading') since[p.n] = when(p.since); });
         showTime();
         var done = 0;
         s.pages.forEach(function (p) {
-          var li = progress.querySelector('li[data-n="' + p.n + '"] span');
-          if (li) li.textContent = words[p.state] || p.state;
+          //(the thumbnail's outline and tooltip; the page's bar and its step, CI1/CI2)
+          var li = document.querySelector('.scan-strip li[data-n="' + p.n + '"]');
+          if (li) {
+            li.className = 'scan-strip-page scan-strip-' + p.state;
+            var a = li.querySelector('a[data-state-tip]');
+            if (a) a.title = 'Page ' + p.n + ': ' + (words[p.state] || p.state) + '. ' + a.dataset.stateTip;
+            var badge = li.querySelector('[data-badge]');
+            var drawn = document.querySelector('#scan-badges') && document.querySelector('#scan-badges').content.querySelector('[data-for="' + p.state + '"]');
+            if (badge && drawn) badge.innerHTML = drawn.innerHTML;
+          }
+          var bar = document.querySelector('[data-bar-page="' + p.n + '"]'), step = document.querySelector('[data-step-page="' + p.n + '"]');
+          var pr = p.progress || {};
+          if (bar) {
+            var known = pr.pct !== null && pr.pct !== undefined;
+            bar.classList.toggle('is-unknown', !known);
+            bar.style.width = (known ? pr.pct : 100) + '%';
+          }
+          if (step) step.textContent = pr.step ? (steps[pr.step] || '') + (pr.pct !== null && pr.pct !== undefined ? ' · ' + pr.pct + '%' : '') : '';
           if (p.state === 'done' || p.state === 'error') done += 1;
         });
         var now = s.pages.filter(function (p) { return p.state === 'reading'; })[0];
-        document.getElementById('scan-progress-line').textContent = now
+        var moved = s.pages.some(function (p) { return was[p.n] !== p.state; }) || !s.reading;
+        //(a page started or finished: drawn again, so each page's box shows how it stands; not over
+        //edits not saved yet, the owner 2026-10-24, CA9: then a finished page's box just goes)
+        if (moved && !edited()) { location.replace(location.href); return; }
+        s.pages.forEach(function (p) {
+          var bar = document.querySelector('#scan-page-' + p.n + ' .scan-progress-bar');
+          if (bar && p.state === 'done') bar.hidden = true;
+        });
+        var line = document.getElementById('scan-progress-line');
+        if (line) line.textContent = now
           ? 'Reading page ' + now.n + ' of ' + s.pages.length + '…'
           : done + ' of ' + s.pages.length + ' pages read';
-        if (!s.reading) location.replace(location.href);
-        else later(4000);
+        //(every 3 seconds while pages are read, live updates or not: the percent only moves by asking)
+        if (s.reading) { clearTimeout(asking); asking = setTimeout(poll, 3000); }
       }).catch(function () { later(8000); });
     };
     //(with instant updates, static/js/push.js, it asks when the server says a page changed;
     //asking every few seconds is then only a backup: the owner, 2026-10-20)
-    var timer = null;
-    function later(ms) { clearTimeout(timer); timer = setTimeout(poll, window.qgenLive ? 60000 : ms); }
-    document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(poll, 300); });
+    var asking = null;
+    function later(ms) { clearTimeout(asking); asking = setTimeout(poll, window.qgenLive ? 60000 : ms); }
+    document.addEventListener('qgen-changed', function () { clearTimeout(asking); asking = setTimeout(poll, 300); });
     later(2000);
-    return;
   }
 
   var form = document.getElementById('scan-form');
@@ -128,21 +173,37 @@
   form.querySelectorAll('.crop').forEach(setUp);
 
   /* ---------- each problem's place on its page (the owner, 2026-10-20) ---------- */
-  //a blue box dragged is placed; Save stays grayed while a checked problem has no place
-  var save = form.querySelector('[data-save]');
+  //a blue box dragged is placed; a page's Generate quiz stays grayed while a checked problem of its quiz has no place
+  var gens = form.querySelectorAll('[data-generate]');
   function itemOf(crop) {
     var m = /^p(\d+)i(\d+)-place$/.exec(crop.dataset.for);
     return m && form.querySelector('.scan-item[data-page="' + m[1] + '"][data-item="' + m[2] + '"]');
   }
+  //what's to fix on each page (the owner, 2026-10-25, CL1): a problem kept in whose check says what's wrong gets its !,
+  //each page its "N to fix", from the checks shown now (they change as problems are checked again)
+  function refreshFix() {
+    var fix = {};
+    form.querySelectorAll('.scan-item').forEach(function (item) {
+      var on = item.querySelector('.scan-include'), errs = item.querySelectorAll('.scan-check .error');
+      var bad = !!(on && on.checked && errs.length), mark = item.querySelector('[data-item-bad]');
+      if (mark) {
+        mark.hidden = !bad;
+        mark.title = Array.prototype.map.call(errs, function (e) { return e.textContent.trim(); }).join(' ');
+      }
+      if (bad) fix[item.dataset.page] = (fix[item.dataset.page] || 0) + 1;
+    });
+    form.querySelectorAll('details.scan-page[data-page]').forEach(function (pg) {
+      var b = pg.querySelector('[data-fix-count]'), k = fix[pg.dataset.page] || 0;
+      if (b) { b.hidden = !k; b.textContent = k + ' to fix'; }
+    });
+    return fix;
+  }
   function refreshSave() {
-    if (!save) return;
-    var waiting = [], items = [];
+    var fix = refreshFix();
+    var waiting = [], items = [], pages = [];
     form.querySelectorAll('.crop-place').forEach(function (crop) {
       var item = itemOf(crop), placed = item && item.querySelector('[data-placed]');
-      //(a page kept back for later doesn't hold Save up)
-      var page = crop.closest('.scan-page');
-      if (page && page.classList.contains('is-kept-back')) return;
-      if (!crop.hidden && placed && placed.value !== '1') { waiting.push(crop.dataset.label); items.push(item); }
+      if (!crop.hidden && placed && placed.value !== '1') { waiting.push(crop.dataset.label); items.push(item); pages.push(item.dataset.page); }
     });
     //(the notices at the top and beside Save: how many are left and which, each a link to it)
     form.querySelectorAll('[data-place-note]').forEach(function (note) {
@@ -158,7 +219,16 @@
         list.appendChild(a);
       });
     });
-    save.disabled = waiting.length > 0;
+    //(each page's own Generate quiz: grayed while a problem of its quiz has no place; a joined page's stays grayed)
+    gens.forEach(function (btn) {
+      if (btn.hasAttribute('data-joined')) return;
+      var group = btn.dataset.group.split(' '), gaps = [], bad = 0;
+      pages.forEach(function (pg, k) { if (group.indexOf(pg) !== -1) gaps.push(waiting[k]); });
+      group.forEach(function (pg) { bad += fix[pg] || 0; });
+      btn.disabled = gaps.length > 0 || bad > 0;
+      btn.title = bad ? 'Fix the problems marked ! first'
+        : gaps.length ? 'Every problem needs its place on the page first (' + gaps.join(', ') + ')' : btn.dataset.tip;
+    });
     //(each page's green check mark: shown once nothing on it waits for its place, the owner 2026-10-21)
     form.querySelectorAll('.scan-page').forEach(function (pg) {
       var ok = pg.querySelector('.scan-page-ok');
@@ -169,7 +239,6 @@
       });
       ok.hidden = left || ok.dataset.errors === '1';
     });
-    save.title = waiting.length ? 'Every problem needs its place on the page first (' + waiting.join(', ') + ')' : save.dataset.tip;
   }
   form.querySelectorAll('.crop-place').forEach(function (crop) {
     crop.addEventListener('pointerdown', function () {
@@ -183,35 +252,68 @@
       refreshSave();
     });
   });
-  /* each page's Save check box (the owner, 2026-10-22): a page unchecked is kept in the scan for
-     later; the pages joined to it go with it. In the page's heading, so its click mustn't fold the page. */
-  function keptBack() {
-    form.querySelectorAll('.scan-page-save').forEach(function (box) {
-      if (box.dataset.lead) {
-        var lead = form.querySelector('.scan-page-save[data-page="' + box.dataset.lead + '"]');
-        if (lead) box.checked = lead.checked;
-      }
-      var page = box.closest('.scan-page');
-      if (page) page.classList.toggle('is-kept-back', !box.checked);
+  /* the workbook's thumbnails (the owner, 2026-10-25): the link between two joins them into one quiz or splits them,
+     and a thumbnail dragged left or right changes the order; either way the whole form goes with it, so edits are kept */
+  var strip = document.querySelector('.scan-strip[data-arrange]');
+  function arrange() {
+    var go = document.createElement('button');
+    go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
+    go.setAttribute('formaction', strip.dataset.arrange);
+    form.appendChild(go);
+    if (window.qgenLeaving) window.qgenLeaving();
+    form.requestSubmit(go);
+  }
+  if (strip) {
+    strip.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button[data-join]');
+      if (!b || b.disabled) return;
+      var input = form.querySelector('input[name="p' + b.dataset.join + '-join_prev"]');
+      if (!input) return;
+      input.value = input.value ? '' : '1';
+      arrange();
+    });
+    var dragged = null;
+    strip.addEventListener('dragstart', function (e) {
+      var li = e.target.closest && e.target.closest('li[draggable="true"]');
+      if (!li) return;
+      dragged = li;
+      li.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', li.dataset.n); } catch (x) {}
+    });
+    strip.addEventListener('dragover', function (e) {
+      if (!dragged) return;
+      var li = e.target.closest && e.target.closest('li.scan-strip-page');
+      if (!li || li === dragged) return;
+      e.preventDefault();
+      var r = li.getBoundingClientRect();
+      li.parentNode.insertBefore(dragged, e.clientX < r.left + r.width / 2 ? li : li.nextSibling);
+    });
+    strip.addEventListener('drop', function (e) { if (dragged) e.preventDefault(); });
+    strip.addEventListener('dragend', function () {
+      if (!dragged) return;
+      dragged.classList.remove('is-dragging');
+      dragged = null;
+      var order = Array.prototype.map.call(strip.querySelectorAll('li.scan-strip-page'), function (li) { return li.dataset.n; });
+      var was = order.slice().sort(function (a, b) { return a - b; });
+      if (order.join(',') === was.join(',')) { location.replace(location.href); return; }
+      document.getElementById('scan-order').value = order.join(',');
+      arrange();
     });
   }
-  form.addEventListener('click', function (e) {
-    var label = e.target.closest && e.target.closest('.scan-page-save-label');
-    if (!label) return;
-    e.preventDefault();
-    var box = label.querySelector('input');
-    if (box.disabled) return;
-    box.checked = !box.checked;
-    box.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  form.addEventListener('change', function (e) {
-    if (e.target.classList && e.target.classList.contains('scan-page-save')) {
-      keptBack(); refreshSave();
-      if (window.qgenChanged) window.qgenChanged();
-    }
-  });
-  keptBack();
   refreshSave();
+  //a problem's short row folds open to its fields, and closed again (the owner, 2026-10-25, CB3)
+  function openItem(item, open) {
+    item.classList.toggle('is-open', open);
+    var b = item.querySelector('[data-fold-item]');
+    if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-fold-item]');
+    if (!b) return;
+    var item = b.closest('.scan-item');
+    openItem(item, !item.classList.contains('is-open'));
+  });
   //a number in the notice: its page opened (pages start folded), then scrolled to
   form.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[data-jump]');
@@ -221,8 +323,33 @@
     e.preventDefault();
     var page = item.closest('details');
     if (page) page.open = true;
+    if (item.classList.contains('scan-item')) openItem(item, true);
     item.scrollIntoView({ block: 'center' });
   });
+
+  //a picture's "save": grayed and checked, with why, while its menu sends it to a problem or a quiz, which saves it
+  //in Pictures anyway (the owner, 2026-10-25, To do 48); back to as it was when the menu says Nothing
+  function keepBox(row) {
+    var use = row.querySelector('select.scan-use'), label = row.querySelector('.scan-pic-keep'), box = label && label.querySelector('input');
+    if (!use || !box) return;
+    if (!('tip' in label.dataset)) { label.dataset.tip = label.title; box.dataset.was = box.checked ? '1' : ''; }
+    var v = use.value, m;
+    if (!v) {
+      if (box.disabled) box.checked = !!box.dataset.was;
+      box.disabled = false;
+      label.title = label.dataset.tip;
+      return;
+    }
+    if (!box.disabled) box.dataset.was = box.checked ? '1' : '';
+    box.checked = true;
+    box.disabled = true;
+    if ((m = /^item:(\d+):(\d+)$/.exec(v))) {
+      label.title = 'Saved in Pictures with problem #' + (+m[2] + 1) + (m[1] !== row.dataset.page ? ' on page ' + m[1] : '') + ', which uses it';
+    } else if ((m = /^quiz:(\d+)$/.exec(v))) {
+      label.title = 'Saved in Pictures with the quiz from page ' + m[1] + ', which uses it';
+    }
+  }
+  form.querySelectorAll('.scan-pic').forEach(keepBox);
 
   //"remove" on a picture hides its box (and puts it back when unchecked)
   form.addEventListener('change', function (e) {
@@ -238,8 +365,10 @@
       it.classList.toggle('is-off', !t.checked);
       //(a problem left out needs no place)
       var place = form.querySelector('.crop-place[data-for="p' + it.dataset.page + 'i' + it.dataset.item + '-place"]');
-      if (place) { place.hidden = !t.checked; refreshSave(); }
+      if (place) place.hidden = !t.checked;
+      refreshSave();
     }
+    if (t.classList.contains('scan-use') && t.closest('.scan-pic')) keepBox(t.closest('.scan-pic'));
     if (t.classList.contains('scan-use-page')) showFixed(t.closest('.scan-item'));
     if (t.classList.contains('scan-qtype')) showChoices(t.closest('.scan-item'));
     if (t.classList.contains('scan-kind')) showKind(t.closest('.scan-value'));
@@ -314,7 +443,7 @@
     out.textContent = 'Checking…';
     fetch(form.dataset.check, { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() } })
       .then(function (r) { return r.json(); })
-      .then(function (res) { if (res.ok) out.innerHTML = res.html; else out.textContent = res.error; })
+      .then(function (res) { if (res.ok) out.innerHTML = res.html; else out.textContent = res.error; refreshSave(); })
       .catch(function () { out.textContent = 'Couldn’t check it just now. Please try again.'; })
       .then(function () { btn.disabled = false; });
   });
@@ -324,6 +453,23 @@
   form.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !/^(checkbox|radio|button|submit)$/.test(e.target.type)) e.preventDefault();
   });
+
+  //(a failed page's Read this page / Discard page (Keep as it is removed: the owner, 2026-10-25, CX3): asked first, then the whole form sent to that address, so the changes on
+  //the other pages are kept; a plain button, never the form's own send button)
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('button[data-page-go]');
+    if (!b) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    //(one with nothing to ask goes at once: Use what was read costs nothing, CX6)
+    (b.dataset.ask ? window.qgenAsk(b.dataset.ask, b.dataset.ok, false) : Promise.resolve(true)).then(function (yes) {
+      if (!yes) return;
+      var go = document.createElement('button');
+      go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
+      go.setAttribute('formaction', b.dataset.pageGo);
+      form.appendChild(go);
+      form.requestSubmit(go);
+    });
+  }, true);
 
   /* ---------- Read this page again: asks first (the owner, 2026-10-20) ---------- */
   //(sent with the whole form, so the changes on the other pages are kept)

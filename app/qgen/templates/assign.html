@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {# the page's whole width: the Quiz card, with When and Assign under it, beside the Students card #}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, scan_mark with context %}
 {% from "_macros.html" import back_home, box_label with context %}
 {% from "_macros.html" import field, check %}
 {% from "_pick.html" import pick_table %}
@@ -36,7 +36,7 @@
         {% call pick_table('Quiz', 'quiz-pick-list') %}
           {% for q in quizzes %}
             <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"{% if not q.shuffle_order %} data-keep-order{% endif %}><td class="tick-col"><input type="checkbox" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if q.id in (form.vquiz.data or []) %} checked{% endif %}></td>
-              <td><label for="vquiz-{{ q.id }}">{{ q.title }}</label></td></tr>
+              <td><label for="vquiz-{{ q.id }}">{{ q.title }}</label>{{ scan_mark(q) }}</td></tr>
           {% endfor %}
         {% endcall %}
       </div>

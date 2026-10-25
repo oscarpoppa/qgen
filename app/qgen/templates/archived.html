@@ -6,14 +6,14 @@
 
 {% block content %}
 <div class="page-head no-print">
-  <h1>Archived attempt</h1>
+  <h1>Attempt in the Trash</h1>
   <div class="actions">
-    {{ back_button(url_for('qgen.archive'), 'Archive') }}
-    <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print this archived attempt, or save it as a PDF">{{ icon('printer') }} Print</button>
+    {{ back_button(url_for('qgen.archive'), 'Trash') }}
+    <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print this attempt, or save it as a PDF">{{ icon('printer') }} Print</button>
   </div>
 </div>
 <div class="alert alert-info archived-banner">
-  <div>Archived {{ a.archived_at|when }}{% if a.archiver %} by {{ a.archiver.shown_name }}{% endif %}
+  <div>Moved to the Trash {{ a.archived_at|when }}{% if a.archiver %} by {{ a.archiver.shown_name }}{% endif %}
     ({{ 'the student’s account was deleted' if a.reason == 'student deleted' else 'the student deleted it, with one of his/her folders' if a.reason == 'student folder' else 'attempt deleted' }}).
     {{ a.student_name }} doesn't see it. This is the results page as it was then, with every answer.</div>
   <div class="btn-row" style="margin-top:8px">

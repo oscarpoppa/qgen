@@ -12,7 +12,7 @@
   {#- the Scanner card, first (the owner, 2026-10-23; it was a chip and pop-over): this teacher's scans, open while
       there are some; static/js/scanprogress.js keeps its rows current while a page is being read #}
   <details class="box card dash-card" id="scan-card" data-elastic="scanner" data-elastic-dir="v" data-box="scanner" data-url="{{ url_for('qgen.scan_progress') }}"{% if scans|selectattr('reading')|list %} data-reading="1"{% endif %}{% if scans %} open{% endif %}>
-    <summary class="dash-head">{{ box_label('camera', 'Scanner', count_of(scans|length, 'scan', 'scans'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('camera', 'Scanner', count_of(scans|length, 'workbook', 'workbooks'), 'h2') }}</summary>
     <div class="dash-body" id="scan-card-body">{% include "_scan_progress.html" %}</div>
   </details>
   {% include "_dashboard_now.html" %}
@@ -27,7 +27,7 @@
       <span class="dash-glance-item"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</span>
       <span class="dash-glance-item"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</span>
       <span class="dash-glance-item"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</span>
-      <span class="dash-glance-item"><span class="dash-num">{{ glance.archived }}</span> archived attempt{{ '' if glance.archived == 1 else 's' }}</span>
+      <span class="dash-glance-item"><span class="dash-num">{{ glance.archived }}</span> attempt{{ '' if glance.archived == 1 else 's' }} in the Trash</span>
     </div>
     <p class="small">
       Sign-up:

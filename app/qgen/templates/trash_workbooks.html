@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import filter_bar, post_button with context %}
+{% from "_archive_sections.html" import archive_switch %}
+{% from "_folders.html" import named_box, folders_page, empty_note with context %}
+{# The Trash's Workbooks (the owner, 2026-10-25, To do 52): a folder page like the Trash's other tabs, in the stash's
+   folders (each workbook in the one it was in; the folders are changed on Scan pages). Each can be viewed, restored
+   (to Stashed workbooks, Uncategorized) or deleted for good, one at a time or the checked ones together. #}
+{% block body_attrs %}{{ watch('archive') }}{% endblock %}
+{% block main_class %} container-wide{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+{% set archive_note %}Workbooks moved to the Trash, in the folders they were in. Restore one, or delete it for good.{% endset %}
+
+{% call folders_page(fk, actions=archive_switch(section, counts), under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
+  <div class="folder-tools-bar">
+    {% if total %}{{ filter_bar('#folder-items', 'workbook', 'workbooks', boxes='details.sub-box', paged=pg.total) }}{% endif %}
+    {#- the checked ones: Restore or Delete for good, each asking first (static/js/filebar.js puts them behind Apply to checked) #}
+    <form method="post" action="{{ url_for('qgen.scan_trash_apply') }}" id="file-form" class="file-bar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="view" value="{{ fk.view if fk.view not in ('all',) else '' }}">
+      <input type="hidden" name="action" value="" data-trash-action>
+      {% set hint = 'Check workbooks, then pick an action:' %}
+      <span class="muted small file-count" aria-live="polite" data-hint="{{ hint }}">{{ hint }}</span>
+      <button type="button" class="btn btn-sm" data-trash-apply="restore" title="Put the checked workbooks back in Stashed workbooks, Uncategorized">Restore</button>
+      <button type="button" class="btn btn-danger btn-sm" data-trash-apply="purge" title="Delete the checked workbooks and their page pictures for good; the quizzes made from them stay">Delete for good</button>
+    </form>
+  </div>
+  <div id="folder-items">
+    {% call named_box(fk, 'workbook:', pg=pg) %}
+    {% if books %}
+    <div class="table-wrap stack">
+      <table class="even-cols trash-workbooks" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+        <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Workbook</th><th data-sort-key="pages">Pages</th><th data-sort-key="made">Quizzes made</th><th data-sort-key="trashed">Moved to the Trash</th><th></th></tr></thead>
+        <tbody>
+        {% for b in books %}{% set j = b.job %}
+          <tr data-box="workbook:{{ j.id }}" data-name="{{ j.name|lower }}">
+            <td class="tick-col"><input type="checkbox" name="items" value="{{ j.id }}" form="file-form" aria-label="Check “{{ j.name }}”"></td>
+            <td data-label="Workbook"><a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was"><strong>{{ j.name }}</strong></a></td>
+            <td data-label="Pages">{{ b.pages }}</td>
+            <td data-label="Quizzes made">{% for m in b.made %}{% if not loop.first %}, {% endif %}<a href="{{ url_for('qgen.view_vquiz', vqid=m.quiz) }}">“{{ m.title }}”</a>{% else %}<span class="muted">none</span>{% endfor %}</td>
+            <td data-label="Moved to the Trash" class="small" data-sort="{{ b.at.isoformat() if b.at else '' }}">{% if b.at %}{{ b.at|when('date') }}{% endif %}{% if b.by %}<br><span class="muted">by {{ b.by.shown_name }}</span>{% endif %}</td>
+            {#- (side by side, like every other row's icons: the owner, 2026-10-25) #}
+            <td class="actions"><span class="btn-row nowrap">
+              <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was">{{ icon_label('lc-eye', 'View') }}</a>
+              {{- post_button(url_for('qgen.scan_restore', job_id=j.id), 'Restore', icon='lc-restore', confirm='Restore “' ~ j.name ~ '”? It goes to Stashed workbooks, Uncategorized.', tip='Restore: put “' ~ j.name ~ '” back in Stashed workbooks, Uncategorized') }}
+              {{- post_button(url_for('qgen.scan_purge', job_id=j.id), 'Delete for good', 'btn btn-danger btn-sm', icon='lc-trash', confirm='Delete “' ~ j.name ~ '” and its page pictures for good? The quizzes made from it stay. This can’t be undone.', tip='Delete for good: “' ~ j.name ~ '” and its page pictures; the quizzes made from it stay') }}
+            </span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif not total %}<p class="card empty small">No workbooks in the Trash. A workbook comes here when every page is made into its quiz, or by its Move to Trash.</p>
+    {% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}
+    {% endcall %}
+  </div>
+{% endcall %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>
+<script>
+//the checked workbooks: Restore or Delete for good, asked first with how many (the owner, 2026-10-25, To do 52)
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-trash-apply]');
+  if (!b) return;
+  var form = document.getElementById('file-form');
+  var n = window.qgenCheckedIds ? window.qgenCheckedIds().length : document.querySelectorAll('input[name="items"]:checked').length;
+  if (!n) return;
+  var what = n === 1 ? 'the checked workbook' : 'the ' + n + ' checked workbooks';
+  var purge = b.dataset.trashApply === 'purge';
+  var q = purge ? 'Delete ' + what + ' and ' + (n === 1 ? 'its' : 'their') + ' page pictures for good? The quizzes made from ' + (n === 1 ? 'it' : 'them') + ' stay. This can’t be undone.'
+                : 'Restore ' + what + '? ' + (n === 1 ? 'It goes' : 'They go') + ' to Stashed workbooks, Uncategorized.';
+  window.qgenAsk(q, purge ? 'Delete for good' : 'Restore', purge).then(function (yes) {
+    if (!yes) return;
+    form.querySelector('[data-trash-action]').value = b.dataset.trashApply;
+    //(what's checked in other folders goes too, as the bar's other actions do: static/js/checked.js)
+    form.querySelectorAll('input[data-kept]').forEach(function (i) { i.remove(); });
+    if (window.qgenCheckedIds) {
+      var here = {};
+      document.querySelectorAll('.folder-main input[name="items"]:checked').forEach(function (t) { here[t.value] = 1; });
+      window.qgenCheckedIds().forEach(function (id) {
+        if (here[id]) return;
+        var i = document.createElement('input'); i.type = 'hidden'; i.name = 'items'; i.value = id; i.dataset.kept = '';
+        form.appendChild(i);
+      });
+    }
+    if (window.qgenCheckedForget) window.qgenCheckedForget();
+    form.requestSubmit();  // (requestSubmit: the checked ones in other folders are added on its way, static/js/checked.js)
+  });
+});
+</script>{% endblock %}

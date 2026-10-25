@@ -10,17 +10,17 @@
 {%- set j = x.job -%}
 <span class="btn-row nowrap scan-controls">
   {%- if x.kind == 'reading' -%}
-    {%- if not x.pausing %}{{ post_button(url_for('qgen.scan_pause', job_id=j.id, back=back or none), 'Pause', icon='lc-pause', tip='Pause “' ~ j.name ~ '” now. Current page not saved.') }}{% endif %}
-    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Stop and discard', 'btn btn-danger btn-sm', icon='lc-x', confirm='Stop reading “' ~ j.name ~ '” and discard it? Its pages and draft are removed; nothing from it was saved.', tip='Stop reading “' ~ j.name ~ '” and discard it (asks first)') }}
+    {%- if not x.pausing %}{{ post_button(url_for('qgen.scan_pause', job_id=j.id, back=back or none), 'Pause', icon='lc-pause', tip='Pause reading “' ~ j.name ~ '”: the pages being read now finish and are kept; no more start until you press Resume.') }}{% endif %}
+    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Stop and move to Trash', 'btn btn-danger btn-sm', icon='lc-x', confirm='Stop reading “' ~ j.name ~ '” and move it to the Trash? You can restore it there.', tip='Stop reading “' ~ j.name ~ '” and move it to the Trash (asks first)') }}
   {%- else -%}
     {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}
     {%- elif x.kind == 'stopped' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Read the rest', icon='lc-resume', tip='Have the AI read the pages that are missing (each page uses a few AI calls)') }}{% endif %}
     {#- (the scan's own page opens whatever state the scan is in, like its name: the owner, 2026-10-23; it was grayed out while paused) #}
     <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>
-    {%- if x.put_away %}{{ post_button(url_for('qgen.scan_take_out', job_id=j.id, back=back or none), 'Take out', icon='lc-folder-up', tip='Take “' ~ j.name ~ '” out, back into Current scans') }}
+    {%- if x.put_away %}{{ post_button(url_for('qgen.scan_take_out', job_id=j.id, back=back or none), 'Take out', icon='lc-folder-up', tip='Take “' ~ j.name ~ '” out, back into Current workbooks') }}
     {#- (Stash only on Scan workbook pages, where the stash and its folders are; not on the Dashboard's Scanner card: the owner, 2026-10-24, To do 11) #}
-    {%- elif x.kind in ('paused', 'stopped', 'draft') and back != 'dashboard' %}{{ post_button(url_for('qgen.scan_put_away', job_id=j.id, back=back or none), 'Stash', icon='lc-folder-input', tip='Stash “' ~ j.name ~ '” until you want it again: out of Current scans and the Dashboard') }}{% endif %}
-    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Discard', icon='lc-trash', confirm='Discard the scan “' ~ j.name ~ '”? Its pages and draft are removed; nothing from it was saved.', tip='Remove this scan and its draft; nothing from it was saved') }}
+    {%- elif x.kind in ('paused', 'stopped', 'draft') and back != 'dashboard' %}{{ post_button(url_for('qgen.scan_put_away', job_id=j.id, back=back or none), 'Stash', icon='lc-folder-input', tip='Stash “' ~ j.name ~ '” until you want it again: out of Current workbooks and the Dashboard') }}{% endif %}
+    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Move to Trash', icon='lc-trash', confirm='Move “' ~ j.name ~ '” to the Trash? You can restore it there.', tip='Move this workbook to the Trash; you can restore it there') }}
   {%- endif -%}
 </span>
 {%- endmacro %}

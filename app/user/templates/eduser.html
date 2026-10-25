@@ -16,7 +16,7 @@
     {{ check(form.is_admin, 'Teachers can create problems and quizzes, and see everyone’s results.') }}
     <div class="btn-row">
       <button type="submit" class="btn" title="Save these changes and go back to {{ came[1] }}">Save</button>
-      <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Go back to {{ came[1] }} without saving">Cancel</a>
+      <a class="btn btn-secondary" href="{{ request.path }}" title="Undo the changes not saved yet">Cancel</a>{#- (Cancel on a page of its own reloads it, throwing away what's typed; only a page opened from another to do one thing goes back there: the owner, 2026-10-24) #}
     </div>
   </form>
 </div>

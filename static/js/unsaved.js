@@ -33,4 +33,6 @@
   window.qgenLeaving = function () { leaving = true; };
   //(changes made by dragging, not typing, e.g. a scan's boxes: the owner, 2026-10-21)
   window.qgenChanged = function () { changed = true; };
+  //(whether anything's been changed: a scan's page isn't drawn again over edits, the owner 2026-10-24)
+  window.qgenIsChanged = function () { return changed && !leaving; };
 })();

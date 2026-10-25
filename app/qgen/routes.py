@@ -372,7 +372,7 @@ def archive_vprob(vpid):
     if vp is None:
         return gone('That problem has been deleted.', url_for('qgen.list_vprobs'))
     S.archive_problem(vp)
-    flash(Markup('Moved problem “{}” to the <a href="{}">Archive</a>, where you can restore it.').format(
+    flash(Markup('Moved problem “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(
         vp.title, url_for('qgen.archive', section='problems')), 'success')
     current_app.logger.info("{} archived VProblem: ({}) '{}'".format(current_user.username, vpid, vp.title))
     return redirect(back_to_list('qgen.list_vprobs'))
@@ -569,7 +569,7 @@ def del_vquiz(vqid):
         return redirect(back_to(url_for('qgen.list_vquizzes')))
     if done == 'removed':
         flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
-                     'You can restore it from the <a href="{}">Archive</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
+                     'You can restore it from the <a href="{}">Trash</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
     else:
         flash('Deleted quiz “{}”.'.format(title), 'success')
     #(logged either way, with the page it came from, so where it went back to can be checked)
@@ -656,9 +656,9 @@ def archive_vquiz(vqid):
     try:
         S.archive_vquiz(vq)
     except S.ServiceError as exc:
-        flash('Not archived. {}'.format(exc), 'error')
+        flash('Not moved to the Trash. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
-    flash(Markup('Moved quiz “{}” to the <a href="{}">Archive</a>, where you can restore it. Students keep their copies and scores.').format(
+    flash(Markup('Moved quiz “{}” to the <a href="{}">Trash</a>, where you can restore it. Students keep their copies and scores.').format(
         vq.title, url_for('qgen.archive', section='quizzes')), 'success')
     current_app.logger.info("{} archived VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
     return redirect(back_to_list('qgen.list_vquizzes'))
@@ -692,7 +692,7 @@ def delete_removed_vquiz(vqid):
         flash('Not deleted. {}'.format(exc), 'error')
         return redirect(url_for('qgen.archive', section='quizzes'))
     if count:
-        flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Archive</a>, where you can still read {}.').format(
+        flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Trash</a>, where you can still read {}.').format(
             title, count, 'attempt is' if count == 1 else 'attempts are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
     else:
         flash('Deleted “{}” for good.'.format(title), 'success')
@@ -1103,6 +1103,53 @@ def review_list():
         fold_key='qgen-folded-grading-folders')
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, pg=pg, fk=fk, title='Grading')
 
+#a finished attempt's grades, changed by a teacher (the owner, 2026-10-25, CP9): every graded question,
+#the answers as they were; asked first (data-confirm), then the score is worked out again
+@qgen_bp.route('/quiz/review/<cqid>/change', methods=['GET', 'POST'])
+@login_required
+@pw_check
+@admin_only
+def change_grades(cqid):
+    cq = CQuiz.query.filter_by(id=cqid).first() if str(cqid).isdigit() else None
+    if cq is None:
+        return attempt_gone(cqid)
+    if not cq.completed:
+        return redirect(url_for('qgen.review', cqid=cq.id))
+    results = url_for('qgen.qtake', cidx=cq.id)
+    graded = [cp for cp in cq.cproblems if not get_qtype(cp.vproblem.qtype).look]
+    form = ReviewForm()
+    if request.method == 'GET':
+        for cp in graded:
+            form.items.append_entry(dict(cpid=cp.id, credit=None if cp.credit is None else round(cp.credit * 100),
+                                         feedback=cp.feedback or '', highlights=cp.highlights_json or '[]'))
+    elif form.validate_on_submit():
+        grades = {}
+        for item in form.items.data:
+            try:
+                spans = json.loads(item['highlights'] or '[]')
+            except ValueError:
+                spans = []
+            grades[int(item['cpid'] or 0)] = {'credit': item['credit'], 'feedback': item['feedback'], 'highlights': spans}
+        before = cq.score
+        try:
+            missing = S.change_grades(cq, grades, changer_id=current_user.id)
+        except S.ServiceError as exc:
+            flash(str(exc), 'error')
+            return redirect(url_for('qgen.change_grades', cqid=cq.id))
+        if missing:
+            flash('Give a credit for question{} {} before finishing.'.format('s' if len(missing) > 1 else '', ', '.join(map(str, missing))), 'error')
+            return redirect(url_for('qgen.change_grades', cqid=cq.id))
+        current_app.logger.info('{} changed the grades of CQuiz ({}) for {}: {} -> {}'.format(
+            current_user.username, cq.id, cq.taker.username if cq.taker else '?', before, cq.score))
+        return redirect(results)
+    entries = {int(e.form.cpid.data): e.form for e in form.items}
+    items = [dict(item=transcript_item(cp), cp=cp, form=entries.get(cp.id),
+                  notes=cp.vproblem.options.get('grading_notes'), raw=cp.submitted or '')
+             for cp in cq.cproblems]
+    return render_template('review.html', cq=cq, form=form, items=items, queue=[], place=None, came_from=results,
+                           others=0, changing=True, title='Grade: {} – {}'.format(cq.taker.shown_name, cq.vquiz.title))
+
+
 #route to grade the essay answers of one quiz
 @qgen_bp.route('/quiz/review/<cqid>', methods=['GET', 'POST'])
 @login_required
@@ -1384,7 +1431,7 @@ def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.shown_name
     archived = S.delete_attempt(cq, by=current_user)
-    flash(Markup('Moved {}\'s attempt at "{}" to the Archive. <a href="{}">View it</a>').format(
+    flash(Markup('Moved {}\'s attempt at "{}" to the Trash. <a href="{}">View it</a>').format(
         owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
     return redirect(back_to(url_for('user.userdet')))
@@ -1401,8 +1448,8 @@ def take_away(vqid, uid):
         return gone('That quiz or student is gone.', back_to(url_for('user.userdet')))
     count = S.take_away(student, vq, by=current_user)
     if count:
-        flash(Markup('Archived {}’s {} {} at “{}”. {} in the <a href="{}">Archive</a>, where you can view or restore {}.').format(
-            student.shown_name, count, 'attempt' if count == 1 else 'attempts', vq.title, 'It’s' if count == 1 else 'They’re',
+        flash(Markup('Moved {}’s {} {} at “{}” to the <a href="{}">Trash</a>, where you can view or restore {}.').format(
+            student.shown_name, count, 'attempt' if count == 1 else 'attempts', vq.title,
             url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
         current_app.logger.info("{} took VQuiz ({}) '{}' away from {}: {} archived".format(
             current_user.username, vqid, vq.title, student.username, count))
@@ -1975,7 +2022,7 @@ def archive_kit(view, node, root, flat, nodes, total):
         unit='attempt', units='attempts', all_label='All attempts', all_count=total,
         name=lambda f: f.name, folder_icon=lambda f: 'user' if f.student_id else 'folder',
         placeholder='e.g. 2025-26', add_words='Move to…', drag_what='an attempt',
-        hint='Each student has a folder (the one with a person on it) for his/her archived attempts; you can add your own and put folders inside folders.',
+        hint='Each student has a folder (the one with a person on it) for his/her attempts in the Trash; you can add your own and put folders inside folders.',
         fold_key='qgen-folded-archive-folders',
         purge_url=lambda fid: url_for('qgen.purge_archive_folder', fid=fid),
         purge_question=lambda n: archive_purge_question(n['folder']))
@@ -1983,7 +2030,7 @@ def archive_kit(view, node, root, flat, nodes, total):
 
 def archive_purge_question(folder):
     count, inner = S.archive_folder_count(folder), len(S.archive_subtree(folder)) - 1
-    return 'Delete the folder “{}”{} and the {} archived attempt{} in it for good? This can’t be undone: {} can’t be ' \
+    return 'Delete the folder “{}”{} and the {} attempt{} in it for good? This can’t be undone: {} can’t be ' \
            'viewed or restored afterwards.'.format(
                folder.name, ' and the {} folder{} inside it'.format(inner, '' if inner == 1 else 's') if inner else '',
                count, '' if count == 1 else 's', 'it' if count == 1 else 'they') if count else \
@@ -2017,17 +2064,19 @@ def archive():
     section = request.args.get('section', 'attempts')
     counts = archive_counts()
     if section == 'quizzes':
-        return subject_page('quizzes', 'vqlist.html', in_archive=True, title='Archive', section=section, counts=counts,
+        return subject_page('quizzes', 'vqlist.html', in_archive=True, title='Trash', section=section, counts=counts,
                             layout=layout, rules=RETAKE_RULES, all_subjects=S.subject_tree('quizzes')[1],
                             archived=S.archived_counts()[0], archive_warning=S.archive_warning, removed_count=counts['quizzes'])
     if section == 'problems':
-        return subject_page('problems', 'vplist.html', in_archive=True, title='Archive', section=section, counts=counts,
+        return subject_page('problems', 'vplist.html', in_archive=True, title='Trash', section=section, counts=counts,
                             qtypes=REGISTRY, all_subjects=S.subject_tree('problems')[1], quizzes=[],
                             archived=S.archived_counts()[1], archive_warning=S.archive_warning,
                             blockers={p.id: S.problem_delete_blocker(p) for p in S.removed_problems()})
     if section == 'people':
         from app.user.routes import people_page
         return people_page(in_archive=True, section=section, counts=counts)
+    if section == 'workbooks':
+        return trash_workbooks_page(section, counts)
     from app import folder_tree
     root, flat, nodes, attempts = S.archive_tree()
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
@@ -2043,23 +2092,83 @@ def archive():
         listed = root['items']
     else:
         listed = folder_tree.subtree(node)
-    pg = paging.paginate(listed, name_of=lambda a: '{} {}'.format(a.student_name or '', a.quiz_title or ''), show=request.args.get('show'))
+    #(sorted over the whole folder, in its month boxes: CS1, the owner 2026-10-25)
+    pg = paging.paginate(listed, name_of=lambda a: '{} {}'.format(a.student_name or '', a.quiz_title or ''), show=request.args.get('show'),
+                         group_of=lambda a: (a.archived_at.year, a.archived_at.month) if a.archived_at else None, sorts={
+        'student': lambda a: (a.student_name or '').lower(),
+        'quiz': lambda a: (a.quiz_title or '').lower(),
+        'when': lambda a: a.archived_at,
+        'result': lambda a: a.score if a.completed and a.score is not None else None})
     if checked is not None:
         pg.label, pg.icon = 'Checked', 'lc-folder-check'
     shown = pg.items
     #whether each attempt shown can be put back
     blockers = {a.id: S.restore_blocker(a) for a in shown}
     fk = archive_kit(view, node, root, flat, nodes, len(attempts))
-    return render_template('archive.html', fk=fk, items=shown, pg=pg, blockers=blockers, total=len(attempts), title='Archive',
+    return render_template('archive.html', fk=fk, items=shown, pg=pg, blockers=blockers, total=len(attempts), title='Trash',
                            section='attempts', counts=counts,
                            moved=request.args.get('moved', ''))
+
+def trash_workbooks_page(section, counts):
+    """The Trash's Workbooks (the owner, 2026-10-25, To do 52): a folder page like the Trash's other tabs, in the
+    stash's own folders (each workbook in the one it was in); looked at here, the folders changed on Scan pages.
+    Checked ones can be restored (to Stashed workbooks, Uncategorized) or deleted for good."""
+    from app import folder_tree, paging
+    from app.qgen import scan as SC
+    from app.qgen.models import ScanFolder
+    from app.user.models import User
+    jobs = SC.trashed_jobs()
+    folders = ScanFolder.query.order_by(ScanFolder.name).all()
+    root, flat, nodes = folder_tree.tree(folders, lambda f: f.name, jobs, {j.id: [j.folder_id] for j in jobs if j.folder_id})
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    checked = request.args.get('checked')
+    if checked is not None:
+        want = {x for x in checked.split(',') if x}
+        listed = [j for j in jobs if str(j.id) in want]
+    elif view == 'all':
+        listed = jobs
+    elif view == 'main':
+        listed = root['items']
+    else:
+        listed = folder_tree.subtree(node)
+    #(sorted over the whole folder, like every list shown a page at a time: sorttable.js, the owner 2026-10-25)
+    data = {}
+    def info(j):
+        if j.id not in data:
+            data[j.id] = SC.get_data(j)
+        return data[j.id]
+    pg = paging.paginate(listed, name_of=lambda j: j.name or '', show=request.args.get('show'), sorts={
+        'name': lambda j: (j.name or '').lower(),
+        'pages': lambda j: len(info(j).get('pages') or []),
+        'made': lambda j: sum(1 for p in info(j).get('pages') or [] if (p.get('made') or {}).get('quiz')),
+        'trashed': lambda j: info(j).get('trashed_at') or ''})
+    if checked is not None:
+        pg.label, pg.icon = 'Checked', 'lc-folder-check'
+    root['all_count'] = len(jobs)
+    fk = folder_tree.kit(view, node, root, flat, nodes,
+                         page=lambda v: url_for('qgen.archive', section='workbooks', folder=v),
+                         unit='workbook', units='workbooks', all_label='All workbooks', all_count=len(jobs),
+                         name=lambda f: f.name, readonly=True, drag_what='a workbook')
+    books = []
+    for job in pg.items:
+        d = info(job)
+        by = db.session.get(User, d['trashed_by']) if d.get('trashed_by') else None
+        books.append({'job': job, 'by': by, 'pages': len(d.get('pages') or []),
+                      'at': SC.datetime.fromisoformat(d['trashed_at']) if d.get('trashed_at') else None,
+                      'made': [p['made'] for p in d.get('pages') or [] if (p.get('made') or {}).get('quiz')]})
+    return render_template('trash_workbooks.html', title='Trash', section=section, counts=counts, books=books,
+                           fk=fk, pg=pg, total=len(jobs))
+
 
 def archive_counts():
     """How many are in each of the Archive's sections."""
     from app.qgen.models import ArchivedAttempt
     from app.user.accounts import archived_people
+    from app.qgen.models import ScanJob
+    from app.qgen.scan import TRASHED
     return {'attempts': ArchivedAttempt.query.count(), 'quizzes': len(S.removed_quizzes()),
-            'problems': len(S.removed_problems()), 'people': len(archived_people())}
+            'problems': len(S.removed_problems()), 'people': len(archived_people()),
+            'workbooks': ScanJob.query.filter_by(status=TRASHED).count()}
 
 
 def archive_folder_or_404(fid):
@@ -2127,7 +2236,7 @@ def purge_archive_folder(fid):
     name, parent = folder.name, folder.parent_id
     gone = S.delete_archive_folder_and_contents(folder)
     current_app.logger.info('{} deleted archive folder ({}) "{}" and {} archived attempts'.format(current_user.username, fid, name, gone))
-    return _archive_done('Deleted the folder “{}”{}.'.format(name, ' and its {} archived attempt{}'.format(gone, '' if gone == 1 else 's') if gone else ''),
+    return _archive_done('Deleted the folder “{}”{}.'.format(name, ' and its {} attempt{}'.format(gone, '' if gone == 1 else 's') if gone else ''),
                          show=(parent or 'all') if request.form.get('view') == str(fid) else None)
 
 #dragging, and the "Move to…" lists: an archived attempt onto a folder (or Uncategorized),
@@ -2151,7 +2260,7 @@ def move_archive_item():
                                  moved='folder:{}'.format(folder.id))
         a = db.session.get(ArchivedAttempt, int(request.form.get('attempt'))) if str(request.form.get('attempt', '')).isdigit() else None
         if a is None:
-            return _archive_done('That archived attempt isn\'t there any more.', error=True)
+            return _archive_done('That attempt isn\'t in the Trash any more.', error=True)
         S.move_archived([a.id], target)
         return _archive_done('Moved {}\'s “{}” to {}.'.format(a.student_name, a.quiz_title, where), moved='attempt:{}'.format(a.id))
     except S.ServiceError as exc:
@@ -2182,10 +2291,10 @@ def move_archived():
 def archived(aid):
     a = db.session.get(ArchivedAttempt, aid)
     if a is None:
-        return gone("That attempt isn't in the Archive any more: it was put back or deleted for good.", url_for('qgen.archive'))
+        return gone("That attempt isn't in the Trash any more: it was put back or deleted for good.", url_for('qgen.archive'))
     return render_template('archived.html', a=a, blocker=S.restore_blocker(a),
                            student=S.archived_student(a), results=S.archived_results(a),
-                           title='Archived: {}'.format(a.quiz_title))
+                           title='In the Trash: {}'.format(a.quiz_title))
 
 #route to put an archived attempt back
 @qgen_bp.route('/quiz/archive/<int:aid>/restore', methods=['POST'])

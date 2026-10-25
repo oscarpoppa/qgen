@@ -162,7 +162,7 @@ def delete_folder_and_quizzes(user, folder_id):
     for g in tree:
         db.session.delete(g)
     if titles:
-        notify_teachers(user.id, '{} deleted his/her folder “{}” with {} quiz{} in it: {}. {} in the Archive, where you can '
+        notify_teachers(user.id, '{} deleted his/her folder “{}” with {} quiz{} in it: {}. {} in the Trash, where you can '
                         'put {} back.'.format(user.username, name, len(titles), '' if len(titles) == 1 else 'zes',
                                               ', '.join('“{}”'.format(t) for t in titles),
                                               'It\'s' if len(titles) == 1 else 'They\'re', 'it' if len(titles) == 1 else 'them'),

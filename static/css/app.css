@@ -1828,7 +1828,20 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .scan-item.is-off .scan-item-body { display: none; }
 .scan-item.is-off { opacity: .65; }
 .scan-item-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.scan-item-head .scan-title { flex: 1 1 12rem; min-width: 0; }
+/* a problem as a short row that folds open (the owner, 2026-10-25, CB3) */
+.scan-item { padding: 6px 12px; }
+.scan-item:not(.is-open) .scan-item-body { display: none; }
+.scan-item-fold { flex: 1 1 12rem; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 4px 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.scan-item-fold .fold { display: inline-block; width: 0; height: 0; flex: 0 0 auto; border-style: solid; border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
+@media (prefers-reduced-motion: reduce) { .scan-item-fold .fold { transition: none; } }
+.scan-item.is-open .scan-item-fold .fold { transform: rotate(90deg); }
+.scan-item-bad { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center;
+  background: var(--warn); color: #1a1a1a; font-weight: 700; font-size: 12px; cursor: help; }
+.scan-item-bad[hidden] { display: none; }
+.scan-item-q { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-item-a { flex: 0 1 10rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 .scan-item-body { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .scan-item-body textarea, .scan-item-body input[type=text] { width: 100%; }
 .scan-values { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
@@ -3023,7 +3036,6 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-t
 /* a scan's row on Scan workbook pages: its page's thumbnail left of its name and lines (the owner, 2026-10-22) */
 .scan-row-name { display: flex; align-items: flex-start; gap: 8px; }
 /* a scan draft's page kept back for later (its Save unchecked): its heading dimmed (the owner, 2026-10-22) */
-.scan-page.is-kept-back > summary .box-title { opacity: .55; }
 .scan-page-save-label { cursor: pointer; }
 .scan-row-name > .scan-row-thumb { flex: none; }
 .scan-row-name > .scan-row-thumb .scan-thumb { margin-right: 0; }
@@ -3492,7 +3504,9 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .scan-chip-wait { color: var(--warn, #b7791f); font-weight: 600; }
 .scan-chip-stopped { color: var(--bad); font-weight: 600; }
 .scan-chip-draft { color: var(--accent-text, var(--accent)); font-weight: 600; }
-.scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.125em; }
+/* every state mark the same: 1em, centered on the words, about 5px before them (the owner, 2026-10-25, To do 50) */
+.scan-chip-done, .scan-chip-wait, .scan-chip-stopped, .scan-chip-draft { display: inline-block; margin-right: .15em; }
+.scan-chip-wait svg, .scan-chip-stopped svg, .scan-chip-draft svg { width: 1em; height: 1em; vertical-align: -0.14em; }
 
 /* the page being read moves along its scan's bar, so the bar shows it's working even before a page is done (the owner, 2026-10-23: the shimmer the chip had) */
 .scan-progress-row .progress-bar > .scan-chip-now { background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
@@ -3510,6 +3524,8 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .tech-input .tech-unit { display: inline-block; min-width: 6.5rem; }
 /* a stashed scan's icons on one line (five of them), like Current scans' */
 .stash-main td .btn-row.nowrap { flex-wrap: nowrap; }
+/* the Trash's Workbooks: a row's View / Restore / Delete side by side, like every other row (the owner, 2026-10-25, To do 52) */
+.trash-workbooks td.actions .btn-row { flex-wrap: nowrap; }
 .stash-main td:last-child { white-space: nowrap; width: 1%; }
 /* Current scans: the icons' column is as wide as its icons, so no empty space follows the last one */
 #scan-current td:last-child .btn-row, #scan-current .scan-controls, .stash-main td:last-child .btn-row { flex-wrap: nowrap; }
@@ -3618,3 +3634,106 @@ html table:is(.even-cols, .pick-table, table) > tbody > tr > td.tick-col, html t
   width: 1%; min-width: 0; padding-left: 12px; padding-right: 0; text-align: left; }  /* (the column just the box's width: the same 12px from the list's edge too) */
 table > tbody > tr > td.tick-col > input, table > thead > tr > th.tick-col > input { margin: 0; vertical-align: middle; }
 table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { padding-left: 12px; }
+/* the scan review page: every page as a thumbnail at the top (the owner, 2026-10-24) */
+.scan-page-strip { padding: 12px 16px; }
+.scan-strip { display: flex; flex-wrap: wrap; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.scan-strip-page { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 84px; text-align: center; }
+.scan-strip-thumb { width: 72px; height: 92px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; display: block; }
+/* how a page went, as its thumbnail's outline (the owner, 2026-10-25: no words under it; they're in its tooltip): gray not
+   read yet, blue (pulsing) being read, green done, amber didn't make it, green and faded generated */
+.scan-strip-page .scan-strip-thumb { border-width: 2px; }
+.scan-strip-waiting .scan-strip-thumb { border-color: var(--border); }
+.scan-strip-done .scan-strip-thumb { border-color: var(--ok); }
+.scan-strip-error .scan-strip-thumb { border-color: var(--warn); }
+.scan-strip-saved .scan-strip-thumb { border-color: var(--ok); opacity: .55; }
+/* the state as a round badge on the thumbnail's top-right corner (the owner, 2026-10-25) */
+.scan-strip-page { position: relative; }
+.scan-strip-badge { position: absolute; top: -6px; right: 2px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); border: 2px solid var(--border); color: var(--muted); }
+.scan-strip-badge svg { width: 12px; height: 12px; }
+.scan-strip-done .scan-strip-badge { background: var(--ok); border-color: var(--ok); color: #fff; }
+.scan-strip-reading .scan-strip-badge { background: var(--accent); border-color: var(--accent); color: #fff; }
+.scan-strip-error .scan-strip-badge { background: var(--warn); border-color: var(--warn); color: #1a1a1a; }
+.scan-strip-saved .scan-strip-badge { background: var(--surface); border-color: var(--ok); color: var(--ok); }
+.scan-strip-bad { color: var(--warn); }
+/* a page that didn't make it: its own box, its choices at the top right */
+.scan-page-failed .scan-failed-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.scan-page-failed .scan-failed-head h2 { margin: 0; font-size: var(--fs-lg); display: inline-flex; align-items: center; gap: 6px; }
+.scan-page-failed .scan-failed-head .box-end { margin-left: auto; }
+.scan-page-failed > p { margin: 6px 0 0; }
+/* the menu's Scan pages badges (the owner, 2026-10-24): green being read, blue paused, red (the usual .count) stopped */
+.count.count-ok { background: var(--ok); color: #fff; }
+.count.count-blue { background: var(--accent); color: var(--accent-text); }
+.count + .count { margin-left: 3px; }
+/* the scan review page while a scan is read: the progress card where a page that didn't make it would be (the owner,
+   2026-10-24); the pages read so far can be changed and saved meanwhile (CA9) */
+/* the workbook page (the owner, 2026-10-25): its own card, the name and buttons on one line, the pages as small thumbnails
+   along the bottom with a link between each two; every page a card from the start, its thumbnail in its heading */
+.scan-batch-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.scan-batch-head .label { margin: 0; }
+.scan-batch-head input[type=text] { flex: 1 1 14rem; min-width: 0; width: auto; }
+.scan-batch-head .box-end { margin-left: auto; }
+.scan-batch .scan-strip { margin-top: 12px; gap: 4px; align-items: flex-start; }
+.scan-batch .scan-strip-page { width: 60px; }
+.scan-batch .scan-strip-thumb { width: 44px; height: 57px; }
+.scan-strip-page[draggable="true"] { cursor: grab; }
+.scan-strip-page.is-dragging { opacity: .4; }
+.scan-join-spot { list-style: none; align-self: center; margin-top: -26px; }
+.scan-join { background: none; border: 0; padding: 4px; color: var(--muted); cursor: pointer; border-radius: var(--r-sm); line-height: 0; }
+.scan-join svg { width: 16px; height: 16px; }
+.scan-join:hover:not(:disabled) { color: var(--accent); }
+.scan-join.is-joined { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.scan-join:disabled { opacity: .3; cursor: default; }
+.scan-head-thumb-link { line-height: 0; flex: 0 0 auto; }
+.scan-head-thumb { width: 26px; height: 34px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
+details.scan-page > summary .scan-head-thumb-link { margin-right: 4px; }
+.scan-page-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.scan-page-head h2 { margin: 0; font-size: var(--fs-lg); }
+.scan-page-head .box-end { margin-left: auto; }
+.scan-page-head .scan-progress-bar { flex: 1 1 8rem; max-width: 16rem; margin: 0; }
+/* a page's bar fills as its step's answer comes back; a step with no percent has the moving one (the owner, 2026-10-25) */
+.scan-page-head .scan-progress-bar > .scan-chip-now { transition: width .6s ease-out; }
+.scan-page-head .scan-progress-bar > .scan-chip-now.is-unknown { background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .scan-page-head .scan-progress-bar > .scan-chip-now.is-unknown { animation: none; opacity: .5; } }
+.scan-page-saved { padding-top: 10px; padding-bottom: 10px; }
+/* a workbook in the Trash: shown, not changed (a fieldset around the form, no look of its own) */
+fieldset.scan-form-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
+/* the page being read: its thumbnail outlined in the accent color, gently pulsing, its words in the accent color; its box with the
+   moving bar (the owner, 2026-10-24) */
+.scan-strip-reading .scan-strip-thumb { border: 2px solid var(--accent); animation: scan-strip-pulse 1.4s ease-in-out infinite; }
+@keyframes scan-strip-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .scan-strip-reading .scan-strip-thumb { animation: none; } }
+.scan-strip-now { color: var(--accent); font-weight: 600; }
+#scan-progress .progress-bar > .scan-chip-now { display: block; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan-chip-now 1.2s linear infinite; }
+@media (prefers-reduced-motion: reduce) { #scan-progress .progress-bar > .scan-chip-now { animation: none; opacity: .5; } }
+
+/* a small camera after a quiz's, problem's or folder's name when the scanner made it (the owner, 2026-10-25) */
+.scan-mark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--muted); opacity: .75; }
+.scan-mark svg { width: 13px; height: 13px; }
+/* a paged list being sorted in place (sorttable.js; the owner, 2026-10-25, CR1): dimmed for the moment it takes */
+table.is-sorting { opacity: .55; transition: opacity .15s; }
+@media (prefers-reduced-motion: reduce) { table.is-sorting { transition: none; } }
+
+/* the Messages panel's Showing as an open folder's tab (the owner, 2026-10-25, CT1): wide enough to read, joined to
+   the line under the row, like the folder pages' open tab; Write to… and Pinned bare icons beside it */
+.panel-extras { align-items: flex-end; gap: 2px; padding-left: 4px; box-shadow: inset 0 -1px 0 var(--tab-edge); }
+.panel-extras > .showing-btn { flex: 1 1 auto; min-width: 9em; max-width: 22em; justify-content: flex-start; min-height: 38px;
+  border: 1px solid var(--tab-edge); border-top: 4px solid var(--accent); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--tab-open); color: var(--text); padding: 4px 12px 8px; margin-right: 6px; position: relative; z-index: 1; }
+.panel-extras > .showing-btn svg.ico { color: var(--accent); }
+.panel-extras > .showing-btn:hover { border-color: var(--accent); filter: none; }
+.panel-extras > .btn-icon { align-self: center; margin-bottom: 3px; }
+.panel-extras .pinned-btn { position: relative; }
+.panel-extras .pin-count { position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px;
+  font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; background: var(--accent-soft); color: var(--accent); }
+/* a page not read yet, or that didn't make it, opened (the owner, 2026-10-25, CX4): the page large beside what was read */
+.scan-failed-body { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; margin-top: 10px; align-items: start; }
+.scan-failed-pic { width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--r-md, 8px); display: block; }
+.scan-read-list { margin: 4px 0 0; padding-left: 1.6em; max-height: 480px; overflow: auto; }
+.scan-read-list li { margin: 2px 0; }
+@media (max-width: 699px) { .scan-failed-body { grid-template-columns: 1fr; } }
+
+/* Messages › Showing: the choices that aren't one student sit on top, under the one heading; the
+   students' table under them keeps its heading for screen readers only (the owner, 2026-10-25) */
+.showing-dialog .showing-top { margin-bottom: 8px; }
+.showing-dialog .showing-students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

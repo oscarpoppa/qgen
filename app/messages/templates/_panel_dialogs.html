@@ -49,19 +49,23 @@
     <span class="muted small">Choose whose messages to show.</span></p>
   <div class="field pick-people" id="showing-pick">
     {{ filter_bar('#showing-pick .folder-filter-list', 'name', 'names', items='tr[data-box]', id='showing-bar') }}
+    {#- the choices that aren't one student (every student, a folder, the teachers): on top, in every
+        folder, and not counted as names (the owner, 2026-10-25) #}
+    {% macro choice(value, label, extra='', box=true) %}<tr{% if box %} data-box="user:{{ value }}"{% endif %}><td class="tick-col"><input type="radio" name="show-pick" value="{{ value }}" id="sh-{{ value }}"{% if value|string == current|string %} checked{% endif %}></td><td><label for="sh-{{ value }}">{{ label }}{{ extra }}</label></td></tr>{% endmacro %}
+    {% call pick_table('Whose messages', 'showing-top') %}
+      {{ choice('all', 'All messages (every student)', box=false) }}
+      {% for f in folders or [] %}{{ choice('f' ~ f.id, '  ' * (f.depth - 1) ~ f.name ~ ' (its students)', (' (' ~ f.unread ~ ' new)') if f.unread else '', box=false) }}{% endfor %}
+      {% if staff.teachers %}
+        {{ choice('teachers', 'All messages (every teacher)', (' (' ~ staff.unread ~ ' new)') if staff.unread else '', box=false) }}
+        {% for t in staff.teachers %}{{ choice('t' ~ t.teacher.id, t.teacher.shown_name ~ (' (online)' if t.online else ''), (' (' ~ t.unread ~ ' new)') if t.unread else '', box=false) }}{% endfor %}
+      {% endif %}
+    {% endcall %}
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"
          data-unit="student" data-units="students" data-remember="showing" data-tools-home="#showing-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ sh_tree|tojson }}</script>
       <div class="folder-filter-list">
-        {% call pick_table('Whose messages') %}
-          {% macro choice(value, label, extra='') %}<tr data-box="user:{{ value }}"><td class="tick-col"><input type="radio" name="show-pick" value="{{ value }}" id="sh-{{ value }}"{% if value|string == current|string %} checked{% endif %}></td><td><label for="sh-{{ value }}">{{ label }}{{ extra }}</label></td></tr>{% endmacro %}
-          {{ choice('all', 'All messages (every student)') }}
-          {% for f in folders or [] %}{{ choice('f' ~ f.id, '  ' * (f.depth - 1) ~ f.name ~ ' (its students)', (' (' ~ f.unread ~ ' new)') if f.unread else '') }}{% endfor %}
+        {% call pick_table('Whose messages', 'showing-students') %}
           {% for u in sh_students %}{{ choice(u.id, u.shown_name, (' (' ~ unread_of[u.id] ~ ' new)') if unread_of.get(u.id) else '') }}{% endfor %}
-          {% if staff.teachers %}
-            {{ choice('teachers', 'All messages (every teacher)', (' (' ~ staff.unread ~ ' new)') if staff.unread else '') }}
-            {% for t in staff.teachers %}{{ choice('t' ~ t.teacher.id, t.teacher.shown_name ~ (' (online)' if t.online else ''), (' (' ~ t.unread ~ ' new)') if t.unread else '') }}{% endfor %}
-          {% endif %}
         {% endcall %}
       </div>
     </div>

@@ -48,6 +48,8 @@ class VPGroup(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
+    #made by the scanner (the owner, 2026-10-25): a small camera beside its name
+    from_scan = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     #the folder it's in (None: at the top); removing a folder moves what's in it up a level
     parent_id = db.Column(db.Integer, db.ForeignKey('vpgroup.id', ondelete='CASCADE'), nullable=True, index=True)
 
@@ -63,6 +65,8 @@ class VQGroup(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64))
     summary = db.Column(db.String(256))
+    #made by the scanner (the owner, 2026-10-25): a small camera beside its name
+    from_scan = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     #the folder it's in (None: at the top); removing a folder moves what's in it up a level
     parent_id = db.Column(db.Integer, db.ForeignKey('vqgroup.id', ondelete='CASCADE'), nullable=True, index=True)
 
@@ -145,6 +149,8 @@ class VProblem(db.Model, SaveMixin, DateMixin):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
     title = db.Column(db.String(64))
     calculator_ok = db.Column(db.Boolean, default=False)
+    #made by the scanner (the owner, 2026-10-25): a small camera beside its name
+    from_scan = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     vpgroups = db.relationship('VPGroup', back_populates='vproblems', secondary=vproblem_vpgroup, lazy=True)
     vquizzes = db.relationship('VQuiz', back_populates='vproblems', secondary=vproblem_vquiz, lazy=True)
@@ -179,6 +185,8 @@ class VQuiz(db.Model, SaveMixin, DateMixin):
     removed_at = db.Column(db.DateTime, nullable=True)
     #JSON: a quiz made from a scanned page is taken on the page itself (pagelayout.py); None: an ordinary quiz
     page_layout_json = db.Column('page_layout', LongText, nullable=True)
+    #made by the scanner (the owner, 2026-10-25): a small camera beside its name
+    from_scan = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     @property
     def page_layout(self):
@@ -260,6 +268,9 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     needs_review = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
     graded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     graded_date = db.Column(db.DateTime, nullable=True)
+    #grades changed after it was finished: by whom and when (the owner, 2026-10-25, CP9)
+    changed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    changed_date = db.Column(db.DateTime, nullable=True)
     #optional window and time limit (minutes) for this assignment
     opens_at = db.Column(db.DateTime, nullable=True)
     closes_at = db.Column(db.DateTime, nullable=True)
@@ -282,6 +293,7 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
     grader = db.relationship('User', lazy=True, foreign_keys=[graded_by])
+    changer = db.relationship('User', lazy=True, foreign_keys=[changed_by])
 
     def deadline(self):
         """When answers stop being accepted: the time limit or the close time, whichever is first."""
@@ -424,11 +436,15 @@ def quiz_counts(user_id):
 
 
 def quiz_dots(user_id):
-    """(new, in progress, due soon) for the dots by the name in the top bar (the owner, 2026-10-23): new and
-    in progress are counted by quiz, like the gold and blue boxes (quiz_counts); due soon counts the
-    unfinished attempts closing within the "due soon" days, like the red Due soon on My quizzes."""
+    """(new, in progress, due soon) for the dots by the name in the top bar (the owner, 2026-10-23): due soon
+    counts the unfinished attempts closing within the "due soon" days, like the red Due soon on My quizzes.
+    New and in progress match My quizzes' New and In progress folders (the owner, 2026-10-25, CO1): attempts
+    are counted, not quizzes, and one handed in and not graded yet is in progress."""
     from app import tuning
-    fresh, started = quiz_counts(user_id)
+    rows = db.session.query(CQuiz.startdate, CQuiz.needs_review).filter(
+        CQuiz.assignee == user_id, CQuiz.completed.is_(False)).all()
+    fresh = sum(1 for began, review in rows if began is None and not review)
+    started = len(rows) - fresh
     now = datetime.now()
     due = CQuiz.query.filter(CQuiz.assignee == user_id, CQuiz.completed.is_(False), CQuiz.needs_review.is_(False),
                              CQuiz.closes_at >= now, CQuiz.closes_at <= now + tuning.due_soon()).count()

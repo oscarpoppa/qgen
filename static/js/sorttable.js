@@ -42,35 +42,99 @@
       .forEach(function (o) { body.appendChild(o.r); });
   }
 
+  //a heading's words made into its sort button (every sortable table, paged or not)
+  function headButton(th, name) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'th-sort';
+    b.title = 'Sort by ' + name.toLowerCase() + ' (press again to reverse)';
+    b.innerHTML = '<span></span><span class="th-sort-arrow" aria-hidden="true"></span>';
+    b.firstChild.textContent = name;
+    th.textContent = '';
+    th.appendChild(b);
+    return b;
+  }
+  //a paged list's headings: each asks the server for the list sorted that way, from page 1, and only the list
+  //and its page numbers are swapped in, so the page doesn't blink (the owner, 2026-10-25, CR1); the
+  //address follows (replaceState), so a reload or coming back finds it sorted the same
+  function pagedHeads(table) {
+    var on = table.dataset.sorted || '', dir = table.dataset.sortedDir === 'desc' ? 'desc' : 'asc';
+    table.querySelectorAll(':scope > thead > tr > th[data-sort-key]').forEach(function (th) {
+      var name = label(th), k = th.dataset.sortKey;
+      var b = headButton(th, name);
+      th.setAttribute('aria-sort', k === on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none');
+      b.dataset.dir = k === on ? (dir === 'desc' ? 'down' : 'up') : '';
+      b.addEventListener('click', function () {
+        var u = new URL(location.href);
+        u.searchParams.set('sort', k);
+        u.searchParams.set('dir', k === on && dir === 'asc' ? 'desc' : 'asc');
+        ['page', 'show', 'moved'].forEach(function (x) { u.searchParams.delete(x); });
+        swapIn(table, u.pathname + u.search + u.hash);
+      });
+    });
+  }
+  //the columns stay where they were while sorting, instead of shifting a little with each page's rows
+  //(the owner, 2026-10-25, CR3): the new table gets the old one's column widths, as shares of the table
+  //(not on a phone, where the rows are cards and there are no columns)
+  function keepColumns(old, added) {
+    var heads = old.querySelectorAll(':scope > thead > tr > th');
+    if (!heads.length || !old.tHead || getComputedStyle(old.tHead).display === 'none') return;
+    var whole = old.getBoundingClientRect().width;
+    var fresh = added.querySelectorAll(':scope > thead > tr > th');
+    if (!whole || fresh.length !== heads.length) return;
+    heads.forEach(function (th, i) {
+      fresh[i].style.width = (old.dataset.fixedCols ? th.style.width : (100 * th.getBoundingClientRect().width / whole).toFixed(3) + '%');
+    });
+    added.style.tableLayout = 'fixed';
+    added.dataset.fixedCols = '1';
+  }
+  //(a list made of several tables, like the Trash's month boxes, is swapped in whole: its [data-sort-swap])
+  function swapIn(table, url) {
+    var go = function () { location.assign(url); };  // (anything odd: just open it, as before)
+    if (!window.fetch || !window.DOMParser || !(window.history && history.replaceState)) return go();
+    var group = table.closest('[data-sort-swap]');
+    var old = group || table;
+    var mine = Array.prototype.indexOf.call(document.querySelectorAll('table[data-paged]'), table);
+    //(switched at once, like opening or folding a row: dimmed only if the server is slow to answer)
+    var slow = setTimeout(function () { table.classList.add('is-sorting'); }, 300);
+    fetch(url, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok || r.redirected) throw new Error('not the list');
+      return r.text();
+    }).then(function (html) {
+      clearTimeout(slow);
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var fresh = group ? doc.querySelector('[data-sort-swap="' + group.dataset.sortSwap + '"]') : doc.querySelectorAll('table[data-paged]')[mine];
+      var oldPagers = document.querySelectorAll('nav.pager'), newPagers = doc.querySelectorAll('nav.pager');
+      if (!fresh || oldPagers.length !== newPagers.length) throw new Error('not the same page');
+      var added = document.importNode(fresh, true);
+      var tablesOf = function (el) { return el.matches('table') ? [el] : Array.prototype.slice.call(el.querySelectorAll('table[data-paged]')); };
+      var before = tablesOf(old), after = tablesOf(added);
+      after.forEach(function (t, i) { if (before[i] || before[0]) keepColumns(before[i] || before[0], t); });
+      old.replaceWith(added);
+      Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
+      after.forEach(pagedHeads);
+      //(what's checked in this folder is checked again in the new rows: checked.js)
+      if (window.qgenCheckedIds) {
+        var kept = {};
+        window.qgenCheckedIds().forEach(function (id) { kept[id] = 1; });
+        var first = null;
+        added.querySelectorAll('input[name="items"], input.pick-person').forEach(function (t) {
+          if (kept[t.value] && !t.checked) { t.checked = true; first = first || t; }
+        });
+        if (first) first.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      history.replaceState(history.state, '', url);
+      document.dispatchEvent(new CustomEvent('qgen-address'));  // (the Back trail keeps it: trail.js)
+    }).catch(go);
+  }
+
   function setUp(list, key) {
     //(not a table that's part of a form being filled in, like the problem editor's Random values;
     //nor a heading with its own controls, like a ? help button)
     var tables = Array.prototype.slice.call(list.querySelectorAll('table')).filter(function (t) { return !t.closest('form') || t.classList.contains('pick-table'); });
     //a list shown a page at a time (app/paging.py; the owner, 2026-10-23) sorts the whole folder: its
-    //headings (data-sort-key) ask the server for the sorted pages, from page 1
-    tables.filter(function (t) { return t.hasAttribute('data-paged'); }).forEach(function (table) {
-      var on = table.dataset.sorted || '', dir = table.dataset.sortedDir === 'desc' ? 'desc' : 'asc';
-      table.querySelectorAll(':scope > thead > tr > th[data-sort-key]').forEach(function (th) {
-        var name = label(th), k = th.dataset.sortKey;
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'th-sort';
-        b.title = 'Sort by ' + name.toLowerCase() + ' (press again to reverse)';
-        b.innerHTML = '<span></span><span class="th-sort-arrow" aria-hidden="true"></span>';
-        b.firstChild.textContent = name;
-        th.textContent = '';
-        th.appendChild(b);
-        th.setAttribute('aria-sort', k === on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none');
-        b.dataset.dir = k === on ? (dir === 'desc' ? 'down' : 'up') : '';
-        b.addEventListener('click', function () {
-          var u = new URL(location.href);
-          u.searchParams.set('sort', k);
-          u.searchParams.set('dir', k === on && dir === 'asc' ? 'desc' : 'asc');
-          ['page', 'show', 'moved'].forEach(function (x) { u.searchParams.delete(x); });
-          location.assign(u.pathname + u.search + u.hash);
-        });
-      });
-    });
+    //headings (data-sort-key) ask the server for the sorted pages, from page 1 (pagedHeads)
+    tables.filter(function (t) { return t.hasAttribute('data-paged'); }).forEach(pagedHeads);
     tables = tables.filter(function (t) { return !t.hasAttribute('data-paged'); });
     if (!tables.length) return;
     tables.forEach(function (table) {
@@ -78,14 +142,7 @@
         var name = label(th);
         if (!name || th.classList.contains('tick-col') || th.querySelector('.sr-only:only-child') || th.querySelector('.th-sort')) return;
         if (th.querySelector('button, a, input, select, .tip-wrap, [role=tooltip]')) return;
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'th-sort';
-        b.title = 'Sort by ' + name.toLowerCase() + ' (press again to reverse)';
-        b.innerHTML = '<span></span><span class="th-sort-arrow" aria-hidden="true"></span>';
-        b.firstChild.textContent = name;
-        th.textContent = '';
-        th.appendChild(b);
+        var b = headButton(th, name);
         th.setAttribute('aria-sort', 'none');
         b.addEventListener('click', function () {
           var down = b.dataset.dir === 'up';

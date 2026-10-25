@@ -200,6 +200,28 @@ window.qgenHideRow = function (row, key, hide) {
     run();
   }
   document.querySelectorAll('[data-filter-bar]').forEach(setUp);
+  //the cursor starts in the page's filter box, ready to type (the owner, 2026-10-25, CQ1); not on a phone,
+  //where it would pop the keyboard up over the list (CQ2), nor when something else already has it.
+  //(once the page has loaded and is showing: a page is kept out of sight until its scripts have set it up)
+  function cursorToFilter(tries) {
+    try {
+      if (document.activeElement && document.activeElement !== document.body) return;
+      var first = Array.prototype.find.call(document.querySelectorAll('[data-filter-bar]'), function (b) {
+        return !b.closest('dialog, [hidden]') && b.getClientRects().length;
+      });
+      var box = first && first.querySelector('input[type=search]');
+      if (box && getComputedStyle(box).visibility === 'hidden') {
+        if ((tries || 0) < 40) setTimeout(function () { cursorToFilter((tries || 0) + 1); }, 50);
+        return;
+      }
+      if (box && window.matchMedia('(min-width: 768px) and (pointer: fine)').matches &&
+          (!document.activeElement || document.activeElement === document.body) && !document.querySelector('[autofocus]')) {
+        box.focus({ preventScroll: true });
+        box.setSelectionRange(box.value.length, box.value.length);
+      }
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') cursorToFilter(0); else window.addEventListener('load', function () { cursorToFilter(0); });
   //(for bars a script adds later: the folder dialogs' filter, dialogfilter.js)
   window.qgenFilterBar = setUp;
 })();

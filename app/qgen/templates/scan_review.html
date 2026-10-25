@@ -41,7 +41,7 @@
   <div class="hint hint-warn scan-place-note" data-place-note{% if not missing %} hidden{% endif %}>
     {{ icon('warning') }} <span><span data-place-count>{{ missing|length }} problem{{ 's need their' if missing|length != 1 else ' needs its' }}</span> answer box: <span data-place-list>
     {%- for m in missing %}{% if not loop.first %}, {% endif %}<a href="#scan-item-{{ m[0] }}-{{ m[1] }}" data-jump>{{ m[2] }}</a>{% endfor -%}
-    </span>. On the page picture, drag each <strong>dashed</strong> box onto the circle or blank where that answer goes. Save stays grayed until they’re all placed.</span>
+    </span>. On the page picture, drag each <strong>dashed</strong> box onto the circle or blank where that answer goes. “Generate quiz” stays grayed until they’re all placed.</span>
   </div>
 {% endmacro %}
 
@@ -49,11 +49,19 @@
   {% set n = page.n %}
   {% set ip = 'p' ~ n ~ 'i' ~ i ~ '-' %}
   {% set key = 'page:' ~ n ~ ':item:' ~ i %}
-  <fieldset id="scan-item-{{ n }}-{{ i }}" class="scan-item{% if not item.include %} is-off{% endif %}{% if key in problems %} has-error{% endif %}" data-page="{{ n }}" data-item="{{ i }}" data-kind="{{ item.kind }}">
+  {#- a short row (its question and answer) that folds open to its fields, one at a time as wanted; one with something to fix
+      starts open (the owner, 2026-10-25, CB3: every field of every problem made a page very long) #}
+  {%- set q_short = (item.page_question if item.use_page else item.question) or item.title %}
+  {%- set a_short = '' if item.kind == 'paper' else ((item.page_answer if item.use_page else item.answer) or '') %}
+  <fieldset id="scan-item-{{ n }}-{{ i }}" class="scan-item{% if not item.include %} is-off{% endif %}{% if key in problems %} has-error is-open{% endif %}" data-page="{{ n }}" data-item="{{ i }}" data-kind="{{ item.kind }}">
     <legend class="sr-only">Page {{ n }}, item {{ i + 1 }}</legend>
     <div class="scan-item-head">
+      {#- something to fix on it: an amber ! before its number, what it is in the tooltip (the owner, 2026-10-25, CL1) #}
+      {%- set errs_now = (checks.get((n, i)) or {}).get('errors') or [] %}
+      <span class="scan-item-bad" data-item-bad title="{{ errs_now|join(' ') }}"{% if not (item.include and errs_now) %} hidden{% endif %}>!</span>
       <label class="check" title="Include this one when saving"><input type="checkbox" name="{{ ip }}include" class="scan-include"{% if item.include %} checked{% endif %}> <span class="qnum">{{ i + 1 }}</span></label>
-      <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem’s title (only you see it)" class="scan-title">
+      <button type="button" class="scan-item-fold" data-fold-item aria-expanded="{{ 'true' if key in problems else 'false' }}" title="{{ q_short }}">
+        <span class="fold" aria-hidden="true"></span><span class="scan-item-q">{{ q_short }}</span>{% if a_short %}<span class="scan-item-a muted">{{ a_short.splitlines()[0] if a_short else '' }}</span>{% endif %}</button>
       {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">{{ icon('pencil') }} Paper only</span>{% endif %}
     </div>
     {{ errs(key) }}
@@ -70,6 +78,7 @@
     {% if same %}<div class="scan-reuse small"><span class="scan-reuse-note">{{ icon('note') }} Same as problem “{{ same }}”: reused</span>
       <label class="check" title="Save this one as a problem of its own"><input type="checkbox" name="{{ ip }}new"{% if item.new %} checked{% endif %}> Make a new one instead</label></div>{% elif item.new %}<input type="hidden" name="{{ ip }}new" value="1">{% endif %}
     <div class="scan-item-body">
+      <input type="text" name="{{ ip }}title" value="{{ item.title }}" maxlength="64" aria-label="Title" title="The problem’s title (only you see it)" class="scan-title">
     {% if item.kind == 'paper' %}
       <input type="hidden" name="{{ ip }}box" id="{{ ip }}box" value="{{ item.box.left }},{{ item.box.top }},{{ item.box.right }},{{ item.box.bottom }}">
       <label class="label small" for="{{ ip }}question">Instructions</label>
@@ -112,11 +121,13 @@
 
 {% macro picture_row(pre, pic, n) %}
   {% set key = pre ~ pic.id ~ '-' %}
-  <div class="scan-pic" data-box="{{ key }}box">
+  <div class="scan-pic" data-box="{{ key }}box" data-page="{{ n }}">
     <input type="hidden" name="{{ key }}box" id="{{ key }}box" value="{{ pic.box.left }},{{ pic.box.top }},{{ pic.box.right }},{{ pic.box.bottom }}">
     <input type="text" name="{{ key }}label" value="{{ pic.label }}" maxlength="64" placeholder="label" aria-label="Picture label" title="A short name for the picture (used in its file name)" size="12">
     {{ use_select(key ~ 'use', pic.use, 'Where the picture ' ~ (pic.label or '') ~ ' goes') }}
-    <label class="check small" title="Save it in Pictures even when it isn’t used"><input type="checkbox" name="{{ key }}keep"{% if pic.keep %} checked{% endif %}> save</label>
+    {#- (grayed and checked while something uses the picture, which saves it in Pictures anyway: the owner, 2026-10-25,
+        To do 48; static/js/scan_review.js keeps it so as the menu changes) #}
+    <label class="check small scan-pic-keep" title="Save it in Pictures even when it isn’t used"><input type="checkbox" name="{{ key }}keep"{% if pic.keep %} checked{% endif %}> save</label>
     <label class="check small" title="Leave this picture out"><input type="checkbox" name="{{ key }}removed" class="scan-pic-remove"> remove</label>
   </div>
 {% endmacro %}
@@ -125,66 +136,173 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Scan: {{ job.name }}</h1>
-  {% if not reading %}{{ expand_collapse('#scan-form', 'pages') }}{% endif %}
+  {#- (a workbook: the pages put in together; each page is scanned: the owner, 2026-10-25) #}
+  <h1>Workbook: {{ job.name }}</h1>
+  {{ expand_collapse('#scan-form', 'pages', fixed=true) }}
   <div class="actions">
-    {{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}
+    {% if trashed %}{{ back_button(url_for('qgen.archive', section='workbooks'), 'Trash') }}{% else %}{{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}{% endif %}
   </div>
 </div>
+{#- in the Trash: looked at, not changed; Restore puts it back in the stash (the owner, 2026-10-25) #}
+{% if trashed %}
+<div class="alert alert-info btn-row">
+  <span>This workbook is in the Trash. Restore it to work on it again.</span>
+  <form method="post" action="{{ url_for('qgen.scan_restore', job_id=job.id) }}" class="inline-form" data-confirm="Restore “{{ job.name }}”? It goes to Stashed workbooks, Uncategorized." data-confirm-ok="Restore">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put “{{ job.name }}” back in Stashed workbooks, Uncategorized">Restore</button></form>
+</div>
+{% endif %}
 
-{% if reading %}
-  <div class="card" id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}">
-    <div class="scan-progress-top"><p><strong id="scan-progress-line">Reading the pages…</strong> <span class="scan-timer muted" id="scan-timer" aria-live="off"></span>
-      {%- if data.from_folder %}<br><span class="small muted scan-from-folder">{{ icon('folder') }} From the folder “{{ data.from_folder }}”, {{ count_of(data.pages|length, 'page', 'pages') }}</span>{% endif %}</p>
-      {#- (Pause, it was Cancel: the pages being read are finished first, the owner 2026-10-19) #}
-      {% if data.pausing %}<span class="muted">Pausing after these pages…</span>{% else %}{{ post_button(url_for('qgen.scan_pause', job_id=job.id), 'Pause', tip='Pause now. Current page not saved.') }}{% endif %}</div>
-    <p class="muted small">About half a minute per page. You can leave this page and come back from “Scan workbook pages”; the reading goes on.</p>
-    <ol class="scan-progress-list">
-      {% for p in data.pages %}<li data-n="{{ p.n }}"><a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom title="See page {{ p.n }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>Page {{ p.n }}: <span class="muted">{{ {'waiting': 'waiting', 'reading': 'reading…', 'done': 'done ✓', 'error': 'couldn’t be read'}[p.state] }}</span></li>{% endfor %}
-    </ol>
-  </div>
-{% else %}
   {#- (no yellow "N pages weren't read yet" card: the Helper has each page's choices; the owner, 2026-10-23) #}
   {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
 
-  
   <div class="editor">
   <form method="post" id="scan-form" data-fresh-page data-unsaved novalidate data-check="{{ url_for('qgen.scan_check', job_id=job.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {#- (while the rest are read, the pages read so far can be changed and generated; what needs every page read waits:
+        the owner, 2026-10-24, CA9) #}
+    {% set wait_tip = 'Wait until every page has been read' %}
+    {% if trashed %}<fieldset class="scan-form-lock" disabled>{% endif %}
+    {% if reading %}<div id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}" data-steps="{{ step_words|tojson|forceescape }}" hidden></div>{% endif %}
     {{ place_note() }}
+    {#- the workbook's own card (the owner, 2026-10-25): its name and its buttons on one line, and its pages as small
+        thumbnails along the bottom: dragged to change the order, a link between two to make them one quiz #}
     <div class="card scan-batch">
-      <div class="field">
+      <div class="scan-batch-head">
         <label class="label" for="scan-name">Workbook name</label>
         <input type="text" id="scan-name" name="name" value="{{ data.name or job.name }}" maxlength="128">
+        <span class="box-end btn-row">
+          {#- (up to three pages are read at once, one reading for the workbook: so one Pause for it here, not one on each
+              page being read; the owner, 2026-10-25) #}
+          {% if reading %}<span class="small muted scan-timer" data-timer-all aria-live="off"></span>
+          {% if data.pausing %}<span class="muted small">Pausing after these pages…</span>{% else %}<button type="button" class="btn btn-secondary btn-sm" data-scan-pause="{{ url_for('qgen.scan_pause', job_id=job.id) }}" title="Pause reading this workbook: the pages being read now finish and are kept; no more start until you press Resume.">{{ icon('lc-pause') }} Pause all</button>{% endif %}{% endif %}
+          {#- (the whole workbook's buttons here, a page's own on its card: the owner, 2026-10-25, CK1) #}
+          {% if not reading and not trashed and data.pages|selectattr('state', 'in', ['waiting', 'error'])|list %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_read', job_id=job.id) }}" data-ask="Read every page not read yet? Each page uses a few AI calls." data-ok="Resume all" title="Go on reading the pages not read yet (each page uses a few AI calls)">{{ icon('lc-resume') }} Resume all</button>{% endif %}
+          {#- (in the stash: Unstash draft, out of it: Stash draft; the owner, 2026-10-23) #}
+          {% if data.put_away %}<button class="btn btn-secondary btn-sm" name="action" value="unstash"{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Keep your changes and move this workbook back to Current workbooks"{% endif %}>Unstash draft</button>
+          {% else %}<button class="btn btn-secondary btn-sm" name="action" value="keep"{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Keep your changes and stash this workbook until you come back to it"{% endif %}>Stash draft</button>{% endif %}
+          {#- (it sends its own form below, so none of the draft's fields go with it) #}
+          <button class="btn btn-secondary btn-sm" form="scan-discard" title="Move this workbook to the Trash; you can restore it there">Move to Trash</button>
+        </span>
       </div>
-      <div class="field">
-        <label class="label" for="scan-folder">Folder</label>
-        <input type="text" id="scan-folder" name="folder" value="{{ data.folder or '' }}" maxlength="{{ tuning.get('folder_name') }}" placeholder="(blank: the workbook’s name)">
-        <div class="help">The problems go in this folder on Problems, and the quizzes in this folder on Quizzes. A folder with this name is used if there is one.</div>
-        {{ errs('folder') }}
-      </div>
+      {#- every page as a thumbnail, with its number and how it went; a thumbnail opens full size, as every thumbnail on the
+          site does (the owner, 2026-10-24) #}
+      {% set movable = not reading and not trashed %}
+      <input type="hidden" name="order" id="scan-order" value="">
+      {#- each state's badge, for scan_review.js to swap in as a page's state changes #}
+      <template id="scan-badges">{% for k, ic in (('waiting', 'hourglass'), ('reading', 'lc-circle-half'), ('done', 'lc-check'), ('error', 'lc-alert'), ('saved', 'lc-clipboard-check')) %}<span data-for="{{ k }}">{{ icon(ic) }}</span>{% endfor %}</template>
+      <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">
+      {% for p in data.pages %}
+        {% if not loop.first %}
+          {%- set before = data.pages[loop.index0 - 1] %}
+          {%- set can_join = movable and p.state == 'done' and before.state == 'done' and p.kind == 'problems' and before.kind == 'problems' %}
+          <li class="scan-join-spot" aria-hidden="false">
+            {% if p.state == 'done' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
+            <button type="button" class="scan-join{% if p.join_prev and p.state == 'done' %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if p.join_prev and p.state == 'done' else 'false' }}"
+              {%- if not can_join %} disabled title="{{ wait_tip if reading else 'Only two pages with problems, both read and not generated yet, can be joined' }}"
+              {%- elif p.join_prev %} title="Pages {{ before.n }} and {{ p.n }} make one quiz: click to make them two"
+              {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link') }}</button>
+          </li>
+        {% endif %}
+        <li class="scan-strip-page scan-strip-{{ p.state }}" data-n="{{ p.n }}"{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
+          {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
+          <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
+          {#- its state as a small badge on the thumbnail's corner (the owner, 2026-10-25: the outline alone was hard to see) #}
+          <span class="scan-strip-badge" data-badge aria-hidden="true">{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-alert', 'saved': 'lc-clipboard-check'}[p.state]) }}</span>
+          <span class="small">Page {{ p.n }}</span>
+        </li>
+      {% endfor %}
+      </ol>
     </div>
 
     {% set ns = namespace(problems_before=false) %}
-    {% for page in data.pages if page.state == 'done' %}
+    {% for page in data.pages %}
       {% set n = page.n %}
       {% set pre = 'p' ~ n ~ '-' %}
+      {% set thumb %}<a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" data-page-zoom class="scan-head-thumb-link" title="See page {{ n }} full size"><img class="scan-head-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=n) }}" alt="" loading="lazy"></a>{% endset %}
+      {% if page.state == 'saved' %}
+      {#- made into its quiz already: a short line with links (the owner, 2026-10-25) #}
+      <div class="box card scan-page scan-page-saved" id="scan-page-{{ n }}">
+        <div class="scan-page-head">
+          {{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          {% set made = page.made or {} %}
+          {% if made.quiz %}<span>Generated: <a href="{{ url_for('qgen.view_vquiz', vqid=made.quiz) }}">“{{ made.title }}”</a>, {{ count_of(made.problems or 0, 'problem', 'problems') }}</span>
+            <a class="icon-link" href="{{ url_for('qgen.edvquiz', vqid=made.quiz) }}" title="Edit: “{{ made.title }}”">{{ icon_label('lc-pencil', 'Edit') }}</a>
+          {% elif made.with %}<span class="muted">Generated with page {{ made.with }}</span>
+          {% else %}<span class="muted">Generated</span>{% endif %}
+          <span class="mark mark-ok">{{ icon('lc-check') }}</span>
+        </div>
+      </div>
+      {% elif page.state != 'done' %}
+      {#- not read yet, being read, or didn't make it: its card from the start, empty until it's read (the owner, 2026-10-25);
+          the page being read has its bar in the heading, a page that didn't make it its choices there #}
+      {#- a page not read or being read: a card that folds open (the owner, 2026-10-25, CX4) to the page picture, large, and what
+          was read before it stopped; the page being read is a plain card with its bar #}
+      {%- set fold = page.state != 'reading' %}
+      <{{ 'details' if fold else 'div' }} class="box card scan-page scan-page-{{ page.state }}" id="scan-page-{{ n }}"{% if fold %} data-box="scan-page:{{ n }}" data-fixed{% endif %}>
+        {% if fold %}<summary>{% else %}<div class="scan-page-head">{% endif %}
+          {% if fold %}<span class="fold" aria-hidden="true"></span>{% endif %}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          <span class="badge {{ 'badge-accent' if page.state == 'reading' else 'badge-warn' }}">{{ {'reading': 'Being read', 'waiting': 'Not read yet', 'error': 'Didn’t make it'}[page.state] }}</span>
+          {% if page.state == 'reading' %}
+            {#- its step and about how much of it is done, as the AI's answer comes back (the owner, 2026-10-25, CI1/CI2); a step
+                with no percent (finding the answer boxes) has the moving bar #}
+            {%- set pr = page.progress or {} %}
+            <div class="progress-bar scan-progress-bar" aria-hidden="true"><span class="scan-chip-now{% if pr.pct is none %} is-unknown{% endif %}" data-bar-page="{{ n }}" style="width:{{ pr.pct if pr.pct is not none else 100 }}%"></span></div>
+            <span class="small scan-step" data-step-page="{{ n }}">{% if pr.step %}{{ step_words[pr.step] }}{% if pr.pct is not none %} · {{ pr.pct }}%{% endif %}{% endif %}</span>
+            <span class="small muted scan-timer" data-timer-page="{{ n }}" aria-live="off"></span>
+            {#- (this page only, at once; the others go on: the owner, 2026-10-25, CK2) #}
+            <span class="box-end"><button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_stop_page', job_id=job.id, n=n) }}" data-ask="Stop reading page {{ n }}? What it has cost so far is lost, and it goes back to Not read yet. The other pages go on." data-ok="Stop this page" title="Stop reading this page now; the other pages go on">Stop this page</button></span>
+          {% elif not reading %}
+          <span class="box-end btn-row">
+            {#- (plain buttons, sent only by their own click, static/js/scan_review.js: as the form's first send buttons they were
+                pressed by the form being sent and read a page again with AI calls nobody asked for, 2026-10-24) #}
+            <button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" data-ask="Read page {{ n }}? It uses a few AI calls. The other pages stay as they are." data-ok="Read this page" title="{{ 'Have the AI read this page, going on from where it stopped (it uses a few AI calls); the other pages stay as they are' if page.qs_reading else 'Have the AI read this page (it uses a few AI calls); the other pages stay as they are' }}">Read this page</button>
+            {% if page.qs_reading %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_use_reading', job_id=job.id, n=n) }}" title="Make this a normal page from what was read, to fix and generate; problems with no random numbers yet keep the page’s own. No AI calls.">Use what was read</button>{% endif %}
+            <button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_drop_page', job_id=job.id, n=n) }}" data-ask="Discard page {{ n }} of this workbook? It can’t be undone." data-ok="Discard" title="Take this page out of the workbook for good">Discard page</button>
+          </span>
+          {% endif %}
+        {% if fold %}</summary>{% else %}</div>{% endif %}
+        {% if page.state == 'error' or (page.error and not reading) %}<p class="small muted">{{ page.error or 'It couldn’t be read.' }}</p>{% endif %}
+        {% if fold %}
+        <div class="scan-failed-body">
+          <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" data-page-zoom title="See page {{ n }} full size"><img class="scan-failed-pic" src="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" alt="Page {{ n }} as scanned" loading="lazy"></a>
+          {% if page.qs_reading %}{% set read = page.qs_reading.problems or [] %}
+          <div class="scan-failed-read">
+            <p class="small">Read so far: {{ count_of(read|length, 'problem', 'problems') }}{% if page.numbers_done %} (random numbers for {{ page.numbers_done|length }}){% endif %}.</p>
+            <ol class="small scan-read-list">{% for p in read %}<li>{{ p.text }}</li>{% endfor %}</ol>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </{{ 'details' if fold else 'div' }}>
+      {% else %}
       {#- (pages start folded, the owner 2026-10-19; one with something to fix shows open) #}
       {%- set pb = namespace(bad=false) %}{% for k in problems if k.startswith('page:' ~ n ~ ':') %}{% set pb.bad = true %}{% endfor %}
-      <details class="box card scan-page" data-page="{{ n }}" data-box="scan-page:{{ n }}"{% if pb.bad %} open data-keep-open{% endif %}>
+      {#- (every page starts closed, not as last left: the owner, 2026-10-25; one with something to fix still opens) #}
+      <details class="box card scan-page" id="scan-page-{{ n }}" data-page="{{ n }}" data-box="scan-page:{{ n }}" data-fixed{% if pb.bad %} open data-keep-open{% endif %}>
         <summary>
-          {{ box_label('file', 'Page ' ~ n ~ ': ' ~ page.title, count_of(page['items']|length, 'item', 'items') if page.kind == 'problems' else none, tag='h2') }}
+          {#- (its thumbnail where the page icon was: the owner, 2026-10-25) #}
+          <span class="fold" aria-hidden="true"></span>{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>{% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
           {#- a green check mark on a page read and with nothing left to fix (the owner, 2026-10-21);
               scan_review.js shows it once the page's last answer box is placed #}
           {#- (the check inside the loop, not as its filter: there loop.index0 is the pages', the code critic 2026-10-22) #}
-          {%- set pe = namespace(errors=pb.bad) %}{% for item in page['items'] %}{% if item.include and (checks.get((n, loop.index0)) or {}).get('errors') %}{% set pe.errors = true %}{% endif %}{% endfor %}
+          {%- set pe = namespace(errors=pb.bad, count=0) %}{% for item in page['items'] %}{% if item.include and (checks.get((n, loop.index0)) or {}).get('errors') %}{% set pe.errors = true %}{% set pe.count = pe.count + 1 %}{% endif %}{% endfor %}
+          {#- how many of its problems need fixing (the owner, 2026-10-25, CL1); scan_review.js keeps it current #}
+          <span class="badge badge-warn" data-fix-count{% if not pe.count %} hidden{% endif %}>{{ pe.count }} to fix</span>
           <span class="mark mark-ok scan-page-ok" data-errors="{{ 1 if pe.errors else 0 }}" title="Page {{ n }} is ready to save"{% if pe.errors or missing|selectattr(0, 'equalto', n)|list %} hidden{% endif %}>{{ icon_label('lc-check', 'Ready to save') }}</span>
           {#- (half of a photo of two pages, cut at the spine: the owner, 2026-10-23) #}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
           {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
-          {#- saved now, or kept in the scan for later (the owner, 2026-10-22); a joined page goes with its quiz's first page #}
+          {#- each page made into its quiz on its own (the owner, 2026-10-25: it was one Generate for every checked page); a joined
+              page goes with its quiz's first page, and the button waits for every answer box of the pages in it #}
           {%- set joined = page.kind == 'problems' and leads.get(n) and leads[n] != n %}
-          <span class="box-end"><label class="check small scan-page-save-label" title="{{ 'Saved with page ' ~ leads[n] if joined else 'Save this page when you press Save' }}"><input type="checkbox" class="scan-page-save" name="{{ pre }}save" data-page="{{ n }}"{% if joined %} data-lead="{{ leads[n] }}" disabled{% endif %}{% if page.save is not sameas false %} checked{% endif %}> Save</label></span>
+          {%- set grp = namespace(ns=[n], gaps=[]) %}{% for k, v in leads.items() if v == n and k != n %}{% set grp.ns = grp.ns + [k] %}{% endfor %}
+          {%- for m in missing if m[0] in grp.ns %}{% set grp.gaps = grp.gaps + [m[2]] %}{% endfor %}
+          {%- set fx = namespace(n=0) %}{% for pg in data.pages if pg.n in grp.ns and pg.state == 'done' %}{% for it in pg['items'] %}{% if it.include and (checks.get((pg.n, loop.index0)) or {}).get('errors') %}{% set fx.n = fx.n + 1 %}{% endif %}{% endfor %}{% endfor %}
+          <span class="box-end"><button class="btn btn-sm" name="generate" value="{{ n }}" data-generate="{{ n }}" data-group="{{ grp.ns|join(' ') }}" data-tip="Make this page’s quiz and problems now"
+            {%- if joined %} disabled data-joined title="Joined with page {{ leads[n] }}"
+            {%- elif fx.n %} disabled title="Fix the problems marked ! first"
+            {%- elif grp.gaps %} disabled title="Every problem needs its place on the page first ({{ grp.gaps|join(', ') }})"
+            {%- else %} title="Make this page’s quiz and problems now"{% endif %}>Generate quiz</button></span>
         </summary>
         <input type="hidden" name="{{ pre }}shown" value="1">
         <div class="scan-split">
@@ -203,14 +321,14 @@
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
             {#- (the answer boxes found again, without the AI: the owner, 2026-10-21) #}
-            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Find the boxes again" data-ask="Find the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used." title="Put page {{ n }}’s answer boxes where they’re found now, without the AI">Find the boxes again</button>{% endif %}
+            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Find the boxes again" data-ask="Find the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used."{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Put page {{ n }}’s answer boxes where they’re found now, without the AI"{% endif %}>Find the boxes again</button>{% endif %}
             {#- the page read again from the start, with what was wrong (the owner, 2026-10-20); sent with
                 the whole form, so the changes on the other pages are kept #}
             <details class="scan-again">
               <summary class="btn btn-secondary btn-sm" title="Have the AI read this page again, saying what was wrong">Read this page again</summary>
               <label class="label small" for="{{ pre }}again_note">What was wrong? (optional)</label>
               <textarea id="{{ pre }}again_note" name="{{ pre }}again_note" rows="2" maxlength="{{ note_longest }}" placeholder="e.g. Problem 6 is missing; the answers to 4 and 5 are swapped"></textarea>
-              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are." title="Read again: page {{ n }} from the start, with your note">Read again</button>
+              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are."{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Read again: page {{ n }} from the start, with your note"{% endif %}>Read again</button>
             </details>
           </div>
           <div class="scan-right">
@@ -222,7 +340,6 @@
                 {{ errs('page:' ~ n ~ ':title') }}
                 {% if page.directions %}<p class="muted small">Directions on the page: {{ page.directions }}</p>{% endif %}
                 <div class="btn-row small">
-                  {% if ns.problems_before %}<label class="check" title="Put this page’s problems in the same quiz as the page before"><input type="checkbox" name="{{ pre }}join_prev"{% if page.join_prev %} checked{% endif %}> Join with the page before</label>{% endif %}
                   <label class="check" title="Each student gets the questions in his/her own order (off keeps the workbook’s order)"><input type="checkbox" name="{{ pre }}shuffle"{% if page.shuffle %} checked{% endif %}> Shuffle the order</label>
                   <label class="check" title="Students can use the on-screen calculator"><input type="checkbox" name="{{ pre }}calculator"{% if page.calculator %} checked{% endif %}> Calculator</label>
                 </div>
@@ -241,29 +358,16 @@
           </div>
         </div>
       </details>
+      {% endif %}
     {% endfor %}
-
-    <div class="card btn-row scan-actions">
-      {{ place_note() }}
-      {#- (grayed while a problem has no place on its page, the owner 2026-10-20; scan_review.js keeps it current) #}
-      {% set no_spot = missing|map(attribute=2)|join(', ') %}
-      <button class="btn" name="action" value="save" data-save data-tip="Make the problems and quizzes from the checked items, and save the pictures"{% if missing %} disabled title="Every problem needs its place on the page first ({{ no_spot }})"{% else %} title="Make the problems and quizzes from the checked items, and save the pictures"{% endif %}>Generate quiz(zes)</button>
-      {#- (in the stash: Unstash draft, out of it: Stash draft; the owner, 2026-10-23) #}
-      {% if data.put_away %}<button class="btn btn-secondary" name="action" value="unstash" title="Keep your changes and move this scan back to Current scans">Unstash draft</button>
-      {% else %}<button class="btn btn-secondary" name="action" value="keep" title="Keep your changes and stash this scan until you come back to it">Stash draft</button>{% endif %}
-      {#- (Discard beside Save and Keep draft, not in the heading, the owner 2026-10-21; it sends its own
-          form below, so none of the draft's fields go with it. Not while it's being read: Pause is on
-          the reading card, the owner 2026-10-18) #}
-      <button class="btn btn-secondary" form="scan-discard" title="Remove this scan and its draft; nothing from it is saved">Discard</button>
-      <span class="muted small">Nothing is saved until you press “Generate quiz(zes)”.</span>
-    </div>
+    {% if trashed %}</fieldset>{% endif %}
   </form>
   {#- the Helper in the right-hand column, as on New problem: what stops quizzes being made, and the choices for a page that didn't make it (the owner, 2026-10-23) #}
   <div class="side-col">
   {% with form_id='scan-form', check_url=url_for('qgen.scan_helper', job_id=job.id) %}{% include "_helper.html" %}{% endwith %}
   </div>
   </div>
-  <form method="post" id="scan-discard" data-leaves action="{{ url_for('qgen.scan_discard', job_id=job.id) }}" hidden data-confirm="Discard the scan “{{ job.name }}”? Its pages and draft are removed; nothing from it was saved." data-confirm-ok="Discard">
+  <form method="post" id="scan-discard" data-leaves action="{{ url_for('qgen.scan_discard', job_id=job.id) }}" hidden data-confirm="Move “{{ job.name }}” to the Trash? You can restore it there." data-confirm-ok="Move to Trash">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </form>
 
@@ -276,7 +380,6 @@
       <label class="check small" title="Leave this picture out"><input type="checkbox" name="__P__-__ID__-removed" class="scan-pic-remove"> remove</label>
     </div>
   </template>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}

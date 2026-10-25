@@ -56,10 +56,12 @@ class Page:
         return out
 
 
-def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, weight_of=None):
+def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, weight_of=None, group_of=None):
     """The page of items the address asks for. items: the folder's things, in their usual order.
     name_of(item) -> the words ?q= is looked for in; sorts: {'title': key function...} (a key of None
-    or '' goes last, either way); show: the id of a thing to land on (?show=, lit up on arrival)."""
+    or '' goes last, either way); show: the id of a thing to land on (?show=, lit up on arrival).
+    group_of(item) -> the group a list shows its items in (the Trash's months): sorting sorts within
+    each group, and the groups stay in their usual order (the owner, 2026-10-25, CS1)."""
     args = request.args if args is None else args
     size = size or tuning.get('page_size')  # (Settings > Technical settings > Lists & pages)
     everything = len(items)
@@ -71,11 +73,17 @@ def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, w
     sort = args.get('sort') if sorts and args.get('sort') in sorts else None
     dirn = 'desc' if args.get('dir') == 'desc' else 'asc'
     if sort:
+        if group_of:
+            usual = {}
+            for i in items:
+                usual.setdefault(group_of(i), len(usual))
         keyed = [(sorts[sort](i), i) for i in items]
         full = [p for p in keyed if p[0] not in (None, '')]
         gaps = [p for p in keyed if p[0] in (None, '')]
         full.sort(key=lambda p: p[0], reverse=dirn == 'desc')
         items = [p[1] for p in full + gaps]
+        if group_of:
+            items.sort(key=lambda i: usual[group_of(i)])  # (stable: each group keeps its sorted order)
     total = len(items)
     count = max(1, math.ceil(total / size))
     try:

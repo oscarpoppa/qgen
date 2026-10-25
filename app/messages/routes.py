@@ -74,6 +74,20 @@ def conversation(student_id):
 def send():
     back = back_to(url_for('messages.inbox'))
     to = request.form.get('to', '')
+    if to.startswith('folder:'):
+        #everyone in a Users page folder (and the folders inside it) who is a student (the panel's
+        #folder view sends here too: the owner, 2026-10-25)
+        from app.user import groups
+        try:
+            ids = groups.everyone_in(to.split(':', 1)[1])
+            to = [u.id for u in User.query.filter(User.id.in_(ids), User.is_admin.is_(False))] if ids else []
+            if not to:
+                raise groups.GroupError('Nobody in that folder is a student.')
+        except groups.GroupError as exc:
+            if wants_json():
+                return jsonify(ok=False, error=str(exc)), 400
+            flash(str(exc), 'error')
+            return redirect(back)
     if wants_json():
         #from the side panel: stays on the page it's on
         try:
@@ -85,18 +99,6 @@ def send():
         to = request.form.getlist('students')
         if not to:
             flash('Check at least one student.', 'error')
-            return redirect(back)
-    elif to.startswith('folder:'):
-        #everyone in a Users page folder (and the folders inside it) who is a student
-        from app.user import groups
-        try:
-            ids = groups.everyone_in(to.split(':', 1)[1])
-        except groups.GroupError as exc:
-            flash(str(exc), 'error')
-            return redirect(back)
-        to = [u.id for u in User.query.filter(User.id.in_(ids), User.is_admin.is_(False))] if ids else []
-        if not to:
-            flash('Nobody in that folder is a student.', 'error')
             return redirect(back)
     try:
         students = M.send(current_user, to, request.form.get('body'), pinned=bool(request.form.get('pin')))

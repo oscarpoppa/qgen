@@ -451,11 +451,11 @@ def archive_user(uid):
     if usr is None:
         abort(404)
     if usr == current_user:
-        flash('You can’t archive your own account.', 'error')
+        flash('You can’t move your own account to the Trash.', 'error')
         return redirect(url_for('user.userdet'))
     keep = request.form.get('keep') != 'no'
     archive_account(usr, by=current_user, keep_results=keep)
-    flash(Markup('Moved {} to the <a href="{}">Archive</a>{}. You can restore him/her there.').format(
+    flash(Markup('Moved {} to the <a href="{}">Trash</a>{}. You can restore him/her there.').format(
         usr.shown_name, url_for('qgen.archive', section='people'),
         '; his/her quiz results are kept' if keep else '; his/her quiz results were deleted'), 'success')
     current_app.logger.info('{} archived user {} ({} results)'.format(current_user.username, usr.username, 'kept' if keep else 'deleted'))
@@ -562,7 +562,7 @@ def people_page(in_archive=False, **extra):
         fold_key='qgen-folded-user-folders')
     from app.qgen.models import RETAKE_RULES
     pg = _people_page_of(ulst, view, node, root, in_archive)
-    return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=pg.items, pg=pg,
+    return render_template('udet.html', ulst=ulst, title='Trash' if in_archive else 'People', fk=fk, shown=pg.items, pg=pg,
                            folders_of=folders_of, in_archive=in_archive, rules=RETAKE_RULES, **extra)
 
 

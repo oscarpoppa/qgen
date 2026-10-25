@@ -24,39 +24,8 @@
       var text = document.createElement('span');
       text.textContent = h.text;
       li.appendChild(icon); li.appendChild(text);
-      //(several choices, each a button: a page that didn't make it gets Try again / Keep as it is / Discard page. One with a
-      //url goes to it with the form's other changes kept, asking first when it says to; "dismiss" hides the hint for now)
-      (h.actions || []).forEach(function (a) {
-        var c = document.createElement('button');
-        c.type = 'button'; c.className = 'btn btn-secondary btn-sm';
-        c.textContent = a.label;
-        if (a.tip) c.title = a.tip;
-        c.addEventListener('click', function () {
-          if (a.dismiss) {
-            try { sessionStorage.setItem('qgen-helper-dismissed:' + location.pathname + ':' + form.id + ':' + h.key, '1'); } catch (e) {}
-            li.remove();
-            return;
-          }
-          var go = document.createElement('button');
-          go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
-          go.setAttribute('formaction', a.url);
-          if (a.ask) { go.dataset.ask = a.ask; go.dataset.ok = a.ok || 'OK'; }
-          form.appendChild(go);
-          go.click();
-        });
-        li.appendChild(c);
-      });
-      if (h.action) {
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'btn btn-secondary btn-sm';
-        b.textContent = h.action.label;
-        b.title = h.action.tip || 'Let the helper make this change in the form for you';
-        b.addEventListener('click', function () {
-          form.dispatchEvent(new CustomEvent('helper-action', { detail: h.action }));
-          check();
-        });
-        li.appendChild(b);
-      }
+      //(the Helper only reads the page and says what it sees: no buttons in it, ever; a choice lives on the thing it's
+      //about, e.g. a scanned page's Try again on that page's box: the owner, 2026-10-24)
       target.appendChild(li);
     });
   }

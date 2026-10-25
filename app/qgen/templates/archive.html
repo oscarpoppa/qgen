@@ -11,12 +11,14 @@
    older ones folded). here: the folder they're listed under (None: All attempts or Not in a
    folder), which is where a drag takes one out of #}
 {% macro archive_table(items, here=none) %}
+  {#- (swapped in whole when sorted: its month boxes are its tables, sorttable.js) #}
+  <div data-sort-swap="attempt-months">
   {% for month in items|groupby_month %}
     <details class="box month-box" data-list>
       <summary>{{ box_label('calendar', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
-        <table class="archive-table even-cols">
-          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th>Student</th><th>Quiz</th><th class="row-more">When</th><th>Folder</th><th>Result</th><th></th></tr></thead>
+        <table class="archive-table even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="student">Student</th><th data-sort-key="quiz">Quiz</th><th class="row-more" data-sort-key="when">When</th><th>Folder</th><th data-sort-key="result">Result</th><th></th></tr></thead>
           <tbody>
           {% for a in month['items'] %}
             {% set blocker = blockers.get(a.id) %}
@@ -28,10 +30,10 @@
               <td data-label="Student"><details class="box row-fold" data-box="attempt-row:{{ a.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="drag-item" data-drag="attempt" data-id="{{ a.id }}" data-name="{{ a.student_name }}: {{ a.quiz_title }}"
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{#- (the name only opens the row, like every row's name: the owner, 2026-10-22) #}{{ a.student_name }}</span></summary></details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
-              <td data-label="Quiz">{#- (opens this archived attempt, like its View icon: the owner, 2026-10-22) #}<a class="name-link" href="{{ url_for('qgen.archived', aid=a.id) }}" data-tip="View: {{ a.student_name }}'s answers and score as they were when archived"><strong>{{ a.quiz_title }}</strong></a>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
+              <td data-label="Quiz">{#- (opens this archived attempt, like its View icon: the owner, 2026-10-22) #}<a class="name-link" href="{{ url_for('qgen.archived', aid=a.id) }}" data-tip="View: {{ a.student_name }}'s answers and score as they were when moved to the Trash"><strong>{{ a.quiz_title }}</strong></a>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
               <td data-label="When" class="small when-col row-more" data-sort="{{ a.archived_at.isoformat() if a.archived_at else '' }}">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
-                <span class="muted"><span class="nowrap">Archived {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
+                <span class="muted"><span class="nowrap">Moved to the Trash {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               {#- (columns in the site's one order: names, date, folder, details, result, icons; the owner 2026-10-20) #}
               {#- the bare folder icon that opens the Move dialog, then the folder it's in: the icon first
                   so it lines up down the column (the owner, 2026-10-19 and 2026-10-20) #}
@@ -43,7 +45,7 @@
                 {% elif a.startdate %}{{ status_icon('going', 'In progress') }}
                 {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}</td>
               <td class="actions">
-                <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when archived">{{ icon_label('lc-eye', 'View') }}</a>
+                <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when moved to the Trash">{{ icon_label('lc-eye', 'View') }}</a>
                 {% if blocker %}
                   <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Restore: {{ blocker }}">{{ icon_label('lc-restore', 'Restore') }}</button>
                 {% else %}
@@ -62,6 +64,7 @@
       </div>
     </details>
   {% endfor %}
+  </div>
 {% endmacro %}
 
 {% block content %}
@@ -69,7 +72,7 @@
     high, level with the open folder; the owner, 2026-10-24) #}
 <div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
-{% set archive_note %}Attempts you archived, and the quiz results of deleted student accounts. Students don't see any of this.
+{% set archive_note %}Attempts you moved to the Trash, and the quiz results of deleted student accounts. Students don't see any of this.
   You can look at each attempt, put it back, or delete it for good.{% endset %}
 
 {% call folders_page(fk, actions=archive_switch(section, counts), under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
@@ -93,9 +96,9 @@
   </div>
   <div id="folder-items">
     {#- one folder's attempts, a page at a time (app/paging.py); still in month boxes #}
-    {% if not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing archived yet. When you archive an attempt (or delete a student), it comes here, in the student's folder.</div>
+    {% if not total %}<div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>Nothing in the Trash yet. When you move an attempt to the Trash (or delete a student), it comes here, in the student's folder.</div>
     {% else %}{% call named_box(fk, 'attempt:', pg=pg) %}{% if items %}{{ archive_table(items, here=fk.node.folder if fk.node else none) }}
-    {% elif fk.node and fk.node.folder.student_id and not pg.q %}<p class="card empty small">Nothing archived for {{ fk.node.name }} yet.</p>
+    {% elif fk.node and fk.node.folder.student_id and not pg.q %}<p class="card empty small">Nothing in the Trash for {{ fk.node.name }} yet.</p>
     {% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}{% endif %}
   </div>
 {% endcall %}

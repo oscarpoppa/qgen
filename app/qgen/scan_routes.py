@@ -26,12 +26,13 @@ def _no_key():
     return redirect(url_for('qgen.list_vquizzes'))
 
 
-def _mine(job_id):
+def _mine(job_id, trashed=False):
     """A scan, for any teacher (the routes are teachers only), or 404. Every teacher sees every
     unfinished scan on the Dashboard, so each can open or discard it (the owner, 2026-10-20; it
-    was the author's alone)."""
+    was the author's alone). One in the Trash only where trashed is set: it can be looked at,
+    restored or deleted for good, nothing else (the owner, 2026-10-25)."""
     job = db.session.get(ScanJob, job_id)
-    if job is None:
+    if job is None or (job.status == SC.TRASHED and not trashed):
         abort(404)
     return job
 
@@ -48,7 +49,7 @@ def scan_start():
     if not _key():
         return _no_key()
     #(every teacher's unfinished scans, like the Dashboard's pop-over: the owner, 2026-10-20)
-    jobs = ScanJob.query.order_by(ScanJob.updated_at.desc()).all()
+    jobs = ScanJob.query.filter(ScanJob.status != SC.TRASHED).order_by(ScanJob.updated_at.desc()).all()
     #(the folder each scan's pages came from, if any: the owner, 2026-10-19)
     folders = {j.id: SC.get_data(j).get('from_folder') for j in jobs}
     #(each scan's kind, with its mark: the owner, 2026-10-19)
@@ -108,11 +109,11 @@ def scan_progress_data(user, put_away=False):
     has got (the owner, 2026-10-18). put_away: False leaves out the scans put away (the owner,
     2026-10-20: they're only in Scan workbook pages' Put away card), None takes them all."""
     out = []
-    for job in ScanJob.query.order_by(ScanJob.updated_at.desc()).all():
+    for job in ScanJob.query.filter(ScanJob.status != SC.TRASHED).order_by(ScanJob.updated_at.desc()).all():
         data = SC.get_data(job)
         if put_away is False and data.get('put_away'):
             continue
-        pages = data.get('pages') or []
+        pages = [p for p in data.get('pages') or [] if p.get('state') != 'saved']
         now = next((p['n'] for p in pages if p.get('state') == 'reading'), None)
         reading = _reading(job)
         kept = data.get('kept_at')
@@ -197,7 +198,7 @@ def scan_upload():
 @pw_check
 @admin_only
 def scan_page_image(job_id, n):
-    job = _mine(job_id)
+    job = _mine(job_id, trashed=True)
     if not 1 <= n <= job.pages:
         abort(404)
     return send_file(SC.page_file(job.id, n), mimetype='image/jpeg', max_age=0)
@@ -209,7 +210,7 @@ def scan_page_image(job_id, n):
 @admin_only
 def scan_page_thumb(job_id, n):
     """A small picture of page n, private like the page itself (the owner, 2026-10-18)."""
-    job = _mine(job_id)
+    job = _mine(job_id, trashed=True)
     if not 1 <= n <= job.pages:
         abort(404)
     return send_file(SC.thumb_file(job.id, n), mimetype='image/jpeg', max_age=0)
@@ -222,10 +223,11 @@ def scan_page_thumb(job_id, n):
 def scan_status(job_id):
     job = _mine(job_id)
     data = SC.get_data(job)
-    pages = data['pages']
+    pages = [p for p in data['pages'] if p.get('state') != 'saved']
     #(times for the page's timer, with the server's own time so a computer's clock being off doesn't matter)
     return jsonify(reading=_reading(job), now=SC.datetime.now().isoformat(timespec='seconds'), since=data.get('reading_since'),
-                   pages=[{'n': p['n'], 'state': p['state'], 'error': p.get('error'), 'since': p.get('since')} for p in pages])
+                   pages=[{'n': p['n'], 'state': p['state'], 'error': p.get('error'), 'since': p.get('since'),
+                           'progress': p.get('progress')} for p in pages])
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/read', methods=['POST'])
@@ -251,21 +253,27 @@ def scan_read(job_id):
 def review_page(job, data, problems=None, status=200):
     reading = _reading(job)
     checks = {}
-    if not reading:
-        #(the names the quizzes and problems will get, from the workbook's name)
-        SC.apply_names(data)
-        for page in data['pages']:
-            for i, item in enumerate(page.get('items') or []):
-                checks[(page['n'], i)] = SC.checked_item(item)
-    return render_template('scan_review.html', title='Scan: {}'.format(job.name), job=job, data=data, reading=reading,
+    #(the pages read so far can be checked and saved while the rest are read: the owner, 2026-10-24, CA9)
+    #(the names the quizzes and problems will get, from the workbook's name)
+    SC.apply_names(data)
+    for page in data['pages']:
+        for i, item in enumerate(page.get('items') or []):
+            #(the right choice shown with its *, from the answer, when the AI left it off: the owner, 2026-10-25)
+            if item.get('qtype') in ('choice_one', 'choice_many'):
+                item['choices'] = SC.star_answer(item.get('choices'), item.get('answer'))
+                item['page_choices'] = SC.star_answer(item.get('page_choices'), item.get('page_answer'))
+            checks[(page['n'], i)] = SC.checked_item(item)
+    return render_template('scan_review.html', title='Workbook: {}'.format(job.name), job=job, data=data, reading=reading,
+                           trashed=job.status == SC.TRASHED,
+                           step_words=SC.STEP_WORDS,
                            kind=SC.scan_kind(data, reading), note_longest=SC.NOTE_LONGEST,
                            checks=checks, problems=problems or {},
-                           reused=SC.reused_as(data) if not reading else {},
-                           matches=SC.reused_as(data, ignore_new=True) if not reading else {}, uses=SC.use_choices(data), leads=SC.lead_of(data),
+                           reused=SC.reused_as(data),
+                           matches=SC.reused_as(data, ignore_new=True), uses=SC.use_choices(data), leads=SC.lead_of(data),
                            qtypes={k: SC.REGISTRY[k].label for k in SC.QTYPES}, kinds=SC.SCAN_KINDS,
                            place_of=SC.place_of, label_of=SC.label_of, no_place=SC.NO_PLACE,
-                           missing=SC.missing_places(data) if not reading else [],
-                           unread=[p['n'] for p in data['pages'] if p['state'] != 'done']), status
+                           missing=SC.missing_places(data),
+                           unread=[p['n'] for p in data['pages'] if p['state'] not in ('done', 'saved')]), status
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>', methods=['GET'])
@@ -273,7 +281,7 @@ def review_page(job, data, problems=None, status=200):
 @pw_check
 @admin_only
 def scan_review(job_id):
-    job = _mine(job_id)
+    job = _mine(job_id, trashed=True)
     data = SC.get_data(job)
     page = review_page(job, data)
     #(checks done for this load are kept, so the next one is quick; not "Last changed", nothing
@@ -314,7 +322,8 @@ def scan_read_again(job_id, n):
     SC.put_data(job, data)
     db.session.commit()
     current_app.logger.info('{} asked for page {} of scan {} "{}" to be read again'.format(current_user.username, n, job.id, job.name))
-    SC.start_reading(job, _key(), current_user.id)
+    #(this page only: the others stay as they are, the owner 2026-10-25)
+    SC.start_reading(job, _key(), current_user.id, only=[n])
     return redirect(url_for('qgen.scan_review', job_id=job.id))
 
 
@@ -346,14 +355,18 @@ def scan_find_places(job_id, n):
 @admin_only
 @post_form_only
 def scan_save(job_id):
-    """Keep draft, or Save: make the problems and quizzes."""
+    """Stash draft, Unstash draft, or a page's Generate quiz: make that page's problems and quiz."""
     job = _mine(job_id)
-    if _reading(job):
+    reading = _reading(job)
+    gen = request.form.get('generate', '')
+    #(while the rest are read, the pages read so far can be generated; Stash draft waits: the owner, 2026-10-24, CA9)
+    if reading and not gen:
         flash('Some pages are still being read. Please wait until they’re done.', 'error')
         return redirect(url_for('qgen.scan_review', job_id=job.id))
     data = SC.update_from_form(SC.get_data(job), request.form)
-    SC.put_data(job, data)
-    db.session.commit()
+    if not reading:
+        SC.put_data(job, data)
+        db.session.commit()
     if request.form.get('action') == 'unstash':
         #(a stashed draft: the edits kept, and the scan back in Current scans: the owner, 2026-10-23)
         data['kept_at'] = SC.datetime.now().isoformat(timespec='seconds')
@@ -362,9 +375,9 @@ def scan_save(job_id):
         SC.keep_corrections(job, data)
         SC.put_away(job, False)
         current_app.logger.info('{} unstashed the draft of scan {} "{}"'.format(current_user.username, job.id, job.name))
-        flash('“{}” is back in Current scans, with your edits.'.format(job.name), 'success')
+        flash('“{}” is back in Current workbooks, with your edits.'.format(job.name), 'success')
         return redirect(url_for('qgen.scan_start'))
-    if request.form.get('action') != 'save':
+    if not gen:
         #(a draft the teacher kept, shown as such among the scans: the owner, 2026-10-19; Stash draft
         #keeps the edits and stashes it in one go, back on Scan workbook pages: the owner, 2026-10-21)
         data['kept_at'] = SC.datetime.now().isoformat(timespec='seconds')
@@ -375,8 +388,19 @@ def scan_save(job_id):
         current_app.logger.info('{} stashed the draft of scan {} "{}"'.format(current_user.username, job.id, job.name))
         flash('“{}” stashed, with your edits.'.format(job.name), 'success')
         return redirect(url_for('qgen.scan_start'))
-    #(the quizzes and problems named after the workbook, before anything is made: the owner, 2026-10-19)
+    #(each page made into its quiz on its own, the owner 2026-10-25: the names worked out with every page, so a
+    #page's quiz is named as it would have been with all of them; then only its quiz is made)
+    n = int(gen) if gen.isdigit() else 0
     data['_plan'] = SC.apply_names(data)
+    leads = SC.lead_of(data)
+    if leads.get(n) != n:
+        flash('Page {} has nothing to make into a quiz yet: check at least one of its problems.'.format(n)
+              if n not in leads else 'Page {} is joined with page {}: use page {}’s Generate quiz.'.format(n, leads[n], leads[n]), 'error')
+        return redirect(url_for('qgen.scan_review', job_id=job.id))
+    group = sorted(k for k, v in leads.items() if v == n)
+    for page in data['pages']:
+        if page.get('state') == 'done':
+            page['save'] = page['n'] in group
     problems = SC.check_all(data)
     if problems:
         flash('Nothing was saved yet: please fix the items marked below.', 'error')
@@ -389,11 +413,116 @@ def scan_save(job_id):
         db.session.rollback()
         flash(str(exc), 'error')
         return review_page(job, data, {}, 400)
-    current_app.logger.info('{} saved scan {} "{}": {} quiz(zes), {} problem(s), {} picture(s)'.format(
-        current_user.username, job.id, job.name, len(made['quizzes']), made['problems'], len(made['pictures'])))
-    #(job: the scan's own pages are gone once it's saved, so Back skips them: the owner, 2026-10-20)
-    session['scan_done'] = {'name': data.get('name') or job.name, 'job': job.id, 'quizzes': [q.id for q in made['quizzes']],
-                            'problems': made['problems'], 'reused': made.get('reused', 0), 'pictures': made['pictures'], 'folder': data.get('folder')}
+    current_app.logger.info('{} generated page(s) {} of scan {} "{}": {} quiz(zes), {} problem(s), {} picture(s)'.format(
+        current_user.username, group, job.id, job.name, len(made['quizzes']), made['problems'], len(made['pictures'])))
+    #(the workbook page stays open, the page a short "Generated" line: the owner, 2026-10-25)
+    left = SC.mark_saved(job.id, data, group, made)
+    quiz = (made.get('quizzes') or [None])[0]
+    flash('Made the quiz “{}” from page {}.'.format(quiz.title, ', '.join(str(k) for k in group)) if quiz is not None
+          else 'Saved page {}.'.format(n), 'success')
+    if not left:
+        #(every page made: the workbook goes to the Trash, the owner 2026-10-25)
+        job = _mine(job.id)
+        SC.trash_job(job, current_user)
+        flash(Markup('Every page of “{}” is made, so it went to the <a href="{}">Trash</a>.').format(
+            job.name, url_for('qgen.archive', section='workbooks')), 'success')
+        return redirect(url_for('qgen.scan_start'))
+    return redirect(url_for('qgen.scan_review', job_id=job.id) + '#scan-page-{}'.format(n))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>/stop', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_stop_page(job_id, n):
+    """Stop this page (the owner, 2026-10-25, CK2): the others go on."""
+    job = _mine(job_id)
+    if SC.stop_page(job, n):
+        current_app.logger.info('{} stopped page {} of scan {} "{}"'.format(current_user.username, n, job.id, job.name))
+    return redirect(url_for('qgen.scan_review', job_id=job.id))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/restore', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_restore(job_id):
+    """A workbook out of the Trash, into the stash's Uncategorized (the owner, 2026-10-25)."""
+    job = _mine(job_id, trashed=True)
+    SC.restore_job(job)
+    current_app.logger.info('{} restored scan {} "{}" from the Trash'.format(current_user.username, job.id, job.name))
+    flash(Markup('Restored “{}”. It’s in <a href="{}">Stashed workbooks</a>, Uncategorized.').format(
+        job.name, url_for('qgen.scan_start', stash='main') + '#scan-away'), 'success')
+    return redirect(url_for('qgen.archive', section='workbooks'))
+
+
+@qgen_bp.route('/quiz/scan/trash/apply', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_trash_apply():
+    """The Trash's Workbooks, Apply to checked (the owner, 2026-10-25, To do 52): Restore (to Stashed workbooks,
+    Uncategorized) or Delete for good, as each one's own buttons do."""
+    jobs = [j for j in (db.session.get(ScanJob, int(x)) for x in request.form.getlist('items') if x.isdigit())
+            if j is not None and j.status == SC.TRASHED]
+    back = url_for('qgen.archive', section='workbooks', folder=request.form.get('view') or None)
+    if not jobs:
+        flash('Check at least one workbook first.', 'error')
+        return redirect(back)
+    one = '“{}”'.format(jobs[0].name) if len(jobs) == 1 else '{} workbooks'.format(len(jobs))
+    if request.form.get('action') == 'purge':
+        for job in jobs:
+            current_app.logger.info('{} deleted scan {} "{}" for good'.format(current_user.username, job.id, job.name))
+            SC.remove_job(job)
+        flash('Deleted {} for good. The quizzes made from {} stay.'.format(one, 'it' if len(jobs) == 1 else 'them'), 'success')
+    else:
+        for job in jobs:
+            current_app.logger.info('{} restored scan {} "{}" from the Trash'.format(current_user.username, job.id, job.name))
+            SC.restore_job(job)
+        flash(Markup('Restored {}. {} in <a href="{}">Stashed workbooks</a>, Uncategorized.').format(
+            one, 'It’s' if len(jobs) == 1 else 'They’re', url_for('qgen.scan_start', stash='main') + '#scan-away'), 'success')
+    return redirect(back)
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/purge', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_purge(job_id):
+    """A workbook in the Trash deleted for good, with its page pictures; the quizzes made from it stay."""
+    job = _mine(job_id, trashed=True)
+    if job.status != SC.TRASHED:
+        abort(404)
+    name = job.name
+    SC.remove_job(job)
+    current_app.logger.info('{} deleted scan {} "{}" for good'.format(current_user.username, job_id, name))
+    flash('Deleted “{}” for good. The quizzes made from it stay.'.format(name), 'success')
+    return redirect(url_for('qgen.archive', section='workbooks'))
+
+
+@qgen_bp.route('/quiz/scan/<int:job_id>/arrange', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_arrange(job_id):
+    """The workbook's thumbnails (the owner, 2026-10-25): pages dragged into a new order, or two joined into one quiz
+    or split again. The form comes with it, so the edits on the pages are kept."""
+    job = _mine(job_id)
+    if _reading(job):
+        flash('Some pages are still being read. Please wait until they’re done.', 'error')
+        return redirect(url_for('qgen.scan_review', job_id=job.id))
+    data = SC.update_from_form(SC.get_data(job), request.form)
+    order = [int(x) for x in request.form.get('order', '').split(',') if x.strip().isdigit()]
+    if order:
+        SC.arrange_pages(job, data, order)
+    SC.put_data(job, data)
+    db.session.commit()
+    return redirect(url_for('qgen.scan_review', job_id=job.id))
     #(the pages not saved stay, stashed under the same name; with none left the scan goes: the owner, 2026-10-22)
     left = SC.keep_leftovers(job, data)
     if left:
@@ -419,6 +548,29 @@ def scan_helper(job_id):
     return jsonify(hints=hints)
 
 
+@qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>/use', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_use_reading(job_id, n):
+    """Use what was read (the owner, 2026-10-25, CX4): a page that stopped after it was read becomes a normal page,
+    with the page's own numbers where none were picked yet; no AI call. The review form is sent with it, so the
+    changes made on the other pages are kept."""
+    job = _mine(job_id)
+    if _reading(job):
+        flash('Some pages are still being read. Please wait until they’re done.', 'error')
+        return redirect(url_for('qgen.scan_review', job_id=job.id))
+    data = SC.update_from_form(SC.get_data(job), request.form)
+    SC.put_data(job, data)
+    db.session.commit()
+    if not SC.use_reading(job, n):
+        abort(404)
+    db.session.commit()
+    current_app.logger.info('{} used what was read of page {} of scan {} "{}"'.format(current_user.username, n, job.id, job.name))
+    return redirect(url_for('qgen.scan_review', job_id=job.id, _anchor='scan-page-{}'.format(n)))
+
+
 @qgen_bp.route('/quiz/scan/<int:job_id>/page/<int:n>/drop', methods=['POST'])
 @login_required
 @pw_check
@@ -441,7 +593,7 @@ def scan_drop_page(job_id, n):
     if not left:
         SC.remove_job(job)
         db.session.commit()
-        flash('That was the last page, so the scan “{}” is gone.'.format(job.name), 'success')
+        flash('That was the last page, so the workbook “{}” is gone.'.format(job.name), 'success')
         return redirect(url_for('qgen.scan_start'))
     flash('Page {} was discarded.'.format(n), 'success')
     return redirect(url_for('qgen.scan_review', job_id=job.id))
@@ -461,7 +613,7 @@ def scan_check(job_id):
         n, i = int(request.form.get('page', '')), int(request.form.get('item', ''))
         item = data['pages'][n - 1]['items'][i]
     except (ValueError, IndexError, KeyError):
-        return jsonify(ok=False, error='That item isn’t on this scan.'), 400
+        return jsonify(ok=False, error='That item isn’t in this workbook.'), 400
     result = SC.check_item(item)
     return jsonify(ok=True, html=render_template('_scan_check.html', check=result, item=item))
 
@@ -490,11 +642,12 @@ def scan_pause(job_id):
 @admin_only
 @post_form_only
 def scan_discard(job_id):
+    """Move to Trash (the owner, 2026-10-25: it was Discard, gone for good at once)."""
     job = _mine(job_id)
     name = job.name
-    SC.remove_job(job)
-    flash('Discarded the scan “{}”. Nothing from it was saved.'.format(name), 'success')
-    current_app.logger.info('{} discarded scan {} "{}"'.format(current_user.username, job_id, name))
+    SC.trash_job(job, current_user)
+    flash(Markup('Moved “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(name, url_for('qgen.archive', section='workbooks')), 'success')
+    current_app.logger.info('{} moved scan {} "{}" to the Trash'.format(current_user.username, job_id, name))
     #(discarded from the Dashboard's scans pop-over: back there, the owner 2026-10-18)
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
@@ -629,7 +782,7 @@ def scan_move_many():
     if to and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
         abort(404)
     if not jobs:
-        flash('Check at least one scan first.', 'error')
+        flash('Check at least one workbook first.', 'error')
         return _stash_back()
     for job in jobs:
         SC.move_scan(job, to)
@@ -651,14 +804,16 @@ def scan_discard_many():
     """The checked stashed scans discarded, as each one's own Discard does (the owner, 2026-10-24, To do 10)."""
     jobs = [j for j in (db.session.get(ScanJob, int(x)) for x in request.form.getlist('items') if x.isdigit()) if j]
     if not jobs:
-        flash('Check at least one scan first.', 'error')
+        flash('Check at least one workbook first.', 'error')
         return _stash_back()
     names = [j.name for j in jobs]
     for job in jobs:
-        current_app.logger.info('{} discarded scan {} "{}"'.format(current_user.username, job.id, job.name))
-        SC.remove_job(job)
-    flash('Discarded {}. Nothing from {} was saved.'.format('the scan “{}”'.format(names[0]) if len(names) == 1 else '{} scans'.format(len(names)),
-                                                              'it' if len(names) == 1 else 'them'), 'success')
+        current_app.logger.info('{} moved scan {} "{}" to the Trash'.format(current_user.username, job.id, job.name))
+        SC.trash_job(job, current_user)
+    #(to the Trash, where they can be restored: the owner, 2026-10-25)
+    flash(Markup('Moved {} to the <a href="{}">Trash</a>, where you can restore {}.').format(
+        '“{}”'.format(names[0]) if len(names) == 1 else '{} workbooks'.format(len(names)), url_for('qgen.archive', section='workbooks'),
+        'it' if len(names) == 1 else 'them'), 'success')
     return _stash_back()
 
 

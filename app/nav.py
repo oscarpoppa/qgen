@@ -105,7 +105,7 @@ def _named(endpoint, args):
         'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.list_users': 'People',
         'qgen.results_by_quiz': 'Results by quiz', 'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
         'user.userdet': 'People', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Teachers’ messages',
-        'qgen.archive': 'Archive', 'user.home': 'Home', 'user.mypage': 'My quizzes',
+        'qgen.archive': 'Trash', 'user.home': 'Home', 'user.mypage': 'My quizzes',
     }
     if endpoint in fixed:
         return fixed[endpoint]
@@ -175,7 +175,7 @@ LINK_LABELS = {
     'qgen.review': 'Grade it',
     'qgen.list_user': 'Student page',
     'qgen.quiz_results_page': 'Quiz history',
-    'qgen.archived': 'See it in the Archive',
+    'qgen.archived': 'See it in the Trash',
     'messages.conversation': 'Open the messages',
 }
 

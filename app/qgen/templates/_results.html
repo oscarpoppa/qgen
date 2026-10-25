@@ -7,20 +7,20 @@
    grayed out beside it, 2026-10-16) #}
 {% macro archive_all_words(g, student) -%}
 {%- set n = g.attempts|length -%}
-{%- if n > 1 -%}Move all {{ n }} of {{ student.shown_name }}’s attempts at “{{ g.vquiz.title }}” to the Archive? You can view or restore them there.
-{%- else -%}Move {{ student.shown_name }}’s attempt at “{{ g.vquiz.title }}” to the Archive? You can view or restore it there.{%- endif -%}
+{%- if n > 1 -%}Move all {{ n }} of {{ student.shown_name }}’s attempts at “{{ g.vquiz.title }}” to the Trash? You can view or restore them there.
+{%- else -%}Move {{ student.shown_name }}’s attempt at “{{ g.vquiz.title }}” to the Trash? You can view or restore it there.{%- endif -%}
 {%- endmacro %}
 {% macro archive_all_button(g, student, form_id=none) -%}
 {% set n = g.attempts|length %}
 {% set question = archive_all_words(g, student) %}
-{% set tip = ('Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Archive') if n > 1 else ('Move ' ~ (student.shown_name)|string ~ '’s attempt at this quiz to the Archive (the same as its own Archive)') %}
-{%- if form_id %}<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{{ form_id }}" title="Archive all ({{ n }}): {{ tip }}">{{ icon_label('lc-trash', 'Archive all (' ~ n ~ ')') }}</button>
-{%- else %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Archive all (' ~ n ~ ')', 'btn btn-secondary btn-sm btn-all', question, tip=tip, icon='lc-trash') }}{% endif %}
+{% set tip = ('Move every one of ' ~ (student.shown_name)|string ~ '’s attempts at this quiz to the Trash') if n > 1 else ('Move ' ~ (student.shown_name)|string ~ '’s attempt at this quiz to the Trash (the same as its own Move to Trash)') %}
+{%- if form_id %}<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{{ form_id }}" title="Move all to Trash ({{ n }}): {{ tip }}">{{ icon_label('lc-trash', 'Move all to Trash (' ~ n ~ ')') }}</button>
+{%- else %}{{ post_button(url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id), 'Move all to Trash (' ~ n ~ ')', 'btn btn-secondary btn-sm btn-all', question, tip=tip, icon='lc-trash') }}{% endif %}
 {%- endmacro %}
 {# the form an "Archive all" on a heading line sends (a form can't sit inside a heading) #}
 {% macro archive_all_form(g, student, form_id) -%}
 <form method="post" action="{{ url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id) }}" id="{{ form_id }}" class="inline-form" hidden
-  data-confirm="{{ archive_all_words(g, student) }}" data-confirm-ok="Archive all ({{ g.attempts|length }})"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+  data-confirm="{{ archive_all_words(g, student) }}" data-confirm-ok="Move all to Trash ({{ g.attempts|length }})"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
 {%- endmacro %}
 {# the pieces of an attempt's line, used by the results tables (result_cells) and by a student page's
    rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
@@ -42,7 +42,7 @@
                     <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="Answer key: {{ student.shown_name }}'s questions next to the correct answers">{{ icon_label('lc-answer-key', 'Answer key') }}</a>
                     {#- (one attempt: its row's Archive all (1) does it, so the attempt's own Archive is grayed,
                         never left out, so every attempt's icons line up: the owner, 2026-10-19 and 2026-10-20) #}
-                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Archive', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Archive? You can view or restore it there.', tip='Move this attempt to the Archive (you can restore it there)', icon='lc-trash') }}{% else %}{{ slot('Archive', 'the only attempt: use Archive all on its row', icon='lc-trash') }}{% endif %}</span>
+                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Move to Trash', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Trash? You can view or restore it there.', tip='Move this attempt to the Trash (you can restore it there)', icon='lc-trash') }}{% else %}{{ slot('Archive', 'the only attempt: use Archive all on its row', icon='lc-trash') }}{% endif %}</span>
 {%- endmacro %}
 {% macro score_counted(g, student, rules) -%}
                 {# while the latest attempt is not started or in progress, a dash (as in its heading, which

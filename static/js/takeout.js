@@ -50,8 +50,8 @@
     var q = archive ? 'What do you want to do with ' + label + '?' : 'Delete ' + label + ' for good?';
     if (form.dataset.deleteNote) q += ' ' + form.dataset.deleteNote;
     var choices = [];
-    if (archive) choices.push({ value: 'archive', label: 'Move to Archive',
-      title: person ? 'He/she can’t log in until you restore him/her from the Archive' : 'Off this page; you can restore it from the Archive' });
+    if (archive) choices.push({ value: 'archive', label: 'Move to Trash',
+      title: person ? 'He/she can’t log in until you restore him/her from the Trash' : 'Off this page; you can restore it from the Trash' });
     choices.push({ value: 'delete', label: form.dataset.deleteLabel || 'Delete for good', danger: true, title: 'It can’t be undone' });
     function send(url, extra) {
       var f = document.createElement('form');
@@ -68,9 +68,9 @@
       if (answer === 'delete') { send(form.dataset.deleteUrl); return; }
       if (answer !== 'archive') return;
       if (!person) { send(archive); return; }
-      window.qgenChoose('Move ' + label + ' to the Archive? He/she won’t be able to log in until you restore him/her. What about his/her quiz results and attempts?', [
+      window.qgenChoose('Move ' + label + ' to the Trash? He/she won’t be able to log in until you restore him/her. What about his/her quiz results and attempts?', [
         { value: 'yes', label: 'Keep their results', title: 'His/her attempts and scores stay, and come back with him/her' },
-        { value: 'no', label: 'Delete their results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Archive' }
+        { value: 'no', label: 'Delete their results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Trash' }
       ]).then(function (keep) { if (keep) send(archive, { keep: keep }); });
     });
   }

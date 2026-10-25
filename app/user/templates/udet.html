@@ -36,7 +36,7 @@
                  critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
-                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · Archived {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></span></summary>
+                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · In the Trash since {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></span></summary>
             {% if not in_archive %}<div class="result-groups divided" data-fold-body>
             {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{% set head %}<span class="box-icon" aria-hidden="true">{{ icon('note') }}</span>{{ attempt_title(g, item) }}{% endset %}{#- (the quiz icon before its name, as on Results by quiz's quiz rows: the owner, 2026-10-24) #}{{ result_group(head, g, item, rules, g.vquiz.title|lower) }}
             {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
@@ -62,7 +62,7 @@
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {{ slot('Student page', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-user') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good',
-                 delete_note=('His/her quiz results are kept in the Archive’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive’s Attempts.')) }}
+                 delete_note=('His/her quiz results are kept in the Trash’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash’s Attempts.')) }}
             {% else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign quizzes: choose quizzes to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign quizzes') }}</a>
             {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
@@ -72,7 +72,7 @@
             {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
             {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good', archive_url=url_for('user.archive_user', uid=item.id) if item != current_user else none, no_delete= 'You can’t delete your own account' if item == current_user else none,
-                 delete_note=('His/her quiz results are kept in the Archive.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive.')) }}
+                 delete_note=('His/her quiz results are kept in the Trash.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash.')) }}
             {% endif %}
           </td>
         </tr>
@@ -91,7 +91,7 @@
     high, level with the open folder; the owner, 2026-10-24) #}
 <div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
-{% set archive_note %}People moved to the Archive: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
+{% set archive_note %}People moved to the Trash: they can’t log in, and they’re off People, Assign, Messages and the Dashboard.
   They stay in their folders. Restore someone to turn their account back on. Restored, they go to Uncategorized.{% endset %}
 {% else %}
 {# (no Sign-up & site settings button here: it's More › Settings; the owner, 2026-10-16) #}
@@ -139,7 +139,7 @@
       </form></div>{% endif %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif in_archive and not ulst %}<p class="card empty small">No people in the Archive. A person’s trash can has Move to Archive.</p>{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
+      {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif in_archive and not ulst %}<p class="card empty small">No people in the Trash. A person’s trash can has Move to Trash.</p>{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
     </div>
 {% endcall %}
 

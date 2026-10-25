@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import post_button, slot with context %}
+{% from "_macros.html" import post_button, slot, scan_mark with context %}
 {% from "_pick.html" import pick_table %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
@@ -19,7 +19,7 @@
           {# the row folds to its title (and folders and buttons); open, it shows its kind, question
              and answer too. Folded to begin with; Expand all / Collapse all and the page remember it #}
           <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
-              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}</strong></summary>
+              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}{{ scan_mark(item) }}</strong></summary>
             <div class="small muted">
               <span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span>
               {#- (kept on one line, never split after "no": the owner, 2026-10-15) #}
@@ -71,13 +71,13 @@
     high, level with the open folder; the owner, 2026-10-24) #}
 <div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
-{% set archive_note %}Problems moved to the Archive: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
+{% set archive_note %}Problems moved to the Trash: they’re off the Problems page and the quiz builder’s list, in the folders they were in.
   Quizzes that use one keep it. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.{% endset %}
 {% else %}
 {# (its buttons small, beside the title: the title row only as tall as the title, the owner 2026-10-15) #}
 {#- the page's own buttons at the top, at the open right end of the list's heading row; under the
     title only when there's no list (the owner, 2026-10-20) #}
-{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% endif %}{% endset %}
+{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}{% endset %}
 <div class="page-head title-inline">
   <h1>{{ title }}</h1>
   {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
@@ -92,7 +92,7 @@
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, 'problem:', pg=pg) %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% elif in_archive and not total %}<p class="card empty small">No problems in the Archive. A problem’s trash can has Move to Archive.</p>{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
+      {% call named_box(fk, 'problem:', pg=pg) %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% elif in_archive and not total %}<p class="card empty small">No problems in the Trash. A problem’s trash can has Move to Trash.</p>{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
 {% endif %}

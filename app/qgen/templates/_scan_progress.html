@@ -17,4 +17,4 @@
 {#- (scans put away: never here, only on Scan workbook pages; the owner, 2026-10-21) #}
 {%- set scans = (scans or [])|rejectattr('put_away')|list %}
 {% if scans %}{% for x in scans %}{{ scan_row(x) }}{% endfor %}
-{% else %}<p class="muted small">No scans waiting.</p>{% endif %}
+{% else %}<p class="muted small">No workbooks waiting.</p>{% endif %}

@@ -49,8 +49,8 @@
     {#- the buttons just under the Images card, not inside it (the owner, 2026-10-23) #}
     <div class="btn-row">
       <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
-      {#- Cancel last: back where you came from, like the ← arrow; nothing is uploaded (the owner, 2026-10-20; last, 2026-10-23) #}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_vquizzes') }}" data-back-href title="Leave without uploading anything">Cancel</a>
+      {#- (Cancel on a page of its own reloads it, throwing away what's typed; only a page opened from another to do one thing goes back there: the owner, 2026-10-24) #}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Undo the changes not saved yet">Cancel</a>
       <span class="muted small" id="scan-wait" hidden>Uploading…</span>
     </div>
   </form>
@@ -60,7 +60,7 @@
 <div class="card-col">
 <div class="card" id="scan-current">
   {#- ("Current", like the Dashboard's pop-over: finished scans are in it too, the owner 2026-10-19) #}
-  <h2>Current scans</h2>
+  <h2>Current workbooks</h2>
   {% if jobs %}
   <div class="table-wrap stack">
     <table class="even-cols">
@@ -82,7 +82,7 @@
     </table>
   </div>
   {% else %}
-  <p class="empty">No scans yet. Pages you upload show here while they’re read, and stay until you save or discard them.</p>
+  <p class="empty">No workbooks yet. Pages you upload show here while they’re read, and stay until you generate their quizzes or move them to the Trash.</p>
   {% endif %}
 </div>
 
@@ -100,12 +100,12 @@
         {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
         <a href="{{ url_for('qgen.scan_start', stash=n.folder.id) }}#scan-away" title="Open the folder “{{ n.folder.name }}”" draggable="false" class="side-link"{% if stash_node and stash_node.folder.id == n.folder.id %} aria-current="page"{% endif %}>
           {{ icon('folder') }} <span class="side-name">{{ n.name }}</span></a>
-        <span class="side-count muted small" title="Scans in it, and in the folders inside it">{{ n.count or 0 }}</span>
+        <span class="side-count muted small" title="Workbooks in it, and in the folders inside it">{{ n.count or 0 }}</span>
       </div>
       {% if n.folders %}<ul class="side-list">{{ stash_tree(n.folders) }}</ul>{% endif %}
     </li>
   {% endfor %}{% endmacro %}
-  <div class="card-head"><h2>Stashed scans</h2>
+  <div class="card-head"><h2>Stashed workbooks</h2>
 </div>
   {% if away or stash_flat %}
   {#- the width kept in this browser is put on the page before the list is drawn (static/js/splitter.js keeps it after), so the list doesn't move when the page's script runs #}
@@ -118,30 +118,30 @@
           <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="open" title="Expand all: Show the folders inside every folder in this list">{{ icon_label('lc-expand', 'Expand all') }}</button>
           <button type="button" class="btn btn-secondary btn-xs btn-icon" data-side-level="close" title="Collapse all: Hide the folders inside every folder (the one you’re in stays in view)">{{ icon_label('lc-collapse', 'Collapse all') }}</button>
         </div></div>
-      <div class="side-card-head"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your scans into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></div>
+      <div class="side-card-head"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your workbooks into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></div>
       <ul class="side-list side-top">
         <li class="side-auto side-auto-first"><div class="side-row{{ ' current' if stash_view == 'all' }}" data-stash-drop="all"><span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed scans, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All scans</a>
+          <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed workbooks, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All workbooks</a>
           <span class="side-count muted small">{{ away|length }}</span></div></li>
         {#- the Checked folder: the scans checked, in any folder (static/js/scanstash.js keeps them; the owner, 2026-10-24, To do 10) #}
         <li class="side-auto"><div class="side-row{{ ' current' if stash_view == 'checked' }}"><span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('qgen.scan_start', stash='checked') }}#scan-away" data-stash-checked-link title="See the scans you’ve checked, from every folder" class="side-link"{% if stash_view == 'checked' %} aria-current="page"{% endif %}>{{ icon('lc-folder-check') }} Checked</a>
+          <a href="{{ url_for('qgen.scan_start', stash='checked') }}#scan-away" data-stash-checked-link title="See the workbooks you’ve checked, from every folder" class="side-link"{% if stash_view == 'checked' %} aria-current="page"{% endif %}>{{ icon('lc-folder-check') }} Checked</a>
           <span class="side-count muted small" data-stash-checked-count>0</span></div></li>
         <li class="side-auto side-auto-last" data-auto="none"><div class="side-row{{ ' current' if stash_view == 'main' }}{{ ' is-empty' if not stash_root['items'] }}" data-stash-drop="main"><span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away" title="See the scans that aren’t in any folder" class="side-link"{% if stash_view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Uncategorized</a>
-          <span class="side-count muted small" title="Scans in no folder">{{ stash_root['items']|length }}</span></div></li>
+          <a href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away" title="See the workbooks that aren’t in any folder" class="side-link"{% if stash_view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Uncategorized</a>
+          <span class="side-count muted small" title="Workbooks in no folder">{{ stash_root['items']|length }}</span></div></li>
         {{ stash_tree(stash_root.folders) }}
       </ul>
     </nav>
     <div class="vsplit stash-bar"></div>
     {#- the open folder as a tab over a framed panel, the same as every other folder page (the owner, 2026-10-24): the tab names the folder with
         its count, the Folder options icon at the right end of the tab's row, the scans in the panel under it #}
-    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All scans{% endif %}{% endset %}
+    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All workbooks{% endif %}{% endset %}
     <div class="stash-main folder-filter named-box has-onetab{{ ' folder-open-empty' if not stash_shown }}">
       <div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs">
-        <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'lc-folder-check' if stash_view == 'checked' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} scan{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
+        <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'lc-folder-check' if stash_view == 'checked' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} workbook{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
         {#- (the Checked folder's “Apply to checked”: Move to folder, Discard; on the tab row, where every folder page has it) #}
-        {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked scans to a folder, or discard them">Apply to checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
+        {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked workbooks to a folder, or to the Trash">Apply to checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
         {% if stash_node %}<span class="folder-filter-tools-now">
           <details class="folder-tools">
             <summary class="btn btn-secondary btn-xs btn-icon" title="Folder options: Rename, make a folder inside, or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
@@ -149,7 +149,7 @@
               <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-rename" data-url="{{ url_for('qgen.scan_rename_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}">Rename</button></span>
               <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-move-folder" data-url="{{ url_for('qgen.scan_move_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}" data-here="{{ stash_node.folder.parent_id or '' }}">Move to</button></span>
               {% if stash_node.depth < tuning.get('folder_depth') %}<span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-new">+ New folder inside</button></span>{% endif %}
-              <span class="folder-opt">{{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', cls='btn btn-secondary btn-xs', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its scans and folders move up a level.', tip='Delete just the folder; what’s in it moves up a level') }}</span>
+              <span class="folder-opt">{{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', cls='btn btn-secondary btn-xs', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its workbooks and folders move up a level.', tip='Delete just the folder; what’s in it moves up a level') }}</span>
             </div>
           </details>
         </span>{% endif %}
@@ -158,7 +158,7 @@
       {% if stash_shown %}
       <div class="table-wrap stack">
         <table class="even-cols">
-          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every scan shown" title="Check every scan shown"></th><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every workbook shown" title="Check every scan shown"></th><th>Workbook</th><th>State</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
           <tbody>
           {% for j in stash_shown %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
             {#- (dragged onto a folder in the list to move it: static/js/scanstash.js) #}
@@ -168,7 +168,9 @@
                 <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""></a>
                 <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
                 {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
-                <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
+                {% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
+              {#- how far it got, a column of its own to sort by (the owner, 2026-10-25, CC): being read, stopped, paused, ready, draft #}
+              <td data-label="State" class="small" data-sort="{{ {'reading': 1, 'stopped': 2, 'paused': 3, 'ready': 4}.get(x.kind, 5) }}">{% include '_scan_kind.html' %}</td>
               <td data-label="Stashed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
               <td data-label="Pages">{{ j.pages }}</td>
               <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans') }}
@@ -179,13 +181,13 @@
         </table>
       </div>
       {% else %}
-      <p class="card empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every scan is in a folder.{% elif stash_view == 'checked' %}Nothing checked. Check scans in any folder and they show here.{% else %}Nothing stashed.{% endif %}</p>
+      <p class="card empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every workbook is in a folder.{% elif stash_view == 'checked' %}Nothing checked. Check workbooks in any folder and they show here.{% else %}Nothing stashed.{% endif %}</p>
       {% endif %}
       </div>
     </div>
   </div>
   {% else %}
-  <p class="empty">Nothing stashed. Paused or stopped scans and drafts you stash wait here.</p>
+  <p class="empty">Nothing stashed. Paused or stopped workbooks and drafts you stash wait here.</p>
   {% endif %}
 
   {#- the standard New folder dialog (app/templates/_folders.html new_folder): the name, and where it goes #}
@@ -211,7 +213,7 @@
   </dialog>
   {#- the standard folder dialog, as every Move on the other folder pages (static/js/dialogfilter.js draws the picker when it
       opens: the owner, 2026-10-23: a dialog takes the standard format the first time it's made) #}
-  <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move" aria-label="Move scan to a folder">
+  <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move" aria-label="Move workbook to a folder">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {#- (the folder open now stays open, as after a drag: the owner, 2026-10-23) #}
@@ -220,15 +222,15 @@
       <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to" data-checked="top">
         <script type="application/json" data-pick-rows>{{ stash_pick_rows|tojson }}</script>
       </div>
-      <div class="btn-row"><button class="btn" title="Put the scan in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+      <div class="btn-row"><button class="btn" title="Put the workbook in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
   {#- the Checked folder's actions (the owner, 2026-10-24, To do 10): Move the checked scans to a folder, or Discard them (static/js/scanstash.js) #}
   <dialog class="ask ask-many with-checked-dialog" id="stash-apply" aria-labelledby="stash-apply-head">
     <p><strong id="stash-apply-head">Apply to the <span data-stash-checked-words></span></strong></p>
     <div class="with-checked-actions">
-      <button type="button" class="btn btn-sm" data-stash-apply-move title="Move the checked scans to a folder">Move to folder</button>
-      <button type="button" class="btn btn-sm btn-danger" data-stash-apply-discard title="Discard the checked scans: their pages and drafts are removed">Discard</button>
+      <button type="button" class="btn btn-sm" data-stash-apply-move title="Move the checked workbooks to a folder">Move to folder</button>
+      <button type="button" class="btn btn-sm btn-danger" data-stash-apply-discard title="Move the checked workbooks to the Trash; you can restore them there">Move to Trash</button>
     </div>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
   </dialog>
@@ -243,7 +245,7 @@
       <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to">
         <script type="application/json" data-pick-rows>{{ stash_pick_rows|tojson }}</script>
       </div>
-      <div class="btn-row"><button class="btn" title="Put the checked scans in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+      <div class="btn-row"><button class="btn" title="Put the checked workbooks in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
   <form method="post" action="{{ url_for('qgen.scan_discard_many') }}" id="stash-discard-many" hidden><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div data-stash-items></div></form>
@@ -339,18 +341,34 @@
     }
     thumbs.hidden = !fs.length;
   }
+  //what the box holds, in the order added (the owner, 2026-10-24: each drop or pick adds to
+  //what's there, it doesn't replace it); a folder's files come in file-name order
+  var held = [], heldFolders = [];
+  function add(list, folderName) {
+    var fs = Array.prototype.slice.call(list || []);
+    if (!fs.length) { sync(); return; }
+    if (folderName) { fs.sort(natural); heldFolders.push(folderName); }
+    held = held.concat(fs.map(function (f) { return { f: f, folder: folderName || '' }; }));
+    sync();
+  }
+  //one folder alone goes up as a folder, as before; anything else as pages, in the order shown
+  function sync() {
+    var one = heldFolders.length === 1 && held.every(function (h) { return h.folder; });
+    var dt = new DataTransfer();
+    held.forEach(function (h) { if (one || usable(h.f)) dt.items.add(h.f); });
+    if (one) { files.value = ''; folder.files = dt.files; } else { folder.value = ''; files.files = dt.files; }
+    document.getElementById('scan-folder-name').value = one ? heldFolders[0] : '';
+    var n = held.filter(function (h) { return usable(h.f); }).length;
+    if (one) chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from \u201c' + heldFolders[0] + '\u201d';
+    else chosen.textContent = n === 1 ? dt.files[0].name : n + ' files: ' + Array.prototype.map.call(dt.files, function (f) { return f.name; }).join(', ');
+    chosen.hidden = !n;
+    showThumbs(held.map(function (h) { return h.f; }), false);
+  }
   //one file out of what's chosen or dropped (its ✕): the rest stay, in the same order
   function removeFile(f) {
-    var fromFolder = folder.files.length > 0, inp = fromFolder ? folder : files;
-    var dt = new DataTransfer();
-    Array.prototype.forEach.call(inp.files, function (g) { if (g !== f) dt.items.add(g); });
-    inp.files = dt.files;
-    if (!fromFolder) { files.dispatchEvent(new Event('change')); return; }
-    var name = document.getElementById('scan-folder-name').value || 'the folder';
-    var n = Array.prototype.filter.call(folder.files, usable).length;
-    if (!n) { folder.value = ''; document.getElementById('scan-folder-name').value = ''; chosen.hidden = true; showThumbs([], false); return; }
-    showThumbs(folder.files, true);
-    chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from \u201c' + name + '\u201d';
+    held = held.filter(function (h) { return h.f !== f; });
+    heldFolders = heldFolders.filter(function (name) { return held.some(function (h) { return h.folder === name; }); });
+    sync();
   }
   //a click or tap on the box (not on its thumbnails' "more") chooses files, as the Pictures drop
   //zones do (the owner, 2026-10-19)
@@ -360,15 +378,9 @@
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); files.click(); }
   });
   folder.addEventListener('change', function () {
-    if (!folder.files.length) return;
-    files.value = '';
-    var n = Array.prototype.filter.call(folder.files, usable).length;
-    showThumbs(folder.files, true);
+    if (!folder.files.length) { sync(); return; }
     var path = folder.files[0].webkitRelativePath || '';
-    var name = path.split('/')[0] || 'the folder';
-    document.getElementById('scan-folder-name').value = path.split('/')[0] || '';
-    chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from “' + name + '”';
-    chosen.hidden = false;
+    add(folder.files, path.split('/')[0] || 'the folder');
   });
   //dropped on the box: files as if chosen; a folder (or anything inside folders) as if its folder
   //was chosen, every file in it, however deep (the owner, 2026-10-19)
@@ -391,34 +403,19 @@
     e.preventDefault();
     var items = Array.prototype.slice.call(e.dataTransfer.items || []);
     var entries = items.map(function (it) { return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; }).filter(Boolean);
-    var folderName = (entries.filter(function (en) { return en.isDirectory; })[0] || {}).name;
-    var got = [];
-    var ready = entries.length ? Promise.all(entries.map(function (en) { return walk(en, got); })) : Promise.resolve(got = Array.prototype.slice.call(e.dataTransfer.files));
-    ready.then(function () {
-      var dt = new DataTransfer();
-      got.forEach(function (f) { dt.items.add(f); });
-      if (!dt.files.length) return;
-      if (folderName) {
-        files.value = '';
-        folder.files = dt.files;
-        document.getElementById('scan-folder-name').value = folderName;
-        showThumbs(dt.files, true);
-        var n = Array.prototype.filter.call(dt.files, usable).length;
-        chosen.textContent = n + ' photo' + (n === 1 ? '' : 's') + ' or PDF' + (n === 1 ? '' : 's') + ' from “' + folderName + '”';
-        chosen.hidden = false;
-      } else {
-        files.files = dt.files;
-        files.dispatchEvent(new Event('change'));
-      }
+    if (!entries.length) { add(e.dataTransfer.files); return; }
+    //(each thing dropped in turn: a folder's files under its name, a loose file as it is)
+    var parts = entries.map(function () { return []; });
+    Promise.all(entries.map(function (en, i) { return walk(en, parts[i]); })).then(function () {
+      entries.forEach(function (en, i) { add(parts[i], en.isDirectory ? en.name : ''); });
     });
   });
+  //(the file picker hands over only what was just picked: added to what's there)
   files.addEventListener('change', function () {
-    folder.value = '';
-    document.getElementById('scan-folder-name').value = '';
-    var n = files.files.length;
-    chosen.textContent = n === 1 ? files.files[0].name : n + ' files: ' + Array.prototype.map.call(files.files, function (f) { return f.name; }).join(', ');
-    chosen.hidden = !n;
-    showThumbs(files.files, false);
+    var picked = Array.prototype.filter.call(files.files, function (f) {
+      return !held.some(function (h) { return h.f === f; });
+    });
+    add(picked);
   });
 })();
 document.getElementById('scan-upload').addEventListener('submit', function (e) {
