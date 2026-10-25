@@ -1586,7 +1586,7 @@ def submit(cq, answers=None, timed_out=False):
         reason = 'it closed' if cq.closes_at and datetime.now() >= cq.closes_at else 'time ran out'
         said = ('{}\'s “{}” was handed in automatically ({})' if cq.startdate else
                 '{} never started “{}”; it was handed in automatically ({})').format(who, cq.vquiz.title, reason)
-    if record_answers(cq, answers):
+    if record_answers(cq, answers, ai=not timed_out):
         cq.needs_review = True
         notify_teachers(cq.assignee, '{}: written answers are waiting for grading.'.format(said),
                         _link('qgen.review', cqid=cq.id))

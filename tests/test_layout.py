@@ -56,9 +56,14 @@ def test_my_quizzes_fold():
 
 
 def test_tests_always_use_a_throwaway_database():
-    # the tests empty their database; it must be the in-memory one whatever the shell has
+    # the tests empty their database; it must be a throwaway one whatever the shell has (a file in a fresh
+    # temporary folder since 2026-10-25, so threads get their own connections: tests/conftest.py)
+    import os, tempfile
     from app import app
-    assert app.config['SQLALCHEMY_DATABASE_URI'] == 'sqlite://'
+    uri = app.config['SQLALCHEMY_DATABASE_URI']
+    assert uri.startswith('sqlite:///')
+    path = uri[len('sqlite:///'):]
+    assert os.path.dirname(os.path.dirname(path)) == tempfile.gettempdir() and os.path.basename(os.path.dirname(path)).startswith('qgen-test-db-')
 
 
 def test_printing_a_quiz_leaves_out_the_rest_of_the_screen():

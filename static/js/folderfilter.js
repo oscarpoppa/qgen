@@ -665,6 +665,15 @@
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
         if (on) centerSide(a.closest('.side-row'));
       });
+      //(a list shown a page at a time, or a folder's own named box, has no tree to match the side list against: the
+      //server marked the folder open, so the folders above it unfold and it's brought into the middle of the list;
+      //the owner, 2026-10-25: the tab said one folder and the list showed another place)
+      if (paged || !Object.keys(byId).length) {
+        var cur = document.querySelector('.folder-side .side-row.current');
+        var li = cur && cur.closest('.side-item');
+        if (li && window.qgenSideReveal) window.qgenSideReveal(li.dataset.folder);
+        if (cur) centerSide(cur);
+      }
     }
     //the folder open now sits in the middle of the folder list, by its tab or the list (the owner,
     //2026-10-20); only the list scrolls, never the page

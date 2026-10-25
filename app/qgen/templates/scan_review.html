@@ -178,8 +178,8 @@
           {#- (the whole workbook's buttons here, a page's own on its card: the owner, 2026-10-25, CK1) #}
           {% if not reading and not trashed and data.pages|selectattr('state', 'in', ['waiting', 'error'])|list %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_read', job_id=job.id) }}" data-ask="Read every page not read yet? Each page uses a few AI calls." data-ok="Resume all" title="Go on reading the pages not read yet (each page uses a few AI calls)">{{ icon('lc-resume') }} Resume all</button>{% endif %}
           {#- (in the stash: Unstash draft, out of it: Stash draft; the owner, 2026-10-23) #}
-          {% if data.put_away %}<button class="btn btn-secondary btn-sm" name="action" value="unstash"{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Keep your changes and move this workbook back to Current workbooks"{% endif %}>Unstash draft</button>
-          {% else %}<button class="btn btn-secondary btn-sm" name="action" value="keep"{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Keep your changes and stash this workbook until you come back to it"{% endif %}>Stash draft</button>{% endif %}
+          {% if data.put_away %}<button class="btn btn-secondary btn-sm" name="action" value="unstash"{% if reading %} disabled data-after-reading="Keep your changes and move this workbook back to Current workbooks" title="{{ wait_tip }}"{% else %} title="Keep your changes and move this workbook back to Current workbooks"{% endif %}>Unstash draft</button>
+          {% else %}<button class="btn btn-secondary btn-sm" name="action" value="keep"{% if reading %} disabled data-after-reading="Keep your changes and stash this workbook until you come back to it" title="{{ wait_tip }}"{% else %} title="Keep your changes and stash this workbook until you come back to it"{% endif %}>Stash draft</button>{% endif %}
           {#- (it sends its own form below, so none of the draft's fields go with it) #}
           <button class="btn btn-secondary btn-sm" form="scan-discard" title="Move this workbook to the Trash; you can restore it there">Move to Trash</button>
         </span>
@@ -288,7 +288,7 @@
           {%- set pe = namespace(errors=pb.bad, count=0) %}{% for item in page['items'] %}{% if item.include and (checks.get((n, loop.index0)) or {}).get('errors') %}{% set pe.errors = true %}{% set pe.count = pe.count + 1 %}{% endif %}{% endfor %}
           {#- how many of its problems need fixing (the owner, 2026-10-25, CL1); scan_review.js keeps it current #}
           <span class="badge badge-warn" data-fix-count{% if not pe.count %} hidden{% endif %}>{{ pe.count }} to fix</span>
-          <span class="mark mark-ok scan-page-ok" data-errors="{{ 1 if pe.errors else 0 }}" title="Page {{ n }} is ready to save"{% if pe.errors or missing|selectattr(0, 'equalto', n)|list %} hidden{% endif %}>{{ icon_label('lc-check', 'Ready to save') }}</span>
+          <span class="mark mark-ok scan-page-ok" data-errors="{{ 1 if pe.errors else 0 }}" title="Page {{ n }} is ready to generate"{% if pe.errors or missing|selectattr(0, 'equalto', n)|list %} hidden{% endif %}>{{ icon_label('lc-check', 'Ready to generate') }}</span>
           {#- (half of a photo of two pages, cut at the spine: the owner, 2026-10-23) #}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
           {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
@@ -321,14 +321,14 @@
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
             {#- (the answer boxes found again, without the AI: the owner, 2026-10-21) #}
-            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Find the boxes again" data-ask="Find the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used."{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Put page {{ n }}’s answer boxes where they’re found now, without the AI"{% endif %}>Find the boxes again</button>{% endif %}
+            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Find the boxes again" data-ask="Find the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used."{% if reading %} disabled data-after-reading="Put page {{ n }}’s answer boxes where they’re found now, without the AI" title="{{ wait_tip }}"{% else %} title="Put page {{ n }}’s answer boxes where they’re found now, without the AI"{% endif %}>Find the boxes again</button>{% endif %}
             {#- the page read again from the start, with what was wrong (the owner, 2026-10-20); sent with
                 the whole form, so the changes on the other pages are kept #}
             <details class="scan-again">
               <summary class="btn btn-secondary btn-sm" title="Have the AI read this page again, saying what was wrong">Read this page again</summary>
               <label class="label small" for="{{ pre }}again_note">What was wrong? (optional)</label>
               <textarea id="{{ pre }}again_note" name="{{ pre }}again_note" rows="2" maxlength="{{ note_longest }}" placeholder="e.g. Problem 6 is missing; the answers to 4 and 5 are swapped"></textarea>
-              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are."{% if reading %} disabled title="{{ wait_tip }}"{% else %} title="Read again: page {{ n }} from the start, with your note"{% endif %}>Read again</button>
+              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are."{% if reading %} disabled data-after-reading="Read again: page {{ n }} from the start, with your note" title="{{ wait_tip }}"{% else %} title="Read again: page {{ n }} from the start, with your note"{% endif %}>Read again</button>
             </details>
           </div>
           <div class="scan-right">

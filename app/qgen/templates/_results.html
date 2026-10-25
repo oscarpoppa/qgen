@@ -42,7 +42,7 @@
                     <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="Answer key: {{ student.shown_name }}'s questions next to the correct answers">{{ icon_label('lc-answer-key', 'Answer key') }}</a>
                     {#- (one attempt: its row's Archive all (1) does it, so the attempt's own Archive is grayed,
                         never left out, so every attempt's icons line up: the owner, 2026-10-19 and 2026-10-20) #}
-                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Move to Trash', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Trash? You can view or restore it there.', tip='Move this attempt to the Trash (you can restore it there)', icon='lc-trash') }}{% else %}{{ slot('Archive', 'the only attempt: use Archive all on its row', icon='lc-trash') }}{% endif %}</span>
+                    {% if g.attempts|length > 1 %}{{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Move to Trash', 'btn btn-secondary btn-sm', 'Move ' ~ (student.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (g.vquiz.title)|string ~ '” to the Trash? You can view or restore it there.', tip='Move this attempt to the Trash (you can restore it there)', icon='lc-trash') }}{% else %}{{ slot('Move to Trash', 'the only attempt: use Move all to Trash on its row', icon='lc-trash') }}{% endif %}</span>
 {%- endmacro %}
 {% macro score_counted(g, student, rules) -%}
                 {# while the latest attempt is not started or in progress, a dash (as in its heading, which

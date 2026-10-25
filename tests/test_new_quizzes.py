@@ -83,11 +83,11 @@ def test_teachers_get_the_badge_and_the_notice(app_db):
     assign(teach, vq, 'lee')
     assert lee.post('/messages/notices/clear', data={}, headers=FETCH).get_json()['cleared'] >= 2
     assert 'New quiz:' not in lee.get('/messages/notices').data.decode()
-    # the badge is the same as a student's: counted by quiz (two tries at one quiz are one),
-    # and still there after looking at My quizzes
-    assert badge(lee.get('/dashboard').data.decode()) == 1
+    # the badge is the same as a student's: counted by attempt (two attempts at one quiz are two, like
+    # the boxes in My quizzes: the owner, 2026-10-25, CO1), and still there after looking at My quizzes
+    assert badge(lee.get('/dashboard').data.decode()) == 2
     lee.get('/mypage')
-    assert badge(lee.get('/dashboard').data.decode()) == 1
+    assert badge(lee.get('/dashboard').data.decode()) == 2
 
 
 def test_archived_quizzes_drop_out_and_restored_ones_come_back(app_db):

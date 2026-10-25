@@ -4,10 +4,12 @@ import sys
 #tests never touch a real database or need a real .env. Always set, never
 #"if not set": the tests empty the database they use, so a DATABASE_URL left in
 #the shell (e.g. the live or sandbox one) must not be picked up
-os.environ['DATABASE_URL'] = 'sqlite://'
+#(a throwaway file, not one in memory: a database in memory is a single connection that every thread shares,
+#and the scan pages read side by side then tripped over each other's queries; 2026-10-25)
+import tempfile
+os.environ['DATABASE_URL'] = 'sqlite:///' + os.path.join(tempfile.mkdtemp(prefix='qgen-test-db-'), 'test.db')
 os.environ['SECRET_KEY'] = 'test-only-secret'
 #uploads during tests go to a throwaway folder
-import tempfile
 os.environ['STATIC_DIR'] = tempfile.mkdtemp(prefix='qgen-test-static-')
 os.environ['SCAN_DIR'] = tempfile.mkdtemp(prefix='qgen-test-scans-')
 os.environ['AI_JOB_DIR'] = tempfile.mkdtemp(prefix='qgen-test-ai-jobs-')

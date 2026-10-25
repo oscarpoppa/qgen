@@ -115,7 +115,8 @@ def test_the_stashs_checked_scans_move_and_discard(app_db):
     # the Checked folder shows just the ones asked for
     page = teacher.get('/quiz/scan?stash=checked&checked={}'.format(a.id)).data.decode()
     assert 'value="{}" data-name="Book A"'.format(a.id) in page and 'data-name="Book B" aria-label' not in page
+    #(discarded workbooks go to the Trash, where they can be restored: the owner, 2026-10-25)
     teacher.post('/quiz/scan/stash/discard', data={'items': [a.id, b.id]})
     db.session.expire_all()
-    assert db.session.get(ScanJob, a.id) is None and db.session.get(ScanJob, b.id) is None
+    assert db.session.get(ScanJob, a.id).status == SC.TRASHED and db.session.get(ScanJob, b.id).status == SC.TRASHED
     assert login(app, 'sam').post('/quiz/scan/stash/discard', data={'items': [1]}).status_code in (302, 403)

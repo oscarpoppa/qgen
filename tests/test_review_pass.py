@@ -759,7 +759,8 @@ def test_pages_off_the_menu_have_a_back_button(app_db):
         page = who.get(url).data.decode()
         #(the way back on every page: the top bar's ← → arrows, worded back buttons removed)
         assert back_by_the_trail(page), url
-    assert 'data-back-href>Cancel</a>' in no_titles(teach.get('/chpass').data.decode())
+    #(Cancel undoes the changes not saved yet, on every form: the owner's Cancel rule, 2026-10-24)
+    assert 'href="/chpass">Cancel</a>' in no_titles(teach.get('/chpass').data.decode())
 
 
 def test_saving_in_an_editor_goes_back_where_it_was_opened(app_db):
@@ -857,9 +858,9 @@ def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
         S.retake(first)
     give(vq, 'kim')
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
-    assert 'Archive all (2)' in page and 'Take away' not in page
+    assert 'Move all to Trash (2)' in page and 'Take away' not in page
     r = teach.post('/quiz/takeaway/{}/{}'.format(vq.id, ids('sam')), follow_redirects=True).data.decode()
-    assert 'Archived sam’s 2 attempts at “Twice”. They’re in the' in r
+    assert 'Moved sam’s 2 attempts at “Twice” to the' in r
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('sam')).count() == 0
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 2
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('kim')).count() == 1
@@ -1065,9 +1066,9 @@ def test_an_archive_folder_can_be_deleted_for_good(app_db):
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     page = teach.get('/quiz/archive?folder={}'.format(sam_folder.id)).data.decode()
     assert 'Delete folder and everything in it' in page
-    assert 'Delete the folder “sam” and the 1 archived attempt in it for good?' in page
+    assert 'Delete the folder “sam” and the 1 attempt in it for good?' in page
     r = teach.post('/quiz/archive/folders/{}/purge'.format(sam_folder.id), follow_redirects=True).data.decode()
-    assert 'Deleted the folder “sam” and its 1 archived attempt.' in r
+    assert 'Deleted the folder “sam” and its 1 attempt.' in r
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam')).count() == 0
     assert ArchivedAttempt.query.filter_by(student_id=ids('kim')).count() == 1
     db.session.expire_all()
@@ -1426,7 +1427,7 @@ def test_teacher_menu_fits_one_line(app_db):
         assert label in top, label
     assert '>Messages</a>' not in nav and '>Home</a>' not in top and 'My quizzes' not in top
     more = top.split('>More</summary>')[1]
-    for label in ('>Archive</a>', '>Upload files</a>', '>Pictures</a>', '>Other files</a>', '>Settings</a>'):
+    for label in ('>Trash</a>', '>Upload files</a>', '>Pictures</a>', '>Other files</a>', '>Settings</a>'):
         assert label in more, label
     assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="nav-dots"' in name_menu.split('</summary>')[0]
     student = no_titles(sam.get('/home').data.decode()).split('<nav class="nav')[1].split('<div class="nav-right">')[0]
@@ -1539,7 +1540,7 @@ def test_results_rows_are_one_line_tall(app_db):
     assert '@container listarea (max-width: 1080px) { td.actions .btn-stack { flex-direction: column; align-items: flex-end; } }' in css
     tpl = open(os.path.join(here, 'app', 'qgen', 'templates', '_results.html')).read()
     #(with one attempt it's not grayed any more: "Archive all (1)" works, the same as its own Archive)
-    assert "'Archive all (' ~ n ~ ')'" in tpl and 'Only one attempt: use its own Archive button' not in tpl
+    assert "'Move all to Trash (' ~ n ~ ')'" in tpl and 'Only one attempt: use its own Archive button' not in tpl
 
 
 def test_a_folded_student_says_where_they_are(app_db):
@@ -1750,14 +1751,14 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
     # "Archive all" acts on every attempt: its own look, on the quiz's heading line
     #(with one attempt it isn't grayed any more: it does the same as the attempt's own Archive)
-    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" form="archive-all-{}-{}" title="Archive all (1): Move sam’s attempt'.format(ids('sam'), vq.id) in page
+    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" form="archive-all-{}-{}" title="Move all to Trash (1): Move sam’s attempt'.format(ids('sam'), vq.id) in page
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
     # with two attempts it's the real button, with the same look
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     # (a button on the heading sending a form kept outside the heading: no form inside a summary)
     form_id = 'archive-all-{}-{}'.format(ids('sam'), vq.id)
-    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Archive all (2): Move every one of sam'.format(form_id) in page and 'aria-label="Archive all (2)"' in page
+    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Move all to Trash (2): Move every one of sam'.format(form_id) in page and 'aria-label="Move all to Trash (2)"' in page
     assert 'id="{}" class="inline-form" hidden'.format(form_id) in page
 
 
@@ -1804,7 +1805,7 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     row = page[page.index('data-fkey="q:{}"'.format(vq.id)):]
     row = row[:row.index('</tr>')]
     head = row[:row.index('</summary>')]
-    assert 'href="/quiz/results/{}"'.format(vq.id) not in head and 'aria-label="History"' not in head and 'aria-label="Archive all (2)"' in row
+    assert 'href="/quiz/results/{}"'.format(vq.id) not in head and 'aria-label="History"' not in head and 'aria-label="Move all to Trash (2)"' in row
     assert '<form' not in head and 'result-archive-all' not in row
     page = teach.get('/quiz/results').data.decode()
     #(a row like My quizzes': the name only opens it; View, Edit and History are icons at its end:

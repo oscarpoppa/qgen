@@ -103,20 +103,34 @@ def groupby_month(attempts, attr='archived_at'):
         out[-1]['items'].append(a)
     return out
 
+_scan_counts_cache = {}
+
+
 @app.context_processor
 def page_helpers():
     from app import assign_dialogs
     def review_count():
         return CQuiz.query.filter_by(needs_review=True, completed=False).count()
     def scan_counts():
-        """The menu's Scan pages badges (the owner, 2026-10-24): scans being read, paused and stopped; stashed ones not counted."""
+        """The menu's Scan pages badges (the owner, 2026-10-24): scans being read, paused and stopped; stashed ones not counted.
+        (On every teacher page: worked out again only when a workbook changed, from a small query of their states and
+        times, not by reading every workbook's whole draft each time; the code critic, 2026-10-25.)"""
         out = {'reading': 0, 'paused': 0, 'stopped': 0}
         try:
             from flask_login import current_user
+            from app.qgen.models import ScanJob
+            from app.qgen import scan as SC
             from app.qgen.scan_routes import scan_progress_data
+            now = SC.datetime.now()
+            key = (tuple(db.session.query(ScanJob.id, ScanJob.status, ScanJob.updated_at)
+                         .filter(ScanJob.status != SC.TRASHED).order_by(ScanJob.id).all()),
+                   now.replace(second=0, microsecond=0))   # (a reading gone quiet counts as stopped after a while)
+            if _scan_counts_cache.get('key') == key:
+                return dict(_scan_counts_cache['out'])
             for x in scan_progress_data(current_user, put_away=False):
                 if x.get('kind') in out:
                     out[x['kind']] += 1
+            _scan_counts_cache.update(key=key, out=dict(out))
         except Exception:
             pass
         return out

@@ -47,7 +47,7 @@ def test_deleting_an_attempt_archives_it_and_restore_brings_it_back(app_db):
 
     # archive the first attempt
     r = teacher.post('/quiz/delcq/{}'.format(cqid), follow_redirects=True)
-    assert b'to the Archive' in r.data
+    assert b'to the Trash' in r.data
     db.session.expire_all()
     assert db.session.get(CQuiz, cqid) is None
     a = ArchivedAttempt.query.one()
@@ -171,7 +171,7 @@ def test_deleting_a_student_keeps_their_results(app_db):
     with app.test_request_context():
         S.submit(CQuiz.query.one(), {1: '4'})
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam_id]})  # a second, unstarted one
-    assert 'His/her quiz results are kept in the Archive' in teacher.get('/userdet').data.decode()
+    assert 'His/her quiz results are kept in the Trash' in teacher.get('/userdet').data.decode()
     teacher.post('/deluser/{}'.format(sam_id))
     db.session.expire_all()
     assert db.session.get(User, sam_id) is None and CQuiz.query.count() == 0
@@ -204,12 +204,12 @@ def test_deleting_a_quiz_or_problem_an_archived_attempt_uses(app_db):
     a = ArchivedAttempt.query.one()
     # the delete questions warn
     # (the Remove question says it; no student has it now, so Delete for good deletes it)
-    assert '1 archived attempt uses this quiz; after deleting it it can still be viewed but not restored.' in \
+    assert '1 attempt in the Trash uses this quiz; after deleting it it can still be viewed but not restored.' in \
         teacher.get('/quiz/listvq').data.decode()
     teacher.post('/quiz/delvq/{}'.format(vq.id))
     db.session.expire_all()
     assert db.session.get(VQuiz, vq.id) is None
-    assert '1 archived attempt uses this problem' in teacher.get('/quiz/listvp').data.decode()
+    assert '1 attempt in the Trash uses this problem' in teacher.get('/quiz/listvp').data.decode()
     teacher.post('/quiz/delvp/{}'.format(probs[0].id))
     db.session.expire_all()
     assert db.session.get(VProblem, probs[0].id) is None
@@ -250,8 +250,8 @@ def test_the_archive_is_for_teachers(app_db):
     sam.post('/quiz/archive/{}/restore'.format(a.id))
     sam.post('/quiz/archive/{}/delete'.format(a.id))
     assert ArchivedAttempt.query.count() == 1 and CQuiz.query.count() == 0
-    assert '>Archive</a>' in teacher.get('/mypage').data.decode()
-    assert '>Archive</a>' not in sam.get('/mypage').data.decode()
+    assert '>Trash</a>' in teacher.get('/mypage').data.decode()
+    assert '>Trash</a>' not in sam.get('/mypage').data.decode()
     # forged forms are refused
     app.config['WTF_CSRF_ENABLED'] = True
     try:
@@ -319,7 +319,7 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     assert page.index('<span class="side-name">kim') < page.index('<span class="side-name">sam') and __import__('app.icons', fromlist=['PATHS']).PATHS['user'] in page
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     #(nothing archived at all yet: the Archive's own empty note, in any folder)
-    assert 'Nothing archived yet. When you archive an attempt' in archive_view(teacher, sam_folder.id)[0]
+    assert 'Nothing in the Trash yet. When you move an attempt to the Trash' in archive_view(teacher, sam_folder.id)[0]
     # a new student gets one automatically
     u = User(username='ava', is_admin=False)
     u.set_password('pw-for-tests')
@@ -332,7 +332,7 @@ def test_the_archive_has_a_folder_for_each_student(app_db):
     kim_folder = ArchiveFolder.query.filter_by(student_id=ids('kim')).one()
     assert archive_view(teacher, sam_folder.id)[1] == [('sam', 'Week 1')]
     assert archive_view(teacher, kim_folder.id)[1] == [] and side_counts(archive_view(teacher)[0])['sam'] == 1
-    assert 'Nothing archived for kim yet.' in archive_view(teacher, kim_folder.id)[0]  # (an empty student folder says so)
+    assert 'Nothing in the Trash for kim yet.' in archive_view(teacher, kim_folder.id)[0]  # (an empty student folder says so)
     # grouped by the month it was archived
     assert 'class="box-title">{:%B %Y}</span>'.format(__import__('datetime').datetime.now()) in archive_view(teacher)[0]
 
@@ -483,5 +483,5 @@ def test_the_archives_when_column_keeps_each_date_on_one_line(app_db):
     page = archive_view(teacher)[0]
     when = re.search(r'<td data-label="When"[^>]*>(.*?)</td>', page, re.S).group(1)
     assert re.search(r'<span class="nowrap">Taken [^<]+</span><br>', when)
-    assert re.search(r'<span class="nowrap">Archived [^<]+</span><br>by teach', when)
+    assert re.search(r'<span class="nowrap">Moved to the Trash [^<]+</span><br>by teach', when)
     assert 'class="archive-table even-cols"' in page

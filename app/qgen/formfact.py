@@ -71,7 +71,9 @@ def quiz_items(cquiz, form):
 #save answers and auto-grade; returns True when an instructor still needs to grade.
 #answers: {question number: answer as the form or API sends it}. Questions not
 #in it keep their autosaved answer, so answers=None (time ran out) grades what was saved.
-def record_answers(cquiz, answers=None):
+def record_answers(cquiz, answers=None, ai=True):
+    """ai=False: no AI check of Short text answers (the once-a-minute sweep handing in attempts whose time is
+    up runs inside someone's page request, so those wait for the teacher: the code critic, 2026-10-25)."""
     needs_review = False
     for cprob in cquiz.cproblems:
         qt = qtype_of(cprob)
@@ -94,7 +96,7 @@ def record_answers(cquiz, answers=None):
             needs_review = needs_review or cprob.credit is None
     #the Short text answers still to check: a small AI model looks first, and marks right only the ones
     #it's sure have the key items (the owner, 2026-10-25, CP4); the rest stay with the teacher
-    if needs_review and ai_check_answers(cquiz):
+    if needs_review and ai and ai_check_answers(cquiz):
         needs_review = any(cp.credit is None for cp in cquiz.cproblems)
     cquiz.compdate = datetime.now()
     return needs_review

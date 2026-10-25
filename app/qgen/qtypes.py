@@ -299,7 +299,11 @@ def normalize_text(text, case_sensitive=False):
 
 def _list_items(text):
     """'Matthew, Mark, Luke, and John' -> [['matthew'], ['mark'], ['luke'], ['john']]: an accepted answer
-    that's a list (commas, semicolons or "and" between its items), each item as its words; None if it isn't one."""
+    that's a list (commas, semicolons or "and" between its items), each item as its words; None if it isn't one.
+    Only with a comma or semicolon in it: "Lewis and Clark" or "rock and roll" is one answer, not a list whose
+    parts could come in any order (the code critic, 2026-10-25)."""
+    if not re.search(r'[,;]', text):
+        return None
     parts = [p for p in re.split(r'\s*[,;]\s*|\s+(?:and|&)\s+', text) if p.strip()]
     if len(parts) < 2:
         return None

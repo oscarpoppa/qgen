@@ -36,7 +36,7 @@ def test_request_shape():
     fake = FakeClient(GOOD_PROBLEM)
     fill, usage = ai_helper.ask('key', 'problem', 'a train problem', client=fake)
     call = fake.calls[0]
-    assert call['model'] == 'claude-opus-5' and call['fallbacks'] == 'default'
+    assert call['model'] == 'claude-haiku-5-5' and call['fallbacks'] == 'default'
     assert call['output_config']['format']['type'] == 'json_schema'
     assert call['system'][0]['cache_control'] == {'type': 'ephemeral'}
     assert 'a train problem' in call['messages'][0]['content']

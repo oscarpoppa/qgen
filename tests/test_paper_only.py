@@ -126,9 +126,9 @@ def test_new_and_started_quizzes_have_gold_and_blue_borders(app_db):
     take_page(s, CQuiz.query.one().id)
     assert '<tr class="row-is-started" data-box="quiz:' in s.get('/mypage').data.decode()
     assert 'name="tab-counts" content="0,1"' in s.get('/home').data.decode() and s.get('/messages/poll').get_json()['tab'] == [0, 1]
-    # counted by quiz, like the boxes: a second try at the same quiz doesn't add a dot
+    # counted by attempt (the owner, 2026-10-25, CO1): a second attempt at the same quiz is a new one
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
-    assert s.get('/messages/poll').get_json()['tab'] == [0, 1]
+    assert s.get('/messages/poll').get_json()['tab'] == [1, 1]
     assert '<title>Quizzes' in teacher.get('/dashboard').data.decode() or '🟡' not in teacher.get('/dashboard').data.decode().split('</title>')[0]
     assert 'class="quiz-is-started"' in s.get('/home').data.decode()
     # a new attempt and a started one at the same quiz: gold wins (the owner, 2026-10-20)

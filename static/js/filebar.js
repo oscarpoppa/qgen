@@ -355,9 +355,11 @@
     if (first) first.focus();
   });
 
-  //Check all / Uncheck all: a check box at the top of each check column
-  var heads = Array.prototype.slice.call(document.querySelectorAll('.folder-main th.tick-col'));
-  heads.forEach(function (th) {
+  //Check all / Uncheck all: a check box at the top of each check column (again on a list swapped in by a
+  //sort, static/js/sorttable.js: its new heading came without one; the code critic, 2026-10-25)
+  function addHeads() {
+  Array.prototype.slice.call(document.querySelectorAll('.folder-main th.tick-col')).forEach(function (th) {
+    if (th.querySelector('input.check-all')) return;
     var c = document.createElement('input');
     c.type = 'checkbox'; c.className = 'check-all';
     //(only its hidden words go: the list's Expand all / Collapse all may be in this cell already)
@@ -371,6 +373,9 @@
       setTimeout(sync, 0);
     });
   });
+  }
+  addHeads();
+  document.addEventListener('qgen-swapped', function () { addHeads(); sync(); });
 
   function sync() {
     var n = count(), list = ticks().filter(shown);

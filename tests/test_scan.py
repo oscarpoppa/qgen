@@ -16,6 +16,18 @@ from app.qgen import ai_helper
 from test_flow import app_db, login, no_titles  # noqa: F401  (fixture)
 
 
+class Final:
+    """A finished stream: no events to read along the way (a real one has them, for the progress), then its message."""
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __iter__(self):
+        return iter(())
+
+    def get_final_message(self):
+        return self.msg
+
+
 class FakeStreamClient:
     """Answers each call like the Claude API would (streamed), one payload per call, in turn.
     The check of a page's answer places (ai_helper.check_places) answers from `checks` instead,
@@ -40,7 +52,7 @@ class FakeStreamClient:
                     payload = client.payloads.pop(0)
                 msg = SimpleNamespace(stop_reason='end_turn', usage=SimpleNamespace(input_tokens=1000, output_tokens=500),
                                       content=[SimpleNamespace(type='text', text=json.dumps(payload))])
-                return SimpleNamespace(get_final_message=lambda: msg)
+                return Final(msg)
 
             def __exit__(self, *a):
                 return False
@@ -69,6 +81,10 @@ class FakeQSClient:
 
             def get_final_message(self):
                 return SimpleNamespace(usage=SimpleNamespace(input_tokens=2000, output_tokens=800))
+
+            def __iter__(self):
+                #(a real stream is a series of events, read for the page's progress: none here)
+                return iter(())
 
             def __exit__(self, *a):
                 return False
@@ -255,6 +271,33 @@ def job_of(db):
     return ScanJob.query.one()
 
 
+def generate_all(teacher, job_id, **changes):
+    """Each page's Generate quiz in turn, as the teacher would press them (the owner, 2026-10-25: a
+    workbook is made page by page): every page that leads its quiz (joined pages go with the one
+    before), each from the draft as it is then. Returns the responses, in order; stops at one that
+    isn't a redirect (an error page)."""
+    from app import db
+    from app.qgen.models import ScanJob
+    from app.qgen import scan as SC
+    out = []
+    while True:
+        job = db.session.get(ScanJob, job_id)
+        db.session.refresh(job)
+        if job.status == SC.TRASHED:
+            return out
+        data = json.loads(job.data)
+        form = form_from(data, **changes)
+        leads = SC.lead_of(SC.update_from_form(copy.deepcopy(data), form))
+        todo = [n for n, lead in sorted(leads.items()) if n == lead
+                and next(p for p in data['pages'] if p['n'] == n).get('state') == 'done']
+        if not todo:
+            return out
+        r = teacher.post('/quiz/scan/{}'.format(job_id), data=dict(form, generate=str(todo[0])))
+        out.append(r)
+        if r.status_code != 302:
+            return out
+
+
 def form_from(data, placed=True, **changes):
     """The review form as the page sends it, from the draft, with the names the page shows
     (the workbook's: scan.apply_names) (changes: field name -> value, None to leave a check
@@ -337,7 +380,9 @@ def test_teachers_only_and_needs_a_key(app_db):
     # no key: the More menu shows it grayed out, with the reason; no buttons; the page sends you back
     html = teacher.get('/quiz/listvq').data.decode()
     assert '<span class="menu-disabled" aria-disabled="true" title="Needs an AI key' in html
-    assert 'href="/quiz/scan"' not in html and '</svg> Scan workbook pages' not in html
+    #(and the page's own button grayed, with the reason: the owner, 2026-10-25, To do 45)
+    assert 'href="/quiz/scan"' not in html
+    assert 'disabled title="Needs an AI key, which this site doesn’t have"><svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg> Scan workbook pages</button>' in html
     r = teacher.get('/quiz/scan')
     assert r.status_code == 302 and '/quiz/listvq' in r.headers['Location']
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
@@ -381,7 +426,7 @@ def test_upload_read_check_and_save(app_db, ai):
     # like the other AI buttons
     calls = [c for c in AICall.query.filter_by(kind='scan', ok=True).all() if ': check' not in c.request]
     assert sorted(c.request for c in calls) == sorted(['Scan {} page {}: reading'.format(job.id, n) for n in (1, 2, 3)]
-                                                      + ['Scan {} page {}: numbers'.format(job.id, n) for n in (1, 2, 3)])
+                                                      + ['Scan {} page {}: numbers'.format(job.id, n) for n in (1, 3)])
 
     # the draft
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
@@ -425,12 +470,12 @@ def test_upload_read_check_and_save(app_db, ai):
     html = r.get_json()['html']
     assert 'negative' not in html and 'Students get versions like:' in html
 
-    # save: the farm goes at the top of page 1's quiz (and is its own Image only quiz too)
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(
-        data, action='save', **dict(fixed, **{'p2-p1-use': 'quiz:1', 'p1-calculator': 'y'})))
-    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/scan/done')
-    done = teacher.get('/quiz/scan/done').data.decode()
-    assert 'Made 3 quizzes from your pages, and 6 new problems for them' in done and 'Math Grade 2' in done
+    # generate each page (the owner, 2026-10-25): the farm goes at the top of page 1's quiz (and is its
+    # own Image only quiz too); the last one sends the workbook to the Trash
+    rs = generate_all(teacher, job.id, **dict(fixed, **{'p2-p1-use': 'quiz:1', 'p1-calculator': 'y'}))
+    assert [r.status_code for r in rs] == [302, 302, 302] and rs[-1].headers['Location'].endswith('/quiz/scan')
+    done = teacher.get('/quiz/scan').data.decode()
+    assert 'Every page of “Math Grade 2” is made, so it went to the' in done
     quizzes = {q.title: q for q in VQuiz.query.all()}
     assert sorted(quizzes) == ['Math Grade 2 1', 'Math Grade 2 2', 'Math Grade 2 3']
     vq = quizzes['Math Grade 2 1']
@@ -467,8 +512,9 @@ def test_upload_read_check_and_save(app_db, ai):
     from PIL import Image
     with Image.open(os.path.join(static, triangles.image)) as im:
         assert abs(im.size[0] - 0.45 * 400) <= 2 and abs(im.size[1] - 0.2 * 600) <= 2
-    # the scan and its files are gone
-    assert ScanJob.query.count() == 0 and not os.path.exists(os.path.join(app.config['SCAN_DIR'], str(job.id)))
+    # the scan is in the Trash, its pages kept so it can be viewed or restored
+    from app.qgen import scan as SC
+    assert ScanJob.query.one().status == SC.TRASHED and os.path.exists(os.path.join(app.config['SCAN_DIR'], str(job.id)))
 
 
 def test_joined_across_a_picture_page_keeps_its_problems(app_db, ai):
@@ -481,16 +527,16 @@ def test_joined_across_a_picture_page_keeps_its_problems(app_db, ai):
     upload(teacher, [(picture(), 'page1.png'), (picture(), 'page2.png'), (picture(), 'page3.png')])
     job = job_of(db)
     data = json.loads(job.data)
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p3-join_prev': 'y'}))
-    assert r.status_code == 302
+    rs = generate_all(teacher, job.id, **{'p3-join_prev': 'y'})
+    assert rs and all(r.status_code == 302 for r in rs)
     in_quizzes = {i for vq in VQuiz.query.all() for i in json.loads(vq.vpid_lst)}
     doubles = [p for p in VProblem.query.all() if p.raw_prob == '[a] + [a] = ?']
     assert doubles and doubles[0].id in in_quizzes, 'page 3’s problem was not saved in any quiz'
 
 
 def test_pages_kept_back_stay_stashed_and_the_rest_are_saved(app_db, ai):
-    """Save page by page (the owner, 2026-10-22): page 2 unchecked isn't saved; it stays as a
-    scan of its own, stashed under the same name, renumbered as its page 1, files and all."""
+    """Each page made on its own (the owner, 2026-10-25): Generate quiz on page 1 makes only its quiz; the
+    workbook stays open with page 2 still to make, and making that one sends the workbook to the Trash."""
     app, db = app_db
     from app.qgen.models import VQuiz, ScanJob
     from app.qgen import scan as SC
@@ -499,22 +545,19 @@ def test_pages_kept_back_stay_stashed_and_the_rest_are_saved(app_db, ai):
     upload(teacher, [(picture(), 'page1.png'), (picture(), 'page2.png')])
     job = job_of(db)
     data = json.loads(job.data)
-    page2 = open(SC.page_file(job.id, 2), 'rb').read()
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p2-save': None}))
-    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/scan/done')
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=dict(form_from(data), generate='1'))
+    assert r.status_code == 302 and r.headers['Location'].split('#')[0].endswith('/quiz/scan/{}'.format(job.id))
     assert VQuiz.query.count() == 1
     left = db.session.get(ScanJob, job.id)
-    assert left is not None and left.pages == 1
+    db.session.refresh(left)
     kept = json.loads(left.data)
-    assert [p['n'] for p in kept['pages']] == [1] and kept.get('put_away') and kept['pages'][0]['save'] is True
-    assert open(SC.page_file(job.id, 1), 'rb').read() == page2
-    assert not os.path.exists(SC.page_file(job.id, 2))
-    done = teacher.get('/quiz/scan/done').data.decode()
-    assert '1 page wasn’t saved' in done and 'waiting in “Stashed scans”' in done
-    # it's in Stashed scans, and saving it later makes its quiz and removes the scan
-    assert 'Nothing stashed.' not in teacher.get('/quiz/scan').data.decode()
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(kept, action='save'))
-    assert r.status_code == 302 and VQuiz.query.count() == 2 and db.session.get(ScanJob, job.id) is None
+    assert left.status != SC.TRASHED and [p['state'] for p in kept['pages']] == ['saved', 'done']
+    assert 'Made the quiz “' in teacher.get(r.headers['Location']).data.decode()
+    # page 2 later: its quiz, and the workbook goes to the Trash
+    rs = generate_all(teacher, job.id)
+    assert len(rs) == 1 and rs[0].status_code == 302 and VQuiz.query.count() == 2
+    db.session.refresh(left)
+    assert left.status == SC.TRASHED
 
 
 def test_one_bad_item_saves_nothing(app_db, ai):
@@ -525,13 +568,13 @@ def test_one_bad_item_saves_nothing(app_db, ai):
     upload(teacher, [(picture(), 'p.png')])
     job = job_of(db)
     data = json.loads(job.data)
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p1i0-answer': '2 * zz'}))
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, generate='1', **{'p1i0-answer': '2 * zz'}))
     assert r.status_code == 400 and 'Nothing was saved yet' in r.data.decode() and 'zz' in r.data.decode()
     assert VProblem.query.count() == 0 and VQuiz.query.count() == 0
     # the edit was kept in the draft, and unchecking the item leaves nothing to save
     assert json.loads(job_of(db).data)['pages'][0]['items'][0]['answer'] == '2 * zz'
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p1i0-include': None}))
-    assert r.status_code == 400 and 'There’s nothing to save yet' in r.data.decode()
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, generate='1', **{'p1i0-include': None}), follow_redirects=True)
+    assert 'Page 1 has nothing to make into a quiz yet: check at least one of its problems.' in r.data.decode()
     assert VProblem.query.count() == 0 and VQuiz.query.count() == 0
     # Stash draft (it was Keep draft: the owner, 2026-10-21): the title typed is kept, the scan is
     # stashed, and it's back on Scan workbook pages, in Stashed scans
@@ -541,13 +584,14 @@ def test_one_bad_item_saves_nothing(app_db, ai):
     assert kept['pages'][0]['title'] == 'Doubles to 20' and kept['kept_at'] and kept['put_away']
     page = teacher.get(r.headers['Location']).data.decode()
     assert '“{}” stashed, with your edits.'.format(job_of(db).name) in page
-    assert 'Math Grade 2' in page and 'Stashed scans' in page
-    # another teacher can Discard it too
+    assert 'Math Grade 2' in page and 'Stashed workbooks' in page
+    # another teacher can move it to the Trash too (the owner, 2026-10-25: Discard became Move to Trash)
     jid = job_of(db).id
     add_teacher(db)
     r = login(app, 'lee').post('/quiz/scan/{}/discard'.format(jid))
     assert r.status_code == 302
-    assert ScanJob.query.count() == 0 and not os.path.exists(os.path.join(app.config['SCAN_DIR'], str(jid)))
+    from app.qgen import scan as SC
+    assert ScanJob.query.one().status == SC.TRASHED and os.path.exists(os.path.join(app.config['SCAN_DIR'], str(jid)))
     assert VProblem.query.count() == 0 and VQuiz.query.count() == 0
 
 
@@ -561,7 +605,7 @@ def test_paper_only_page_number_switch_saves_fixed_values(app_db, ai):
     job = job_of(db)
     data = json.loads(job.data)
     assert data['pages'][0]['items'][0]['use_page'] is False
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p1i0-use_page': 'y'}))
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, generate='1', **{'p1i0-use_page': 'y'}))
     assert r.status_code == 302
     vp = VProblem.query.one()
     assert vp.raw_prob == '6 + 6 = ?' and vp.raw_ansr == '12' and vp.options['values'] == []
@@ -579,9 +623,9 @@ def test_errors_limits_and_retry(app_db, ai):
     job = job_of(db)
     page = json.loads(job.data)['pages'][0]
     assert page['state'] == 'error' and page['error'] == 'That photo is too blurry to read.'
-    #(the old yellow card with its Read the rest button is gone: the Helper says it, with Try again, 2026-10-23)
+    #(the Helper says it; its buttons are gone, the page's own "Read this page" does it: the owner, 2026-10-25)
     hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
-    assert any('That photo is too blurry to read.' in h['text'] and h['actions'][0]['label'] == 'Try again' for h in hints)
+    assert any('That photo is too blurry to read.' in h['text'] and not h.get('actions') for h in hints)
     assert AICall.query.filter_by(kind='scan', ok=False).count() == 1
     # QuizScan reads it, but the numbers call fails: left to read again, QuizScan's reading kept
     import anthropic
@@ -614,8 +658,9 @@ def test_errors_limits_and_retry(app_db, ai):
     second = ScanJob.query.filter_by(name='Second').one()
     page = json.loads(second.data)['pages'][0]
     assert page['state'] == 'waiting' and 'in the last hour' in page['error'] and not fakes.qs.calls and not fakes.api.calls
-    #(the review page's yellow Resume card is gone: the waiting page is in the Helper with Try again, 2026-10-23)
-    assert any('in the last hour' in h['text'] for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
+    #(the Helper says the page hasn't been read; the page's own card says why: the owner, 2026-10-25, CL2)
+    assert any(h['text'] == 'Page 1 hasn’t been read yet.' for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
+    assert 'in the last hour' in teacher.get('/quiz/scan/{}'.format(second.id)).data.decode()
     # with room for two, it still waits; with room for three, it's read
     AICall.query.filter_by(kind='problem').limit(1).one().created = datetime(2000, 1, 1)
     db.session.commit()
@@ -647,19 +692,21 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     job.data = json.dumps(data)
     db.session.commit()
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'Generate quiz(zes)' in page and '>Save</button>' not in page
+    #(one Generate quiz per page: the owner, 2026-10-25)
+    assert '>Generate quiz</button>' in page and 'Generate quiz(zes)' not in page and '>Save</button>' not in page
     assert 'value="keep"' in page and 'Stash draft' in page and 'Unstash draft' not in page
     assert 'id="helper"' in page and 'js/helper.js' in page
     hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
     mine = [h for h in hints if h.get('key') == 'page-2'][0]
     assert 'Page 2 didn’t make it: This page took longer than 10 minutes' in mine['text']
-    assert [a['label'] for a in mine['actions']] == ['Try again', 'Keep as it is', 'Discard page']
-    assert 'stays in the stash' not in mine['actions'][1]['tip']
+    #(the Helper only says it: Read this page and Discard page are on the page's own card, the owner 2026-10-25)
+    assert not mine.get('actions')
+    card = page[page.index('id="scan-page-2"'):]
+    assert '>Read this page</button>' in card and '/quiz/scan/{}/page/2/drop'.format(job.id) in card
     #(a page not read yet hasn't failed: the owner, 2026-10-23)
     data['pages'].append({'n': 3, 'state': 'waiting', 'error': SC.PAUSED_NOTE})
     waiting = SC.helper_hints(job, data, {'again': lambda n: '/a/{}'.format(n), 'drop': lambda n: '/d/{}'.format(n)})
-    assert 'Page 3 hasn’t been read yet: Paused before this page was read.' in [h['text'] for h in waiting]
-    assert mine['actions'][2]['url'].endswith('/page/2/drop') and mine['actions'][1]['dismiss']
+    assert 'Page 3 hasn’t been read yet.' in [h['text'] for h in waiting]
     #(in the stash: Unstash draft)
     SC.put_away(job)
     db.session.commit()
@@ -688,9 +735,9 @@ def test_the_stash_has_folders(app_db, ai):
     SC.put_away(job)
     db.session.commit()
     page = teacher.get('/quiz/scan').data.decode()
-    assert 'Stashed scans' in page and 'Workbook A' in page and 'id="stash-new"' in page and 'Uncategorized' in page
-    # the stashed scan keeps its controls: continue, take out, discard
-    assert 'aria-label="Continue"' in page and 'aria-label="Take out"' in page and 'aria-label="Discard"' in page
+    assert 'Stashed workbooks' in page and 'Workbook A' in page and 'id="stash-new"' in page and 'Uncategorized' in page
+    # the stashed workbook keeps its controls: continue, take out, move to Trash
+    assert 'aria-label="Continue"' in page and 'aria-label="Take out"' in page and 'aria-label="Move to Trash"' in page
     # make a folder, then one inside it
     assert teacher.post('/quiz/scan/folders/new', data={'name': 'Fractions'}).status_code == 302
     top = ScanFolder.query.filter_by(name='Fractions').one()
@@ -797,7 +844,7 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
     assert '<span data-place-count>1 problem needs its</span> answer box: <span data-place-list><a href="#scan-item-1-0" data-jump>1.</a></span>' in html
     assert 'disabled title="Every problem needs its place on the page first (1.)"' in html
     # saving anyway is refused, with the red line once, and nothing is made
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, placed=False, action='save'))
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, placed=False, generate='1'))
     assert r.status_code == 400 and r.data.decode().count(no_place) == 1 and not VQuiz.query.count()
     # left out: it needs no place
     assert not SC.missing_places(dict(data, pages=[dict(page, items=[dict(page['items'][0], include=False)])]))
@@ -818,8 +865,8 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
 
 
 def test_a_save_that_fails_partway_leaves_nothing_behind(app_db, ai, monkeypatch):
-    """Two pages, the second quiz fails: the first page's problem and quiz are removed again, so
-    pressing Save again doesn't make them twice (the code critic, 2026-10-20)."""
+    """A page's quiz fails after its problem was made: the problem is removed again, so pressing Generate
+    quiz again doesn't make it twice (the code critic, 2026-10-20; one page at a time since 2026-10-25)."""
     app, db = app_db
     from app.qgen import services as S
     from app.qgen.models import VQuiz, VProblem
@@ -835,17 +882,17 @@ def test_a_save_that_fails_partway_leaves_nothing_behind(app_db, ai, monkeypatch
 
     def flaky(vq, title, *a, **kw):
         calls.append(title)
-        if len(calls) == 2:
+        if len(calls) == 1:
             return ['Something went wrong.']
         return real(vq, title, *a, **kw)
     monkeypatch.setattr(S, 'save_vquiz', flaky)
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, action='save', **{'p2i0-new': 'y'}))
-    assert r.status_code == 400 and len(calls) == 2
+    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, generate='1', **{'p2i0-new': 'y'}))
+    assert r.status_code == 400 and len(calls) == 1
     assert VQuiz.query.count() == 0 and VProblem.query.count() == 0
-    # again, working: made once
+    # again, working: each made once
     monkeypatch.setattr(S, 'save_vquiz', real)
-    r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(json.loads(job_of(db).data), action='save', **{'p2i0-new': 'y'}))
-    assert r.status_code == 302 and VQuiz.query.count() == 2 and VProblem.query.count() == 2
+    rs = generate_all(teacher, job.id, **{'p2i0-new': 'y'})
+    assert [r.status_code for r in rs] == [302, 302] and VQuiz.query.count() == 2 and VProblem.query.count() == 2
 
 
 # ---------------------------------------------------------------- QuizScan's part (the owner, 2026-10-20)
@@ -988,12 +1035,10 @@ def test_pages_are_read_three_at_once_and_pause_drops_them(own_connections, ai):
     job = job_of(db)
     data = json.loads(job.data)
     assert fakes.qs.most_at_once == 3
-    # Pause is at once (the owner, 2026-10-22): the page being read when it was pressed (page 1,
-    # whose reading pressed it) is dropped, even though its reading comes back afterward; nothing
-    # is read after it; every page not read waits for Resume. (Under a busy machine another page
-    # may already have finished before Pause: that one is kept.)
+    # Pause (the owner, 2026-10-24): the pages being read when it was pressed finish and are kept; nothing
+    # more starts; every page not read waits for Resume
     states = [p['state'] for p in data['pages']]
-    assert states[0] == 'waiting' and set(states) <= {'waiting', 'done'} and states.count('waiting') >= 3, states
+    assert states == ['done'] * 3 + ['waiting'] * 2, states
     assert data['pages'][3]['error'] == SC.PAUSED_NOTE and data.get('paused') and job.status == 'ready'
     # Resume reads the rest
     fakes.qs.during = None
@@ -1130,7 +1175,7 @@ def test_put_away_and_take_out(app_db, ai):
     html = teacher.get('/quiz/scan').data.decode()
     #("Put away" is "Stash" everywhere; the Stashed scans card is always there, empty with its note:
     #the owner 2026-10-21)
-    assert 'Nothing stashed. Paused or stopped scans and drafts you stash wait here.' in html and 'Week 1' not in html.split('id="scan-away"')[1]
+    assert 'Nothing stashed. Paused or stopped workbooks and drafts you stash wait here.' in html and 'Week 1' not in html.split('id="scan-away"')[1]
     assert '“Week 1” until you want it again' not in html
     # Stash draft: the draft is stashed at once
     teacher.post('/quiz/scan/{}'.format(job.id), data=dict(form_from(json.loads(job.data)), action='keep'))
@@ -1138,13 +1183,13 @@ def test_put_away_and_take_out(app_db, ai):
     teacher.post('/quiz/scan/{}/take-out'.format(job.id))
     # taken out, a draft has a Stash button in Current scans
     html = teacher.get('/quiz/scan').data.decode()
-    assert 'aria-label="Stash"' in html and 'Stash “Week 1” until you want it again: out of Current scans and the Dashboard' in html
+    assert 'aria-label="Stash"' in html and 'Stash “Week 1” until you want it again: out of Current workbooks and the Dashboard' in html
     # stashed: out of Current scans and the Dashboard, into its own card
     assert teacher.post('/quiz/scan/{}/put-away'.format(job.id)).headers['Location'].endswith('/quiz/scan')
     html = teacher.get('/quiz/scan').data.decode()
     current, away = html.split('id="scan-away"')
-    assert 'Week 1' not in current.split('id="scan-current"')[1] and 'No scans yet.' in current
-    assert '<h2>Stashed scans</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
+    assert 'Week 1' not in current.split('id="scan-current"')[1] and 'No workbooks yet.' in current
+    assert '<h2>Stashed workbooks</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
     assert 'Week 1' in away and 'Take “Week 1” out' in away and 'Continue: go on checking “Week 1”' in away
     # ...and never in the Dashboard's pop-over nor on its chip (the owner, 2026-10-21; it had a list
     # of its own there)
@@ -1212,17 +1257,17 @@ def test_the_dashboard_has_a_scanner_card_not_a_chip(app_db, ai):
     app, db = app_db
     teacher = login(app, 'teach')
     html = teacher.get('/dashboard').data.decode()
-    assert 'id="scan-card"' in html and '>Scanner</h2>' in html and '0 scans' in html and 'No scans waiting.' in html
+    assert 'id="scan-card"' in html and '>Scanner</h2>' in html and '0 workbooks' in html and 'No workbooks waiting.' in html
     assert 'scan-chip"' not in html and 'id="scan-pop"' not in html
     assert html.index('id="scan-card"') < html.index('id="dash-right-now"') and 'id="scan-card" data-elastic="scanner" data-elastic-dir="v" data-box="scanner" data-url' in html
     ai([QS_TIMES], [NUM_TIMES])
     upload(teacher, [(picture(), 'p.png')])
     html = teacher.get('/dashboard').data.decode()
-    assert '1 scan<' in html and 'scan-progress-row' in html and 'No scans waiting.' not in html
+    assert '1 workbook<' in html and 'scan-progress-row' in html and 'No workbooks waiting.' not in html
     assert ' open' in html.split('id="scan-card"')[1].split('>')[0]
     #(the workbook's name opens its scan page, even while it's waiting or being read; a bar's moving part shows while reading)
     assert 'class="name-link scan-pop-name" href="/quiz/scan/{}"'.format(job_of(db).id) in html
-    assert teacher.get('/quiz/scan/progress').get_json()['count'] == '1 scan'
+    assert teacher.get('/quiz/scan/progress').get_json()['count'] == '1 workbook'
 
 
 def test_stashed_scans_can_be_dragged_onto_folders(app_db, ai):
@@ -1404,3 +1449,74 @@ def test_every_page_loads_the_whole_row_click_script(app_db):
     import os
     js = open(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'pagequiz.js')).read()
     assert 'el.value = el.defaultValue' in js
+
+
+def test_restore_only_takes_a_workbook_out_of_the_trash(app_db, ai):
+    """Restore on a workbook that isn't in the Trash changes nothing (the code critic, 2026-10-25): a stashed one
+    keeps its folder."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    from app.qgen.models import ScanFolder
+    ai([QS_TIMES], [NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    f = ScanFolder(name='Week 3')
+    db.session.add(f)
+    db.session.commit()
+    SC.put_away(job)
+    job.folder_id = f.id
+    db.session.commit()
+    assert teacher.post('/quiz/scan/{}/restore'.format(job.id)).status_code == 302
+    job = job_of(db)
+    assert job.folder_id == f.id and job.status != SC.TRASHED
+
+
+def test_a_reading_that_breaks_leaves_a_trashed_workbook_in_the_trash(app_db, ai, monkeypatch):
+    """The reading going wrong after the workbook was moved to the Trash doesn't bring it back, and no page is
+    left "still with the AI" (the code critic, 2026-10-25)."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    from app.qgen.models import ScanJob
+    ai([QS_TIMES], [NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png'), (picture(), 'q.png')])
+    job = job_of(db)
+    data = json.loads(job.data)
+    data['pages'][1].update(state='waiting')
+    data['out'] = {'2': ['old-run', '2026-10-25T10:00:00', 1]}
+    job.data = json.dumps(data)
+    db.session.commit()
+
+    def broken(*a, **kw):
+        j = db.session.get(ScanJob, job.id)
+        j.status = SC.TRASHED
+        db.session.commit()
+        raise RuntimeError('the reading broke')
+    monkeypatch.setattr(SC, 'still_out', broken)
+    with app.test_request_context():
+        SC.start_reading(job_of(db), 'test-key', ids_of('teach'))
+    job = job_of(db)
+    assert job.status == SC.TRASHED and 'out' not in json.loads(job.data)
+
+
+def test_generate_keeps_a_page_stopped_meanwhile(app_db, ai):
+    """A page stopped after the workbook page was loaded stays stopped when another page is generated from
+    that page (the code critic, 2026-10-25)."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    ai([QS_TIMES, QS_TIMES], [NUM_TIMES, NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png'), (picture(), 'q.png')])
+    job = job_of(db)
+    loaded = json.loads(job.data)
+    loaded['stopped'] = []   # (as the page was loaded: nothing stopped yet)
+    with SC.page_lock(job.id) as data:
+        data['stopped'] = [2]
+    SC.mark_saved(job.id, loaded, [1], {'quizzes': []})
+    assert json.loads(job_of(db).data)['stopped'] == [2]
+
+
+def ids_of(name):
+    from app.user.models import User
+    return User.query.filter_by(username=name).one().id

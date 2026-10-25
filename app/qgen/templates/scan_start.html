@@ -158,7 +158,7 @@
       {% if stash_shown %}
       <div class="table-wrap stack">
         <table class="even-cols">
-          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every workbook shown" title="Check every scan shown"></th><th>Workbook</th><th>State</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every workbook shown" title="Check every workbook shown"></th><th>Workbook</th><th>State</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
           <tbody>
           {% for j in stash_shown %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
             {#- (dragged onto a folder in the list to move it: static/js/scanstash.js) #}

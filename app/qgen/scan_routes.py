@@ -151,7 +151,8 @@ def scan_progress():
 
 
 def _count_words(n):
-    return '{} scan{}'.format(n, '' if n == 1 else 's')
+    #("workbook", like the card's own count it replaces: the owner's rename, 2026-10-25)
+    return '{} workbook{}'.format(n, '' if n == 1 else 's')
 
 
 @qgen_bp.route('/quiz/scan/new', methods=['POST'])
@@ -451,6 +452,9 @@ def scan_stop_page(job_id, n):
 def scan_restore(job_id):
     """A workbook out of the Trash, into the stash's Uncategorized (the owner, 2026-10-25)."""
     job = _mine(job_id, trashed=True)
+    #(only one in the Trash: a workbook being read or stashed isn't touched; the code critic, 2026-10-25)
+    if job.status != SC.TRASHED:
+        return redirect(url_for('qgen.archive', section='workbooks'))
     SC.restore_job(job)
     current_app.logger.info('{} restored scan {} "{}" from the Trash'.format(current_user.username, job.id, job.name))
     flash(Markup('Restored “{}”. It’s in <a href="{}">Stashed workbooks</a>, Uncategorized.').format(

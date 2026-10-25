@@ -125,6 +125,8 @@
       }
       history.replaceState(history.state, '', url);
       document.dispatchEvent(new CustomEvent('qgen-address'));  // (the Back trail keeps it: trail.js)
+      //(scripts that set up a list's parts once, like its heading check box, do the new one: filebar.js)
+      document.dispatchEvent(new CustomEvent('qgen-swapped', { detail: { list: added } }));
     }).catch(go);
   }
 

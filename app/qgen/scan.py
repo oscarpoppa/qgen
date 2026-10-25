@@ -343,25 +343,36 @@ READ_AT_ONCE = 3   # pages read at the same time (each takes a minute or so of A
                    # the site's SCAN_READ_AT_ONCE setting, when set, instead
 
 
+_LOCKS, _LOCKS_LOCK = {}, threading.Lock()
+
+
+def _job_lock(job_id):
+    with _LOCKS_LOCK:
+        return _LOCKS.setdefault(job_id, threading.RLock())
+
+
 @contextmanager
 def page_lock(job_id):
     """A scan's data, fresh and locked until it's written back (yields None when the scan is gone):
-    pages read side by side, and Pause, each change their own part without undoing another's."""
-    job = db.session.get(ScanJob, job_id, with_for_update=True, populate_existing=True)
-    if job is None:
-        db.session.rollback()
-        yield None
-        return
-    data = get_data(job)
-    states = [p.get('state') for p in data.get('pages') or []]
-    try:
-        yield data
-    except BaseException:
-        db.session.rollback()
-        raise
-    put_data(job, data)
-    author = job.author_id
-    db.session.commit()
+    pages read side by side, and Pause, each change their own part without undoing another's. (MySQL locks
+    the row; SQLite, the sandbox's and the tests', has no row locks, so the reading threads of one process
+    also take a lock of their own: two pages' writes at once lost one of them, the tests 2026-10-25.)"""
+    with _job_lock(job_id):
+        job = db.session.get(ScanJob, job_id, with_for_update=True, populate_existing=True)
+        if job is None:
+            db.session.rollback()
+            yield None
+            return
+        data = get_data(job)
+        states = [p.get('state') for p in data.get('pages') or []]
+        try:
+            yield data
+        except BaseException:
+            db.session.rollback()
+            raise
+        put_data(job, data)
+        author = job.author_id
+        db.session.commit()
     #a page started, read or failed: its teacher's open pages hear at once (scan rows are quiet
     #otherwise, app/push.py), so the scan's progress needs no asking every few seconds (the owner,
     #2026-10-20)
@@ -541,8 +552,12 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                 for p in data['pages']:
                     if p['state'] in ('waiting', 'reading'):
                         p.update(state='error', error='Something went wrong while reading this page. Please try again.')
+                #(no page is still out with the AI after this, so reading one again starts at once; and a workbook
+                #moved to the Trash meanwhile stays there: the code critic, 2026-10-25)
+                data.pop('out', None)
                 put_data(job, data)
-                job.status = 'ready'
+                if job.status == 'reading':
+                    job.status = 'ready'
                 db.session.commit()
         finally:
             db.session.remove()
@@ -564,7 +579,7 @@ def _tell_done(job):
         body = 'Your workbook “{}” has been read: {} of {} pages are ready to check; {} didn’t make it{}.'.format(
             job.name, done, len(pages), failed, ' ({} took too long)'.format(slow) if slow else '')
     else:
-        body = 'Your workbook “{}” couldn’t be read. Open it to try again.'.format(job.name)
+        body = 'Your workbook “{}” couldn’t be read. Open it and press “Read this page”.'.format(job.name)
     notify(job.author_id, body, '/quiz/scan/{}'.format(job.id))
 
 
@@ -611,7 +626,9 @@ class Progress:
         now = (name, pct)
         if now == self.shown:
             return
-        if pct is not None and self.shown and self.shown[0] == name and time.monotonic() - self.last < 2:
+        #(a new percent of the same step at most every 5 seconds: each is a write of the whole workbook's draft,
+        #and the page asks every 3; the code critic, 2026-10-25)
+        if pct is not None and self.shown and self.shown[0] == name and time.monotonic() - self.last < 5:
             return
         self.shown, self.last = now, time.monotonic()
         try:
@@ -645,7 +662,9 @@ def mark_saved(job_id, data, ns, made):
         if fresh is None:
             return 0
         for k, v in data.items():
-            if k not in ('pages', 'run', 'dropped_run', 'paused', 'pausing', 'reading_since', 'out', '_plan'):
+            #(nor what the reading, Stop this page or the Trash changed since the page was loaded: the code critic, 2026-10-25)
+            if k not in ('pages', 'run', 'dropped_run', 'paused', 'pausing', 'reading_since', 'out', '_plan',
+                         'stopped', 'only', 'trashed_at', 'trashed_by', 'put_away'):
                 fresh[k] = v
         for i, p in enumerate(data.get('pages') or []):
             if i >= len(fresh['pages']):
@@ -2086,16 +2105,23 @@ def _save_all(job, data, author, made_so_far):
     book = _slug(data.get('name') or job.name)
     leads = lead_of(data)
     pictures, for_item, for_quiz, kept_of = made_so_far['pictures'], {}, {}, {}
-    #1. the pictures, cropped into the pictures folder (not a page kept back for later)
+    #1. the pictures, cropped into the pictures folder (not a page kept back for later). A picture on a page not
+    #made now goes too when it's for a problem or quiz made now: pages are made one at a time, so a picture on
+    #page 2 for the top of page 1's quiz would otherwise never reach it (the tests, 2026-10-25)
+    now = {p['n'] for p in data['pages'] if p.get('state') == 'done' and p.get('save') is not False}
+    def for_now(use):
+        m = re.match(r'^(?:item|quiz):(\d+)', use or '')
+        return bool(m) and leads.get(int(m.group(1)), int(m.group(1))) in {leads.get(n, n) for n in now}
     for page in data['pages']:
-        if page.get('state') != 'done' or page.get('save') is False:
+        if page.get('state') != 'done':
             continue
+        here = page['n'] in now
         for pic in page.get('pictures', []):
-            if not (pic.get('keep') or pic.get('use')):
+            if not (pic.get('keep') or pic.get('use')) or (not here and not for_now(pic.get('use'))):
                 continue
             fname = save_picture(job, page['n'], pic['box'], '{}-p{}-{}'.format(book, page['n'], _slug(pic.get('label'))))
             pictures.append(fname)
-            if pic.get('keep'):
+            if pic.get('keep') and here:
                 kept_of.setdefault(page['n'], []).append(fname)
             use = pic.get('use') or ''
             m = re.match(r'^item:(\d+):(\d+)$', use)

@@ -24,5 +24,6 @@
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(soon);
   window.addEventListener('resize', function () { clearTimeout(soon._t); soon._t = setTimeout(fit, 150); });
   document.addEventListener('qgen-filtered', soon);
+  document.addEventListener('qgen-swapped', soon);   // (a sorted list swapped in: static/js/sorttable.js)
   document.addEventListener('toggle', soon, true);
 })();

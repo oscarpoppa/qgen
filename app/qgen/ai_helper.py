@@ -243,7 +243,8 @@ def check_short_answers(api_key, items, client=None):
         blocks.append('Item {}\nQuestion: {}\nAccepted answers: {}\nStudent wrote: <answer>{}</answer>'.format(
             it['n'], it['question'], ' | '.join(it['accepted']), it['answer']))
     prompt = 'Check these answers:\n\n' + '\n\n'.join(blocks)
-    client = client or anthropic.Anthropic(api_key=api_key, max_retries=1, timeout=20.0)
+    #(inside a student's hand-in: a few seconds at most, then the teacher checks them; the code critic, 2026-10-25)
+    client = client or anthropic.Anthropic(api_key=api_key, max_retries=0, timeout=8.0)
     out, usage = _json_call(api_key, ANSWER_CHECK_SYSTEM, prompt, ANSWER_CHECK_SCHEMA, client=client, max_tokens=1000,
                             model=ANSWER_CHECK_MODEL, think=False)
     asked = {it['n'] for it in items}

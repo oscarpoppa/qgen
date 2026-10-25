@@ -31,7 +31,7 @@ def test_defaults_are_what_the_site_used_before(app_db):
     assert (v['list_grading'], v['list_handins'], v['list_assigned']) == (5, 10, 10)
     assert 'list_messages' not in v
     assert (v['grace_minutes'], v['max_api_answer'], v['max_message']) == (2, 20000, 2000)
-    assert (v['ai_hourly'], v['ai_model']) == (30, 'claude-opus-5')
+    assert (v['ai_hourly'], v['ai_model'], v['scan_model'], v['ai_short_answers']) == (30, 'claude-haiku-5-5', 'claude-opus-5-5', 'on')
     assert (v['min_password'], v['lockout_tries'], v['lockout_minutes'], v['token_days']) == (8, 10, 15, 90)
     assert tuning.seen_every() == timedelta(minutes=1)
 
@@ -80,7 +80,7 @@ def test_saving_checking_and_resetting(app_db):
     teacher.post(PAGE, data={'reset': 'online_window'})
     assert tuning.get('online_window') == 2 and tuning.get('ai_model') == 'claude-sonnet-5-5'
     teacher.post(PAGE, data={'reset': 'all'})
-    assert tuning.get('ai_model') == 'claude-opus-5'
+    assert tuning.get('ai_model') == 'claude-haiku-5-5'
     # setting a value back to its default stores nothing
     from app.qgen.models import Setting
     teacher.post(PAGE, data=form(grace_minutes=4))
@@ -94,7 +94,7 @@ def test_a_broken_stored_value_means_the_default(app_db):
     Setting.put('tune.online_window', 'banana')
     Setting.put('tune.ai_model', 'not-a-model')
     Setting.put('tune.max_message', '999999999')
-    assert tuning.get('online_window') == 2 and tuning.get('ai_model') == 'claude-opus-5' and tuning.get('max_message') == 2000
+    assert tuning.get('online_window') == 2 and tuning.get('ai_model') == 'claude-haiku-5-5' and tuning.get('max_message') == 2000
 
 
 def test_online_settings_take_effect(app_db):

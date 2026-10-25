@@ -3685,7 +3685,7 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-join.is-joined { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .scan-join:disabled { opacity: .3; cursor: default; }
 .scan-head-thumb-link { line-height: 0; flex: 0 0 auto; }
-.scan-head-thumb { width: 26px; height: 34px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: 3px; background: #fff; }
+.scan-head-thumb { width: 26px; height: 34px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
 details.scan-page > summary .scan-head-thumb-link { margin-right: 4px; }
 .scan-page-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .scan-page-head h2 { margin: 0; font-size: var(--fs-lg); }
@@ -3724,11 +3724,11 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
 .panel-extras > .showing-btn:hover { border-color: var(--accent); filter: none; }
 .panel-extras > .btn-icon { align-self: center; margin-bottom: 3px; }
 .panel-extras .pinned-btn { position: relative; }
-.panel-extras .pin-count { position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px;
+.panel-extras .pin-count { position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px;
   font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; background: var(--accent-soft); color: var(--accent); }
 /* a page not read yet, or that didn't make it, opened (the owner, 2026-10-25, CX4): the page large beside what was read */
 .scan-failed-body { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; margin-top: 10px; align-items: start; }
-.scan-failed-pic { width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--r-md, 8px); display: block; }
+.scan-failed-pic { width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--r); display: block; }
 .scan-read-list { margin: 4px 0 0; padding-left: 1.6em; max-height: 480px; overflow: auto; }
 .scan-read-list li { margin: 2px 0; }
 @media (max-width: 699px) { .scan-failed-body { grid-template-columns: 1fr; } }

@@ -79,6 +79,15 @@
         //(a page started or finished: drawn again, so each page's box shows how it stands; not over
         //edits not saved yet, the owner 2026-10-24, CA9: then a finished page's box just goes)
         if (moved && !edited()) { location.replace(location.href); return; }
+        //(with edits not saved yet the page isn't drawn again: once every page is read, the buttons that were waiting
+        //for it work again, in place; the code critic, 2026-10-25)
+        if (!s.reading) {
+          document.querySelectorAll('[data-after-reading]').forEach(function (b) {
+            b.disabled = false;
+            b.title = b.dataset.afterReading;
+            b.removeAttribute('data-after-reading');
+          });
+        }
         s.pages.forEach(function (p) {
           var bar = document.querySelector('#scan-page-' + p.n + ' .scan-progress-bar');
           if (bar && p.state === 'done') bar.hidden = true;
