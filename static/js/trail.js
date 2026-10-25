@@ -3,8 +3,11 @@
  * Each browser tab keeps its own trail of the pages visited (sessionStorage): the address,
  * and the page's name (its title). A page counts once however its address changes (a
  * folder picked, a form saved, a reload): only its latest address is kept. Coming back to
- * a page already on the trail (its Back button, the browser's Back, or straight back to
- * the page before) goes back along the trail instead of adding to it, so Back never loops.
+ * a page already on the trail by going back (its Back button, the ← arrow or the browser's Back)
+ * goes back along the trail instead of adding to it.
+ * (A link to a page already on the trail, even the page just before, is a step forward, as in the
+ * browser: the trail grows, so ← and → go back and forward along it as far as it goes. It used to
+ * count as Back, and the two arrows flipped between two pages; the owner, 2026-10-25.)
  *
  * A Back button is <a data-back>: drawn by the server with a sensible place to go (it works
  * without this script), then pointed at the page before this one on the trail, named after
@@ -69,7 +72,7 @@
     trail.push(here);                                       // Forward: the next page gone back from
     ahead = ahead.slice(1);
     document.documentElement.setAttribute('data-came-back', '');
-  } else if (last !== -1 && (going === here.k || historyMove || last === trail.length - 2)) {
+  } else if (last !== -1 && (going === here.k || historyMove)) {
     ahead = trail.slice(last + 1).concat(ahead);            // back to a page on the trail: the
     trail = trail.slice(0, last).concat([here]);            // pages after it are where Forward goes
     //(put back as it was, static/js/keep.js, only for a real Back; a link to the page before is a
