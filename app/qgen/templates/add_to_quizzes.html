@@ -46,7 +46,7 @@
         </div>
       </div>
       {# or a new quiz with the problems checked in it; its Back comes back to the Problems page #}
-      <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make new quiz</a></p>
+      <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make new quiz</a></p>
     </div>
     <div class="assign-go btn-row"><button class="btn btn-big" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
   </div>
@@ -88,7 +88,11 @@
     e.preventDefault();
     var list = ids();
     if (!list.length) { mark(perr, true); perr.scrollIntoView({ block: 'center' }); return; }
-    location.href = make.getAttribute('href').split('?')[0] + '?problems=' + list.join(',') + '&next=' + encodeURIComponent(make.dataset.next);
+    var go = function () { location.href = make.getAttribute('href').split('?')[0] + '?problems=' + list.join(',') + '&next=' + encodeURIComponent(make.dataset.next); };
+    //(more checked than the Technical setting allows without asking: "Make a quiz with 254 problems?", as on Problems: the critic, 2026-10-24)
+    var over = parseInt(make.dataset.askOver, 10);
+    if (over && list.length > over && window.qgenAsk) window.qgenAsk('Make a quiz with ' + list.length + ' problems?', 'Continue').then(function (yes) { if (yes) go(); });
+    else go();
   });
 })();
 </script>

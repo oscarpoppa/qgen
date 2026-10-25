@@ -71,9 +71,10 @@
       });
     }
     setTimeout(function () { dialog.close(); }, 0);
-    //(done with them: unchecked when the page comes back, the owner 2026-10-24)
-    if (window.qgenCheckedForget) window.qgenCheckedForget();
   });
+  //(done with them: unchecked when the page comes back, the owner 2026-10-24; only once the form really goes,
+  //after Take out's own question: static/js/takeout.js forgets them itself when it sends; found by the critic)
+  form.addEventListener('submit', function (e) { if (!e.defaultPrevented && window.qgenCheckedForget) window.qgenCheckedForget(); });
   if (sel.querySelector('option[value=""]')) sel.required = true;
 
   function checked() {

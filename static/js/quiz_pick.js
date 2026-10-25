@@ -139,6 +139,7 @@
     }
     //Add to quizzes: its own page, with these problems (it was a dialog: the owner, 2026-10-24); it
     //comes back to this view and tab
+    var fromChecked = false;  // (the checked bar's button, not one row's icon: only then are the checked ones done after)
     function ask(ids) {
       if (!ids.length) return;
       var q = new URLSearchParams(), here = new URLSearchParams(location.search);
@@ -146,7 +147,7 @@
       var view = document.querySelector('#file-form input[name="view"], input[name="view"]');
       if (view && view.value) q.set('view', view.value);
       if (here.get('tab')) q.set('tab', here.get('tab'));
-      if (window.qgenCheckedLeaving) window.qgenCheckedLeaving();
+      if (fromChecked && window.qgenCheckedLeaving) window.qgenCheckedLeaving();
       location.href = '/quiz/addtoquiz/pick?' + q.toString();
     }
     document.addEventListener('click', function (e) {
@@ -154,8 +155,8 @@
       if (!b || b.disabled) return;
       if (b.dataset.addQuiz === 'checked') {
         var ids = checkedIds();
-        askIfMany(b, ids.length, 'Add ' + ids.length + ' problems?', function () { ask(ids); });
-      } else ask([b.dataset.addQuiz]);
+        askIfMany(b, ids.length, 'Add ' + ids.length + ' problems?', function () { fromChecked = true; ask(ids); });
+      } else { fromChecked = false; ask([b.dataset.addQuiz]); }
     });
 
     //picking for the quiz being built

@@ -831,8 +831,13 @@ def paper_problems(vquiz):
 
 @qgen_bp.app_template_global('paper_pages')
 def paper_pages(vquiz):
-    """How many Paper only pages a quiz has (0: nothing to print)."""
-    return len(paper_problems(vquiz))
+    """How many Paper only pages a quiz has (0: nothing to print); worked out once a page, not once a row (People has a
+    row per student and quiz: the critic, 2026-10-24)."""
+    from flask import g
+    seen = g.setdefault('paper_pages', {})
+    if vquiz.id not in seen:
+        seen[vquiz.id] = len(paper_problems(vquiz))
+    return seen[vquiz.id]
 
 
 @qgen_bp.route('/quiz/print/<int:vqid>')
@@ -843,8 +848,9 @@ def print_paper(vqid):
     """The quiz's paper pages, one copy per student with their name on top; the print
     dialog opens by itself."""
     vquiz = db.get_or_404(VQuiz, vqid)
-    ids = [int(u) for u in request.args.getlist('users') if u.isdigit()]
-    students = [u for u in (db.session.get(User, i) for i in dict.fromkeys(ids)) if u]
+    #(one student at a time, never a stack, even from a hand-made address: the owner, 2026-10-21, To do 7)
+    ids = [int(u) for u in request.args.getlist('users') if u.isdigit()][:1]
+    students = [u for u in (db.session.get(User, i) for i in ids) if u]
     then = next_arg(url_for('qgen.quiz_results_page', vqid=vquiz.id))
     return render_template('print_paper.html', title='Print: ' + vquiz.title, vquiz=vquiz, pages=paper_problems(vquiz),
                            students=students or [None], then=then, then_name=place_name(then), today=datetime.now())

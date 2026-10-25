@@ -75,7 +75,7 @@
 {%- endmacro %}
 {# one student's paper pages of this quiz (its Paper only problems) to print, with his/her name on top: one
    thing at a time, never a stack (the owner, 2026-10-21, To do 7). Only a quiz with Paper only problems has it;
-   a long one asks first (static/js/printone.js) #}
+   a long one asks first (static/js/confirm.js) #}
 {% macro print_button(g, student) -%}
 {%- set n = paper_pages(g.vquiz) %}
 {%- if n %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=g.vquiz.id, users=[student.id], next=request.full_path) }}" data-print-pages="{{ n }}" title="Print: {{ student.shown_name }}’s paper page{{ '' if n == 1 else 's' }} of “{{ g.vquiz.title }}” ({{ n }} page{{ '' if n == 1 else 's' }}), with his/her name on top">{{ icon_label('lc-printer', 'Print') }}</a>{% endif %}

@@ -194,7 +194,11 @@ document.addEventListener('qgen-stash-redrawn', foldList);
   document.addEventListener('qgen-stash-redrawn', restore);
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (t.matches && t.matches('input.stash-pick')) { set(t.value, t.checked); save(); show(); }
+    if (t.matches && t.matches('input.stash-pick')) {
+      set(t.value, t.checked); save(); show();
+      //(in the Checked folder, one unchecked leaves it at once, not at the next reload: the critic, 2026-10-24)
+      if (!t.checked && /[?&]stash=checked/.test(location.search)) { var tr = t.closest('tr'); if (tr) tr.hidden = true; }
+    }
     if (t.matches && t.matches('[data-stash-all]')) { boxes().forEach(function (b) { b.checked = t.checked; set(b.value, t.checked); }); save(); show(); }
   });
   //(the Checked folder opened with an old address: what's checked now)

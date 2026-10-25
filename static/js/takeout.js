@@ -142,6 +142,9 @@
       var go = function (choice) {
         if (choice) hidden(form, 'confirm', choice);
         if (sub && sub.name) hidden(form, sub.name, sub.value);
+        //(the checked bar's: done with the checked ones, unchecked when the page comes back; not before the
+        //question is answered, so a Cancel keeps them: static/js/checked.js)
+        if (form.id === 'file-form' && window.qgenCheckedForget) window.qgenCheckedForget();
         form.submit();  // (no submit event: not asked again; the added fields go with it)
       };
       //(the owner, 2026-10-15: every take-out says where each will go, up to the folder this one

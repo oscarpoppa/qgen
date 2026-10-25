@@ -235,7 +235,7 @@
   //2026-10-24: every form missing something says so, in red, where it's needed)
   hidden.form.addEventListener('submit', function (e) {
     //(saved with problems from the Problems page's checked ones: unchecked there on return, the owner 2026-10-24)
-    if (order.length) { if (window.qgenCheckedDone) window.qgenCheckedDone(); return; }
+    if (order.length) { if (/[?&]problems=/.test(location.search) && window.qgenCheckedDone) window.qgenCheckedDone(); return; }
     var picker = document.getElementById('problem-picker');
     if (!picker || !window.qgenPickError) return;
     e.preventDefault();

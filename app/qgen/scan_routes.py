@@ -635,6 +635,10 @@ def scan_move_many():
         SC.move_scan(job, to)
     where = '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'
     flash('Moved {} to {}.'.format('“{}”'.format(jobs[0].name) if len(jobs) == 1 else '{} scans'.format(len(jobs)), where), 'success')
+    #(the folder that was open stays open, as after one scan's move)
+    if 'stay' in request.form:
+        stay = request.form.get('stay') or None
+        return _stash_back(None if stay == 'checked' else stay)
     return _stash_back(to or None)
 
 

@@ -9,13 +9,18 @@
   //the checked ones leave for another page to be acted on (Assign quizzes, Add to quizzes, New quiz):
   //qgenCheckedLeaving() here, then qgenCheckedDone() there once the action is sent, and coming back
   //here they're unchecked; Cancel there leaves them checked (the owner, 2026-10-24)
-  window.qgenCheckedLeaving = function () { try { sessionStorage.setItem('qgen-checked-from', location.pathname); } catch (e) {} };
+  //(the mark lasts 30 minutes and goes with a Cancel, so a later, unrelated action never clears them: found by the critic, 2026-10-24)
+  window.qgenCheckedLeaving = function () { try { sessionStorage.setItem('qgen-checked-from', JSON.stringify({ p: location.pathname, at: Date.now() })); } catch (e) {} };
   window.qgenCheckedDone = function () {
     try {
-      var from = sessionStorage.getItem('qgen-checked-from');
-      if (from) { sessionStorage.removeItem('qgen-checked:' + from); sessionStorage.removeItem('qgen-checked-from'); }
+      var from = JSON.parse(sessionStorage.getItem('qgen-checked-from') || 'null');
+      sessionStorage.removeItem('qgen-checked-from');
+      if (from && from.p && Date.now() - from.at < 30 * 60e3) sessionStorage.removeItem('qgen-checked:' + from.p);
     } catch (e) {}
   };
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('a[data-back-href]')) { try { sessionStorage.removeItem('qgen-checked-from'); } catch (x) {} }
+  }, true);
 })();
 (function () {
   var form = document.getElementById('file-form');

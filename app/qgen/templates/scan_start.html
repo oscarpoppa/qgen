@@ -139,8 +139,8 @@
     {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All scans{% endif %}{% endset %}
     <div class="stash-main folder-filter named-box has-onetab{{ ' folder-open-empty' if not stash_shown }}">
       <div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs">
-        <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} scan{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
-        {#- (the Checked folder's “Apply to checked”: Move to folder, Discard) #}
+        <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'lc-folder-check' if stash_view == 'checked' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} scan{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
+        {#- (the Checked folder's “Apply to checked”: Move to folder, Discard; on the tab row, where every folder page has it) #}
         {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked scans to a folder, or discard them">Apply to checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
         {% if stash_node %}<span class="folder-filter-tools-now">
           <details class="folder-tools">
@@ -236,8 +236,11 @@
     <form method="post" action="{{ url_for('qgen.scan_move_many') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div data-stash-items></div>
+      {#- (the folder open now stays open after the move, as after one scan's: the critic, 2026-10-24) #}
+      <input type="hidden" name="stay" value="{{ request.args.get('stash') or '' }}">
       <p data-pick-head><strong>Move the <span data-stash-checked-words></span> to a folder</strong><br><span class="muted small">Choose a folder.</span></p>
-      <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to" data-checked="top">
+      {#- (nothing chosen to begin with: Move without choosing says “Choose a folder first.”, never a quiet move to Uncategorized) #}
+      <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to">
         <script type="application/json" data-pick-rows>{{ stash_pick_rows|tojson }}</script>
       </div>
       <div class="btn-row"><button class="btn" title="Put the checked scans in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
