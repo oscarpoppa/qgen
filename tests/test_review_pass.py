@@ -239,10 +239,10 @@ def test_editing_a_quiz_returns_where_it_started(app_db):
     start = 'http://localhost/quiz/results/{}'.format(vq.id)
     page = teach.get('/quiz/editvquiz/{}'.format(vq.id), headers={'Referer': start}).data.decode()
     assert '<input type="hidden" name="next" value="/quiz/results/{}" data-back-next>'.format(vq.id) in page
-    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1b', 'vplist': vq.vpid_lst.strip('[]'), 'shuffle_order': '',
+    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1b', 'vplist': vq.vpid_lst.strip('[]'), 'keep_order': 'y',
                                                           'retake_rule': 'best', 'next': '/quiz/results/{}'.format(vq.id)})
     assert r.headers['Location'] == '/quiz/results/{}'.format(vq.id)
-    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1c', 'vplist': vq.vpid_lst.strip('[]'), 'shuffle_order': '',
+    r = teach.post('/quiz/editvquiz/{}'.format(vq.id), data={'title': 'Week 1c', 'vplist': vq.vpid_lst.strip('[]'), 'keep_order': 'y',
                                                           'retake_rule': 'best', 'next': 'https://evil.example/'})
     assert 'evil' not in r.headers['Location']
 
@@ -1659,8 +1659,7 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         #Grading's "Grade the oldest" is gone)
         '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
                                            'disabled title="Give another attempt: A new attempt can be given once the latest one is handed in and graded">'],
-        #(no Print paper pages on a quiz's history: the owner, 2026-10-21; Results by quiz's rows have it)
-        '/quiz/results': ['disabled title="Print paper pages: this quiz has no Paper only questions"'],
+        #(no printer for a whole class on Results by quiz: one student's paper pages print from his/her own row, the owner 2026-10-21, To do 7)
         '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
         '/userdet': ['disabled title="Delete for good: You can’t delete your own account">',
@@ -1822,7 +1821,7 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     row = row[row.index('<td class="actions">'):]
     row = row[:row.index('</tr>')]
     #(the name only opens the row; Assign a quiz, Message and Student page are icons at its end: the owner, 2026-10-21)
-    assert 'href="/' not in head and 'aria-label="Assign a quiz"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
+    assert 'href="/' not in head and 'aria-label="Assign quizzes"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     #(no folder boxes inside the list any more: one folder at a time, the owner 2026-10-22)
     assert 'macro sub_box' not in folders and 'sub-tools' not in folders

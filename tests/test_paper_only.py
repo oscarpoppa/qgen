@@ -52,18 +52,20 @@ def test_take_grade_and_print(app_db):
     vq, pic = _quiz(app, db, teacher)
     sam, kim = User.query.filter_by(username='sam').one(), User.query.filter_by(username='kim').one()
 
-    # assigning sends the teacher to print a copy for each student, then back
+    # assigning goes back where it came from, no print of a stack; each student's own row has a printer for
+    # just his/her paper pages (one thing at a time: the owner, 2026-10-21, To do 7)
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id, kim.id], 'next': '/quiz/results/{}'.format(vq.id)})
-    assert r.status_code == 302 and '/quiz/print/{}'.format(vq.id) in r.headers['Location']
-    page = teacher.get(r.headers['Location']).data.decode()
-    assert page.count('class="paper-sheet"') == 2
-    assert 'sam' in page and 'kim' in page and 'Color the triangles red.' in page and pic in page
+    assert r.status_code == 302 and '/quiz/print/' not in r.headers['Location']
+    #(the print page first: its way back is the page named by next=, before other pages are visited)
+    page = teacher.get('/quiz/print/{}?users={}&next=/quiz/results/{}'.format(vq.id, sam.id, vq.id)).data.decode()
+    assert page.count('class="paper-sheet"') == 1
+    assert 'sam' in page and 'Color the triangles red.' in page and pic in page
     assert 'window.print()' in page
     assert 'href="/quiz/results/{}"'.format(vq.id) in no_titles(page)
-    # and later from Results by quiz's row; not on the quiz's history (it prints a worksheet per student,
-    # not that page: the owner, 2026-10-21)
-    assert 'aria-label="Print paper pages"' in teacher.get('/quiz/results').data.decode()  # (the printer icon: owner 2026-10-14)
-    assert 'aria-label="Print paper pages"' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    hist = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    for who in (sam, kim):
+        assert '/quiz/print/{}?users={}'.format(vq.id, who.id) in hist
+    assert 'aria-label="Print paper pages"' not in teacher.get('/quiz/results').data.decode()  # (no printer for the whole class)
     # students can't open it
     s = login(app, 'sam')
     assert s.get('/quiz/print/{}'.format(vq.id)).status_code == 302
@@ -142,8 +144,9 @@ def test_quiz_without_paper_redirects_as_before(app_db):
     sam = User.query.filter_by(username='sam').one()
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
     assert r.status_code == 302 and '/quiz/print' not in r.headers['Location']
-    page = teacher.get('/quiz/results').data.decode()
-    assert '/quiz/print/' not in page and 'disabled title="Print paper pages: this quiz has no Paper only questions"' in page  # grayed out, not missing
+    #(a quiz without Paper only questions has no printer anywhere: there's nothing of it to print)
+    assert '/quiz/print/' not in teacher.get('/quiz/results').data.decode()
+    assert '/quiz/print/' not in teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
 
 
 def test_assign_page_has_a_quiz_filter_like_the_students_one(app_db):

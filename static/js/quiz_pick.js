@@ -1,6 +1,6 @@
 /* Problems into quizzes from the Problems page (the owner, 2026-10-15):
- *  - Add to a quiz: a row's icon (that problem) or the checked bar's button (the checked ones)
- *    opens a small dialog to choose the quiz; they go at the end of it (/quiz/addtoquiz).
+ *  - Add to quizzes: a row's icon (that problem) or the checked bar's button (the checked ones)
+ *    opens the Add to quizzes page to choose the quizzes; they go at the end of each (/quiz/addtoquiz).
  *  - New quiz / Edit quiz: leaving in any way keeps what's filled in (this browser, 3 hours),
  *    and coming back to the page puts it back. Nothing is saved until the quiz is. */
 (function () {
@@ -99,8 +99,7 @@
       return out;
     }
 
-    //Add to a quiz
-    var dialog = document.getElementById('add-quiz-dialog');
+    //Add to quizzes
     var barBtn = document.querySelector('[data-add-quiz="checked"]');
     function keepBarBtn() {
       if (barBtn && 'noQuiz' in barBtn.dataset) { barBtn.disabled = true; barBtn.title = 'There are no quizzes yet'; }
@@ -117,6 +116,7 @@
       var ids = window.qgenCheckedIds ? window.qgenCheckedIds() : ticks.filter(function (t) { return t.checked; }).map(function (t) { return t.value; });
       if (!ids.length) return;
       askIfMany(b, ids.length, 'Make a quiz with ' + ids.length + ' problems?', function () {
+        if (window.qgenCheckedLeaving) window.qgenCheckedLeaving();
         location.href = b.dataset.makeQuiz + '?problems=' + ids.join(',') + '&next=' + encodeURIComponent(location.pathname + location.search);
       });
     });
@@ -137,53 +137,25 @@
       d.showModal();
       d.querySelector('[data-exit]').focus();
     }
-    var fromBar = false;  // (opened by the checked bar's button, not one row's)
-    function ask(ids, what) {
-      if (!dialog || !ids.length) return;
-      dialog.querySelector('[data-what]').textContent = what;
-      var box = dialog.querySelector('[data-problem-ids]');
-      box.innerHTML = '';
-      ids.forEach(function (id) {
-        var i = document.createElement('input');
-        i.type = 'hidden'; i.name = 'items'; i.value = id;
-        box.appendChild(i);
-      });
-      //(the link to a new quiz: these problems in it, and Back comes back to this page and tab)
-      var make = dialog.querySelector('[data-new-quiz]');
-      if (make) {
-        make.textContent = 'Make new quiz';  // (the owner's words, 2026-10-21)
-        make.href = make.getAttribute('href').split('?')[0] + '?problems=' + ids.join(',') + '&next=' + encodeURIComponent(location.pathname + location.search);
-      }
-      dialog.showModal();
-      var first = dialog.querySelector('.filter-list:not([hidden])') || dialog.querySelector('input[name=quiz]');
-      if (first) first.focus();
-    }
-    if (dialog) {
-      dialog.querySelector('[data-cancel]').addEventListener('click', function () { dialog.close(); });
-      //(like the Assign dialogs: the Quizzes page's folder list and the filter narrow the list
-      //(folderfilter.js, filter.js); the heading row's check box checks all shown (checkall.js); as many quizzes as wanted)
-      var err = dialog.querySelector('[data-quiz-error]');
-      var rows = Array.prototype.slice.call(dialog.querySelectorAll('.add-quiz-list tbody > tr'));
-      function sync() {
-        if (dialog.querySelector('input[name=quiz]:checked')) err.hidden = true;
-      }
-      dialog.addEventListener('change', sync);
-      sync();
-      dialog.querySelector('form').addEventListener('submit', function (e) {
-        if (!dialog.querySelector('input[name=quiz]:checked')) { e.preventDefault(); err.hidden = false; }
-    if (!e.defaultPrevented && fromBar && window.qgenCheckedClear) window.qgenCheckedClear();  // (the checked ones done: nothing stays checked)
-  });
+    //Add to quizzes: its own page, with these problems (it was a dialog: the owner, 2026-10-24); it
+    //comes back to this view and tab
+    function ask(ids) {
+      if (!ids.length) return;
+      var q = new URLSearchParams(), here = new URLSearchParams(location.search);
+      q.set('problems', ids.join(','));
+      var view = document.querySelector('#file-form input[name="view"], input[name="view"]');
+      if (view && view.value) q.set('view', view.value);
+      if (here.get('tab')) q.set('tab', here.get('tab'));
+      if (window.qgenCheckedLeaving) window.qgenCheckedLeaving();
+      location.href = '/quiz/addtoquiz/pick?' + q.toString();
     }
     document.addEventListener('click', function (e) {
       var b = e.target.closest('[data-add-quiz]');
       if (!b || b.disabled) return;
       if (b.dataset.addQuiz === 'checked') {
         var ids = checkedIds();
-        askIfMany(b, ids.length, 'Add ' + ids.length + ' problems?', function () {
-          fromBar = true;
-          ask(ids, ids.length === 1 ? 'the checked problem' : 'the ' + ids.length + ' checked problems');
-        });
-      } else { fromBar = false; ask([b.dataset.addQuiz], b.dataset.what); }
+        askIfMany(b, ids.length, 'Add ' + ids.length + ' problems?', function () { ask(ids); });
+      } else ask([b.dataset.addQuiz]);
     });
 
     //picking for the quiz being built

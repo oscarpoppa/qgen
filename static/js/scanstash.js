@@ -160,3 +160,84 @@ function foldList() {
 foldList();
 //(the page redraws its cards now and then, new rows each time: the arrows are hooked up again)
 document.addEventListener('qgen-stash-redrawn', foldList);
+
+/* The stash's check boxes (the owner, 2026-10-24, To do 10): what's checked is kept in this browser tab whatever folder is
+ * open (each folder is its own page); the Checked folder lists them (?stash=checked&checked=4,7), its "Apply to checked"
+ * moves them to a folder or discards them (asked first). Done, they're unchecked; canceled, they stay checked. */
+(function () {
+  var KEY = 'qgen-stash-checked';
+  var kept = [];
+  try { kept = JSON.parse(sessionStorage.getItem(KEY) || '[]') || []; } catch (e) { kept = []; }
+  function save() { try { sessionStorage.setItem(KEY, JSON.stringify(kept)); } catch (e) {} }
+  function boxes() { return Array.prototype.slice.call(document.querySelectorAll('input.stash-pick')); }
+  function show() {
+    document.querySelectorAll('[data-stash-checked-count]').forEach(function (el) { el.textContent = kept.length; });
+    var words = kept.length === 1 ? 'checked scan' : kept.length + ' checked scans';
+    document.querySelectorAll('[data-stash-checked-words]').forEach(function (el) { el.textContent = words; });
+    var link = document.querySelector('[data-stash-checked-link]');
+    if (link) link.href = link.getAttribute('href').split('?')[0].split('#')[0] + '?stash=checked&checked=' + kept.join(',') + '#scan-away';
+    var row = link && link.closest('.side-row');
+    //(green while anything is checked, as on every folder list: .has-checked)
+    if (row) { row.classList.toggle('is-empty', !kept.length); row.classList.toggle('has-checked', !!kept.length); }
+    var all = document.querySelector('[data-stash-all]'), b = boxes();
+    if (all) { var on = b.filter(function (x) { return x.checked; }).length; all.checked = !!b.length && on === b.length; all.indeterminate = on > 0 && on < b.length; }
+    var apply = document.querySelector('[data-stash-apply]');
+    if (apply) apply.disabled = !kept.length;
+  }
+  function set(id, on) {
+    var i = kept.indexOf(id);
+    if (on && i === -1) kept.push(id);
+    if (!on && i !== -1) kept.splice(i, 1);
+  }
+  function restore() { boxes().forEach(function (b) { if (kept.indexOf(b.value) !== -1) b.checked = true; }); show(); }
+  //(the stash's card is drawn again from the server now and then, scan_start.html: its boxes checked again)
+  document.addEventListener('qgen-stash-redrawn', restore);
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.matches && t.matches('input.stash-pick')) { set(t.value, t.checked); save(); show(); }
+    if (t.matches && t.matches('[data-stash-all]')) { boxes().forEach(function (b) { b.checked = t.checked; set(b.value, t.checked); }); save(); show(); }
+  });
+  //(the Checked folder opened with an old address: what's checked now)
+  if (/[?&]stash=checked/.test(location.search)) {
+    var asked = (new URLSearchParams(location.search).get('checked') || '').split(',').filter(Boolean);
+    if (asked.join(',') !== kept.join(',')) {
+      location.replace(location.pathname + '?stash=checked&checked=' + kept.join(',') + '#scan-away');
+      return;
+    }
+  }
+  function fill(form) {
+    var holder = form.querySelector('[data-stash-items]');
+    holder.textContent = '';
+    kept.forEach(function (id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'items'; i.value = id; holder.appendChild(i); });
+  }
+  function done() { kept = []; save(); }  // (sent: unchecked when the page comes back)
+  //(looked up each time: the card, with its dialogs, can be drawn again)
+  function el(id) { return document.getElementById(id); }
+  document.addEventListener('click', function (e) {
+    var apply = el('stash-apply'), many = el('stash-move-many'), gone = el('stash-discard-many');
+    if (e.target.closest('[data-stash-apply]')) { if (kept.length && apply) apply.showModal(); return; }
+    if (e.target.closest('#stash-apply [data-cancel]')) { apply.close(); return; }
+    if (e.target.closest('[data-stash-apply-move]')) {
+      apply.close();
+      fill(many.querySelector('form'));
+      var holder = many.querySelector('[data-folder-pick]'); var old = holder.querySelector('table'); if (old) old.remove();
+      many.showModal();
+      return;
+    }
+    if (e.target.closest('[data-stash-apply-discard]')) {
+      apply.close();
+      var q = 'Discard the ' + (kept.length === 1 ? 'checked scan' : kept.length + ' checked scans') + '? Their pages and drafts are removed; nothing from them is saved.';
+      (window.qgenAsk ? window.qgenAsk(q, 'Discard', true) : Promise.resolve(window.confirm(q))).then(function (yes) {
+        if (!yes) return;
+        fill(gone); done(); gone.submit();
+      });
+    }
+  });
+  document.addEventListener('submit', function (e) {
+    var many = e.target.closest('#stash-move-many');
+    if (!many) return;
+    if (!many.querySelector('input[name=to]:checked')) { e.preventDefault(); if (window.qgenPickError) window.qgenPickError(many.querySelector('[data-folder-pick]'), 'Choose a folder first.'); return; }
+    done();
+  });
+  restore();
+})();

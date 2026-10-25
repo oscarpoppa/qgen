@@ -38,7 +38,7 @@
       {# a student's own buttons on their heading line (no row of their own) #}
       {% if not single %}<span class="box-actions">
       {# (icons, in the same order as on the People cards: the paper plane, then the speech bubble: the owner, 2026-10-14) #}
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" data-what="{{ item.shown_name }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" data-what="{{ item.shown_name }}" title="Assign quizzes: choose quizzes to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign quizzes') }}</a>
       {#- (no Message icon: the Messages pop-over does it, the owner 2026-10-21) #}</span>{% endif %}
       {# one student: Expand all / Collapse all of their folders and quizzes, on the heading line #}
       {% if item.cquizzes and single %}<span class="head-pair"><span class="level-buttons">
@@ -88,7 +88,7 @@
 {% set single_buttons %}{% if single %}{{ back_button(url_for('user.people'), 'People', 'btn btn-secondary btn-sm' if laid_out else 'btn btn-secondary') }}
       {#- (no "Message …" here: the Messages pop-over does it, the owner 2026-10-21) #}
       <a class="btn btn-secondary{{ ' btn-sm' if laid_out }}" href="{{ url_for('user.eduser', uid=ulst[0].id) }}" title="Change {{ ulst[0].shown_name }}'s username, email or teacher status">Edit user</a>
-      <a class="btn{{ ' btn-sm' if laid_out }}" href="{{ url_for('qgen.assign', users=ulst[0].id) }}" data-what="{{ ulst[0].shown_name }}" title="Choose a quiz to give {{ ulst[0].shown_name }}">Assign a quiz to {{ ulst[0].shown_name }}</a>{% endif %}{% endset %}
+      <a class="btn{{ ' btn-sm' if laid_out }}" href="{{ url_for('qgen.assign', users=ulst[0].id) }}" data-what="{{ ulst[0].shown_name }}" title="Choose quizzes to give {{ ulst[0].shown_name }}">Assign quizzes to {{ ulst[0].shown_name }}</a>{% endif %}{% endset %}
 {% if not laid_out %}
 <div class="page-head">
   <h1>{{ title }}</h1>
@@ -148,7 +148,6 @@
 </section>
 {% endif %}
 {% endif %}
-{% include "_dialog_assign_people.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/assign_people.js') }}"></script>

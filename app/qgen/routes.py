@@ -254,6 +254,33 @@ def preview_vprob():
     errors, samples = S.preview_problem(form.qtype.data, form.question.data, form.answer.data, form.options())
     return render_template('_preview.html', errors=errors, samples=samples, essay=not get_qtype(form.qtype.data).auto_graded)
 
+#Add to quizzes: problems on the left (the Problems page's folders; the checked ones, or one row's,
+#?problems=4,7, already checked), quizzes on the right, like the Assign page (the Problems page's view
+#and tab, to go back to); it was a dialog (the owner, 2026-10-24)
+@qgen_bp.route('/quiz/addtoquiz/pick', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def add_to_quiz_page():
+    from app.assign_dialogs import assign_quizzes
+    from app import folder_tree
+    ids = {int(x) for x in request.args.get('problems', '').split(',') if x.isdigit()}
+    all_problems = S.in_use('problems').order_by(VProblem.title).all()
+    problem_root = S.subject_tree('problems', items=all_problems)[0]
+    problem_tree = folder_tree.filter_tree(problem_root, lambda f: f.title, lambda fid: None, 'problem:')
+    view = request.args.get('view') or 'all'
+    tab = request.args.get('tab')
+    values = {'folder': view} if view.isdigit() or view in ('main', 'all') else {}
+    if tab:
+        values['tab'] = tab
+    back_to_problems = url_for('qgen.list_vprobs', **values)
+    quizzes, quiz_tree = assign_quizzes()
+    #(the problems' list opens on the folder the Problems page was showing)
+    problem_start = view if view.isdigit() else ('none' if view == 'main' else 'all')
+    return render_template('add_to_quizzes.html', title='Add to quizzes', problems=all_problems, chosen=ids, view=view,
+                           problem_tree=problem_tree, problem_start=problem_start,
+                           quizzes=quizzes, quiz_tree=quiz_tree, back_to_problems=back_to_problems)
+
 #checked problems (or one row's) added to the end of a quiz the teacher picks, from the
 #Problems page; ones already in it are left where they are (the owner, 2026-10-15)
 @qgen_bp.route('/quiz/addtoquiz', methods=['POST'])
@@ -389,7 +416,7 @@ def quiz_page(form, title, vq=None, subject_error=None):
 def save_quiz_from_form(form, vq):
     errors = S.save_vquiz(vq, form.title.data, form.vplist.data, author_id=current_user.id,
                           image=form.image.data or None, calculator_ok=form.calculator_ok.data,
-                          shuffle_order=form.shuffle_order.data, retake_rule=form.retake_rule.data)
+                          shuffle_order=not form.keep_order.data, retake_rule=form.retake_rule.data)
     form.vplist.errors = errors
     return errors
 
@@ -448,6 +475,7 @@ def edvquiz(vqid):
     form = QuizForm(obj=vqobj)
     if request.method == 'GET':
         form.vplist.data = layout.dumps(layout.parse(vqobj.vpid_lst))
+        form.keep_order.data = not vqobj.shuffle_order
     subject_error = None
     if request.method == 'POST' and form.validate_on_submit():
         subject_error = subject_form_error('quizzes', new=False)
@@ -486,7 +514,7 @@ def assign_many():
         return done_('Check at least one quiz first.', error=True)
     if not students:
         return done_('Check at least one person to assign them to.', error=True)
-    done, paper = [], []
+    done = []
     for vq in quizzes:
         created, failed = S.assign(vq, students, by=current_user)
         for student, err in failed:
@@ -496,11 +524,6 @@ def assign_many():
             current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vq.title, cq.id, cq.taker.username))
         if created:
             done.append(vq)
-            if paper_problems(vq):
-                paper.append((vq, [cq.taker.id for cq in created]))
-    for vq, users in paper:
-        flash(Markup('“{}” has pages done on paper: <a href="{}">print a copy for each of them</a>.').format(
-            vq.title, url_for('qgen.print_paper', vqid=vq.id, users=users)), 'success')
     if not done:
         return done_('Nothing was assigned.', error=True)
     return done_('Assigned {} to {}.'.format(', '.join('“{}”'.format(q.title) for q in done),
@@ -726,32 +749,41 @@ def assign():
     quizzes = S.in_use('quizzes').order_by(VQuiz.title).all()
     form.vquiz.choices = [(q.id, q.title) for q in quizzes]
     form.users.choices = [(u.id, u.username) for u in User.query.order_by(User.username).all()]
-    #a link for one quiz opens on All, so that quiz is in the list
-    choice = 'all' if request.args.get('vq', '').isdigit() else S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
-    #(one that's been removed isn't in the list: then the first quiz, as with no link)
-    if request.method == 'GET' and request.args.get('vq', '').isdigit() and int(request.args['vq']) in {q.id for q in quizzes}:
-        form.vquiz.data = int(request.args['vq'])
+    #(the quizzes checked on arrival: ?vq= once or more, e.g. a quiz's paper plane, or the Quizzes
+    #page's checked ones; it replaced the Assign dialogs: the owner, 2026-10-24)
+    in_use = {q.id for q in quizzes}
+    asked = [int(v) for v in request.args.getlist('vq') if v.isdigit() and int(v) in in_use]
+    #a link for quizzes opens on All, so they're in the list
+    choice = 'all' if asked else S.valid_subject_choice('quizzes', request.args.get('subject', 'all'))
+    if request.method == 'GET':
+        form.vquiz.data = list(dict.fromkeys(asked))
+        #("Keep the quiz's order": as the quiz is set; shown only for one quiz)
+        picked = [q for q in quizzes if q.id in form.vquiz.data]
+        form.keep_order.data = len(picked) == 1 and not picked[0].shuffle_order
     if form.validate_on_submit():
-        vquiz = db.get_or_404(VQuiz, form.vquiz.data)
+        vquizzes = [db.get_or_404(VQuiz, i) for i in dict.fromkeys(form.vquiz.data)]
         #each person once, however many folders they were checked in
-        students = [db.session.get(User, uid) for uid in dict.fromkeys(form.users.data)]
-        created, failed = S.assign(vquiz, [u for u in students if u], form.opens_at.data, form.closes_at.data, form.time_limit.data,
-                                   by=current_user)
-        for student, err in failed:
-            flash(err, 'error')
-            current_app.logger.error(err)
-        for cq in created:
-            current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, cq.taker.username))
-        if created:
-            flash(Markup('Assigned “{}” to {}. <a href="{}">View the quiz</a> · <a href="{}">See its history →</a>').format(
-                vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.view_vquiz', vqid=vquiz.id),
-                url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
-        #back where they came from (a student page, a quiz's results...), else ready for the next one
-        then = next_arg(url_for('qgen.assign'))
-        if created and paper_problems(vquiz):
-            #pages done on paper: straight to printing a copy for each of them
-            return redirect(url_for('qgen.print_paper', vqid=vquiz.id, users=[cq.taker.id for cq in created], next=then))
-        return redirect(then)
+        students = [u for u in (db.session.get(User, uid) for uid in dict.fromkeys(form.users.data)) if u]
+        #(several quizzes: each keeps its own order setting, the owner's choice)
+        #(and only when the box was on the page: a post without it, e.g. an older form, keeps each quiz's own setting)
+        keep = form.keep_order.data if len(vquizzes) == 1 and request.form.get('keep_order_set') else None
+        done = []
+        for vquiz in vquizzes:
+            created, failed = S.assign(vquiz, students, form.opens_at.data, form.closes_at.data, form.time_limit.data,
+                                       by=current_user, same=form.same.data, keep_order=keep)
+            for student, err in failed:
+                flash(err, 'error')
+                current_app.logger.error(err)
+            for cq in created:
+                current_app.logger.info('{} assigned quiz: "{}" ({}) to {}'.format(current_user.username, vquiz.title, cq.id, cq.taker.username))
+            if created:
+                done.append((vquiz, created))
+                flash(Markup('Assigned “{}” to {}. <a href="{}">View the quiz</a> · <a href="{}">See its history →</a>').format(
+                    vquiz.title, ', '.join(cq.taker.shown_name for cq in created), url_for('qgen.view_vquiz', vqid=vquiz.id),
+                    url_for('qgen.quiz_results_page', vqid=vquiz.id)), 'success')
+        #back where they came from (a student page, a quiz's results...), else ready for the next one; no print of
+        #every student's paper pages from here: each student's prints from his/her own row (the owner, 2026-10-21, To do 7)
+        return redirect(next_arg(url_for('qgen.assign')))
     #the quizzes to pick from: one list (A to Z) with the Quizzes page's folders down its side,
     #like the students beside it (static/js/folderfilter.js); ?subject= opens on that folder
     from app import folder_tree
@@ -759,15 +791,12 @@ def assign():
     quiz_tree = folder_tree.filter_tree(quiz_root, lambda f: f.title, lambda fid: None, 'quiz:')
     quiz_start = choice
     #(opened for one quiz, e.g. View's paper plane: on that quiz's own folder, its first one A to Z,
-    #or Uncategorized when it's in none, so it's in sight: the owner, 2026-10-19)
-    if request.args.get('vq', '').isdigit() and request.method == 'GET':
-        came = db.session.get(VQuiz, int(request.args['vq']))
+    #or Uncategorized when it's in none, so it's in sight: the owner, 2026-10-19; several: All)
+    if len(asked) == 1 and request.method == 'GET':
+        came = db.session.get(VQuiz, asked[0])
         if came is not None:
             homes = sorted(came.vqgroups, key=lambda g: (g.title or '').lower())
             quiz_start = str(homes[0].id) if homes else 'none'
-    #nothing picked yet: the first quiz, as the menu had it
-    if form.vquiz.data is None and quizzes:
-        form.vquiz.data = quizzes[0].id
     #the people to choose from: one checklist with the People folders as tabs over it, like every
     #folder page (static/js/folderfilter.js); from People, some come already checked (?users=...,
     #or everyone in ?folder=, which opens on that folder's tab)
@@ -787,7 +816,7 @@ def assign():
     target = request.form.get('next') if request.method == 'POST' else None
     came_from = back(None, None) if not target else (safe_next(target), place_name(safe_next(target)))
     came_from = came_from if came_from and came_from[0] and came_from[1] else None
-    return render_template('assign.html', title='Assign a quiz', form=form, came_from=came_from,
+    return render_template('assign.html', title='Assign quizzes', form=form, came_from=came_from,
                            quizzes=quizzes, quiz_tree=quiz_tree, quiz_start=quiz_start,
                            people=people, root=root, chosen=chosen, pick_tree=pick_tree, pick_start=start)
 
@@ -798,6 +827,12 @@ def paper_problems(vquiz):
     probs = {p.id: p for p in vquiz.vproblems}
     ids = dict.fromkeys(i for i in layout.all_ids(layout.parse(vquiz.vpid_lst)) if i in probs)
     return [probs[i] for i in ids if get_qtype(probs[i].qtype).paper]
+
+
+@qgen_bp.app_template_global('paper_pages')
+def paper_pages(vquiz):
+    """How many Paper only pages a quiz has (0: nothing to print)."""
+    return len(paper_problems(vquiz))
 
 
 @qgen_bp.route('/quiz/print/<int:vqid>')
@@ -1534,7 +1569,7 @@ def check_vquiz():
     this_id = request.args.get('vq', type=int)
     others = {q.title.strip().lower() for q in VQuiz.query.all() if q.id != this_id and q.title}
     hints = quiz_hints(form.title.data, vpids, form.calculator_ok.data, others, problems,
-                       lay=lay, shuffle_order=form.shuffle_order.data)
+                       lay=lay, shuffle_order=not form.keep_order.data)
     return jsonify(hints=with_folder_hint('quizzes', hints, new=not this_id))
 
 

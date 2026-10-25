@@ -256,7 +256,7 @@ def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
     key = 'quiz:{}'.format(VQuiz.query.one().id)
     assert tree[0]['id'] == math.id and key in tree[0]['keys']
     assert tree[0]['children'][0]['id'] == alg.id and key in tree[0]['children'][0]['keys']
-    assert 'type="radio" name="vquiz" value="{}"'.format(VQuiz.query.one().id) in quiz
+    assert 'type="checkbox" name="vquiz" value="{}"'.format(VQuiz.query.one().id) in quiz
 
 
 def test_new_items_can_be_given_a_subject(app_db):
@@ -627,7 +627,7 @@ def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db)
     assert 'data-remember="write-to" data-tools-home="#write-to-bar" data-style="list"' in page
     assert page.count('data-style="list"') == 3
     assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
-    assert page.index('id="pick-quiz"') < page.index('class="assign-side"') < page.index('id="pick-people"') < page.index('class="assign-go"') < page.index('class="card assign-when"')
+    assert page.index('id="pick-quiz"') < page.index('class="assign-side"') < page.index('id="pick-people"') < page.index('class="assign-go btn-row"') < page.index('class="card assign-when"')
     assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()
 
 
@@ -645,9 +645,10 @@ def test_assign_with_no_quizzes_says_so_and_a_removed_quizs_link_picks_the_first
     a, b = VQuiz.query.filter_by(title='A quiz').one(), VQuiz.query.filter_by(title='B quiz').one()
     b.removed_at = datetime.now()
     db.session.commit()
-    # a link to a removed quiz: it isn't offered, so the first quiz is checked, as with no link
+    # a link to a removed quiz: it isn't offered, and nothing is checked for the teacher (several quizzes can
+    # be checked now, none to begin with: the owner, 2026-10-24)
     page = teacher.get('/quiz/assign?vq={}'.format(b.id)).data.decode()
-    assert 'value="{}" id="vquiz-{}" checked'.format(a.id, a.id) in page
+    assert 'value="{}" id="vquiz-{}">'.format(a.id, a.id) in page and 'name="vquiz" value="{}" id="vquiz-{}" checked'.format(a.id, a.id) not in page
     assert 'vquiz-{}'.format(b.id) not in page
 
 

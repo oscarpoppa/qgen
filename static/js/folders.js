@@ -495,9 +495,10 @@
         lab.lastChild.textContent += ' (here now)';
       } });
     err.hidden = true;
+    window.qgenPickOk(list);
     box.querySelector('[data-ok]').onclick = function () {
       var r = list.querySelector('input[name=move-to]:checked');
-      if (!r) { err.hidden = false; return; }
+      if (!r) { window.qgenPickError(list, 'Choose a folder first.'); return; }
       form.querySelector('input[name=to]').value = r.value;
       box.close();
       form.submit();

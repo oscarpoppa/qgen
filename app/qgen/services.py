@@ -7,6 +7,7 @@ pages; problems are reported by raising ServiceError (worded for people)
 or by returning lists of plain-language errors.
 """
 import json
+import copy
 import random
 from datetime import datetime
 
@@ -805,21 +806,54 @@ def quiz_varies(vq, tries=8):
 
 # ---------------------------------------------------------------- assigning
 
-def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None):
-    """One student's own copy of a quiz. Raises ServiceError if it can't be made."""
+def draw_quiz(vquiz, same='order', shuffle=None):
+    """One drawing of a quiz to give every student alike (Assign's "Every student gets"): the
+    problems picked and put in order once; with same='all', each problem's numbers and choices
+    drawn once too. create_cquiz's `plan`. `shuffle`: None for the quiz's own setting."""
+    ordered = layout.draw(layout.parse(vquiz.vpid_lst), random)
+    if vquiz.shuffle_order if shuffle is None else shuffle:
+        random.shuffle(ordered)
+    if same != 'all':
+        return [(pid, None) for pid in ordered]
+    plan, seen = [], set()
+    for pid in ordered:
+        vprob = db.session.get(VProblem, pid)
+        drawn = instantiate_problem(vprob)
+        tries = 0
+        while (pid, drawn[0]) in seen and tries < 30:
+            drawn = instantiate_problem(vprob)
+            tries += 1
+        seen.add((pid, drawn[0]))
+        plan.append((pid, drawn))
+    return plan
+
+
+def create_cquiz(vquiz, assignee, opens_at=None, closes_at=None, time_limit=None, plan=None, shuffle=None):
+    """One student's own copy of a quiz. Raises ServiceError if it can't be made. `plan`
+    (draw_quiz) gives every student the same order, or the very same problems. `shuffle`: None
+    for the quiz's own setting, else this assignment's (Assign's "Keep the quiz's order")."""
     try:
         cq = CQuiz(vquiz_id=vquiz.id, assignee=assignee.id, opens_at=opens_at, closes_at=closes_at, time_limit=time_limit)
         #only a quiz that opens later gets an "it's open now" notice (see announce_opened)
         cq.open_notice_sent = not (opens_at and opens_at > datetime.now())
         cq.seen_by_taker = False  # counted next to "My quizzes" until they look
-        #groups ("2 of these 6") are drawn separately for each student
-        ordered = layout.draw(layout.parse(vquiz.vpid_lst), random)
-        #so "question 1 is B" means nothing to the student next door
-        if vquiz.shuffle_order:
-            random.shuffle(ordered)
+        if plan is None:
+            #groups ("2 of these 6") are drawn separately for each student
+            ordered = layout.draw(layout.parse(vquiz.vpid_lst), random)
+            #so "question 1 is B" means nothing to the student next door
+            if vquiz.shuffle_order if shuffle is None else shuffle:
+                random.shuffle(ordered)
+            plan = [(pid, None) for pid in ordered]
         seen = set()
-        for ordinal, pid in enumerate(ordered, 1):
+        for ordinal, (pid, drawn) in enumerate(plan, 1):
             vprob = db.session.get(VProblem, pid)
+            if drawn is not None:
+                #the very same problem as everyone else's (its own copy of the extra data)
+                prob, ansr, opts = drawn[0], drawn[1], copy.deepcopy(drawn[2])
+                cp = CProblem(ordinal=ordinal, conc_prob=prob, conc_ansr=ansr, vproblem_id=vprob.id)
+                cp.conc_opts = opts
+                cq.cproblems.append(cp)
+                continue
             prob, ansr, opts = instantiate_problem(vprob)
             #a problem used several times in a quiz: a different version each time, when its
             #values allow one (the owner, 2026-10-18)
@@ -862,9 +896,13 @@ def time_limit_error(opens_at, closes_at, time_limit, now=None):
             .format(time_limit, window, '' if window == 1 else 's', window))
 
 
-def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None):
+def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None, same='', keep_order=None):
     """Give each student a separate copy; returns (created quizzes, [(student, error), ...]).
-    `by` is the teacher assigning it: the teachers' notices say who assigned what."""
+    `by` is the teacher assigning it: the teachers' notices say who assigned what. `same`:
+    '' each student's own version, 'order' the same problems in the same order (own numbers),
+    'all' the very same quiz for everyone (the owner, 2026-10-24). `keep_order`: None for the
+    quiz's own setting, True/False to keep or shuffle its order for this assignment only."""
+    shuffle = None if keep_order is None else not keep_order
     if opens_at and closes_at and closes_at <= opens_at:
         raise ServiceError('The closing time must be after the opening time.')
     if time_limit is not None and not 1 <= time_limit <= 600:
@@ -873,9 +911,15 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
     if too_long:
         raise ServiceError(too_long)
     created, failed = [], []
+    plan = None
+    if same in ('order', 'all'):
+        try:
+            plan = draw_quiz(vquiz, same, shuffle)
+        except ServiceError as exc:
+            return [], [(student, str(exc)) for student in students]
     for student in students:
         try:
-            cq = create_cquiz(vquiz, student, opens_at, closes_at, time_limit)
+            cq = create_cquiz(vquiz, student, opens_at, closes_at, time_limit, plan=plan, shuffle=shuffle)
         except ServiceError as exc:
             failed.append((student, str(exc)))
             continue

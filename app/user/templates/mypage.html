@@ -120,7 +120,7 @@
 {#- a teacher's way to try a quiz as a student would: always here, empty or not, at the right end of
     the list's heading row ("My quizzes  15 quizzes"), or of the page's title row when there's no list
     yet (the owner, 2026-10-20) #}
-{% set assign_me %}{% if current_user.is_admin %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', users=current_user.id) }}" title="Choose a quiz to give yourself, to take it as a student would">Assign a quiz to me</a>{% endif %}{% endset %}
+{% set assign_me %}{% if current_user.is_admin %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', users=current_user.id) }}" title="Choose quizzes to give yourself, to take them as a student would">Assign quizzes to me</a>{% endif %}{% endset %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
   {% if not (groups or fk.root.folders) and current_user.is_admin %}<div class="actions">{{ assign_me }}</div>{% endif %}</div>
 
@@ -151,7 +151,7 @@
   {% if current_user.is_admin %}
   <div class="card empty"><span class="big">{{ icon('books') }}</span>Quizzes you assign to yourself, to try them out as a student would, show up here.
     {#- (no New problem / Problems / Messages here: nothing to do with this card, the owner 2026-10-20;
-        "Assign a quiz to me" is beside the page's title) #}</div>
+        "Assign quizzes to me" is beside the page's title) #}</div>
   {% else %}
   <div class="card empty"><span class="big">{{ icon('books') }}</span>No quizzes yet. When a teacher assigns one, it will show up here.</div>
   {% endif %}

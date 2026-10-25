@@ -73,6 +73,13 @@
 {% macro retake_button(g, student) -%}
 {% if g.latest.completed and not g.open %}{{ post_button(url_for('qgen.ret_cquiz', cqid=g.latest.id), 'Give another attempt', 'btn btn-secondary btn-sm', 'Give ' ~ (student.shown_name)|string ~ ' another attempt at “' ~ (g.vquiz.title)|string ~ '” with new values?', tip=(student.shown_name)|string ~ ' gets new values this time', icon='lc-retake') }}{% else %}{{ slot('Give another attempt', 'A new attempt can be given once the latest one is handed in and graded', icon='lc-retake') }}{% endif %}
 {%- endmacro %}
+{# one student's paper pages of this quiz (its Paper only problems) to print, with his/her name on top: one
+   thing at a time, never a stack (the owner, 2026-10-21, To do 7). Only a quiz with Paper only problems has it;
+   a long one asks first (static/js/printone.js) #}
+{% macro print_button(g, student) -%}
+{%- set n = paper_pages(g.vquiz) %}
+{%- if n %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=g.vquiz.id, users=[student.id], next=request.full_path) }}" data-print-pages="{{ n }}" title="Print: {{ student.shown_name }}’s paper page{{ '' if n == 1 else 's' }} of “{{ g.vquiz.title }}” ({{ n }} page{{ '' if n == 1 else 's' }}), with his/her name on top">{{ icon_label('lc-printer', 'Print') }}</a>{% endif %}
+{%- endmacro %}
 {% macro result_cells(g, student, rules, archive_all=true) %}
               {#- (sort keys for a sorted column, static/js/sorttable.js: the latest attempt's date; the score) -#}
               {%- set last = g.latest.compdate or g.latest.startdate or g.latest.create_date %}
@@ -99,7 +106,7 @@
                 {% endfor %}
               </td>
               <td class="actions"><div class="btn-stack">
-                {{ retake_button(g, student) }}
+                {{ retake_button(g, student) }}{{ print_button(g, student) }}
                 {# all of this student's attempts to the Archive at once, beside Retake (no row of its own;
                    a student page's quiz box has it on its heading line instead: archive_all=false) #}
                 {% if archive_all %}{{ archive_all_button(g, student) }}{% endif %}
@@ -113,7 +120,7 @@
 {% macro result_group(head, g, student, rules, name='') %}
 <div class="result-group" data-state="{{ 'review' if g.attempts|selectattr('status', 'equalto', 'review')|list else 'out' if g.open else 'done' }}" data-name="{{ name }}">
   <div class="attempt-row result-group-head">{{ head }} <span class="result-group-score"><span class="muted">Score counted:</span> {{ score_counted(g, student, rules) }}</span>
-    <span class="attempt-act attempt-act-group"><span class="btn-row result-attempt-buttons">{{ retake_button(g, student) }}{{ archive_all_button(g, student) }}</span></span></div>
+    <span class="attempt-act attempt-act-group"><span class="btn-row result-attempt-buttons">{{ retake_button(g, student) }}{{ print_button(g, student) }}{{ archive_all_button(g, student) }}</span></span></div>
   <ol class="small attempt-list">
     {% for cq in g.attempts %}
       <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
@@ -165,6 +172,6 @@
         {%- if has_started %}{{ status_icon('going', 'In progress') }}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
         {%- if has_new and has_started %}{{ status_icon('fresh', 'New') }}{% endif %}</span></td>
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-      <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}{{ icons }}</span></td>
+      <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ print_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}{{ icons }}</span></td>
     </tr>
 {% endmacro %}

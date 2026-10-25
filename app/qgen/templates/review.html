@@ -68,6 +68,8 @@
     {% if others %}{{ form.finalize_next(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and open the next one waiting') }}
     {{ form.finalize(class='btn btn-secondary', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% else %}{{ form.finalize(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and go back to ' ~ ('the page you came from' if came_from else 'Grading')) }}{% endif %}
     {{ form.save(class='btn btn-secondary', title='Keep your grades so far without finishing; ' ~ cq.taker.shown_name ~ ' sees nothing yet') }}
+    {#- (every page that fills in a form has a Cancel, last: the owner, 2026-10-24) #}
+    <a class="btn btn-secondary" href="{{ came_from or url_for('qgen.review_list') }}" data-back-href title="Leave without saving these grades">Cancel</a>
     <span class="muted small">Finishing saves the permanent transcript and shows the score to the student.</span>
   </div>
 </form>

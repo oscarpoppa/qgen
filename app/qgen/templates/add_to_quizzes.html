@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{# Add to quizzes: problems on the left (the Problems page's folders, the ones checked there already
+   checked), the quizzes on the right, like the Assign page; the checked ones as chips on both sides
+   (static/js/pickchips.js). They go at the end of each quiz checked (the owner, 2026-10-24: it was a dialog) #}
+{% from "_macros.html" import filter_bar with context %}
+{% from "_pick.html" import pick_table %}
+
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1>
+  <div class="actions"></div></div>
+
+{#- laid out exactly as the Assign page (.assign-form): Problems where its Quiz card is, Quizzes where its
+    Students card is, Add and Cancel under that card (the owner, 2026-10-24: "almost identical") #}
+<form method="post" action="{{ url_for('qgen.add_to_quiz') }}" class="assign-form add-quiz-page" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="view" value="{{ view }}">
+    <div class="card field pick-quiz" id="add-problem-pick">
+      <div class="pick-chips" data-chips-for="items" aria-live="polite"></div>
+      <span class="label pick-wrap-head">Problems</span>
+      {{ filter_bar('#add-problem-pick .folder-filter-list', 'problem', 'problems', items='tr[data-box]', id='add-problem-bar') }}
+      {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
+      <div class="error pick-error" data-problem-error role="alert" hidden>Check at least one problem first.</div>
+      <div class="folder-filter" data-folder-filter data-prefix="problem:" data-all-label="All problems" data-main-label="Uncategorized"
+           data-unit="problem" data-units="problems" data-start="{{ problem_start }}" data-tools-home="#add-problem-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          {% call pick_table('Problem', 'add-problem-list') %}
+            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}</label></td></tr>{% endfor %}
+          {% endcall %}
+        </div>
+      </div>
+    </div>
+  <div class="assign-side">
+    <div class="card field pick-quiz pick-people-card" id="add-quiz-pick">
+      <div class="pick-chips" data-chips-for="quiz" aria-live="polite"></div>
+      <span class="label pick-wrap-head">Quizzes</span>
+      {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
+      <div class="error pick-error" data-quiz-error role="alert" hidden>Check at least one quiz first.</div>
+      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+           data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">
+        <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
+        <div class="folder-filter-list">
+          {% call pick_table('Quiz', 'add-quiz-list') %}
+            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label></td></tr>{% endfor %}
+          {% endcall %}
+        </div>
+      </div>
+      {# or a new quiz with the problems checked in it; its Back comes back to the Problems page #}
+      <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make new quiz</a></p>
+    </div>
+    <div class="assign-go btn-row"><button class="btn btn-big" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/pickchips.js') }}"></script>
+<script>
+/* Add needs a problem and a quiz checked (the red message under each card's filter), then "Are you
+ * sure?" naming what goes where (the owner, 2026-10-24); "Make new quiz" takes the problems checked now */
+(function () {
+  var form = document.querySelector('.add-quiz-page');
+  if (!form) return;
+  var perr = form.querySelector('[data-problem-error]'), qerr = form.querySelector('[data-quiz-error]'), sure = false;
+  function checked(name) { return Array.prototype.slice.call(form.querySelectorAll('input[name="' + name + '"]:checked')); }
+  function ids() { return checked('items').map(function (b) { return b.value; }); }
+  function nameOf(b) { var l = form.querySelector('label[for="' + b.id + '"]'); return l ? l.textContent.trim() : ''; }
+  function says(list, many) { return list.length === 1 ? '\u201c' + nameOf(list[0]) + '\u201d' : list.length + ' ' + many; }
+  function mark(e, bad) { e.hidden = !bad; e.closest('.card').classList.toggle('pick-bad', bad); }
+  form.addEventListener('change', function () { if (ids().length) mark(perr, false); if (checked('quiz').length) mark(qerr, false); });
+  form.addEventListener('submit', function (e) {
+    if (sure) return;
+    e.preventDefault();
+    var ps = checked('items'), qs = checked('quiz');
+    mark(perr, !ps.length); mark(qerr, !qs.length);
+    if (!ps.length || !qs.length) { (ps.length ? qerr : perr).scrollIntoView({ block: 'center' }); return; }
+    var q = 'Add ' + says(ps, 'problems') + ' to ' + says(qs, 'quizzes') + '?';
+    var btn = e.submitter || form.querySelector('button:not([type=button])');
+    (window.qgenAsk ? window.qgenAsk(q, 'Add') : Promise.resolve(window.confirm(q))).then(function (yes) {
+      if (!yes) return;
+      sure = true;
+      if (window.qgenCheckedDone) window.qgenCheckedDone();  // (Problems: unchecked on return)
+      if (form.requestSubmit) form.requestSubmit(btn); else form.submit();
+    });
+  });
+  var make = form.querySelector('[data-new-quiz]');
+  if (make) make.addEventListener('click', function (e) {
+    e.preventDefault();
+    var list = ids();
+    if (!list.length) { mark(perr, true); perr.scrollIntoView({ block: 'center' }); return; }
+    location.href = make.getAttribute('href').split('?')[0] + '?problems=' + list.join(',') + '&next=' + encodeURIComponent(make.dataset.next);
+  });
+})();
+</script>
+{% endblock %}

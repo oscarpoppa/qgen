@@ -84,57 +84,17 @@
 </div>
 
 {% endif %}
-{% if not total and in_archive %}
-  <p class="muted page-intro">{{ archive_note }}</p>
-  <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No problems in the Archive. A problem’s trash can has Move to Archive.</div>
-{% elif not total %}
+{#- (an empty Archive section is still its folder page, the message in the open folder: the owner, 2026-10-24) #}
+{% if not total and not in_archive %}
   <div class="card empty"><span class="big">{{ icon('note') }}</span>No problems yet. <a href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">Create your first one</a>.</div>
 {% else %}
   {% call folders_page(fk, actions=archive_switch(section, counts) if in_archive else head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, 'problem:', pg=pg) %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
+      {% call named_box(fk, 'problem:', pg=pg) %}{% if items %}{{ problem_table(items, here=fk.node.folder if fk.node else none) }}{% elif in_archive and not total %}<p class="card empty small">No problems in the Archive. A problem’s trash can has Move to Archive.</p>{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
-{% endif %}
-{% if quizzes %}
-{# Add to a quiz: one row's problem (its icon) or the checked ones (the bar's button) #}
-{# laid out and working like the Assign dialogs (the owner, 2026-10-15); the quizzes: the standard
-   picker, the Quizzes page's folders as the folder list, the filter, and checking on a line of its
-   own, like the Assign dialogs (the owner, 2026-10-19; it was a folder drop-down) #}
-{% from "_macros.html" import filter_bar with context %}
-<dialog class="ask ask-many add-quiz assign-many pick-dialog" id="add-quiz-dialog" aria-labelledby="add-quiz-head">
-  <form method="post" action="{{ url_for('qgen.add_to_quiz') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="view" value="{{ fk.view }}">
-    <p id="add-quiz-head"><strong>Add <span data-what></span> to quizzes</strong><br>
-      <span class="muted small">Check the quizzes to add to.</span></p>
-    <div class="assign-defaults small">
-      <strong>{{ icon('lc-alert', 'assign-defaults-sign') }}What happens:</strong>
-      <ul><li>Added at the end of each quiz</li><li>What’s already in a quiz stays as it is</li>
-        <li>A problem already in a quiz isn’t added twice</li><li>Quizzes already assigned keep the version they were given</li></ul>
-    </div>
-    {% set aq_quizzes, aq_tree = assign_quizzes() %}
-    <div class="field pick-people" id="add-quiz-pick">
-      {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
-      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
-           data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">
-        <script type="application/json" class="folder-filter-tree">{{ aq_tree|tojson }}</script>
-        <div class="folder-filter-list">
-          {% call pick_table('Quiz', 'add-quiz-list') %}
-            {% for q in aq_quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label></td></tr>{% endfor %}
-          {% endcall %}
-        </div>
-      </div>
-    </div>
-    <p class="error small" data-quiz-error hidden>Check at least one quiz first.</p>
-    <div data-problem-ids></div>
-    {# or a new quiz with them in it (quiz_pick.js fills in which, and the way back) #}
-    <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz title="Open New quiz with these problems already in it; its Back comes back here">Make new quiz</a></p>
-    <div class="btn-row"><button class="btn" title="Add to the end of the checked quizzes">Add</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
-  </form>
-</dialog>
 {% endif %}
 {% endblock %}
 {% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/quiz_pick.js') }}"></script>{% endblock %}

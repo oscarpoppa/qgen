@@ -23,7 +23,11 @@
   ok.addEventListener('click', function () {
     var picked = Array.prototype.filter.call(boxes(), function (b) { return b.checked; })
       .map(function (b) { return { name: b.value, url: b.dataset.url }; });
-    if (!picked.length) { err.hidden = false; return; }
+    if (!picked.length) {
+      var pick = box.querySelector('#pick-pictures-pick');
+      if (pick) window.qgenPickError(pick, single ? 'Choose a picture first.' : 'Check a picture first.'); else err.hidden = false;
+      return;
+    }
     box.close();
     if (onPick) onPick(single ? picked.slice(0, 1) : picked);
   });
@@ -36,6 +40,8 @@
     //critic, 2026-10-20)
     boxes().forEach(function (b) { b.type = single ? 'radio' : 'checkbox'; b.checked = false; });
     err.hidden = true;
+    var pick = box.querySelector('#pick-pictures-pick');
+    if (pick) window.qgenPickOk(pick);
     recount();
     box.showModal();
   };

@@ -145,10 +145,12 @@
           {% endif %}
           {% if current_user.is_admin %}
             <details class="menu">
-              <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob')) }} title="Find, write and edit problems">Problems</summary>
+              <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob', 'qgen.add_to_quiz_page')) }} title="Find, write and edit problems">Problems</summary>
               <div class="menu-list">
                 {{ item('qgen.list_vprobs', 'All problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob'), tip='Browse, edit and organize every problem') }}
                 {{ item('qgen.mkvprob', 'New problem', tip='Write a new problem to use in quizzes') }}
+                {#- (the owner, 2026-10-24) #}
+                {{ item('qgen.add_to_quiz_page', 'Add to quizzes', tip='Put problems at the end of quizzes you pick') }}
               </div>
             </details>
             <details class="menu">
@@ -157,7 +159,7 @@
               <div class="menu-list">
                 {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz'), tip='Browse, edit and organize every quiz') }}
                 {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
-                {{ item('qgen.assign', 'Assign a quiz', tip='Give a quiz to students or groups, with a due date') }}
+                {{ item('qgen.assign', 'Assign quizzes', tip='Give quizzes to students or groups, with a due date') }}
                 {{ item('qgen.results_by_quiz', 'Results by quiz', ('qgen.quiz_results_page',), tip='Pick a quiz to see every student’s score on it') }}
                 {#- (no "Results by student": People shows each person's results now, the owner 2026-10-21) #}
               </div>

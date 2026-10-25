@@ -68,7 +68,7 @@
   </div>
   <div class="card">
     <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Question order</h2></div>
-    {{ check(form.shuffle_order, 'Recommended: then “question 1 is B” is no use to the student next door. Turn off only if the order matters (e.g. questions build on each other).') }}
+    {{ check(form.keep_order) }}
   </div>
   <div class="card">
     <div class="card-head"><span class="step-num" aria-hidden="true">4</span><h2>Retakes</h2></div>
@@ -149,7 +149,6 @@
   </div>
 </div>
 </div>
-{% include "_dialog_assign_quizzes.html" %}
 {#- the quiz picture's "Choose one already uploaded": the same dialog as the problem editor's (the owner, 2026-10-19) #}
 {% include "_dialog_pick_pictures.html" %}
 {% endblock %}

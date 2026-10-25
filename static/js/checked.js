@@ -6,6 +6,18 @@
  * For the bar's scripts: window.qgenCheckedIds() (every checked one, here or not, in the order
  * checked) and window.qgenCheckedClear(). */
 (function () {
+  //the checked ones leave for another page to be acted on (Assign quizzes, Add to quizzes, New quiz):
+  //qgenCheckedLeaving() here, then qgenCheckedDone() there once the action is sent, and coming back
+  //here they're unchecked; Cancel there leaves them checked (the owner, 2026-10-24)
+  window.qgenCheckedLeaving = function () { try { sessionStorage.setItem('qgen-checked-from', location.pathname); } catch (e) {} };
+  window.qgenCheckedDone = function () {
+    try {
+      var from = sessionStorage.getItem('qgen-checked-from');
+      if (from) { sessionStorage.removeItem('qgen-checked:' + from); sessionStorage.removeItem('qgen-checked-from'); }
+    } catch (e) {}
+  };
+})();
+(function () {
   var form = document.getElementById('file-form');
   var bar = form && form.closest('.folder-tools-bar');
   if (!bar) return;
@@ -66,6 +78,8 @@
     kept = []; save();
     ticks().forEach(function (t) { t.checked = false; });
   };
+  //(the bar's own form sent: unchecked when the page comes back, the boxes still sent with it now)
+  window.qgenCheckedForget = function () { kept = []; save(); };
 
   //coming back to the page (another folder, a reload): what was checked is checked again
   var first = null;

@@ -16,7 +16,8 @@
   {{ image_drop(form.favicon, 'Drop a picture here', 'or click to choose one. The little picture in the browser tab. Leave it empty to use the logo. A square picture works best: a wide one is shrunk to fit, which makes it tiny.') }}
   <h2>Sign-up</h2>
   {{ field(form.code, 'Students need this code to create an account. Leave it blank to turn sign-up off. Changing it doesn’t affect existing accounts.', attrs={'placeholder': 'e.g. maple-7', 'autocomplete': 'off'}) }}
-  {{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}
+  {#- (every page that fills in a form has a Cancel, last: the owner, 2026-10-24) #}
+  <div class="btn-row">{{ form.submit(class='btn', title='Save the site name, pictures and sign-up code') }}<a class="btn btn-secondary" href="{{ home_url() }}" data-back-href title="Leave without saving">Cancel</a></div>
 </form>
 {#- the logo's and tab picture's "Choose one already uploaded": the same dialog as the problem
     editor's (the owner, 2026-10-19) #}

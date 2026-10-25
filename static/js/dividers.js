@@ -73,9 +73,15 @@
     var outer = d.closest('table'), inner = d.querySelector(':scope > .answer-rows > table');
     if (!outer || !inner || !d.open || !d.offsetParent) return;
     var oh = outer.querySelector(':scope > thead'), ih = inner.querySelectorAll(':scope > thead th');
-    var ot = oh ? oh.querySelectorAll('th') : [];
-    if (!oh || getComputedStyle(oh).display === 'none' || !ot.length || !ih.length) {
+    //(only the list's headings that show: a narrow list hides some, and their width of 0 squeezed the table's columns to nothing)
+    var ot = oh ? Array.prototype.filter.call(oh.querySelectorAll('th'), function (th) { return th.getBoundingClientRect().width > 0; }) : [];
+    //(a list of one column, Problem history's "Quiz": nothing to line up with, so the inner table keeps its own
+    //widths; fixing them there made its last column the row's whole width and the row grew without end, the
+    //Student column 33 million pixels wide, found 2026-10-24)
+    //(and a table of more columns than the list's, Problem history's 7 under its 5: the two left over had no width at all)
+    if (!oh || getComputedStyle(oh).display === 'none' || ot.length < 2 || !ih.length || ih.length > ot.length) {
       ih.forEach(function (th) { th.style.width = ''; });
+      inner.style.tableLayout = '';
       return;
     }
     inner.style.tableLayout = 'fixed';
@@ -90,6 +96,15 @@
       }
       else if (i === n - 1 && n >= m) w = Math.round(ot[m - 1].getBoundingClientRect().width) + 'px';
       if (ih[i].style.width !== w) { ih[i].style.width = w; unsettled = true; }
+    }
+    //(never wider than the list itself: a row widened by its own table moves the list's headings, which widened the
+    //table again, without end (Problem history, 33 million pixels: found 2026-10-24); then it keeps its own widths)
+    var sum = 0;
+    ih.forEach(function (th) { sum += parseFloat(th.style.width) || 0; });
+    if (sum > outer.getBoundingClientRect().width + 2) {
+      ih.forEach(function (th) { th.style.width = ''; });
+      inner.style.tableLayout = '';
+      return;
     }
     //(the last column takes what's left, so a table wider than its fixed columns doesn't spread the extra over all of them)
     var total = inner.getBoundingClientRect().width, used = 0;

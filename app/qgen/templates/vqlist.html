@@ -87,7 +87,9 @@
 
 {% block content %}
 {% if in_archive %}
-<div class="page-head"><h1>{{ title }}</h1>{{ archive_switch(section, counts) }}</div>
+{#- (the Attempts / Quizzes / Problems / People switch in the open folder's title row at its right end, as on the Archive's
+    other sections, not under the title: the owner, 2026-10-24) #}
+<div class="page-head"><h1>{{ title }}</h1></div>
 {#- (its words under the folder list, as on the other folder pages, not over it: the owner, 2026-10-21) #}
 {% set archive_note %}Quizzes moved to the Archive: they’re off the Quizzes page and Assign, in the folders they were in.
   Students keep their copies and scores. Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.{% endset %}
@@ -103,21 +105,18 @@
   {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
 </div>
 {% endif %}
-{% if not total and in_archive %}
-  <p class="muted page-intro">{{ archive_note }}</p>
-  <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No quizzes in the Archive. A quiz’s trash can has Move to Archive.</div>
-{% elif not total %}
+{#- (an empty Archive section is still its folder page, the message in the open folder: the owner, 2026-10-24) #}
+{% if not total and not in_archive %}
   <div class="card empty"><span class="big">{{ icon('folders') }}</span>No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</div>
 {% else %}
-  {% call folders_page(fk, actions=head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
+  {% call folders_page(fk, actions=archive_switch(section, counts) if in_archive else head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, 'quiz:', pg=pg) %}{% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
+      {% call named_box(fk, 'quiz:', pg=pg) %}{% if items %}{{ quiz_table(items, here=fk.node.folder if fk.node else none) }}{% elif in_archive and not total %}<p class="card empty small">No quizzes in the Archive. A quiz’s trash can has Move to Archive.</p>{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
 {% endif %}
-{% include "_dialog_assign_quizzes.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/copy.js') }}"></script><script src="{{ asset('js/assign_many.js') }}"></script>{% endblock %}

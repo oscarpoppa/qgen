@@ -35,7 +35,7 @@
   var err = document.createElement('p');
   err.className = 'error small'; err.hidden = true; err.textContent = 'Choose a folder first.';
   dialog.appendChild(err);
-  holder.addEventListener('change', function () { err.hidden = true; });
+  holder.addEventListener('change', function () { err.hidden = true; });  // (err: kept hidden; qgenPickError shows it)
   //the bar's folders as round buttons, indented as in the folder list; "out of every folder"
   //(Uncategorized) first
   function fillList() {
@@ -57,7 +57,7 @@
   //(sent: the dialog steps aside, so takeout.js's question, if any, shows alone)
   go.addEventListener('click', function (e) {
     var r = holder.querySelector('input:checked');
-    if (!r) { e.preventDefault(); err.hidden = false; return; }
+    if (!r) { e.preventDefault(); window.qgenPickError(holder, 'Choose a folder first.'); return; }
     sel.value = r.value;
     //(what's checked in other folders goes too: static/js/checked.js)
     form.querySelectorAll('input[data-kept]').forEach(function (i) { i.remove(); });
@@ -71,6 +71,8 @@
       });
     }
     setTimeout(function () { dialog.close(); }, 0);
+    //(done with them: unchecked when the page comes back, the owner 2026-10-24)
+    if (window.qgenCheckedForget) window.qgenCheckedForget();
   });
   if (sel.querySelector('option[value=""]')) sel.required = true;
 
@@ -220,6 +222,7 @@
     putBox.querySelector('[data-ok]').textContent = copy ? 'Put in folder' : 'Move';
     putBox.querySelector('[data-err]').textContent = copy ? 'Check at least one folder first.' : 'Choose a folder first.';
     putBox.querySelector('[data-err]').hidden = true;
+    window.qgenPickOk(putList);
     var onlyIn = d.from || (n === 1 && d.already.length === 1 ? d.already[0] : null);
     //(a folder inside another indented as in the folder list; a folder icon between the box and the
     //name: the owner, 2026-10-16; no "out of every folder" here, so no Uncategorized)
@@ -233,7 +236,19 @@
   putBox.querySelector('[data-ok]').addEventListener('click', function () {
     var d = putState, copy = copyBox.checked;
     var picked = Array.prototype.map.call(putList.querySelectorAll('input:checked:not(:disabled)'), function (b) { return b.value; });
-    if (!picked.length) { putBox.querySelector('[data-err]').hidden = false; return; }
+    if (!picked.length) { window.qgenPickError(putList, putBox.querySelector('[data-err]').textContent); return; }
+    //"Are you sure?" naming the folder (the owner, 2026-10-24); Cancel goes back to this dialog
+    var names = Array.prototype.map.call(putList.querySelectorAll('input:checked:not(:disabled)'), function (b) {
+      var tr = b.closest('tr');
+      return tr && tr.dataset.folderName ? tr.dataset.folderName : '';
+    });
+    var where = names.length === 1 && names[0] ? '\u201c' + names[0] + '\u201d' : names.length + ' folders';
+    var q = copy ? 'Put ' + d.what + ' in ' + where + '?' : 'Move ' + d.what + ' to ' + where + '?';
+    (window.qgenAsk ? window.qgenAsk(q, copy ? 'Put in folder' : 'Move') : Promise.resolve(window.confirm(q))).then(function (yes) {
+      if (yes) putSend(d, copy, picked);
+    });
+  });
+  function putSend(d, copy, picked) {
     var f = document.createElement('form');
     f.method = 'post'; f.action = form.getAttribute('action'); f.hidden = true;
     function hidden(k, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); }
@@ -248,7 +263,7 @@
     document.body.appendChild(f);
     if (window.qgenCheckedClear) window.qgenCheckedClear();
     f.submit();
-  });
+  }
   function putIn(ids, label, already, from) {
     if (!ids.length) return;
     var n = ids.length;

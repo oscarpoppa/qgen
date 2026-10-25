@@ -18,7 +18,7 @@ def setup_quiz(app, teacher, *qtypes):
         teacher.post('/quiz/makevprob', data=f)
         made.append(VProblem.query.order_by(VProblem.id.desc()).first())
     teacher.post('/quiz/makevquiz', data={'title': 'Week 1', 'vplist': ','.join(str(p.id) for p in made),
-                                          'shuffle_order': ''})
+                                          'keep_order': 'y'})
     return VQuiz.query.filter_by(title='Week 1').one(), made
 
 

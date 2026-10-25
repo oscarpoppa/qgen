@@ -130,18 +130,27 @@ class QuizForm(FlaskForm):
     vplist = HiddenField('Problems')
     image = StringField('Picture shown at the top (optional)')
     calculator_ok = BooleanField('Calculator allowed')
-    shuffle_order = BooleanField('Give each student the questions in a different order', default=True)
+    #checked: every student gets the problems in the quiz's order; unchecked: shuffled (vq.shuffle_order),
+    #checked for new quizzes (the owner, 2026-10-24)
+    keep_order = BooleanField('Keep the problems in this order', default=True)
     retake_rule = SelectField('If a student takes this quiz more than once, the score is', choices=list(RETAKE_RULES.items()), default='best')
     submit = SubmitField('Save quiz')
 
 
 #form for assigning a quiz to one or more students
 class AssignForm(FlaskForm):
-    vquiz = SelectField('Quiz', coerce=int)
-    users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Check at least one student.')])
+    #(as many quizzes as wanted, each given to every student checked: the owner, 2026-10-24)
+    vquiz = CheckboxList('Quiz', coerce=int, validators=[DataRequired(message='Check at least one quiz first.')])
+    users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Check at least one student first.')])
     opens_at = DateTimeLocalField('Opens', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     closes_at = DateTimeLocalField('Closes', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     time_limit = IntegerField('Time limit (minutes)', validators=[Optional(), NumberRange(min=1, max=600, message='Between 1 and 600 minutes.')])
+    same = SelectField('Every student gets', default='', choices=[
+        ('', 'A version of his/her own'),
+        ('order', 'The same order, own numbers'),
+        ('all', 'The exact same quiz')])
+    #(starts as the quiz is set, assign.html; for this assignment only)
+    keep_order = BooleanField("Keep the quiz's order")
     submit = SubmitField('Assign')
 
     def validate_closes_at(self, field):

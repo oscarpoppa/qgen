@@ -123,6 +123,10 @@
         <li class="side-auto side-auto-first"><div class="side-row{{ ' current' if stash_view == 'all' }}" data-stash-drop="all"><span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed scans, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All scans</a>
           <span class="side-count muted small">{{ away|length }}</span></div></li>
+        {#- the Checked folder: the scans checked, in any folder (static/js/scanstash.js keeps them; the owner, 2026-10-24, To do 10) #}
+        <li class="side-auto"><div class="side-row{{ ' current' if stash_view == 'checked' }}"><span class="side-fold-space" aria-hidden="true"></span>
+          <a href="{{ url_for('qgen.scan_start', stash='checked') }}#scan-away" data-stash-checked-link title="See the scans you’ve checked, from every folder" class="side-link"{% if stash_view == 'checked' %} aria-current="page"{% endif %}>{{ icon('lc-folder-check') }} Checked</a>
+          <span class="side-count muted small" data-stash-checked-count>0</span></div></li>
         <li class="side-auto side-auto-last" data-auto="none"><div class="side-row{{ ' current' if stash_view == 'main' }}{{ ' is-empty' if not stash_root['items'] }}" data-stash-drop="main"><span class="side-fold-space" aria-hidden="true"></span>
           <a href="{{ url_for('qgen.scan_start', stash='main') }}#scan-away" title="See the scans that aren’t in any folder" class="side-link"{% if stash_view == 'main' %} aria-current="page"{% endif %}>{{ icon('tray') }} Uncategorized</a>
           <span class="side-count muted small" title="Scans in no folder">{{ stash_root['items']|length }}</span></div></li>
@@ -132,10 +136,12 @@
     <div class="vsplit stash-bar"></div>
     {#- the open folder as a tab over a framed panel, the same as every other folder page (the owner, 2026-10-24): the tab names the folder with
         its count, the Folder options icon at the right end of the tab's row, the scans in the panel under it #}
-    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% else %}All scans{% endif %}{% endset %}
+    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All scans{% endif %}{% endset %}
     <div class="stash-main folder-filter named-box has-onetab{{ ' folder-open-empty' if not stash_shown }}">
       <div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs">
         <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} scan{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
+        {#- (the Checked folder's “Apply to checked”: Move to folder, Discard) #}
+        {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked scans to a folder, or discard them">Apply to checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
         {% if stash_node %}<span class="folder-filter-tools-now">
           <details class="folder-tools">
             <summary class="btn btn-secondary btn-xs btn-icon" title="Folder options: Rename, make a folder inside, or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
@@ -152,11 +158,12 @@
       {% if stash_shown %}
       <div class="table-wrap stack">
         <table class="even-cols">
-          <thead><tr><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every scan shown" title="Check every scan shown"></th><th>Workbook</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
           <tbody>
           {% for j in stash_shown %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
             {#- (dragged onto a folder in the list to move it: static/js/scanstash.js) #}
             <tr data-stash-drag data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-home="{{ j.folder_id or '' }}" title="Drag onto a folder to move it there">
+              <td class="tick-col"><input type="checkbox" class="stash-pick" value="{{ j.id }}" data-name="{{ j.name }}" aria-label="Check “{{ j.name }}”"></td>
               <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
                 <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""></a>
                 <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
@@ -172,7 +179,7 @@
         </table>
       </div>
       {% else %}
-      <p class="card empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every scan is in a folder.{% else %}Nothing stashed.{% endif %}</p>
+      <p class="card empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every scan is in a folder.{% elif stash_view == 'checked' %}Nothing checked. Check scans in any folder and they show here.{% else %}Nothing stashed.{% endif %}</p>
       {% endif %}
       </div>
     </div>
@@ -216,6 +223,27 @@
       <div class="btn-row"><button class="btn" title="Put the scan in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
+  {#- the Checked folder's actions (the owner, 2026-10-24, To do 10): Move the checked scans to a folder, or Discard them (static/js/scanstash.js) #}
+  <dialog class="ask ask-many with-checked-dialog" id="stash-apply" aria-labelledby="stash-apply-head">
+    <p><strong id="stash-apply-head">Apply to the <span data-stash-checked-words></span></strong></p>
+    <div class="with-checked-actions">
+      <button type="button" class="btn btn-sm" data-stash-apply-move title="Move the checked scans to a folder">Move to folder</button>
+      <button type="button" class="btn btn-sm btn-danger" data-stash-apply-discard title="Discard the checked scans: their pages and drafts are removed">Discard</button>
+    </div>
+    <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+  </dialog>
+  <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move-many" aria-label="Move the checked scans to a folder">
+    <form method="post" action="{{ url_for('qgen.scan_move_many') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div data-stash-items></div>
+      <p data-pick-head><strong>Move the <span data-stash-checked-words></span> to a folder</strong><br><span class="muted small">Choose a folder.</span></p>
+      <div class="field pick-people folder-pick" data-folder-pick data-main-label="Uncategorized" data-name="to" data-checked="top">
+        <script type="application/json" data-pick-rows>{{ stash_pick_rows|tojson }}</script>
+      </div>
+      <div class="btn-row"><button class="btn" title="Put the checked scans in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+    </form>
+  </dialog>
+  <form method="post" action="{{ url_for('qgen.scan_discard_many') }}" id="stash-discard-many" hidden><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div data-stash-items></div></form>
   {#- a folder's own Move to, the standard dialog as on the other folder pages (what the open folder can go inside: not itself, not what's in it) #}
   {% if stash_node %}<dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move-folder" aria-label="Move “{{ stash_node.folder.name }}” to another folder">
     <form method="post">

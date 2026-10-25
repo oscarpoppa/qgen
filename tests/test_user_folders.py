@@ -204,14 +204,14 @@ def test_assigning_from_the_users_page(app_db):
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     # each person: a box to check (for the bar) and a quick Assign; a folder: Assign a quiz to this folder
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
-    #(the checked people get their quizzes from the Assign a quiz dialog, not a trip to Assign)
+    #(the checked people go to the Assign page with them checked: the dialog became the page, the owner 2026-10-24)
     assert 'class="pick-person" name="users" value="{}"'.format(ids('kim')) in page
-    assert 'id="assign-people-dialog"' in page and '<form method="post" action="/quiz/assignmany">' in page
-    assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'aria-label="Assign a quiz"' in page  # (the paper plane: owner 2026-10-14)
+    assert 'id="assign-people-dialog"' not in page and 'js/assign_people.js' in page
+    assert 'href="/quiz/assign?users={}"><svg'.format(ids('kim')) in no_titles(page) and 'aria-label="Assign quizzes"' in page  # (the paper plane: owner 2026-10-14)
     #(paper planes, the words for screen readers: owner 2026-10-14)
-    assert 'href="/quiz/assign?folder={}"><svg'.format(g7) in no_titles(page) and 'aria-label="Assign a quiz to this folder"' in page
-    #(one folder at a time, 20 to a page: the folder inside has its Assign on its own page; the owner, 2026-10-23)
-    assert 'href="/quiz/assign?folder={}"><svg'.format(p2) in no_titles(teach.get('/userdet?folder={}'.format(p2)).data.decode())
+    #(no paper plane at the top for a folder: people are assigned from the Checked folder, the owner 2026-10-24)
+    assert '/quiz/assign?folder=' not in page and 'Assign quizzes to this folder' not in page
+    assert '/quiz/assign?folder=' not in teach.get('/userdet?folder={}'.format(p2)).data.decode()
     checked = lambda page: sorted(int(i) for i in re.findall(r'name="users" value="(\d+)" id="users-\d+" data-user="\d+" data-name="[^"]*" checked', page))
     start = lambda page: re.search(r'data-start="(\w+)"', page[page.index('id="pick-people"'):]).group(1)
     # a folder: everyone in it (and in the folders inside it), checked, opening on its tab
@@ -253,7 +253,7 @@ def test_results_pages_lead_back_to_users(app_db):
         assert back_by_the_trail(teach.get(url).data.decode()), url
     # one student's page: Assign a quiz to them
     #(it opens the Assign a quiz dialog: data-what names who it's for)
-    assert 'href="/quiz/assign?users={}" data-what="sam">Assign a quiz to sam</a>'.format(ids('sam')) in \
+    assert 'href="/quiz/assign?users={}" data-what="sam">Assign quizzes to sam</a>'.format(ids('sam')) in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
 
 

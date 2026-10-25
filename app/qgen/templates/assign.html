@@ -2,7 +2,7 @@
 {# the page's whole width: the Quiz card, with When and Assign under it, beside the Students card #}
 {% from "_macros.html" import filter_bar with context %}
 {% from "_macros.html" import back_home, box_label with context %}
-{% from "_macros.html" import field %}
+{% from "_macros.html" import field, check %}
 {% from "_pick.html" import pick_table %}
 
 
@@ -19,26 +19,29 @@
   {# the quiz: one list with the Quizzes page's folders down its side (static/js/folderfilter.js,
      data-style="list"), laid out like the students beside it: All quizzes, the folders, Uncategorized #}
   <div class="card field pick-quiz{% if form.vquiz.errors %} has-error{% endif %}" id="pick-quiz">
+    {# the checked ones as chips, in the card's top right (the owner, 2026-10-24) #}
+    <div class="pick-chips" data-chips-for="vquiz" aria-live="polite"></div>
     <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
     {% if not quizzes %}
     {# (the same words as the Quizzes page with none) #}
     <p class="card empty small">No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</p>
     {% else %}
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='quiz-filter-bar') }}
+    {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
+    <div class="error pick-error" data-pick-error="vquiz" role="alert"{% if not form.vquiz.errors %} hidden{% endif %}>{{ form.vquiz.errors[0] if form.vquiz.errors else 'Check at least one quiz first.' }}</div>
     <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
-         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list" data-checked-radios>
+         data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
-        {% call pick_table('Quiz', 'quiz-pick-list', (' role="radiogroup" aria-label="' ~ form.vquiz.label.text ~ '"')|safe) %}
+        {% call pick_table('Quiz', 'quiz-pick-list') %}
           {% for q in quizzes %}
-            <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"><td class="tick-col"><input type="radio" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if form.vquiz.data == q.id %} checked{% endif %}></td>
+            <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"{% if not q.shuffle_order %} data-keep-order{% endif %}><td class="tick-col"><input type="checkbox" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if q.id in (form.vquiz.data or []) %} checked{% endif %}></td>
               <td><label for="vquiz-{{ q.id }}">{{ q.title }}</label></td></tr>
           {% endfor %}
         {% endcall %}
       </div>
     </div>
     {% endif %}
-    {% for e in form.vquiz.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
   {# the people: one checklist, with the People folders down its side (data-style="list",
      static/js/folderfilter.js): All people, the folders, Uncategorized #}
@@ -46,6 +49,7 @@
       sat a row lower, under the Quiz card's height); on a phone Assign is last, after When #}
   <div class="assign-side">
   <div class="card pick-people-card">
+    <div class="pick-chips" data-chips-for="users" aria-live="polite"></div>
     {#- (no "Assignee" block above the students: the checked ones are in the Students card's Checked
         folder, and both cards start at the top, level: the owner, 2026-10-22) #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
@@ -55,6 +59,7 @@
        line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
     {#- (checking everyone shown: the check box in the list's heading row, static/js/checkall.js; the owner, 2026-10-22) #}
     {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='tr[data-box]', id='people-pick-bar') }}
+    <div class="error pick-error" data-pick-error="users" role="alert"{% if not form.users.errors %} hidden{% endif %}>{{ form.users.errors[0] if form.users.errors else 'Check at least one student first.' }}</div>
     <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
@@ -67,11 +72,14 @@
         {% endcall %}
       </div>
     </div>
-    <div class="help">Only the people checked get the quiz. Each student gets a different random version of the quiz.</div>
-    {% for e in form.users.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    <div class="help">Only the people checked get the quizzes.</div>
+    <div class="field-short assign-same">{{ field(form.same) }}</div>
+    {#- (keep_order_set: the box was there to say yes or no; without it, each quiz keeps its own setting) #}
+    <div id="keep-order-field">{{ check(form.keep_order) }}<input type="hidden" name="keep_order_set" value="1" id="keep_order_set"></div>
   </div>
   </div>
-  <div class="assign-go">{{ form.submit(class='btn btn-big', title='Give the quiz to the checked students') }}</div>
+  {#- (Cancel last, back to the page they came from: the owner, 2026-10-24) #}
+  <div class="assign-go btn-row">{{ form.submit(class='btn btn-big', title='Give the quizzes to the checked students') }}<a class="btn btn-secondary" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div>
   </div>
   {# when: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">
@@ -93,34 +101,37 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ asset('js/pickchips.js') }}"></script>
 <script>
-/* the Quiz card: the quiz that's checked is always one on screen, so Assign never gives out a
- * quiz the teacher can't see. While a folder or the filter hides the teacher's choice, the first
- * quiz shown is checked (none if nothing is shown); once their choice is in sight again, it's
- * checked again. */
+/* the Quiz card: as many quizzes as wanted (the owner, 2026-10-24; the Assign dialogs became this
+ * page). "Keep the quiz's order" shows for one quiz, starting as that quiz is set; with several,
+ * it's hidden and each quiz keeps its own setting (the owner's choice). */
 (function () {
   var card = document.getElementById('pick-quiz');
   if (!card) return;
-  var radios = Array.prototype.slice.call(card.querySelectorAll('input[name="vquiz"]'));
-  var chosen = radios.filter(function (r) { return r.checked; })[0] || null;
-  radios.forEach(function (r) { r.addEventListener('change', function () { if (r.checked) chosen = r; }); });
-  function inSight(r) { return !r.closest('[hidden]'); }
-  function keep() {
-    if (chosen && inSight(chosen)) { chosen.checked = true; return; }
-    var on = radios.filter(function (r) { return r.checked; })[0];
-    if (on && inSight(on)) return;
-    if (on) on.checked = false;
-    var first = radios.filter(inSight)[0];
-    if (first) first.checked = true;
+  var boxes = Array.prototype.slice.call(card.querySelectorAll('input[name="vquiz"]'));
+  var keepBox = document.getElementById('keep_order'), keepField = document.getElementById('keep-order-field');
+  var was = null;
+  function sync() {
+    var on = boxes.filter(function (b) { return b.checked; });
+    if (keepField) keepField.hidden = on.length > 1;
+    if (keepBox) keepBox.disabled = on.length > 1;
+    var keepSet = document.getElementById('keep_order_set');
+    if (keepSet) keepSet.disabled = on.length > 1;
+    //(a different single quiz: start as it's set)
+    if (on.length === 1 && on[0] !== was && keepBox) keepBox.checked = on[0].closest('tr').hasAttribute('data-keep-order');
+    was = on.length === 1 ? on[0] : null;
   }
-  card.addEventListener('qgen-shown', keep);
-  keep();
-  //the quiz checked, scrolled into view in its list on arrival (the list scrolls inside its card):
+  //(the first one's state is the server's: the teacher's own choice kept after an error)
+  was = boxes.filter(function (b) { return b.checked; }).length === 1 ? boxes.filter(function (b) { return b.checked; })[0] : null;
+  card.addEventListener('change', sync);
+  sync();
+  //the first quiz checked, scrolled into view in its list on arrival (the list scrolls inside its card):
   //opened for one quiz, it's the one you came from (the owner, 2026-10-19)
   function show() {
-    var on = radios.filter(function (r) { return r.checked; })[0];
+    var on = boxes.filter(function (b) { return b.checked && !b.closest('[hidden]'); })[0];
     var li = on && on.closest('tr');
-    if (!li || !inSight(on)) return;
+    if (!li) return;
     //(the box that scrolls: the list itself, or the card's list around it)
     var list = li.parentElement;
     while (list && list !== card && !(list.scrollHeight > list.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(list).overflowY))) list = list.parentElement;
@@ -129,6 +140,47 @@
     if (ir.top < lr.top || ir.bottom > lr.bottom) list.scrollTop += ir.top - lr.top - (list.clientHeight - li.offsetHeight) / 2;
   }
   window.addEventListener('load', function () { setTimeout(show, 50); });
+})();
+/* Assign: a quiz and a student checked first (the red message under each card's filter), then
+ * "Are you sure?" naming what goes to whom (the owner, 2026-10-24) */
+(function () {
+  var form = document.querySelector('.assign-form');
+  if (!form) return;
+  var sure = false;
+  function checked(name) { return Array.prototype.slice.call(form.querySelectorAll('input[name="' + name + '"]:checked')); }
+  function nameOf(b) { var l = form.querySelector('label[for="' + b.id + '"]'); return l ? (l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : l.textContent).trim() : ''; }
+  function says(list, one, many) {
+    var names = list.map(nameOf).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
+    return names.length === 1 ? '\u201c' + names[0] + '\u201d' : names.length + ' ' + many;
+  }
+  function mark(name, bad) {
+    var e = form.querySelector('[data-pick-error="' + name + '"]');
+    if (!e) return;
+    e.hidden = !bad;
+    e.closest('.card').classList.toggle('pick-bad', bad);
+  }
+  form.addEventListener('change', function (e) {
+    if (e.target.name === 'vquiz' || e.target.name === 'users') { if (checked(e.target.name).length) mark(e.target.name, false); }
+  });
+  form.addEventListener('submit', function (e) {
+    if (sure) return;
+    e.preventDefault();
+    var qs = checked('vquiz'), us = checked('users');
+    mark('vquiz', !qs.length); mark('users', !us.length);
+    if (!qs.length || !us.length) {
+      var bad = form.querySelector('.pick-error:not([hidden])');
+      if (bad) bad.scrollIntoView({ block: 'center' });
+      return;
+    }
+    var btn = e.submitter || form.querySelector('button[type=submit], input[type=submit]');
+    var q = 'Assign ' + says(qs, 'quiz', 'quizzes') + ' to ' + says(us, 'student', 'students') + '?';
+    (window.qgenAsk ? window.qgenAsk(q, 'Assign') : Promise.resolve(window.confirm(q))).then(function (yes) {
+      if (!yes) return;
+      sure = true;
+      if (window.qgenCheckedDone) window.qgenCheckedDone();  // (the page they came from: unchecked on return)
+      if (form.requestSubmit) form.requestSubmit(btn); else HTMLFormElement.prototype.submit.call(form);
+    });
+  });
 })();
 /* the time limit can't be longer than the time between opening and closing (checked
  * again when assigning): say the most it can be, and warn as soon as it's too long */

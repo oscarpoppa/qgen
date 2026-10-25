@@ -124,7 +124,8 @@ def test_people_fits_a_laptops_window(app_db):
     page = teacher.get('/userdet').data.decode()
     row = page[page.index('data-box="user:{}"'.format(ids('teach'))):]
     row = row[:row.index('</tr>')]
-    assert '<span class="person-line"><span class="avatar-wrap">' in row and '>teach</strong></span>' in row
+    #(a teacher's cap on the name's own line: the owner, 2026-10-24, To do 38)
+    assert '<span class="person-line"><span class="avatar-wrap">' in row and '>teach</strong><span class="person-role person-role-icon"' in row
     made = User.query.filter_by(username='teach').one().created_at
     if made:
         from app import when_filter

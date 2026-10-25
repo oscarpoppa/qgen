@@ -1946,6 +1946,9 @@ a.btn[data-back] .back-label { overflow: hidden; text-overflow: ellipsis; white-
   .history-table td.actions { width: 1%; min-width: max-content; overflow-wrap: normal; }
   .history-table td.actions .btn, .history-table td.actions .inline-form { display: block; margin: 0 0 6px; }
   .history-table td.actions .btn { width: 100%; text-align: center; white-space: nowrap; }
+  /* (bare icons stay side by side: stacked, they made every answer's row twice the 46px, To do 39, 2026-10-24) */
+  .history-table td.actions { white-space: nowrap; }
+  .history-table td.actions .btn.btn-icon, .history-table td.actions .inline-form:has(> .btn-icon) { display: inline-flex; width: auto; margin: 0 0 0 4px; }
 } }
 /* People: each card's buttons in an even grid (never one left alone on a line) */
 .person-card .btn-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }
@@ -2355,7 +2358,7 @@ td.tick-col input[type=checkbox]:is(:focus-visible, :checked), th.tick-col input
 table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-row) td.row-more:not(.row-count-col) { display: none; }
 /* phone row cards: the checkbox on the title's line, the "+" beside the folder chips */
 @media (max-width: 640px) {
-  .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; }
+  .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0; }  /* (the 12px after the check box is the next cell's own, as on a wide screen: 2026-10-24) */
   .stack tr:has(> td.tick-col) > td { grid-column: 2; }
   .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
   .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
@@ -2390,6 +2393,18 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
 .pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
 .assign-form .assign-go { margin: 0; }
+/* the checked quizzes / people as chips (the owner, 2026-10-24): above the list on a narrow card; on a
+   wide one in the card's top right, beside the filter (the room the Folders heading leaves) */
+.pick-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 0 0 10px; max-height: 118px; overflow-y: auto; }
+.pick-chips[hidden] { display: none; }
+.pick-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 10px; border-radius: 999px; font-size: var(--fs-xs); line-height: 1.4; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent-soft); color: var(--accent); }
+.pick-chip .chip-x { color: inherit; min-width: 22px; min-height: 22px; }
+.pick-chip .chip-x:hover { color: var(--bad); }
+@container page (min-width: 960px) {
+  .card:has(> .pick-chips) { position: relative; }
+  .card > .pick-chips { position: absolute; top: 16px; right: 16px; left: 400px; margin: 0; }
+}
 /* (narrower: the right-hand column's two parts join the page's one column; Assign last, after When) */
 .assign-side { display: contents; }
 .assign-side > .assign-go { order: 1; }
@@ -2939,7 +2954,9 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 .page-quiz .pq-hide { position: absolute; background: #fff; }
 .page-quiz .pq-q { display: contents; }
 /* a problem's printed numbers, covered and written again with this student's */
-.page-quiz .pq-text { position: absolute; display: flex; box-sizing: content-box; padding: 0.4cqw 0.6cqw; margin: -0.4cqw -0.6cqw;
+/* (a little past the letters top and bottom: their soft gray edges showed under and over the new words, the owner
+   2026-10-24, To do 35) */
+.page-quiz .pq-text { position: absolute; display: flex; box-sizing: content-box; padding: 0.9cqw 0.6cqw; margin: -0.9cqw -0.6cqw;
   background: #fff; color: #222; font-family: "PageFont", "Noto Sans", sans-serif; font-weight: var(--pq-weight, 700); white-space: pre; }
 .page-quiz .pq-equals { justify-content: space-between; align-items: center; line-height: 1; }
 .page-quiz .pq-left { flex-direction: column; justify-content: space-around; align-items: flex-start; line-height: var(--pq-line); }
@@ -3306,13 +3323,17 @@ th.tick-col input.check-all { margin: 0; }
 /* the automatic folders pinned at the top of every folder list, the folders scrolling under them
    (static/js/folderfilter.js qgenPinAuto gives each its top; the owner, 2026-10-21) */
 .side-top > li.side-auto, .folder-side-list > .side-row.side-auto { position: sticky; z-index: 2; background: var(--surface); }
-.side-top > li.side-auto-last, .folder-side-list > .side-row.side-auto-last { box-shadow: 0 2px 0 color-mix(in srgb, var(--muted) 55%, var(--border)); padding-bottom: 4px; }  /* (a little heavier: the owner, 2026-10-21) */  /* (padding, not margin: the folders showed through a margin) */
+.side-top > li.side-auto-last, .folder-side-list > .side-row.side-auto-last { padding-bottom: 4px; }
+/* the line under them: straight, end to end (a shadow followed the row's rounded corners and curved up at the
+   ends: the owner, 2026-10-24) */
+.side-top > li.side-auto-last::after, .folder-side-list > .side-row.side-auto-last::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: color-mix(in srgb, var(--muted) 55%, var(--border)); pointer-events: none; }  /* (a little heavier: the owner, 2026-10-21) */  /* (padding, not margin: the folders showed through a margin) */
 /* (the space over the first one, the list's own top padding, covered too: the folders scrolled up
    showed through it) */
 /* (and the 2px gaps between the pinned ones, covered: the folders slid through them) */
 .side-top > li.side-auto + li.side-auto, .folder-side-list > .side-row.side-auto + .side-row.side-auto { box-shadow: 0 -2px 0 var(--surface); }
 .side-top > li.side-auto + li.side-auto-last, .folder-side-list > .side-row.side-auto + .side-row.side-auto-last {
-  box-shadow: 0 -2px 0 var(--surface), 0 2px 0 color-mix(in srgb, var(--muted) 55%, var(--border)); }
+  box-shadow: 0 -2px 0 var(--surface); }
 .side-top > li.side-auto:first-child::before, .folder-side-list > .side-row.side-auto:first-of-type::before,
 .side-top > li.side-auto-first::before, .folder-side-list > .side-row.side-auto-first::before {
   content: ""; position: absolute; left: -8px; right: -8px; bottom: 100%; height: 16px; background: var(--surface); }
@@ -3524,9 +3545,9 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 /* a list with check boxes: the row's fold arrow 12px after the check box, the same room Results by quiz leaves before its arrow
    (the owner, 2026-10-24: there was twice that between the box and the arrow) */
 .folder-filter-list table.even-cols :is(th, td).tick-col { padding-right: 0; }
-.folder-filter-list table.even-cols :is(th.tick-col + th, td.tick-col + td) { padding-left: 9px; }
-/* (the cell after the check box has 9px of room inside instead of 12px: its groups still start 40px in from the row's edge) */
-.result-rows td.tick-col + td > details.row-fold[open] > .result-groups { margin-left: calc(30px - var(--cell-offset, 0px)); }
+.folder-filter-list table.even-cols :is(th.tick-col + th, td.tick-col + td) { padding-left: 12px; }
+/* (12px after the check box on every list, picker and dialog alike, 2026-10-24; its groups still start 40px in from the row's edge) */
+.result-rows td.tick-col + td > details.row-fold[open] > .result-groups { margin-left: calc(27px - var(--cell-offset, 0px)); }
 /* One row height on every folder list (the owner, 2026-10-24): a folded row is 46px, as on Results by quiz (text with 10px above and
    below, 34px icons with 4px or 6px). People's were 59-91px: its Folders cell held 34px icons with 10px of room, the picture made the
    name line 32px, and the Status badges and folder chips wrapped. */
@@ -3575,3 +3596,25 @@ html.js-setup .folders-layout, html.js-setup .student-folders, html.js-setup .st
 .pq-answer > .error[data-said] { position: absolute; top: calc(100% + 3px); left: 0; z-index: 3; white-space: nowrap;
   font-size: var(--fs-sm); line-height: 1.3; padding: 2px 6px; border-radius: var(--r-sm); background: var(--surface);
   color: var(--bad); box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+/* the quiz builder: how many times a problem is used (the owner, 2026-10-24) */
+.order-times { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--muted); white-space: nowrap; }
+.order-times input.order-times-n { width: 4.5em; min-width: 0; flex: none; min-height: 30px; padding: 2px 6px; font-size: var(--fs-sm); }
+/* a picker card with nothing checked when its button was pressed (Assign, Add to quizzes): the card's
+   edge red and the message right under its filter, not the filter box outlined (the owner, 2026-10-24) */
+.pick-error { margin: 0 0 8px; color: var(--bad); font-size: var(--fs-sm); }
+.card.pick-bad, .card:has(.pick-error:not([hidden])) { border-color: var(--bad); }
+.field.has-error:has(> .pick-error) .filter-bar input { border-color: var(--border); }
+/* a list to check from with nothing checked when its button was pressed (a dialog's folders, Write to's
+   students, Choose pictures): outlined in red, the words under its filter (static/js/fielderror.js) */
+.pick-bad:not(.card) { outline: 2px solid var(--bad); outline-offset: 4px; border-radius: var(--r); }
+.pick-bad > .pick-error { margin: 0 0 8px; }
+/* an open row's answers (Problem history): the row's icons side by side, never stacked, so each answer stays one
+   46px line (To do 39, 2026-10-24) */
+.folder-filter-list .answer-rows > table.history-table.even-cols > tbody > tr > td.actions { white-space: nowrap; width: 1%; min-width: max-content; }
+/* one gap between a row's check box and the first thing in the row, on every list, picker and dialog, whatever the column's
+   width (the owner, 2026-10-24: "a standard spacing between the checkbox and the first item for all folder-related things"):
+   the box at its column's right end, the next column's content 12px after it */
+html table:is(.even-cols, .pick-table, table) > tbody > tr > td.tick-col, html table:is(.even-cols, .pick-table, table) > thead > tr > th.tick-col {
+  width: 1%; min-width: 0; padding-left: 12px; padding-right: 0; text-align: left; }  /* (the column just the box's width: the same 12px from the list's edge too) */
+table > tbody > tr > td.tick-col > input, table > thead > tr > th.tick-col > input { margin: 0; vertical-align: middle; }
+table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { padding-left: 12px; }

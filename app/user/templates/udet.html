@@ -36,7 +36,7 @@
                  critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
-                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · Archived {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong></span>{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></summary>
+                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · Archived {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></span></summary>
             {% if not in_archive %}<div class="result-groups divided" data-fold-body>
             {% for g in groups %}{#- (the quiz's name opens this person's latest attempt at it: the owner, 2026-10-22) #}{% set head %}<span class="box-icon" aria-hidden="true">{{ icon('note') }}</span>{{ attempt_title(g, item) }}{% endset %}{#- (the quiz icon before its name, as on Results by quiz's quiz rows: the owner, 2026-10-24) #}{{ result_group(head, g, item, rules, g.vquiz.title|lower) }}
             {% else %}<p class="muted small box-empty">No quizzes assigned yet.</p>{% endfor %}</div>{% endif %}</details></td>
@@ -64,7 +64,7 @@
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good',
                  delete_note=('His/her quiz results are kept in the Archive’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Archive’s Attempts.')) }}
             {% else %}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign a quiz: choose a quiz to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign a quiz') }}</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign quizzes: choose quizzes to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign quizzes') }}</a>
             {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# their page: quizzes and results, awards #}
@@ -99,11 +99,9 @@
 <div class="page-head"><h1>People</h1></div>
 {% endif %}
 
-{% set actions %}{% if in_archive %}{{ archive_switch(section, counts) }}{% elif fk.view == 'main' and fk.main_tools %}{{ fk.main_tools(fk.root)|replace('btn-xs', 'btn-sm') }}{% elif fk.node and fk.node.count %}<a class="btn btn-sm btn-icon" href="{{ url_for('qgen.assign', folder=fk.node.folder.id) }}" title="Assign a quiz to this folder: everyone in {{ fk.name(fk.node.folder) }}">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</a>{% elif fk.node %}<button type="button" class="btn btn-sm btn-icon" disabled title="Assign a quiz to this folder: no one is in it yet">{{ icon_label('lc-send', 'Assign a quiz to this folder') }}</button>{% endif %}{% endset %}
-{% if in_archive and not ulst %}
-  <p class="muted page-intro">{{ archive_note }}</p>
-  <div class="card empty"><span class="big">{{ icon('lc-trash') }}</span>No people in the Archive. A person’s trash can has Move to Archive.</div>
-{% else %}
+{#- (no Assign paper plane at the top: people are assigned from the Checked folder, the owner 2026-10-24) #}
+{% set actions %}{% if in_archive %}{{ archive_switch(section, counts) }}{% endif %}{% endset %}
+{#- (an empty Archive section is still its folder page, the message in the open folder: the owner, 2026-10-24) #}
 {% call folders_page(fk, actions, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% if ulst %}<div class="folder-tools-bar{% if not in_archive %} results-filter{% endif %}">{% if in_archive %}{{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}{% else %}
       {#- (with Results' "Show" beside it: one People page, the owner 2026-10-21) #}
@@ -129,23 +127,22 @@
           <button class="btn btn-sm" name="action" value="add" title="Move the checked people to a folder (or copy them there)">Move to folder</button>
           <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked people out of the chosen folder">Take out of folder</button>
           {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
-          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign quizzes</button>{% endif %}
         {% else %}
           {#- (no folders yet: grayed, with why, never left out: the owner, 2026-10-19) #}
           <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check people to put in it.</span>
           <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
           <button type="button" class="btn btn-secondary btn-sm" data-no-folder="Take out of folder: there are no folders yet">Take out of folder</button>
           {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
-          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give a quiz to the checked people">Assign a quiz</button>{% endif %}
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign quizzes</button>{% endif %}
         {% endif %}
       </form></div>{% endif %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
+      {% call named_box(fk, 'user:', pg=pg) %}{% if shown %}{{ people_table(shown, fk.node.folder if fk.node else none) }}{% elif in_archive and not ulst %}<p class="card empty small">No people in the Archive. A person’s trash can has Move to Archive.</p>{% elif not pg.q and not request.args.get('state') %}{{ empty_note(fk) }}{% endif %}{% endcall %}
     </div>
 {% endcall %}
-{% endif %}
-{% include "_dialog_assign_people.html" %}
+
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/namewidth.js') }}" defer></script>

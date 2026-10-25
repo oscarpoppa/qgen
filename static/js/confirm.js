@@ -143,3 +143,17 @@ window.qgenSay = function (text, kind) {
   main.insertBefore(list, main.firstChild);
   if (window.qgenFloat) window.qgenFloat(list);
 };
+
+/* A student's paper pages to print (the printer on his/her row, templates/qgen/_results.html): one thing at a
+ * time, and a long one asks first, "Print 14 pages?" (the owner, 2026-10-21, To do 7) */
+(function () {
+  var MANY = 10;
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-print-pages]');
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var n = parseInt(a.dataset.printPages, 10) || 0;
+    if (n <= MANY || !window.qgenAsk) return;
+    e.preventDefault();
+    window.qgenAsk('Print ' + n + ' pages?', 'Print').then(function (yes) { if (yes) location.href = a.href; });
+  });
+})();

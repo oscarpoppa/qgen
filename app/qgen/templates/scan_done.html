@@ -47,7 +47,6 @@
   {% endif %}
   {% if done.pictures %}<p class="small"><a href="{{ url_for('upload.images') }}" title="See the pictures, including the ones from these pages">See the pictures →</a></p>{% endif %}
 </div>
-{% include "_dialog_assign_quizzes.html" %}
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/assign_many.js') }}"></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>{% endblock %}

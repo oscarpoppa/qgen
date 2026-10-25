@@ -917,11 +917,31 @@ def _wording(ink, full, rgb, number, cut, ch, X0, Y0):
         return None, None
     tx0, ty0 = min(k[0] for k in keep), min(k[1] for k in keep)
     tx1, ty1 = max(k[2] for k in keep), max(k[3] for k in keep)
+    #(the whole of every letter the cover cuts through: a problem's box that stops partway down its last
+    #line left the bottoms of "9 + 5 = ???" showing under the new words, the owner 2026-10-24, To do 35.
+    #Taller or shorter only: a letter's own height, never a picture or the page's frame)
+    ty0, ty1 = _whole_letters(full, tx0 + X0, ty0 + Y0, tx1 + X0, ty1 + Y0, ch)
+    ty0, ty1 = ty0 - Y0, ty1 - Y0
     #(covered in the paper's own color, not white: a cream or colored page stays as it is)
     area = rgb[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]
     paper = area[~full[ty0 + Y0:ty1 + Y0, tx0 + X0:tx1 + X0]]
     color = '#%02x%02x%02x' % tuple(int(v) for v in np.median(paper, axis=0)) if paper.size else None
     return frac(tx0 + X0, ty0 + Y0, tx1 + X0, ty1 + Y0, W, H), color
+
+
+def _whole_letters(full, x0, y0, x1, y1, ch):
+    """(top, bottom) of the box x0..x1, y0..y1 grown to the whole of each mark of ink it cuts through
+    at its top or bottom edge (letters only: a mark more than two letters tall is left as it is)."""
+    H, W = full.shape
+    pad = max(2, int(1.5 * ch))
+    wy0, wy1 = max(0, y0 - pad), min(H, y1 + pad)
+    top, bottom = y0, y1
+    for (a, b, c, d, n) in _components(full[wy0:wy1, x0:x1]):
+        b, d = b + wy0, d + wy0
+        if d - b > 2 * ch or d <= y0 or b >= y1:
+            continue
+        top, bottom = min(top, b), max(bottom, d)
+    return top, bottom
 
 
 def wording_box(img, p, answer):

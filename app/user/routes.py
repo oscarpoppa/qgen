@@ -557,19 +557,9 @@ def people_page(in_archive=False, **extra):
         unit='person', units='people', all_label='All people', all_count=len(ulst), name=lambda f: f.name,
         placeholder='e.g. 7th grade', add_words='+', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
-        #a plain button (blue is for the page's own action); grayed out in an empty folder;
-        #"to this folder" drops off on phones
-        box_tools=None if in_archive else lambda n: Markup('<a class="btn btn-secondary btn-xs btn-icon" href="{}" title="Assign a quiz to this folder: everyone in “{}”">{}</a> ').format(
-            url_for('qgen.assign', folder=n['folder'].id), n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder'))
-        if n['count'] else Markup('<button type="button" class="btn btn-secondary btn-xs btn-icon" disabled title="Assign a quiz to this folder: nobody in “{}” yet">{}</button> ').format(
-            n['folder'].name, icon_label('lc-send', 'Assign a quiz to this folder')),
-        fold_key='qgen-folded-user-folders',
-        #All people: every student; Uncategorized: the people in no folder (the owner, 2026-10-14:
-        #every folder tab can assign a quiz to everyone in it)
-        all_tools=None if in_archive else lambda r: _assign_all_button([u for u in ulst if not u.is_admin], 'Assign a quiz to everyone',
-                                               'Assign a quiz to everyone: every student', 'Assign a quiz to everyone: there are no students yet'),
-        main_tools=None if in_archive else lambda r: _assign_all_button(r['people'], 'Assign a quiz to this folder',
-                                                'Assign a quiz to this folder: everyone in Uncategorized (in no folder)', 'Assign a quiz to this folder: nobody is in Uncategorized'))
+        #(no Assign paper plane at the top for a folder, Uncategorized or everyone: people are assigned from the
+        #Checked folder's "Apply to checked", each person from his/her own row: the owner, 2026-10-24)
+        fold_key='qgen-folded-user-folders')
     from app.qgen.models import RETAKE_RULES
     pg = _people_page_of(ulst, view, node, root, in_archive)
     return render_template('udet.html', ulst=ulst, title='Archive' if in_archive else 'People', fk=fk, shown=pg.items, pg=pg,

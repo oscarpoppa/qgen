@@ -708,6 +708,9 @@
     if (!d || !d.querySelector('input[name=students]')) return;
     if (!d.querySelector('input[name=students]:checked')) {
       e.preventDefault();
+      //(under the students' filter, the list outlined in red: static/js/fielderror.js, the owner 2026-10-24)
+      var pick = d.querySelector('.pick-people');
+      if (pick) { window.qgenPickError(pick, 'Check at least one student first.'); return; }
       var said = d.querySelector('[data-none-checked]');
       if (!said) {
         said = document.createElement('p');

@@ -74,14 +74,17 @@ def test_every_question_type_end_to_end(app_db):
     assert view.count('class="card sample-item"') == 7
     sensible(view, 'quiz view')
 
-    # --- assign: a paper page in it, so straight to printing one copy for the student
+    # --- assign: no print right after it any more; the student's paper page prints from his/her own row
+    # (one thing at a time: the owner, 2026-10-21, To do 7)
     ava = User(username='ava', is_admin=False)
     ava.set_password('pw-for-tests')
     db.session.add(ava)
     db.session.commit()
     r = teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ava.id]})
-    assert '/quiz/print/{}'.format(vq.id) in r.headers['Location']
-    printing = teacher.get(r.headers['Location']).data.decode()
+    assert '/quiz/print/' not in r.headers['Location']
+    hist = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
+    assert '/quiz/print/{}?users={}'.format(vq.id, ava.id) in hist
+    printing = teacher.get('/quiz/print/{}?users={}'.format(vq.id, ava.id)).data.decode()
     assert printing.count('class="paper-sheet"') == 1 and 'ava' in printing and page_pic in printing
     sensible(printing, 'print page')
     # it waits on Home and My quizzes (gold: new)

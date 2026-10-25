@@ -48,4 +48,35 @@
   }
   document.addEventListener('input', clear, true);
   document.addEventListener('change', clear, true);
+
+  /* A list to check or choose from (a dialog's folders, Write to's students, Choose pictures) with nothing
+   * checked when its button was pressed (the owner, 2026-10-24: "red text and a rectangle"): the list outlined
+   * in red and the words right under its filter, where they're seen (not at the bottom, under a long list).
+   * Gone once something in it is checked. window.qgenPickError(anything in the picker, words) / qgenPickOk(...). */
+  function pickRoot(el) { return el.closest('[data-folder-pick], .pick-people, .pick-pictures, .folder-filter') || el; }
+  window.qgenPickError = function (el, words) {
+    var root = pickRoot(el);
+    root.classList.add('pick-bad');
+    var e = root.querySelector(':scope > .pick-error[data-said]');
+    if (!e) {
+      e = document.createElement('div');
+      e.className = 'error pick-error';
+      e.setAttribute('data-said', '');
+      e.setAttribute('role', 'alert');
+      var bar = root.querySelector(':scope > .filter-bar');
+      if (bar) bar.insertAdjacentElement('afterend', e); else root.insertBefore(e, root.firstChild);
+    }
+    e.textContent = words;
+    e.scrollIntoView({ block: 'nearest' });
+  };
+  window.qgenPickOk = function (el) {
+    var root = pickRoot(el);
+    root.classList.remove('pick-bad');
+    var e = root.querySelector(':scope > .pick-error[data-said]');
+    if (e) e.remove();
+  };
+  document.addEventListener('change', function (e) {
+    var root = e.target.closest && e.target.closest('.pick-bad');
+    if (root && root.querySelector('input:checked:not(:disabled)')) window.qgenPickOk(root);
+  }, true);
 })();

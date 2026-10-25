@@ -2,6 +2,8 @@
  * optionally put some in groups ("each student gets 2 of these 6"); the panel says
  * how many questions each student answers. Saved as JSON in the hidden vplist:
  *   [4, {"pick": 2, "from": [5, 6, 7]}, 9]
+ * A problem every student gets can be used several times ("How many times", the owner 2026-10-24):
+ * its id repeated in a row, each one a fresh draw of its values ([4, 4, 4, 9]).
  */
 (function () {
   var hidden = document.getElementById('vplist');
@@ -9,7 +11,7 @@
   var empty = document.getElementById('order-empty');
   var groupsBox = document.getElementById('groups');
   var total = document.getElementById('order-total');
-  var shuffle = document.getElementById('shuffle_order');
+  var keep = document.getElementById('keep_order');
   var shuffledNote = document.getElementById('order-shuffled');
   var fixedNote = document.getElementById('order-fixed');
   var LETTERS = 'ABCDEFGH'.split('');
@@ -22,7 +24,7 @@
     if (container) container.dispatchEvent(new Event('qgen-ticks-changed'));
   }
 
-  var order = [];      // [{id: '5', group: ''|'A'}]
+  var order = [];      // [{id: '5', group: ''|'A', times: 1}]
   var picks = {};      // {A: 2}
 
   /* load what was saved */
@@ -36,7 +38,10 @@
         picks[letter] = entry.pick;
         (entry.from || []).forEach(function (id) { order.push({ id: String(id), group: letter }); });
       } else {
-        order.push({ id: String(entry), group: '' });
+        //(the same problem again right after itself: one row, used that many times)
+        var last = order[order.length - 1];
+        if (last && !last.group && last.id === String(entry)) last.times = (last.times || 1) + 1;
+        else order.push({ id: String(entry), group: '', times: 1 });
       }
     });
   })();
@@ -44,7 +49,7 @@
   function save() {
     var out = [], seen = {};
     order.forEach(function (item) {
-      if (!item.group) { out.push(+item.id); return; }
+      if (!item.group) { for (var k = 0; k < (item.times || 1); k++) out.push(+item.id); return; }
       if (seen[item.group]) { seen[item.group].from.push(+item.id); return; }
       seen[item.group] = { pick: +(picks[item.group] || 1), from: [+item.id] };
       out.push(seen[item.group]);
@@ -61,7 +66,8 @@
 
   //how many questions each student answers: every ungrouped one, plus each group's pick
   function renderTotal(used) {
-    var n = order.filter(function (o) { return !o.group; }).length;
+    var n = 0;
+    order.forEach(function (o) { if (!o.group) n += o.times || 1; });
     Object.keys(used).forEach(function (l) { n += Math.min(picks[l] || 1, used[l]); });
     total.textContent = order.length ? 'Each student answers ' + n + ' problem' + (n === 1 ? '' : 's') + '.' : '';
   }
@@ -128,7 +134,8 @@
       var r = tr.querySelector('input'), lab = tr.querySelector('label');
       r.id = id; r.value = l; r.checked = item.group === l;
       lab.htmlFor = id; lab.textContent = l ? 'In group ' + l + ' (random pick)' : 'Every student gets it';
-      r.addEventListener('change', function () { item.group = l; whoDialog.close(); render(); });
+      //(a group's problems are used once each: "How many times" is for problems every student gets)
+      r.addEventListener('change', function () { item.group = l; if (l) item.times = 1; whoDialog.close(); render(); });
       body.appendChild(tr);
     });
     whoDialog.showModal();
@@ -137,7 +144,7 @@
 
   function render() {
     order = order.filter(function (item) { return boxes[item.id]; });
-    var fixed = shuffle && !shuffle.checked;
+    var fixed = keep && keep.checked;
     if (shuffledNote) shuffledNote.hidden = fixed;
     if (fixedNote) fixedNote.hidden = !fixed;
     list.innerHTML = '';
@@ -197,6 +204,25 @@
           bottom.appendChild(btn);
         });
       }
+      //how many times every student gets it (each a fresh draw of its values: the owner, 2026-10-24)
+      if (!item.group) {
+        var howLabel = document.createElement('label');
+        howLabel.className = 'order-times small';
+        howLabel.appendChild(document.createTextNode('How many times '));
+        var how = document.createElement('input');
+        how.type = 'number'; how.min = 1; how.max = 50; how.value = item.times || 1;
+        how.className = 'order-times-n';
+        how.setAttribute('aria-label', 'How many times \u201c' + title + '\u201d is in the quiz');
+        how.addEventListener('input', function () {
+          var v = Math.round(+how.value);
+          if (!v) return;
+          item.times = Math.max(1, Math.min(50, v));
+          renderTotal(groupSizes()); save();
+        });
+        how.addEventListener('change', function () { how.value = item.times || 1; });
+        howLabel.appendChild(how);
+        bottom.appendChild(howLabel);
+      }
       if (bottom.children.length) li.appendChild(bottom);
       list.appendChild(li);
     });
@@ -204,7 +230,18 @@
     save();
   }
 
-  if (shuffle) shuffle.addEventListener('change', render);
+  if (keep) keep.addEventListener('change', render);
+  //Save with no problem checked: the red words under the Problems card's filter, its list outlined (the owner,
+  //2026-10-24: every form missing something says so, in red, where it's needed)
+  hidden.form.addEventListener('submit', function (e) {
+    //(saved with problems from the Problems page's checked ones: unchecked there on return, the owner 2026-10-24)
+    if (order.length) { if (window.qgenCheckedDone) window.qgenCheckedDone(); return; }
+    var picker = document.getElementById('problem-picker');
+    if (!picker || !window.qgenPickError) return;
+    e.preventDefault();
+    window.qgenPickError(picker, 'Check at least one problem first.');
+    picker.scrollIntoView({ block: 'center' });
+  });
 
   Object.keys(boxes).forEach(function (id) {
     boxes[id].forEach(function (box) {

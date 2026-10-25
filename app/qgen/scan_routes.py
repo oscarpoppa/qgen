@@ -60,10 +60,17 @@ def scan_start():
     from app import folder_tree as FT
     stash_folders = ScanFolder.query.order_by(ScanFolder.name).all()
     root, flat, nodes = FT.tree(stash_folders, lambda f: f.name, away, {j.id: [j.folder_id] for j in away if j.folder_id})
-    view, node = FT.view_of(request.args.get('stash'), nodes, default='all')
+    #(the Checked folder: the scans checked, in any folder, sent as ?stash=checked&checked=4,7 by static/js/scanstash.js;
+    #the owner, 2026-10-24, To do 10)
+    if request.args.get('stash') == 'checked':
+        want = {int(x) for x in request.args.get('checked', '').split(',') if x.isdigit()}
+        view, node = 'checked', None
+    else:
+        view, node = FT.view_of(request.args.get('stash'), nodes, default='all')
     from app import tuning
     deep = tuning.get('folder_depth')
-    shown = away if view == 'all' else root['items'] if view == 'main' else FT.subtree(node)
+    shown = ([j for j in away if j.id in want] if view == 'checked' else away if view == 'all'
+             else root['items'] if view == 'main' else FT.subtree(node))
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
                            max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
                            stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [],
@@ -607,6 +614,48 @@ def scan_move(job_id):
     if 'stay' in request.form:
         return _stash_back(request.form.get('stay') or None)
     return _stash_back(to or None)
+
+
+@qgen_bp.route('/quiz/scan/stash/move', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_move_many():
+    """The checked stashed scans into a folder, or out to Uncategorized (the owner, 2026-10-24, To do 10)."""
+    jobs = [j for j in (db.session.get(ScanJob, int(x)) for x in request.form.getlist('items') if x.isdigit()) if j]
+    to = request.form.get('to') or ''
+    to = '' if to == 'top' else to
+    if to and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
+        abort(404)
+    if not jobs:
+        flash('Check at least one scan first.', 'error')
+        return _stash_back()
+    for job in jobs:
+        SC.move_scan(job, to)
+    where = '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'
+    flash('Moved {} to {}.'.format('“{}”'.format(jobs[0].name) if len(jobs) == 1 else '{} scans'.format(len(jobs)), where), 'success')
+    return _stash_back(to or None)
+
+
+@qgen_bp.route('/quiz/scan/stash/discard', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def scan_discard_many():
+    """The checked stashed scans discarded, as each one's own Discard does (the owner, 2026-10-24, To do 10)."""
+    jobs = [j for j in (db.session.get(ScanJob, int(x)) for x in request.form.getlist('items') if x.isdigit()) if j]
+    if not jobs:
+        flash('Check at least one scan first.', 'error')
+        return _stash_back()
+    names = [j.name for j in jobs]
+    for job in jobs:
+        current_app.logger.info('{} discarded scan {} "{}"'.format(current_user.username, job.id, job.name))
+        SC.remove_job(job)
+    flash('Discarded {}. Nothing from {} was saved.'.format('the scan “{}”'.format(names[0]) if len(names) == 1 else '{} scans'.format(len(names)),
+                                                              'it' if len(names) == 1 else 'them'), 'success')
+    return _stash_back()
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/take-out', methods=['POST'])

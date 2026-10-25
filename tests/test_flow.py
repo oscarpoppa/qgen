@@ -162,7 +162,7 @@ def test_whole_school_week(app_db):
 
     # --- quiz and assignment
     ids = ', '.join(str(p.id) for p in probs)
-    r = teacher.post('/quiz/makevquiz', data={'title': 'Week 1', 'vplist': ids, 'shuffle_order': 'y'})
+    r = teacher.post('/quiz/makevquiz', data={'title': 'Week 1', 'vplist': ids, 'keep_order': ''})
     assert r.status_code == 302
     vq = VQuiz.query.one()
     assert vq.shuffle_order
@@ -287,7 +287,7 @@ def test_question_groups_give_students_different_problems(app_db):
     lay = json.dumps([p[0], {'pick': 2, 'from': p[1:]}])
     bad = json.dumps([p[0], {'pick': 9, 'from': p[1:]}])
     assert b'not 9' in teacher.post('/quiz/makevquiz', data={'title': 'G', 'vplist': bad}).data
-    assert teacher.post('/quiz/makevquiz', data={'title': 'Groups', 'vplist': lay, 'shuffle_order': 'y'}).status_code == 302
+    assert teacher.post('/quiz/makevquiz', data={'title': 'Groups', 'vplist': lay, 'keep_order': ''}).status_code == 302
     vq = VQuiz.query.one()
     assert b'2 of these 4' in teacher.get('/quiz/listvq').data
     assert json.loads(teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()

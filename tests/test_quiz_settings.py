@@ -15,7 +15,7 @@ def make_quiz(app, db, teacher, **quiz):
     for f in (f1, f2):
         assert teacher.post('/quiz/makevprob', data=f).status_code == 302
     ids = ', '.join(str(p.id) for p in VProblem.query.order_by(VProblem.id))
-    data = dict({'title': 'Settings quiz', 'vplist': ids, 'shuffle_order': 'y', 'retake_rule': 'best'}, **quiz)
+    data = dict({'title': 'Settings quiz', 'vplist': ids, 'keep_order': '', 'retake_rule': 'best'}, **quiz)
     assert teacher.post('/quiz/makevquiz', data=data).status_code == 302
     return VQuiz.query.filter_by(title='Settings quiz').one()
 

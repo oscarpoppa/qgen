@@ -13,7 +13,7 @@ def make_quiz(app, teacher, title='Week 1', essay=False):
     else:
         teacher.post('/quiz/makevprob', data=problem_form('numeric', title + ' sum', 'What is 2 + 2?', '4', []))
     vp = VProblem.query.order_by(VProblem.id.desc()).first()
-    teacher.post('/quiz/makevquiz', data={'title': title, 'vplist': str(vp.id), 'shuffle_order': ''})
+    teacher.post('/quiz/makevquiz', data={'title': title, 'vplist': str(vp.id), 'keep_order': 'y'})
     return VQuiz.query.filter_by(title=title).one()
 
 
