@@ -66,7 +66,10 @@
       {%- set errs_now = (checks.get((n, i)) or {}).get('errors') or [] %}
       <span class="scan-item-bad" data-item-bad title="{{ errs_now|join(' ') }}"{% if not (item.include and errs_now) %} hidden{% endif %}>!</span>
       <label class="check" title="Include this one when saving"><input type="checkbox" name="{{ ip }}include" class="scan-include"{% if item.include %} checked{% endif %}> <span class="qnum">{{ i + 1 }}</span></label>
-      <button type="button" class="scan-item-fold" data-fold-item aria-expanded="{{ 'true' if key in problems else 'false' }}" title="{{ q_short }}">
+      {#- only a problem with something to fix opens; the rest are changed after generating, in Edit problem (the owner, 2026-10-25) #}
+      {%- set can_open = (item.include and errs_now) or key in problems %}
+      <button type="button" class="scan-item-fold" data-fold-item aria-expanded="{{ 'true' if key in problems else 'false' }}" data-q="{{ q_short }}" data-off="Nothing to fix: change it after generating, in Edit problem"
+        {%- if can_open %} title="{{ q_short }}"{% else %} disabled title="Nothing to fix: change it after generating, in Edit problem"{% endif %}>
         <span class="fold" aria-hidden="true"></span><span class="scan-item-q">{{ q_short }}</span>{% if a_short %}<span class="scan-item-a muted">{{ a_short.splitlines()[0] if a_short else '' }}</span>{% endif %}</button>
       {% if item.kind == 'paper' %}<span class="badge" title="Done on paper: printed for each student when you assign the quiz, and you score it">{{ icon('pencil') }} Paper only</span>{% endif %}
     </div>
@@ -211,13 +214,17 @@
             <button type="button" class="scan-join{% if p.join_prev and p.state == 'done' %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if p.join_prev and p.state == 'done' else 'false' }}"
               {%- if not can_join %} disabled title="{{ wait_tip if reading else 'Only two pages with problems, both read and not generated yet, can be joined' }}"
               {%- elif p.join_prev %} title="Pages {{ before.n }} and {{ p.n }} make one quiz: click to make them two"
-              {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link') }}</button>
+              {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link' if p.join_prev and p.state == 'done' else 'lc-unlink') }}</button>
           </li>
         {% endif %}
         {%- set f = fix.get(p.n) if p.state == 'done' else none %}
         {%- set shown_state = 'fix' if f else p.state %}
         {%- set fix_words = (('; ' ~ f[0] ~ ' answer box' ~ ('' if f[0] == 1 else 'es') ~ ' to place') if f and f[0] else '') ~ (('; ' ~ f[1] ~ ' problem' ~ ('' if f[1] == 1 else 's') ~ ' to fix') if f and f[1] else '') %}
-        <li class="scan-strip-page scan-strip-{{ shown_state }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
+        {#- joined pages: a whole chain between them and one bar under both (the owner, 2026-10-25: a gray or blue chain
+            alone didn't show it) #}
+        {%- set nxt = data.pages[loop.index0 + 1] if not loop.last else none %}
+        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state == 'done' and not loop.first else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state == 'done' else '') %}
+        <li class="scan-strip-page scan-strip-{{ shown_state }}{{ join_cls }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
           {#- its state as a small badge on the thumbnail's corner (the owner, 2026-10-25: the outline alone was hard to see) #}

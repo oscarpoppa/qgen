@@ -6,6 +6,8 @@
 {% from "_pick.html" import pick_table %}
 
 
+{#- the whole window, like the folder pages, so its two cards aren't crunched (the owner, 2026-10-25) #}
+{% block main_class %} container-wide{% endblock %}
 {% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 
 {% block content %}
@@ -36,7 +38,7 @@
         {% call pick_table('Quiz', 'quiz-pick-list') %}
           {% for q in quizzes %}
             <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"{% if not q.shuffle_order %} data-keep-order{% endif %}><td class="tick-col"><input type="checkbox" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if q.id in (form.vquiz.data or []) %} checked{% endif %}></td>
-              <td><label for="vquiz-{{ q.id }}">{{ q.title }}</label>{{ scan_mark(q) }}</td></tr>
+              <td><label for="vquiz-{{ q.id }}">{{ q.title }}{{ scan_mark(q) }}</label></td></tr>
           {% endfor %}
         {% endcall %}
       </div>

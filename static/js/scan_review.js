@@ -214,6 +214,12 @@
         mark.title = Array.prototype.map.call(errs, function (e) { return e.textContent.trim(); }).join(' ');
       }
       if (bad) fix[item.dataset.page] = (fix[item.dataset.page] || 0) + 1;
+      //(only a problem with something to fix opens; one open stays open until it's closed: the owner, 2026-10-25)
+      var fold = item.querySelector('[data-fold-item]');
+      if (fold && !item.classList.contains('is-open') && !item.classList.contains('has-error')) {
+        fold.disabled = !bad;
+        fold.title = bad ? fold.dataset.q : fold.dataset.off;
+      }
     });
     form.querySelectorAll('details.scan-page[data-page]').forEach(function (pg) {
       var b = pg.querySelector('[data-fix-count]'), k = fix[pg.dataset.page] || 0;
@@ -328,6 +334,7 @@
     if (!b) return;
     var item = b.closest('.scan-item');
     openItem(item, !item.classList.contains('is-open'));
+    if (!item.classList.contains('is-open')) refreshFix();
   });
   //a number in the notice: its page opened (pages start folded), then scrolled to
   form.addEventListener('click', function (e) {

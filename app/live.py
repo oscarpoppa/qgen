@@ -264,6 +264,14 @@ def _assign(now):
             [tuple(u) for u in User.query.with_entities(User.id, User.username, User.nickname, User.is_admin).order_by(User.id)], groups.state())
 
 
+def _addquiz(now):
+    """Add to quizzes: the problems (and their folders) and the quizzes (and theirs), as Assign watches its own lists
+    (the owner, 2026-10-25: the two are equivalent pages)."""
+    from app.qgen.models import VQuiz
+    return (_problems(now), [tuple(q) for q in VQuiz.query.filter(VQuiz.removed_at.is_(None)).with_entities(VQuiz.id, VQuiz.title).order_by(VQuiz.id)],
+            _quiz_folders())
+
+
 def _grading(cqid, now):
     """The grading page of one attempt: its answers and the grades saved so far (another
     teacher's draft, or the attempt being archived)."""
@@ -371,6 +379,7 @@ KINDS = {
     'editquiz': (True, _editquiz),
     'problems': (True, lambda arg, now: _problems(now)),
     'assign': (True, lambda arg, now: _assign(now)),
+    'addquiz': (True, lambda arg, now: _addquiz(now)),
     'archive': (True, lambda arg, now: _archive(None, now)),
     'archived': (True, _archive),
     'users': (True, lambda arg, now: _users(now)),

@@ -1839,6 +1839,8 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
   border-color: transparent transparent transparent var(--muted); transition: transform .15s; }
 @media (prefers-reduced-motion: reduce) { .scan-item-fold .fold { transition: none; } }
 .scan-item.is-open .scan-item-fold .fold { transform: rotate(90deg); }
+.scan-item-fold:disabled { opacity: 1; cursor: default; }
+.scan-item-fold:disabled .fold { opacity: .3; }
 .scan-item-bad { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center;
   background: var(--warn); color: #1a1a1a; font-weight: 700; font-size: 12px; cursor: help; }
 .scan-item-bad[hidden] { display: none; }
@@ -2402,9 +2404,9 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
   .assign-form > .assign-side > .pick-people-card { align-self: stretch; }
   .pick-people .folder-filter-list > .pick-list, .pick-people .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); }
 }
-.pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 6px 8px; }
-.pick-quiz .quiz-pick-list > li { margin: 0; min-width: 0; }
+/* (the quiz list is a table now, as wide as its box: it was still laid out as the old tiles' grid, its table in a
+   240px column, the owner 2026-10-25) */
+.pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0; }
 .pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
 .pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
 .assign-form .assign-go { margin: 0; }
@@ -3279,7 +3281,9 @@ details.result-box[open] > summary, details.item-box[open] > summary {
    tiles): a check column and a name column, a line between rows, the checked ones in the light
    accent they had as tiles; never the card layout (a dialog is narrow) */
 .folder-filter-list > .pick-wrap { margin: 0; }
-.pick-quiz .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); overflow: auto; }
+/* (as tall as the Assign page's Students list at each width: 420px on a narrow window; the owner, 2026-10-25) */
+.pick-quiz .folder-filter-list > .pick-wrap { max-height: 420px; overflow: auto; }
+@container page (min-width: 960px) { .pick-quiz .folder-filter-list > .pick-wrap { max-height: min(60vh, 560px); } }
 table.pick-table { width: 100%; border-collapse: collapse; }
 table.pick-table > thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2, var(--surface)); }
 table.pick-table > tbody > tr > td { padding: 6px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
@@ -3692,6 +3696,10 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-join:hover:not(:disabled) { color: var(--accent); }
 .scan-join.is-joined { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .scan-join:disabled { opacity: .3; cursor: default; }
+/* joined pages share one bar under their thumbnails, meeting in the middle of the chain between them (the owner, 2026-10-25) */
+.scan-strip-page.is-joined-prev::after, .scan-strip-page.is-joined-next::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 3px; border-radius: 2px; background: var(--accent); }
+.scan-strip-page.is-joined-prev::after { left: -26px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.scan-strip-page.is-joined-next::after { right: -26px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .scan-head-thumb-link { line-height: 0; flex: 0 0 auto; }
 .scan-head-thumb { width: 26px; height: 34px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
 details.scan-page > summary .scan-head-thumb-link { margin-right: 4px; }
@@ -3758,3 +3766,8 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
 .person-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 8px 0 4px 28px; }
 .person-facts dt { color: var(--muted); }
 .person-facts dd { margin: 0; }
+/* a grayed "Generate quiz" (a joined page's, or one with something to fix) is plainly gray, not a dimmed blue: the owner, 2026-10-25 */
+.scan-page button[data-generate]:disabled { background: var(--surface-2); border-color: var(--border); color: var(--muted); opacity: 1; }
+/* the camera of a quiz or problem made from a scanned page, right after its name in a picker's row (the owner, 2026-10-25:
+   it wrapped under the name); the label's own gap spaces it */
+table.pick-table label .scan-mark { margin-left: -2px; flex: none; }

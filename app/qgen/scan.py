@@ -904,9 +904,15 @@ def helper_hints(job, data, urls):
     #(each page that isn't ready says what to do next, as numbered steps; a page ready to make says so: the owner,
     #2026-10-25, "more helpful about what steps need to be taken instead of just throwing a bunch of problems at me")
     gen = 'Press \u201cGenerate quiz\u201d.'
+    #(the pages being read now, as one gray line first, so the Helper isn't blank while a workbook is read: the owner, 2026-10-25)
+    now = [p['n'] for p in pages if p.get('state') == 'reading']
+    if now:
+        names = str(now[0]) if len(now) == 1 else '{} and {}'.format(', '.join(map(str, now[:-1])), now[-1])
+        hints.append({'level': 'tip', 'key': 'reading', 'text': 'Page{} {} {} being read\u2026'.format(
+            '' if len(now) == 1 else 's', names, 'is' if len(now) == 1 else 'are')})
     for p in pages:
         n, state = p['n'], p.get('state')
-        #(nothing about a page being read or made already: its card shows how it's going)
+        #(nothing more about a page being read or made already: its card shows how it's going)
         if state in ('saved', 'reading'):
             continue
         if state == 'waiting':
@@ -948,7 +954,14 @@ def helper_hints(job, data, urls):
             hints.append({'level': 'error', 'key': 'page-{}'.format(n),
                           'text': 'Page {}: {}'.format(n, '; '.join(heads)), 'steps': steps})
         elif lead:
-            hints.append({'level': 'ok', 'key': 'page-{}'.format(n), 'text': 'Page {} is ready: press \u201cGenerate quiz\u201d.'.format(n)})
+            #(pages joined into one quiz are named together, its Generate being on the first: the owner, 2026-10-25)
+            grp = sorted(k for k, v in leads.items() if v == n)
+            if len(grp) > 1:
+                names = '{} and {}'.format(', '.join(map(str, grp[:-1])), grp[-1])
+                text = 'Pages {} are joined and ready: press \u201cGenerate quiz\u201d on page {}.'.format(names, n)
+            else:
+                text = 'Page {} is ready: press \u201cGenerate quiz\u201d.'.format(n)
+            hints.append({'level': 'ok', 'key': 'page-{}'.format(n), 'text': text})
     if data.get('folder'):
         err = S.new_subject_name_error('problems', data['folder'])
         if err:

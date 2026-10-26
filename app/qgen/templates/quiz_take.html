@@ -286,8 +286,21 @@
       .then(function (res) { status.textContent = res.ok ? 'Saved at ' + res.saved : (res.error || 'Not saved'); },
             function () { status.textContent = 'Not saved — check your connection. Keep this page open.'; });
   }
-  function soon() { clearTimeout(timer); if (status) status.textContent = 'Saving…'; timer = setTimeout(save, 1200); }
+  function soon() { clearTimeout(timer); if (status) status.textContent = 'Saving…'; timer = setTimeout(function () { timer = null; save(); }, 1200); }
   if (saveUrl) { form.addEventListener('input', soon); form.addEventListener('change', soon); }
+  //what's in the boxes counted as soon as the quiz opens, and again when the browser brings the page back from its
+  //memory (Back) with what was typed; a change not saved yet is sent at once when the page is left (the owner, 2026-10-25:
+  //boxes came back filled in but not counted or saved)
+  update();
+  window.addEventListener('pageshow', function (e) { update(); if (e.persisted && saveUrl) save(); });
+  window.addEventListener('pagehide', function () {
+    if (!timer || !saveUrl || submitting) return;
+    clearTimeout(timer); timer = null;
+    var data = new FormData(form);
+    data.delete('csrf_token');
+    fetch(saveUrl, { method: 'POST', body: data, credentials: 'same-origin', keepalive: true,
+                     headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } }).catch(function () {});
+  });
 
   /* time limit: a quiet reminder, updated once a minute; hands in what's there at the end */
   var left = form.dataset.remaining ? +form.dataset.remaining : null, clock = document.getElementById('timer');

@@ -5,6 +5,10 @@
 {% from "_macros.html" import filter_bar, scan_mark with context %}
 {% from "_pick.html" import pick_table %}
 
+{#- the whole window, like Assign quizzes and the folder pages (the owner, 2026-10-25) #}
+{% block main_class %} container-wide{% endblock %}
+{#- (a notice when the problems, quizzes or folders change while it's open, as on Assign quizzes) #}
+{% block body_attrs %}{{ watch('addquiz', note='The problems, quizzes or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
   <div class="actions"></div></div>
@@ -21,11 +25,11 @@
       {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
       <div class="error pick-error" data-problem-error role="alert" hidden>Check at least one problem first.</div>
       <div class="folder-filter" data-folder-filter data-prefix="problem:" data-all-label="All problems" data-main-label="Uncategorized"
-           data-unit="problem" data-units="problems" data-start="{{ problem_start }}" data-tools-home="#add-problem-bar" data-style="list">
+           data-unit="problem" data-units="problems" data-start="{{ problem_start }}" data-remember="add-problems" data-tools-home="#add-problem-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Problem', 'add-problem-list') %}
-            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}</label>{{ scan_mark(p) }}</td></tr>{% endfor %}
+            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}{{ scan_mark(p) }}</label></td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>
@@ -41,7 +45,7 @@
         <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Quiz', 'add-quiz-list') %}
-            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}</label>{{ scan_mark(q) }}</td></tr>{% endfor %}
+            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}{{ scan_mark(q) }}</label></td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>
