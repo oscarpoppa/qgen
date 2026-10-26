@@ -3665,7 +3665,6 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-strip-saved .scan-strip-badge { background: var(--ok); border-color: var(--ok); color: #fff; }
 .scan-strip-reading .scan-strip-badge { background: var(--accent); border-color: var(--accent); color: #fff; }
 .scan-strip-error .scan-strip-badge { background: var(--bad); border-color: var(--bad); color: #fff; }
-.scan-strip-saved .scan-strip-badge { background: var(--surface-2, var(--surface)); border-color: var(--muted); color: var(--muted); }
 /* read, but not ready yet: "!" in the Helper's yellow (the owner, 2026-10-25) */
 .scan-strip-fix .scan-strip-thumb { border-color: var(--warn); }
 .scan-strip-fix .scan-strip-badge { background: var(--warn); border-color: var(--warn); color: #1a1a1a; font-size: 13px; line-height: 1; }
