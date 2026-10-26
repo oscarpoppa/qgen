@@ -271,8 +271,8 @@ def test_retake_scoring_rules(app_db):
     assert r.status_code == 302
     page = sam.get('/mypage').data.decode()
     assert 'Your score: 50%' in page and '★ 50%' in page and '★ 0%' not in page
-    #(People shows each person's results now: Results by student is gone, the owner 2026-10-21)
-    ulist = teacher.get('/userdet').data.decode()
+    #(each person's results are on his/her own page, not under People's rows: the owner, 2026-10-25)
+    ulist = teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()
     assert 'Change how the score counts' in ulist
     assert 'selected>The best attempt' in ulist.replace('"selected" ', 'selected').replace('selected ', 'selected') or 'The best attempt' in ulist
     teacher.post('/quiz/retakerule/{}'.format(second.id), data={'rule': ''})

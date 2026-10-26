@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {#- the page's own background before anything else arrives, so moving between pages or reloading never flashes
+      white in dark mode (the owner, 2026-10-25: "the whole page blanks out"); the same colors as app.css's --bg #}
+  <meta name="color-scheme" content="light dark">
+  <style>html { background: #f6f7f9; } @media (prefers-color-scheme: dark) { html { background: #12151b; } }</style>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   {% if current_user.is_authenticated %}<meta name="qgen-user" content="{{ current_user.id }}">{% endif %}
   {# the tab: just the page's name; unfinished quizzes (blue) and new ones (gold) are small dots one

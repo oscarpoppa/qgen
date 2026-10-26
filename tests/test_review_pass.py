@@ -451,7 +451,7 @@ def test_results_by_student_in_the_users_folders(app_db):
     assert row.format(ids('sam')) in page and row.format(ids('kim')) not in page
     # the folders are made and moved on this same page now
     assert 'class="side-card-head"' in page and 'aria-label="New folder"' in page and 'Folder options' in page and 'data-drop=' in page
-    assert 'id="results-filter"' in page and 'class="state-filter"' in page and 'Waiting for grading only' in page
+    assert 'id="results-filter"' in page and 'class="state-filter"' not in page   # (no Show menu: the owner, 2026-10-25)
     every = teach.get('/userdet?folder=all').data.decode()
     assert row.format(ids('kim')) in every and row.format(ids('sam')) in every
     # a change to the folders reaches an open People page

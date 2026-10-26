@@ -22,4 +22,5 @@
   }, true);
   function all() { document.querySelectorAll('table').forEach(function (t) { if (t.querySelector('details.row-fold')) mark(t); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
+  document.addEventListener('qgen-swapped', all);   // (a list swapped in without a reload)
 })();

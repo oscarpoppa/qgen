@@ -3753,3 +3753,8 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
 /* a workbook page's state before its heading: the thumbnail's badge, in line (the owner, 2026-10-25) */
 .scan-head-state { display: inline-flex; flex: none; }
 .scan-head-state .scan-strip-badge { position: static; }
+
+/* People: an opened row's account facts, two columns (the owner, 2026-10-25: no quizzes here) */
+.person-facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 8px 0 4px 28px; }
+.person-facts dt { color: var(--muted); }
+.person-facts dd { margin: 0; }

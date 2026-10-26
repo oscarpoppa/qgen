@@ -420,8 +420,9 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     assert '>Results</a>' not in results and '>Accounts</a>' not in results and 'people_switch' not in results
     assert teacher.get('/quiz/listuser').headers['Location'] == '/userdet'
     assert '<tr class="result-item" data-box="user:' in results and '<details class="box row-fold" data-box="user-row:' in results
-    assert '<div class="result-groups divided" data-fold-body>' in results
-    assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' in results
+    #(an opened row shows the person's account only; quizzes are on his/her own page: the owner, 2026-10-25)
+    assert '<dl class="person-facts small" data-fold-body>' in results and '<div class="result-groups' not in results
+    assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' not in results
 
 
 def test_they_are_called_folders_on_screen(app_db):

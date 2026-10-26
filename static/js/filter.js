@@ -43,6 +43,11 @@ window.qgenHideRow = function (row, key, hide) {
       if (title) { under.classList.add('title-count'); title.insertAdjacentElement('afterend', under); } else bar.insertBefore(under, bar.firstChild);
     }
     var root = bar.dataset.filter ? document.querySelector(bar.dataset.filter) : null;
+    //(found again when the list was swapped in without a reload, after a drop: static/js/folders.js)
+    document.addEventListener('qgen-swapped', function () {
+      if (bar.dataset.filter) root = document.querySelector(bar.dataset.filter);
+      none = null;
+    });
     var one = bar.dataset.one || 'match', many = bar.dataset.many || 'matches';
     var before = null;  // which folder boxes were open before filtering
     var none = null;  // the "Nothing matches" note

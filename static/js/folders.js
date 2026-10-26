@@ -126,9 +126,7 @@
   });
 
   //after a drag: "Moved "train" to "abc"." at the top, and what moved lit up
-  (function () {
-    var done = null;
-    try { done = JSON.parse(sessionStorage.getItem('qgen-moved') || 'null'); sessionStorage.removeItem('qgen-moved'); } catch (e) {}
+  function movedSay(done) {
     if (!done || !done.text) return;
     var list = document.createElement('ul'), item = document.createElement('li');
     list.className = 'alerts';
@@ -146,7 +144,63 @@
       box.classList.add('just-moved');
       setTimeout(function () { box.classList.remove('just-moved'); }, 2500);
     }
+  }
+  //(after a reload: kept for the fallback below)
+  (function () {
+    var done = null;
+    try { done = JSON.parse(sessionStorage.getItem('qgen-moved') || 'null'); sessionStorage.removeItem('qgen-moved'); } catch (e) {}
+    movedSay(done);
   })();
+
+  //after a move, the page as it is now, swapped in without reloading (the owner, 2026-10-25: "the whole page blanks
+  //out and comes back"): the list (each folder box is set up again by folderfilter.js), its page controls, and the
+  //folder list's counts, changed in place so its folds and drop places stay. Anything that doesn't line up: a reload.
+  function sideKey(row) {
+    var a = row.querySelector('a[href]');
+    if (!a || a.dataset.sideTab) return null;
+    var u = new URL(a.getAttribute('href'), location.href);
+    return u.pathname + u.search;
+  }
+  function refreshInPlace(done) {
+    var reload = function () {
+      try { sessionStorage.setItem('qgen-moved', JSON.stringify(done)); } catch (e) {}
+      if (window.qgenNotePlace) window.qgenNotePlace();  // back to the same place after the reload
+      location.reload();
+    };
+    if (!window.fetch || !window.DOMParser || !window.qgenFolderFilterSetUp) return reload();
+    fetch(location.href, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok || r.redirected) throw new Error('not the page');
+      return r.text();
+    }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var oldBoxes = document.querySelectorAll('.folder-main [data-folder-filter]'), newBoxes = doc.querySelectorAll('.folder-main [data-folder-filter]');
+      var oldPagers = document.querySelectorAll('nav.pager'), newPagers = doc.querySelectorAll('nav.pager');
+      if (!oldBoxes.length || oldBoxes.length !== newBoxes.length || oldPagers.length !== newPagers.length) throw new Error('not the same page');
+      var fresh = {};
+      doc.querySelectorAll('.folder-side .side-row').forEach(function (row) { var k = sideKey(row); if (k) fresh[k] = row; });
+      document.querySelectorAll('.folder-side .side-row').forEach(function (row) {
+        var k = sideKey(row), n = k && fresh[k];
+        if (!n) return;
+        ['.side-count', '.side-flags'].forEach(function (sel) {
+          var a = row.querySelector(sel), b = n.querySelector(sel);
+          if (a && b) a.innerHTML = b.innerHTML;
+          else if (a) a.remove();
+          else if (b) (row.querySelector('.side-count') ? row.insertBefore(document.importNode(b, true), row.querySelector('.side-count')) : row.appendChild(document.importNode(b, true)));
+        });
+        row.classList.toggle('is-empty', n.classList.contains('is-empty'));
+      });
+      Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
+      Array.prototype.forEach.call(oldBoxes, function (b, i) {
+        var nb = document.importNode(newBoxes[i], true);
+        b.replaceWith(nb);
+        window.qgenFolderFilterSetUp(nb);
+      });
+      document.dispatchEvent(new CustomEvent('qgen-swapped', { detail: { list: document.querySelector('.folder-main') } }));
+      //(a name typed in the filter still narrows the new list)
+      document.querySelectorAll('[data-filter-bar]').forEach(function (bar) { if (bar.qgenRun) bar.qgenRun(); });
+      movedSay(done);
+    }).catch(reload);
+  }
 
   //after a "Move to" list, "+ Add to folder…" or a bar's button (the page came back with
   //?moved=quiz:12): the same glow as after a drag; the address is tidied
@@ -283,9 +337,7 @@
           return;
         }
         if (res.ok) {
-          try { sessionStorage.setItem('qgen-moved', JSON.stringify({ text: res.message, box: d.kind + ':' + d.id })); } catch (e) {}
-          if (window.qgenNotePlace) window.qgenNotePlace();  // back to the same place after the reload
-          location.reload();
+          refreshInPlace({ text: res.message, box: d.kind + ':' + d.id });
           return;
         }
         window.qgenSay(res.error || 'That didn\'t work. Please reload the page and try again.', 'error');

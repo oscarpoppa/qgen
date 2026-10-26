@@ -161,12 +161,16 @@
   all();
   //(again whenever a list changes size: a row opened or folded, fonts or pictures in, badges
   //resized; more dependable than watching clicks, the owner 2026-10-20)
-  if (window.ResizeObserver) {
-    var watch = new ResizeObserver(soon);
+  var watch = window.ResizeObserver ? new ResizeObserver(soon) : null;
+  function watchAll() {
+    if (!watch) return;
     document.querySelectorAll('table').forEach(function (t) {
       if (t.querySelector('ol.attempt-list, td.attempt-buttons, details.row-fold')) watch.observe(t);
     });
   }
+  watchAll();
+  //(a list swapped in without a reload, after a sort or a drop: static/js/sorttable.js, folders.js)
+  document.addEventListener('qgen-swapped', function () { watchAll(); soon(); });
   //(and once the page's fonts and pictures are in: they change the widths)
   window.addEventListener('load', soon);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(soon);
