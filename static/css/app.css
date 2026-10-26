@@ -3346,7 +3346,10 @@ th.tick-col input.check-all { margin: 0; }
 .put-frame .put-table { margin: 0; max-height: min(45vh, 28rem); overflow-y: auto; }
 /* the automatic folders pinned at the top of every folder list, the folders scrolling under them
    (static/js/folderfilter.js qgenPinAuto gives each its top; the owner, 2026-10-21) */
-.side-top > li.side-auto, .folder-side-list > .side-row.side-auto { position: sticky; z-index: 2; background: var(--surface); }
+.side-top > li.side-auto, .folder-side-list > .side-row.side-auto { position: sticky; z-index: 2; background: var(--surface);
+  /* (covered out to the list box's edges, its 8px sides and the rows' rounded corners: the folders scrolling under
+     showed through there; the owner, 2026-10-26) */
+  box-shadow: -6px 0 0 2px var(--surface), 6px 0 0 2px var(--surface); }
 .side-top > li.side-auto-last, .folder-side-list > .side-row.side-auto-last { padding-bottom: 4px; }
 /* the line under them: straight, end to end (a shadow followed the row's rounded corners and curved up at the
    ends: the owner, 2026-10-24) */
@@ -3355,9 +3358,10 @@ th.tick-col input.check-all { margin: 0; }
 /* (the space over the first one, the list's own top padding, covered too: the folders scrolled up
    showed through it) */
 /* (and the 2px gaps between the pinned ones, covered: the folders slid through them) */
-.side-top > li.side-auto + li.side-auto, .folder-side-list > .side-row.side-auto + .side-row.side-auto { box-shadow: 0 -2px 0 var(--surface); }
+.side-top > li.side-auto + li.side-auto, .folder-side-list > .side-row.side-auto + .side-row.side-auto {
+  box-shadow: 0 -2px 0 var(--surface), -6px 0 0 2px var(--surface), 6px 0 0 2px var(--surface); }
 .side-top > li.side-auto + li.side-auto-last, .folder-side-list > .side-row.side-auto + .side-row.side-auto-last {
-  box-shadow: 0 -2px 0 var(--surface); }
+  box-shadow: 0 -2px 0 var(--surface), -6px 0 0 2px var(--surface), 6px 0 0 2px var(--surface); }
 .side-top > li.side-auto:first-child::before, .folder-side-list > .side-row.side-auto:first-of-type::before,
 .side-top > li.side-auto-first::before, .folder-side-list > .side-row.side-auto-first::before {
   content: ""; position: absolute; left: -8px; right: -8px; bottom: 100%; height: 16px; background: var(--surface); }
