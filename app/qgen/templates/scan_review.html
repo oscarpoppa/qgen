@@ -38,9 +38,9 @@
 {% macro state_badge(p, fix) %}
   {%- set f = fix.get(p.n) if p.state == 'done' else none %}
   {%- set st = 'fix' if f else p.state %}
-  {%- set words = 'needs fixing' if f else {'waiting': 'not read yet', 'reading': 'being read', 'done': 'ready to generate', 'error': 'didn’t make it'}.get(p.state, '') %}
+  {%- set words = 'needs fixing' if f else {'waiting': 'not read yet', 'reading': 'being read', 'done': 'ready to generate', 'error': 'didn’t make it', 'saved': 'generated'}.get(p.state, '') %}
   <span class="scan-head-state scan-strip-{{ st }}" role="img" aria-label="Page {{ p.n }}: {{ words }}" title="Page {{ p.n }}: {{ words }}"><span class="scan-strip-badge">
-    {%- if f %}<b>!</b>{% else %}{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-x'}.get(p.state, 'lc-check')) }}{% endif %}</span></span>
+    {%- if f %}<b>!</b>{% else %}{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-x', 'saved': 'lc-file-text'}.get(p.state, 'lc-check')) }}{% endif %}</span></span>
 {%- endmacro %}
 
 {#- take a page out of the workbook, any page not generated yet (the owner, 2026-10-25: it was only for pages that
@@ -251,7 +251,8 @@
           {% elif made.with %}<span class="muted">Generated with page {{ made.with }}</span>
           {% else %}<span class="muted">Generated</span>{% endif %}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
-          <span class="mark mark-ok">{{ icon('lc-check') }}</span>
+          {#- the thumbnail's green "generated" badge, not a ✓ (that means read and waiting for Generate): the owner, 2026-10-25 #}
+          {{ state_badge(page, {}) }}
         </div>
       </div>
       {% elif page.state != 'done' %}
