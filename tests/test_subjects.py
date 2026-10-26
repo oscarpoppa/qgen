@@ -771,3 +771,17 @@ def test_back_up_to_the_outer_folder_says_where_else_it_is(app_db):
     # critic 2026-10-20; the message above names them, from the server)
     page = teacher.get('/quiz/listvp').data.decode()
     assert 'data-chains=' not in page and 'data-remove-one' in page
+
+
+def test_a_row_carries_its_folders_for_a_drag(app_db):
+    """A row says which folders its thing is in, so a drag from All or Checked moves it out of its one folder instead
+    of copying it (the owner, 2026-10-26: dragging from Checked left it where it was)."""
+    app, db = app_db
+    from app.qgen.models import VPGroup
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add')
+    teacher.post('/quiz/subjects/problems/new', data={'name': 'Math'})
+    math = VPGroup.query.one()
+    teacher.post('/quiz/subjects/problems/file', data={'subject': math.id, 'items': [probs['Add'].id]})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert '<span hidden data-folders="[{}]"></span>'.format(math.id) in page

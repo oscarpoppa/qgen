@@ -353,7 +353,10 @@
       Move icon. Grayed, with why, when it can't be deleted) #}
   {#- (one button, no form of its own: static/js/takeout.js asks and sends; a page with hundreds of
       rows carried hundreds of forms and unused fields, the code critic 2026-10-20) #}
-  {% if no_delete %}{{ slot('Delete for good', no_delete, 'btn btn-danger btn-sm', 'lc-trash') }}{% else %}
+  {#- (the folders it's in, for a drag from All or Checked to move it out of its one folder, static/js/folders.js: they
+      went with the row's form, 2026-10-20, and a drag from Checked copied instead of moving; the owner, 2026-10-26) #}
+  <span hidden data-folders="{{ ((folders or [])|map(attribute='id')|list)|tojson|forceescape }}"></span>
+  {%- if no_delete %}{{ slot('Delete for good', no_delete, 'btn btn-danger btn-sm', 'lc-trash') }}{% else %}
   <button type="button" class="btn btn-danger btn-sm btn-icon" data-remove-one data-kind="{{ kind }}" data-label="{{ label }}"
           data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"
           title="Delete for good: delete {{ label }}; you’re asked first">{{ icon_label('lc-trash', 'Delete for good') }}</button>{% endif %}

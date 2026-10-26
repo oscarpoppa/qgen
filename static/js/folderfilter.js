@@ -779,6 +779,12 @@
       if (ownList() && hasChecks()) {
         //(beside the page's title, where the folder list's pair used to be: 2026-10-23)
         var pair = document.querySelector('main .page-head > h1');
+        //(the list swapped in after a drop finds the one already beside the title, not a second one: the owner, 2026-10-26)
+        if (pair && !titleCount && pair.parentNode.querySelector(':scope > .title-checked')) {
+          titleCount = pair.parentNode.querySelector(':scope > .title-checked');
+          titleCount.replaceWith(titleCount = titleCount.cloneNode(false));
+          titleCount.addEventListener('click', function () { if (chosen !== 'checked') choose('checked'); });
+        }
         if (pair && !titleCount) {
           //(a button: it opens the Checked folder, the owner 2026-10-21)
           titleCount = document.createElement('button');
@@ -805,6 +811,10 @@
       if (sideLink || !ownList() || !hasChecks()) return;
       var top = document.querySelector('.folder-side .side-top > li');
       if (!top) return;
+      //(the side list stays when the list is swapped in after a drop: its Checked row is there already, so it's used
+      //again, not added twice; the owner, 2026-10-26)
+      var had = top.parentNode.querySelector(':scope > li.side-auto a[data-side-tab="checked"]');
+      if (had) { sideLink = had; return; }
       var li = document.createElement('li');
       li.className = 'side-auto';
       li.innerHTML = '<div class="side-row"><span class="side-fold-space" aria-hidden="true"></span><a class="side-link" data-side-tab="checked"></a><span class="side-count muted small"></span></div>';

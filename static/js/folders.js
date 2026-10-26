@@ -394,8 +394,8 @@
       //(from All: something in exactly one folder moves out of that one; in several, it's a copy)
       if (!shown && kind !== 'folder') {
         //(a card holds its Remove; a table row has it in another cell)
-        var rm = (h.closest('[data-box]') || h).querySelector('form[data-remove-one]'), fs = [];
-        if (!rm && h.closest('tr')) rm = h.closest('tr').querySelector('form[data-remove-one]');
+        var rm = (h.closest('[data-box]') || h).querySelector('[data-folders]'), fs = [];
+        if (!rm && h.closest('tr')) rm = h.closest('tr').querySelector('[data-folders]');
         try { fs = JSON.parse(rm ? rm.dataset.folders : '[]'); } catch (err) {}
         if (fs.length === 1) shown = String(fs[0]);
       }
