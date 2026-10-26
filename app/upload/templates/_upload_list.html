@@ -3,24 +3,29 @@
     'pictures' or 'files'; what: 'picture' or 'file'. The files are still the truth
     (app/qgen/uploads.py keeps a row for each). #}
 {% from "_macros.html" import post_button, slot with context %}
-{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% set what = 'picture' if kind == 'pictures' else 'file' %}
 
 {% macro upload_table(items, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="title">{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th data-sort-key="created">Created</th><th>Folders</th><th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="title">{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th data-sort-key="created">Created</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}{% set gs = item.picgroups if kind == 'pictures' else item.filegroups %}
         <tr data-item="{{ item.id }}" data-box="{{ what }}:{{ item.id }}" data-name="{{ item.name|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
           <td class="tick-col"><input type="checkbox" name="items" value="{{ item.id }}" form="file-form" aria-label="Check “{{ item.name }}”"></td>
-          <td data-label="{{ 'Picture' if kind == 'pictures' else 'File' }}"><span class="upload-name">
+          {#- its name opens the row, like every folder page's (the owner, 2026-10-26): the folders it's in as chips, and a
+              picture larger; the Folders column is gone from the row's top line #}
+          <td data-label="{{ 'Picture' if kind == 'pictures' else 'File' }}"><details class="box row-fold" data-box="{{ what }}-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="upload-name">
             {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ url_for('static', filename=item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ url_for('static', filename='T_' ~ item.name) }}" alt="" loading="lazy"></a>
             {%- else %}<span class="upload-thumb upload-file" aria-hidden="true">{{ icon('file') }}</span>{% endif %}
-            <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></td>
+            <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></summary>
+            {%- if kind == 'pictures' %}<a class="upload-big" href="{{ url_for('static', filename=item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ url_for('static', filename=item.name) }}" alt="{{ item.name }}" loading="lazy"></a>{% endif %}
+            {{- folder_chips(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
-          <td data-label="Folders" class="person-folders">{{ in_folders(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</td>
           <td class="actions">
+            {#- (the folder icons first: the owner, 2026-10-26) #}
+            {{- folder_icons(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}
             {%- if kind == 'pictures' %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} full size in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
             {#- (the trash can every list has: the same dialog as Problems', the owner 2026-10-19) #}

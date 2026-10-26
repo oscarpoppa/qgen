@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import post_button, slot, scan_mark with context %}
 {% from "_archive_sections.html" import archive_switch %}
-{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -11,7 +11,7 @@
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th>{% if fk %}<th>Folders</th>{% endif %}<th class="row-more row-count-col" data-sort-key="problems">Problems</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th><th class="row-more row-count-col" data-sort-key="problems">Problems</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -31,9 +31,9 @@
               <li>assigned {{ item.cquizzes|length }} time{{ '' if item.cquizzes|length == 1 else 's' }}</li>
               <li>retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
               <span class="badge badge-warn" title="Set on People">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</li>
-            </ul></details></td>
+            </ul>
+            {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
-          {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}</td>{% endif %}
           <td data-label="Problems" class="row-more row-count-col" data-sort="{{ '%04d' % entries|length }}">
             {#- folded, the number of problems (the owner, 2026-10-23: it was blank until the row was opened);
                 open, the fold-out list below takes its place #}
@@ -58,6 +58,8 @@
           {%- set na = (assigned or {}).get(item.id, 0) %}
           <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na %}<a class="name-link small" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" data-tip="Assigned {{ na }} time{{ '' if na == 1 else 's' }}: open the history of “{{ item.title }}”">{{ na }}</a>{% else %}<span class="muted small" title="Not assigned yet">0</span>{% endif %}</td>
           <td class="actions">
+            {#- (the folder icons first, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
+            {%- if fk %}{{ folder_icons(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}
             {% if in_archive %}
             {# the Archive's Quizzes (the owner, 2026-10-16): Restore, View, History and Delete for good #}
             <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=item.id) }}" class="inline-form"

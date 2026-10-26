@@ -3788,3 +3788,12 @@ details.row-pop > .row-pop-body { position: absolute; top: calc(100% + 4px); lef
   border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 6px 20px rgba(0, 0, 0, .25); white-space: normal; }
 details.row-pop > .row-pop-body ul { margin: 2px 0 4px; padding-left: 1.1em; }
 details.row-pop.pop-up > .row-pop-body { top: auto; bottom: calc(100% + 4px); }
+
+/* a row's folders in its opened part, as chips with ✕ (the owner, 2026-10-26: out of the row's top line) */
+.row-folders { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.person-facts dd .row-folders { margin-top: 0; }
+td.actions > .folder-icons { display: inline-flex; gap: inherit; }
+/* a picture's row opened: the picture larger */
+.upload-big { display: inline-block; margin: 6px 0 2px; line-height: 0; }
+.upload-big img { max-width: min(320px, 100%); max-height: 240px; border-radius: var(--r-sm); border: 1px solid var(--border); background: #fff; }
+.row-folders .folder-chip { margin: 0; }

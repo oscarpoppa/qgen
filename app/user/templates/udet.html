@@ -4,7 +4,7 @@
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
 {% from "_results.html" import result_group with context %}
-{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, remove_button with context %}
+{% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% block body_attrs %}{{ watch('users' if in_archive else 'people') }}{% endblock %}
 {# the folder list beside the people needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -20,7 +20,7 @@
       {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
           after Folders, in the site's column order; open, a row shows the person and then each of their
           quizzes with its attempts) #}
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th>Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -45,10 +45,10 @@
               <dt>Role</dt><dd>{{ 'Teacher' if item.is_admin else 'Student' }}</dd>
               <dt>Created</dt><dd>{{ item.created_at|when if item.created_at else '—' }}</dd>
               <dt>Last seen</dt><dd>{{ item.last_seen|when if item.last_seen else '—' }}</dd>
-              <dt>Folders</dt><dd>{{ mine|map(attribute='name')|join(', ') if mine else 'none' }}</dd>
+              {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
+              <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}none{% endif %}</dd>
             </dl></details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '' }}</td>
-          <td data-label="Folders" class="person-folders">{{ in_folders(fk, 'user', item.id, item.shown_name, mine) }}</td>
           {% if not in_archive %}
           <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}">{{ count_badge(n, 'quiz', 'quizzes') }}</td>
           {#- (laid out as Results by quiz's rows, the owner 2026-10-24: Average in its own column, in the same badge; then one Status
@@ -62,6 +62,8 @@
           {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">
+            {#- (the folder icons first, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
+            {{- folder_icons(fk, 'user', item.id, item.shown_name, mine) }}
             {% if in_archive %}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
             <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form"
