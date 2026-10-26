@@ -133,8 +133,6 @@ def mypage():
     #folder page: All quizzes, New, In progress, their folders, then Uncategorized
     def keys(gs):
         return sorted('quiz:{}'.format(g['vquiz'].id) for g in gs)
-    def under(n):
-        return n['groups'] + [g for c in n['folders'] for g in under(c)]
     def tab(n):
         return {'id': n['folder'].id, 'name': n['folder'].name, 'count': n['count'], 'url': url_for('user.mypage', folder=n['folder'].id),
                 'keys': keys(n['groups']), 'children': [tab(c) for c in n['folders']]}

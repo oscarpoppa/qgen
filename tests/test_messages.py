@@ -938,3 +938,12 @@ def test_messages_folder_list_counts_unread(app_db):
     page = teacher.get('/messages/panel?student={}'.format(ids('kim'))).data.decode()
     assert '<option value="{}">sam (1 new)</option>'.format(ids('sam')) in page
     assert '<option value="f{}">7th grade (1 new)</option>'.format(g7.id) in page
+    # a folder counts only its own students' messages: sam moved into a folder inside 7th grade leaves it at none new,
+    # and its view shows none of sam's (the owner, 2026-10-26)
+    teacher.post('/users/folders', data={'name': 'Period 2', 'parent': g7.id})
+    p2 = UserFolder.query.filter_by(name='Period 2').one()
+    teacher.post('/users/folders/move', data={'user': ids('sam'), 'to': p2.id, 'from': g7.id})
+    page = teacher.get('/messages/panel?student={}'.format(ids('kim'))).data.decode()
+    assert '<option value="f{}">7th grade</option>'.format(g7.id) in page and '(1 new)</option>' in page
+    assert 'help please' not in teacher.get('/messages/panel?student=f{}'.format(g7.id)).data.decode()
+    assert 'help please' in teacher.get('/messages/panel?student=f{}'.format(p2.id)).data.decode()

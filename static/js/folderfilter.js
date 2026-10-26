@@ -511,7 +511,10 @@
       list.hidden = folderEmpty;  // (no empty frame above the note)
       var nm = byId[base()] ? byId[base()].name : '';
       //(a tab can bring its own words for when it's empty: 'empty' in its data)
-      note.textContent = bare ? 'Nothing in \u201c' + box.dataset.name + '\u201d yet.' : byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : chosen.indexOf('self:') === 0 ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
+      //(a folder with nothing loose in it but things in the folders inside it says so, not "Nothing in it yet": a folder
+      //shows only its own things since 2026-10-25; the code critic, 2026-10-26)
+      var holdsInside = function (n) { return !!n && n.children.some(function (c) { return Object.keys(c.keySet).length || holdsInside(c); }); };
+      note.textContent = bare ? 'Nothing in \u201c' + box.dataset.name + '\u201d yet.' : byId[chosen] && byId[chosen].empty ? byId[chosen].empty : chosen === 'none' ? 'Everything is in a folder.' : (chosen.indexOf('self:') === 0 || holdsInside(byId[chosen])) ? 'Everything in \u201c' + nm + '\u201d is in a folder inside it.' : 'Nothing in \u201c' + nm + '\u201d yet.';
       //(how to fill an empty folder, where the page says (My quizzes): the owner, 2026-10-16)
       if (box.dataset.emptyHint && (bare || /^\d+$/.test(chosen)) && /yet\.$/.test(note.textContent)) note.textContent += ' ' + box.dataset.emptyHint;
       oneTab();

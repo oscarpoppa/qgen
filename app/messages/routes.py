@@ -75,11 +75,11 @@ def send():
     back = back_to(url_for('messages.inbox'))
     to = request.form.get('to', '')
     if to.startswith('folder:'):
-        #everyone in a Users page folder (and the folders inside it) who is a student (the panel's
-        #folder view sends here too: the owner, 2026-10-25)
+        #the students loose in a People folder, the ones its view in the panel shows (not those in the folders inside
+        #it: the owner, 2026-10-26)
         from app.user import groups
         try:
-            ids = groups.everyone_in(to.split(':', 1)[1])
+            ids = groups.own_in(to.split(':', 1)[1])
             to = [u.id for u in User.query.filter(User.id.in_(ids), User.is_admin.is_(False))] if ids else []
             if not to:
                 raise groups.GroupError('Nobody in that folder is a student.')
@@ -347,12 +347,13 @@ def teacher_panel(choice='all', mark_seen=True):
     staff = staff_picker(current_user)
     if choice == 'teachers' or (isinstance(choice, str) and choice[:1] == 't' and choice[1:].isdigit()):
         return dict(teachers_view(rows, staff, choice, mark_seen), **panel_extras(rows))
-    #a People folder: every message from its students (and the folders inside it) together
+    #a People folder: every message from its own students together (not those in the folders inside it: a folder
+    #shows only its own, the owner 2026-10-26)
     if isinstance(choice, str) and choice[:1] == 'f' and choice[1:].isdigit():
         extras = panel_extras(rows)
         folder = next((f for f in extras['folders'] if str(f['id']) == choice[1:]), None)
         if folder is not None:
-            ids = set(folder['ids'])
+            ids = set(folder['own'])
             from .models import Message
             #(an announcement is listed once, under its first copy's student: it belongs here if
             #any of its copies went to someone in the folder)
@@ -406,7 +407,7 @@ def panel_extras(rows):
     unread = {r['student'].id: r['unread'] for r in rows}
     folders = groups.picker()
     for f in folders:
-        f['students'] = [i for i in f['ids'] if i in students]
+        f['students'] = [i for i in f['own'] if i in students]
         f['unread'] = sum(unread.get(i, 0) for i in f['students'])
     return {'folders': folders, 'pinned': M.pinned_announcements()}
 

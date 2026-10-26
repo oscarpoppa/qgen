@@ -187,7 +187,11 @@
           var a = row.querySelector(sel), b = n.querySelector(sel);
           if (a && b) a.innerHTML = b.innerHTML;
           else if (a) a.remove();
-          else if (b) (row.querySelector('.side-count') ? row.insertBefore(document.importNode(b, true), row.querySelector('.side-count')) : row.appendChild(document.importNode(b, true)));
+          else if (b) {
+            //(in their usual order: its own dots, then the small ones for the folders inside, then the count)
+            var at = (sel === '.side-flags' && row.querySelector('.side-inner-dots')) || row.querySelector('.side-count');
+            if (at) row.insertBefore(document.importNode(b, true), at); else row.appendChild(document.importNode(b, true));
+          }
         });
         row.classList.toggle('is-empty', n.classList.contains('is-empty'));
       });

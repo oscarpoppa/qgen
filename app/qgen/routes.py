@@ -1251,7 +1251,14 @@ def list_user(uid):
     def keys(gs):
         return sorted('q:{}'.format(g['vquiz'].id) for g in gs)
     def some(nodes):
-        return [dict(n, children=some(n['children'])) for n in nodes if n['count']]
+        #(a folder stays when it has some of theirs itself or in a folder inside it: counts are a folder's own
+        #now, and a parent with only a subfolder's quizzes dropped out with that subfolder; the code critic, 2026-10-26)
+        out = []
+        for n in nodes:
+            kept = some(n['children'])
+            if n['count'] or kept:
+                out.append(dict(n, children=kept))
+        return out
     quiz_filter = [{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [], 'url': None},
                    {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None}]
     if quiz_tree:

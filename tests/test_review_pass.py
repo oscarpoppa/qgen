@@ -586,6 +586,11 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
     assert [t[0] for t in student_filter(page)] == ['New', 'In progress'] and 'data-fkey="q:{}"'.format(c.id) in page
+    # a folder with none of kim's itself but some in a folder inside it stays, with that folder (it dropped out with
+    # it once counts became a folder's own: the code critic, 2026-10-26)
+    teach.post('/quiz/subjects/quizzes/add', data={'quiz': c.id, 'to': frac.id})
+    tree = student_filter(teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode())
+    assert [t[0] for t in tree] == ['New', 'In progress', 'Math'] and tree[2][1] == 0 and tree[2][2] == [('Fractions', 1, [])]
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):

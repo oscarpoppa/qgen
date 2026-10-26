@@ -237,24 +237,19 @@ def inside(node):
     return out
 
 
-def everyone_in(folder_id):
-    """The ids of everyone in a folder or in the folders inside it."""
+def own_in(folder_id):
+    """The ids of the people loose in a folder itself, not in the folders inside it (the Messages panel's folder view
+    and its send: the owner, 2026-10-26)."""
     f = get(folder_id)
     if f is None:
         return set()
-    ids, todo = set(), [f.id]
-    while todo:
-        fid = todo.pop()
-        ids |= {m.user_id for m in UserFolderMember.query.filter_by(folder_id=fid)}
-        ids -= _archived_ids()
-        todo += [c.id for c in UserFolder.query.filter_by(parent_id=fid)]
-    return ids
+    return {m.user_id for m in UserFolderMember.query.filter_by(folder_id=f.id)} - _archived_ids()
 
 
 def picker():
     """For the Assign and Messages pages: every folder (indented by depth) with the ids of
-    everyone in it, folders inside it included: [{'id', 'name', 'depth', 'path' ("7th grade ›
-    Period 2"), 'ids'}]."""
+    everyone in it, folders inside it included ('ids'), and of those loose in it ('own'): [{'id', 'name', 'depth',
+    'path' ("7th grade › Period 2"), 'ids', 'own'}]."""
     root, flat, nodes, _ = tree([])
     def path(f):
         names = [f.name]
@@ -262,7 +257,8 @@ def picker():
             f = nodes[f.parent_id]['folder']
             names.insert(0, f.name)
         return ' › '.join(names)
-    return [{'id': f.id, 'name': f.name, 'depth': depth, 'path': path(f), 'ids': sorted(nodes[f.id]['everyone'])} for f, depth in flat]
+    return [{'id': f.id, 'name': f.name, 'depth': depth, 'path': path(f), 'ids': sorted(nodes[f.id]['everyone']),
+             'own': sorted(nodes[f.id]['ids'])} for f, depth in flat]
 
 
 def state():

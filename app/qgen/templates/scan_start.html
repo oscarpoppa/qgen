@@ -181,7 +181,7 @@
         </table>
       </div>
       {% else %}
-      <p class="card empty small">{% if stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every workbook is in a folder.{% elif stash_view == 'checked' %}Nothing checked. Check workbooks in any folder and they show here.{% else %}Nothing stashed.{% endif %}</p>
+      <p class="card empty small">{% if stash_node and stash_node.everyone %}Everything in “{{ stash_node.folder.name }}” is in a folder inside it.{% elif stash_node %}Nothing in this folder yet.{% elif stash_view == 'main' %}Every workbook is in a folder.{% elif stash_view == 'checked' %}Nothing checked. Check workbooks in any folder and they show here.{% else %}Nothing stashed.{% endif %}</p>
       {% endif %}
       </div>
     </div>

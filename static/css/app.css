@@ -2450,16 +2450,16 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .editor > .side-col > .helper { position: static; max-height: none; overflow: visible; }
 /* (the Helper stays at the top of the column while what's under it scrolls, as on New problem: on New quiz the long
    "Problems in this quiz" scrolled it out of sight; the owner, 2026-10-25) */
-.editor > .side-col > .helper:not(:only-child) { position: sticky; top: 0; z-index: 1; }
+.editor > .side-col > .helper:not(:only-child) { position: sticky; top: 0; z-index: 1; max-height: 60vh; overflow-y: auto; }  /* (a long Helper scrolls inside itself, its last lines in reach: the code critic, 2026-10-26) */
 @media (max-width: 960px) {
   .editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr); }
   .editor > .side-col { position: static; max-height: none; overflow: visible; order: -1; }
-  .editor > .side-col > .helper:not(:only-child) { position: static; }
+  .editor > .side-col > .helper:not(:only-child) { position: static; max-height: none; overflow: visible; }
 }
 @container page (max-width: 900px) {
   .editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr); }
   .editor > .side-col { position: static; max-height: none; overflow: visible; order: -1; }
-  .editor > .side-col > .helper:not(:only-child) { position: static; }
+  .editor > .side-col > .helper:not(:only-child) { position: static; max-height: none; overflow: visible; }
 }
 /* a picking card's Expand all / Collapse all: at the right end of its filter bar's line */
 .folder-filter-tools-here { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }

@@ -174,10 +174,13 @@ def test_assigning_and_messaging_a_folder(app_db):
     # (a folder holds only who's loose in it, not who's in the folders inside it: the owner, 2026-10-25)
     assert tree[0]['keys'] == [] and tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
     assert sorted(re.findall(r'name="students" value="(\d+)"', page)) == sorted([str(ids('kim')), str(ids('sam'))])
-    # writing to a folder reaches its students (folders inside included)
-    teach.post('/messages/send', data={'to': 'folder:{}'.format(g7), 'body': 'Field trip Friday'})
+    # writing to a folder (the Messages panel's folder view) reaches the students loose in it, not those in the
+    # folders inside it (the owner, 2026-10-26): Period 2 reaches sam; 7th grade holds only the teacher
+    teach.post('/messages/send', data={'to': 'folder:{}'.format(p2), 'body': 'Field trip Friday'})
     got = Message.query.filter_by(body='Field trip Friday').all()
     assert [m.student_id for m in got] == [ids('sam')]
+    r = teach.post('/messages/send', data={'to': 'folder:{}'.format(g7), 'body': 'y'}, follow_redirects=True)
+    assert 'Nobody in that folder is a student.' in r.data.decode() and not Message.query.filter_by(body='y').count()
     teach.post('/users/folders', data={'name': 'Empty'})
     r = teach.post('/messages/send', data={'to': 'folder:{}'.format(folder('Empty')), 'body': 'x'}, follow_redirects=True)
     assert 'Nobody in that folder is a student.' in r.data.decode()
