@@ -442,7 +442,7 @@ def test_they_are_called_folders_on_screen(app_db):
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'algebra'}, follow_redirects=True)
     assert 'There&#39;s already a folder called' in r.data.decode()
     form = teacher.get('/quiz/makevprob').data.decode()
-    assert '<legend>Folder' in form and 'Or a new folder' in form
+    assert '<h2>Folder</h2>' in form and 'Or a new folder' in form  # (its own card, "Folder", as on New quiz: the owner, 2026-10-26)
     for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/makevprob', '/quiz/makevquiz', '/quiz/assign'):
         text = teacher.get(url).data.decode()
         assert '>Subject' not in text and 'subject “' not in text and 'New subject' not in text, url

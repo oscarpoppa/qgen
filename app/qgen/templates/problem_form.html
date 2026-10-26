@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button, slot with context %}
 {% from "_macros.html" import field, check, errors as error_box, image_drop, tip, box_label %}
-{% from "_subjects.html" import subject_checks with context %}
+{% from "_subjects.html" import subject_checks, subject_optional with context %}
 
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
 {% set tip_ai %}<p>Describe it the way you'd tell a colleague. Claude fills in the form below, then you check it.</p><p>Nothing is saved, and students see nothing, until you press <b>Save problem</b>.</p><p>Each click costs a few cents; you can use it 30 times an hour.</p>{% endset %}
@@ -238,11 +238,15 @@
     <button type="button" class="btn btn-secondary btn-sm" id="pick-image" title="Pick a picture from the ones uploaded before">Choose one already uploaded</button>
   </div>
 
+  {#- the calculator a card of its own, then the folder in one, as on New quiz (the owner, 2026-10-26: it was one
+      "Check and save" card); a page done on paper has nothing to work out on screen, so no calculator card #}
+  <div class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay">
+    <div class="card-head"><span class="step-num" aria-hidden="true">5</span><h2>Calculator</h2></div>
+    {{ check(form.calculator_ok, tip_body=tip_calc) }}
+  </div>
   <div class="card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">5</span><h2>Check and save</h2></div>
-    {# a page done on paper has nothing to work out on screen #}
-    <div class="t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay">{{ check(form.calculator_ok, tip_body=tip_calc) }}</div>
-    {{ subject_checks('problems', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error) }}
+    <div class="card-head"><span class="step-num" aria-hidden="true">6</span><h2>Folder</h2>{{ subject_optional() }}</div>
+    {{ subject_checks('problems', all_subjects, ticked_subjects, new_item, unsorted_ticked, new_subject_name, subject_error, card_headed=true) }}
   </div>
 
   <div id="preview" class="examples" aria-live="polite"></div>
