@@ -244,15 +244,15 @@
       {#- made into its quiz already: a short line with links (the owner, 2026-10-25) #}
       <div class="box card scan-page scan-page-saved" id="scan-page-{{ n }}">
         <div class="scan-page-head">
-          {{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          {#- the thumbnail's green "generated" badge first, where the other pages show theirs (not a ✓ at the end: that
+              means read and waiting for Generate; the owner, 2026-10-25) #}
+          {{ state_badge(page, {}) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
           {% set made = page.made or {} %}
           {% if made.quiz %}<span>Generated: <a href="{{ url_for('qgen.view_vquiz', vqid=made.quiz) }}">“{{ made.title }}”</a>, {{ count_of(made.problems or 0, 'problem', 'problems') }}</span>
             <a class="icon-link" href="{{ url_for('qgen.edvquiz', vqid=made.quiz) }}" title="Edit: “{{ made.title }}”">{{ icon_label('lc-pencil', 'Edit') }}</a>
           {% elif made.with %}<span class="muted">Generated with page {{ made.with }}</span>
           {% else %}<span class="muted">Generated</span>{% endif %}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
-          {#- the thumbnail's green "generated" badge, not a ✓ (that means read and waiting for Generate): the owner, 2026-10-25 #}
-          {{ state_badge(page, {}) }}
         </div>
       </div>
       {% elif page.state != 'done' %}
