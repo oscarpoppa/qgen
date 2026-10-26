@@ -2367,4 +2367,8 @@ def dashboard_online():
 @pw_check
 @admin_only
 def dashboard_now():
+    #(opened as a page, not fetched by the Dashboard: the Dashboard itself; a sign-in from the refreshed piece landed
+    #here as a bare page; the owner, 2026-10-26)
+    if request.headers.get('Sec-Fetch-Mode') == 'navigate':
+        return redirect(url_for('qgen.dashboard'))
     return render_template('_dashboard_live.html', **dashboard_data())

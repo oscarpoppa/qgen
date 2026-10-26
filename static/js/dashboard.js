@@ -33,7 +33,15 @@
     waiting = false;
     lastRefresh = Date.now();
     fetch(box.dataset.url, { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (r) {
+        //(signed out meanwhile: the answer is the login page; the whole page reloads to it, never the login form inside
+        //the Dashboard, where signing in landed on this bare piece: the owner, 2026-10-26; as messages.js does)
+        if (r.redirected && /\/login(\?|$)/.test(new URL(r.url).pathname + new URL(r.url).search.slice(0, 1))) {
+          window.location.reload();
+          return null;
+        }
+        return r.ok ? r.text() : null;
+      })
       .then(function (html) {
         if (!html || html === lastHtml) return;  // nothing new: leave the page alone
         lastHtml = html;

@@ -7,7 +7,11 @@
   menu.addEventListener('toggle', function () {
     if (!menu.open) return;
     fetch(menu.dataset.url, { credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (r) {
+        //(signed out meanwhile: the whole page reloads to the login page, never the login form inside this menu; 2026-10-26)
+        if (r.redirected && /\/login(\?|$)/.test(new URL(r.url).pathname + new URL(r.url).search.slice(0, 1))) { window.location.reload(); return null; }
+        return r.ok ? r.text() : null;
+      })
       .then(function (html) {
         pop.innerHTML = html ? html + '<p class="small"><a href="' + menu.dataset.dashboard + '" title="See what everyone online is working on">Dashboard →</a></p>'
                              : '<p class="muted small">Couldn\'t load the list. Please try again.</p>';

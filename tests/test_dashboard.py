@@ -389,3 +389,13 @@ def test_dashboard_boxes_fold_in_place(app_db):
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
     assert 'dash-folded' not in css and '.dash-chips' not in css
 
+
+
+def test_the_dashboards_refresh_piece_opened_as_a_page_goes_to_the_dashboard(app_db):
+    """/dashboard/now is what the Dashboard fetches to refresh; opened as a page (e.g. after signing in from it) it's
+    the Dashboard itself (the owner, 2026-10-26: the live site showed the bare piece)."""
+    app, db = app_db
+    teacher = login(app, 'teach')
+    r = teacher.get('/dashboard/now', headers={'Sec-Fetch-Mode': 'navigate'})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/dashboard')
+    assert teacher.get('/dashboard/now', headers={'Sec-Fetch-Mode': 'cors'}).status_code == 200
