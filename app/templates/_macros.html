@@ -84,7 +84,7 @@
 
 {# a teacher looking at one attempt: its student, the quiz's results, and the answer key #}
 {% macro attempt_links(cq) %}
-  {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "’s student page") }}
+  {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "’s student history") }}
   <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone’s attempts and scores on “{{ cq.vquiz.title }}”">Quiz history</a>
 {%- endmacro %}
 
@@ -104,7 +104,7 @@
    Its tooltip (data-tip, tips.js) shows above it. size 0: no picture, just the name. #}
 {% macro person_link(u, size=24, strong=true) -%}
   {%- if u -%}
-  <a class="name-link person" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student page">{% if size %}{{ avatar(u, size) }}{% endif %}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
+  <a class="name-link person" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student history">{% if size %}{{ avatar(u, size) }}{% endif %}{% if strong %}<strong>{{ u.shown_name }}</strong>{% else %}{{ u.shown_name }}{% endif %}</a>
   {%- else %}<span class="muted">someone</span>{% endif -%}
 {%- endmacro %}
 
@@ -126,7 +126,7 @@
 
 {# a student's name as a link to their student page, no picture (a box heading's title) #}
 {% macro student_link(u) -%}
-  <a class="name-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student page">{{ u.shown_name }}</a>
+  <a class="name-link" href="{{ url_for('qgen.list_user', uid=u.id) }}" data-tip="Open {{ u.shown_name }}’s student history">{{ u.shown_name }}</a>
 {%- endmacro %}
 
 {# a quiz's title in a teacher's list, plain, in quotes (its "History" button goes beside it; the

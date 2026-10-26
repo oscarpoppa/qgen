@@ -91,7 +91,8 @@
       <a class="btn{{ ' btn-sm' if laid_out }}" href="{{ url_for('qgen.assign', users=ulst[0].id) }}" data-what="{{ ulst[0].shown_name }}" title="Choose quizzes to give {{ ulst[0].shown_name }}">Assign quizzes to {{ ulst[0].shown_name }}</a>{% endif %}{% endset %}
 {% if not laid_out %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
+  {#- ("Student history:" on the top line, the name under it, like a quiz's history: the owner, 2026-10-25) #}
+  {% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">{{ ulst[0].shown_name }}</span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
   {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
   <div class="actions">{{ single_buttons }}</div>
 </div>
@@ -120,7 +121,7 @@
        data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-style="list"
        data-paged data-server-view="{{ server_view }}" data-total="{{ groups_total }}" data-loose="{{ groups_loose }}" data-shown-total="{{ pg.total }}">
     {#- the title over the folder list, as on the other list pages (the owner, 2026-10-17) #}
-    <div class="page-head student-head"><h1>{{ title }}</h1></div>
+    <div class="page-head student-head">{% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">{{ ulst[0].shown_name }}</span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}</div>
     <div class="folder-tools-bar student-filter">{{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='tr[data-fkey]', paged=pg.total, id='student-filter-bar') }}
       <div class="btn-row results-filter-right">{{ single_buttons }}</div></div>
     {#- Awards: a button under the folder list that opens them as a pop-over (the owner, 2026-10-17) #}

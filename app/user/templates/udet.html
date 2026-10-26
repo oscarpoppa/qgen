@@ -67,7 +67,7 @@
             <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form"
                   data-confirm="Restore {{ item.shown_name }}’s account? He/she can sign in again." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
-            {{ slot('Student page', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-user') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
+            {{ slot('Student history', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-history') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good',
                  delete_note=('His/her quiz results are kept in the Trash’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash’s Attempts.')) }}
             {% else %}
@@ -75,7 +75,7 @@
             {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# their page: quizzes and results, awards #}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student page: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student history: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>
             {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
             {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good', archive_url=url_for('user.archive_user', uid=item.id) if item != current_user else none, no_delete= 'You can’t delete your own account' if item == current_user else none,

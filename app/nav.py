@@ -103,7 +103,7 @@ def _named(endpoint, args):
     from app.qgen.models import VQuiz
     fixed = {
         'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.list_users': 'People',
-        'qgen.results_by_quiz': 'Results by quiz', 'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
+        'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
         'user.userdet': 'People', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Teachers’ messages',
         'qgen.archive': 'Trash', 'user.home': 'Home', 'user.mypage': 'My quizzes',
     }
@@ -117,7 +117,7 @@ def _named(endpoint, args):
         return vq.title if vq else None
     if endpoint == 'qgen.list_user':
         name = user('uid')
-        return "{}’s student page".format(name) if name else None
+        return 'Student history: {}'.format(name) if name else None
     if endpoint == 'messages.conversation':
         name = user('student_id')
         return 'Messages: {}'.format(name) if name else None
@@ -147,7 +147,7 @@ def _match(path):
 
 
 def place_name(path):
-    """"Dashboard", "sam’s student page"... for a page someone can go back to, or None."""
+    """"Dashboard", "Student history: sam"... for a page someone can go back to, or None."""
     if not path:
         return None
     endpoint, args = _match(path)
@@ -173,7 +173,7 @@ def back(fallback_url, fallback_label):
 #what a notice's or message's link opens, by the page it goes to
 LINK_LABELS = {
     'qgen.review': 'Grade it',
-    'qgen.list_user': 'Student page',
+    'qgen.list_user': 'Student history',
     'qgen.quiz_results_page': 'Quiz history',
     'qgen.archived': 'See it in the Trash',
     'messages.conversation': 'Open the messages',

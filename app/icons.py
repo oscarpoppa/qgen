@@ -175,7 +175,7 @@ BUTTON_ICONS = {'View': 'lc-eye', 'Edit': 'lc-pencil', 'History': 'lc-history', 
                 'Expand all': 'lc-expand', 'Collapse all': 'lc-collapse', 'Open this folder': 'lc-folder-open',
                 'Folder options': 'lc-folder-cog', 'Unpin': 'lc-pin-off', 'Message': 'lc-message', 'Start': 'lc-play', 'Continue': 'lc-play',
                 'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Move to Trash': 'lc-trash', 'Retake': 'lc-retake',
-                'Student page': 'lc-user', 'Reset password': 'lc-key', 'Remove picture': 'lc-image-minus', 'Restore': 'lc-restore',
+                'Student page': 'lc-user', 'Student history': 'lc-history', 'Reset password': 'lc-key', 'Remove picture': 'lc-image-minus', 'Restore': 'lc-restore',
                 'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil', 'Add to a quiz': 'lc-list-plus'}
 
 

@@ -15,7 +15,7 @@
         {% for r in rows %}<option value="{{ url_for('messages.conversation', student_id=r.student.id) }}"{{ ' selected' if r.student.id == student.id }}>{{ r.student.shown_name }}{% if r.unread %} ({{ r.unread }} new){% endif %}</option>{% endfor %}
       </select>
     </form>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="{{ student.shown_name }}'s quizzes, results and awards">Student page</a>
+    <a class="btn btn-secondary" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="{{ student.shown_name }}'s quizzes, results and awards">Student history</a>
     <a class="btn btn-secondary" href="{{ url_for('messages.inbox') }}" title="The Messages page, with every student’s conversation">All messages</a>
   </div>
 </div>

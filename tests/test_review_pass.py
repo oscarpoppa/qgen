@@ -172,7 +172,7 @@ def test_gone_pages_say_so(app_db):
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
     for url, where in (('/quiz/listuser/999', '/userdet'), ('/quiz/listvq/999', '/quiz/listvq'),
-                       ('/quiz/editvquiz/999', '/quiz/listvq'), ('/quiz/results/999', '/quiz/results'),
+                       ('/quiz/editvquiz/999', '/quiz/listvq'), ('/quiz/results/999', '/quiz/listvq'),
                        ('/messages/999', '/messages'), ('/quiz/archive/999', '/quiz/archive')):
         r = teach.get(url)
         assert r.status_code == 302 and r.headers['Location'].split('?')[0] == where, url
@@ -211,8 +211,8 @@ def student_filter(page):
 def test_menu_marks_where_you_are(app_db):
     app, db = app_db
     teach = login(app, 'teach')
-    page = teach.get('/quiz/results').data.decode()
-    assert 'href="/quiz/results" class="active" aria-current="page">Results by quiz</a>' in no_titles(page)
+    page = teach.get('/quiz/listvq').data.decode()
+    assert 'href="/quiz/listvq" class="active" aria-current="page">All quizzes</a>' in no_titles(page)
     assert re.search(r'<summary class="active">Quizzes</summary>', no_titles(page))
     assert '<a class="skip-link" href="#main">' in no_titles(page) and '<main id="main"' in no_titles(page)
 
@@ -226,7 +226,7 @@ def test_back_goes_where_you_came_from(app_db):
     for ref in (None, 'http://localhost/dashboard', 'https://evil.example/dashboard',
                 'http://localhost/quiz/listuser/{}'.format(ids('sam'))):
         headers = {'Referer': ref} if ref else {}
-        for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results'):
+        for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/listvq'):
             page = teach.get(url, headers=headers).data.decode()
             assert back_by_the_trail(page), (url, ref)
             assert 'evil.example' not in page
@@ -460,20 +460,15 @@ def test_results_by_student_in_the_users_folders(app_db):
     assert poll(teach, 'users') != before
 
 
-def test_results_by_quiz_in_the_quiz_folders(app_db):
+def test_results_by_quiz_opens_quizzes_in_the_same_folder(app_db):
+    """Results by quiz is gone (the owner, 2026-10-25): its old address opens Quizzes, in the folder asked for."""
     app, db = app_db
     teach = login(app, 'teach')
-    a, b = make_quiz(app, teach, 'A'), make_quiz(app, teach, 'B')
-    give(a, 'sam')
+    a = make_quiz(app, teach, 'A')
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Fall'})
     from app.qgen.models import VQGroup
     fall = VQGroup.query.one()
-    teach.post('/quiz/subjects/quizzes/add', data={'quiz': a.id, 'to': fall.id})
-    page = teach.get('/quiz/results?folder={}'.format(fall.id)).data.decode()
-    assert 'id="quiz-{}"'.format(a.id) in page and 'id="quiz-{}"'.format(b.id) not in page
-    assert 'data-state="out"' in page  # sam hasn't handed it in: "Not handed in yet" finds it
-    main = teach.get('/quiz/results?folder=main').data.decode()
-    assert 'id="quiz-{}"'.format(b.id) in main and 'id="quiz-{}"'.format(a.id) not in main
+    assert teach.get('/quiz/results?folder={}'.format(fall.id)).headers['Location'].endswith('/quiz/listvq?folder={}'.format(fall.id))
 
 
 def test_a_long_conversation_shows_the_newest(app_db):
@@ -577,8 +572,8 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<h1>sam’s student page</h1>' in page
-    assert '<title>sam' in page and 'student page' in page.split('<title>')[1].split('</title>')[0]
+    assert '<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">sam</span></h1>' in page
+    assert '<title>Student history: sam' in page
     # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
     # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder
     # with none of sam's quizzes isn't a button
@@ -1233,7 +1228,7 @@ def test_pages_come_back_as_they_were_left(app_db):
 
 
 def test_score_counted_stays_on_the_page_behind_nginx(app_db):
-    """Changing "Score counted" on Results by quiz comes back to Results by quiz, even
+    """Changing "Score counted" on a quiz's history comes back to it, even
     behind nginx (Host without the port, Referer with it), not to the student page."""
     app, db = app_db
     from app.qgen import services as S
@@ -1244,9 +1239,9 @@ def test_score_counted_stays_on_the_page_behind_nginx(app_db):
     from app.qgen.models import CQuiz
     cq = CQuiz.query.order_by(CQuiz.id.desc()).first()
     r = teach.post('/quiz/retakerule/{}'.format(cq.id), data={'rule': 'latest'},
-                   headers={'Host': 'localhost', 'Referer': 'http://localhost:8080/quiz/results?folder=2'})
-    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/results?folder=2'), r.headers['Location']
-    page = teach.get('/quiz/results').data.decode()
+                   headers={'Host': 'localhost', 'Referer': 'http://localhost:8080/quiz/results/{}?folder=2'.format(vq.id)})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/results/{}?folder=2'.format(vq.id)), r.headers['Location']
+    page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(a pencil opening "How should sam’s score count?", never a drop-down that saves the moment
     #it's picked: the owner, 2026-10-19; static/js/retakerule.js sends the form)
     assert 'class="inline-form retake-rule-form"' in page and 'data-rule-edit' in page and 'js/retakerule.js' in page
@@ -1807,13 +1802,6 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     head = row[:row.index('</summary>')]
     assert 'href="/quiz/results/{}"'.format(vq.id) not in head and 'aria-label="History"' not in head and 'aria-label="Move all to Trash (2)"' in row
     assert '<form' not in head and 'result-archive-all' not in row
-    page = teach.get('/quiz/results').data.decode()
-    #(a row like My quizzes': the name only opens it; View, Edit and History are icons at its end:
-    #the owner, 2026-10-21)
-    row = page[page.index('id="quiz-{}"'.format(vq.id)):]
-    row = row[:row.index('</tr>')]
-    head = row[:row.index('</summary>')]
-    assert 'href="/' not in head and 'aria-label="View quiz"' in row and 'aria-label="Edit quiz"' in row and 'aria-label="History"' in row
     assert 'box-links' not in page[page.index('<main'):]
     #(People shows each person's results now, one People page: the owner, 2026-10-21)
     page = teach.get('/userdet').data.decode()
@@ -1822,7 +1810,7 @@ def test_set_wide_controls_sit_on_the_heading_line(app_db):
     row = row[row.index('<td class="actions">'):]
     row = row[:row.index('</tr>')]
     #(the name only opens the row; Assign a quiz, Message and Student page are icons at its end: the owner, 2026-10-21)
-    assert 'href="/' not in head and 'aria-label="Assign quizzes"' in row and 'aria-label="Student page"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
+    assert 'href="/' not in head and 'aria-label="Assign quizzes"' in row and 'aria-label="Student history"' in row and 'aria-label="Message"' in row  # (icons: owner 2026-10-14)
     folders = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'templates', '_folders.html')).read()
     #(no folder boxes inside the list any more: one folder at a time, the owner 2026-10-22)
     assert 'macro sub_box' not in folders and 'sub-tools' not in folders

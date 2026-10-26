@@ -243,13 +243,13 @@ def test_results_pages_lead_back_to_users(app_db):
     assert teach.get('/people?folder=all').headers['Location'] == '/userdet?folder=all'
     assert teach.get('/people?folder=all&view=results').headers['Location'] == '/userdet?folder=all'
     # the menu: one People entry, lit; no Results by student in the Quizzes menu (the owner, 2026-10-21),
-    # Results by quiz stays
+    # no Results by quiz either (the owner, 2026-10-25)
     assert '>People</a>' in accounts and 'class="active" aria-current="page">People</a>' in accounts
     menu = accounts.split('<main')[0]
-    assert '>Results by quiz</a>' in menu and 'Results by student' not in menu
+    assert '>Results by quiz</a>' not in menu and 'Results by student' not in menu
     # one student's page, a quiz's history and Results by quiz: the way back is the top bar's
     # arrows (the trail), no worded back button
-    for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results/{}'.format(vq.id), '/quiz/results'):
+    for url in ('/quiz/listuser/{}'.format(ids('sam')), '/quiz/results/{}'.format(vq.id)):
         assert back_by_the_trail(teach.get(url).data.decode()), url
     # one student's page: Assign a quiz to them
     #(it opens the Assign a quiz dialog: data-what names who it's for)
@@ -263,8 +263,8 @@ def test_users_page_leads_to_each_student_page(app_db):
     page = teach.get('/userdet?folder=all').data.decode()
     sam = ids('sam')
     #(the person icon: owner 2026-10-14)
-    assert ('href="/quiz/listuser/{}" title="Student page: sam&#39;s quizzes, results and awards">'.format(sam) in page
-            or 'href="/quiz/listuser/{}" title="Student page: sam\'s quizzes, results and awards">'.format(sam) in page) and 'aria-label="Student page"' in page
+    assert ('href="/quiz/listuser/{}" title="Student history: sam&#39;s quizzes, results and awards">'.format(sam) in page
+            or 'href="/quiz/listuser/{}" title="Student history: sam\'s quizzes, results and awards">'.format(sam) in page) and 'aria-label="Student history"' in page
     # the name itself is plain text, not a link: only buttons act on a person
     assert '>sam</strong>' in page and 'class="box-title" title="Student · Last seen:' in page and 'class="person-link"' not in page
     assert '>Quizzes</a>' not in page

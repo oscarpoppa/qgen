@@ -852,24 +852,16 @@ def test_results_by_quiz(app_db):
     sam_q = CQuiz.query.filter_by(assignee=student(db, 'sam').id).one()
     with app.test_request_context():
         S.submit(sam_q, {1: '0', 2: []})
-    page = teacher.get('/quiz/results').data.decode()
-    assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
-    box = page.split('id="quiz-{}"'.format(vq.id))[1]
-    assert box.index('kim</a>') < box.index('sam</a>')  # students by name (each a link to their student page)
-    assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Move to Trash' in box
-    assert '>0%</span>' in box  # sam's score counts; kim has none yet
+    #(no Results by quiz any more: each quiz's history shows it; the old address opens Quizzes: the owner, 2026-10-25)
+    assert teacher.get('/quiz/results').headers['Location'].endswith('/quiz/listvq')
+    assert '>Results by quiz<' not in teacher.get('/dashboard').data.decode()
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(one quiz's history: a row per student in People's folders, not one box for the quiz)
     assert 'Quiz history:</span> <span class="title-name">Settings quiz</span></h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
     assert 'data-box="student:{}"'.format(student(db, 'sam').id) in one and 'data-box="student:{}"'.format(student(db, 'kim').id) in one
-    assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Results by quiz
-    # where it's linked from
-    assert '/quiz/results' in teacher.get('/dashboard').data.decode()
+    assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Quizzes
+    # where it's linked from: the quiz's row on Quizzes
     assert '/quiz/results/{}'.format(vq.id) in teacher.get('/quiz/listvq').data.decode()
-    #(People, which shows each person's results now, reaches it from the menu; Results by quiz no longer
-    #links to a "Results by student": the owner, 2026-10-21)
-    assert '/quiz/results"' in teacher.get('/userdet').data.decode()
-    assert '/quiz/listuser"' not in page and '>Results by student<' not in page
     # teachers only
     assert login(app, 'sam').get('/quiz/results').status_code == 302
     # Results by student still draws the same rows

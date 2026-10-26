@@ -1292,7 +1292,7 @@ def list_user(uid):
             n['keys'] = []
             strip(n['children'])
     strip(quiz_filter)
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title="{}’s student page".format(ulst.shown_name),
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title='Student history: {}'.format(ulst.shown_name),
                            awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter,
                            pg=pg, shown_groups=pg.items, server_view=str(ask), groups_total=len(groups),
                            groups_loose=len([g for g in groups if g['vquiz'].id not in in_some]))
@@ -1303,42 +1303,9 @@ def list_user(uid):
 @pw_check
 @admin_only
 def results_by_quiz():
-    from app import folder_tree
-    from .models import RETAKE_RULES
-    quizzes = VQuiz.query.order_by(VQuiz.title).all()
-    root, flat, nodes = S.subject_tree('quizzes', items=quizzes)
-    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
-    listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
-    #each quiz's results, worked out once even if it's in several folders; for the 20 drawn only,
-    #unless the words typed, Show or a sort by what they hold need all of them (app/paging.py)
-    results = {}
-    def work(vqs):
-        todo = [q for q in vqs if q.id not in results]
-        for q in quiz_results(todo):
-            results[q['vquiz'].id] = q
-    state = request.args.get('state')
-    by_results = state in ('review', 'out') or request.args.get('sort') in ('students', 'average', 'status')
-    if by_results:
-        work(listed)
-    if state in ('review', 'out'):
-        listed = [q for q in listed if any(('review' if any(a.status == 'review' for a in g['attempts']) else 'out' if g['open'] else 'done') == state
-                                           for _s, g in results[q.id]['rows'])]
-    from app import paging
-    pg = paging.paginate(listed, name_of=lambda q: q.title, show=request.args.get('show'), sorts={
-        'title': lambda q: (q.title or '').lower(),
-        'students': lambda q: results[q.id]['students'] if q.id in results else 0,
-        'average': lambda q: results[q.id]['average'] if q.id in results else None,
-        'status': lambda q: (results[q.id]['states']['review'], results[q.id]['states']['out']) if q.id in results and (results[q.id]['states']['review'] or results[q.id]['states']['out']) else None})
-    work(pg.items)
-    shown = pg.items
-    fk = folder_tree.kit(
-        view, node, root, flat, nodes, readonly=True,
-        page=lambda v: url_for('qgen.results_by_quiz', folder=v),
-        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(quizzes), name=lambda f: f.title,
-        #(no "make and fill them there" note: the owner, 2026-10-22)
-        fold_key='qgen-folded-results-quiz-folders')
-    return render_template('results_by_quiz.html', quizzes=[results[q.id] for q in shown], results=results, fk=fk, pg=pg,
-                           rules=RETAKE_RULES, title='Results by quiz')
+    """Results by quiz is gone (the owner, 2026-10-25: the same as each quiz's history, reached from its row on
+    Quizzes); its old address opens Quizzes, in the same folder."""
+    return redirect(url_for('qgen.list_vquizzes', **({'folder': request.args['folder']} if request.args.get('folder') else {})))
 
 #one quiz's results
 @qgen_bp.route('/quiz/results/<int:vqid>', methods=['GET'])
@@ -1349,7 +1316,7 @@ def quiz_results_page(vqid):
     from .models import RETAKE_RULES
     vq = db.session.get(VQuiz, vqid)
     if vq is None:
-        return gone('That quiz has been deleted.', url_for('qgen.results_by_quiz'))
+        return gone('That quiz has been deleted.', url_for('qgen.list_vquizzes'))
     #its students in People's folders, like a problem's history (the owner, 2026-10-17)
     from app import folder_tree
     from app.user import groups

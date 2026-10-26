@@ -167,7 +167,7 @@ def test_every_question_type_end_to_end(app_db):
     assert '100%' in done and 'Done on paper.' in done and done.count('class="card question"') == 7
     # and the teacher's results pages
     for url in ('/quiz/results/{}'.format(vq.id), '/quiz/listuser/{}'.format(ava.id), '/quiz/listcq/{}'.format(cq.id),
-                '/quiz/results', '/userdet', '/dashboard'):
+                '/userdet', '/dashboard'):
         r = teacher.get(url)
         assert r.status_code == 200, url
         sensible(r.data.decode(), url)

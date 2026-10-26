@@ -142,7 +142,7 @@ def test_taking_a_quiz_right_now(app_db):
     taking = part[:part.index('class="online-list"')]
     assert '<a class="name-link person" href="/quiz/take/{}"'.format(other.id) in taking and 'href="/quiz/listuser/' not in taking
     online = part[part.index('class="online-list"'):]
-    assert 'href="/quiz/listuser/{}" data-tip="Open sam’s student page"'.format(ids('sam')) in online
+    assert 'href="/quiz/listuser/{}" data-tip="Open sam’s student history"'.format(ids('sam')) in online
     assert 'href="/quiz/results/' not in part and '>Student page</a>' not in part
     assert 'data-url="/dashboard/now"' in teacher.get('/dashboard').data.decode()
 

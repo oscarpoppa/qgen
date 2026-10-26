@@ -101,7 +101,7 @@
     <thead><tr><th data-sort-key="name">Student</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
     <tbody>
     {% for person in people %}{% set student, g = rows[person.id] %}
-      {% set page_icon %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Student page: {{ student.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-user', 'Student page') }}</a>{% endset %}
+      {% set page_icon %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Student history: {{ student.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>{% endset %}
       {{ result_row(g, student, label=box_label(avatar(student, 26), student.shown_name, none, 'span', student.shown_name),
                     key=('data-box="student:' ~ student.id ~ '"' ~ (' data-score="' ~ g.combined ~ '"' if g.combined is not none else ''))|safe, open_key='history-row:' ~ g.vquiz.id ~ '-' ~ student.id,
                     name=student.username|lower ~ ' ' ~ (student.nickname or '')|lower, icons=page_icon) }}

@@ -81,7 +81,7 @@
         Changing the setting above puts everyone on the new rule, {{ 'this student' if retake_overrides|length == 1 else 'these students' }} too:
         <ul>
         {% for student, rule in retake_overrides %}
-          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}’s student page">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
+          <li><a href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Open {{ student.shown_name }}’s student history">{{ student.shown_name }}</a>: {{ rules[rule]|lower if rule in rules else rule }}</li>
         {% endfor %}
         </ul>
       </div>

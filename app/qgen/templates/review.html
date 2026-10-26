@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-head">
   {#- the student's name in the heading (the owner, 2026-10-17) #}
-  <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}’s student page">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz’s history: every student’s attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
+  <h1 class="grade-head">Grade <a class="person" href="{{ url_for('qgen.list_user', uid=cq.assignee) }}" title="{{ cq.taker.shown_name }}’s student history">{{ avatar(cq.taker, 32) }}{{ cq.taker.shown_name }}</a>’s “<a href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="This quiz’s history: every student’s attempts and scores">{{ cq.vquiz.title }}</a>”</h1>
   {% if place is not none %}<span class="badge" title="Waiting for grading, oldest first">{{ place + 1 }} of {{ queue|length }} waiting</span>{% endif %}
   <div class="actions">{{ back_button(came_from, 'Quiz results') if changing else back_button(url_for('qgen.review_list'), 'Grading') }}</div>
 </div>
