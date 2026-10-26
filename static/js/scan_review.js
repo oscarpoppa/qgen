@@ -17,8 +17,9 @@
     var steps = {};
     try { steps = JSON.parse(progress.dataset.steps || '{}'); } catch (x) {}
     //Pause: a plain button, sent by its own click
-    var pause = document.querySelector('[data-scan-pause]');
-    if (pause) pause.addEventListener('click', function () {
+    document.addEventListener('click', function (e) {
+      var pause = e.target.closest && e.target.closest('[data-scan-pause]');
+      if (!pause) return;
       var f = document.getElementById('scan-form'), go = document.createElement('button');
       go.type = 'submit'; go.hidden = true; go.formNoValidate = true;
       go.setAttribute('formaction', pause.dataset.scanPause);
@@ -79,7 +80,20 @@
         var moved = s.pages.some(function (p) { return was[p.n] !== p.state; }) || !s.reading;
         //(a page started or finished: drawn again, so each page's box shows how it stands; not over
         //edits not saved yet, the owner 2026-10-24, CA9: then a finished page's box just goes)
-        if (moved && !edited()) { location.replace(location.href); return; }
+        if (moved && !edited()) {
+          //(drawn again in place, nothing blanks out: the pages' boxes, the thumbnails and the workbook's buttons;
+          //the owner, 2026-10-25. Anything that doesn't line up: a reload, as before)
+          if (!window.qgenScanSwap) { location.replace(location.href); return; }
+          window.qgenScanSwap().then(function (ok) {
+            if (!ok) { location.replace(location.href); return; }
+            was = {};
+            Array.prototype.forEach.call(document.querySelectorAll('.scan-strip li[data-n]'), function (li) {
+              was[li.dataset.n] = (li.className.match(/scan-strip-(waiting|reading|done|error)/) || [])[1];
+            });
+            if (s.reading) { clearTimeout(asking); asking = setTimeout(poll, 3000); }
+          });
+          return;
+        }
         //(with edits not saved yet the page isn't drawn again: once every page is read, the buttons that were waiting
         //for it work again, in place; the code critic, 2026-10-25)
         if (!s.reading) {
@@ -184,7 +198,6 @@
 
   /* ---------- each problem's place on its page (the owner, 2026-10-20) ---------- */
   //a blue box dragged is placed; a page's Generate quiz stays grayed while a checked problem of its quiz has no place
-  var gens = form.querySelectorAll('[data-generate]');
   function itemOf(crop) {
     var m = /^p(\d+)i(\d+)-place$/.exec(crop.dataset.for);
     return m && form.querySelector('.scan-item[data-page="' + m[1] + '"][data-item="' + m[2] + '"]');
@@ -216,7 +229,7 @@
       if (!crop.hidden && placed && placed.value !== '1') { waiting.push(crop.dataset.label); items.push(item); pages.push(item.dataset.page); }
     });
     //(each page's own Generate quiz: grayed while a problem of its quiz has no place; a joined page's stays grayed)
-    gens.forEach(function (btn) {
+    form.querySelectorAll('[data-generate]').forEach(function (btn) {
       if (btn.hasAttribute('data-joined')) return;
       var group = btn.dataset.group.split(' '), gaps = [], bad = 0;
       pages.forEach(function (pg, k) { if (group.indexOf(pg) !== -1) gaps.push(waiting[k]); });
@@ -236,7 +249,7 @@
       ok.hidden = left || ok.dataset.errors === '1';
     });
   }
-  form.querySelectorAll('.crop-place').forEach(function (crop) {
+  function setUpPlace(crop) {
     crop.addEventListener('pointerdown', function () {
       var item = itemOf(crop);
       if (!item) return;
@@ -247,7 +260,8 @@
       crop.classList.remove('is-missing', 'is-guessed');
       refreshSave();
     });
-  });
+  }
+  form.querySelectorAll('.crop-place').forEach(setUpPlace);
   /* the workbook's thumbnails (the owner, 2026-10-25): the link between two joins them into one quiz or splits them,
      and a thumbnail dragged left or right changes the order; either way the whole form goes with it, so edits are kept */
   var strip = document.querySelector('.scan-strip[data-arrange]');
@@ -268,11 +282,12 @@
       input.value = input.value ? '' : '1';
       arrange();
     });
-    var dragged = null;
+    var dragged = null, before = null;
     strip.addEventListener('dragstart', function (e) {
       var li = e.target.closest && e.target.closest('li[draggable="true"]');
       if (!li) return;
       dragged = li;
+      before = Array.prototype.slice.call(strip.children);   // (put back as it was when dropped where it started)
       li.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
       try { e.dataTransfer.setData('text/plain', li.dataset.n); } catch (x) {}
@@ -292,7 +307,11 @@
       dragged = null;
       var order = Array.prototype.map.call(strip.querySelectorAll('li.scan-strip-page'), function (li) { return li.dataset.n; });
       var was = order.slice().sort(function (a, b) { return a - b; });
-      if (order.join(',') === was.join(',')) { location.replace(location.href); return; }
+      if (order.join(',') === was.join(',')) {
+        //(nothing moved: the thumbnails and the links between them back in place, no reload; the owner, 2026-10-25)
+        if (before) before.forEach(function (el) { strip.appendChild(el); });
+        return;
+      }
       document.getElementById('scan-order').value = order.join(',');
       arrange();
     });
@@ -372,7 +391,7 @@
 
   //a crop box the AI missed
   var added = 0, template = document.getElementById('scan-new-pic');
-  form.querySelectorAll('.scan-add-pic').forEach(function (btn) {
+  function setUpAddPic(btn) {
     btn.addEventListener('click', function () {
       added += 1;
       var n = btn.dataset.page, pre = 'p' + n, id = 'new' + added;
@@ -392,7 +411,8 @@
       var label = row.querySelector('input[type=text]');
       if (label) label.focus();
     });
-  });
+  }
+  form.querySelectorAll('.scan-add-pic').forEach(setUpAddPic);
 
   /* ---------- an item's fields ---------- */
   var CHOICE = ['choice_one', 'choice_many'];
@@ -417,6 +437,43 @@
   }
   form.querySelectorAll('.scan-item').forEach(function (item) { showFixed(item); showChoices(item); });
   form.querySelectorAll('.scan-value').forEach(showKind);
+
+  //a page's box swapped in (below): everything set up on it, as on the page's opening
+  function setUpRoot(root) {
+    root.querySelectorAll('.crop').forEach(setUp);
+    root.querySelectorAll('.crop-place').forEach(setUpPlace);
+    root.querySelectorAll('.scan-pic').forEach(keepBox);
+    root.querySelectorAll('.scan-add-pic').forEach(setUpAddPic);
+    root.querySelectorAll('.scan-item').forEach(function (item) { showFixed(item); showChoices(item); });
+    root.querySelectorAll('.scan-value').forEach(showKind);
+  }
+  //while pages are read: the workbook as it is now, swapped in without a reload (the owner, 2026-10-25: pages should
+  //update cleanly). Only with nothing edited (the caller checks); false when it doesn't line up, and the caller reloads
+  window.qgenScanSwap = function () {
+    if (!window.fetch || !window.DOMParser) return Promise.resolve(false);
+    return fetch(location.href, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok || r.redirected) throw new Error('not the page');
+      return r.text();
+    }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var oldPages = form.querySelectorAll('.scan-page[id^="scan-page-"]'), newPages = doc.querySelectorAll('#scan-form .scan-page[id^="scan-page-"]');
+      var newStrip = doc.querySelector('.scan-strip'), oldEnd = form.querySelector('.scan-batch-head .box-end'), newEnd = doc.querySelector('.scan-batch-head .box-end');
+      if (!oldPages.length || oldPages.length !== newPages.length || !newStrip || !strip || !oldEnd || !newEnd) return false;
+      for (var i = 0; i < oldPages.length; i++) if (oldPages[i].id !== newPages[i].id) return false;
+      Array.prototype.forEach.call(oldPages, function (pg, k) {
+        var fresh = document.importNode(newPages[k], true);
+        //(a box that was open stays open)
+        if (pg.tagName === 'DETAILS' && fresh.tagName === 'DETAILS' && pg.open) fresh.open = true;
+        pg.replaceWith(fresh);
+        setUpRoot(fresh);
+      });
+      strip.innerHTML = newStrip.innerHTML;
+      oldEnd.replaceWith(document.importNode(newEnd, true));
+      refreshSave();
+      form.dispatchEvent(new Event('helper-refresh'));
+      return true;
+    }).catch(function () { return false; });
+  };
 
   //the item being worked on is lit up on its page
   form.addEventListener('focusin', function (e) {

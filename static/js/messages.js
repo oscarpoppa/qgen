@@ -459,6 +459,13 @@
     return edited || busyTyping() || !!document.querySelector('dialog[open]');
   }
   function reloadHere() {
+    //(a folder page swaps its list in place, nothing blanks out: static/js/folders.js; the owner, 2026-10-25)
+    if (window.qgenRefreshList && document.querySelector('.folder-main [data-folder-filter]') && !document.body.hasAttribute('data-watch-post')) {
+      var bar = document.getElementById('live-bar');
+      if (bar) bar.remove();
+      window.qgenRefreshList();
+      return;
+    }
     try { sessionStorage.setItem(SCROLL, location.pathname + location.search + '|' + Math.round(window.scrollY)); } catch (e) {}
     //a pop-up that just arrived (often what changed the page) is shown again after the reload
     var keep = recentToasts.filter(function (t) { return Date.now() - t.at < 15000; });

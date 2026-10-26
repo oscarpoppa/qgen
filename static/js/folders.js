@@ -161,6 +161,8 @@
     var u = new URL(a.getAttribute('href'), location.href);
     return u.pathname + u.search;
   }
+  //(also for a page whose contents changed meanwhile, a hand-in or a grade: static/js/messages.js, the owner 2026-10-25)
+  window.qgenRefreshList = function () { refreshInPlace(null); };
   function refreshInPlace(done) {
     var reload = function () {
       try { sessionStorage.setItem('qgen-moved', JSON.stringify(done)); } catch (e) {}
@@ -194,6 +196,15 @@
         var nb = document.importNode(newBoxes[i], true);
         b.replaceWith(nb);
         window.qgenFolderFilterSetUp(nb);
+        //(what's checked stays checked in the new rows, as after a sort: checked.js)
+        if (window.qgenCheckedIds) {
+          var kept = {}, first = null;
+          window.qgenCheckedIds().forEach(function (id) { kept[id] = 1; });
+          nb.querySelectorAll('input[name="items"], input.pick-person').forEach(function (t) {
+            if (kept[t.value] && !t.checked) { t.checked = true; first = first || t; }
+          });
+          if (first) first.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       });
       document.dispatchEvent(new CustomEvent('qgen-swapped', { detail: { list: document.querySelector('.folder-main') } }));
       //(a name typed in the filter still narrows the new list)

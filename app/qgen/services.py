@@ -1761,10 +1761,18 @@ def page_text_fits(page_text, values):
 
 
 def same_problem(qtype, question, answer, options, author_id=None):
-    """A problem already in the library that is the same as this one (problem_key), or None."""
+    """A problem already in the library that is the same as this one (problem_key), or None. (Each library problem's
+    key is worked out once per request, kept by its id: a workbook page asks this for every problem on it, and worked
+    out again each time it took most of the page's 0.3 s; a problem made meanwhile is still looked at. 2026-10-25)"""
+    from flask import g, has_app_context
     key = problem_key(qtype, question, answer, options)
-    q = in_use('problems').filter(VProblem.qtype == qtype)
-    for vp in q.order_by(VProblem.id).all():
-        if problem_key(vp.qtype, vp.raw_prob, vp.raw_ansr, vp.options) == key:
-            return vp
+    known = g.setdefault('problem_keys', {}) if has_app_context() else {}
+    ids = [i for (i,) in in_use('problems').filter(VProblem.qtype == qtype).with_entities(VProblem.id).order_by(VProblem.id).all()]
+    todo = [i for i in ids if i not in known]
+    if todo:
+        for vp in VProblem.query.filter(VProblem.id.in_(todo)).all():
+            known[vp.id] = problem_key(vp.qtype, vp.raw_prob, vp.raw_ansr, vp.options)
+    for i in ids:
+        if known.get(i) == key:
+            return db.session.get(VProblem, i)
     return None

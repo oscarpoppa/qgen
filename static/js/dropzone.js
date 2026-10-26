@@ -180,7 +180,11 @@
         if (failed.length) status(failed.join(' · '), true);
         else status(multiple ? 'Uploaded ' + ok + ' file' + (ok === 1 ? '' : 's') + '.' : 'Uploaded.');
         //(with the tiles there's no need to reload: they show what was saved)
-        if (multiple && ok && !done) setTimeout(function () { location.reload(); }, 600);
+        //(on a folder page the list is swapped in place, nothing blanks out: static/js/folders.js; the owner, 2026-10-25)
+        if (multiple && ok && !done) setTimeout(function () {
+          if (window.qgenRefreshList && document.querySelector('.folder-main [data-folder-filter]')) window.qgenRefreshList();
+          else location.reload();
+        }, 600);
         //(the tiles stay; the box's own line goes back to saying what to do)
         if (multiple && done && !failed.length) setTimeout(function () { status(''); }, 4000);
       });
