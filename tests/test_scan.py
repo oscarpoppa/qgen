@@ -832,11 +832,19 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
     job = job_of(db)
     data = json.loads(job.data)
     page = data['pages'][0]
-    # nothing on the blank picture: no place found
+    # nothing on the blank picture: a box just after the problem, dashed until it's dragged (the owner, 2026-10-25)
+    assert page['slots']['q1'].get('guessed') and SC.place_of(page, page['items'][0])[1]
+    assert 'crop crop-place is-guessed' in teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    # no box at all (no room beside it): it's missing
+    page['slots'] = {}
+    job.data = json.dumps(data)
+    db.session.commit()
     assert SC.place_of(page, page['items'][0]) == ({'left': 0.7, 'top': 0.1, 'right': 0.9, 'bottom': 0.2}, False)
     assert SC.missing_places(data) == [(1, 0, '1.')]
     html = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     assert 'crop crop-place is-missing' in html and 'data-label="1."' in html and 'Where “1.” is answered' in html
+    #(the page with something to fix starts open: the owner, 2026-10-25)
+    assert 'id="scan-page-1" data-page="1" data-box="scan-page:1" data-fixed open data-keep-open' in html
     #(the red line says which box and where it goes, and a notice lists what's still to place: the
     #owner, 2026-10-22)
     no_place = 'No place on the page yet. On the page picture, drag its dashed box “1.” onto the circle or blank where the answer goes.'
@@ -1544,3 +1552,20 @@ def test_an_old_page_error_names_the_button_the_page_has(app_db, ai):
     for said in [page] + [h['text'] for h in hints]:
         assert 'Read the rest' not in said and '“Try again”' not in said
     assert any('Press “Read this page” to read it again' in h['text'] for h in hints)
+
+
+def test_a_problem_with_no_blank_gets_a_box_right_after_it(app_db):
+    """No blank printed after a problem ("3/4 + 1/5 ="): its answer box goes just to its right, as tall as it, stopping
+    short of the next problem on the line, dashed ('guessed') until it's dragged (the owner, 2026-10-25)."""
+    from app.qgen import scan as SC
+    qs = [{'id': 'q1', 'box': {'left': 0.10, 'top': 0.12, 'right': 0.30, 'bottom': 0.16}},
+          {'id': 'q2', 'box': {'left': 0.39, 'top': 0.12, 'right': 0.58, 'bottom': 0.16}},
+          {'id': 'q3', 'box': {'left': 0.66, 'top': 0.12, 'right': 0.85, 'bottom': 0.17}},
+          {'id': 'q4', 'box': {'left': 0.10, 'top': 0.20, 'right': 0.30, 'bottom': 0.24}}]
+    found = {'q4': {'kind': 'field', 'answer': {'left': 0.31, 'top': 0.2, 'right': 0.4, 'bottom': 0.24}, 'text': None, 'char': 0.02}}
+    slots = SC.guess_places(qs, dict(found), covered={'q2'})
+    a1, a2, a3 = (slots[k]['answer'] for k in ('q1', 'q2', 'q3'))
+    assert a1['left'] > 0.30 and a1['right'] < 0.39 and (a1['top'], a1['bottom']) == (0.12, 0.16)
+    assert a2['right'] < 0.66 and a3['right'] <= 0.99
+    assert all(slots[k]['guessed'] for k in ('q1', 'q2', 'q3')) and slots['q4'] == found['q4']   # (a found one stays)
+    assert slots['q2']['text'] == qs[1]['box'] and slots['q1']['text'] is None   # (random numbers: its wording is written again)

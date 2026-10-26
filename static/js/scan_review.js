@@ -257,7 +257,7 @@
       if (window.qgenChanged) window.qgenChanged();
       var line = item.querySelector('.scan-no-place');
       if (line) line.hidden = true;
-      crop.classList.remove('is-missing');
+      crop.classList.remove('is-missing', 'is-guessed');
       refreshSave();
     });
   });

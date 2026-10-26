@@ -1805,6 +1805,8 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
    labeled with the page's number; dashed while it hasn't been placed yet */
 .crop.crop-place { background: none; border-width: 2px; }
 .crop.crop-place.is-missing { border-style: dashed; }
+/* a box put just after a problem whose blank couldn't be found: dashed until it's dragged (the owner, 2026-10-25) */
+.crop.crop-place.is-guessed { border-style: dashed; }
 .crop-place .crop-label { top: auto; bottom: 100%; }
 .crop-place .crop-handle { width: 10px; height: 10px; }
 .crop-place .crop-nw { left: -5px; top: -5px; } .crop-place .crop-se { right: -5px; bottom: -5px; }

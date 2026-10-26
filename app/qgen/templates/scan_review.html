@@ -276,9 +276,13 @@
       </{{ 'details' if fold else 'div' }}>
       {% else %}
       {#- (pages start folded, the owner 2026-10-19; one with something to fix shows open) #}
-      {%- set pb = namespace(bad=false) %}{% for k in problems if k.startswith('page:' ~ n ~ ':') %}{% set pb.bad = true %}{% endfor %}
+      {%- set pb = namespace(bad=false, fix=false) %}{% for k in problems if k.startswith('page:' ~ n ~ ':') %}{% set pb.bad = true %}{% endfor %}
+      {#- (a page with something to fix starts open: answer boxes to place, problems marked !; the owner, 2026-10-25, after
+          "Use what was read" left a page of 39 to fix folded) #}
+      {%- for m in missing if m[0] == n %}{% set pb.fix = true %}{% endfor %}
+      {%- for item in page['items'] %}{% if item.include and (checks.get((n, loop.index0)) or {}).get('errors') %}{% set pb.fix = true %}{% endif %}{% endfor %}
       {#- (every page starts closed, not as last left: the owner, 2026-10-25; one with something to fix still opens) #}
-      <details class="box card scan-page" id="scan-page-{{ n }}" data-page="{{ n }}" data-box="scan-page:{{ n }}" data-fixed{% if pb.bad %} open data-keep-open{% endif %}>
+      <details class="box card scan-page" id="scan-page-{{ n }}" data-page="{{ n }}" data-box="scan-page:{{ n }}" data-fixed{% if pb.bad or pb.fix %} open data-keep-open{% endif %}>
         <summary>
           {#- (its thumbnail where the page icon was: the owner, 2026-10-25) #}
           <span class="fold" aria-hidden="true"></span>{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>{% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
@@ -316,7 +320,7 @@
                 <div class="crop crop-paper" data-for="p{{ n }}i{{ loop.index0 }}-box" title="What gets printed for “{{ item.title }}”: drag to move, drag the corners to resize"><span class="crop-label">{{ icon('pencil') }} {{ item.title }}</span></div>
               {% endif %}{% endfor %}
               {% for item in page['items'] %}{% set pl = place_of(page, item) %}{% if pl %}{% set lab = label_of(page, item) %}
-                <div class="crop crop-place{% if not pl[1] %} is-missing{% endif %}" data-for="p{{ n }}i{{ loop.index0 }}-place" data-label="{{ lab }}"{% if not item.include %} hidden{% endif %} title="Where “{{ lab }}” is answered: drag to move, drag the corners to resize"><span class="crop-label">{{ lab }}</span></div>
+                <div class="crop crop-place{% if not pl[1] %} is-missing{% elif ((page.slots or {}).get(item.qs_id) or {}).get('guessed') %} is-guessed{% endif %}" data-for="p{{ n }}i{{ loop.index0 }}-place" data-label="{{ lab }}"{% if not item.include %} hidden{% endif %} title="Where “{{ lab }}” is answered: drag to move, drag the corners to resize"><span class="crop-label">{{ lab }}</span></div>
               {% endif %}{% endfor %}
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>

@@ -777,7 +777,7 @@ def find_places_again(job_id, page):
         return False
     flat = Image.open(page_file(job_id, page['n'])).convert('RGB')
     covered = {item['qs_id'] for item in page.get('items') or [] if item.get('qs_id') and item.get('values') and item.get('page_text')}
-    page['slots'] = pagelayout.find_slots(flat, {'problems': page['qs'], 'pictures': []}, covered)
+    page['slots'] = guess_places(page['qs'], pagelayout.find_slots(flat, {'problems': page['qs'], 'pictures': []}, covered), covered)
     return True
 
 
@@ -1195,7 +1195,7 @@ def finish_page(job, n, qs, numbers, flat, api_key=None, user_id=None, progress=
     if progress:
         progress.step('places')
     covered = {pid for pid, item in numbers.items() if item.get('values') and item.get('page_text')}
-    slots = pagelayout.find_slots(flat, qs, covered)
+    slots = guess_places(qs.get('problems') or [], pagelayout.find_slots(flat, qs, covered), covered)
     if step('finding the answer places'):
         return stopped
     #(the AI looks at the page as a student will see it, and the places it moves are checked here)
@@ -1216,6 +1216,30 @@ def finish_page(job, n, qs, numbers, flat, api_key=None, user_id=None, progress=
     page.update(size=qs['size'], slots=slots, font=font, checked=checked,
                 qs=[{k: p.get(k) for k in ('id', 'type', 'box', 'choices', 'text', 'number')} for p in qs['problems']])
     return page
+
+
+def guess_places(problems, slots, covered=()):
+    """An answer box for each problem the finder couldn't place (no blank printed after it, e.g. "3/4 + 1/5 ="): just
+    to the right of the problem, as tall as it, up to the next problem on its line or the page's edge, marked
+    'guessed' (the owner, 2026-10-25: "box right after the =", dragged by hand where it's off). slots is changed
+    in place and returned."""
+    boxes = [q for q in problems if isinstance(q.get('box'), dict)]
+    for q in boxes:
+        if q['id'] in slots:
+            continue
+        b = q['box']
+        #(the nearest problem to its right on the same line: the box stops short of it)
+        stop = min([o['box']['left'] for o in boxes if o is not q and o['box']['left'] >= b['right'] - 0.005
+                    and min(o['box']['bottom'], b['bottom']) - max(o['box']['top'], b['top']) > 0.3 * (b['bottom'] - b['top'])]
+                   + [0.99])
+        left = b['right'] + 0.005
+        right = min(left + 0.10, stop - 0.008)
+        if right - left < 0.03:
+            continue
+        h = b['bottom'] - b['top']
+        slots[q['id']] = {'kind': 'field', 'answer': {'left': round(left, 4), 'top': b['top'], 'right': round(right, 4), 'bottom': b['bottom']},
+                          'text': dict(b) if q['id'] in covered else None, 'char': round(min(0.03, 0.5 * h), 5), 'guessed': True}
+    return slots
 
 
 def use_reading(job, n):
@@ -1708,6 +1732,7 @@ def update_from_form(data, form):
                 if slot.get('answer') != box:
                     #(moved: its wording is found again beside the new place when it's saved)
                     slot = dict(slot, answer=box, by_hand=True, text=None)
+                    slot.pop('guessed', None)   # (placed by the teacher now: solid, like a found one)
                 page['slots'][item['qs_id']] = slot
             qtype = _f(form, ip + 'qtype', item['qtype'])
             item['qtype'] = qtype if qtype in QTYPES else item['qtype']
