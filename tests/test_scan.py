@@ -1520,3 +1520,27 @@ def test_generate_keeps_a_page_stopped_meanwhile(app_db, ai):
 def ids_of(name):
     from app.user.models import User
     return User.query.filter_by(username=name).one().id
+
+
+def test_an_old_page_error_names_the_button_the_page_has(app_db, ai):
+    """A page that failed before the buttons were renamed shows "Read this page", the button it has now, not
+    "Read the rest" or "Try again" (the owner, 2026-10-25)."""
+    app, db = app_db
+    from app.qgen import scan as SC
+    old = ('The AI’s answer for this page ran too long, so the page wasn’t read. Press “Read the rest” to try it again. '
+           'If it stops again, photograph just this page, closer up, and scan that photo as a new scan.')
+    assert 'Press “Read this page” to read it again. If it stops again' in SC.shown_error(old)
+    assert SC.shown_error('Press “Try again” on it in a while.') == 'Press “Read this page” in a while.'
+    ai([QS_TIMES, QS_TIMES], [NUM_TIMES, NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png'), (picture(), 'q.png')])
+    job = job_of(db)
+    data = json.loads(job.data)
+    data['pages'][0] = {'n': 1, 'state': 'error', 'error': old}
+    job.data = json.dumps(data)
+    db.session.commit()
+    page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
+    for said in [page] + [h['text'] for h in hints]:
+        assert 'Read the rest' not in said and '“Try again”' not in said
+    assert any('Press “Read this page” to read it again' in h['text'] for h in hints)

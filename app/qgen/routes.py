@@ -922,7 +922,7 @@ def qtake(cidx):
             return redirect(url_for('qgen.qtake', cidx=cidx))
         if request.method == 'POST' and form.csrf_token.errors:
             #(never silent: the answers sent are still filled in below, to hand in again)
-            flash('Your quiz wasn’t handed in. Your answers are still here: press Hand it in again.', 'error')
+            flash('Your quiz wasn’t handed in. Your answers are still here: press “Hand it in” again.', 'error')
         if not cq.startdate:
             S.start(cq)
             current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, title, cidx))

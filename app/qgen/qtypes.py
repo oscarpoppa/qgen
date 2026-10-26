@@ -570,12 +570,12 @@ class ChoiceOne(QType):
         show_n = options.get('show_n')
         if show_n:
             if show_n < 2 or show_n > len(choices):
-                errors.append('"Show only" must be between 2 and the number of choices ({}).'.format(len(choices)))
+                errors.append('\u201cShow only this many choices\u201d must be between 2 and the number of choices ({}).'.format(len(choices)))
             elif not self.multi and len(wrong) < show_n - 1:
                 errors.append('To show {} choices you need at least {} wrong ones.'.format(show_n, show_n - 1))
         elif not self.multi and len(right) > 1:
             errors.append('Pick one questions can only have one choice marked with *, '
-                          'unless you use “Show only” to pick one of them at random.')
+                          'unless you use “Show only this many choices” to pick one of them at random.')
         for text, _ in choices:
             errors += F.check_text('choice “{}”'.format(text), text, known)
         return errors
@@ -673,7 +673,7 @@ class ChoiceMany(ChoiceOne):
         show_n = options.get('show_n')
         if show_n:
             if show_n < 2 or show_n > len(choices):
-                errors.append('"Show only" must be between 2 and the number of choices ({}).'.format(len(choices)))
+                errors.append('\u201cShow only this many choices\u201d must be between 2 and the number of choices ({}).'.format(len(choices)))
             elif all(len(c) > show_n for c in self.answer_sets(choices, combos)):
                 errors.append('Every correct combination has more than {} choices, so it can\'t be shown whole.'.format(show_n))
         for text in texts:

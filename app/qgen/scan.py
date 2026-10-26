@@ -381,6 +381,21 @@ def page_lock(job_id):
         push.tell(push._user_rooms(author))
 
 
+_OLD_BUTTONS = re.compile('Press \u201c(?:Read the rest|Try again)\u201d(?: on it)? to (?:try it|read it) again')
+_OLD_BUTTONS_LATER = re.compile('Press \u201c(?:Read the rest|Try again)\u201d(?: on it)? in a while')
+
+
+def shown_error(text):
+    """A page's saved error as it's shown now: one saved before the buttons were renamed names the button the
+    page has now, \u201cRead this page\u201d (the owner, 2026-10-25: an old page said \u201cRead the rest\u201d, which
+    isn't on the page)."""
+    if not text:
+        return text
+    text = _OLD_BUTTONS.sub('Press \u201cRead this page\u201d to read it again', text)
+    text = _OLD_BUTTONS_LATER.sub('Press \u201cRead this page\u201d in a while', text)
+    return text.replace('\u201cRead the rest\u201d', '\u201cRead this page\u201d').replace('\u201cTry again\u201d', '\u201cRead this page\u201d')
+
+
 #a page whose reading ran too long: what to do next, step by step (the owner, 2026-10-21)
 PAGE_TOO_LONG = ('This page was read, but picking its random numbers ran too long, so it stopped. '
                  'Press \u201cRead this page\u201d to go on from there. If it stops again, photograph half the page at a time, closer up.')
@@ -403,7 +418,7 @@ def _read_page(app, job_id, n, api_key, user_id, reserved, cancel=None):
         except Exception as exc:
             db.session.rollback()
             app.logger.exception('reading scan {} page {} failed: {}'.format(job_id, n, exc))
-            return {'n': n, 'state': 'error', 'error': 'Something went wrong while reading this page. Please try again.'}
+            return {'n': n, 'state': 'error', 'error': 'Something went wrong while reading this page. Press \u201cRead this page\u201d to read it again.'}
         finally:
             db.session.remove()
 
@@ -551,7 +566,7 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                 data = get_data(job)
                 for p in data['pages']:
                     if p['state'] in ('waiting', 'reading'):
-                        p.update(state='error', error='Something went wrong while reading this page. Please try again.')
+                        p.update(state='error', error='Something went wrong while reading this page. Press \u201cRead this page\u201d to read it again.')
                 #(no page is still out with the AI after this, so reading one again starts at once; and a workbook
                 #moved to the Trash meanwhile stays there: the code critic, 2026-10-25)
                 data.pop('out', None)
@@ -892,7 +907,7 @@ def helper_hints(job, data, urls):
             continue
         if state != 'done':
             hints.append({'level': 'error', 'key': 'page-{}'.format(n),
-                          'text': 'Page {} didn\u2019t make it: {}'.format(n, p.get('error') or 'it couldn\u2019t be read.')})
+                          'text': 'Page {} didn\u2019t make it: {}'.format(n, shown_error(p.get('error')) or 'it couldn\u2019t be read.')})
             continue
         bad = [checked_item(it)['errors'] for it in p.get('items') or [] if it.get('include')]
         bad = [e for e in bad if e]

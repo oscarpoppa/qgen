@@ -265,7 +265,7 @@ def review_page(job, data, problems=None, status=200):
                 item['page_choices'] = SC.star_answer(item.get('page_choices'), item.get('page_answer'))
             checks[(page['n'], i)] = SC.checked_item(item)
     return render_template('scan_review.html', title='Workbook: {}'.format(job.name), job=job, data=data, reading=reading,
-                           trashed=job.status == SC.TRASHED,
+                           trashed=job.status == SC.TRASHED, scan_error=SC.shown_error,
                            step_words=SC.STEP_WORDS,
                            kind=SC.scan_kind(data, reading), note_longest=SC.NOTE_LONGEST,
                            checks=checks, problems=problems or {},

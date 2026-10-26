@@ -174,7 +174,7 @@
           {#- (up to three pages are read at once, one reading for the workbook: so one Pause for it here, not one on each
               page being read; the owner, 2026-10-25) #}
           {% if reading %}<span class="small muted scan-timer" data-timer-all aria-live="off"></span>
-          {% if data.pausing %}<span class="muted small">Pausing after these pages…</span>{% else %}<button type="button" class="btn btn-secondary btn-sm" data-scan-pause="{{ url_for('qgen.scan_pause', job_id=job.id) }}" title="Pause reading this workbook: the pages being read now finish and are kept; no more start until you press Resume.">{{ icon('lc-pause') }} Pause all</button>{% endif %}{% endif %}
+          {% if data.pausing %}<span class="muted small">Pausing after these pages…</span>{% else %}<button type="button" class="btn btn-secondary btn-sm" data-scan-pause="{{ url_for('qgen.scan_pause', job_id=job.id) }}" title="Pause reading this workbook: the pages being read now finish and are kept; no more start until you press “Resume”.">{{ icon('lc-pause') }} Pause all</button>{% endif %}{% endif %}
           {#- (the whole workbook's buttons here, a page's own on its card: the owner, 2026-10-25, CK1) #}
           {% if not reading and not trashed and data.pages|selectattr('state', 'in', ['waiting', 'error'])|list %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_read', job_id=job.id) }}" data-ask="Read every page not read yet? Each page uses a few AI calls." data-ok="Resume all" title="Go on reading the pages not read yet (each page uses a few AI calls)">{{ icon('lc-resume') }} Resume all</button>{% endif %}
           {#- (in the stash: Unstash draft, out of it: Stash draft; the owner, 2026-10-23) #}
@@ -261,7 +261,7 @@
           </span>
           {% endif %}
         {% if fold %}</summary>{% else %}</div>{% endif %}
-        {% if page.state == 'error' or (page.error and not reading) %}<p class="small muted">{{ page.error or 'It couldn’t be read.' }}</p>{% endif %}
+        {% if page.state == 'error' or (page.error and not reading) %}<p class="small muted">{{ scan_error(page.error) or 'It couldn’t be read.' }}</p>{% endif %}
         {% if fold %}
         <div class="scan-failed-body">
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" data-page-zoom title="See page {{ n }} full size"><img class="scan-failed-pic" src="{{ url_for('qgen.scan_page_image', job_id=job.id, n=n) }}" alt="Page {{ n }} as scanned" loading="lazy"></a>

@@ -177,7 +177,7 @@
     strong.textContent = d.title ? 'Choosing problems for “' + d.title + '”' : 'Choosing problems for your new quiz';
     var how = document.createElement('span');
     how.className = 'muted small';
-    how.textContent = ': check the ones you want (in any folder), then press Add to the quiz. ';
+    how.textContent = ': check the ones you want (in any folder), then press \u201cAdd to the quiz\u201d. ';
     var count = document.createElement('span');
     count.className = 'badge badge-accent pick-count';
     p.appendChild(strong); p.appendChild(how); p.appendChild(count);
