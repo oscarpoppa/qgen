@@ -65,7 +65,7 @@
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
             {% set n = item.cquizzes|length %}
             {{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.delete_removed_vquiz', vqid=item.id),
-                 delete_note='This can’t be undone.' ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Trash’s Attempts, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '.' if n else '') ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
+                 own_problems=(own_problems(item)|length) if own_problems else 0, delete_note='This can’t be undone.' ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Trash’s Attempts, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '.' if n else '') ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
             {% else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student’s version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Edit: Change this quiz’s questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
@@ -76,7 +76,7 @@
             {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
             {#- (grayed, with who's taking it, while someone is: it was refused only after the click; the owner, 2026-10-26) #}
             {% if not item.removed_at %}{{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.del_vquiz', vqid=item.id), archive_url=url_for('qgen.archive_vquiz', vqid=item.id),
-                 no_delete=delete_blocker(item) if delete_blocker else none,
+                 no_delete=delete_blocker(item) if delete_blocker else none, own_problems=(own_problems(item)|length) if own_problems else 0,
                  delete_note=('A quiz students have taken goes to the Trash instead, where you can restore it.' if item.cquizzes else 'Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'quiz'))) }}{% endif %}
             {% endif %}
           </td>

@@ -348,7 +348,7 @@
    deleting it means), then Move to Archive (archive_url: kept there, restorable; the owner,
    2026-10-16), Delete for good, or Cancel. delete_url / delete_label: its own delete; no_delete: why it
    can't be deleted (grayed with that reason). static/js/takeout.js #}
-{% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='', archive_url=none) %}
+{% macro remove_button(kind, ident, label, folders, delete_url, delete_label='Delete for good', no_delete=none, delete_note='', archive_url=none, own_problems=0) %}
   {#- (the owner, 2026-10-16: the trash can only deletes, asked first; moving is the row's own
       Move icon. Grayed, with why, when it can't be deleted) #}
   {#- (one button, no form of its own: static/js/takeout.js asks and sends; a page with hundreds of
@@ -358,7 +358,7 @@
   <span hidden data-folders="{{ ((folders or [])|map(attribute='id')|list)|tojson|forceescape }}"></span>
   {%- if no_delete %}{{ slot('Delete for good', no_delete, 'btn btn-danger btn-sm', 'lc-trash') }}{% else %}
   <button type="button" class="btn btn-danger btn-sm btn-icon" data-remove-one data-kind="{{ kind }}" data-label="{{ label }}"
-          data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"
+          data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if own_problems %} data-own-problems="{{ own_problems }}"{% endif %}
           title="Delete for good: delete {{ label }}; you’re asked first">{{ icon_label('lc-trash', 'Delete for good') }}</button>{% endif %}
 {% endmacro %}
 

@@ -1338,7 +1338,8 @@ def test_list_items_have_only_buttons(app_db):
         items = re.findall(r'<tr[ >].*?</tr>|<li>.*?</li>|<summary[ >].*?</summary>', main, re.S)
         for item in items:
             # (the folder list down the side is where to go, not an item: its entries are links)
-            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link|icon-link)\b', a)]  # (icon-link: a bare icon, the owner 2026-10-14)
+            #(row-quiz-chip: an opened problem row's quiz names, chips linking to each quiz: the quiz-name exception, the owner 2026-10-26)
+            links = [a for a in re.findall(r'<a [^>]*>', item) if not re.search(r'class="[^"]*\b(btn|side-link|name-link|icon-link|row-quiz-chip)\b', a)]  # (icon-link: a bare icon, the owner 2026-10-14)
             assert not links, (url, links, item[:300])
             names = re.findall(r'<a class="name-link[^"]*" href="([^"]+)" data-tip="([^"]+)"', item)
             #(a Dashboard row's person opens what its icon opens: an attempt, or its grading; the owner, 2026-10-22)

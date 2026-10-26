@@ -28,7 +28,7 @@
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
             </div>
             {#- the quizzes it's in, each opening its row on Quizzes (the owner, 2026-10-26) #}
-            {%- if item.vquizzes %}<div class="small row-quizzes">In quizzes: {% for q in item.vquizzes|sort(attribute='title') %}<a class="name-link" href="{{ url_for('qgen.list_vquiz', vqid=q.id) }}" title="Open “{{ q.title }}” on Quizzes">{{ q.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}</details>
+            {%- if item.vquizzes %}<div class="small row-quizzes">In quizzes: {% for q in item.vquizzes|sort(attribute='title') %}<a class="pick-chip row-quiz-chip" href="{{ url_for('qgen.list_vquiz', vqid=q.id) }}" title="Open “{{ q.title }}” on Quizzes">{{ q.title }}</a>{% endfor %}</div>{% endif %}</details>
           </td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}

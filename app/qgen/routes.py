@@ -547,7 +547,7 @@ def assign_many():
 def list_vquizzes():
     return subject_page('quizzes', 'vqlist.html', title='Quizzes', layout=layout, rules=RETAKE_RULES,
                         all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning,
-                        removed_count=len(S.removed_quizzes()), delete_blocker=S.vquiz_delete_blocker)
+                        removed_count=len(S.removed_quizzes()), delete_blocker=S.vquiz_delete_blocker, own_problems=S.own_problems)
 
 #one quiz: its row on the Quizzes page, opened and lit up (old links and notices lead here)
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
@@ -571,11 +571,16 @@ def list_vquiz(vqid):
 def del_vquiz(vqid):
     vq = VQuiz.query.filter_by(id=vqid).first_or_404('No VQuiz with id {}'.format(vqid))
     title = vq.title
+    #(its problems no other quiz uses, when the check box under the question was left checked: the owner, 2026-10-26)
+    along = S.own_problems(vq) if request.form.get('problems') == '1' else []
     try:
         done = S.delete_vquiz(vq)
     except S.ServiceError as exc:
         flash('Not removed. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
+    n = S.take_problems_along(along, delete=True)
+    if n:
+        flash('Its {} problem{} went too.'.format(n, '' if n == 1 else 's'), 'success')
     if done == 'removed':
         flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
                      'You can restore it from the <a href="{}">Trash</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
@@ -662,11 +667,15 @@ def archive_vquiz(vqid):
     vq = db.session.get(VQuiz, vqid)
     if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.list_vquizzes'))
+    along = S.own_problems(vq) if request.form.get('problems') == '1' else []
     try:
         S.archive_vquiz(vq)
     except S.ServiceError as exc:
         flash('Not moved to the Trash. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
+    n = S.take_problems_along(along)
+    if n:
+        flash('Its {} problem{} went to the Trash too.'.format(n, '' if n == 1 else 's'), 'success')
     flash(Markup('Moved quiz “{}” to the <a href="{}">Trash</a>, where you can restore it. Students keep their copies and scores.').format(
         vq.title, url_for('qgen.archive', section='quizzes')), 'success')
     current_app.logger.info("{} archived VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
@@ -695,11 +704,15 @@ def delete_removed_vquiz(vqid):
     if vq is None:
         return gone('That quiz has been deleted.', url_for('qgen.archive', section='quizzes'))
     title = vq.title
+    along = S.own_problems(vq) if request.form.get('problems') == '1' else []
     try:
         count = S.delete_removed_vquiz(vq, by=current_user)
     except S.ServiceError as exc:
         flash('Not deleted. {}'.format(exc), 'error')
         return redirect(url_for('qgen.archive', section='quizzes'))
+    n = S.take_problems_along(along, delete=True)
+    if n:
+        flash('Its {} problem{} went too.'.format(n, '' if n == 1 else 's'), 'success')
     if count:
         flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Trash</a>, where you can still read {}.').format(
             title, count, 'attempt is' if count == 1 else 'attempts are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
@@ -2049,7 +2062,8 @@ def archive():
     if section == 'quizzes':
         return subject_page('quizzes', 'vqlist.html', in_archive=True, title='Trash', section=section, counts=counts,
                             layout=layout, rules=RETAKE_RULES, all_subjects=S.subject_tree('quizzes')[1],
-                            archived=S.archived_counts()[0], archive_warning=S.archive_warning, removed_count=counts['quizzes'])
+                            archived=S.archived_counts()[0], archive_warning=S.archive_warning, removed_count=counts['quizzes'],
+                            own_problems=S.own_problems)
     if section == 'problems':
         return subject_page('problems', 'vplist.html', in_archive=True, title='Trash', section=section, counts=counts,
                             qtypes=REGISTRY, all_subjects=S.subject_tree('problems')[1], quizzes=[],

@@ -58,7 +58,9 @@
    * {value, label, title, danger, disabled: why it can't be chosen}, and Cancel first (with the focus). Resolves to the value
    * chosen, or null for Cancel or Esc. */
   var many = null;
-  window.qgenChoose = function (question, choices) {
+  //(check: {label, checked}, a check box under the question (a quiz's own problems going with it: the owner, 2026-10-26);
+  //then it resolves to {value, checked} instead of the value)
+  window.qgenChoose = function (question, choices, check) {
     //(no dialog in this browser: OK means the first choice that isn't a danger, never a delete)
     if (!window.HTMLDialogElement) {
       var safe = choices.filter(function (c) { return !c.danger && !c.disabled; })[0];
@@ -68,14 +70,17 @@
       many = document.createElement('dialog');
       many.className = 'ask ask-many';
       many.setAttribute('aria-labelledby', 'choose-text');
-      many.innerHTML = '<p id="choose-text"></p><div class="btn-row"></div>';
+      many.innerHTML = '<p id="choose-text"></p><label class="check choose-check" hidden><input type="checkbox"> <span></span></label><div class="btn-row"></div>';
       document.body.appendChild(many);
     }
     many.querySelector('#choose-text').textContent = question;
+    var box = many.querySelector('.choose-check'), tick = box.querySelector('input');
+    box.hidden = !check;
+    if (check) { box.querySelector('span').textContent = check.label; tick.checked = !!check.checked; }
     var row = many.querySelector('.btn-row');
     row.textContent = '';
     return new Promise(function (resolve) {
-      function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(v); }
+      function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(check ? { value: v, checked: tick.checked } : v); }
       function esc(e) { e.preventDefault(); done(null); }
       //(the answers first, Cancel last: the owner, 2026-10-23)
       choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {

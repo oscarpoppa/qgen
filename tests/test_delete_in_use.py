@@ -63,9 +63,51 @@ def test_a_problem_a_quiz_uses_has_its_trash_grayed_and_names_the_quiz(app_db):
     page = teach.get('/quiz/listvp').data.decode()
     why = 'Problem “{}” is used by these quizzes: “Week 4”. Take it out of them first.'.format(vp.title)
     assert why in page
-    assert 'In quizzes: <a class="name-link" href="/quiz/listvq/{}"'.format(vq.id) in page
+    assert 'In quizzes: <a class="pick-chip row-quiz-chip" href="/quiz/listvq/{}"'.format(vq.id) in page
     teach.post('/quiz/archivevp/{}'.format(vp.id))
     teach.post('/quiz/delvp/{}'.format(vp.id))
     db.session.expire_all()
     vp = db.session.get(VProblem, vp.id)
     assert vp is not None and vp.removed_at is None
+
+
+def test_a_quiz_can_take_its_own_problems_with_it(app_db):
+    """Moving a quiz to the Trash, or deleting it, can take the problems no other quiz uses with it (a check box,
+    checked to start); a problem another quiz uses stays (the owner, 2026-10-26)."""
+    app, db = app_db
+    from app.qgen.models import VProblem, VQuiz
+    teach = login(app, 'teach')
+    from app.qgen import services as S
+    from test_flow import problem_form
+    a = make_quiz(app, teach, 'Week A')
+    teach.post('/quiz/makevprob', data=problem_form('numeric', 'Shared one', 'What is 3 + 3?', '6', []))
+    sh = VProblem.query.filter_by(title='Shared one').one()
+    teach.post('/quiz/makevquiz', data={'title': 'Week B', 'vplist': str(sh.id), 'keep_order': 'y'})
+    b = VQuiz.query.filter_by(title='Week B').one()
+    own, shared = a.vproblems[0], b.vproblems[0]
+    assert own.id != shared.id
+    a.vproblems.append(shared)
+    db.session.commit()
+    assert [p.id for p in S.own_problems(a)] == [own.id]
+    page = teach.get('/quiz/listvq').data.decode()
+    assert 'data-own-problems="1"' in page  # (Week A: its own one; the shared one doesn't count)
+    teach.post('/quiz/archivevq/{}'.format(a.id), data={'problems': '1'})
+    db.session.expire_all()
+    assert db.session.get(VProblem, own.id).removed_at is not None
+    assert db.session.get(VProblem, shared.id).removed_at is None
+    # left unchecked: the problems stay
+    teach.post('/quiz/makevprob', data=problem_form('numeric', 'Keep one', 'What is 4 + 4?', '8', []))
+    keep = VProblem.query.filter_by(title='Keep one').one()
+    teach.post('/quiz/makevquiz', data={'title': 'Week C', 'vplist': str(keep.id), 'keep_order': 'y'})
+    c = VQuiz.query.filter_by(title='Week C').one()
+    teach.post('/quiz/archivevq/{}'.format(c.id))
+    db.session.expire_all()
+    assert db.session.get(VProblem, keep.id).removed_at is None
+    # deleted for good (no one took it): its own problem deleted too
+    teach.post('/quiz/makevprob', data=problem_form('numeric', 'Gone one', 'What is 5 + 5?', '10', []))
+    gone_id = VProblem.query.filter_by(title='Gone one').one().id
+    teach.post('/quiz/makevquiz', data={'title': 'Week D', 'vplist': str(gone_id), 'keep_order': 'y'})
+    d = VQuiz.query.filter_by(title='Week D').one()
+    teach.post('/quiz/delvq/{}'.format(d.id), data={'problems': '1'})
+    db.session.expire_all()
+    assert db.session.get(VQuiz, d.id) is None and db.session.get(VProblem, gone_id) is None

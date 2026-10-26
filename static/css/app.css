@@ -3774,3 +3774,8 @@ table.pick-table label .scan-mark { margin-left: -2px; flex: none; }
 .side-inner-dots { display: none; align-items: center; gap: 3px; flex: none; }
 .side-item.side-folded > .side-row .side-inner-dots { display: inline-flex; }
 .side-dot.side-dot-mini { min-width: 0; width: 8px; height: 8px; padding: 0; border-radius: 50%; }
+
+/* an opened problem row's quizzes as chips like the Assign page's, links with no ✕ (the owner, 2026-10-26) */
+.row-quizzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.pick-chip.row-quiz-chip { padding: 1px 10px; text-decoration: none; }
+.pick-chip.row-quiz-chip:hover { text-decoration: underline; }

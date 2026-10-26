@@ -460,6 +460,22 @@ def problem_delete_blocker(vp):
     return None
 
 
+def own_problems(vq):
+    """A quiz's problems no other quiz uses: the ones that can go with it (the owner, 2026-10-26)."""
+    return [p for p in vq.vproblems if all(q.id == vq.id for q in p.vquizzes)]
+
+
+def take_problems_along(problems, delete=False):
+    """A quiz's own problems, gone with it: to the Trash, or (delete) deleted for good, one with students' answers kept
+    quietly as delete_problem does. Returns how many."""
+    for p in problems:
+        if delete:
+            delete_problem(p)
+        else:
+            archive_problem(p)
+    return len(problems)
+
+
 def problem_in_quiz_blocker(vp):
     """Why a problem's trash can is grayed on the Problems page (a quiz uses it), or None: nothing goes to the Trash
     while something still uses it, site-wide (the owner, 2026-10-26)."""
