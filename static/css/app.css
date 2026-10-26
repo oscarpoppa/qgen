@@ -3661,6 +3661,8 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
   background: var(--surface); border: 2px solid var(--border); color: var(--muted); }
 .scan-strip-badge svg { width: 12px; height: 12px; }
 .scan-strip-done .scan-strip-badge { background: var(--ok); border-color: var(--ok); color: #fff; }
+/* a page made into its quiz already: green too, it went well (the owner, 2026-10-25) */
+.scan-strip-saved .scan-strip-badge { background: var(--ok); border-color: var(--ok); color: #fff; }
 .scan-strip-reading .scan-strip-badge { background: var(--accent); border-color: var(--accent); color: #fff; }
 .scan-strip-error .scan-strip-badge { background: var(--bad); border-color: var(--bad); color: #fff; }
 .scan-strip-saved .scan-strip-badge { background: var(--surface-2, var(--surface)); border-color: var(--muted); color: var(--muted); }
