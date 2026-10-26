@@ -856,7 +856,7 @@ def test_results_by_quiz(app_db):
     assert 'Results by quiz' in page and 'Settings quiz' in page and '2 students' in page
     box = page.split('id="quiz-{}"'.format(vq.id))[1]
     assert box.index('kim</a>') < box.index('sam</a>')  # students by name (each a link to their student page)
-    assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Archive' in box
+    assert 'Not started' in box and '%</span>' in box and 'Answer key' in box and 'Move to Trash' in box
     assert '>0%</span>' in box  # sam's score counts; kim has none yet
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(one quiz's history: a row per student in People's folders, not one box for the quiz)

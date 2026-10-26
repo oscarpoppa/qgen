@@ -56,7 +56,8 @@
         s.pages.forEach(function (p) {
           //(the thumbnail's outline and tooltip; the page's bar and its step, CI1/CI2)
           var li = document.querySelector('.scan-strip li[data-n="' + p.n + '"]');
-          if (li) {
+          //(a read page with things to fix keeps its "!" from the server: the owner, 2026-10-25)
+          if (li && !(p.state === 'done' && 'fix' in li.dataset)) {
             li.className = 'scan-strip-page scan-strip-' + p.state;
             var a = li.querySelector('a[data-state-tip]');
             if (a) a.title = 'Page ' + p.n + ': ' + (words[p.state] || p.state) + '. ' + a.dataset.stateTip;
@@ -213,20 +214,6 @@
     form.querySelectorAll('.crop-place').forEach(function (crop) {
       var item = itemOf(crop), placed = item && item.querySelector('[data-placed]');
       if (!crop.hidden && placed && placed.value !== '1') { waiting.push(crop.dataset.label); items.push(item); pages.push(item.dataset.page); }
-    });
-    //(the notices at the top and beside Save: how many are left and which, each a link to it)
-    form.querySelectorAll('[data-place-note]').forEach(function (note) {
-      note.hidden = !waiting.length;
-      if (!waiting.length) return;
-      note.querySelector('[data-place-count]').textContent = waiting.length + (waiting.length === 1 ? ' problem needs its' : ' problems need their');
-      var list = note.querySelector('[data-place-list]');
-      list.textContent = '';
-      items.forEach(function (item, k) {
-        if (k) list.appendChild(document.createTextNode(', '));
-        var a = document.createElement('a');
-        a.href = '#' + item.id; a.setAttribute('data-jump', ''); a.textContent = waiting[k];
-        list.appendChild(a);
-      });
     });
     //(each page's own Generate quiz: grayed while a problem of its quiz has no place; a joined page's stays grayed)
     gens.forEach(function (btn) {

@@ -110,6 +110,8 @@ def problem_hints(qtype_key, question, answer, options):
         text = '“{}” isn\'t in your values table.'.format(name)
         if close:
             text += ' Did you mean “{}”?'.format(close[0])
+        #(the Helper has no buttons: it says what to do; the owner, 2026-10-25)
+        text += ' Add a value named “{}”, or fix the name in the question.'.format(name)
         hints.append(hint('error', text, {'type': 'add_value', 'name': name, 'label': 'Add a value named {}'.format(name)}))
     for err in qt.validate(question, answer, options):
         if not any('“{}”'.format(n) in err for n in missing):
@@ -165,20 +167,20 @@ def problem_hints(qtype_key, question, answer, options):
     #does the wording suggest a different question type?
     low = question.lower()
     if re.search(r'\btrue\s*(or|/)\s*false\b', low) and qt.key != 'truefalse':
-        hints.append(hint('tip', 'This reads like a true-or-false question.', _switch('truefalse', 'Switch to True / False')))
+        hints.append(hint('tip', 'This reads like a true-or-false question: set “Question type” to “True / False”.', _switch('truefalse', 'Switch to True / False')))
     elif re.match(r'\s*(explain|describe|discuss|justify|why|compare|in your own words)\b', low) and qt.key != 'essay':
-        hints.append(hint('tip', 'Questions that ask students to explain usually work best as a written answer that you grade.',
+        hints.append(hint('tip', 'Questions that ask students to explain usually work best as a written answer that you grade: set “Question type” to “Long text (instructor grades)”.',
                           _switch('essay', 'Switch to Long text')))
     elif re.search(r'\b(select|choose|tick|check) all\b|\ball that apply\b', low) and qt.key != 'choice_many':
-        hints.append(hint('tip', '"Select all" questions need Pick several, so students can check more than one.',
+        hints.append(hint('tip', '“Select all” questions need “Pick several” in “Question type”, so students can check more than one.',
                           _switch('choice_many', 'Switch to Pick several')))
     if qt.key == 'choice_one' and len([c for c in parse_choices(options.get('choices')) if c[1]]) > 1 and not options.get('show_n'):
-        hints.append(hint('tip', 'You marked more than one correct choice.', _switch('choice_many', 'Switch to Pick several')))
+        hints.append(hint('tip', 'You marked more than one correct choice: set “Question type” to “Pick several”.', _switch('choice_many', 'Switch to Pick several')))
     if qt.key == 'numeric' and answer.strip() and '[' not in answer and not re.search(r'\d', answer) and not _formula_names(answer) & set(known):
         try:
             F.parse_expr(answer)
         except F.FriendlyError:
-            hints.append(hint('tip', 'The answer looks like words, not a number.', _switch('text', 'Switch to Short text')))
+            hints.append(hint('tip', 'The answer looks like words, not a number: set “Question type” to “Short text”.', _switch('text', 'Switch to Short text')))
 
     #choice lists
     if qt.uses_choices:

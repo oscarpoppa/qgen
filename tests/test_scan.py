@@ -642,7 +642,9 @@ def test_errors_limits_and_retry(app_db, ai):
     page = json.loads(job_of(db).data)['pages'][0]
     assert page['state'] == 'done' and page['title'] == 'Doubles' and len(page['items']) == 1
     assert not fakes.qs.calls and len(fakes.api.calls) == 1
-    assert not [h for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1']
+    #(read now: the Helper says it's ready, with what to press; the owner, 2026-10-25)
+    assert [h['text'] for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1'] \
+        == ['Page 1 is ready: press “Generate quiz”.']
     # the hourly limit: a page needs room for its three AI calls (QuizScan's photo check and
     # reading, then the numbers)
     from datetime import datetime
@@ -849,7 +851,12 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
     #owner, 2026-10-22)
     no_place = 'No place on the page yet. On the page picture, drag its dashed box “1.” onto the circle or blank where the answer goes.'
     assert no_place in html
-    assert '<span data-place-count>1 problem needs its</span> answer box: <span data-place-list><a href="#scan-item-1-0" data-jump>1.</a></span>' in html
+    #(no notice at the top any more: the Helper gives the steps; the owner, 2026-10-25)
+    assert 'data-place-note' not in html
+    steps = [h for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1'][0]
+    assert steps['text'] == 'Page 1: 1 answer box to place' and steps['steps'] == [
+        'Press “Place the answer boxes again (free)” under the page picture.',
+        'Drag any dashed box that’s off onto where its answer goes.', 'Press “Generate quiz”.']
     assert 'disabled title="Every problem needs its place on the page first (1.)"' in html
     # saving anyway is refused, with the red line once, and nothing is made
     r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, placed=False, generate='1'))
@@ -1549,9 +1556,13 @@ def test_an_old_page_error_names_the_button_the_page_has(app_db, ai):
     db.session.commit()
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
-    for said in [page] + [h['text'] for h in hints]:
+    said_all = [page] + [h['text'] for h in hints] + [st for h in hints for st in h.get('steps') or []]
+    for said in said_all:
         assert 'Read the rest' not in said and '“Try again”' not in said
-    assert any('Press “Read this page” to read it again' in h['text'] for h in hints)
+    #(the Helper: the reason, short, and the next step naming today's buttons; the owner, 2026-10-25)
+    mine = [h for h in hints if h.get('key') == 'page-1'][0]
+    assert mine['text'] == 'Page 1 didn’t make it (the AI’s answer ran too long)'
+    assert mine['steps'] == ['Press “Read this page” to read it again (a few AI calls).']
 
 
 def test_a_problem_with_no_blank_gets_a_box_right_after_it(app_db):
@@ -1569,3 +1580,22 @@ def test_a_problem_with_no_blank_gets_a_box_right_after_it(app_db):
     assert a2['right'] < 0.66 and a3['right'] <= 0.99
     assert all(slots[k]['guessed'] for k in ('q1', 'q2', 'q3')) and slots['q4'] == found['q4']   # (a found one stays)
     assert slots['q2']['text'] == qs[1]['box'] and slots['q1']['text'] is None   # (random numbers: its wording is written again)
+
+
+def test_a_read_page_with_things_to_fix_shows_a_mark_not_a_check(app_db, ai):
+    """A page that was read but isn't ready (answer boxes to place) shows "!" on its thumbnail, with what's left in
+    its tooltip; ✓ only when it's ready (the owner, 2026-10-25)."""
+    app, db = app_db
+    ai([QS_TIMES], [NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert 'scan-strip-page scan-strip-done' in page and 'scan-strip-fix' not in page   # (its box was placed)
+    data = json.loads(job.data)
+    data['pages'][0]['slots'] = {}
+    job.data = json.dumps(data)
+    db.session.commit()
+    page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert 'scan-strip-page scan-strip-fix' in page and 'data-fix="; 1 answer box to place"' in page
+    assert 'title="Page 1: read; 1 answer box to place. See page 1 full size"' in page and '<b>!</b>' in page

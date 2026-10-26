@@ -34,17 +34,6 @@
   </div>
 {% endmacro %}
 
-{#- what's still to place, said plainly, at the top and beside Save (the owner, 2026-10-22: it was only
-    a tooltip on the grayed Save); each number opens its page and goes to it. scan_review.js keeps it
-    current as boxes are placed. #}
-{% macro place_note() %}
-  <div class="hint hint-warn scan-place-note" data-place-note{% if not missing %} hidden{% endif %}>
-    {{ icon('warning') }} <span><span data-place-count>{{ missing|length }} problem{{ 's need their' if missing|length != 1 else ' needs its' }}</span> answer box: <span data-place-list>
-    {%- for m in missing %}{% if not loop.first %}, {% endif %}<a href="#scan-item-{{ m[0] }}-{{ m[1] }}" data-jump>{{ m[2] }}</a>{% endfor -%}
-    </span>. On the page picture, drag each <strong>dashed</strong> box onto the circle or blank where that answer goes. “Generate quiz” stays grayed until they’re all placed.</span>
-  </div>
-{% endmacro %}
-
 {% macro item_box(page, item, i) %}
   {% set n = page.n %}
   {% set ip = 'p' ~ n ~ 'i' ~ i ~ '-' %}
@@ -163,7 +152,7 @@
     {% set wait_tip = 'Wait until every page has been read' %}
     {% if trashed %}<fieldset class="scan-form-lock" disabled>{% endif %}
     {% if reading %}<div id="scan-progress" data-status="{{ url_for('qgen.scan_status', job_id=job.id) }}" data-steps="{{ step_words|tojson|forceescape }}" hidden></div>{% endif %}
-    {{ place_note() }}
+    {#- (no notice of boxes to place here: the Helper says what to do, step by step; the owner, 2026-10-25) #}
     {#- the workbook's own card (the owner, 2026-10-25): its name and its buttons on one line, and its pages as small
         thumbnails along the bottom: dragged to change the order, a link between two to make them one quiz #}
     <div class="card scan-batch">
@@ -189,7 +178,12 @@
       {% set movable = not reading and not trashed %}
       <input type="hidden" name="order" id="scan-order" value="">
       {#- each state's badge, for scan_review.js to swap in as a page's state changes #}
-      <template id="scan-badges">{% for k, ic in (('waiting', 'hourglass'), ('reading', 'lc-circle-half'), ('done', 'lc-check'), ('error', 'lc-alert'), ('saved', 'lc-clipboard-check')) %}<span data-for="{{ k }}">{{ icon(ic) }}</span>{% endfor %}</template>
+      <template id="scan-badges">{% for k, ic in (('waiting', 'hourglass'), ('reading', 'lc-circle-half'), ('done', 'lc-check'), ('error', 'lc-x'), ('saved', 'lc-file-text')) %}<span data-for="{{ k }}">{{ icon(ic) }}</span>{% endfor %}</template>
+      {#- a page read but not ready yet (answer boxes to place, problems marked !) shows "!" instead of ✓, matching its
+          "Ready to generate" mark (the owner, 2026-10-25) #}
+      {%- set fix = {} %}
+      {%- for m in missing %}{% set _ = fix.update({m[0]: [(fix.get(m[0]) or [0, 0])[0] + 1, (fix.get(m[0]) or [0, 0])[1]]}) %}{% endfor %}
+      {%- for p in data.pages if p.state == 'done' %}{% for item in p['items'] if item.include and (checks.get((p.n, loop.index0)) or {}).get('errors') %}{% set _ = fix.update({p.n: [(fix.get(p.n) or [0, 0])[0], (fix.get(p.n) or [0, 0])[1] + 1]}) %}{% endfor %}{% endfor %}
       <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">
       {% for p in data.pages %}
         {% if not loop.first %}
@@ -203,11 +197,14 @@
               {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link') }}</button>
           </li>
         {% endif %}
-        <li class="scan-strip-page scan-strip-{{ p.state }}" data-n="{{ p.n }}"{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
+        {%- set f = fix.get(p.n) if p.state == 'done' else none %}
+        {%- set shown_state = 'fix' if f else p.state %}
+        {%- set fix_words = (('; ' ~ f[0] ~ ' answer box' ~ ('' if f[0] == 1 else 'es') ~ ' to place') if f and f[0] else '') ~ (('; ' ~ f[1] ~ ' problem' ~ ('' if f[1] == 1 else 's') ~ ' to fix') if f and f[1] else '') %}
+        <li class="scan-strip-page scan-strip-{{ shown_state }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
-          <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
+          <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
           {#- its state as a small badge on the thumbnail's corner (the owner, 2026-10-25: the outline alone was hard to see) #}
-          <span class="scan-strip-badge" data-badge aria-hidden="true">{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-alert', 'saved': 'lc-clipboard-check'}[p.state]) }}</span>
+          <span class="scan-strip-badge" data-badge aria-hidden="true">{% if f %}<b>!</b>{% else %}{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-x', 'saved': 'lc-file-text'}[p.state]) }}{% endif %}</span>
           <span class="small">Page {{ p.n }}</span>
         </li>
       {% endfor %}
@@ -325,14 +322,14 @@
             </div>
             <button type="button" class="btn btn-secondary btn-sm scan-add-pic" data-page="{{ n }}" title="Draw a new crop box for a picture the AI missed">+ Add a picture</button>
             {#- (the answer boxes found again, without the AI: the owner, 2026-10-21) #}
-            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Find the boxes again" data-ask="Find the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used."{% if reading %} disabled data-after-reading="Put page {{ n }}’s answer boxes where they’re found now, without the AI" title="{{ wait_tip }}"{% else %} title="Put page {{ n }}’s answer boxes where they’re found now, without the AI"{% endif %}>Find the boxes again</button>{% endif %}
+            {% if page.kind == 'problems' and page.qs %}<button class="btn btn-secondary btn-sm" formaction="{{ url_for('qgen.scan_find_places', job_id=job.id, n=n) }}" formnovalidate data-ok="Place the answer boxes again" data-ask="Place the answer boxes on page {{ n }} again? Boxes you moved on this page go back to where they’re found. No AI is used."{% if reading %} disabled data-after-reading="Put page {{ n }}’s answer boxes where they’re found now, without the AI" title="{{ wait_tip }}"{% else %} title="Put page {{ n }}’s answer boxes where they’re found now, without the AI"{% endif %}>Place the answer boxes again (free)</button>{% endif %}
             {#- the page read again from the start, with what was wrong (the owner, 2026-10-20); sent with
                 the whole form, so the changes on the other pages are kept #}
             <details class="scan-again">
-              <summary class="btn btn-secondary btn-sm" title="Have the AI read this page again, saying what was wrong">Read this page again</summary>
-              <label class="label small" for="{{ pre }}again_note">What was wrong? (optional)</label>
+              <summary class="btn btn-secondary btn-sm" title="Have the AI read this page again, saying what was wrong">{{ icon('sparkle') }} Read this page again (AI)</summary>
+              <label class="label small" for="{{ pre }}again_note">Anything the AI should know? (optional)</label>
               <textarea id="{{ pre }}again_note" name="{{ pre }}again_note" rows="2" maxlength="{{ note_longest }}" placeholder="e.g. Problem 6 is missing; the answers to 4 and 5 are swapped"></textarea>
-              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are."{% if reading %} disabled data-after-reading="Read again: page {{ n }} from the start, with your note" title="{{ wait_tip }}"{% else %} title="Read again: page {{ n }} from the start, with your note"{% endif %}>Read again</button>
+              <button class="btn btn-sm" formaction="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" formnovalidate data-ok="Read this page again" data-ask="Read page {{ n }} again? Your changes on this page are dropped, and it uses a few more AI calls. Your other pages stay as they are."{% if reading %} disabled data-after-reading="Read again: page {{ n }} from the start, with your note" title="{{ wait_tip }}"{% else %} title="Read again: page {{ n }} from the start, with your note"{% endif %}>Read this page again</button>
             </details>
           </div>
           <div class="scan-right">

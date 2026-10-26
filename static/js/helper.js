@@ -24,6 +24,13 @@
       var text = document.createElement('span');
       text.textContent = h.text;
       li.appendChild(icon); li.appendChild(text);
+      //(what to do next, in order: a workbook page's steps, the owner 2026-10-25)
+      if (h.steps && h.steps.length) {
+        var ol = document.createElement('ol');
+        ol.className = 'hint-steps';
+        h.steps.forEach(function (st) { var s = document.createElement('li'); s.textContent = st; ol.appendChild(s); });
+        text.appendChild(ol);
+      }
       //(the Helper only reads the page and says what it sees: no buttons in it, ever; a choice lives on the thing it's
       //about, e.g. a scanned page's Try again on that page's box: the owner, 2026-10-24)
       target.appendChild(li);

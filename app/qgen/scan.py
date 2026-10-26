@@ -897,6 +897,9 @@ def helper_hints(job, data, urls):
         gaps.setdefault(g[0], []).append(g[2])
     leads = lead_of(data)
     seen = {}
+    #(each page that isn't ready says what to do next, as numbered steps; a page ready to make says so: the owner,
+    #2026-10-25, "more helpful about what steps need to be taken instead of just throwing a bunch of problems at me")
+    gen = 'Press \u201cGenerate quiz\u201d.'
     for p in pages:
         n, state = p['n'], p.get('state')
         #(nothing about a page being read or made already: its card shows how it's going)
@@ -906,33 +909,44 @@ def helper_hints(job, data, urls):
             hints.append({'level': 'warn', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.'.format(n)})
             continue
         if state != 'done':
-            hints.append({'level': 'error', 'key': 'page-{}'.format(n),
-                          'text': 'Page {} didn\u2019t make it: {}'.format(n, shown_error(p.get('error')) or 'it couldn\u2019t be read.')})
+            why = 'the AI\u2019s answer ran too long' if p.get('timed_out') or 'too long' in (p.get('error') or '') else None
+            text = 'Page {} didn\u2019t make it ({})'.format(n, why) if why else \
+                'Page {} didn\u2019t make it: {}'.format(n, shown_error(p.get('error')) or 'it couldn\u2019t be read.')
+            steps = ['Press \u201cRead this page\u201d to finish it (a few AI calls), or \u201cUse what was read\u201d to finish it by hand.'] \
+                if p.get('qs_reading') else ['Press \u201cRead this page\u201d to read it again (a few AI calls).']
+            hints.append({'level': 'error', 'key': 'page-{}'.format(n), 'text': text, 'steps': steps})
             continue
-        bad = [checked_item(it)['errors'] for it in p.get('items') or [] if it.get('include')]
-        bad = [e for e in bad if e]
-        if bad:
-            firsts = {e[0] for e in bad}
-            what = (' to fix: \u201c{}\u201d'.format(bad[0][0]) if len(firsts) == 1 else ' to fix (marked !)')
-            hints.append({'level': 'error', 'text': 'Page {}: {} problem{}{}'.format(n, len(bad), '' if len(bad) == 1 else 's', what)})
+        bad = [e for e in (checked_item(it)['errors'] for it in p.get('items') or [] if it.get('include')) if e]
+        heads, steps = [], []
         if gaps.get(n):
             k = len(gaps[n])
-            hints.append({'level': 'warn', 'text': 'Page {}: {} problem{} still need{} an answer box on the page: {}.'.format(
-                n, k, '' if k == 1 else 's', 's' if k == 1 else '', ', '.join(gaps[n]))})
-        if leads.get(n) == n and p.get('kind') == 'problems':
+            heads.append('{} answer box{} to place'.format(k, '' if k == 1 else 'es'))
+            steps += ['Press \u201cPlace the answer boxes again (free)\u201d under the page picture.',
+                      'Drag any dashed box that\u2019s off onto where its answer goes.']
+        if bad:
+            heads.append('{} problem{} to fix (marked !)'.format(len(bad), '' if len(bad) == 1 else 's'))
+            steps.append('Open each one and correct it.')
+        lead = leads.get(n) == n and p.get('kind') == 'problems'
+        if lead:
             title = ' '.join((p.get('title') or '').split())
             if not title:
-                hints.append({'level': 'error', 'text': 'Page {}: give its quiz a title.'.format(n)})
+                heads.append('no quiz title')
+                steps.append('Give its quiz a title.')
             elif S.quiz_name_taken(title) or title.lower() in seen:
-                hints.append({'level': 'error', 'text': 'Page {}: a quiz is already called \u201c{}\u201d. Give this one a different title.'.format(n, title)})
+                heads.append('a quiz is already called \u201c{}\u201d'.format(title))
+                steps.append('Give its quiz a different title.')
             seen[title.lower()] = n
+        if heads:
+            if lead:
+                steps.append(gen)
+            hints.append({'level': 'error' if bad or not lead else 'warn', 'key': 'page-{}'.format(n),
+                          'text': 'Page {}: {}'.format(n, '; '.join(heads)), 'steps': steps})
+        elif lead:
+            hints.append({'level': 'ok', 'key': 'page-{}'.format(n), 'text': 'Page {} is ready: press \u201cGenerate quiz\u201d.'.format(n)})
     if data.get('folder'):
         err = S.new_subject_name_error('problems', data['folder'])
         if err:
             hints.append({'level': 'error', 'text': err})
-    if not hints:
-        made = len(quiz_groups(data))
-        hints.append({'level': 'ok', 'text': 'Ready: {} quiz{} can be made.'.format(made, '' if made == 1 else 'zes')})
     return hints
 
 

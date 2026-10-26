@@ -64,7 +64,7 @@
     --field-border: #6a7385;
     --on-ok: #0f1320;
     --on-bad: #0f1320;
-    --warn-soft: #3a2e14;
+    --warn-soft: #4a3f0c;   /* mustard, not brown: the owner, 2026-10-25 */
     --info-soft: #1c2a3d;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4);
     color-scheme: dark;
@@ -3646,8 +3646,11 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-strip-page .scan-strip-thumb { border-width: 2px; }
 .scan-strip-waiting .scan-strip-thumb { border-color: var(--border); }
 .scan-strip-done .scan-strip-thumb { border-color: var(--ok); }
-.scan-strip-error .scan-strip-thumb { border-color: var(--warn); }
-.scan-strip-saved .scan-strip-thumb { border-color: var(--ok); opacity: .55; }
+/* one color and shape per state (the owner, 2026-10-25): waiting gray, being read blue, ready green ✓, needs fixing yellow !,
+   didn't make it red ✕, generated gray page */
+.scan-strip-error .scan-strip-thumb { border-color: var(--bad); }
+.scan-strip-reading .scan-strip-thumb { border-color: var(--accent); }
+.scan-strip-saved .scan-strip-thumb { border-color: var(--border); opacity: .55; }
 /* the state as a round badge on the thumbnail's top-right corner (the owner, 2026-10-25) */
 .scan-strip-page { position: relative; }
 .scan-strip-badge { position: absolute; top: -6px; right: 2px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
@@ -3655,8 +3658,11 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-strip-badge svg { width: 12px; height: 12px; }
 .scan-strip-done .scan-strip-badge { background: var(--ok); border-color: var(--ok); color: #fff; }
 .scan-strip-reading .scan-strip-badge { background: var(--accent); border-color: var(--accent); color: #fff; }
-.scan-strip-error .scan-strip-badge { background: var(--warn); border-color: var(--warn); color: #1a1a1a; }
-.scan-strip-saved .scan-strip-badge { background: var(--surface); border-color: var(--ok); color: var(--ok); }
+.scan-strip-error .scan-strip-badge { background: var(--bad); border-color: var(--bad); color: #fff; }
+.scan-strip-saved .scan-strip-badge { background: var(--surface-2, var(--surface)); border-color: var(--muted); color: var(--muted); }
+/* read, but not ready yet: "!" in the Helper's yellow (the owner, 2026-10-25) */
+.scan-strip-fix .scan-strip-thumb { border-color: var(--warn); }
+.scan-strip-fix .scan-strip-badge { background: var(--warn); border-color: var(--warn); color: #1a1a1a; font-size: 13px; line-height: 1; }
 .scan-strip-bad { color: var(--warn); }
 /* a page that didn't make it: its own box, its choices at the top right */
 .scan-page-failed .scan-failed-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -3739,3 +3745,7 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
    students' table under them keeps its heading for screen readers only (the owner, 2026-10-25) */
 .showing-dialog .showing-top { margin-bottom: 8px; }
 .showing-dialog .showing-students thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* the Helper's next steps under a hint (the owner, 2026-10-25) */
+.hint .hint-steps { margin: 4px 0 0; padding-left: 1.3em; }
+.hint .hint-steps li { margin: 2px 0; }
