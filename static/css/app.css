@@ -3779,3 +3779,12 @@ table.pick-table label .scan-mark { margin-left: -2px; flex: none; }
 .row-quizzes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
 .pick-chip.row-quiz-chip { padding: 1px 10px; text-decoration: none; }
 .pick-chip.row-quiz-chip:hover { text-decoration: underline; }
+
+/* a fold-out that pops out over its row instead of making the row taller (vqlist.html's Problems; the owner, 2026-10-26) */
+details.row-pop { position: relative; }
+details.row-pop[open] { z-index: 30; }
+details.row-pop > .row-pop-body { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; min-width: 240px; max-width: 360px;
+  max-height: min(50vh, 360px); overflow: auto; margin: 0; padding: 8px 12px 8px 2em; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 6px 20px rgba(0, 0, 0, .25); white-space: normal; }
+details.row-pop > .row-pop-body ul { margin: 2px 0 4px; padding-left: 1.1em; }
+details.row-pop.pop-up > .row-pop-body { top: auto; bottom: calc(100% + 4px); }
