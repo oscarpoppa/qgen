@@ -876,6 +876,10 @@ def drop_page(job, data, n):
         return len(left)
     if not left:
         return 0
+    #(the page after it isn't joined to the one before it by accident: a join was with the page taken out)
+    after = next((p for p in left if p['n'] == int(n) + 1), None)
+    if after is not None:
+        after.pop('join_prev', None)
     _renumber_pages(job, left)
     data['pages'] = left
     data.pop('_plan', None)
@@ -906,7 +910,8 @@ def helper_hints(job, data, urls):
         if state in ('saved', 'reading'):
             continue
         if state == 'waiting':
-            hints.append({'level': 'warn', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.'.format(n)})
+            #(gray, like the quiz Helper's tips: nothing to fix, it's waiting for its turn or for Resume)
+            hints.append({'level': 'tip', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.'.format(n)})
             continue
         if state != 'done':
             why = 'the AI\u2019s answer ran too long' if p.get('timed_out') or 'too long' in (p.get('error') or '') else None
@@ -939,7 +944,8 @@ def helper_hints(job, data, urls):
         if heads:
             if lead:
                 steps.append(gen)
-            hints.append({'level': 'error' if bad or not lead else 'warn', 'key': 'page-{}'.format(n),
+            #(red, like the quiz Helper's: each of these keeps "Generate quiz" from working until it's done; the owner, 2026-10-25)
+            hints.append({'level': 'error', 'key': 'page-{}'.format(n),
                           'text': 'Page {}: {}'.format(n, '; '.join(heads)), 'steps': steps})
         elif lead:
             hints.append({'level': 'ok', 'key': 'page-{}'.format(n), 'text': 'Page {} is ready: press \u201cGenerate quiz\u201d.'.format(n)})

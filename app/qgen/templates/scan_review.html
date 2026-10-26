@@ -34,6 +34,23 @@
   </div>
 {% endmacro %}
 
+{#- a page's state as the thumbnail's badge, before its heading (the owner, 2026-10-25): fix is the strip's {page: [boxes, problems]} #}
+{% macro state_badge(p, fix) %}
+  {%- set f = fix.get(p.n) if p.state == 'done' else none %}
+  {%- set st = 'fix' if f else p.state %}
+  {%- set words = 'needs fixing' if f else {'waiting': 'not read yet', 'reading': 'being read', 'done': 'ready to generate', 'error': 'didn’t make it'}.get(p.state, '') %}
+  <span class="scan-head-state scan-strip-{{ st }}" role="img" aria-label="Page {{ p.n }}: {{ words }}" title="Page {{ p.n }}: {{ words }}"><span class="scan-strip-badge">
+    {%- if f %}<b>!</b>{% else %}{{ icon({'waiting': 'hourglass', 'reading': 'lc-circle-half', 'done': 'lc-check', 'error': 'lc-x'}.get(p.state, 'lc-check')) }}{% endif %}</span></span>
+{%- endmacro %}
+
+{#- take a page out of the workbook, any page not generated yet (the owner, 2026-10-25: it was only for pages that
+    didn't make it); grayed, with why, while pages are being read #}
+{% macro drop_icon(n, reading, wait_tip) %}
+  <button type="button" class="btn btn-secondary btn-sm btn-icon btn-danger" data-page-go="{{ url_for('qgen.scan_drop_page', job_id=job.id, n=n) }}"
+    data-ask="Take page {{ n }} out of “{{ job.name }}”? Its problems aren’t kept. It can’t be undone." data-ok="Take it out"
+    {%- if reading %} disabled title="{{ wait_tip }}"{% else %} title="Take page {{ n }} out of this workbook"{% endif %}>{{ icon_label('lc-trash', 'Take page ' ~ n ~ ' out') }}</button>
+{%- endmacro %}
+
 {% macro item_box(page, item, i) %}
   {% set n = page.n %}
   {% set ip = 'p' ~ n ~ 'i' ~ i ~ '-' %}
@@ -183,7 +200,7 @@
           "Ready to generate" mark (the owner, 2026-10-25) #}
       {%- set fix = {} %}
       {%- for m in missing %}{% set _ = fix.update({m[0]: [(fix.get(m[0]) or [0, 0])[0] + 1, (fix.get(m[0]) or [0, 0])[1]]}) %}{% endfor %}
-      {%- for p in data.pages if p.state == 'done' %}{% for item in p['items'] if item.include and (checks.get((p.n, loop.index0)) or {}).get('errors') %}{% set _ = fix.update({p.n: [(fix.get(p.n) or [0, 0])[0], (fix.get(p.n) or [0, 0])[1] + 1]}) %}{% endfor %}{% endfor %}
+      {%- for p in data.pages if p.state == 'done' %}{% for item in p['items'] %}{% if item.include and (checks.get((p.n, loop.index0)) or {}).get('errors') %}{% set _ = fix.update({p.n: [(fix.get(p.n) or [0, 0])[0], (fix.get(p.n) or [0, 0])[1] + 1]}) %}{% endif %}{% endfor %}{% endfor %}
       <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">
       {% for p in data.pages %}
         {% if not loop.first %}
@@ -226,6 +243,7 @@
             <a class="icon-link" href="{{ url_for('qgen.edvquiz', vqid=made.quiz) }}" title="Edit: “{{ made.title }}”">{{ icon_label('lc-pencil', 'Edit') }}</a>
           {% elif made.with %}<span class="muted">Generated with page {{ made.with }}</span>
           {% else %}<span class="muted">Generated</span>{% endif %}
+          {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
           <span class="mark mark-ok">{{ icon('lc-check') }}</span>
         </div>
       </div>
@@ -237,7 +255,7 @@
       {%- set fold = page.state != 'reading' %}
       <{{ 'details' if fold else 'div' }} class="box card scan-page scan-page-{{ page.state }}" id="scan-page-{{ n }}"{% if fold %} data-box="scan-page:{{ n }}" data-fixed{% endif %}>
         {% if fold %}<summary>{% else %}<div class="scan-page-head">{% endif %}
-          {% if fold %}<span class="fold" aria-hidden="true"></span>{% endif %}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          {% if fold %}<span class="fold" aria-hidden="true"></span>{% endif %}{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
           <span class="badge {{ 'badge-accent' if page.state == 'reading' else 'badge-warn' }}">{{ {'reading': 'Being read', 'waiting': 'Not read yet', 'error': 'Didn’t make it'}[page.state] }}</span>
           {% if page.state == 'reading' %}
             {#- its step and about how much of it is done, as the AI's answer comes back (the owner, 2026-10-25, CI1/CI2); a step
@@ -254,7 +272,7 @@
                 pressed by the form being sent and read a page again with AI calls nobody asked for, 2026-10-24) #}
             <button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_read_again', job_id=job.id, n=n) }}" data-ask="Read page {{ n }}? It uses a few AI calls. The other pages stay as they are." data-ok="Read this page" title="{{ 'Have the AI read this page, going on from where it stopped (it uses a few AI calls); the other pages stay as they are' if page.qs_reading else 'Have the AI read this page (it uses a few AI calls); the other pages stay as they are' }}">Read this page</button>
             {% if page.qs_reading %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_use_reading', job_id=job.id, n=n) }}" title="Make this a normal page from what was read, to fix and generate; problems with no random numbers yet keep the page’s own. No AI calls.">Use what was read</button>{% endif %}
-            <button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_drop_page', job_id=job.id, n=n) }}" data-ask="Discard page {{ n }} of this workbook? It can’t be undone." data-ok="Discard" title="Take this page out of the workbook for good">Discard page</button>
+            {{ drop_icon(n, reading, wait_tip) }}
           </span>
           {% endif %}
         {% if fold %}</summary>{% else %}</div>{% endif %}
@@ -282,7 +300,7 @@
       <details class="box card scan-page" id="scan-page-{{ n }}" data-page="{{ n }}" data-box="scan-page:{{ n }}" data-fixed{% if pb.bad or pb.fix %} open data-keep-open{% endif %}>
         <summary>
           {#- (its thumbnail where the page icon was: the owner, 2026-10-25) #}
-          <span class="fold" aria-hidden="true"></span>{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>{% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
+          <span class="fold" aria-hidden="true"></span>{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>{% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
           {#- a green check mark on a page read and with nothing left to fix (the owner, 2026-10-21);
               scan_review.js shows it once the page's last answer box is placed #}
           {#- (the check inside the loop, not as its filter: there loop.index0 is the pages', the code critic 2026-10-22) #}
@@ -303,7 +321,7 @@
             {%- if joined %} disabled data-joined title="Joined with page {{ leads[n] }}"
             {%- elif fx.n %} disabled title="Fix the problems marked ! first"
             {%- elif grp.gaps %} disabled title="Every problem needs its place on the page first ({{ grp.gaps|join(', ') }})"
-            {%- else %} title="Make this page’s quiz and problems now"{% endif %}>Generate quiz</button></span>
+            {%- else %} title="Make this page’s quiz and problems now"{% endif %}>Generate quiz</button>{{ drop_icon(n, reading, wait_tip) }}</span>
         </summary>
         <input type="hidden" name="{{ pre }}shown" value="1">
         <div class="scan-split">

@@ -705,6 +705,9 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     assert not mine.get('actions')
     card = page[page.index('id="scan-page-2"'):]
     assert '>Read this page</button>' in card and '/quiz/scan/{}/page/2/drop'.format(job.id) in card
+    #(every page not generated has the trash icon and its state's badge: the owner, 2026-10-25)
+    assert 'aria-label="Take page 1 out"' in page and 'Take page 2 out of “' in page
+    assert 'class="scan-head-state scan-strip-error"' in card and 'class="scan-head-state scan-strip-' in page.split('id="scan-page-1"')[1]
     #(a page not read yet hasn't failed: the owner, 2026-10-23)
     data['pages'].append({'n': 3, 'state': 'waiting', 'error': SC.PAUSED_NOTE})
     waiting = SC.helper_hints(job, data, {'again': lambda n: '/a/{}'.format(n), 'drop': lambda n: '/d/{}'.format(n)})
@@ -720,8 +723,9 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     db.session.expire_all()
     left = json.loads(db.session.get(ScanJob, job.id).data)['pages']
     assert [p['n'] for p in left] == [1] and left[0]['state'] == 'done'
-    # a page that was read can't be discarded this way
-    assert teacher.post('/quiz/scan/{}/page/1/drop'.format(job.id)).status_code == 404
+    # a page that was read can be taken out too (the owner, 2026-10-25): the last one, and the workbook is gone
+    r = teacher.post('/quiz/scan/{}/page/1/drop'.format(job.id))
+    assert r.status_code == 302 and db.session.get(ScanJob, job.id) is None
 
 
 def test_the_stash_has_folders(app_db, ai):

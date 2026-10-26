@@ -581,15 +581,15 @@ def scan_use_reading(job_id, n):
 @admin_only
 @post_form_only
 def scan_drop_page(job_id, n):
-    """Discard one page that didn't make it (the owner, 2026-10-23); the review form is sent with it, so the
-    changes made on the other pages are kept."""
+    """Take one page out of the workbook: any page not generated yet (the owner, 2026-10-25; it was only one that
+    didn't make it, 2026-10-23); the review form is sent with it, so the changes made on the other pages are kept."""
     job = _mine(job_id)
     if _reading(job):
         flash('Some pages are still being read. Please wait until they’re done.', 'error')
         return redirect(url_for('qgen.scan_review', job_id=job.id))
     data = SC.update_from_form(SC.get_data(job), request.form)
     page = next((p for p in data.get('pages') or [] if p['n'] == n), None)
-    if page is None or page.get('state') == 'done':
+    if page is None or page.get('state') == 'saved':
         abort(404)
     left = SC.drop_page(job, data, n)
     db.session.commit()

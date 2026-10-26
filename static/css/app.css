@@ -3749,3 +3749,7 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
 /* the Helper's next steps under a hint (the owner, 2026-10-25) */
 .hint .hint-steps { margin: 4px 0 0; padding-left: 1.3em; }
 .hint .hint-steps li { margin: 2px 0; }
+
+/* a workbook page's state before its heading: the thumbnail's badge, in line (the owner, 2026-10-25) */
+.scan-head-state { display: inline-flex; flex: none; }
+.scan-head-state .scan-strip-badge { position: static; }
