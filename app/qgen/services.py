@@ -620,6 +620,43 @@ def being_taken(vq, now=None):
             and not (cq.deadline() and cq.deadline() <= now)]
 
 
+def files_in_use():
+    """{file name: ([problem titles], [quiz titles])} for every uploaded file a problem or quiz uses (its picture, a
+    problem's pictures), in the Trash too (they can be restored); worked out once a request."""
+    from flask import g, has_request_context
+    if has_request_context() and getattr(g, 'files_in_use', None) is not None:
+        return g.files_in_use
+    out = {}
+    for title, image, opts in VProblem.query.with_entities(VProblem.title, VProblem.image, VProblem.options_json):
+        names = {image} if image else set()
+        try:
+            names |= {i.get('file') for i in (json.loads(opts or '{}').get('images') or []) if isinstance(i, dict) and i.get('file')}
+        except (TypeError, ValueError):
+            pass
+        for n in names:
+            out.setdefault(n, ([], []))[0].append(title or 'Untitled')
+    for title, image in VQuiz.query.with_entities(VQuiz.title, VQuiz.image):
+        if image:
+            out.setdefault(image, ([], []))[1].append(title or 'Untitled')
+    if has_request_context():
+        g.files_in_use = out
+    return out
+
+
+def file_delete_blocker(name, kind='pictures'):
+    """Why an uploaded file can't be deleted for good (a problem or quiz uses it), or None (the owner, 2026-10-26: like
+    a problem's, its Delete grayed with this, and refused)."""
+    problems, quizzes = files_in_use().get(name, ([], []))
+    if not (problems or quizzes):
+        return None
+    def names(titles):
+        shown = ', '.join('“{}”'.format(t) for t in sorted(titles)[:5])
+        return shown + (' and {} more'.format(len(titles) - 5) if len(titles) > 5 else '')
+    parts = (['these problems: ' + names(problems)] if problems else []) + (['these quizzes: ' + names(quizzes)] if quizzes else [])
+    return '{} “{}” is used by {}. Take it out of them first.'.format(
+        'Picture' if kind == 'pictures' else 'File', name, '; and '.join(parts))
+
+
 def vquiz_delete_blocker(vq):
     """Why the quiz can't be taken off the Quizzes page right now, or None."""
     busy = being_taken(vq)

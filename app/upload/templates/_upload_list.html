@@ -24,10 +24,11 @@
             {%- if kind == 'pictures' %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} full size in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
             {#- (the trash can every list has: the same dialog as Problems', the owner 2026-10-19) #}
-            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delimg', fname=item.name), delete_note='Problems using it will show no picture.') }}
+            {#- (grayed, with what uses it, while a problem or quiz does: the owner, 2026-10-26) #}
+            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delimg', fname=item.name), no_delete=file_blocker(item.name, 'pictures') if file_blocker else none) }}
             {%- else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
-            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delnonimg', fname=item.name)) }}
+            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delnonimg', fname=item.name), no_delete=file_blocker(item.name, 'files') if file_blocker else none) }}
             {%- endif %}
           </td>
         </tr>

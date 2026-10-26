@@ -95,7 +95,8 @@ def images():
     from app.qgen.routes import subject_page
     from app.qgen import services as S, uploads
     uploads.sync()
-    return subject_page('pictures', 'images.html', title='Pictures', all_subjects=S.subject_tree('pictures')[1])
+    return subject_page('pictures', 'images.html', title='Pictures', all_subjects=S.subject_tree('pictures')[1],
+                        file_blocker=S.file_delete_blocker)
 
 #admin-only list non-image files on server
 @upload_bp.route('/nonimages', methods=['GET'])
@@ -107,7 +108,8 @@ def nonimages():
     from app.qgen.routes import subject_page
     from app.qgen import services as S, uploads
     uploads.sync()
-    return subject_page('files', 'nonimages.html', title='Other files', all_subjects=S.subject_tree('files')[1])
+    return subject_page('files', 'nonimages.html', title='Other files', all_subjects=S.subject_tree('files')[1],
+                        file_blocker=S.file_delete_blocker)
 
 #admin-only delete an image from server
 @upload_bp.route('/delimg/<fname>', methods=['POST'])
@@ -116,8 +118,13 @@ def nonimages():
 @admin_only
 @post_form_only
 def delimg(fname):
+    from app.qgen import services as S
+    #(not while a problem or quiz uses it: its Delete is grayed with this too; the owner, 2026-10-26)
+    why = S.file_delete_blocker(fname, 'pictures')
     if fname not in static_files():
         flash('Couldn’t find the picture “{}”. It may have been deleted already.'.format(fname), 'error')
+    elif why:
+        flash(why, 'error')
     else:
         try:
             remove(static_dir() + fname)
@@ -136,8 +143,12 @@ def delimg(fname):
 @admin_only
 @post_form_only
 def delnonimg(fname):
+    from app.qgen import services as S
+    why = S.file_delete_blocker(fname, 'files')
     if fname not in static_files():
         flash('Couldn’t find the file “{}”. It may have been deleted already.'.format(fname), 'error')
+    elif why:
+        flash(why, 'error')
     else:
         try:
             remove(static_dir() + fname)

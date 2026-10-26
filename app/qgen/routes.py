@@ -538,7 +538,7 @@ def assign_many():
 def list_vquizzes():
     return subject_page('quizzes', 'vqlist.html', title='Quizzes', layout=layout, rules=RETAKE_RULES,
                         all_subjects=S.subject_tree('quizzes')[1], archived=S.archived_counts()[0], archive_warning=S.archive_warning,
-                        removed_count=len(S.removed_quizzes()))
+                        removed_count=len(S.removed_quizzes()), delete_blocker=S.vquiz_delete_blocker)
 
 #one quiz: its row on the Quizzes page, opened and lit up (old links and notices lead here)
 @qgen_bp.route('/quiz/listvq/<vqid>', methods=['GET'])
