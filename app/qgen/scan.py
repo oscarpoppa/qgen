@@ -906,6 +906,8 @@ def helper_hints(job, data, urls):
     gen = 'Press \u201cGenerate quiz\u201d.'
     #(the pages being read now, as one gray line first, so the Helper isn't blank while a workbook is read: the owner, 2026-10-25)
     now = [p['n'] for p in pages if p.get('state') == 'reading']
+    #(the workbook being read, as the page decides it (scan_routes._reading): its buttons wait till then)
+    reading_now = bool(now) or (getattr(job, 'status', None) == 'reading' and job.updated_at and job.updated_at > datetime.now() - STALE)
     if now:
         names = str(now[0]) if len(now) == 1 else '{} and {}'.format(', '.join(map(str, now[:-1])), now[-1])
         hints.append({'level': 'tip', 'key': 'reading', 'text': 'Page{} {} {} being read\u2026'.format(
@@ -917,7 +919,9 @@ def helper_hints(job, data, urls):
             continue
         if state == 'waiting':
             #(gray, like the quiz Helper's tips: nothing to fix, it's waiting for its turn or for Resume)
-            hints.append({'level': 'tip', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.'.format(n)})
+            #(with its next step: the code critic and the user critic, 2026-10-25)
+            hints.append({'level': 'tip', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.{}'.format(
+                n, '' if reading_now else ' Press \u201cResume all\u201d.')})
             continue
         if state != 'done':
             why = 'the AI\u2019s answer ran too long' if p.get('timed_out') or 'too long' in (p.get('error') or '') else None
@@ -925,6 +929,9 @@ def helper_hints(job, data, urls):
                 'Page {} didn\u2019t make it: {}'.format(n, shown_error(p.get('error')) or 'it couldn\u2019t be read.')
             steps = ['Press \u201cRead this page\u201d to finish it (a few AI calls), or \u201cUse what was read\u201d to finish it by hand.'] \
                 if p.get('qs_reading') else ['Press \u201cRead this page\u201d to read it again (a few AI calls).']
+            #(those buttons are drawn once reading ends: the user critic, 2026-10-25)
+            if reading_now:
+                steps = ['Wait until every page has been read, then press \u201cRead this page\u201d.']
             hints.append({'level': 'error', 'key': 'page-{}'.format(n), 'text': text, 'steps': steps})
             continue
         bad = [e for e in (checked_item(it)['errors'] for it in p.get('items') or [] if it.get('include')) if e]

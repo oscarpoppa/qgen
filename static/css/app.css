@@ -3698,7 +3698,7 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-join.is-joined { color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .scan-join:disabled { opacity: .3; cursor: default; }
 /* joined pages share one bar under their thumbnails, meeting in the middle of the chain between them (the owner, 2026-10-25) */
-.scan-strip-page.is-joined-prev::after, .scan-strip-page.is-joined-next::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 3px; border-radius: 2px; background: var(--accent); }
+.scan-strip-page.is-joined-prev::after, .scan-strip-page.is-joined-next::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 3px; border-radius: var(--r-sm); background: var(--accent); }
 .scan-strip-page.is-joined-prev::after { left: -26px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .scan-strip-page.is-joined-next::after { right: -26px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .scan-head-thumb-link { line-height: 0; flex: 0 0 auto; }

@@ -11,6 +11,11 @@
   function setUp(box, early) {
     if (box.qgenFolderFilter) { if (!early && box.qgenAfterRows) box.qgenAfterRows(); return; }
     box.qgenFolderFilter = true;
+    //(its listeners on the whole page, kept so they go when the box is swapped for a new one: folders.js calls
+    //box.qgenTearDown first; they piled up, one set for each drop, the code critic 2026-10-25)
+    var offs = [];
+    function onDoc(type, fn) { document.addEventListener(type, fn); offs.push([type, fn]); }
+    box.qgenTearDown = function () { offs.forEach(function (o) { document.removeEventListener(o[0], o[1]); }); offs = []; };
     var data = box.querySelector('.folder-filter-tree'), list = box.querySelector('.folder-filter-list');
     if (!data || !list) return;
     var tree = JSON.parse(data.textContent), prefix = box.dataset.prefix || '';
@@ -574,7 +579,7 @@
             allBtn.setAttribute('aria-label', (allBtn.checked ? 'Uncheck all ' : 'Check all ') + pairs.length + ' in this folder');
           };
           allBtn.addEventListener('change', function () { window.qgenCheckMany(pairs, allBtn.checked); });
-          document.addEventListener('qgen-checked', sync);
+          onDoc('qgen-checked', sync);
           sync();
         }
       }
@@ -616,7 +621,7 @@
       //what's shown changed (a folder chosen, a filter typed): e.g. Assign keeps its chosen quiz in sight
       box.dispatchEvent(new CustomEvent('qgen-shown', { bubbles: true }));
     }
-    document.addEventListener('qgen-filtered', function (e) {
+    onDoc('qgen-filtered', function (e) {
       //(only the filter over this list: Messages has another, for the message's students)
       var bar = e.target.closest && e.target.closest('[data-filter-bar]'), over = bar && document.querySelector(bar.dataset.filter);
       if (!over || !(over.contains(list) || box.contains(over))) return;
@@ -683,7 +688,7 @@
       var r = row.getBoundingClientRect(), c = sc.getBoundingClientRect();
       sc.scrollTop += (r.top + r.height / 2) - (c.top + sc.clientHeight / 2);
     }
-    document.addEventListener('click', function (e) {
+    onDoc('click', function (e) {
       var a = e.target.closest && e.target.closest('.side-row a[href]');
       if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       var id = sideFor(a);
@@ -812,10 +817,10 @@
     }
     //(checking a box, Check all, a chip's ✕, a dialog's Check all shown: all end in a click or a change)
     box.addEventListener('change', soon);
-    document.addEventListener('click', soon);
-    document.addEventListener('qgen-checked', soon);
+    onDoc('click', soon);
+    onDoc('qgen-checked', soon);
     //("Apply to checked" made after the Checked folder was first drawn: drawn again with it)
-    document.addEventListener('qgen-apply-ready', function () { if (chosen === 'checked') apply(); });
+    onDoc('qgen-apply-ready', function () { if (chosen === 'checked') apply(); });
     function choose(id) {
       chosen = id;
       try { sessionStorage.setItem(memKey, chosen); } catch (err) {}

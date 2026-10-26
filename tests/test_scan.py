@@ -661,7 +661,7 @@ def test_errors_limits_and_retry(app_db, ai):
     page = json.loads(second.data)['pages'][0]
     assert page['state'] == 'waiting' and 'in the last hour' in page['error'] and not fakes.qs.calls and not fakes.api.calls
     #(the Helper says the page hasn't been read; the page's own card says why: the owner, 2026-10-25, CL2)
-    assert any(h['text'] == 'Page 1 hasn’t been read yet.' for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
+    assert any(h['text'] == 'Page 1 hasn’t been read yet. Press “Resume all”.' for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
     assert 'in the last hour' in teacher.get('/quiz/scan/{}'.format(second.id)).data.decode()
     # with room for two, it still waits; with room for three, it's read
     AICall.query.filter_by(kind='problem').limit(1).one().created = datetime(2000, 1, 1)
@@ -711,7 +711,7 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     #(a page not read yet hasn't failed: the owner, 2026-10-23)
     data['pages'].append({'n': 3, 'state': 'waiting', 'error': SC.PAUSED_NOTE})
     waiting = SC.helper_hints(job, data, {'again': lambda n: '/a/{}'.format(n), 'drop': lambda n: '/d/{}'.format(n)})
-    assert 'Page 3 hasn’t been read yet.' in [h['text'] for h in waiting]
+    assert 'Page 3 hasn’t been read yet. Press “Resume all”.' in [h['text'] for h in waiting]
     #(in the stash: Unstash draft)
     SC.put_away(job)
     db.session.commit()

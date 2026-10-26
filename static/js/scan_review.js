@@ -26,9 +26,15 @@
       f.appendChild(go); f.requestSubmit(go);
     });
     //(how each page stood when the page was drawn: a change is drawn again, unless something's been edited)
+    //(a read page with things to fix is drawn as "fix" but is "done" to the server: the same, or it was drawn again every
+    //3 seconds while reading; the code critic, 2026-10-25)
+    function stateOf(li) {
+      var m = (li.className.match(/scan-strip-(waiting|reading|done|error|fix)/) || [])[1];
+      return m === 'fix' ? 'done' : m;
+    }
     var was = {};
     Array.prototype.forEach.call(document.querySelectorAll('.scan-strip li[data-n]'), function (li) {
-      was[li.dataset.n] = (li.className.match(/scan-strip-(waiting|reading|done|error)/) || [])[1];
+      was[li.dataset.n] = stateOf(li);
     });
     function edited() { return window.qgenIsChanged ? window.qgenIsChanged() : false; }
     //the timers (the owner, 2026-10-18): each page being read, its own time so far, and the whole reading so far in the
@@ -46,6 +52,13 @@
       if (all && allSince !== null) all.textContent = 'in all ' + mmss(now - allSince);
     }
     setInterval(showTime, 1000);
+    function afterReading() {
+      document.querySelectorAll('[data-after-reading]').forEach(function (b) {
+        b.disabled = false;
+        b.title = b.dataset.afterReading;
+        b.removeAttribute('data-after-reading');
+      });
+    }
     var poll = function () {
       fetch(progress.dataset.status, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
         if (s.now) skew = when(s.now) - Date.now();
@@ -57,14 +70,18 @@
         s.pages.forEach(function (p) {
           //(the thumbnail's outline and tooltip; the page's bar and its step, CI1/CI2)
           var li = document.querySelector('.scan-strip li[data-n="' + p.n + '"]');
-          //(a read page with things to fix keeps its "!" from the server: the owner, 2026-10-25)
+          //(a read page with things to fix shows "!", never ✓, as the server says: the owner, 2026-10-25)
           if (li && !(p.state === 'done' && 'fix' in li.dataset)) {
-            li.className = 'scan-strip-page scan-strip-' + p.state;
+            var shown = p.state === 'done' && p.fix ? 'fix' : p.state;
+            li.className = 'scan-strip-page scan-strip-' + shown + (li.className.match(/ is-joined-(prev|next)/g) || []).join('');
             var a = li.querySelector('a[data-state-tip]');
-            if (a) a.title = 'Page ' + p.n + ': ' + (words[p.state] || p.state) + '. ' + a.dataset.stateTip;
+            if (a) a.title = 'Page ' + p.n + ': ' + (shown === 'fix' ? 'read; something to fix' : (words[p.state] || p.state)) + '. ' + a.dataset.stateTip;
             var badge = li.querySelector('[data-badge]');
             var drawn = document.querySelector('#scan-badges') && document.querySelector('#scan-badges').content.querySelector('[data-for="' + p.state + '"]');
-            if (badge && drawn) badge.innerHTML = drawn.innerHTML;
+            if (badge) {
+              if (shown === 'fix') badge.innerHTML = '<b>!</b>';
+              else if (drawn) badge.innerHTML = drawn.innerHTML;
+            }
           }
           var bar = document.querySelector('[data-bar-page="' + p.n + '"]'), step = document.querySelector('[data-step-page="' + p.n + '"]');
           var pr = p.progress || {};
@@ -85,10 +102,14 @@
           //the owner, 2026-10-25. Anything that doesn't line up: a reload, as before)
           if (!window.qgenScanSwap) { location.replace(location.href); return; }
           window.qgenScanSwap().then(function (ok) {
+            if (ok === 'edited') {
+              if (s.reading) { clearTimeout(asking); asking = setTimeout(poll, 3000); } else afterReading();
+              return;
+            }
             if (!ok) { location.replace(location.href); return; }
             was = {};
             Array.prototype.forEach.call(document.querySelectorAll('.scan-strip li[data-n]'), function (li) {
-              was[li.dataset.n] = (li.className.match(/scan-strip-(waiting|reading|done|error)/) || [])[1];
+              was[li.dataset.n] = stateOf(li);
             });
             if (s.reading) { clearTimeout(asking); asking = setTimeout(poll, 3000); }
           });
@@ -96,13 +117,7 @@
         }
         //(with edits not saved yet the page isn't drawn again: once every page is read, the buttons that were waiting
         //for it work again, in place; the code critic, 2026-10-25)
-        if (!s.reading) {
-          document.querySelectorAll('[data-after-reading]').forEach(function (b) {
-            b.disabled = false;
-            b.title = b.dataset.afterReading;
-            b.removeAttribute('data-after-reading');
-          });
-        }
+        if (!s.reading) afterReading();
         s.pages.forEach(function (p) {
           var bar = document.querySelector('#scan-page-' + p.n + ' .scan-progress-bar');
           if (bar && p.state === 'done') bar.hidden = true;
@@ -236,7 +251,7 @@
     });
     //(each page's own Generate quiz: grayed while a problem of its quiz has no place; a joined page's stays grayed)
     form.querySelectorAll('[data-generate]').forEach(function (btn) {
-      if (btn.hasAttribute('data-joined')) return;
+      if (btn.hasAttribute('data-joined') || btn.hasAttribute('data-nothing')) return;
       var group = btn.dataset.group.split(' '), gaps = [], bad = 0;
       pages.forEach(function (pg, k) { if (group.indexOf(pg) !== -1) gaps.push(waiting[k]); });
       group.forEach(function (pg) { bad += fix[pg] || 0; });
@@ -467,6 +482,8 @@
       var newStrip = doc.querySelector('.scan-strip'), oldEnd = form.querySelector('.scan-batch-head .box-end'), newEnd = doc.querySelector('.scan-batch-head .box-end');
       if (!oldPages.length || oldPages.length !== newPages.length || !newStrip || !strip || !oldEnd || !newEnd) return false;
       for (var i = 0; i < oldPages.length; i++) if (oldPages[i].id !== newPages[i].id) return false;
+      //(something typed while the page was being fetched: not drawn over it, CA9; the code critic, 2026-10-25)
+      if (window.qgenIsChanged && window.qgenIsChanged()) return 'edited';
       Array.prototype.forEach.call(oldPages, function (pg, k) {
         var fresh = document.importNode(newPages[k], true);
         //(a box that was open stays open)

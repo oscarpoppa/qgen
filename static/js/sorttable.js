@@ -186,4 +186,7 @@
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
+  //(a list swapped in place, after a drop, an upload or a live change: its headings sort too; the ones set up already
+  //are marked and skipped; the code critic, 2026-10-25)
+  document.addEventListener('qgen-swapped', all);
 })();

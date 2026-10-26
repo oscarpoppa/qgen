@@ -194,6 +194,7 @@
       Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
       Array.prototype.forEach.call(oldBoxes, function (b, i) {
         var nb = document.importNode(newBoxes[i], true);
+        if (b.qgenTearDown) b.qgenTearDown();
         b.replaceWith(nb);
         window.qgenFolderFilterSetUp(nb);
         //(what's checked stays checked in the new rows, as after a sort: checked.js)

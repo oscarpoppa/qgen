@@ -225,10 +225,16 @@ def scan_status(job_id):
     job = _mine(job_id)
     data = SC.get_data(job)
     pages = [p for p in data['pages'] if p.get('state') != 'saved']
+    #(a read page with answer boxes to place or problems marked !: its thumbnail shows "!", never ✓, even when the page
+    #isn't drawn again over edits; the checks were kept as each page was read, so this is cheap; the code critic, 2026-10-25)
+    gaps = {g[0] for g in SC.missing_places(data)}
+    def fix(p):
+        return p.get('state') == 'done' and (p['n'] in gaps or any(
+            it.get('include') and SC.checked_item(it)['errors'] for it in p.get('items') or []))
     #(times for the page's timer, with the server's own time so a computer's clock being off doesn't matter)
     return jsonify(reading=_reading(job), now=SC.datetime.now().isoformat(timespec='seconds'), since=data.get('reading_since'),
                    pages=[{'n': p['n'], 'state': p['state'], 'error': p.get('error'), 'since': p.get('since'),
-                           'progress': p.get('progress')} for p in pages])
+                           'progress': p.get('progress'), 'fix': fix(p)} for p in pages])
 
 
 @qgen_bp.route('/quiz/scan/<int:job_id>/read', methods=['POST'])

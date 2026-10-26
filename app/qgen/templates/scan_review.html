@@ -209,12 +209,14 @@
         {% if not loop.first %}
           {%- set before = data.pages[loop.index0 - 1] %}
           {%- set can_join = movable and p.state == 'done' and before.state == 'done' and p.kind == 'problems' and before.kind == 'problems' %}
+          {#- (joined only when both pages are read, the same test as the bar under them: the code critic, 2026-10-25) #}
+          {%- set joined_now = p.join_prev and p.state == 'done' and before.state == 'done' %}
           <li class="scan-join-spot" aria-hidden="false">
             {% if p.state == 'done' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
-            <button type="button" class="scan-join{% if p.join_prev and p.state == 'done' %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if p.join_prev and p.state == 'done' else 'false' }}"
+            <button type="button" class="scan-join{% if joined_now %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if joined_now else 'false' }}"
               {%- if not can_join %} disabled title="{{ wait_tip if reading else 'Only two pages with problems, both read and not generated yet, can be joined' }}"
               {%- elif p.join_prev %} title="Pages {{ before.n }} and {{ p.n }} make one quiz: click to make them two"
-              {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link' if p.join_prev and p.state == 'done' else 'lc-unlink') }}</button>
+              {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link' if joined_now else 'lc-unlink') }}</button>
           </li>
         {% endif %}
         {%- set f = fix.get(p.n) if p.state == 'done' else none %}
@@ -223,7 +225,7 @@
         {#- joined pages: a whole chain between them and one bar under both (the owner, 2026-10-25: a gray or blue chain
             alone didn't show it) #}
         {%- set nxt = data.pages[loop.index0 + 1] if not loop.last else none %}
-        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state == 'done' and not loop.first else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state == 'done' else '') %}
+        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state == 'done' and not loop.first and data.pages[loop.index0 - 1].state == 'done' else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state == 'done' and p.state == 'done' else '') %}
         <li class="scan-strip-page scan-strip-{{ shown_state }}{{ join_cls }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
@@ -282,6 +284,8 @@
             {% if page.qs_reading %}<button type="button" class="btn btn-secondary btn-sm" data-page-go="{{ url_for('qgen.scan_use_reading', job_id=job.id, n=n) }}" title="Make this a normal page from what was read, to fix and generate; problems with no random numbers yet keep the page’s own. No AI calls.">Use what was read</button>{% endif %}
             {{ drop_icon(n, reading, wait_tip) }}
           </span>
+          {#- (while the workbook is read: its trash grayed, with why, never gone; the user critic, 2026-10-25) #}
+          {% else %}<span class="box-end">{{ drop_icon(n, reading, wait_tip) }}</span>
           {% endif %}
         {% if fold %}</summary>{% else %}</div>{% endif %}
         {% if page.state == 'error' or (page.error and not reading) %}<p class="small muted">{{ scan_error(page.error) or 'It couldn’t be read.' }}</p>{% endif %}
@@ -327,6 +331,8 @@
           {%- set fx = namespace(n=0) %}{% for pg in data.pages if pg.n in grp.ns and pg.state == 'done' %}{% for it in pg['items'] %}{% if it.include and (checks.get((pg.n, loop.index0)) or {}).get('errors') %}{% set fx.n = fx.n + 1 %}{% endif %}{% endfor %}{% endfor %}
           <span class="box-end"><button class="btn btn-sm" name="generate" value="{{ n }}" data-generate="{{ n }}" data-group="{{ grp.ns|join(' ') }}" data-tip="Make this page’s quiz and problems now"
             {%- if joined %} disabled data-joined title="Joined with page {{ leads[n] }}"
+            {#- (a page that makes no quiz: nothing to use, or none of its problems checked; the user critic, 2026-10-25) #}
+            {%- elif leads.get(n) != n %} disabled data-nothing title="Nothing on this page to make into a quiz"
             {%- elif fx.n %} disabled title="Fix the problems marked ! first"
             {%- elif grp.gaps %} disabled title="Every problem needs its place on the page first ({{ grp.gaps|join(', ') }})"
             {%- else %} title="Make this page’s quiz and problems now"{% endif %}>Generate quiz</button>{{ drop_icon(n, reading, wait_tip) }}</span>

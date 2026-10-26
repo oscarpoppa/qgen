@@ -119,8 +119,11 @@
     var bar = document.createElement('div');
     bar.className = 'vsplit pick-split';
     box.appendChild(bar);
-    divider(bar, 'qgen-pick-side-width', function () { return side.getBoundingClientRect().width; },
-      function (px) { if (px) root.style.setProperty('--pick-side-w', px + 'px'); else root.style.removeProperty('--pick-side-w'); },
+    //(each list its own width, set on its own box and remembered for it: one width for every picker on the page made
+    //dragging the Quiz list's bar move the Students list's too; the owner, 2026-10-25)
+    var which = box.dataset.remember || ((box.dataset.prefix || '') + location.pathname);
+    divider(bar, 'qgen-pick-side-width:' + which, function () { return side.getBoundingClientRect().width; },
+      function (px) { if (px) box.style.setProperty('--pick-side-w', px + 'px'); else box.style.removeProperty('--pick-side-w'); },
       function () { return 170; }, function () { return Math.max(170, Math.min(480, box.getBoundingClientRect().width * 0.5)); },
       1, 'Make the folder list wider or narrower');
   }

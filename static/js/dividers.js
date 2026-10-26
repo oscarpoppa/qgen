@@ -164,6 +164,8 @@
   var watch = window.ResizeObserver ? new ResizeObserver(soon) : null;
   function watchAll() {
     if (!watch) return;
+    //(the tables swapped out let go of, so they aren't kept alive: the code critic, 2026-10-25)
+    watch.disconnect();
     document.querySelectorAll('table').forEach(function (t) {
       if (t.querySelector('ol.attempt-list, td.attempt-buttons, details.row-fold')) watch.observe(t);
     });

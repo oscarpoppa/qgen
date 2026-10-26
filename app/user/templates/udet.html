@@ -42,7 +42,7 @@
             <dl class="person-facts small" data-fold-body>
               <dt>Username</dt><dd>{{ item.username }}</dd>
               {% if item.nickname %}<dt>Name shown</dt><dd>{{ item.nickname }}</dd>{% endif %}
-              <dt>{{ 'Teacher' if item.is_admin else 'Student' }}</dt><dd></dd>
+              <dt>Role</dt><dd>{{ 'Teacher' if item.is_admin else 'Student' }}</dd>
               <dt>Created</dt><dd>{{ item.created_at|when if item.created_at else '—' }}</dd>
               <dt>Last seen</dt><dd>{{ item.last_seen|when if item.last_seen else '—' }}</dd>
               <dt>Folders</dt><dd>{{ mine|map(attribute='name')|join(', ') if mine else 'none' }}</dd>
