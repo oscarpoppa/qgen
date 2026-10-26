@@ -50,6 +50,14 @@ def _clean_name(name):
     return name
 
 
+def _name_taken(user, name, parent_id, ignore=None):
+    """Another of this student's folders at that level has the name (two folders side by side never share a
+    name: the owner, 2026-10-26)."""
+    low = name.lower()
+    return any(f.name.lower() == low and f.id != ignore
+               for f in QuizFolder.query.filter_by(owner_id=user.id, parent_id=parent_id))
+
+
 def _depth(f):
     """1 for a folder in the main list, 2 for one inside it..."""
     n = 0
@@ -69,7 +77,10 @@ def create_folder(user, name, parent_id=None):
     parent = _folder(user, parent_id)
     if parent is not None and _depth(parent) >= _max_depth():
         raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
-    f = QuizFolder(owner_id=user.id, parent_id=parent.id if parent else None, name=_clean_name(name))
+    name = _clean_name(name)
+    if _name_taken(user, name, parent.id if parent else None):
+        raise FolderError('There\u2019s already a folder called \u201c{}\u201d here.'.format(name))
+    f = QuizFolder(owner_id=user.id, parent_id=parent.id if parent else None, name=name)
     db.session.add(f)
     db.session.commit()
     return f
@@ -79,7 +90,10 @@ def rename_folder(user, folder_id, name):
     f = _folder(user, folder_id)
     if f is None:
         raise FolderError('That folder isn\'t one of yours.')
-    f.name = _clean_name(name)
+    name = _clean_name(name)
+    if _name_taken(user, name, f.parent_id, ignore=f.id):
+        raise FolderError('There\u2019s already a folder called \u201c{}\u201d here.'.format(name))
+    f.name = name
     db.session.commit()
     return f
 
@@ -206,6 +220,8 @@ def move_folder(user, folder_id, to_id):
             up = db.session.get(QuizFolder, up.parent_id) if up.parent_id else None
         if _depth(target) + _height(user, f) > _max_depth():
             raise FolderError('Folders can go only {} levels deep.'.format(_max_depth()))
+    if (target.id if target else None) != f.parent_id and _name_taken(user, f.name, target.id if target else None, ignore=f.id):
+        raise FolderError('There\u2019s already a folder called \u201c{}\u201d there. Rename one of them first.'.format(f.name))
     f.parent_id = target.id if target else None
     db.session.commit()
     return target

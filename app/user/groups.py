@@ -60,6 +60,13 @@ def _clean_name(name):
     return name
 
 
+def _name_taken(name, parent_id, ignore=None):
+    """Another People folder at that level has the name (two folders side by side never share a name: the owner,
+    2026-10-26)."""
+    low = name.lower()
+    return any(f.name.lower() == low and f.id != ignore for f in UserFolder.query.filter_by(parent_id=parent_id))
+
+
 def _depth(f):
     n = 0
     while f is not None:
@@ -77,7 +84,10 @@ def create(name, parent_id=None):
     parent = get(parent_id)
     if parent is not None and _depth(parent) >= _max_depth():
         raise GroupError('Folders can go only {} levels deep.'.format(_max_depth()))
-    f = UserFolder(parent_id=parent.id if parent else None, name=_clean_name(name))
+    name = _clean_name(name)
+    if _name_taken(name, parent.id if parent else None):
+        raise GroupError('There\u2019s already a folder called \u201c{}\u201d here.'.format(name))
+    f = UserFolder(parent_id=parent.id if parent else None, name=name)
     db.session.add(f)
     db.session.commit()
     return f
@@ -87,7 +97,10 @@ def rename(folder_id, name):
     f = get(folder_id)
     if f is None:
         raise GroupError('That folder doesn\'t exist any more.')
-    f.name = _clean_name(name)
+    name = _clean_name(name)
+    if _name_taken(name, f.parent_id, ignore=f.id):
+        raise GroupError('There\u2019s already a folder called \u201c{}\u201d here.'.format(name))
+    f.name = name
     db.session.commit()
     return f
 
@@ -124,6 +137,8 @@ def move_folder(folder_id, to_id):
             up = db.session.get(UserFolder, up.parent_id) if up.parent_id else None
         if _depth(target) + _height(f) > _max_depth():
             raise GroupError('Folders can go only {} levels deep.'.format(_max_depth()))
+    if (target.id if target else None) != f.parent_id and _name_taken(f.name, target.id if target else None, ignore=f.id):
+        raise GroupError('There\u2019s already a folder called \u201c{}\u201d there. Rename one of them first.'.format(f.name))
     f.parent_id = target.id if target else None
     db.session.commit()
     return target

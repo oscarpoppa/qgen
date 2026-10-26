@@ -322,3 +322,36 @@ def test_out_of_a_folder_inside_another_goes_back_up(app_db):
     assert in_folders('kim') == ['8th grade']
     # out of the top folder, with nothing else: still asked (delete or Uncategorized)
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
+
+
+def test_two_folders_side_by_side_never_share_a_name(app_db):
+    """Two folders at the same level can't have the same name, on People and on My quizzes; moving one in beside a
+    folder of its name is refused, asking for a rename (the owner, 2026-10-26)."""
+    app, db = app_db
+    import pytest
+    from app.user import groups
+    from app.user.models import User
+    from app.qgen import folders as QF
+    with app.app_context():
+        g7 = groups.create('7th Grade')
+        groups.create('Math', g7.id)
+        top_math = groups.create('Math')          # (another level: fine)
+        with pytest.raises(groups.GroupError, match='already a folder called “math” here'):
+            groups.create('math', g7.id)
+        other = groups.create('Science', g7.id)
+        with pytest.raises(groups.GroupError, match='here'):
+            groups.rename(other.id, 'MATH')
+        with pytest.raises(groups.GroupError, match='already a folder called “Math” there. Rename one of them first.'):
+            groups.move_folder(top_math.id, g7.id)
+        groups.rename(top_math.id, 'Math 2')
+        groups.move_folder(top_math.id, g7.id)
+        sam = User.query.filter_by(username='sam').one()
+        a = QF.create_folder(sam, 'math')
+        QF.create_folder(sam, 'Inside', a.id)
+        b = QF.create_folder(sam, 'Inside')
+        with pytest.raises(QF.FolderError, match='already a folder called “Math” here'):
+            QF.create_folder(sam, 'Math')
+        with pytest.raises(QF.FolderError, match='there. Rename one of them first.'):
+            QF.move_folder(sam, b.id, a.id)
+        with pytest.raises(QF.FolderError, match='here'):
+            QF.rename_folder(sam, b.id, 'MATH')

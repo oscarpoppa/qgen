@@ -2340,7 +2340,7 @@ def move_folder(folder, to_id):
         return folder
     FT.check_move(ScanFolder, folder, target)
     if _stash_name_taken(folder.name, target.id if target else None, ignore=folder.id):
-        raise FT.FolderError('There’s already a folder called “{}” there.'.format(folder.name))
+        raise FT.FolderError('There’s already a folder called “{}” there. Rename one of them first.'.format(folder.name))
     folder.parent_id = target.id if target else None
     db.session.commit()
     return folder
