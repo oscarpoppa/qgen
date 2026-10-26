@@ -1843,7 +1843,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .scan-item-fold:disabled { opacity: 1; cursor: default; }
 .scan-item-fold:disabled .fold { opacity: .3; }
 .scan-item-bad { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center;
-  background: var(--warn); color: #1a1a1a; font-weight: 700; font-size: 12px; cursor: help; }
+  background: var(--warn); color: #1a1a1a; font-weight: 700; font-size: 12px; cursor: default; }  /* (no "?" cursor; the tooltip stays: the owner, 2026-10-26) */
 .scan-item-bad[hidden] { display: none; }
 .scan-item-q { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scan-item-a { flex: 0 1 10rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
