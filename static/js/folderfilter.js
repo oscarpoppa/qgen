@@ -273,6 +273,10 @@
         var allBtn = button('all', box.dataset.allLabel || 'All', allCount(), 'folders');
         allBtn.classList.add('folder-tab-all');
         sideRow(allBtn, 1, null).classList.add('side-auto');
+        //(the automatic folders a page brings in its tree (a student's New and In progress: ids that aren't a folder's
+        //number) go right after All, pinned above the line with the others, never among the folders: the owner, 2026-10-26)
+        var autoNodes = tree.filter(function (n) { return !/^\d+$/.test(String(n.id)); });
+        autoNodes.forEach(function (n) { sideRow(button(String(n.id), n.name, n.count, n.icon || 'folder'), 1, n).classList.add('side-auto'); });
         if (hasChecks()) sideRow(button('checked', checkedNode.name, checkedNode.count, checkedNode.icon), 1, null).classList.add('side-auto');
         //(the automatic folders pinned at the top, in one order: All, Checked, Uncategorized; the folders
         //scroll under them: the owner, 2026-10-21)
@@ -291,7 +295,7 @@
             //(no "Unsorted" line under a folder: every folder list looks like the side list on the
             //Problems page, the owner 2026-10-13; Unsorted is the tab inside an open folder)
           });
-        })(tree, 1);
+        })(tree.filter(function (n) { return autoNodes.indexOf(n) === -1; }), 1);
         //folding: the rows after a folder that are deeper belong to it; the folder picked (and the
         //folders it's in) always stay open
         var rowsAll = Array.prototype.slice.call(col.querySelectorAll('.side-row'));
