@@ -3704,7 +3704,11 @@ table > tbody > tr > td.tick-col + td, table > thead > tr > th.tick-col + th { p
 .scan-head-thumb-link { line-height: 0; flex: 0 0 auto; }
 .scan-head-thumb { width: 26px; height: 34px; object-fit: cover; object-position: top; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
 details.scan-page > summary .scan-head-thumb-link { margin-right: 4px; }
-.scan-page-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* (a row that doesn't fold: an empty space as wide as the fold arrow and the same gaps as a folding row's, so every
+   page's badge and thumbnail line up down the page; the owner, 2026-10-25) */
+.scan-page-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.scan-page-head > .fold-space { flex: 0 0 7px; }
+.scan-page-head .scan-head-thumb-link { margin-right: 4px; }
 .scan-page-head h2 { margin: 0; font-size: var(--fs-lg); }
 .scan-page-head .box-end { margin-left: auto; }
 .scan-page-head .scan-progress-bar { flex: 1 1 8rem; max-width: 16rem; margin: 0; }

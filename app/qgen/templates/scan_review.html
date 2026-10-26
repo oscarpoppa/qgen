@@ -246,7 +246,7 @@
         <div class="scan-page-head">
           {#- the thumbnail's green "generated" badge first, where the other pages show theirs (not a ✓ at the end: that
               means read and waiting for Generate; the owner, 2026-10-25) #}
-          {{ state_badge(page, {}) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          <span class="fold-space" aria-hidden="true"></span>{{ state_badge(page, {}) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
           {% set made = page.made or {} %}
           {% if made.quiz %}<span>Generated: <a href="{{ url_for('qgen.view_vquiz', vqid=made.quiz) }}">“{{ made.title }}”</a>, {{ count_of(made.problems or 0, 'problem', 'problems') }}</span>
             <a class="icon-link" href="{{ url_for('qgen.edvquiz', vqid=made.quiz) }}" title="Edit: “{{ made.title }}”">{{ icon_label('lc-pencil', 'Edit') }}</a>
@@ -263,7 +263,7 @@
       {%- set fold = page.state != 'reading' %}
       <{{ 'details' if fold else 'div' }} class="box card scan-page scan-page-{{ page.state }}" id="scan-page-{{ n }}"{% if fold %} data-box="scan-page:{{ n }}" data-fixed{% endif %}>
         {% if fold %}<summary>{% else %}<div class="scan-page-head">{% endif %}
-          {% if fold %}<span class="fold" aria-hidden="true"></span>{% endif %}{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
+          {% if fold %}<span class="fold" aria-hidden="true"></span>{% else %}<span class="fold-space" aria-hidden="true"></span>{% endif %}{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}</h2>
           <span class="badge {{ 'badge-accent' if page.state == 'reading' else 'badge-warn' }}">{{ {'reading': 'Being read', 'waiting': 'Not read yet', 'error': 'Didn’t make it'}[page.state] }}</span>
           {% if page.state == 'reading' %}
             {#- its step and about how much of it is done, as the AI's answer comes back (the owner, 2026-10-25, CI1/CI2); a step
