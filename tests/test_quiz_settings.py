@@ -900,6 +900,8 @@ def test_a_quiz_starts_only_from_its_start_card(app_db):
     sam = login(app, 'sam')
     card = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
     assert 'Start the quiz' in card and '2 questions' in card and '20 minutes</strong> once you start' in card
+    # a way out beside Start, nothing started (the owner, 2026-10-25)
+    assert 'class="btn btn-secondary btn-lg start-cancel"' in card and 'data-back-href title="Leave without starting the quiz">Cancel</a>' in card
     assert 'Calculator allowed' in card and 'saved as you go' in card and 'Hand it in' not in card
     db.session.expire_all()
     assert cq.startdate is None  # a look starts nothing
