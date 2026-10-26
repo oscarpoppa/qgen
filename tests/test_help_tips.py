@@ -1,4 +1,4 @@
-"""The "?" help tips on the problem editor."""
+"""The problem editor's labels: no help tooltips any more (the owner, 2026-10-26)."""
 import re
 
 from test_flow import app_db, login, problem_form  # noqa: F401  (fixture)
@@ -9,19 +9,16 @@ def tips(page):
                       r'<span class="tip-body" role="tooltip" hidden>(.*?)</span></span>', page, re.S)
 
 
-def test_problem_editor_has_help_everywhere(app_db):
+def test_no_help_tooltips_on_labels(app_db):
+    """No label tooltips with the dotted underline and "?" cursor (the owner, 2026-10-26)."""
     app, db = app_db
-    page = login(app, 'teach').get('/quiz/makevprob').data.decode()
-    found = tips(page)
-    labels = {label for label, _ in found}
-    for want in ('Question type', 'Title', 'Question', 'random values', 'value names', 'kinds of value',
-                 'value settings', 'How close must the answer be?', 'pictures', 'Calculator allowed'):
-        assert want in labels, want
-    # every tip says something, and its markup arrived as markup (not escaped text)
-    assert all(body.strip() for _, body in found)
-    assert '&lt;p&gt;' not in page and '<p>A formula using your value names' in page
-    # numbered steps, the live kind line, and the value-name chip bars
-    assert page.count('class="step-num"') == 5
+    teach = login(app, 'teach')
+    for url in ('/quiz/makevprob', '/quiz/makevquiz', '/dashboard'):
+        page = teach.get(url).data.decode()
+        assert not tips(page) and 'class="tip-wrap"' not in page, url
+    page = teach.get('/quiz/makevprob').data.decode()
+    # numbered steps (Calculator and Folder each a card: the owner, 2026-10-26), the live kind line, the value-name chips
+    assert page.count('class="step-num"') == 6
     assert 'class="kind-hint"' in page and page.count('class="name-chips"') == 2
 
 

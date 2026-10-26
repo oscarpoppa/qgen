@@ -1,7 +1,9 @@
 {# Shared form pieces. Use: {% from "_macros.html" import field, check, errors, tip %} #}
 
 {# A small "?" next to a label: hover, focus or tap shows `body` (trusted template markup). #}
-{% macro tip(label, body) %}<span class="tip-wrap"><button type="button" class="tip" aria-label="Help: {{ label }}" title="Help: {{ label }}" aria-expanded="false">?</button><span class="tip-body" role="tooltip" hidden>{{ body }}</span></span>{% endmacro %}
+{#- (no help tooltips on labels any more, the dotted underline with the "?" cursor: the owner, 2026-10-26, "get rid of
+    any of the tooltips with the fish hooky thing". The help texts stay in the templates, so one can come back.) #}
+{% macro tip(label, body) %}{% endmacro %}
 
 {# above: markup between the label and the box, e.g. a row of math buttons for that box #}
 {% macro field(f, help=None, attrs={}, tip_body=None, above=None) %}
