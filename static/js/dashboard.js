@@ -50,10 +50,10 @@
         //each box keeps its place while it's redrawn (the owner, 2026-10-18): the new boxes come in
         //where the old ones were (their row spans, folded or open, the row of folded boxes), instead
         //of first in plain grid order and then jumping into place; only a box whose size changed moves
-        var oldGrid = box.querySelector('.dash-grid'), keep = {}, chips = box.querySelector('.dash-chips');
+        var oldGrid = box.querySelector('.dash-grid'), keep = {};
         var key = function (d) { return d.dataset.box || d.id; };
         if (oldGrid) Array.prototype.forEach.call(oldGrid.children, function (d) {
-          if (key(d)) keep[key(d)] = { span: d.style.gridRowEnd, open: d.open, folded: d.classList.contains('dash-folded') };
+          if (key(d)) keep[key(d)] = { span: d.style.gridRowEnd, open: d.open };
         });
         box.innerHTML = html;
         var newGrid = box.querySelector('.dash-grid');
@@ -64,9 +64,7 @@
             if (!k) return;
             if (k.span) d.style.gridRowEnd = k.span;
             if (d.tagName === 'DETAILS') d.open = k.open;
-            d.classList.toggle('dash-folded', k.folded);
           });
-          if (chips) newGrid.parentNode.insertBefore(chips, newGrid);  // (built again straight after: dashchips.js)
         }
         //and the sizes kept by hand (a list pulled longer, a card pulled taller) straight away, not
         //a moment later, so a card doesn't shrink and grow again

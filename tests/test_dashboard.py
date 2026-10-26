@@ -370,22 +370,22 @@ def test_refresh_keeps_the_page_where_it_was():
     assert 'if (!moved && Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y)' in js
 
 
-def test_folded_dashboard_boxes_are_a_row_of_buttons(app_db):
-    """The Dashboard (2026-10-09, option A): folded boxes sit together as a row of buttons
-    above the open ones (static/js/dashchips.js), no counters row, "due soon" on the Assigned
-    box's heading, and no Upload button in the heading (it's under More)."""
+def test_dashboard_boxes_fold_in_place(app_db):
+    """The Dashboard's boxes fold in place, as on Home: no row of folded boxes at the top (the owner, 2026-10-26; it
+    was static/js/dashchips.js), no counters row, "due soon" on the Assigned box's heading, and no Upload button in
+    the heading (it's under More)."""
     import os
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
-    assert 'js/dashchips.js' in page and 'dash-counters' not in page
+    assert 'dashchips' not in page and 'dash-counters' not in page
     head = page.split('<div class="actions dash-actions"')[1].split('</div>')[0]
     assert '>Upload</a>' not in head
     # Expand all / Collapse all beside the page's title, not at the far end of its buttons (the owner, 2026-10-19)
     title = page.split('<div class="page-head">')[1].split('<div class="actions dash-actions"')[0]
     assert 'data-level="open" data-level-of="#dash-live"' in title
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    js = open(os.path.join(here, 'static', 'js', 'dashchips.js')).read()
-    assert "d._byHand = Date.now();" in js and "classList.toggle('dash-folded', !d.open)" in js
+    assert not os.path.exists(os.path.join(here, 'static', 'js', 'dashchips.js'))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
-    assert '.dash-grid > details.dash-folded { display: none; }' in css
+    assert 'dash-folded' not in css and '.dash-chips' not in css
+

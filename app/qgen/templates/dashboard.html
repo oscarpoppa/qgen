@@ -8,9 +8,7 @@
   <div class="actions dash-actions" aria-label="Quick actions">
     <a class="btn btn-secondary" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
     <a class="btn btn-secondary" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
-    {#- (the owner, 2026-10-18; grayed out, not left out, when the site has no AI key) #}
-    {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>
-    {%- else %}<button type="button" class="btn btn-secondary" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}
+    {#- (no “Scan workbook pages” button here: it's “Scan pages” in the menu just above; the owner, 2026-10-26) #}
     {#- (no "Message students": the top bar's Messages opens the same panel; the owner, 2026-10-19) #}
     <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give quizzes to students, with optional open and close times">Assign quizzes</a>
   </div>
@@ -27,4 +25,4 @@
 {% endblock %}
 
 {% block scripts %}<script src="{{ asset('js/dashboard.js') }}" defer></script><script src="{{ asset('js/elastic.js') }}" defer></script>
-<script src="{{ asset('js/dashchips.js') }}" defer></script><script src="{{ asset('js/scanprogress.js') }}" defer></script><script src="{{ asset('js/scantimer.js') }}" defer></script>{% endblock %}
+{#- (no tray of folded boxes at the top: a box folds in place, as on Home; the owner, 2026-10-26) #}<script src="{{ asset('js/scanprogress.js') }}" defer></script><script src="{{ asset('js/scantimer.js') }}" defer></script>{% endblock %}
