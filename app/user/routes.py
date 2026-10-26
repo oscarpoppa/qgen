@@ -125,9 +125,9 @@ def mypage():
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
                                  'give {} back. Your answers and scores go with {}.'.format(
-            n['folder'].name, ' and the folders inside it' if n['folders'] else '', n['count'], '' if n['count'] == 1 else 'zes',
-            'It' if n['count'] == 1 else 'They', 'es' if n['count'] == 1 else '', 'it' if n['count'] == 1 else 'them',
-            'it' if n['count'] == 1 else 'them') if n['count'] else
+            n['folder'].name, ' and the folders inside it' if n['folders'] else '', n['total'], '' if n['total'] == 1 else 'zes',
+            'It' if n['total'] == 1 else 'They', 'es' if n['total'] == 1 else '', 'it' if n['total'] == 1 else 'them',
+            'it' if n['total'] == 1 else 'them') if n['total'] else
             'Delete the folder “{}”{}? It’s empty.'.format(n['folder'].name, ' and the folders inside it' if n['folders'] else ''))
     #the folder tabs over their one list of quizzes (static/js/folderfilter.js), as on every
     #folder page: All quizzes, New, In progress, their folders, then Uncategorized
@@ -137,7 +137,7 @@ def mypage():
         return n['groups'] + [g for c in n['folders'] for g in under(c)]
     def tab(n):
         return {'id': n['folder'].id, 'name': n['folder'].name, 'count': n['count'], 'url': url_for('user.mypage', folder=n['folder'].id),
-                'keys': keys(under(n)), 'children': [tab(c) for c in n['folders']]}
+                'keys': keys(n['groups']), 'children': [tab(c) for c in n['folders']]}
     quiz_filter = ([{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [],
                      'url': url_for('user.mypage', folder='new'), 'empty': 'No new quizzes right now.'},
                     {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [],
@@ -145,7 +145,8 @@ def mypage():
                    + [tab(c) for c in root['folders']])
     #a folder's own page: just what's in it, with tabs for the folders inside it
     if node:
-        quiz_filter, shown = [tab(c) for c in node['folders']], under(node)
+        #(only what's loose in it: the owner, 2026-10-25)
+        quiz_filter, shown = [tab(c) for c in node['folders']], node['groups']
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
@@ -582,7 +583,7 @@ def _people_page_of(ulst, view, node, root, in_archive):
     elif view == 'main':
         listed = root['people']
     else:
-        listed = folder_tree.subtree(node)
+        listed = folder_tree.own(node)
     sums = {}
 
     def facts(u):

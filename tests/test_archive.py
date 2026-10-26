@@ -372,7 +372,7 @@ def test_archive_folders_can_be_made_renamed_moved_and_removed(app_db):
     teacher.post('/quiz/archive/folders/move', data={'folder': kim_f.id, 'to': year.id})
     db.session.expire_all()
     assert db.session.get(ArchiveFolder, kim_f.id).parent_id == year.id
-    assert side_counts(archive_view(teacher)[0])['2025-26'] == 2  # its own, and kim's inside it
+    assert side_counts(archive_view(teacher)[0])['2025-26'] == 1  # its own only, not kim's inside it (the owner, 2026-10-25)
     FETCH = {'X-Requested-With': 'fetch'}
     res = teacher.post('/quiz/archive/folders/move', data={'folder': year.id, 'to': kim_f.id}, headers=FETCH)
     assert res.status_code == 400 and 'inside itself' in res.get_json()['error']

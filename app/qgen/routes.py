@@ -186,7 +186,7 @@ def problem_results(vpid):
     answers = {vq.id: r for vq, r in quizzes}
     root, flat, nodes = S.subject_tree('quizzes', items=vqs)
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
-    listed = vqs if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
+    listed = vqs if view == 'all' else root['items'] if view == 'main' else folder_tree.own(node)
     #(20 quizzes to a page, app/paging.py; the counts count answers, like the rows' data-weight)
     from app import paging
     def names(vq):
@@ -1074,13 +1074,13 @@ def review_list():
     #(the folders count attempts waiting, not quizzes: the owner, 2026-10-19)
     weight = {q.id: len(by_quiz[q.id]) for q in quizzes}
     def weigh(n):
-        n['count'] = sum(weight.get(k, 0) for k in n['everyone'])
+        n['count'] = sum(weight.get(k, 0) for k in n['ids'])  # (only its own: the owner, 2026-10-25)
         for c in n['folders']:
             weigh(c)
     for c in root['folders']:
         weigh(c)
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
-    listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.subtree(node)
+    listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.own(node)
     #(20 quizzes to a page, app/paging.py; the counts still count attempts waiting: the owner, 2026-10-19)
     from app import paging
     def todo(cq):
@@ -1325,7 +1325,7 @@ def quiz_results_page(vqid):
     rows = {student.id: (student, g) for student, g in q['rows']}
     root, flat, nodes, _folders_of = groups.tree(students, only={u.id for u in students})
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
-    listed = students if view == 'all' else root['people'] if view == 'main' else folder_tree.subtree(node)
+    listed = students if view == 'all' else root['people'] if view == 'main' else folder_tree.own(node)
     state = request.args.get('state')
     def group_state(u):
         g = rows[u.id][1]
@@ -1922,7 +1922,7 @@ def subject_page(kind, template, in_archive=False, **extra):
     elif view == 'main':
         listed = root['items']
     else:
-        listed = folder_tree.subtree(node)
+        listed = folder_tree.own(node)
     #(a thing that was just saved or opened by a link, ?show=, is in the All list when it isn't here)
     show = request.args.get('show', '')
     if show and checked is None and view != 'all' and not any(str(x.id) == show for x in listed) \
@@ -2058,7 +2058,7 @@ def archive():
     elif view == 'main':
         listed = root['items']
     else:
-        listed = folder_tree.subtree(node)
+        listed = folder_tree.own(node)
     #(sorted over the whole folder, in its month boxes: CS1, the owner 2026-10-25)
     pg = paging.paginate(listed, name_of=lambda a: '{} {}'.format(a.student_name or '', a.quiz_title or ''), show=request.args.get('show'),
                          group_of=lambda a: (a.archived_at.year, a.archived_at.month) if a.archived_at else None, sorts={
@@ -2097,7 +2097,7 @@ def trash_workbooks_page(section, counts):
     elif view == 'main':
         listed = root['items']
     else:
-        listed = folder_tree.subtree(node)
+        listed = folder_tree.own(node)
     #(sorted over the whole folder, like every list shown a page at a time: sorttable.js, the owner 2026-10-25)
     data = {}
     def info(j):

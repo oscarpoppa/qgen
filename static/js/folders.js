@@ -183,7 +183,7 @@
       document.querySelectorAll('.folder-side .side-row').forEach(function (row) {
         var k = sideKey(row), n = k && fresh[k];
         if (!n) return;
-        ['.side-count', '.side-flags'].forEach(function (sel) {
+        ['.side-count', '.side-flags', '.side-inner-dots'].forEach(function (sel) {
           var a = row.querySelector(sel), b = n.querySelector(sel);
           if (a && b) a.innerHTML = b.innerHTML;
           else if (a) a.remove();

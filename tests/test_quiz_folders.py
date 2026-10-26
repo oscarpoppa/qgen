@@ -84,7 +84,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     sam.post('/mypage/folders', data={'name': 'Algebra', 'parent': folder_id('Math', 'sam')})
     math, algebra = folder_id('Math', 'sam'), folder_id('Algebra', 'sam')
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': algebra})
-    assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == ['Week 1']  # in Algebra's box
+    assert cards(sam, algebra) == ['Week 1'] and cards(sam, math) == []  # (in Algebra only: the owner, 2026-10-25)
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
     # Math's page: everything in it in one list, with the tabs every level has (All,
     # Algebra, Uncategorized: static/js/folderfilter.js)
@@ -219,8 +219,15 @@ def test_a_folder_page_lists_everything_in_it_with_tabs_for_its_folders(app_db):
     sam.post('/mypage/move', data={'quiz': w1.id, 'to': math})
     sam.post('/mypage/move', data={'quiz': w2.id, 'to': algebra})
     page = sam.get('/mypage?folder={}'.format(math)).data.decode()
-    # Math's quiz and Algebra's, each once, in one list
-    assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', page)) == ['Week 1', 'Week 2']
+    # Math's own quiz only: Algebra's is on Algebra's page
+    assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', page)) == ['Week 1']  # (its own only: the owner, 2026-10-25)
     # Algebra's own page holds Week 2 only (the side list's folders are links to their own pages)
     assert sorted(re.findall(r'<span title="([^"]+)" class="box-title">', sam.get('/mypage?folder={}'.format(algebra)).data.decode())) == ['Week 2']
     assert 'aria-label="Expand all in Math"' in page
+    # Math's dots count only its own new quiz (1), and a small plain dot says there are new ones in the folders inside,
+    # shown while Math is collapsed (the owner, 2026-10-25)
+    row = re.search(r'<li class="side-item" data-folder="{}".*?<ul class="side-list">'.format(math), page, re.S).group(0)
+    assert re.search(r'class="side-dot dot-new"[^>]*>1<', row)
+    assert 'class="side-dot side-dot-mini dot-new" title="New quizzes in the folders inside"' in row
+    alg_row = re.search(r'<li class="side-item" data-folder="{}".*?</li>'.format(algebra), page, re.S).group(0)
+    assert 'side-dot-mini' not in alg_row and re.search(r'class="side-dot dot-new"[^>]*>1<', alg_row)

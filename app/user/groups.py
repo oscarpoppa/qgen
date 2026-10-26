@@ -171,7 +171,7 @@ def _archived_ids():
 def tree(people, only=None):
     """The folders as a tree for the Users page: the main list as {'folder': None, 'folders',
     'people' (in no folder), 'count'}; each folder the same, with its own members in 'people'
-    and 'count' = everyone in it or in folders inside it. Also every folder as (folder, depth)
+    and 'count' = who's loose in it (not in the folders inside it; 'everyone' has them all). Also every folder as (folder, depth)
     for the "Add to" lists, and {person id: [their folders]}."""
     folders = all_folders()
     by_user = {}
@@ -203,7 +203,8 @@ def tree(people, only=None):
         for child in node['folders']:
             everyone |= walk(child, depth + 1)
         node['everyone'] = everyone
-        node['count'] = len(everyone)
+        #(only who's loose in the folder itself: the owner, 2026-10-25; 'everyone' keeps the whole lot)
+        node['count'] = len(node['ids'])
         return everyone
     walk(root, 0)
     root['count'] = len(root['people'])

@@ -4,12 +4,13 @@ _dialog_assign_people.html picks the quizzes for given people (static/js/assign_
 
 
 def people_choices():
-    """[(person, 'ids of every People folder they're in, or in one inside')], [(folder, depth)]."""
+    """[(person, 'ids of every People folder they're in')], [(folder, depth)]: a folder shows only who's loose in it
+    (the owner, 2026-10-25)."""
     from app.user.models import User
     from app.user import groups
     people = User.query.order_by(User.username).all()
     _, flat, nodes, _ = groups.tree(people)
-    return [(u, ' '.join(str(fid) for fid, n in nodes.items() if u.id in n['everyone'])) for u in people], flat
+    return [(u, ' '.join(str(fid) for fid, n in nodes.items() if u.id in n['ids'])) for u in people], flat
 
 
 def quiz_choices():

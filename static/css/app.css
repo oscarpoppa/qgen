@@ -3729,7 +3729,7 @@ fieldset.scan-form-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { #scan-progress .progress-bar > .scan-chip-now { animation: none; opacity: .5; } }
 
 /* a small camera after a quiz's, problem's or folder's name when the scanner made it (the owner, 2026-10-25) */
-.scan-mark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--muted); opacity: .75; }
+.scan-mark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--muted); opacity: .5; }  /* (fainter: the owner, 2026-10-25) */
 .scan-mark svg { width: 13px; height: 13px; }
 /* a paged list being sorted in place (sorttable.js; the owner, 2026-10-25, CR1): dimmed for the moment it takes */
 table.is-sorting { opacity: .55; transition: opacity .15s; }
@@ -3776,3 +3776,8 @@ table.is-sorting { opacity: .55; transition: opacity .15s; }
 /* the camera of a quiz or problem made from a scanned page, right after its name in a picker's row (the owner, 2026-10-25:
    it wrapped under the name); the label's own gap spaces it */
 table.pick-table label .scan-mark { margin-left: -2px; flex: none; }
+
+/* My quizzes: a collapsed folder's small plain dots for what needs the student in the folders inside it (the owner, 2026-10-25) */
+.side-inner-dots { display: none; align-items: center; gap: 3px; flex: none; }
+.side-item.side-folded > .side-row .side-inner-dots { display: inline-flex; }
+.side-dot.side-dot-mini { min-width: 0; width: 8px; height: 8px; padding: 0; border-radius: 50%; }

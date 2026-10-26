@@ -99,7 +99,9 @@ def tree(folders, name, items, homes, key=lambda item: item.id):
         for child in node['folders']:
             everyone |= walk(child, d + 1)
         node['everyone'] = everyone
-        node['count'] = len(everyone)
+        #(a folder counts only what's loose in it, not what's in the folders inside it: the owner, 2026-10-25,
+        #"a folder holding only subfolders says zero"; 'everyone' keeps the whole lot for what needs it)
+        node['count'] = len(node['ids'])
         return everyone
     walk(root, 0)
     root['count'] = len(root['items'])
@@ -170,9 +172,20 @@ def filter_tree(root, name, page, key_prefix):
     def one(node):
         f = node['folder']
         return {'id': f.id, 'name': name(f), 'count': node['count'], 'url': page(f.id),
-                'keys': sorted(key_prefix + str(k) for k in node['everyone']),
+                'keys': sorted(key_prefix + str(k) for k in node['ids']),
                 'children': [one(c) for c in node['folders']]}
     return [one(c) for c in root['folders']]
+
+
+def own(node):
+    """What's loose in a folder itself, not in the folders inside it, in list order: what a folder shows when it's
+    opened (the owner, 2026-10-25: a folder shows and counts only its own things)."""
+    out, seen = [], set()
+    for item in node.get('items') or node.get('people') or []:
+        if id(item) not in seen:
+            seen.add(id(item))
+            out.append(item)
+    return out
 
 
 def subtree(node):
@@ -223,7 +236,7 @@ def kit(view, node, root, flat, nodes, page, **words):
     #history): its empty folders left out, Uncategorized too when empty; the owner, 2026-10-22)
     if out.get('hide_empty'):
         def prune(n):
-            n['folders'] = [c for c in n['folders'] if c['count']]
+            n['folders'] = [c for c in n['folders'] if c.get('everyone', c['count'])]
             for c in n['folders']:
                 prune(c)
         prune(root)
@@ -238,4 +251,5 @@ def kit(view, node, root, flat, nodes, page, **words):
     #top, or those inside one folder (node)
     out['filter_tree'] = lambda key_prefix, node=None: filter_tree(node or root, out['name'], page, key_prefix)
     out['subtree'] = subtree
+    out['own'] = own
     return out

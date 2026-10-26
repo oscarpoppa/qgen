@@ -233,7 +233,10 @@ def tree(user, groups, due_ids=()):
         node['depth'] = depth
         if node['folder'] is not None:
             flat.append((node['folder'], depth))
-        node['count'] = len(node['groups']) + sum(walk(child, depth + 1) for child in node['folders'])
+        #(its count: only the quizzes loose in it, the owner 2026-10-25; 'total' has the folders inside too, for
+        #"Delete the folder and everything in it")
+        node['total'] = len(node['groups']) + sum(walk(child, depth + 1) for child in node['folders'])
+        node['count'] = len(node['groups'])
         #tries that need the student, here and in the folders inside (the numbers on the folder,
         #and on every folder it's in): a quiz given twice and not started counts 2
         tests = {'new': lambda a: a.status == 'new',
@@ -242,7 +245,7 @@ def tree(user, groups, due_ids=()):
         for kind, test in tests.items():
             node[kind + '_here'] = sum(1 for g in node['groups'] for a in g['attempts'] if test(a))
             node[kind] = node[kind + '_here'] + sum(child[kind] for child in node['folders'])
-        return node['count']
+        return node['total']
     walk(root, 0)
     return root, flat
 

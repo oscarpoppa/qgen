@@ -71,7 +71,7 @@ def scan_start():
     from app import tuning
     deep = tuning.get('folder_depth')
     shown = ([j for j in away if j.id in want] if view == 'checked' else away if view == 'all'
-             else root['items'] if view == 'main' else FT.subtree(node))
+             else root['items'] if view == 'main' else FT.own(node))
     return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
                            max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
                            stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [],

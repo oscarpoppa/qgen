@@ -100,7 +100,7 @@
         {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
         <a href="{{ url_for('qgen.scan_start', stash=n.folder.id) }}#scan-away" title="Open the folder “{{ n.folder.name }}”" draggable="false" class="side-link"{% if stash_node and stash_node.folder.id == n.folder.id %} aria-current="page"{% endif %}>
           {{ icon('folder') }} <span class="side-name">{{ n.name }}</span></a>
-        <span class="side-count muted small" title="Workbooks in it, and in the folders inside it">{{ n.count or 0 }}</span>
+        <span class="side-count muted small" title="Workbooks in it, not counting the folders inside it">{{ n.count or 0 }}</span>
       </div>
       {% if n.folders %}<ul class="side-list">{{ stash_tree(n.folders) }}</ul>{% endif %}
     </li>

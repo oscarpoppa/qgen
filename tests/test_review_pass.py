@@ -581,7 +581,7 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
         assert page.count('data-fkey="q:{}"'.format(q.id)) == 1
     tree = student_filter(page)
     assert [t[0] for t in tree] == ['New', 'In progress', 'Math']
-    assert tree[2][1] == 2 and tree[2][2] == [('Fractions', 1, [])]
+    assert tree[2][1] == 1 and tree[2][2] == [('Fractions', 1, [])]  # (Math counts only its own A: the owner, 2026-10-25)
     # no quiz folders at all: just the automatic New and In progress
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
@@ -1151,12 +1151,18 @@ def test_special_quizzes_and_every_folder_above_them_are_badged(app_db):
         sam.post('/mypage/move', data={'quiz': q.id, 'to': inner.id})
     page = sam.get('/mypage?folder={}'.format(top.id)).data.decode()
     side = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
-    for f in (top, inner):
+    def row_of(f):
         row = side[side.index('data-folder="{}"'.format(f.id)):]
-        row = row[:row.index('</div>')]
-        assert 'dot-started" title="1 attempt in progress"' in row and 'dot-due" title="1 attempt due soon"' in row
-        assert 'dot-new" title="1 new attempt"' in row  # Soon isn't started yet
-        assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
+        return row[:row.index('</div>')]
+    row = row_of(inner)
+    assert 'dot-started" title="1 attempt in progress"' in row and 'dot-due" title="1 attempt due soon"' in row
+    assert 'dot-new" title="1 new attempt"' in row  # Soon isn't started yet
+    assert row.index('dot-due') < row.index('dot-started') < row.index('dot-new')  # most urgent first
+    # Top counts only its own (none), with a small plain dot of each kind for Inner's, seen while it's collapsed
+    # (the owner, 2026-10-25)
+    row = row_of(top)
+    assert 'attempt' not in row
+    assert row.index('side-dot-mini dot-due') < row.index('side-dot-mini dot-started') < row.index('side-dot-mini dot-new')
     cards = sam.get('/mypage?folder={}'.format(inner.id)).data.decode()
     #(the badges are in the row's Status column now, the owner 2026-10-20)
     def status_of(quiz):

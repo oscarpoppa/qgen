@@ -27,6 +27,17 @@
     {%- endfor -%}</span>{%- endif -%}
 {%- endmacro %}
 
+{#- what needs the student in the folders inside a folder (not in it itself): a small plain dot for each kind, no number,
+    seen only while the folder is collapsed (the owner, 2026-10-25) #}
+{% macro inner_dots(n) -%}
+  {%- set shown = [] -%}
+  {%- for kind, words in (('unread', 'Unread in the folders inside'), ('due', 'Quizzes due soon in the folders inside'),
+                          ('started', 'Quizzes in progress in the folders inside'), ('new', 'New quizzes in the folders inside')) -%}
+    {%- if n is mapping and kind in n and (kind ~ '_here') in n and n[kind] - n[kind ~ '_here'] > 0 -%}{%- set _ = shown.append((kind, words)) -%}{%- endif -%}
+  {%- endfor -%}
+  {%- if shown -%}<span class="side-inner-dots">{% for kind, words in shown %}<span class="side-dot side-dot-mini dot-{{ kind }}" title="{{ words }}" role="img" aria-label="{{ words }}"></span>{% endfor %}</span>{%- endif -%}
+{%- endmacro %}
+
 {# the folder list down the side (on a phone: a list that folds away, above the contents) #}
 {% macro side_folder(fk, n) %}
   {% set f = n.folder %}
@@ -36,9 +47,10 @@
       {% else %}<span class="side-fold-space" aria-hidden="true"></span>{% endif %}
       <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(n.folder) }}”" draggable="false"{% if not fk.readonly %} data-drag="folder" data-id="{{ f.id }}" data-home="{{ f.parent_id or 'top' }}" data-name="{{ fk.name(n.folder) }}"{% endif %} class="side-link"{% if fk.view == f.id|string %} aria-current="page"{% endif %}>
         {{ draw_icon(fk.folder_icon(f)) }} <span class="side-name">{{ fk.name(n.folder) }}</span>{{ scan_mark(f, 'Made by the scanner') }}</a>
-      {# quizzes that need the student in it, or in a folder inside it #}
-      {{ flag_badges(fk, n) }}
-      <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in it, and in the folders inside it">{{ n.count or 0 }}</span>
+      {#- quizzes that need the student loose in it (the owner, 2026-10-25: a folder's dots count only its own), and a small
+          plain dot in the same color for those in the folders inside, shown while it's collapsed (static/js/folders.js) #}
+      {{ flag_badges(fk, n, here=true) }}{{ inner_dots(n) }}
+      <span class="side-count muted small" title="{{ (fk.count_units or fk.units)|capitalize }} in it, not counting the folders inside it">{{ n.count or 0 }}</span>
     </div>
     {% if n.folders %}<ul class="side-list">{% for child in n.folders %}{{ side_folder(fk, child) }}{% endfor %}</ul>{% endif %}
   </li>
@@ -225,7 +237,7 @@
    grayed out when there are no folders inside it), laid out like every other level.
    The caller draws the list: {% call(n) folder_items(fk, key_prefix) %} #}
 {% macro folder_items(fk, key_prefix) %}
-  {% set draw = caller %}{% set every = fk.subtree(fk.node) %}
+  {% set draw = caller %}{% set every = fk.own(fk.node) %}
   {% set name = fk.name(fk.node.folder) %}
   <div class="folder-filter" data-folder-filter data-onetab data-prefix="{{ key_prefix }}" data-all-label="All"
        data-main-label="Unsorted" data-main-url="" data-all-url=""{% if not fk.node.folders %} data-no-main{% endif %} data-unit="{{ fk.unit }}" data-units="{{ fk.units }}"{% if fk.count_units %} data-count-unit="{{ fk.count_unit }}" data-count-units="{{ fk.count_units }}"{% endif %}

@@ -111,14 +111,14 @@ def test_folders_inside_folders_and_removing_them(app_db):
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': p2})
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     page = teach.get('/userdet?folder={}'.format(g7)).data.decode()
-    # 7th grade: one list of kim (directly) and sam (in Period 2), with a folder button for Period 2; it counts both
-    assert people(teach, g7) == ['kim', 'sam'] and '"name": "Period 2"' in page
-    assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>2<', page)
+    # 7th grade: only kim, who's loose in it (sam is in Period 2), and it counts only kim (the owner, 2026-10-25)
+    assert people(teach, g7) == ['kim'] and '"name": "Period 2"' in page  # (only its own: the owner, 2026-10-25)
+    assert re.search(r'7th grade</span></a>\s*<span class="side-count muted small"[^>]*>1<', page)
     assert 'aria-label="Expand all in 7th grade"' in page
     # each person a row of the folder's table (People shown as rows)
     #(the page's own rows, each with its name for the filter; the dialogs' pickers list people as rows too)
     #(a row opens to the person's results too: one People page, the owner 2026-10-21)
-    assert len(re.findall(r'<tr class="result-item" data-box="user:\d+" data-name=', page)) == 2  # kim, and sam in Period 2
+    assert len(re.findall(r'<tr class="result-item" data-box="user:\d+" data-name=', page)) == 1  # kim only: sam is in Period 2 (the owner, 2026-10-25)
     assert '<tr class="result-item" data-box="user:{}" data-name="kim'.format(ids('kim')) in page
     # not inside itself
     assert teach.post('/users/folders/move', data={'folder': g7, 'to': p2}, headers=FETCH).get_json()['error'] == \
@@ -171,7 +171,8 @@ def test_assigning_and_messaging_a_folder(app_db):
     page = page[page.index('id="write-to-dialog"'):page.index('</dialog>', page.index('id="write-to-dialog"'))]
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', page, re.S).group(1))
     assert [(t['name'], [c['name'] for c in t['children']]) for t in tree] == [('7th grade', ['Period 2'])]
-    assert tree[0]['keys'] == ['user:{}'.format(ids('sam'))] and tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
+    # (a folder holds only who's loose in it, not who's in the folders inside it: the owner, 2026-10-25)
+    assert tree[0]['keys'] == [] and tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
     assert sorted(re.findall(r'name="students" value="(\d+)"', page)) == sorted([str(ids('kim')), str(ids('sam'))])
     # writing to a folder reaches its students (folders inside included)
     teach.post('/messages/send', data={'to': 'folder:{}'.format(g7), 'body': 'Field trip Friday'})

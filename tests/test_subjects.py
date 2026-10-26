@@ -208,10 +208,9 @@ def test_folders_inside_folders(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
     teacher.post('/quiz/subjects/problems/file', data={'subject': math.id, 'items': [probs['Area'].id]})
     page = teacher.get('/quiz/listvp?folder={}'.format(math.id)).data.decode()
-    # Math counts what's in Algebra too; one list of both, with a folder button for Algebra (and
-    # "Math itself"); the path shows in Algebra
-    assert side_counts(page)['Math'] == 2 and side_counts(page)['Algebra'] == 1
-    assert 'href="/quiz/listvp?folder={}"'.format(alg.id) in page and sorted(shown(teacher, 'problems', math.id)) == ['Add', 'Area']
+    # Math counts and shows only its own (the owner, 2026-10-25), with a link to Algebra; the path shows in Algebra
+    assert side_counts(page)['Math'] == 1 and side_counts(page)['Algebra'] == 1  # (only its own: the owner, 2026-10-25)
+    assert 'href="/quiz/listvp?folder={}"'.format(alg.id) in page and sorted(shown(teacher, 'problems', math.id)) == ['Area']
     #(the path is the heading, "Math › Algebra", with Up going back to Math)
     page = teacher.get('/quiz/listvp?folder={}'.format(alg.id)).data.decode()
     assert ' Math › Algebra</h2>' in page and 'folder-up" href="/quiz/listvp?folder={}"'.format(math.id) in page
@@ -254,7 +253,8 @@ def test_quiz_in_a_folder_inside_another_is_under_both_on_assign(app_db):
     quiz = page[page.index('id="pick-quiz"'):page.index('id="pick-people"')]
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', quiz, re.S).group(1))
     key = 'quiz:{}'.format(VQuiz.query.one().id)
-    assert tree[0]['id'] == math.id and key in tree[0]['keys']
+    # (only in its own folder: the owner, 2026-10-25)
+    assert tree[0]['id'] == math.id and key not in tree[0]['keys'] and key in tree[0]['children'][0]['keys']
     assert tree[0]['children'][0]['id'] == alg.id and key in tree[0]['children'][0]['keys']
     assert 'type="checkbox" name="vquiz" value="{}"'.format(VQuiz.query.one().id) in quiz
 
@@ -501,7 +501,8 @@ def test_folders_four_deep_show_on_folder_pages_and_in_the_quiz_editor(app_db):
     tree = json.loads(re.search(r'class="folder-filter-tree">(.*?)</script>', html, re.S).group(1))
     node = tree[0]
     for g in chain:
-        assert node['id'] == g.id and 'p:{}'.format(probs['P4'].id) in node['keys']
+        # (only in the deepest, its own folder: the owner, 2026-10-25)
+        assert node['id'] == g.id and (('p:{}'.format(probs['P4'].id) in node['keys']) == (g is chain[-1]))
         node = node['children'][0] if node['children'] else None
     assert html.count('class="pick" value="{}"'.format(probs['P4'].id)) == 1
 
