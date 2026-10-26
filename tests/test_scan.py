@@ -1190,12 +1190,12 @@ def test_put_away_and_take_out(app_db, ai):
     teacher = login(app, 'teach')
     upload(teacher, [(picture(), 'p1.png')], name='Week 1')
     job = job_of(db)
-    # a scan read all the way can't be stashed (only a paused one or a draft)
+    # a workbook read all the way can be stashed from its row too (the owner, 2026-10-25)
     html = teacher.get('/quiz/scan').data.decode()
     #("Put away" is "Stash" everywhere; the Stashed scans card is always there, empty with its note:
     #the owner 2026-10-21)
     assert 'Nothing stashed. Paused or stopped workbooks and drafts you stash wait here.' in html and 'Week 1' not in html.split('id="scan-away"')[1]
-    assert '“Week 1” until you want it again' not in html
+    assert '“Week 1” until you want it again' in html
     # Stash draft: the draft is stashed at once
     teacher.post('/quiz/scan/{}'.format(job.id), data=dict(form_from(json.loads(job.data)), action='keep'))
     assert json.loads(job_of(db).data).get('put_away')
