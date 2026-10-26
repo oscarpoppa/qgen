@@ -237,7 +237,9 @@ def test_whole_school_week(app_db):
     assert 'Mentions inertia' not in page
 
     # --- home page and lists
-    assert '★ 93%' in sam.get('/mypage').data.decode()
+    # (the ★ only in the opened list of attempts, not on the quiz's own row: the owner, 2026-10-26)
+    mine = sam.get('/mypage').data.decode()
+    assert mine.count('★ 93%') == 1 and '>93%</span>' in mine
     # (Results by student is the People page now: the owner, 2026-10-21)
     assert teacher.get('/quiz/listuser').headers['Location'] == '/userdet'
     for url in ('/quiz/listvp', '/quiz/listvq', '/userdet', '/images', '/nonimages',

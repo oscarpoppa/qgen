@@ -96,7 +96,8 @@
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
-      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{{ status(latest, latest in g.counted) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{#- (no ★ on the quiz's own row: it marks the attempt that counts only in the opened list
+        of attempts; the owner, 2026-10-26) #}{{ status(latest) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       {#- no Start / Continue / View of its own: they're on each attempt's line, where it's clear which
           attempt they mean (the owner, 2026-10-20); only Move -#}
       <td class="actions"><span class="btn-row quiz-row-actions">
