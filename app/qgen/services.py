@@ -460,6 +460,15 @@ def problem_delete_blocker(vp):
     return None
 
 
+def problem_in_quiz_blocker(vp):
+    """Why a problem's trash can is grayed on the Problems page (a quiz uses it), or None: nothing goes to the Trash
+    while something still uses it, site-wide (the owner, 2026-10-26)."""
+    if vp.vquizzes:
+        return 'Problem “{}” is used by these quizzes: {}. Take it out of them first.'.format(
+            vp.title or 'Untitled', ', '.join('“{}”'.format(q.title) for q in sorted(vp.vquizzes, key=lambda q: (q.title or '').lower())))
+    return None
+
+
 def delete_problem(vp):
     """A problem's Delete for good. While a quiz uses it or students answered it, it can't go:
     it's kept for those, quietly taken off the Problems page and the quiz builder's list (the

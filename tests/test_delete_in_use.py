@@ -50,3 +50,22 @@ def test_a_quiz_being_taken_has_its_trash_grayed(app_db):
     db.session.commit()
     page = teach.get('/quiz/listvq').data.decode()
     assert 'is taking “Week 3” right now. Try again once it’s handed in (or its time runs out).' in page
+
+
+def test_a_problem_a_quiz_uses_has_its_trash_grayed_and_names_the_quiz(app_db):
+    """A problem a quiz uses: its trash can grayed, naming the quizzes; the server refuses both Move to Trash and
+    Delete; its opened row links to each quiz on Quizzes (the owner, 2026-10-26)."""
+    app, db = app_db
+    from app.qgen.models import VProblem
+    teach = login(app, 'teach')
+    vq = make_quiz(app, teach, 'Week 4')
+    vp = vq.vproblems[0]
+    page = teach.get('/quiz/listvp').data.decode()
+    why = 'Problem “{}” is used by these quizzes: “Week 4”. Take it out of them first.'.format(vp.title)
+    assert why in page
+    assert 'In quizzes: <a class="name-link" href="/quiz/listvq/{}"'.format(vq.id) in page
+    teach.post('/quiz/archivevp/{}'.format(vp.id))
+    teach.post('/quiz/delvp/{}'.format(vp.id))
+    db.session.expire_all()
+    vp = db.session.get(VProblem, vp.id)
+    assert vp is not None and vp.removed_at is None

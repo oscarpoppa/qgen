@@ -332,7 +332,7 @@ def add_to_quiz():
 def list_vprobs():
     return subject_page('problems', 'vplist.html', qtypes=REGISTRY, title='Problems', all_subjects=S.subject_tree('problems')[1],
                         quizzes=VQuiz.query.filter(VQuiz.removed_at.is_(None)).order_by(VQuiz.title).all(),
-                        archived=S.archived_counts()[1], archive_warning=S.archive_warning)
+                        archived=S.archived_counts()[1], archive_warning=S.archive_warning, in_quiz=S.problem_in_quiz_blocker)
 
 #one problem: its row on the Problems page, opened and lit up (old links and notices lead here)
 @qgen_bp.route('/quiz/listvp/<vpid>', methods=['GET'])
@@ -352,6 +352,11 @@ def list_vprob(vpid):
 def del_vprob(vpid):
     vp = VProblem.query.filter_by(id=vpid).first_or_404('No VProblem with id {}'.format(vpid))
     title = vp.title
+    #(not while a quiz uses it: its trash can is grayed with this too; the owner, 2026-10-26)
+    why = S.problem_in_quiz_blocker(vp)
+    if why:
+        flash(why, 'error')
+        return redirect(back_to_list('qgen.list_vprobs'))
     #(one a quiz uses, or students answered, is kept for those and quietly taken off the page)
     how = S.delete_problem(vp)
     flash('Deleted problem “{}”.'.format(title) if how == 'deleted' else
@@ -371,6 +376,10 @@ def archive_vprob(vpid):
     vp = db.session.get(VProblem, vpid)
     if vp is None:
         return gone('That problem has been deleted.', url_for('qgen.list_vprobs'))
+    why = S.problem_in_quiz_blocker(vp)
+    if why:
+        flash(why, 'error')
+        return redirect(back_to_list('qgen.list_vprobs'))
     S.archive_problem(vp)
     flash(Markup('Moved problem “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(
         vp.title, url_for('qgen.archive', section='problems')), 'success')

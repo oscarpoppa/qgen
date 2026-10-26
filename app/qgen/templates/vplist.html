@@ -26,7 +26,9 @@
               <span class="nowrap">{% if item.calculator_ok %}calculator OK{% else %}no calculator{% endif %}</span>
               {% set pics = item.options.get('images') or ([{'file': item.image}] if item.image else []) %}
               {% if pics %} · {{ pics|length }} picture{{ '' if pics|length == 1 else 's' }}{% endif %}
-            </div></details>
+            </div>
+            {#- the quizzes it's in, each opening its row on Quizzes (the owner, 2026-10-26) #}
+            {%- if item.vquizzes %}<div class="small row-quizzes">In quizzes: {% for q in item.vquizzes|sort(attribute='title') %}<a class="name-link" href="{{ url_for('qgen.list_vquiz', vqid=q.id) }}" title="Open “{{ q.title }}” on Quizzes">{{ q.title }}</a>{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}</details>
           </td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {% if fk %}<td data-label="Folders" class="person-folders">{{ in_folders(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}</td>{% endif %}
@@ -52,8 +54,9 @@
             {# put it at the end of a quiz (static/js/quiz_pick.js), the owner 2026-10-15 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-add-quiz="{{ item.id }}" data-what="“{{ item.title or 'Untitled' }}”"{% if not quizzes %} disabled title="Add to a quiz: there are no quizzes yet"{% else %} title="Add to a quiz: Put “{{ item.title or 'Untitled' }}” at the end of one of your quizzes"{% endif %}>{{ icon_label('lc-list-plus', 'Add to a quiz') }}</button>
             {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {#- (grayed, naming the quizzes, while one uses it: the owner, 2026-10-26) #}
             {{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id), archive_url=url_for('qgen.archive_vprob', vpid=item.id),
-                 delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}
+                 no_delete=in_quiz(item) if in_quiz else none, delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}
             {% endif %}
           </td>
         </tr>

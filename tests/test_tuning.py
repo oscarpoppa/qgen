@@ -123,7 +123,8 @@ def test_online_settings_take_effect(app_db):
     teacher = login(app, 'teach')
     page = teacher.get('/dashboard').data.decode()
     assert 'data-every="45000"' in page and 'data-every="120000"' in page
-    assert 'checked every 45 seconds' in teacher.get('/dashboard/online').data.decode()
+    # (the “Online now” help that said how often is gone with every label tooltip: the owner, 2026-10-26)
+    assert 'checked every 45 seconds' not in teacher.get('/dashboard/online').data.decode()
 
 
 def test_dashboard_settings_take_effect(app_db):
