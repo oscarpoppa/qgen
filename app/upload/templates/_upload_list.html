@@ -4,7 +4,10 @@
     (app/qgen/uploads.py keeps a row for each). #}
 {% from "_macros.html" import post_button, slot with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
+{% from "_archive_sections.html" import archive_switch %}
 {% set what = 'picture' if kind == 'pictures' else 'file' %}
+{#- (in the Trash, its file is in the private trash folder: the owner, 2026-10-26, To do 66) #}
+{% macro file_url(name) %}{{ url_for('upload.trashed_file', fname=name) if in_archive else url_for('static', filename=name) }}{% endmacro %}
 
 {% macro upload_table(items, here=none) %}
   <div class="table-wrap stack">
@@ -17,23 +20,30 @@
           {#- its name opens the row, like every folder page's (the owner, 2026-10-26): the folders it's in as chips, and a
               picture larger; the Folders column is gone from the row's top line #}
           <td data-label="{{ 'Picture' if kind == 'pictures' else 'File' }}"><details class="box row-fold" data-box="{{ what }}-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="upload-name">
-            {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ url_for('static', filename=item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ url_for('static', filename='T_' ~ item.name) }}" alt="" loading="lazy"></a>
+            {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ file_url(item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ file_url('T_' ~ item.name) }}" alt="" loading="lazy"></a>
             {%- else %}<span class="upload-thumb upload-file" aria-hidden="true">{{ icon('file') }}</span>{% endif %}
             <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></summary>
-            {%- if kind == 'pictures' %}<a class="upload-big" href="{{ url_for('static', filename=item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ url_for('static', filename=item.name) }}" alt="{{ item.name }}" loading="lazy"></a>{% endif %}
+            {%- if kind == 'pictures' %}<a class="upload-big" href="{{ file_url(item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ file_url(item.name) }}" alt="{{ item.name }}" loading="lazy"></a>{% endif %}
             {{- folder_chips(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           <td class="actions">
             {#- (the folder icons first: the owner, 2026-10-26) #}
             {{- folder_icons(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}
-            {%- if kind == 'pictures' %}
+            {%- if in_archive %}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ file_url(item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }}{{ ' full size' if kind == 'pictures' }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
+            {#- the Trash's: Restore and Delete for good, as a problem's there (the owner, 2026-10-26) #}
+            <form method="post" action="{{ url_for('upload.restore_upload', uid=item.id) }}" class="inline-form"
+                  data-confirm="Restore “{{ item.name }}”? It goes back on the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page." data-confirm-ok="Restore">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.name }}” back on the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
+            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delete_trashed_upload', uid=item.id), delete_note='It can’t be undone.') }}
+            {%- elif kind == 'pictures' %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} full size in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
             {#- (the trash can every list has: the same dialog as Problems', the owner 2026-10-19) #}
             {#- (grayed, with what uses it, while a problem or quiz does: the owner, 2026-10-26) #}
-            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delimg', fname=item.name), no_delete=file_blocker(item.name, 'pictures') if file_blocker else none) }}
+            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delimg', fname=item.name), archive_url=url_for('upload.trash_upload', uid=item.id), no_delete=file_blocker(item.name, 'pictures') if file_blocker else none) }}
             {%- else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
-            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delnonimg', fname=item.name), no_delete=file_blocker(item.name, 'files') if file_blocker else none) }}
+            {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delnonimg', fname=item.name), archive_url=url_for('upload.trash_upload', uid=item.id), no_delete=file_blocker(item.name, 'files') if file_blocker else none) }}
             {%- endif %}
           </td>
         </tr>
@@ -48,18 +58,24 @@
 {#- the page's own button at the top, at the open right end of the list's heading row; under the
     title only when there's no list (the owner, 2026-10-20) #}
 {% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('upload.upload') }}" title="{{ upload_tip }}">{{ upload_label }}</a>{% endset %}
+{% if in_archive %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+{% set archive_note %}{{ 'Pictures' if kind == 'pictures' else 'Other files' }} moved to the Trash: they’re off the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page and every picture list, in the folders they were in.
+  Restore one to use it again, or delete it for good. Restored, they go to Uncategorized.{% endset %}
+{% else %}
 <div class="page-head title-inline">
   <h1>{{ title }}</h1>
   {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
 </div>
-{% if not total %}
+{% endif %}
+{% if not total and not in_archive %}
   <div class="card empty"><span class="big">{{ icon(empty_icon) }}</span>{{ empty_text }}</div>
 {% else %}
-  {% call folders_page(fk, actions=head_buttons) %}
+  {% call folders_page(fk, actions=archive_switch(section, counts) if in_archive else head_buttons, under_side=(('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) if in_archive else '') %}
     {% include "_folder_tools.html" %}
     <div id="folder-items">
       {#- one folder's rows, a page at a time (app/paging.py): the side list's folders are links, each its own page #}
-      {% call named_box(fk, what ~ ':', pg=pg) %}{% if items %}{{ upload_table(items, here=fk.node.folder if fk.node else none) }}{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
+      {% call named_box(fk, what ~ ':', pg=pg) %}{% if items %}{{ upload_table(items, here=fk.node.folder if fk.node else none) }}{% elif in_archive and not total %}<p class="card empty small">No {{ 'pictures' if kind == 'pictures' else 'other files' }} in the Trash. A {{ what }}’s trash can has Move to Trash.</p>{% elif not pg.q %}{{ empty_note(fk, fk.node and fk.node.folders) }}{% endif %}{% endcall %}
     </div>
   {% endcall %}
 {% endif %}

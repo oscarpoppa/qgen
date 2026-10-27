@@ -161,6 +161,85 @@ def delnonimg(fname):
 
 
 
+#a picture's or other file's trash can: Move to Trash, and the Trash's Restore and Delete for good (the owner, 2026-10-26,
+#To do 66; they were only ever deleted for good). Not while a problem or quiz uses it, like a problem's.
+def _upload_or_gone(uid):
+    from app.qgen.models import UploadFile
+    from app import db
+    u = db.session.get(UploadFile, uid)
+    if u is None:
+        flash('That file has been deleted.', 'info')
+    return u
+
+
+def _kind(u):
+    return 'pictures' if u.picture else 'files'
+
+
+@upload_bp.route('/upload/<int:uid>/trash', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def trash_upload(uid):
+    from markupsafe import Markup
+    from app.qgen import services as S, uploads
+    u = _upload_or_gone(uid)
+    if u is None or u.removed_at:
+        return back_to_list('upload.images' if u is None or u.picture else 'upload.nonimages')
+    page = 'upload.images' if u.picture else 'upload.nonimages'
+    why = S.file_delete_blocker(u.name, _kind(u))
+    if why:
+        flash(why, 'error')
+        return back_to_list(page)
+    uploads.trash_file(u)
+    flash(Markup('Moved “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(
+        u.name, url_for('qgen.archive', section=_kind(u))), 'success')
+    return back_to_list(page)
+
+
+@upload_bp.route('/upload/<int:uid>/restore', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def restore_upload(uid):
+    from app.qgen import uploads
+    u = _upload_or_gone(uid)
+    if u is not None and u.removed_at:
+        uploads.restore_file(u)
+        flash('“{}” is back on the {} page.'.format(u.name, 'Pictures' if u.picture else 'Other files'), 'success')
+    return redirect(url_for('qgen.archive', section=_kind(u) if u is not None else 'pictures'))
+
+
+@upload_bp.route('/upload/<int:uid>/delete', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def delete_trashed_upload(uid):
+    from app.qgen import uploads
+    u = _upload_or_gone(uid)
+    if u is not None and u.removed_at:
+        name, kind = u.name, _kind(u)
+        uploads.delete_file(u)
+        flash('Deleted “{}”.'.format(name), 'success')
+        current_app.logger.info('{} deleted {} from the Trash for good'.format(current_user.username, name))
+        return redirect(url_for('qgen.archive', section=kind))
+    return redirect(url_for('qgen.archive', section='pictures'))
+
+
+#a picture (or file) in the Trash, to see it there: teachers only, from the private trash folder
+@upload_bp.route('/upload/trashed/<path:fname>', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def trashed_file(fname):
+    from flask import send_from_directory
+    from app.qgen.uploads import trash_dir
+    return send_from_directory(trash_dir(), fname)
+
+
 def back_to_list(endpoint):
     """After a delete: back to the page as it was (the folder and tab open), else its start."""
     from urllib.parse import urlsplit
@@ -174,7 +253,9 @@ def unique_name(fname):
     base, dot, ext = fname.rpartition('.')
     if not dot:
         base, ext = fname, ''
-    existing = set(listdir(static_dir()))
+    #(nor a name in the Trash, so a picture restored from there never meets a new one of its name: the owner, 2026-10-26)
+    from app.qgen.uploads import trashed_names
+    existing = set(listdir(static_dir())) | trashed_names()
     cand, n = fname, 1
     while cand in existing or 'T_' + cand in existing:
         n += 1

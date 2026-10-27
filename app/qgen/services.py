@@ -259,7 +259,7 @@ def in_use(kind):
         #(uploads: the pictures or the other files. Kept in step with the folder by uploads.sync(),
         #called where files change and when their pages open, never here: this runs inside other
         #requests, and a sync commits)
-        return item_cls.query.filter(item_cls.picture.is_(kind == 'pictures'))
+        return item_cls.query.filter(item_cls.picture.is_(kind == 'pictures'), item_cls.removed_at.is_(None))
     return item_cls.query.filter(item_cls.removed_at.is_(None))
 
 

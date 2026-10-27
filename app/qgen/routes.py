@@ -5,7 +5,7 @@ from app.home import home_url
 from .formfact import quiz_form_class, quiz_items, form_answers, transcript_html, transcript_item, fieldname_base
 from . import services as S
 from .forms import ProblemForm, QuizForm, AssignForm, ReviewForm
-from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES
+from .models import CQuiz, VQuiz, VProblem, ArchivedAttempt, RETAKE_RULES, UploadFile
 from .qtypes import get_qtype, REGISTRY
 from .friendly import KINDS, FriendlyError
 from . import layout
@@ -649,6 +649,12 @@ def restore_many(kind):
         if kept:
             flash('Not restored: {}. There’s already a quiz by that name on the Quizzes page; rename that one first.'.format(
                 ', '.join('“{}”'.format(t) for t in kept)), 'error')
+    elif kind in S.UPLOAD_KINDS:
+        from . import uploads
+        for u in UploadFile.query.filter(UploadFile.id.in_(ids), UploadFile.removed_at.isnot(None)).all() if ids else []:
+            uploads.restore_file(u)
+            n += 1
+        word = _item_word(kind, n)
     else:
         abort(404)
     #(none restored because every one clashed: only the "Not restored" message, not "Restored 0"
@@ -657,6 +663,60 @@ def restore_many(kind):
         flash('Restored {} {}.'.format(n, word), 'success')
     view = request.form.get('view')
     return redirect(url_for('qgen.archive', section=kind, **({'folder': view} if view else {})))
+
+
+#the Checked folder's Apply to checked: Move to Trash, for Problems, Quizzes and People (the owner, 2026-10-26, To do 66);
+#each checked the way its own trash can is, the ones that can't go named and kept. A quiz's problems stay, a person's
+#results are kept (the trash can's own choices, at their safe answers).
+@qgen_bp.route('/quiz/trash/<kind>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+@post_form_only
+def trash_many(kind):
+    ids = [int(i) for i in request.form.getlist('items') if str(i).isdigit()]
+    n, kept = 0, []
+    if kind == 'people':
+        from app.user.accounts import any_person, archive_account
+        for uid in ids:
+            usr = any_person(uid)
+            if usr is None or usr.archived_at:
+                continue
+            if usr == current_user:
+                kept.append('You can’t move your own account to the Trash.')
+                continue
+            archive_account(usr, by=current_user, keep_results=True)
+            n += 1
+        word, back = ('person' if n == 1 else 'people'), 'user.userdet'
+    elif kind in ('problems', 'quizzes'):
+        item_cls = S.subject_kind(kind)[1]
+        for item in item_cls.query.filter(item_cls.id.in_(ids), item_cls.removed_at.is_(None)).all() if ids else []:
+            why = S.problem_in_quiz_blocker(item) if kind == 'problems' else S.vquiz_delete_blocker(item)
+            if why:
+                kept.append(why)
+                continue
+            (S.archive_problem if kind == 'problems' else S.archive_vquiz)(item)
+            n += 1
+        word, back = _item_word(kind, n), LIST_PAGES[kind]
+    elif kind in S.UPLOAD_KINDS:
+        from . import uploads
+        for u in UploadFile.query.filter(UploadFile.id.in_(ids), UploadFile.removed_at.is_(None)).all() if ids else []:
+            why = S.file_delete_blocker(u.name, kind)
+            if why:
+                kept.append(why)
+                continue
+            uploads.trash_file(u)
+            n += 1
+        word, back = _item_word(kind, n), LIST_PAGES[kind]
+    else:
+        abort(404)
+    if n:
+        flash(Markup('Moved {} {} to the <a href="{}">Trash</a>, where you can restore {}.').format(
+            n, word, url_for('qgen.archive', section=kind), 'it' if n == 1 and kind != 'people' else 'him/her' if n == 1 else 'them'), 'success')
+    for why in kept:
+        flash('Not moved. {}'.format(why), 'error')
+    current_app.logger.info('{} moved {} {} to the Trash ({} kept)'.format(current_user.username, n, kind, len(kept)))
+    return redirect(back_to_list(back))
 
 
 #the trash can's Move to Archive for a quiz, taken or not (the owner, 2026-10-16)
@@ -1941,7 +2001,8 @@ def subject_page(kind, template, in_archive=False, **extra):
     from app import folder_tree
     _g, item_cls, rel, _b = S.subject_kind(kind)
     if in_archive:
-        everything = item_cls.query.filter(item_cls.removed_at.isnot(None)).order_by(item_cls.id.desc()).all()
+        everything = item_cls.query.filter(item_cls.removed_at.isnot(None), *((item_cls.picture.is_(kind == 'pictures'),) if kind in S.UPLOAD_KINDS else ())
+                                           ).order_by(*(S.upload_order(kind) if kind in S.UPLOAD_KINDS else (item_cls.id.desc(),))).all()
         root, flat, nodes = S.subject_tree(kind, items=everything)
     else:
         root, flat, nodes = S.subject_tree(kind)
@@ -2108,6 +2169,9 @@ def archive():
         return people_page(in_archive=True, section=section, counts=counts)
     if section == 'workbooks':
         return trash_workbooks_page(section, counts)
+    if section in S.UPLOAD_KINDS:  # (the owner, 2026-10-26, To do 66)
+        return subject_page(section, 'images.html' if section == 'pictures' else 'nonimages.html', in_archive=True, title='Trash',
+                            section=section, counts=counts, all_subjects=S.subject_tree(section)[1], file_blocker=None)
     from app import folder_tree
     root, flat, nodes, attempts = S.archive_tree()
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
@@ -2197,9 +2261,11 @@ def archive_counts():
     from app.user.accounts import archived_people
     from app.qgen.models import ScanJob
     from app.qgen.scan import TRASHED
+    from app.qgen import uploads
     return {'attempts': ArchivedAttempt.query.count(), 'quizzes': len(S.removed_quizzes()),
             'problems': len(S.removed_problems()), 'people': len(archived_people()),
-            'workbooks': ScanJob.query.filter_by(status=TRASHED).count()}
+            'workbooks': ScanJob.query.filter_by(status=TRASHED).count(),
+            'pictures': len(uploads.removed('pictures')), 'files': len(uploads.removed('files'))}
 
 
 def archive_folder_or_404(fid):

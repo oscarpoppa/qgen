@@ -96,6 +96,8 @@ class UploadFile(db.Model, DateMixin):
     name = db.Column(db.String(191), nullable=False, unique=True)
     #a picture (it has a thumbnail, on the Pictures page) or another file (Other files)
     picture = db.Column(db.Boolean, nullable=False, default=False)
+    #in the Trash since (its file moved to UPLOAD_TRASH_DIR: app/qgen/uploads.py), or None (the owner, 2026-10-26)
+    removed_at = db.Column(db.DateTime, nullable=True)
     picgroups = db.relationship('PicGroup', back_populates='uploads', secondary=upload_picgroup, lazy=True)
     filegroups = db.relationship('FileGroup', back_populates='uploads', secondary=upload_filegroup, lazy=True)
 

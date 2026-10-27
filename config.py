@@ -22,6 +22,11 @@ class Config(object):
     STATIC_DIR = os.environ.get('STATIC_DIR') or os.path.join(basedir, 'static')
     #workbook pages being scanned (private: not under static), until saved or discarded
     SCAN_DIR = os.environ.get('SCAN_DIR') or os.path.join(basedir, 'instance', 'scans')
+    #pictures and other files in the Trash (private: not under static), until restored or deleted for good (the owner,
+    #2026-10-26, To do 66); beside STATIC_DIR when that's set, so each site keeps its own
+    UPLOAD_TRASH_DIR = os.environ.get('UPLOAD_TRASH_DIR') or (
+        os.path.join(os.path.dirname(os.environ['STATIC_DIR'].rstrip('/')), 'upload-trash') if os.environ.get('STATIC_DIR')
+        else os.path.join(basedir, 'instance', 'upload-trash'))
     #the AI helper's answers while the page waits for them (app/qgen/ai_jobs.py)
     AI_JOB_DIR = os.environ.get('AI_JOB_DIR') or os.path.join(basedir, 'instance', 'ai-jobs')
     #optional: enables the "Fill in for me" helper on the problem page

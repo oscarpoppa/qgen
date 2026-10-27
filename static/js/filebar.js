@@ -420,6 +420,18 @@
       if (yes) send(b.dataset.url, ids);
     });
   });
+  //(and the other way, on Problems, Quizzes and People: Move to Trash, asking first; the owner, 2026-10-26, To do 66)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-trash-many]');
+    if (!b || b.disabled) return;
+    var ids = window.qgenCheckedIds ? window.qgenCheckedIds() : [];
+    if (!ids.length) return;
+    var q = ids.length === 1 ? 'Move the checked ' + b.dataset.one + ' to the Trash? You can restore ' + (b.dataset.one === 'person' ? 'him/her' : 'it') + ' there.'
+                             : 'Move the ' + ids.length + ' checked ' + b.dataset.noun + ' to the Trash? You can restore them there.';
+    (window.qgenAsk ? window.qgenAsk(q, 'Move to Trash') : Promise.resolve(true)).then(function (yes) {
+      if (yes) send(b.dataset.url, ids);
+    });
+  });
   //(the button's address passed in: it was read from a name not in reach here, so Restore never
   //sent; found by the code critic, 2026-10-20)
   function send(url, ids) {

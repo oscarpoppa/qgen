@@ -6,7 +6,9 @@
                                ('quizzes', 'Quizzes', 'Quizzes moved to the Trash; restore them to use them again'),
                                ('problems', 'Problems', 'Problems moved to the Trash; restore them to use them again'),
                                ('people', 'People', 'People moved to the Trash; they can’t log in until restored'),
-                               ('workbooks', 'Workbooks', 'Workbooks with every page made, or moved to the Trash; restore one to the stash')) %}
+                               ('workbooks', 'Workbooks', 'Workbooks with every page made, or moved to the Trash; restore one to the stash'),
+                               ('pictures', 'Pictures', 'Pictures moved to the Trash; restore them to use them again'),
+                               ('files', 'Other files', 'Other files moved to the Trash; restore them to use them again')) %}
       <a href="{{ url_for('qgen.archive', section=key) if key != 'attempts' else url_for('qgen.archive') }}" title="{{ tip }}"{% if section == key %} aria-current="page"{% endif %}>{{ label }} ({{ counts[key] }})</a>
     {% endfor %}
   </nav>

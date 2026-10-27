@@ -63,7 +63,7 @@ def sync():
         elif u.picture != picture:
             u.picture = picture
     for name, u in rows.items():
-        if name not in real:
+        if name not in real and u.removed_at is None:  # (one in the Trash has its file there: kept)
             db.session.delete(u)
     try:
         db.session.commit()
@@ -85,12 +85,63 @@ def get(name):
     return u
 
 
-def delete_file(u):
-    """Delete an upload for good: the file, its thumbnail, and its row (and so its folders)."""
+def trash_dir():
+    """Where pictures and other files in the Trash are kept (private: not under static)."""
+    d = current_app.config['UPLOAD_TRASH_DIR']
+    os.makedirs(d, exist_ok=True)
+    return os.path.join(d, '')
+
+
+def trashed_names():
+    try:
+        return set(os.listdir(trash_dir()))
+    except OSError:
+        return set()
+
+
+def _move(names, src, dst):
+    for f in names:
+        try:
+            os.replace(src + f, dst + f)
+        except FileNotFoundError:
+            pass  # (a picture's thumbnail may be missing)
+
+
+def trash_file(u):
+    """Move to Trash for a picture or other file (the owner, 2026-10-26, To do 66): its file and thumbnail go to the
+    private trash folder, off Pictures / Other files and every picture picker; it stays in its folders, like a problem."""
     from app.upload.routes import static_dir, files_changed
+    _move((u.name, 'T_' + u.name), static_dir(), trash_dir())
+    u.removed_at = datetime.now()
+    db.session.commit()
+    files_changed()
+    current_app.logger.info('moved upload {} to the Trash'.format(u.name))
+
+
+def restore_file(u):
+    """Back from the Trash, in Uncategorized (out of the folders it was in, like a restored problem). Its name can't
+    have been taken meanwhile: a new upload's name is never one in the Trash (upload/routes.py unique_name)."""
+    from app.upload.routes import static_dir, files_changed
+    _move((u.name, 'T_' + u.name), trash_dir(), static_dir())
+    u.removed_at = None
+    u.picgroups, u.filegroups = [], []
+    db.session.commit()
+    files_changed()
+    current_app.logger.info('restored upload {}'.format(u.name))
+
+
+def removed(kind):
+    """The pictures (or other files) in the Trash."""
+    return UploadFile.query.filter(UploadFile.removed_at.isnot(None), UploadFile.picture.is_(kind == 'pictures')).all()
+
+
+def delete_file(u):
+    """Delete an upload for good: the file, its thumbnail, and its row (and so its folders); from the Trash too."""
+    from app.upload.routes import static_dir, files_changed
+    where = trash_dir() if u.removed_at else static_dir()
     for f in (u.name, 'T_' + u.name):
         try:
-            remove(static_dir() + f)
+            remove(where + f)
         except FileNotFoundError:
             pass
     db.session.delete(u)

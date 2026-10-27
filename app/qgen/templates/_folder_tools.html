@@ -3,6 +3,8 @@
    (put them in a folder, or take them out). It stays at the top while scrolling. #}
 {#- (the things' word, for Pictures and Other files too: the owner, 2026-10-19) #}
 {% set one, noun = {'problems': ('problem', 'problems'), 'quizzes': ('quiz', 'quizzes'), 'pictures': ('picture', 'pictures'), 'files': ('file', 'files')}[kind] %}
+{#- (the page they go back to: Other files is the files' page; the owner, 2026-10-26) #}
+{% set page_name = {'problems': 'Problems', 'quizzes': 'Quizzes', 'pictures': 'Pictures', 'files': 'Other files'}[kind] %}
 <div class="folder-tools-bar">
   {% if total %}{{ filter_bar('#folder-items', one, noun, boxes='details.sub-box, details.subject-box', paged=pg.total if pg else none, url=not pg) }}{% endif %}
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar" data-takeout="remove">
@@ -19,22 +21,26 @@
       </select>
       <button class="btn btn-sm" name="action" value="add" title="Move the checked {{ noun }} to a folder (or copy them there)">Move to folder</button>
       <button class="btn btn-secondary btn-sm" name="action" value="remove" title="Take the checked {{ noun }} out of the chosen folder">Take out of folder</button>
-      {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="{{ one }}" data-noun="{{ noun }}" data-then="{{ 'They go back on the ' ~ noun|capitalize ~ ' page.' }}" data-then-one="{{ 'It goes back on the ' ~ noun|capitalize ~ ' page.' }}" data-url="{{ url_for('qgen.restore_many', kind=kind) }}" title="Put the checked {{ noun }} back on the {{ noun|capitalize }} page">Restore</button>
+      {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="{{ one }}" data-noun="{{ noun }}" data-then="{{ 'They go back on the ' ~ page_name ~ ' page.' }}" data-then-one="{{ 'It goes back on the ' ~ page_name ~ ' page.' }}" data-url="{{ url_for('qgen.restore_many', kind=kind) }}" title="Put the checked {{ noun }} back on the {{ page_name }} page">Restore</button>
       {% elif kind == 'quizzes' %}<button type="button" class="btn btn-sm btn-quiz" data-assign-many title="Give the checked quizzes to people you pick">Assign quizzes</button>
       {% elif kind == 'problems' %}<button type="button" class="btn btn-sm btn-quiz" data-add-quiz="checked"{% if not quizzes %} data-no-quiz{% endif %} data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Put the checked problems at the end of one of your quizzes">Add to a quiz</button>
       {#- (straight to New quiz with them in it: the owner, 2026-10-21) #}
       <button type="button" class="btn btn-sm btn-quiz" data-make-quiz="{{ url_for('qgen.mkvquiz') }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it">Make new quiz</button>{% endif %}
+      {%- if not in_archive %}
+      <button type="button" class="btn btn-sm" data-trash-many data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
     {% else %}
       {#- (no folders yet: the folder buttons grayed, with why, never left out; the page's own button
           still works: the owner, 2026-10-19) #}
       <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check {{ noun }} to put in it.</span>
       <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
       <button type="button" class="btn btn-secondary btn-sm" data-no-folder="Take out of folder: there are no folders yet">Take out of folder</button>
-      {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="{{ one }}" data-noun="{{ noun }}" data-then="{{ 'They go back on the ' ~ noun|capitalize ~ ' page.' }}" data-then-one="{{ 'It goes back on the ' ~ noun|capitalize ~ ' page.' }}" data-url="{{ url_for('qgen.restore_many', kind=kind) }}" title="Put the checked {{ noun }} back on the {{ noun|capitalize }} page">Restore</button>
+      {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="{{ one }}" data-noun="{{ noun }}" data-then="{{ 'They go back on the ' ~ page_name ~ ' page.' }}" data-then-one="{{ 'It goes back on the ' ~ page_name ~ ' page.' }}" data-url="{{ url_for('qgen.restore_many', kind=kind) }}" title="Put the checked {{ noun }} back on the {{ page_name }} page">Restore</button>
       {% elif kind == 'quizzes' %}<button type="button" class="btn btn-sm btn-quiz" data-assign-many title="Give the checked quizzes to people you pick">Assign quizzes</button>
       {% elif kind == 'problems' %}<button type="button" class="btn btn-sm btn-quiz" data-add-quiz="checked"{% if not quizzes %} data-no-quiz{% endif %} data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Put the checked problems at the end of one of your quizzes">Add to a quiz</button>
       {#- (straight to New quiz with them in it: the owner, 2026-10-21) #}
       <button type="button" class="btn btn-sm btn-quiz" data-make-quiz="{{ url_for('qgen.mkvquiz') }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it">Make new quiz</button>{% endif %}
+      {%- if not in_archive %}
+      <button type="button" class="btn btn-sm" data-trash-many data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
     {% endif %}
   </form>
 </div>
