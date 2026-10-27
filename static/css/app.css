@@ -3829,5 +3829,5 @@ td.actions > .folder-icons > .btn:first-child { margin-left: 0; }
 .chip-more::-webkit-details-marker { display: none; }
 .chip-more:hover, .row-more-pop[open] > .chip-more { color: var(--text); }
 details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 8px; width: max-content; min-width: 0; max-width: min(720px, 90vw);
-  max-height: min(50vh, 300px); overflow-y: auto; overscroll-behavior: contain;
+  max-height: min(50vh, 300px); overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--text) 60%, transparent); }  /* (a light edge that stands out from the page; scrolls when it's long: the owner, 2026-10-26) */

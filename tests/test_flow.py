@@ -291,7 +291,9 @@ def test_question_groups_give_students_different_problems(app_db):
     assert b'not 9' in teacher.post('/quiz/makevquiz', data={'title': 'G', 'vplist': bad}).data
     assert teacher.post('/quiz/makevquiz', data={'title': 'Groups', 'vplist': lay, 'keep_order': ''}).status_code == 302
     vq = VQuiz.query.one()
-    assert b'2 of these 4' in teacher.get('/quiz/listvq').data
+    # its problems, the group's too, as chips in its row (the owner, 2026-10-26: no pop-up list)
+    page = teacher.get('/quiz/listvq').data.decode()
+    assert all('href="/quiz/listvp/{}"'.format(i) in page for i in p)
     assert json.loads(teacher.get('/quiz/editvquiz/{}'.format(vq.id)).data.decode()
                       .split('id="vplist" name="vplist" type="hidden" value="')[1].split('"')[0].replace('&#34;', '"')) \
         == [p[0], {'pick': 2, 'from': p[1:]}]
