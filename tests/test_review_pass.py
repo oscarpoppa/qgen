@@ -549,7 +549,7 @@ def test_dashboard_assigned_box_opens_the_students_copy(app_db):
     box = box[:box.index('</details>')]
     # the quiz's name is plain words; the student's name opens what the eye opens, their copy (the owner, 2026-10-22)
     #(the quiz's title opens their copy too: the owner, 2026-10-22)
-    assert '<span class="dash-quiz">“' in box and '<span class="dash-quiz"><a' not in box and 'data-tip="Open the history of' not in box
+    assert '<span class="dash-quiz"><span class="quiz-title">' in box and '<span class="dash-quiz"><a' not in box and 'data-tip="Open the history of' not in box
     assert '<a class="name-link person" href="/quiz/take/{}"'.format(cq.id) in box and 'href="/quiz/listuser/' not in box
     assert 'href="/quiz/take/{}" title="View: sam'.format(cq.id) in box and 'aria-label="View"' in box
     assert '>Student page</a>' not in box
@@ -835,9 +835,17 @@ def test_a_quiz_cant_be_removed_while_someone_is_taking_it(app_db):
     vq = make_quiz(app, teach, 'Busy')
     cq = give(vq, 'sam')
     cq.startdate = datetime.now()
+    cq.taker.last_seen = datetime.now()  # (active on the site lately: the owner, 2026-10-26)
     db.session.commit()
     r = teach.post('/quiz/delvq/{}'.format(vq.id), follow_redirects=True).data.decode()
     assert 'Not removed.' in r and 'is taking “Busy” right now' in r
+    # not seen on the site for longer than "Still taking a quiz for" (2 hours): left, not "taking it"
+    cq.taker.last_seen = datetime.now() - timedelta(hours=3)
+    db.session.commit()
+    from app.qgen import services as S
+    assert S.being_taken(vq) == []
+    cq.taker.last_seen = datetime.now()
+    db.session.commit()
     assert db.session.get(VQuiz, vq.id).removed_at is None
     # its due date has passed: abandoned, not "taking it"
     cq.closes_at = datetime.now() - timedelta(minutes=1)
@@ -1033,7 +1041,7 @@ def test_dashboard_recent_hand_ins_name_the_quiz_as_a_link_to_its_history(app_db
     row = page.split('/quiz/take/{}'.format(cq.id))[0].rsplit('<li>', 1)[1]
     #(the quiz's name is plain words; the student's name opens the hand-in, like the eye: the owner, 2026-10-22)
     row = page.split('<a class="name-link person" href="/quiz/take/{}"'.format(cq.id))[1].split('</li>')[0]
-    assert '<span class="dash-quiz">“' in row and '<span class="dash-quiz"><a' not in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
+    assert '<span class="dash-quiz"><span class="quiz-title">' in row and '<span class="dash-quiz"><a' not in row and 'href="/quiz/results/{}"'.format(vq.id) not in row
     assert '<strong>sam</strong></a>' in row and 'href="/quiz/listuser/' not in row
     assert '>Student page</a>' not in row
 
@@ -1049,7 +1057,7 @@ def test_dashboard_waiting_for_grading_names_the_quiz_as_a_link_to_its_history(a
     page = teach.get('/dashboard').data.decode()
     #(the quiz's name is plain words; the student's name opens the hand-in to grade, like Grade: the owner, 2026-10-22)
     row = page.split('<a class="name-link person" href="/quiz/review/{}"'.format(cq.id))[1].split('</li>')[0]
-    assert '<span class="dash-quiz">“' in row and '<span class="dash-quiz"><a' not in row  # (plain words: the owner, 2026-10-23)
+    assert '<span class="dash-quiz"><span class="quiz-title">' in row and '<span class="dash-quiz"><a' not in row  # (plain words: the owner, 2026-10-23)
     assert 'href="/quiz/results/{}"'.format(vq.id) not in row and '>Student page</a>' not in row
     # and no "All N in Grading →" link on the card
     assert 'in Grading →' not in page

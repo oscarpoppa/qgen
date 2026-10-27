@@ -137,7 +137,7 @@ def test_taking_a_quiz_right_now(app_db):
     assert 'Taking a quiz' in part and '<strong>sam</strong>' in part
     # the quiz's name is plain words; the student's name opens what the eye opens, their quiz as it
     # is now (the owner, 2026-10-22)
-    assert 'href="/quiz/take/{}"'.format(other.id) in part and '<span class="dash-quiz">“Other”</span>' in part and 'aria-label="View"' in part  # (the eye: the student's copy, owner 2026-10-14)
+    assert 'href="/quiz/take/{}"'.format(other.id) in part and '<span class="dash-quiz"><span class="quiz-title">Other</span></span>' in part and 'aria-label="View"' in part  # (the eye: the student's copy, owner 2026-10-14)
     #(the Online now list is the one place a name opens the student page: the owner, 2026-10-23)
     taking = part[:part.index('class="online-list"')]
     assert '<a class="name-link person" href="/quiz/take/{}"'.format(other.id) in taking and 'href="/quiz/listuser/' not in taking

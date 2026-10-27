@@ -1663,7 +1663,7 @@ hr.section-rule.list-rule { margin: 4px 0 14px; }
 
 /* boxes in a grid take only the height they need (static/js/masonry.js gives each a row span) */
 .masonry-on { grid-auto-rows: 4px; row-gap: 0 !important; align-items: start; }
-.masonry-on > * { margin-top: 0; margin-bottom: 0; }
+.masonry-on > * { margin-top: 0; margin-bottom: 0; }  /* the space below a box comes from its span */
 /* a quiz's name in a sentence or row: no quotes, a little bolder (the owner, 2026-10-26) */
 .quiz-title { font-weight: 600; }
 /* cards dragged to another column (static/js/masonry.js): the heading shows they move; the dragged
@@ -1672,7 +1672,7 @@ hr.section-rule.list-rule { margin: 4px 0 14px; }
 [data-movable] { position: relative; }
 .card-dragging { position: relative; z-index: 7; opacity: .85; box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.3)); pointer-events: none; }
 body.cards-dragging, body.cards-dragging * { cursor: grabbing !important; user-select: none; }
-.card-drop-line { position: absolute; height: 3px; margin-top: -2px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 8; }  /* the space below a box comes from its span */
+.card-drop-line { position: absolute; height: 3px; margin-top: -2px; border-radius: 999px; background: var(--accent); pointer-events: none; z-index: 8; }
 @media print { .masonry-on { grid-auto-rows: auto; row-gap: 16px !important; } .masonry-on > * { grid-row: auto !important; grid-column: auto !important; } .masonry-on > .dash-wide { grid-column: 1 / -1 !important; } }
 
 /* ===== The one box that opens and folds (folders, a page's sections, a quiz, a student, a
@@ -2197,6 +2197,8 @@ details.row-fold > .small { margin: 4px 0 0 13px; }
 details.row-fold[open] > :not(summary) { margin-left: 28px; }
 /* (an open row's contents reach across the empty cells to its right: static/js/rowopen.js) */
 details.row-fold.row-wide[open] > :not(summary) { margin-right: calc(-1 * var(--row-extra, 0px)); position: relative; z-index: 1; }
+/* (a card open in it lies over the rows below, theirs too) */
+details.row-fold.row-wide[open] > :has(details.row-pop[open]), details.row-fold:has(details.row-pop[open]) { z-index: 40; }
 ol.attempt-list { padding-left: 1.2em; margin-top: 0; margin-bottom: 4px; }
 tr:has(> td > details.row-fold:not([open])) > td.row-more > :not(.row-count) { display: none; }
 /* (Quizzes' Problems column shows its number while the row is folded, its list when open: the owner, 2026-10-23) */
@@ -3826,4 +3828,4 @@ td.actions > .folder-icons > .btn:first-child { margin-left: 0; }
 .row-problems .chip-more { display: inline-flex; padding: 1px 10px; border-radius: 999px; border: 1px dashed var(--border); color: var(--muted); cursor: pointer; list-style: none; }
 .row-problems .chip-more::-webkit-details-marker { display: none; }
 .row-problems .chip-more:hover, .row-problems .row-more-pop[open] > .chip-more { color: var(--text); }
-details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; width: max-content; min-width: 0; max-width: min(480px, 80vw); }
+details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; width: max-content; min-width: 0; max-width: min(720px, 90vw); }

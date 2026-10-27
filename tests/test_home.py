@@ -36,7 +36,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert counts == {'new': 2, 'in progress': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
     waiting = page.split('class="box-title">Waiting for you</h2>')[1].split('</details>')[0]
-    assert re.findall(r'<strong>“([^”]+)”</strong>', waiting) == ['Q2', 'Q3', 'Q1']
+    assert re.findall(r'<strong>([^<]+)</strong></span>', waiting) == ['Q2', 'Q3', 'Q1']
     assert 'aria-label="Continue"' in page and page.count('aria-label="Start"') == 2  # (the play triangle: owner 2026-10-14)
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in no_titles(page)  # in the menu for students
     # the boxes fold away (remembered in the browser); they start folded (the owner, scratchpad mode)
@@ -62,7 +62,7 @@ def test_awards(app_db):
     finish(give(quizzes[4], 'sam'), 100, t + timedelta(days=5))             # perfect; 5 quizzes; streak 4
     page = sam.get('/home').data.decode()
     assert titles(page) == ['Perfect score', '5 quizzes', '3 in a row', 'Perfect score', 'Comeback', 'First quiz']
-    assert '100% on “W4”' in page
+    assert '100% on <span class="quiz-title">W4</span>' in page  # (no quotes, bolder: the owner, 2026-10-26)
     assert 'Up 25 points on' in page
     # still to earn: the next of each kind only
     rest = page.split('Still to earn')[1]
@@ -105,14 +105,14 @@ def test_a_perfect_score_means_the_score_that_counts(app_db):
     finish(give(latest, 'sam'), 100, t + timedelta(hours=4))
     finish(give(latest, 'sam'), 80, t + timedelta(hours=5))
     page = sam.get('/home').data.decode()
-    perfect = re.findall(r'100% on “([^”]+)”', page.split('Still to earn')[0])
+    perfect = re.findall(r'100% on <span class="quiz-title">([^<]+)</span>', page.split('Still to earn')[0])
     assert perfect == ['Best']
     # a teacher's own rule for this student changes it: "best" on Latest makes it count
     from app.qgen.models import CQuiz
     from app.qgen import services as S
     S.set_retake_rule(CQuiz.query.filter_by(vquiz_id=latest.id).order_by(CQuiz.id.desc()).first(), 'best')
     page = sam.get('/home').data.decode()
-    assert sorted(re.findall(r'100% on “([^”]+)”', page.split('Still to earn')[0])) == ['Best', 'Latest']
+    assert sorted(re.findall(r'100% on <span class="quiz-title">([^<]+)</span>', page.split('Still to earn')[0])) == ['Best', 'Latest']
 
 
 def test_recently_completed(app_db):
@@ -130,13 +130,13 @@ def test_recently_completed(app_db):
     give(quizzes[3], 'sam')                                               # not handed in
     page = sam.get('/home').data.decode()
     part = page.split('class="box-title">Just finished</h2>')[1].split('</details>')[0]
-    assert re.findall(r'<strong>“([^”]+)”</strong>', part) == ['R2', 'R1']  # newest first
+    assert re.findall(r'<strong>([^<]+)</strong></a>', part) == ['R2', 'R1']  # newest first
     assert 'title="In progress: handed in; your teacher is checking your written answers" role="img" aria-label="In progress"' in part and '>85%</span>' in part and part.count('aria-label="View"') == 2  # (the eye for both: owner 2026-10-14)
     # at most 10
     for i in range(4, 13):
         finish(give(quizzes[i], 'sam'), 90, now - timedelta(minutes=i))
     part = sam.get('/home').data.decode().split('class="box-title">Just finished</h2>')[1].split('</details>')[0]
-    assert len(re.findall(r'<strong>“', part)) == 10
+    assert len(re.findall(r'<strong>[^<]+</strong></a>', part)) == 10
 
 
 def test_home_follows_hand_ins(app_db):
