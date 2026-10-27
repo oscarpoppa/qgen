@@ -3121,9 +3121,11 @@ dialog.page-zoom::backdrop { background: rgba(0, 0, 0, .55); }
 /* Back and Forward at the bar's left end: two quiet arrows, no border, the words in their tooltips
    (base.html, js/trail.js; the owner, 2026-10-19). Grayed out when there's nowhere to go. */
 .trail-nav { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px; flex: 0 0 auto; }
-.trail-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--r-sm);
-  color: var(--muted); text-decoration: none; cursor: pointer; }
-.trail-btn svg { width: 18px; height: 18px; }
+/* (bigger and bolder than the browser's own arrows, so the two are told apart: the owner, 2026-10-27; they were 28px,
+   an 18px arrow, gray) */
+.trail-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--r-sm);
+  color: var(--text); text-decoration: none; cursor: pointer; }
+.trail-btn svg { width: 24px; height: 24px; stroke-width: 2.75; }
 .trail-btn:hover { color: var(--text); background: var(--surface-2); }
 .trail-btn[aria-disabled="true"] { opacity: .35; cursor: default; pointer-events: auto; }
 .trail-btn[aria-disabled="true"]:hover { background: none; color: var(--muted); }
