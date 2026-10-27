@@ -312,8 +312,10 @@
   {% else %}<button type="button" class="btn btn-secondary btn-sm btn-icon add-folder-off" disabled title="Move to folder: {{ label }} is in every folder already">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button>{% endif %}
   {#- take it out of the folder open now (else its own): it says where it will go first
       (static/js/filebar.js) #}
-  {% if mine %}<button type="button" class="btn btn-secondary btn-sm btn-icon take-out-one" data-take-out="{{ ident }}" data-label="{{ label }}" title="Take out of folder: take {{ label }} out of the folder open now (it says where {{ 'he/she' if what == 'user' else 'it' }}’ll go first)">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button>{% endif %}
-  </span>{% else %}{#- (no folders yet: the icon grayed, with why, not the word "none": the owner, 2026-10-19) #}<span class="folder-icons"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move to folder: make a folder first (+ New folder)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button></span>{% endif %}
+  {% if mine %}<button type="button" class="btn btn-secondary btn-sm btn-icon take-out-one" data-take-out="{{ ident }}" data-label="{{ label }}" title="Take out of folder: take {{ label }} out of the folder open now (it says where {{ 'he/she' if what == 'user' else 'it' }}’ll go first)">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button>
+  {#- (in no folder: grayed, with why, never left out, so the row's icons stay in their columns; the owner, 2026-10-26) #}
+  {%- else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Take out of folder: {{ label }} isn’t in any folder">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button>{% endif %}
+  </span>{% else %}{#- (no folders yet: the icon grayed, with why, not the word "none": the owner, 2026-10-19) #}<span class="folder-icons"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move to folder: make a folder first (+ New folder)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Take out of folder: there are no folders yet">{{ icon_label('lc-folder-minus', 'Take out of folder') }}</button></span>{% endif %}
 {% endmacro %}
 
 {#- the folders a thing is in, as chips with ✕ (take it out), in its opened row: "In folders: …" (the owner, 2026-10-26) #}

@@ -78,7 +78,9 @@
    a long one asks first (static/js/confirm.js) #}
 {% macro print_button(g, student) -%}
 {%- set n = paper_pages(g.vquiz) %}
-{%- if n %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=g.vquiz.id, users=[student.id], next=request.full_path) }}" data-print-pages="{{ n }}" title="Print: {{ student.shown_name }}’s paper page{{ '' if n == 1 else 's' }} of “{{ g.vquiz.title }}” ({{ n }} page{{ '' if n == 1 else 's' }}), with his/her name on top">{{ icon_label('lc-printer', 'Print') }}</a>{% endif %}
+{%- if n %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=g.vquiz.id, users=[student.id], next=request.full_path) }}" data-print-pages="{{ n }}" title="Print: {{ student.shown_name }}’s paper page{{ '' if n == 1 else 's' }} of “{{ g.vquiz.title }}” ({{ n }} page{{ '' if n == 1 else 's' }}), with his/her name on top">{{ icon_label('lc-printer', 'Print') }}</a>
+{#- (no paper pages: grayed, with why, so the row's icons stay in their columns; the owner, 2026-10-26) #}
+{%- else %}{{ slot('Print', 'nothing to print: “' ~ g.vquiz.title ~ '” has no Paper only problems', icon='lc-printer') }}{% endif %}
 {%- endmacro %}
 {% macro result_cells(g, student, rules, archive_all=true) %}
               {#- (sort keys for a sorted column, static/js/sorttable.js: the latest attempt's date; the score) -#}
