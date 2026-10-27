@@ -2741,6 +2741,7 @@ details.quiz-card[open] > summary .quiz-sum .btn-icon { display: none; }
 .side-col > .save-card { padding: 12px 16px; }
 .side-col > .save-card .btn-row { margin: 0; }
 .side-col > .editor-go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.side-col > #preview-errors:not(:empty) { margin-top: 12px; }  /* (what stops “Show me 3 examples”, under the buttons) */
 /* a teacher's badge right after the name; the icons drop to the next line, at the right, when
    the line is too full (the owner, 2026-10-16) */
 .person-card > summary .person > .badge { flex: none; }

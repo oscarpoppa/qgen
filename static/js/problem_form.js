@@ -467,6 +467,17 @@
     fetch(previewBtn.dataset.url, { method: 'POST', body: new FormData(form), credentials: 'same-origin' })
       .then(function (r) { return r.text(); })
       .then(function (html) {
+        //(what's not ready yet goes under the buttons, at the top, and the page stays where it is; the examples go under
+        //the form, scrolled to: the owner, 2026-10-27)
+        var errs = document.getElementById('preview-errors');
+        var probe = document.createElement('div');
+        probe.innerHTML = html;
+        if (errs && probe.querySelector('.alert-error')) {
+          preview.innerHTML = '';
+          errs.innerHTML = html;
+          return;
+        }
+        if (errs) errs.innerHTML = '';
         preview.innerHTML = html;
         preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([preview]);

@@ -16,6 +16,14 @@
   //page, which would push everything down under the reader
   window.qgenFloat = function (alerts) {
     alerts.classList.add('alerts-float');
+    //(side to side across the page's content, as the message strip in the page is: the owner, 2026-10-27; it was a short
+    //560px strip in the middle)
+    var main = document.querySelector('main');
+    if (main) {
+      var r = main.getBoundingClientRect(), cs = getComputedStyle(main);
+      var l = r.left + parseFloat(cs.paddingLeft), w = r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      alerts.style.left = Math.round(l) + 'px'; alerts.style.width = Math.round(w) + 'px'; alerts.style.transform = 'none';
+    }
     var gone = false;
     function hide() {
       if (gone) return;

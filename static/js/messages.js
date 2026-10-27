@@ -743,6 +743,9 @@
 
   measure();
   window.addEventListener('resize', measure);
+  //(and whenever the top bar changes height, e.g. its Menu opened on a phone: the panel stayed where the bar had ended
+  //and covered the menu, so Menu seemed to do nothing; the owner, 2026-10-27)
+  if (window.ResizeObserver && document.querySelector('.topbar')) new ResizeObserver(measure).observe(document.querySelector('.topbar'));
   setupSplit();
   syncButtons();
   PANES.forEach(function (p) { if (isOpen(p)) load(p); });
