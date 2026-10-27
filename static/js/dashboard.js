@@ -61,7 +61,10 @@
         var oldGrid = box.querySelector('.dash-grid'), keep = {};
         var key = function (d) { return d.dataset.box || d.id; };
         if (oldGrid) Array.prototype.forEach.call(oldGrid.children, function (d) {
-          if (key(d)) keep[key(d)] = { span: d.style.gridRowEnd, open: d.open };
+          //(its whole place, column and row, not only its height: with the height alone each new box came in
+          //at the grid's next free spot, in plain order, overlapping, then jumped back a moment later; seen on
+          //every reload, when the live connection's first redraw comes; the owner, 2026-10-26)
+          if (key(d)) keep[key(d)] = { col: d.style.gridColumn, row: d.style.gridRow, open: d.open };
         });
         box.innerHTML = html;
         var newGrid = box.querySelector('.dash-grid');
@@ -70,7 +73,8 @@
           Array.prototype.forEach.call(newGrid.children, function (d) {
             var k = keep[key(d)];
             if (!k) return;
-            if (k.span) d.style.gridRowEnd = k.span;
+            if (k.col) d.style.gridColumn = k.col;
+            if (k.row) d.style.gridRow = k.row;
             if (d.tagName === 'DETAILS') d.open = k.open;
           });
         }
@@ -79,6 +83,9 @@
         if (window.qgenGripScan) window.qgenGripScan();
         if (window.qgenElasticScan) window.qgenElasticScan();
         box.querySelectorAll('details[data-more]').forEach(function (d) { if (more[d.dataset.more]) d.open = true; });
+        //laid out now, before the page is drawn again (a box that changed size, or a new one, is never shown in a
+        //wrong spot first)
+        if (newGrid && window.qgenLayNow) window.qgenLayNow(newGrid);
         setTimeout(function () {
           ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(function (t) { window.removeEventListener(t, mine); });
           box.style.minHeight = '';

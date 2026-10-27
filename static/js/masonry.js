@@ -105,7 +105,8 @@
     .observe(document.querySelector('main') || document.body, { childList: true, subtree: true });
   //and straight away for a box opening or folding, or a search hiding cards
   function all() { document.querySelectorAll(GRIDS).forEach(soon); }
-  window.qgenRelayout = all;  // (a box's room changed without its size changing: elastic.js)
+  window.qgenRelayout = all;
+  window.qgenLayNow = lay;  // (at once, not on the next timer: the Dashboard after redrawing its boxes, dashboard.js)  // (a box's room changed without its size changing: elastic.js)
   document.addEventListener('toggle', all, true);
   document.addEventListener('qgen-filtered', all);
   window.addEventListener('resize', all);
