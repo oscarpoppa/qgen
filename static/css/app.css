@@ -393,6 +393,8 @@ td.actions .btn { margin-left: 4px; }
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
+  .stack table.people-table > tbody > tr > td { border-bottom: 0; }  /* (stacked: the line ends the person, not each field) */
+  .stack table.people-table > tbody > tr { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; }
   .stack td.actions .btn { margin: 4px 4px 0 0; }
@@ -1492,6 +1494,8 @@ main.container.container-editor { max-width: 1440px; }
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
+  .stack table.people-table > tbody > tr > td { border-bottom: 0; }  /* (stacked: the line ends the person, not each field) */
+  .stack table.people-table > tbody > tr { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; white-space: normal; }
   .stack td.actions .btn { margin: 4px 4px 0 0; }
@@ -1522,6 +1526,8 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
+  .stack table.people-table > tbody > tr > td { border-bottom: 0; }  /* (stacked: the line ends the person, not each field) */
+  .stack table.people-table > tbody > tr { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; white-space: normal; }
   .stack td.actions .btn { margin: 4px 4px 0 0; }
