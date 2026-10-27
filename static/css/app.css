@@ -3831,3 +3831,5 @@ td.actions > .folder-icons > .btn:first-child { margin-left: 0; }
 details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 8px; width: max-content; min-width: 0; max-width: min(720px, 90vw);
   max-height: min(50vh, 300px); overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--text) 60%, transparent); }  /* (a light edge that stands out from the page; scrolls when it's long: the owner, 2026-10-26) */
+/* the Put in folder dialog's folders it's already in (copy mode): said in words */
+.already-in { margin-left: 8px; font-weight: 400; }

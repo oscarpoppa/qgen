@@ -758,7 +758,8 @@
     //what's checked now: the Checked folder's things and its count, wherever it's shown
     function recount() {
       var ks = {}, n = 0, before = Object.keys(checkedNode.keySet).join(' ');
-      items().forEach(function (el) { var t = tickOf(el); if (t && t.checked) { ks[keyOf(el)] = 1; n += el.dataset.weight ? +el.dataset.weight : 1; } });
+      items().forEach(function (el) { var t = tickOf(el); if (t && t.checked && !t.disabled) {  // (a grayed check box, e.g. a folder it's already in, isn't a pick)
+        ks[keyOf(el)] = 1; n += el.dataset.weight ? +el.dataset.weight : 1; } });
       //(a paged list: everything checked, on every page and in every folder, is what the Checked folder holds)
       if (paged && window.qgenCheckedIds) n = window.qgenCheckedIds().length;
       checkedNode.keySet = ks; checkedNode.count = n;

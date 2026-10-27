@@ -205,7 +205,7 @@
   var putList = putBox.querySelector('[data-folder-pick]'), copyBox = putBox.querySelector('[data-copy]');
   putBox.querySelector('[data-no]').addEventListener('click', function () { putBox.close(); });
   putBox.addEventListener('change', function (e) {
-    if (e.target !== copyBox && putList.querySelector('input:checked:not(:disabled)')) putBox.querySelector('[data-err]').hidden = true;
+    if (e.target !== copyBox && putList.querySelector('input[name="put-to"]:checked:not(:disabled)')) putBox.querySelector('[data-err]').hidden = true;
   });
   var putState = null;
   function putDraw() {
@@ -213,14 +213,15 @@
     var it = n === 1 ? (unit === 'person' ? 'him/her' : 'it') : 'them';
     var stays = n === 1 ? (unit === 'person' ? 'he' : 'it') : 'they';
     var inNow = n === 1 ? (unit === 'person' ? 'he/she is' : 'it’s') : 'they’re';
-    putBox.querySelector('[data-head]').textContent = copy ? 'Put ' + d.what + ' in folders' : 'Move ' + d.what + ' to a folder';
-    putBox.querySelector('[data-sub]').textContent = copy ? 'Check the folders to put ' + it + ' in.' : 'Choose the folder to move ' + it + ' to.';
+    //(copying says Copy, as its message says Copied: the owner, 2026-10-26)
+    putBox.querySelector('[data-head]').textContent = copy ? 'Copy ' + d.what + ' to folders' : 'Move ' + d.what + ' to a folder';
+    putBox.querySelector('[data-sub]').textContent = copy ? 'Check the folders to copy ' + it + ' to.' : 'Choose the folder to move ' + it + ' to.';
     putBox.querySelector('[data-stays]').textContent = copy ? (stays === 'it' ? 'It will still be available in its original folders' : stays === 'he' ? 'He/she will still be available in his/her original folders' : 'They will still be available in their original folders')
       : (stays === 'it' ? 'It moves' : stays === 'he' ? 'He/she moves' : 'They move') + ' to a new folder';
     putBox.querySelector('[data-several]').textContent = 'You can check several folders';
     putBox.querySelector('[data-several]').hidden = !copy;
     putBox.querySelector('[data-copy-words]').textContent = 'Copy instead: keep ' + it + ' in the folders ' + inNow + ' in now too';
-    putBox.querySelector('[data-ok]').textContent = copy ? 'Put in folder' : 'Move';
+    putBox.querySelector('[data-ok]').textContent = copy ? 'Copy' : 'Move';
     putBox.querySelector('[data-err]').textContent = copy ? 'Check at least one folder first.' : 'Choose a folder first.';
     putBox.querySelector('[data-err]').hidden = true;
     window.qgenPickOk(putList);
@@ -229,23 +230,28 @@
     //name: the owner, 2026-10-16; no "out of every folder" here, so no Uncategorized)
     window.qgenFolderPick.fill(putList, window.qgenFolderPick.fromSelect(sel).folders, { type: copy ? 'checkbox' : 'radio', name: 'put-to',
       each: function (f, box, lab) {
-        if (copy && d.already.indexOf(f.id) !== -1) { box.checked = true; box.disabled = true; lab.title = 'Already in it'; }
+        if (copy && d.already.indexOf(f.id) !== -1) {
+          box.checked = true; box.disabled = true; lab.title = 'Already in it';
+          //(said in words, not only on hover: the owner, 2026-10-26)
+          var note = document.createElement('span'); note.className = 'already-in small muted'; note.textContent = 'already in';
+          lab.appendChild(note);
+        }
         if (!copy && f.id === onlyIn) { box.disabled = true; lab.title = 'Already in it'; }
       } });
   }
   copyBox.addEventListener('change', putDraw);
   putBox.querySelector('[data-ok]').addEventListener('click', function () {
     var d = putState, copy = copyBox.checked;
-    var picked = Array.prototype.map.call(putList.querySelectorAll('input:checked:not(:disabled)'), function (b) { return b.value; });
+    var picked = Array.prototype.map.call(putList.querySelectorAll('input[name="put-to"]:checked:not(:disabled)')  /* (the folders only, not the check-all box) */, function (b) { return b.value; });
     if (!picked.length) { window.qgenPickError(putList, putBox.querySelector('[data-err]').textContent); return; }
     //"Are you sure?" naming the folder (the owner, 2026-10-24); Cancel goes back to this dialog
-    var names = Array.prototype.map.call(putList.querySelectorAll('input:checked:not(:disabled)'), function (b) {
+    var names = Array.prototype.map.call(putList.querySelectorAll('input[name="put-to"]:checked:not(:disabled)')  /* (the folders only, not the check-all box) */, function (b) {
       var tr = b.closest('tr');
       return tr && tr.dataset.folderName ? tr.dataset.folderName : '';
     });
     var where = names.length === 1 && names[0] ? '\u201c' + names[0] + '\u201d' : names.length + ' folders';
-    var q = copy ? 'Put ' + d.what + ' in ' + where + '?' : 'Move ' + d.what + ' to ' + where + '?';
-    (window.qgenAsk ? window.qgenAsk(q, copy ? 'Put in folder' : 'Move') : Promise.resolve(window.confirm(q))).then(function (yes) {
+    var q = copy ? 'Copy ' + d.what + ' to ' + where + '?' : 'Move ' + d.what + ' to ' + where + '?';
+    (window.qgenAsk ? window.qgenAsk(q, copy ? 'Copy' : 'Move') : Promise.resolve(window.confirm(q))).then(function (yes) {
       if (yes) putSend(d, copy, picked);
     });
   });
