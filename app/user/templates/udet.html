@@ -50,17 +50,17 @@
               {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
               <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}none{% endif %}</dd>
             </dl></details></td>
-          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '' }}</td>
+          <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '<span class="no-data" title="None yet">—</span>'|safe }}</td>
           {% if not in_archive %}
           <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}">{{ count_badge(n, 'quiz', 'quizzes') }}</td>
           {#- (laid out as Results by quiz's rows, the owner 2026-10-24: Average in its own column, in the same badge; then one Status
               column with the badges side by side, not started / in progress / done; there was a Done column) #}
-          <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="badge {{ score_class(sum_avg) }}" title="The average of the scores that count, for the {{ sum_done|length }} quiz{{ '' if sum_done|length == 1 else 'zes' }} with one">{{ '%.0f' % sum_avg }}%</span>{% endif %}</td>
+          <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % sum_avg if sum_avg is not none else '' }}">{% if sum_avg is not none %}<span class="badge {{ score_class(sum_avg) }}" title="The average of the scores that count, for the {{ sum_done|length }} quiz{{ '' if sum_done|length == 1 else 'zes' }} with one">{{ '%.0f' % sum_avg }}%</span>{% else %}<span class="no-data" title="None yet">—</span>{% endif %}</td>  {#- (a dash where there's nothing, in a sparse column: the owner, 2026-10-26) #}
           <td data-label="Status" class="nowrap" data-sort="{{ '%04d%04d' % (sum_going, sum_fresh) if sum_going or sum_fresh else '' }}"><span class="status-sums">
             {#- (as small numbered circles, the words in their tooltips: the owner, 2026-10-24) #}
             {% if sum_fresh %}{{ count_dot(sum_fresh, 'new', 'not started') }}{% endif %}
             {% if sum_going %}{{ count_dot(sum_going, 'started', 'in progress') }}{% endif %}
-            {% if sum_finished %}{{ count_dot(sum_finished, 'done', 'done') }}{% endif %}</span></td>
+            {% if sum_finished %}{{ count_dot(sum_finished, 'done', 'done') }}{% endif %}{% if not (sum_fresh or sum_going or sum_finished) %}<span class="no-data" title="None yet">—</span>{% endif %}</span></td>
           {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">

@@ -3836,3 +3836,5 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
   border: 1px solid color-mix(in srgb, var(--text) 60%, transparent); }  /* (a light edge that stands out from the page; scrolls when it's long: the owner, 2026-10-26) */
 /* the Put in folder dialog's folders it's already in (copy mode): said in words */
 .already-in { margin-left: 8px; font-weight: 400; }
+/* a sparse column's empty cell: a muted dash (the owner, 2026-10-26) */
+.no-data { color: var(--muted); }
