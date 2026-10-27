@@ -41,15 +41,17 @@
                     column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · In the Trash since {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% endif %}</span></span></summary>
             {#- opened: the person's account only; his/her quizzes are on his/her own page (the owner, 2026-10-25: People is
                 for who someone is and which folders, grade, he/she is in; it was every quiz and attempt) #}
-            <dl class="person-facts small" data-fold-body>
-              <dt>Username</dt><dd>{{ item.username }}</dd>
-              {% if item.nickname %}<dt>Name shown</dt><dd>{{ item.nickname }}</dd>{% endif %}
-              <dt>Role</dt><dd>{{ 'Teacher' if item.is_admin else 'Student' }}</dd>
-              <dt>Created</dt><dd>{{ item.created_at|when if item.created_at else '—' }}</dd>
-              <dt>Last seen</dt><dd>{{ item.last_seen|when if item.last_seen else '—' }}</dd>
-              {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
-              <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}<span class="no-data" title="In no folder (Uncategorized)">—</span>{% endif %}</dd>
-            </dl></details></td>
+            {#- the facts as a list with small circles, as every open row's; the folders on their own “In folders:” line under it,
+                as on Quizzes and Problems (the owner, 2026-10-27; they were a two-column table, “Folders” one of its rows) #}
+            <ul class="quiz-facts small muted" data-fold-body>
+              <li>Username: {{ item.username }}</li>
+              {% if item.nickname %}<li>Name shown: {{ item.nickname }}</li>{% endif %}
+              <li>Role: {{ 'Teacher' if item.is_admin else 'Student' }}</li>
+              <li>Created: {{ item.created_at|when if item.created_at else '—' }}</li>
+              <li>Last seen: {{ item.last_seen|when if item.last_seen else '—' }}</li>
+            </ul>
+            {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
+            {{ folder_chips(fk, 'user', item.id, item.shown_name, mine) }}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '<span class="no-data" title="None yet">—</span>'|safe }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
           {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}
