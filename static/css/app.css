@@ -25,6 +25,8 @@
   --field-border: #7d8695;  /* form fields and checkboxes: 3:1 against the page (WCAG 1.4.11) */
   --on-ok: #ffffff;        /* text on a green or red fill */
   --on-bad: #ffffff;
+  --paper-accent: #2f5bd3;  /* a page-quiz's marks on its white paper, whatever the mode: the theme's light accent */
+  --paper-ink: #1b3fbf;
   /* one set of sizes for the whole site: text ... */
   --fs-xs: .75rem;    /* 12px: the smallest text (labels, badges) */
   --fs-sm: .875rem;   /* 14px: secondary text, small buttons */
@@ -69,6 +71,28 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, .4);
     color-scheme: dark;
   }
+}
+
+/* Color themes (the owner, 2026-10-26, To do 64): each person picks one on My profile (saved on the account, set on
+   <html data-theme>); light or dark still follows the device. A theme changes only the accent family: green, red and
+   yellow keep their meaning. Each accent is at least 4.5:1 against the page and under its button text, both modes.
+   On any element, so a swatch shows its own theme. Ocean is the site's blue, the default. */
+[data-theme="ocean"] { --accent: #2f5bd3; --paper-accent: #2f5bd3; --accent-soft: #e6ecfb; --info-soft: #e6f0fb; --paper-ink: #1b3fbf; }
+[data-theme="forest"] { --accent: #0f7564; --paper-accent: #0f7564; }
+[data-theme="sunset"] { --accent: #c2410c; --paper-accent: #c2410c; }
+[data-theme="grape"] { --accent: #7a3fc4; --paper-accent: #7a3fc4; }
+[data-theme="berry"] { --accent: #b8195c; --paper-accent: #b8195c; }
+[data-theme="sky"] { --accent: #0369a1; --paper-accent: #0369a1; }
+[data-theme]:not([data-theme="ocean"]) { --accent-soft: color-mix(in srgb, var(--accent) 11%, #fff); --info-soft: color-mix(in srgb, var(--accent) 9%, #fff);
+  --paper-ink: color-mix(in srgb, var(--paper-accent) 78%, #000); }
+@media (prefers-color-scheme: dark) {
+  [data-theme="ocean"] { --accent: #7c9cf5; --accent-soft: #232c45; --info-soft: #1c2a3d; }
+  [data-theme="forest"] { --accent: #4fc4a8; }
+  [data-theme="sunset"] { --accent: #fb9a5b; }
+  [data-theme="grape"] { --accent: #b99af5; }
+  [data-theme="berry"] { --accent: #f58db7; }
+  [data-theme="sky"] { --accent: #56c1ee; }
+  [data-theme]:not([data-theme="ocean"]) { --accent-soft: color-mix(in srgb, var(--accent) 17%, var(--surface)); --info-soft: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
 }
 
 * { box-sizing: border-box; }
@@ -1388,8 +1412,8 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 @media print {
   :root {
     --bg: #ffffff; --surface: #ffffff; --surface-2: #f4f5f7; --text: #000000; --muted: #444b57;
-    --border: #c9ced6; --accent: #1f4bbf; --accent-soft: #eef2fb; --ok: #166b3b; --ok-soft: #e8f5ed;
-    --bad: #a3201a; --bad-soft: #fbeceb; --warn: #7a4f00; --warn-soft: #fbf3e2; --info-soft: #eef4fb;
+    --border: #c9ced6; --accent: var(--paper-ink); --accent-soft: color-mix(in srgb, var(--paper-accent) 8%, #fff); --ok: #166b3b; --ok-soft: #e8f5ed;
+    --bad: #a3201a; --bad-soft: #fbeceb; --warn: #7a4f00; --warn-soft: #fbf3e2; --info-soft: color-mix(in srgb, var(--paper-accent) 7%, #fff);
     --shadow: none; color-scheme: light;
   }
   body { background: #fff; color: #000; }
@@ -2982,19 +3006,19 @@ dialog.write-to-dialog .check.field input[type=checkbox] { margin-left: 0; }
 .page-quiz .pq-column { flex-direction: column; justify-content: space-around; align-items: flex-end; line-height: var(--pq-line); }
 /* the answer, typed in the page's own box or on its line */
 .page-quiz .pq-answer { position: absolute; }
-.page-quiz .pq-input { position: absolute; inset: 0; width: 100%; height: 100%; font-size: inherit; box-sizing: border-box; border: 0; background: transparent; text-align: center; color: #1b3fbf;
+.page-quiz .pq-input { position: absolute; inset: 0; width: 100%; height: 100%; font-size: inherit; box-sizing: border-box; border: 0; background: transparent; text-align: center; color: var(--paper-ink);
   font-family: "PageFont", "Noto Sans", sans-serif; font-weight: var(--pq-weight, 700); padding: 0; min-height: 0; border-radius: 1.2cqw; }
-.page-quiz .pq-input:focus { outline: 3px solid #2f5bd3; outline-offset: -0.6cqw; }
+.page-quiz .pq-input:focus { outline: 3px solid var(--paper-accent); outline-offset: -0.6cqw; }
 /* a choice: the printed box (or circle) and its words are the button; the check goes in the box */
 .page-quiz .pq-choice { position: absolute; cursor: pointer; border-radius: 0.8cqw; }
-.page-quiz .pq-choice:hover { background: rgba(47, 91, 211, 0.08); }
-.page-quiz .pq-choice:has(input:focus-visible) { outline: 3px solid #2f5bd3; outline-offset: 2px; }
+.page-quiz .pq-choice:hover { background: color-mix(in srgb, var(--paper-accent) 8%, transparent); }
+.page-quiz .pq-choice:has(input:focus-visible) { outline: 3px solid var(--paper-accent); outline-offset: 2px; }
 .page-quiz .pq-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
-.page-quiz .pq-tick { position: absolute; display: flex; align-items: center; justify-content: center; line-height: 1; color: #1b3fbf; font-weight: 700; }
+.page-quiz .pq-tick { position: absolute; display: flex; align-items: center; justify-content: center; line-height: 1; color: var(--paper-ink); font-weight: 700; }
 .page-quiz .pq-choice input:checked + .pq-tick::after { content: "✓"; }
-.page-quiz .pq-choice:has(input:checked) { background: rgba(47, 91, 211, 0.12); }
+.page-quiz .pq-choice:has(input:checked) { background: color-mix(in srgb, var(--paper-accent) 12%, transparent); }
 /* a table cell to mark (e.g. "Circle True (T) or False (F)"): picked, it gets a circle, as a pencil would */
-.page-quiz .pq-choice input:checked + .pq-tick.pq-ring::after { content: ""; width: 70%; aspect-ratio: 1; border: 0.45cqw solid #1b3fbf; border-radius: 50%; box-sizing: border-box; }
+.page-quiz .pq-choice input:checked + .pq-tick.pq-ring::after { content: ""; width: 70%; aspect-ratio: 1; border: 0.45cqw solid var(--paper-ink); border-radius: 50%; box-sizing: border-box; }
 /* the page on a tablet or computer, the usual list on a phone (the same width as pagequiz.js) */
 .card.pq-has-slot { display: none; }
 @media (max-width: 599px) { .page-quizzes { display: none; } .card.pq-has-slot { display: block; } }
@@ -3049,8 +3073,8 @@ dialog.pick-dialog .pick-people .folder-filter-list > .pick-wrap, dialog.write-t
 .scan-pop-name { display: inline-flex; align-items: center; min-width: 0; }
 .scan-pop-name .scan-thumb { height: 32px; max-width: 32px; }
 /* an answer typed where the page prints "???": a box drawn there, over the question marks (the owner, 2026-10-18) */
-.page-quiz .pq-bare .pq-input { border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
-.page-quiz .pq-inline .pq-input { background: var(--pq-paper, #fff); border: 0.25cqw dashed #2f5bd3; border-radius: 0.6cqw; }
+.page-quiz .pq-bare .pq-input { border: 0.25cqw dashed var(--paper-accent); border-radius: 0.6cqw; }
+.page-quiz .pq-inline .pq-input { background: var(--pq-paper, #fff); border: 0.25cqw dashed var(--paper-accent); border-radius: 0.6cqw; }
 /* a question under the page keeps its lines (a puzzle written line by line) */
 .qtext { white-space: pre-line; }
 .scan-done-thumb { height: 64px; max-width: 64px; }
@@ -3838,3 +3862,13 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .already-in { margin-left: 8px; font-weight: 400; }
 /* a sparse column's empty cell: a muted dash (the owner, 2026-10-26) */
 .no-data { color: var(--muted); }
+
+/* My profile's Theme card (the owner, 2026-10-26, To do 64): a row of swatches, each in its own theme's color; the
+   chosen one ringed */
+.theme-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+.theme-swatch { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; min-width: 72px; padding: 8px 6px 6px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+.theme-swatch:hover { border-color: var(--accent); }
+.theme-swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); font-weight: 600; }
+.theme-dot { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 50%, var(--accent-soft) 50%);
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }

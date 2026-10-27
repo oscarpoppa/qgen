@@ -47,6 +47,20 @@
   <p class="muted small" style="margin-top:10px">Your picture shows next to your name, including in messages. Teachers can remove pictures.</p>
 </div>
 
+{#- the site's colors for this account (the owner, 2026-10-26, To do 64): each swatch shows its own theme, in light or
+    dark as the device is; picking one applies at once (static/js/theme.js) and is saved on the account #}
+<div class="card">
+  <div class="card-head"><h2>Theme</h2></div>
+  <form method="post" action="{{ url_for('user.set_theme') }}" class="theme-pick" data-theme-pick>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for key, name in current_user.THEMES %}
+    <button class="theme-swatch" name="theme" value="{{ key }}" data-theme="{{ key }}" aria-pressed="{{ 'true' if current_user.theme_key == key else 'false' }}" title="Use the {{ name }} colors">
+      <span class="theme-dot" aria-hidden="true"></span><span class="theme-name">{{ name }}</span></button>
+    {% endfor %}
+  </form>
+  <p class="muted small">Light or dark follows your device.</p>
+</div>
+
 {% if current_user.is_admin %}
 <div class="card">
   <div class="card-head"><h2>Apps</h2></div>
@@ -95,6 +109,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ asset('js/theme.js') }}"></script>
 {% if not current_user.is_admin %}<script src="{{ asset('js/dropzone.js') }}"></script>{% endif %}
 <script>
 /* show the new picture as soon as it's uploaded */

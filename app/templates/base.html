@@ -1,5 +1,5 @@
 {% from "_macros.html" import avatar with context %}<!doctype html>
-<html lang="en"{% block html_attrs %}{% endblock %}>
+<html lang="en" data-theme="{{ current_user.theme_key if current_user.is_authenticated else 'ocean' }}"{% block html_attrs %}{% endblock %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

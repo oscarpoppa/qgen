@@ -28,6 +28,14 @@ class User(UserMixin, db.Model):
     #name everywhere, "sam (Sammy)"
     nickname = db.Column(db.String(32), nullable=True)
     NICKNAME_MAX = 32
+    #their color theme, picked on My profile (the owner, 2026-10-26, To do 64); None is Ocean, the site's blue.
+    #Light or dark still follows the device.
+    theme = db.Column(db.String(16), nullable=True)
+    THEMES = (('ocean', 'Ocean'), ('forest', 'Forest'), ('sunset', 'Sunset'), ('grape', 'Grape'), ('berry', 'Berry'), ('sky', 'Sky'))
+
+    @property
+    def theme_key(self):
+        return self.theme if self.theme in dict(self.THEMES) else 'ocean'
     #the attempt whose quiz page they have open and on screen (its check-ins, every few
     #seconds while it shows), and when it last checked in: the Dashboard's "Taking a quiz"
     on_quiz = db.Column(db.Integer, nullable=True)

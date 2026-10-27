@@ -1,7 +1,7 @@
 from . import db, user_bp
 from .models import User
 from .forms import RegistrationForm, LoginForm, ChPassForm, SettingsForm, clean_email
-from flask import flash, render_template, redirect, url_for, request, current_app, session, abort
+from flask import flash, render_template, redirect, url_for, request, current_app, session, abort, jsonify
 from app.nav import back_to, safe_next, next_arg, kept_tab
 from flask_login import current_user, login_user, login_required, logout_user
 from flask_wtf import FlaskForm
@@ -946,6 +946,22 @@ def set_nickname():
     db.session.commit()
     flash('Your nickname is now “{}”.'.format(nick) if nick else 'Your nickname is gone; your name shows on its own.', 'success')
     current_app.logger.info('{} {} their nickname'.format(current_user.username, 'set' if nick else 'cleared'))
+    return redirect(url_for('user.profile'))
+
+# route to set one's own color theme (My profile's Theme card, the owner 2026-10-26, To do 64): the page shows it at
+# once (static/js/theme.js) and saves it here; without the script, the form sends it and the page comes back
+@user_bp.route('/profile/theme', methods=['POST'])
+@login_required
+@pw_check
+@post_form_only
+def set_theme():
+    key = request.form.get('theme')
+    if key not in dict(User.THEMES):
+        abort(400)
+    current_user.theme = None if key == 'ocean' else key
+    db.session.commit()
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return jsonify(ok=True)
     return redirect(url_for('user.profile'))
 
 # route to upload one's own picture (drag and drop on the profile page)
