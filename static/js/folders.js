@@ -384,8 +384,11 @@
     document.body.classList.remove('folder-dragging');
     pending = dragging = ghost = null;
   }
-  document.querySelectorAll('[data-drag]').forEach(function (h) {
-    h.addEventListener('pointerdown', function (e) {
+  //(one listener for the whole page, not one per row: the rows swapped in after a move, refreshInPlace, never got
+  //theirs, and dragging stopped after the first drop or two; the owner, 2026-10-26)
+  document.addEventListener('pointerdown', function (e) {
+      var h = e.target.closest && e.target.closest('[data-drag]');
+      if (!h) return;
       if (e.button !== 0 || e.pointerType === 'touch') return;
       if (e.target.closest('button, input, select, textarea')) return;  // its own controls still work
       var kind = h.dataset.drag;
@@ -402,7 +405,6 @@
       pending = { kind: kind, id: h.dataset.id, home: shown || h.dataset.home, label: h.dataset.name,
                   el: h.closest('[data-box]') || h, x: e.clientX, y: e.clientY };
       e.preventDefault();  // no text selection while dragging; a click still goes through
-    });
   });
   document.addEventListener('pointermove', function (e) {
     if (pending && !dragging) {
