@@ -2926,6 +2926,8 @@ tr:has(> td > details.row-fold[open]) > td { background: transparent; }
 /* (the colored part ends on a stronger line, in its own color, so it's clear where it stops: the
    owner, 2026-10-21; every open row and open box on the site) */
 tr:has(> td > details.row-fold[open]) > td { border-bottom: 2px solid var(--open-edge); }
+/* People: every row ends in that line, so one person is told from the next (the owner, 2026-10-26) */
+table.people-table > tbody > tr > td { border-bottom: 2px solid var(--open-edge); }
 /* ...and its two parts are told apart: the heading part (the name, and on My quizzes its question
    count and score) on that color, the contents (the attempts) a shade between it and the page's
    rows, end to end across the row (the owner, 2026-10-20). The contents start at [data-fold-body],
