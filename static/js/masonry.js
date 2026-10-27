@@ -2,8 +2,8 @@
  * take only the height they need, and the ones below move up into the space, instead of
  * every row being as tall as its tallest box and leaving holes under the short ones.
  *
- * Each box spans as many thin grid rows as its height needs (the grid keeps its columns and
- * left-to-right order, and a box spanning every column still does). Done again whenever a
+ * Each box spans as many thin grid rows as its height needs and stays in its own column (the
+ * boxes take the columns in turn, left to right; a box spanning every column still does). Done again whenever a
  * box changes size: opening or folding it, live updates, a search hiding cards, a side panel
  * or the window changing the width. Without this script the grid is laid out as before. */
 (function () {
@@ -19,10 +19,28 @@
       grid.classList.add('masonry-on');  // thin rows, no row gap (each box adds its own)
     }
     gap = parseFloat(grid.dataset.gap) || 0;
+    //each box keeps its own column (in order: left, middle, right, left…) and only moves up or
+    //down as the ones above it grow or shrink, never across to another column (the owner,
+    //2026-10-26: the tiles jumped from side to side); a box as wide as the grid starts below them all
+    var cols = cs.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    var tops = [], i = 0, c;
+    for (c = 0; c < cols; c++) tops.push(1);
     Array.prototype.forEach.call(grid.children, function (box) {
       if (box.hidden || getComputedStyle(box).display === 'none') return;
       var m = getComputedStyle(box), h = box.getBoundingClientRect().height + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
-      box.style.gridRowEnd = 'span ' + Math.max(1, Math.ceil((h + gap) / UNIT));
+      var span = Math.max(1, Math.ceil((h + gap) / UNIT));
+      if (box.classList.contains('dash-wide') || cols === 1) {
+        var top = Math.max.apply(null, tops);
+        box.style.gridColumn = cols === 1 ? '' : '1 / -1';
+        box.style.gridRow = top + ' / span ' + span;
+        for (c = 0; c < cols; c++) tops[c] = top + span;
+        i = 0;
+      } else {
+        c = i++ % cols;
+        box.style.gridColumn = (c + 1) + ' / span 1';
+        box.style.gridRow = tops[c] + ' / span ' + span;
+        tops[c] += span;
+      }
     });
     //laid out: a page that hid its boxes until now (the Dashboard) shows them, in place
     var settling = grid.closest('.dash-settling');

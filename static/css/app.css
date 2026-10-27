@@ -1664,7 +1664,7 @@ hr.section-rule.list-rule { margin: 4px 0 14px; }
 /* boxes in a grid take only the height they need (static/js/masonry.js gives each a row span) */
 .masonry-on { grid-auto-rows: 4px; row-gap: 0 !important; align-items: start; }
 .masonry-on > * { margin-top: 0; margin-bottom: 0; }  /* the space below a box comes from its span */
-@media print { .masonry-on { grid-auto-rows: auto; row-gap: 16px !important; } .masonry-on > * { grid-row-end: auto !important; } }
+@media print { .masonry-on { grid-auto-rows: auto; row-gap: 16px !important; } .masonry-on > * { grid-row: auto !important; grid-column: auto !important; } .masonry-on > .dash-wide { grid-column: 1 / -1 !important; } }
 
 /* ===== The one box that opens and folds (folders, a page's sections, a quiz, a student, a
    month...): <details class="box"> with _macros.html box_label() first in its <summary>:
