@@ -580,17 +580,17 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     for q in (a, b, c):
         assert page.count('data-fkey="q:{}"'.format(q.id)) == 1
     tree = student_filter(page)
-    assert [t[0] for t in tree] == ['New', 'In progress', 'Math']
-    assert tree[2][1] == 1 and tree[2][2] == [('Fractions', 1, [])]  # (Math counts only its own A: the owner, 2026-10-25)
+    assert [t[0] for t in tree] == ['New', 'In progress', 'Due soon', 'Math']  # (Due soon: an automatic folder, the owner 2026-10-27)
+    assert tree[3][1] == 1 and tree[3][2] == [('Fractions', 1, [])]  # (Math counts only its own A: the owner, 2026-10-25)
     # no quiz folders at all: just the automatic New and In progress
     kim_q = give(c, 'kim')
     page = teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode()
-    assert [t[0] for t in student_filter(page)] == ['New', 'In progress'] and 'data-fkey="q:{}"'.format(c.id) in page
+    assert [t[0] for t in student_filter(page)] == ['New', 'In progress', 'Due soon'] and 'data-fkey="q:{}"'.format(c.id) in page
     # a folder with none of kim's itself but some in a folder inside it stays, with that folder (it dropped out with
     # it once counts became a folder's own: the code critic, 2026-10-26)
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': c.id, 'to': frac.id})
     tree = student_filter(teach.get('/quiz/listuser/{}'.format(ids('kim'))).data.decode())
-    assert [t[0] for t in tree] == ['New', 'In progress', 'Math'] and tree[2][1] == 0 and tree[2][2] == [('Fractions', 1, [])]
+    assert [t[0] for t in tree] == ['New', 'In progress', 'Due soon', 'Math'] and tree[3][1] == 0 and tree[3][2] == [('Fractions', 1, [])]
 
 
 def test_taking_a_quiz_away_updates_everything(app_db):
@@ -727,7 +727,9 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
     home = sam.get('/home').data.decode()
     # New and In progress open My quizzes on the tab of the same name; Due, its quizzes due soon
     assert 'href="/mypage?folder=new"' in home and 'href="/mypage?folder=started"' in home
-    assert 'href="/mypage?show=soon"' in home and 'href="/mypage?folder=soon"' not in home
+    # (Due soon: its own automatic folder, the owner 2026-10-27; the old ?show=soon goes there)
+    assert 'href="/mypage?folder=soon"' in home and 'href="/mypage?show=soon"' not in home
+    assert sam.get('/mypage?show=soon').headers['Location'].endswith('/mypage?folder=soon')
     new = sam.get('/mypage?folder=new').data.decode()
     assert 'data-paged' in new and 'New: quizzes you haven’t started' in new
     assert '“New one”' in new or 'New one' in new
@@ -740,7 +742,8 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
         return re.findall(r'<span title="([^"]+)" class="box-title">', page)
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
-    assert titles('soon') == ['Soon']
+    # (Due soon: an automatic folder now, the owner 2026-10-27)
+    assert re.findall(r'<span title="([^"]+)" class="box-title">', sam.get('/mypage?folder=soon').data.decode()) == ['Soon']
     # afterward My quizzes starts on All as always
     sam.get('/mypage?show=todo')
     assert 'data-view="all"' in sam.get('/mypage').data.decode()
@@ -786,12 +789,12 @@ def test_home_counter_views_say_what_they_show(app_db):
     page = sam.get('/mypage?show=started').data.decode()
     assert '>In progress: quizzes you’ve started, or handed in and not graded yet</h2>' in page
     assert 'Nothing in progress right now. {}'.format(ico('party')) in page
-    page = sam.get('/mypage?show=soon').data.decode()
+    page = sam.get('/mypage?folder=soon').data.decode()
     with app.app_context():
         from app import tuning
         days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
-    assert '>Due within {}</h2>'.format(within) in page and 'Nothing is due within {}. {}'.format(within, ico('party')) in page
+    assert '>Due soon: not handed in, closing within {}</h2>'.format(within) in page and 'Nothing is due within {}.'.format(within) in page
     # All: its own name, like any folder (not the page's: the owner, 2026-10-21; it was the page's, 2026-10-14)
     assert re.search(r'class="folder-title" data-page-name="My quizzes">All[^<]*</h2>', sam.get('/mypage?folder=all').data.decode())
 
@@ -1294,7 +1297,7 @@ def test_folder_lists_have_one_order(app_db):
             assert names == [names[0], 'Uncategorized', 'Fall'], (url, names)
             assert 0 < nav.index('Uncategorized') < nav.index('Fall'), url
     names = side(sam.get('/mypage').data.decode())
-    assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3] == 'Uncategorized', names
+    assert names[0].startswith('All') and names[1] == 'New' and names[2] == 'In progress' and names[3] == 'Due soon' and names[4] == 'Uncategorized', names
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     names = [t[0] for t in student_filter(page)]
     assert names.index('New') < names.index('In progress')
