@@ -193,6 +193,8 @@
     });
   });
   function putSend(d, copy, picked) {
+    //(done in place now, no reload: the dialog closes itself; the owner, 2026-10-27)
+    if (putBox.open) putBox.close();
     var f = document.createElement('form');
     f.method = 'post'; f.action = form.getAttribute('action'); f.hidden = true;
     function hidden(k, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); }

@@ -85,6 +85,9 @@
   //a form sent by a script (after its own question): in place when it's marked, else the usual way
   window.qgenSubmit = function (form, submitter) {
     if (!window.fetch || !form.matches('[data-in-place]')) { form.submit(); return; }
+    //(a dialog it was sent from closes, as the reload used to close it: the owner, 2026-10-27)
+    var dlg = form.closest('dialog');
+    if (dlg && dlg.open) dlg.close();
     var data = new FormData(form);
     if (submitter && submitter.name) data.set(submitter.name, submitter.value);
     if (window.qgenCheckedClear && form.dataset.clearsChecked !== undefined) window.qgenCheckedClear();
