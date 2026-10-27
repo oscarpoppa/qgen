@@ -385,6 +385,15 @@
     if (row) row.open = true;
     saved.classList.add('just-saved');
     saved.scrollIntoView({ block: 'center' });
+    //(and again once the page has settled: rows above it shrink as their long chip lists fold into "+N more", and it
+    //slid out of sight, e.g. a quiz row's problem chip opening Problems; the owner, 2026-10-27)
+    var recentre = function () {
+      //(seen whole in the box that scrolls, the list's own or the window; a row taller than that, from its top)
+      var r = saved.getBoundingClientRect(), sc = saved.closest('.folder-scroll');
+      var b = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight, height: window.innerHeight };
+      if (r.top < b.top || r.bottom > b.bottom) saved.scrollIntoView({ block: r.height > b.height - 20 ? 'start' : 'center' });
+    };
+    window.addEventListener('load', function () { setTimeout(recentre, 0); setTimeout(recentre, 400); });
   }
 
   var token = document.querySelector('meta[name="csrf-token"]');
