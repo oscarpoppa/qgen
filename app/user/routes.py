@@ -172,6 +172,8 @@ def mypage():
     pg = paging.paginate(ordered, name_of=lambda g: g['vquiz'].title or '', sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
         'latest': lambda g: g['last_at'],
+        #(how many folders it's in: 0 or 1, a quiz being in one place at a time; the owner, 2026-10-27)
+        'folders': lambda g: 1 if home.get(g['vquiz'].id) else 0,
         'attempts': lambda g: len(g['attempts']),
         'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
         'score': lambda g: g['combined']})

@@ -45,7 +45,7 @@
   <table class="quiz-rows even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
     {#- (attempts and status are columns of their own, sortable, and lined up by the table itself
         whatever badges come and go: the owner, 2026-10-20) #}
-    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="folders">Folders</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
     <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
@@ -100,6 +100,10 @@
           (sortable; right after the name, as on every list: the owner 2026-10-20) -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
       <td data-label="Latest" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
+      {#- how many folders it's in, sortable, as on every folder page (the owner, 2026-10-27): 0 or 1 here, a quiz being in
+          one place at a time -#}
+      {%- set nf = 1 if here else 0 %}
+      <td data-label="Folders" class="nowrap" data-sort="{{ '%04d' % nf }}">{{ count_badge(nf, 'folder', 'folders', 'box-count' ~ (' muted' if not nf else '')) }}</td>
       <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}{{ count_badge(tried, 'attempt', 'attempts') }}{% endif %}</td>
       {#- the row's state first (In progress, else New, else Completed), then anything more: Due soon, a second New, a change -#}
       {#- (Completed: every attempt handed in and graded, the owner 2026-10-20. Sorted New, In progress,
