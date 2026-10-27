@@ -393,7 +393,7 @@ td.actions .btn { margin-left: 4px; }
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
-  .stack tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
+  .stack tbody tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; box-shadow: none; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
   .stack tr:has(> td > details.row-fold[open]) { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; }
@@ -1494,7 +1494,7 @@ main.container.container-editor { max-width: 1440px; }
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
-  .stack tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
+  .stack tbody tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; box-shadow: none; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
   .stack tr:has(> td > details.row-fold[open]) { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; white-space: normal; }
@@ -1526,7 +1526,7 @@ form.inline-form select[name="rule"], td select[name="rule"] { min-width: 9.5rem
   .stack thead { display: none; }
   .stack tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 10px; padding: 6px 0; }
   .stack td { border: 0; padding: 6px 14px; }
-  .stack tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
+  .stack tbody tr:has(> td > details.row-fold[open]) > td { border-bottom: 0; box-shadow: none; }  /* (stacked: an open row's line runs once, along its bottom, as in a table: the owner, 2026-10-26) */
   .stack tr:has(> td > details.row-fold[open]) { border-bottom: 2px solid var(--open-edge); }
   .stack td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-xs); color: var(--muted); }
   .stack td.actions { text-align: left; white-space: normal; }
@@ -2931,7 +2931,11 @@ tr:has(> td > details.row-fold[open]) { background: color-mix(in srgb, var(--ope
 tr:has(> td > details.row-fold[open]) > td { background: transparent; }
 /* (the colored part ends on a stronger line, in its own color, so it's clear where it stops: the
    owner, 2026-10-21; every open row and open box on the site) */
-tr:has(> td > details.row-fold[open]) > td { border-bottom: 2px solid var(--open-edge); }
+/* (drawn as a shadow inside the cells, like the outline above, not a border: Firefox didn't draw the
+   border on People's open rows; the owner, 2026-10-26) */
+tr:has(> td > details.row-fold[open]) > td { box-shadow: inset 0 1px 0 var(--row-line), inset 0 -2px 0 var(--open-edge); }
+tr:has(> td > details.row-fold[open]) > td:first-child { box-shadow: inset 1px 0 0 var(--row-line), inset 0 1px 0 var(--row-line), inset 0 -2px 0 var(--open-edge); }
+tr:has(> td > details.row-fold[open]) > td:last-child { box-shadow: inset -1px 0 0 var(--row-line), inset 0 1px 0 var(--row-line), inset 0 -2px 0 var(--open-edge); }
 /* ...and its two parts are told apart: the heading part (the name, and on My quizzes its question
    count and score) on that color, the contents (the attempts) a shade between it and the page's
    rows, end to end across the row (the owner, 2026-10-20). The contents start at [data-fold-body],
