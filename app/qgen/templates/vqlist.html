@@ -35,11 +35,9 @@
               <span class="badge badge-warn" title="Set on People">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</li>
             </ul>
             {#- its problems as chips, the first 10, then “+N more” opening the rest in a card that pops out
-                over the row, not making it taller (the owner, 2026-10-26; the Problems column keeps just the number) #}
+                over the row (static/js/chipcap.js; the owner, 2026-10-26; the Problems column keeps just the number) #}
             {%- set pids = [] %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% endfor %}{% endfor %}
-            {%- if pids %}<div class="small row-quizzes row-problems">Problems: {% for pid in pids[:10] %}{{ problem_chip(byid[pid]) }}{% endfor %}
-            {%- if pids|length > 10 %}<details class="row-pop row-more-pop"><summary class="chip-more" title="See the other {{ pids|length - 10 }}">+{{ pids|length - 10 }} more</summary>
-              <div class="row-pop-body chip-pop">{% for pid in pids[10:] %}{{ problem_chip(byid[pid]) }}{% endfor %}</div></details>{% endif %}</div>{% endif %}
+            {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid]) }}{% endfor %}</div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           <td data-label="Problems" class="nowrap small" data-sort="{{ '%04d' % entries|length }}">{{ entries|length }}</td>

@@ -31,6 +31,7 @@
         box.appendChild(c);
       });
       box.hidden = !names.length;
+      if (window.qgenChipCap) window.qgenChipCap(box);  // (the first ten; the rest in a “+N more” card)
     }
     card.addEventListener('change', function () { clearTimeout(t); t = setTimeout(draw, 0); });
     draw();

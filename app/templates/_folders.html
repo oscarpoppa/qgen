@@ -317,7 +317,7 @@
 {% endmacro %}
 
 {#- the folders a thing is in, as chips with ✕ (take it out), in its opened row: "In folders: …" (the owner, 2026-10-26) #}
-{% macro folder_chips(fk, what, ident, label, mine, lead='In folders: ') %}{% if mine %}<div class="small row-folders">{{ lead }}
+{% macro folder_chips(fk, what, ident, label, mine, lead='In folders: ') %}{% if mine %}<div class="small row-folders" data-chip-cap="10">{{ lead }}
   {% for f in mine %}
     {#- a plain badge: its ✕ builds the take-out form when pressed (static/js/takeout.js), so a long
         list doesn't carry a form in every badge (the owner, 2026-10-21: page speed) #}

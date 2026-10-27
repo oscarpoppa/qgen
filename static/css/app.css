@@ -2407,7 +2407,7 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .assign-form .assign-go { margin: 0; }
 /* the checked quizzes / people as chips (the owner, 2026-10-24): above the list on a narrow card; on a
    wide one in the card's top right, beside the filter (the room the Folders heading leaves) */
-.pick-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 0 0 10px; max-height: 118px; overflow-y: auto; }
+.pick-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 0 0 10px; }  /* (ten at most; the rest in a “+N more” card: static/js/chipcap.js) */
 .pick-chips[hidden] { display: none; }
 .pick-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 10px; border-radius: 999px; font-size: var(--fs-xs); line-height: 1.4; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent-soft); color: var(--accent); }
@@ -3824,10 +3824,10 @@ td.actions > .folder-icons > .btn:first-child { margin-left: 0; }
 .row-folders .folder-chip .chip-x { min-width: 17px; min-height: 17px; padding: 0; line-height: 1; font-size: 11px; color: var(--muted); }
 .row-folders .folder-chip .chip-x:hover { color: var(--bad); }
 .row-quizzes, .row-folders { margin-bottom: 2px; }
-/* a quiz row's “+N more” problems: a plain chip opening the rest in a card over the row */
-.row-problems .chip-more { display: inline-flex; padding: 1px 10px; border-radius: 999px; border: 1px dashed var(--border); color: var(--muted); cursor: pointer; list-style: none; }
-.row-problems .chip-more::-webkit-details-marker { display: none; }
-.row-problems .chip-more:hover, .row-problems .row-more-pop[open] > .chip-more { color: var(--text); }
+/* a row of chips' “+N more”: a plain chip opening the rest in a card over the page (static/js/chipcap.js) */
+.chip-more { display: inline-flex; padding: 1px 10px; border-radius: 999px; border: 1px dashed var(--border); color: var(--muted); cursor: pointer; list-style: none; }
+.chip-more::-webkit-details-marker { display: none; }
+.chip-more:hover, .row-more-pop[open] > .chip-more { color: var(--text); }
 details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; padding: 8px; width: max-content; min-width: 0; max-width: min(720px, 90vw);
   max-height: min(50vh, 300px); overflow-y: auto; overscroll-behavior: contain;
-  border: 1px solid color-mix(in srgb, var(--muted) 70%, transparent); }  /* (a stronger edge; scrolls when it's long: the owner, 2026-10-26) */
+  border: 1px solid color-mix(in srgb, var(--text) 60%, transparent); }  /* (a light edge that stands out from the page; scrolls when it's long: the owner, 2026-10-26) */
