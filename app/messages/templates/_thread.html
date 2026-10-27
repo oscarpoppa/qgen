@@ -10,7 +10,7 @@
       {% if m.kind != 'notice' %}
         {% if grouped %}
           {# shown once for everyone who got it: the ✕ removes every copy #}
-          <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
+          <form method="post" data-in-place action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
                 data-confirm="Delete this announcement for all {{ m.copies }} students who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
             <button class="msg-x" aria-label="Delete this message" title="Delete this message">✕</button>
@@ -23,15 +23,15 @@
           <span class="msg-x-wrap">
             <button type="button" class="msg-x" aria-label="Delete this message" title="Delete this message"
                     data-ann-del data-who="{{ m.student.shown_name }}" data-n="{{ m.copies }}">✕</button>
-            <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form" data-ann-one hidden>
+            <form method="post" data-in-place action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form" data-ann-one hidden>
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             </form>
-            <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form" data-ann-all hidden>
+            <form method="post" data-in-place action="{{ url_for('messages.delete', message_id=m.id) }}" class="dock-form" data-ann-all hidden>
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
             </form>
           </span>
         {% else %}
-          <form method="post" action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
+          <form method="post" data-in-place action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
                 data-confirm="{{ 'Remove this message from your messages? Your teacher will still have it.' if (not me_teacher and m.from_teacher) else 'Delete this message? This can’t be undone.' }}"
                 data-confirm-ok="{{ 'Remove' if (not me_teacher and m.from_teacher) else 'Delete' }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -44,7 +44,7 @@
       {% set can_pin = me_teacher and m.from_teacher %}
       {% if can_pin %}
         {% set pin_words = ('Unpin (now at the top of ' ~ m.student.shown_name ~ '’s messages)') if m.pinned else ('Pin to the top of ' ~ m.student.shown_name ~ '’s messages') %}
-        <form method="post" action="{{ url_for('messages.pin', message_id=m.id) }}" class="msg-pin-wrap dock-form"{% if m.pinned %}
+        <form method="post" data-in-place action="{{ url_for('messages.pin', message_id=m.id) }}" class="msg-pin-wrap dock-form"{% if m.pinned %}
               data-confirm="Unpin this message? It stops showing at the top of {{ 'every student’s' if m.kind == 'announcement' else m.student.shown_name ~ '’s' }} messages." data-confirm-ok="Unpin"{% endif %}>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="{{ '0' if m.pinned else '1' }}">
           <button class="msg-pin{{ ' is-pinned' if m.pinned }}" aria-pressed="{{ 'true' if m.pinned else 'false' }}" aria-label="{{ pin_words }}" title="{{ pin_words }}">{{ icon('lc-pin-off') if m.pinned else icon('pin') }}</button>

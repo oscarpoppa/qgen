@@ -8,7 +8,7 @@
     {{ avatar(m.sender, 28) if m.sender else '' }}
     <div class="msg msg-teacher {{ 'msg-mine' if mine else '' }} msg-message {{ 'msg-new' if unread_ids is defined and m.id in unread_ids else '' }}">
       {% if mine %}
-        <form method="post" action="{{ url_for('messages.delete_staff', message_id=m.id) }}" class="msg-x-wrap dock-form"
+        <form method="post" data-in-place action="{{ url_for('messages.delete_staff', message_id=m.id) }}" class="msg-x-wrap dock-form"
               data-confirm="Delete this message for every teacher who got it? This can’t be undone." data-confirm-ok="Delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="msg-x" aria-label="Delete this message" title="Delete this message">✕</button>

@@ -193,7 +193,7 @@
 
   {#- the standard New folder dialog (app/templates/_folders.html new_folder): the name, and where it goes #}
   <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-new" aria-label="New folder">
-    <form method="post" action="{{ url_for('qgen.scan_new_folder') }}">
+    <form method="post" data-in-place action="{{ url_for('qgen.scan_new_folder') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="view" value="{{ stash_view if stash_view != 'all' else '' }}">
       <p data-pick-head><strong>New folder</strong><br><span class="muted small">Type its name and choose where it goes.</span></p>
@@ -205,7 +205,7 @@
     </form>
   </dialog>
   <dialog class="ask folder-dialog" id="stash-rename" aria-label="Rename folder">
-    <form method="post">
+    <form method="post" data-in-place>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p><strong>Rename “<span data-stash-name></span>”</strong></p>
       <input type="text" name="name" maxlength="{{ tuning.get('folder_name') }}" required aria-label="Folder name">
@@ -215,7 +215,7 @@
   {#- the standard folder dialog, as every Move on the other folder pages (static/js/dialogfilter.js draws the picker when it
       opens: the owner, 2026-10-23: a dialog takes the standard format the first time it's made) #}
   <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move" aria-label="Move workbook to a folder">
-    <form method="post">
+    <form method="post" data-in-place>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {#- (the folder open now stays open, as after a drag: the owner, 2026-10-23) #}
       <input type="hidden" name="stay" value="{{ request.args.get('stash') or '' }}">
@@ -236,7 +236,7 @@
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
   </dialog>
   <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move-many" aria-label="Move the checked scans to a folder">
-    <form method="post" action="{{ url_for('qgen.scan_move_many') }}">
+    <form method="post" data-in-place action="{{ url_for('qgen.scan_move_many') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div data-stash-items></div>
       {#- (the folder open now stays open after the move, as after one scan's: the critic, 2026-10-24) #}
@@ -249,10 +249,10 @@
       <div class="btn-row"><button class="btn" title="Put the checked workbooks in the folder chosen">Move</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
-  <form method="post" action="{{ url_for('qgen.scan_discard_many') }}" id="stash-discard-many" hidden><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div data-stash-items></div></form>
+  <form method="post" data-in-place action="{{ url_for('qgen.scan_discard_many') }}" id="stash-discard-many" hidden><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div data-stash-items></div></form>
   {#- a folder's own Move to, the standard dialog as on the other folder pages (what the open folder can go inside: not itself, not what's in it) #}
   {% if stash_node %}<dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" id="stash-move-folder" aria-label="Move “{{ stash_node.folder.name }}” to another folder">
-    <form method="post">
+    <form method="post" data-in-place>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <p data-pick-head><strong>Move “<span data-stash-name></span>” to another folder</strong><br><span class="muted small">Choose the folder to move it to.</span></p>
       <div class="assign-defaults small"><strong>{{ icon('lc-alert', 'assign-defaults-sign') }}What happens:</strong>
@@ -295,6 +295,8 @@
   }
   document.addEventListener('qgen-changed', function () { clearTimeout(timer); timer = setTimeout(refresh, 300); });
   later();
+  //(an action on these cards done in place redraws them the same way: static/js/inplace.js; the owner, 2026-10-27)
+  window.qgenPageRedraw = refresh;
 })();
 </script>
 <script>

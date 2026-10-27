@@ -14,7 +14,7 @@
 </div></div>
 
 {% set days = tuning.get('due_soon_days') %}
-<div class="dash-counters home-counters" aria-label="Your quizzes">
+<div class="dash-counters home-counters" aria-label="Your quizzes" data-redraw="home-counts">
   {# these open My quizzes' New and In progress tabs, and its quizzes due soon #}
   <a class="dash-count{{ ' has' if todo }}" href="{{ url_for('user.mypage', folder='new') }}" title="See the quizzes you haven’t started yet">
     <span class="dash-num">{{ todo }}</span><span>new</span></a>
@@ -25,7 +25,7 @@
     <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
 </div>
 
-<div class="dash-grid" id="home-boxes" data-movable="home">
+<div class="dash-grid" id="home-boxes" data-movable="home" data-redraw="home-boxes">
   {# each box folds away (remembered in this browser), like the Dashboard's #}
   <details class="box card dash-card" id="waiting" data-elastic="waiting" data-elastic-dir="v" data-box="waiting">
     <summary class="dash-head">{{ box_label('hourglass', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>

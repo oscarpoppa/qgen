@@ -95,7 +95,7 @@
     stay.type = 'hidden'; stay.name = 'stay'; stay.value = new URLSearchParams(location.search).get('stash') || '';
     f.appendChild(stay);
     document.body.appendChild(f);
-    f.submit();
+    f.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(f);  // (in place: static/js/inplace.js)
   });
   document.addEventListener('click', function (e) { if (swallow) { e.preventDefault(); e.stopPropagation(); } }, true);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (pending || dragging)) stop(); });
@@ -233,7 +233,7 @@ document.addEventListener('qgen-stash-redrawn', foldList);
       var q = 'Move the ' + (kept.length === 1 ? 'checked workbook' : kept.length + ' checked workbooks') + ' to the Trash? You can restore ' + (kept.length === 1 ? 'it' : 'them') + ' there.';
       (window.qgenAsk ? window.qgenAsk(q, 'Move to Trash', true) : Promise.resolve(window.confirm(q))).then(function (yes) {
         if (!yes) return;
-        fill(gone); done(); gone.submit();
+        fill(gone); done(); (window.qgenSubmit || function (x) { x.submit(); })(gone);
       });
     }
   });

@@ -25,7 +25,7 @@
     if (!loc) return true;
     var u = new URL(loc, location.href), here = new URL(location.href);
     return u.origin === here.origin && u.pathname === here.pathname &&
-      ['folder', 'section', 'checked'].every(function (k) {
+      ['folder', 'section', 'checked', 'stash'].every(function (k) {
         //(one with none is the page's own start, often the same thing: only two different ones are another page)
         var a = u.searchParams.get(k), b = here.searchParams.get(k);
         return a === null || b === null || a === b;
@@ -33,8 +33,10 @@
   }
   //redrawn in place, if this page can; false: it can't (the caller goes there instead)
   function redraw() {
+    if (window.qgenPageRedraw) { window.qgenPageRedraw(); return true; }  // (a page's own, e.g. the Scan page's cards)
     if (window.qgenRefreshList && document.querySelector('.folder-main [data-folder-filter]')) { window.qgenRefreshList(); return true; }
     if (window.qgenDashRefresh) { window.qgenDashRefresh(); return true; }
+    if (document.querySelector('[data-redraw]')) { regions(); return true; }
     //(any other page made of folder lists, e.g. a student's history: its lists swapped for fresh ones, each set up again
     //as folders.js does; anything that doesn't line up: the page is loaded again)
     var boxes = lists(document);
@@ -55,6 +57,32 @@
     }).catch(function () { go(null); });
     return true;
   }
+  //the parts of a page marked data-redraw="<name>" (a thread of messages, Home's cards, My profile's nickname), swapped for
+  //fresh ones; each keeps its place and its boxes stay open or folded as they were
+  function regions() {
+    fetch(location.href, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok || r.redirected) throw new Error('not the page');
+      return r.text();
+    }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      document.querySelectorAll('[data-redraw]').forEach(function (old) {
+        var fresh = doc.querySelector('[data-redraw="' + old.dataset.redraw + '"]');
+        if (!fresh) return;
+        var nb = document.importNode(fresh, true);
+        if (old.getAttribute('style')) nb.setAttribute('style', old.getAttribute('style'));  // (its place in a grid)
+        if (old.tagName === 'DETAILS') nb.open = old.open;
+        old.querySelectorAll('details[data-box]').forEach(function (d) {
+          var n = nb.querySelector('details[data-box="' + d.dataset.box + '"]');
+          if (n) n.open = d.open;
+        });
+        old.replaceWith(nb);
+      });
+      var grid = document.querySelector('.dash-grid');
+      if (grid && window.qgenLayNow) window.qgenLayNow(grid);
+      if (window.qgenElasticScan) window.qgenElasticScan();
+      document.dispatchEvent(new CustomEvent('qgen-swapped', { detail: { list: null } }));
+    }).catch(function () { go(null); });
+  }
   //(also when the page changed elsewhere, static/js/messages.js: redrawn in place where it can be, the owner 2026-10-27)
   window.qgenRedraw = redraw;
   function lists(doc) {
@@ -73,14 +101,15 @@
       }
       return r.json().then(function (res) {
         if (res.inplace) {
-          if (!samePage(res.location)) { go(res.location); return; }
+          if (!samePage(res.location)) { go(res.location); return false; }
           say(res.messages);
           if (!redraw()) go(res.location);
-          return;
+          return !res.messages.some(function (m) { return m.error; });
         }
         //(a route that answers JSON itself, {ok, message} or {ok: false, error})
         say([{ html: escapeHtml(res.ok ? res.message || '' : res.error || 'That didn’t work. Please reload the page and try again.'), error: !res.ok }].filter(function (m) { return m.html; }));
         if (res.ok && !redraw()) go(null);
+        return !!res.ok;
       });
     }).catch(function () {
       say([{ html: 'That didn’t work: no connection. Please try again.', error: true }]);
@@ -97,12 +126,16 @@
     var data = new FormData(form);
     if (submitter && submitter.name) data.set(submitter.name, submitter.value);
     if (window.qgenCheckedClear && form.dataset.clearsChecked !== undefined) window.qgenCheckedClear();
-    window.qgenInPlace(form.getAttribute('action') || location.href, data);
+    window.qgenInPlace(form.getAttribute('action') || location.href, data).then(function (ok) {
+      //(a message sent: its box empties, ready for the next)
+      if (ok && 'resetAfter' in form.dataset) form.reset();
+    });
   };
   //a marked form sent by its own button (nothing else stopped it first, e.g. a question)
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (e.defaultPrevented || !form.matches || !form.matches('form[data-in-place]') || !window.fetch) return;
+    if (form.closest('.dock-pane')) return;  // (the Messages panel's own: static/js/messages.js)
     e.preventDefault();
     window.qgenSubmit(form, e.submitter);
   });

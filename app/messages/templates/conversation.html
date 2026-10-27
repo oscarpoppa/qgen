@@ -21,12 +21,15 @@
 </div>
 <div class="card">
   {# one line over the thread: Show older (when there is more) and Clear all at the right #}
+  {#- (drawn again in place after sending, deleting or pinning: the owner, 2026-10-27) #}
+  <div data-redraw="thread">
   <div class="thread-top">
     {% if older %}<a class="small" href="{{ url_for('messages.conversation', student_id=student.id, show=show_more) }}" title="Also show messages from further back">Show older messages</a>{% endif %}
     {{ clear_thread(student.id, items, student.shown_name, panel=false) }}
   </div>
   {% set me_teacher = true %}{% include "_thread.html" %}
-  <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate>
+  </div>
+  <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate data-in-place data-reset-after>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="to" value="{{ student.id }}">
     <label for="body" class="sr-only">Message to {{ student.shown_name }}</label>

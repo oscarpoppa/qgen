@@ -9,12 +9,12 @@
 <div class="page-head"><h1>My profile</h1>
   <div class="actions">{{ back_home() }}</div></div>
 <div class="card-grid">
-<div class="card">
+<div class="card" data-redraw="nickname">
   <div class="card-head"><h2>Nickname</h2></div>
   <p class="muted small">If you like to be called something else, put it here. It shows next to your name everywhere,
     {% if current_user.nickname %}like this: <strong>{{ current_user.shown_name }}</strong>{% else %}for example <strong>{{ current_user.username }} (Sunny)</strong> if you chose “Sunny”{% endif %}.
     You don't have to have one: with none, just your name shows.</p>
-  <form method="post" action="{{ url_for('user.set_nickname') }}" class="btn-row">
+  <form method="post" action="{{ url_for('user.set_nickname') }}" class="btn-row" data-in-place>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="nickname" class="sr-only">Nickname</label>
     <input type="text" id="nickname" name="nickname" maxlength="{{ current_user.NICKNAME_MAX }}" value="{{ current_user.nickname or '' }}"
@@ -27,7 +27,7 @@
 <div class="card">
   <div class="card-head"><h2>Picture</h2></div>
   <div class="btn-row" style="align-items:center;gap:16px">
-    <span id="my-avatar">{{ avatar(current_user, 96) }}</span>
+    <span id="my-avatar" data-redraw="avatar">{{ avatar(current_user, 96) }}</span>
     <div style="flex:1;min-width:220px">
       <div class="dropzone" data-upload="{{ url_for('user.upload_avatar') }}" tabindex="0" role="button"
            aria-label="Upload your picture: drop a file here or press Enter to choose one"
@@ -35,13 +35,13 @@
         <div class="dz-text"><strong class="dz-msg">Drop a picture here</strong><span class="dz-hint">or click to choose one. It's cropped to a square.</span></div>
         <input type="file" accept="image/*" hidden>
       </div>
-      {% if current_user.avatar %}
-      <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px"
+      <div data-redraw="avatar-remove">{% if current_user.avatar %}
+      <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px" data-in-place
             data-confirm="Remove your picture? Your initials show instead." data-confirm-ok="Remove picture">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove my picture</button>
       </form>
-      {% endif %}
+      {% endif %}</div>
     </div>
   </div>
   <p class="muted small" style="margin-top:10px">Your picture shows next to your name, including in messages. Teachers can remove pictures.</p>

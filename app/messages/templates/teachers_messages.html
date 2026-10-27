@@ -13,13 +13,14 @@
 {% else %}
 <div class="staff-grid">
     {# who: every teacher, or just between you and one of them #}
-    <nav class="card btn-row small" aria-label="Which teachers">
+    <nav class="card btn-row small" aria-label="Which teachers" data-redraw="staff-nav">
       <a class="btn btn-sm {{ 'btn-secondary' if other }}" href="{{ url_for('messages.teachers_page') }}" title="Show the messages with every teacher"{% if not other %} aria-current="page"{% endif %}>All messages (every teacher){% if staff.unread %} ({{ staff.unread }} new){% endif %}</a>
       {% for t in staff.teachers %}<a class="btn btn-sm {{ 'btn-secondary' if not other or other.id != t.teacher.id }}" href="{{ url_for('messages.teachers_page', with=t.teacher.id) }}" title="Show just your messages with {{ t.teacher.shown_name }}"{% if other and other.id == t.teacher.id %} aria-current="page"{% endif %}>{{ '● ' if t.online }}{{ t.teacher.shown_name }}{% if t.unread %} ({{ t.unread }} new){% endif %}</a>{% endfor %}
       {{ clear_thread('t' ~ other.id if other else 'teachers', items, other.shown_name if other else 'The other teachers', panel=false) }}
     </nav>
-    <div class="card">{% set show_with = false %}{% include "_staff_thread.html" %}</div>
-    <form method="post" action="{{ url_for('messages.send_staff') }}" class="card" novalidate>
+    <div class="card" data-redraw="staff-thread">{% set show_with = false %}{% include "_staff_thread.html" %}</div>
+    {#- (sent in place: the thread above is drawn again, the box empties; the owner, 2026-10-27) #}
+    <form method="post" action="{{ url_for('messages.send_staff') }}" class="card" novalidate data-in-place data-reset-after>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <h2>Write {{ 'to ' ~ other.shown_name if other else 'to teachers' }}</h2>
       {% if staff.teachers|length > 1 %}
