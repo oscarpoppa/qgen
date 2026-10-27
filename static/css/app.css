@@ -3583,6 +3583,9 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
    name line 32px, and the Status badges and folder chips wrapped. */
 .folder-filter-list table.even-cols > tbody > tr > td.person-folders { padding-top: 6px; padding-bottom: 5px; }
 .people-table > tbody > tr > td[data-label="Name"] { padding-top: 4px; padding-bottom: 4px; }
+/* (an open person's shaded contents stop at the cell's 4px padding, just above the open row's line:
+   reaching 10px down as elsewhere, Firefox painted the shade over that line; the owner, 2026-10-26) */
+.people-table details.row-fold[open]::after { bottom: -4px; }
 .people-table td[data-label="Status"] .student-sums { flex-wrap: nowrap; margin-left: 0; }
 @container listarea (min-width: 1101px) {
   .folder-filter-list td.person-folders, .folder-filter-list td.person-folders .move-form { flex-wrap: nowrap; white-space: nowrap; }
