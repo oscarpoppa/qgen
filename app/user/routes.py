@@ -536,6 +536,30 @@ def people():
     return redirect(url_for('user.userdet', **args))
 
 
+#a person's notes, for teachers (People, an open row's Notes card; the owner, 2026-10-27): saved as typed by
+#static/js/personnote.js, JSON {note}; every teacher sees the same notes, the person never does
+@user_bp.route('/users/<int:user_id>/note', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def save_teacher_note(user_id):
+    from datetime import datetime
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='The page was out of date. Please reload it.'), 400
+    person = db.session.get(User, user_id)
+    if not person:
+        return jsonify(ok=False, error='That person isn\u2019t here any more.'), 404
+    note = ((request.get_json(silent=True) or {}).get('note') or '').strip()
+    if len(note) > User.TEACHER_NOTE_MAX:
+        return jsonify(ok=False, error='Notes can be at most {} characters.'.format(User.TEACHER_NOTE_MAX)), 400
+    person.teacher_note = note or None
+    person.teacher_note_at = datetime.now()
+    person.teacher_note_by_id = current_user.id
+    db.session.commit()
+    from app import when_filter
+    return jsonify(ok=True, changed="Changed {} by {}".format(when_filter(person.teacher_note_at), current_user.shown_name))
+
+
 @user_bp.route('/userdet', methods=['GET'])
 @login_required
 @pw_check

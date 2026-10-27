@@ -28,7 +28,9 @@
     var td = d.closest('td');
     if (!td) return;
     if (!d.open) { d.style.removeProperty('--row-extra'); d.classList.remove('row-wide'); return; }
-    var head = d.querySelector(':scope > summary'), top = head.getBoundingClientRect().bottom + 2;
+    //(where the contents start: 6px under the heading, app.css; a row's icons a pixel taller than its name stopped it short
+    //of them, People's: the owner, 2026-10-27)
+    var head = d.querySelector(':scope > summary'), top = head.getBoundingClientRect().bottom + 6;
     var own = td.getBoundingClientRect(), right = own.right, sib = td.nextElementSibling;
     for (; sib; sib = sib.nextElementSibling) {
       var r = sib.getBoundingClientRect();

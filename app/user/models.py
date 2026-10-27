@@ -31,6 +31,13 @@ class User(UserMixin, db.Model):
     #their color theme, picked on My profile (the owner, 2026-10-26, To do 64); None is Ocean, the site's blue.
     #Light or dark still follows the device.
     theme = db.Column(db.String(16), nullable=True)
+    #teachers' notes about this person (the owner, 2026-10-27): general notes, e.g. sick for the next week. Every teacher
+    #sees and edits the same notes; the person never sees them. When and by whom they were last changed.
+    teacher_note = db.Column(db.Text, nullable=True)
+    teacher_note_at = db.Column(db.DateTime, nullable=True)
+    teacher_note_by_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL', name='fk_user_teacher_note_by'), nullable=True)
+    teacher_note_by = db.relationship('User', remote_side=[id], foreign_keys=[teacher_note_by_id])
+    TEACHER_NOTE_MAX = 4000
     THEMES = (('ocean', 'Ocean'), ('forest', 'Forest'), ('sunset', 'Sunset'), ('grape', 'Grape'), ('berry', 'Berry'), ('sky', 'Sky'))
 
     @property

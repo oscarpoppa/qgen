@@ -59,6 +59,8 @@ PATHS = {
     #(a status as a small mark, the words in its tooltip: the owner, 2026-10-24) a circle (new / not started) and a half-filled one (in progress)
     'lc-circle': '<circle cx="12" cy="12" r="9"/>',
     #(handed in, waiting for the teacher: the owner, 2026-10-27)
+    #(a person's notes, for teachers, on People: the owner, 2026-10-27)
+    'lc-sticky-note': '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/>',
     'lc-user-check': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
     'lc-circle-half': '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
     'lc-users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',

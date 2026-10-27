@@ -3878,3 +3878,15 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .theme-dot { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 50%, var(--accent-soft) 50%);
   border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }
 .scan-folder-row { margin-top: 8px; }  /* the Scan page's "Choose a folder", under its drop box (To do 40) */
+
+/* People: an open row's facts on the left, the teachers' Notes card in the free room on the right; one under the other when
+   narrow (the owner, 2026-10-27; static/js/personnote.js) */
+.person-open { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px; }
+.person-open-facts { flex: 1 1 220px; min-width: 0; }
+.person-open > .person-note { flex: 0 1 400px; min-width: 220px; margin-left: auto; margin: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; cursor: auto; }
+.person-note-head { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--muted); }
+.person-note-text { width: 100%; min-height: 4.5em; resize: vertical; font: inherit; font-size: var(--fs-sm); }
+.person-note-status { min-height: 1.2em; }
+.person-note-status.error { color: var(--bad); }
+.person-note-mark { display: inline-flex; margin-left: 6px; color: var(--muted); }
+.person-note-mark svg { width: 14px; height: 14px; }
