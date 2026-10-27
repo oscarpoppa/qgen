@@ -1362,6 +1362,12 @@ def list_user(uid):
     #and "In progress": started and not handed in yet (like My quizzes' own)
     #(an attempt waiting for grading counts as in progress too)
     working = [g for g in groups if any(a.status in ('started', 'review') for a in g['attempts'])]
+    #and "Due soon": not handed in, closing within the Technical setting's days (like My quizzes' own: the owner, 2026-10-27)
+    from datetime import datetime as _dt
+    from app import tuning as _tuning
+    _now = _dt.now()
+    soon = [g for g in groups if any(a.status in ('new', 'started') and a.closes_at and _now <= a.closes_at <= _now + _tuning.due_soon()
+                                     for a in g['attempts'])]
     #the folder buttons over their one list of quizzes (static/js/folderfilter.js): New and In
     #progress first, then the Quizzes page's folders that have some of theirs in them
     from app import folder_tree
@@ -1377,7 +1383,8 @@ def list_user(uid):
                 out.append(dict(n, children=kept))
         return out
     quiz_filter = [{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [], 'url': None},
-                   {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None}]
+                   {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [], 'url': None},
+                   {'id': 'soon', 'name': 'Due soon', 'icon': 'alarm', 'count': len(soon), 'keys': keys(soon), 'children': [], 'url': None}]
     if quiz_tree:
         quiz_filter += some(folder_tree.filter_tree(quiz_tree, lambda f: f.title, lambda fid: None, 'q:'))
     #one folder's quizzes at a time, 20 to a page (app/paging.py; the owner, 2026-10-23): the side list's
@@ -1397,6 +1404,8 @@ def list_user(uid):
         listed = fresh
     elif ask == 'started':
         listed = working
+    elif ask == 'soon':
+        listed = soon
     elif ask == 'none':
         listed = [g for g in groups if g['vquiz'].id not in in_some]
     elif ask and str(ask).isdigit() and int(ask) in folder_keys:

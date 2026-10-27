@@ -20,7 +20,7 @@
     <span class="dash-num">{{ todo }}</span><span>new</span></a>
   <a class="dash-count{{ ' has' if started }}" href="{{ url_for('user.mypage', folder='started') }}" title="See the quizzes you started but haven’t handed in">
     <span class="dash-num">{{ started }}</span><span>in progress</span></a>
-  <a class="dash-count{{ ' has' if soon }}" href="{{ url_for('user.mypage', show='soon') }}"
+  <a class="dash-count{{ ' has' if soon }}" href="{{ url_for('user.mypage', folder='soon') }}"
      title="Not handed in yet, and closing in the next {{ days }} day{{ '' if days == 1 else 's' }}">
     <span class="dash-num">{{ soon|length }}</span><span>due within {{ days }} day{{ '' if days == 1 else 's' }}</span></a>
 </div>

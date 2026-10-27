@@ -142,7 +142,7 @@
       {% elif showing and not pg.q %}<p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
       {#- (an empty folder says so even with folders inside it: the old rows of folder tabs that said it are gone; the
           owner, 2026-10-24: two rows deep, with its message, on every folder page) #}
-      {% elif not pg.q and fk.view in ('new', 'started') %}<p class="card empty small">{{ nothing }}</p>
+      {% elif not pg.q and fk.view in ('new', 'started', 'soon') %}<p class="card empty small">{{ nothing }}</p>
       {% elif not pg.q and (fk.node or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
       {% endif %}{% endcall %}
   </div>

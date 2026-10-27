@@ -71,15 +71,20 @@ def mypage():
     from app import folder_tree
     #from Home's counters (?show=todo, started or soon): only those quizzes, from every folder
     showing = request.args.get('show') if request.args.get('show') in SHOW_ONLY else None
+    #(Home's "due within n days" count opens the automatic Due soon folder, a folder like New: the owner, 2026-10-27)
+    if showing == 'soon':
+        return redirect(url_for('user.mypage', folder='soon'))
     if showing:
         view, node = folder_tree.view_of('all', nodes, remember=False)
     else:
-        view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all', extra=('new', 'started'))
+        view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all', extra=('new', 'started', 'soon'))
     #the automatic "New" folder: quizzes given to them and not started yet (each also stays in its own folder)
     fresh = [g for g in groups if any(a.status == 'new' for a in g['attempts'])]
     #and "In progress": started and not handed in yet, or handed in and waiting to be graded
     #(also each in its own folder)
     working = [g for g in groups if any(a.status in ('started', 'review') for a in g['attempts'])]
+    #and "Due soon": not handed in, closing within the Technical setting's days (the owner, 2026-10-27)
+    soon = [g for g in groups if any(a.id in due_ids for a in g['attempts'])]
     days = tuning.get('due_soon_days')
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     #their badges count tries (a quiz given twice and not started is 2 new)
@@ -87,8 +92,10 @@ def mypage():
              'started': sum(1 for g in groups for a in g['attempts'] if a.status in ('started', 'review'))}
     def n_tries(n):
         return '{} {}'.format(n, 'attempt' if n == 1 else 'attempts')
+    def n_quizzes(n):
+        return '{} {}'.format(n, 'quiz' if n == 1 else 'quizzes')
     shown = (node['groups'] if node else groups if view == 'all' else fresh if view == 'new'
-             else working if view == 'started' else root['groups'])
+             else working if view == 'started' else soon if view == 'soon' else root['groups'])
     if showing:
         wanted = {cq.id for cq in current_user.cquizzes if
                   (showing == 'todo' and cq.status == 'new') or (showing == 'started' and cq.status in ('started', 'review'))
@@ -103,6 +110,8 @@ def mypage():
         heading, nothing = 'New: quizzes you haven’t started', 'No new quizzes right now.'
     elif view == 'started':
         heading, nothing = 'In progress: quizzes you’ve started, or handed in and not graded yet', 'Nothing in progress right now.'
+    elif view == 'soon':
+        heading, nothing = 'Due soon: not handed in, closing within {}'.format(within), 'Nothing is due within {}.'.format(within)
     else:
         heading = nothing = None
     fk = folder_tree.kit(
@@ -120,7 +129,10 @@ def mypage():
                      'badge_title': '{} not started yet'.format(n_tries(tries['new']))},
                     {'key': 'started', 'icon': 'pencil', 'label': 'In progress', 'count': tries['started'],
                      'badge': '{} in progress'.format(tries['started']), 'badge_class': 'badge-accent',
-                     'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))}],
+                     'badge_title': '{} started, or handed in and not graded yet'.format(n_tries(tries['started']))},
+                    {'key': 'soon', 'icon': 'alarm', 'label': 'Due soon', 'count': len(soon),
+                     'badge': '{} due soon'.format(len(soon)), 'badge_class': 'badge-warn',
+                     'badge_title': '{} not handed in, closing within {}'.format(n_quizzes(len(soon)), within)}],
         purge_url=lambda fid: url_for('user.purge_folder', folder_id=fid),
         purge_blocked=lambda n: folders.not_handed_in_note(folders.not_handed_in(current_user, n['folder'].id)),
         purge_question=lambda n: 'Delete the folder “{}”{} and the {} quiz{} in it? {} go{} to your teacher, who can '
@@ -139,7 +151,9 @@ def mypage():
     quiz_filter = ([{'id': 'new', 'name': 'New', 'icon': 'sparkle', 'count': len(fresh), 'keys': keys(fresh), 'children': [],
                      'url': url_for('user.mypage', folder='new'), 'empty': 'No new quizzes right now.'},
                     {'id': 'started', 'name': 'In progress', 'icon': 'pencil', 'count': len(working), 'keys': keys(working), 'children': [],
-                     'url': url_for('user.mypage', folder='started'), 'empty': 'Nothing in progress right now.'}]
+                     'url': url_for('user.mypage', folder='started'), 'empty': 'Nothing in progress right now.'},
+                    {'id': 'soon', 'name': 'Due soon', 'icon': 'alarm', 'count': len(soon), 'keys': keys(soon), 'children': [],
+                     'url': url_for('user.mypage', folder='soon'), 'empty': 'Nothing is due within {}.'.format(within)}]
                    + [tab(c) for c in root['folders']])
     #a folder's own page: just what's in it, with tabs for the folders inside it
     if node:

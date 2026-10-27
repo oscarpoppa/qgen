@@ -169,7 +169,7 @@ def icon_or(value):
 
 
 #the ones page scripts draw themselves (calendar.js, folders.js, helper.js, scan_review.js)
-FOR_SCRIPTS = ('calendar', 'folder', 'folders', 'tray', 'sparkle', 'pencil', 'bulb', 'picture', 'user', 'pin', 'note')
+FOR_SCRIPTS = ('calendar', 'folder', 'folders', 'tray', 'sparkle', 'pencil', 'bulb', 'picture', 'user', 'pin', 'note', 'alarm')
 #(the icon buttons' drawings: scripts build some of those buttons too)
 FOR_SCRIPTS = FOR_SCRIPTS + tuple(k for k in PATHS if k.startswith('lc-'))
 
