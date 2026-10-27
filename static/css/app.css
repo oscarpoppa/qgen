@@ -2793,6 +2793,7 @@ dialog.temp-pw-dialog .temp-pw code { display: block; padding: 8px 12px; border:
 /* Quizzes: a quiz's facts under its title, one a line (the owner, 2026-10-16) */
 .quiz-facts { list-style: circle; margin: 4px 0 0; padding-left: 1.1em; line-height: 1.5; }  /* (the open circle of the Problems column's "2 of these" lists) */
 .quiz-facts > li { margin: 0; }
+.quiz-facts > li.quiz-fact-score strong { color: var(--text); }  /* (My quizzes: the score that counts, first and plain to see) */
 /* Spacing on the 4/8/12/16 steps (the spacing check, part c; the owner, 2026-10-16) */
 .field { margin-bottom: 16px; }
 .folder-filter-rows > .folder-tabs:first-child > .folder-tab { padding: 8px 12px; }
