@@ -1251,8 +1251,7 @@ def finish_page(job, n, qs, numbers, flat, api_key=None, user_id=None, progress=
     samples = {}
     for p in qs['problems']:
         if p['id'] in covered:
-            words = p['text'][len(p.get('number') or ''):] if p['text'].startswith(p.get('number') or '\0') else p['text']
-            samples[p['id']] = words.replace('_', '').strip()
+            samples[p['id']] = pagelayout.covered_words(p['text'], p.get('number') or '')
     font = pagelayout.pick_font(flat, qs, slots, samples, os.path.join(current_app.static_folder, 'fonts'))
     step('choosing the font')
     page = draft_page(n, quizscan_raw(qs, numbers))

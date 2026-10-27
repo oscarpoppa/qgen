@@ -45,13 +45,14 @@
       below instead (static/js/pagequiz.js). Problems with no place on the page are always in
       the list. #}
   {% set L = page_layout %}
-  {% set weight = 700 if 'Bold' in L.font else 400 %}
+  {% set weight = L.font|pq_weight %}{% set cap = L.font|pq_cap %}
   <style>@font-face { font-family: "PageFont"; src: url("{{ url_for('static', filename=L.font) }}"); font-weight: {{ weight }}; }</style>
   <div class="page-quizzes" data-page-quiz>
   {% for pg in L.pages %}{% set k = loop.index0 %}{% set ratio = pg.height / pg.width %}
     <div class="page-quiz card" style="aspect-ratio: {{ pg.width }} / {{ pg.height }}; --pq-weight: {{ weight }}">
       <img class="pq-page" src="{{ url_for('static', filename=pg.image) }}" alt="{{ cq.vquiz.title }}{% if L.pages|length > 1 %}, page {{ loop.index }}{% endif %}">
       {% for b in pg.hide %}<div class="pq-hide" style="left: {{ b.left * 100 }}%; top: {{ b.top * 100 }}%; width: {{ (b.right - b.left) * 100 }}%; height: {{ (b.bottom - b.top) * 100 }}%"></div>{% endfor %}
+      {%- set chars = L.slots|pq_chars(k) %}
       {% for s in L.slots if s.page == k and s.pos <= items|length %}{% set it = items[s.pos - 1] %}{% set co = page_opts.get(it.num, {}) %}
         {% if s.kind == 'paper' %}
         <div class="question pq-q" data-q="{{ it.num }}" data-paper><input type="hidden" name="{{ it.field.name }}_present" value="1">{{ it.field(id='pq-' ~ it.field.id) }}</div>
@@ -65,15 +66,15 @@
             {#- (answered where the page printed "???": the box takes the place of the question marks) #}
             {%- if s.inline %}{% set words = words|pq_no_blank %}{% endif %}
             {%- set lines = words.split('\n') %}
-            {%- set ch = s.char if s.char else (t.bottom - t.top) / lines|length %}
-            {#- (printed letters are about 0.714 of the font size tall) #}
-            {%- set fs = ch * ratio * 100 / 0.714 %}
+            {%- set ch = chars.get(s.pos) or s.char or (t.bottom - t.top) / lines|length %}
+            {#- (the printed letters' height over the font's own capital height: the same size as the page's) #}
+            {%- set fs = ch * ratio * 100 / cap %}
             {%- set style = words|pq_style %}
             <div class="pq-text pq-{{ style }}" style="{% if s.paper %}background: {{ s.paper }}; {% endif %}left: {{ t.left * 100 }}%; top: {{ t.top * 100 }}%; width: {{ (t.right - t.left) * 100 }}%; height: {{ (t.bottom - t.top) * 100 }}%; font-size: {{ fs }}cqw; --pq-line: {{ (t.bottom - t.top) * ratio * 100 / lines|length }}cqw" aria-hidden="true">
               {%- if style == 'equals' %}{% set parts = words.rsplit('=', 1) %}<span>{{ parts[0].strip() }}</span><span>=</span>
               {%- else %}{% for line in lines %}<span>{{ line }}</span>{% endfor %}{% endif %}</div>
           {% endif %}
-          <div class="pq-answer{% if s.inline %} pq-inline{% elif s.bare %} pq-bare{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.85, (s.char or 0.02) * ratio * 100 / 0.714]|min }}cqw">
+          <div class="pq-answer{% if s.inline %} pq-inline{% elif s.bare %} pq-bare{% endif %}" style="{% if s.inline and s.paper %}--pq-paper: {{ s.paper }}; {% endif %}left: {{ a.left * 100 }}%; top: {{ a.top * 100 }}%; width: {{ (a.right - a.left) * 100 }}%; height: {{ (a.bottom - a.top) * 100 }}%; font-size: {{ [(a.bottom - a.top) * ratio * 100 * 0.85, (chars.get(s.pos) or s.char or 0.02) * ratio * 100 / cap]|min }}cqw">
             {#- (the typed answer the same size as the page's printed words beside it, so the two read
                 as one line: it was smaller and looked out of line, the owner 2026-10-20) #}
             {#- (inputmode only for numbers: WTForms writes a missing one as inputmode="None", the code critic 2026-10-20) #}

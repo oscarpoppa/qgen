@@ -964,6 +964,27 @@ def pq_style(words):
     return style_of(words)
 
 
+#(the page's font's own cap height, its weight, and one size for problems printed alike: the owner, 2026-10-26)
+@qgen_bp.app_template_filter('pq_cap')
+def pq_cap(font):
+    import os
+    from flask import current_app
+    from .pagelayout import cap_ratio
+    return cap_ratio(font, os.path.join(current_app.static_folder, 'fonts'))
+
+
+@qgen_bp.app_template_filter('pq_weight')
+def pq_weight(font):
+    from .pagelayout import font_weight
+    return font_weight(font)
+
+
+@qgen_bp.app_template_filter('pq_chars')
+def pq_chars(slots, page):
+    from .pagelayout import snapped_chars
+    return snapped_chars(slots, page)
+
+
 @qgen_bp.app_template_filter('pq_no_blank')
 def pq_no_blank(words):
     """A problem's words without the "???" (or "___") at the very end, where the answer box goes."""

@@ -21,10 +21,66 @@ import re
 import numpy as np
 
 CONTRAST = 40       # ink: this much darker than the paper around it (pale circles before choices too)
-FONTS = {           # the fonts a covered problem can be written in: static/fonts/<file>
+FONTS = {           # the fonts a covered problem can be written in: static/fonts/<file> (licenses: LICENSES.txt there)
     'NotoSans-Bold.ttf': ('sans', 700), 'NotoSans-Regular.ttf': ('sans', 400),
     'NotoSerif-Bold.ttf': ('serif', 700), 'NotoSerif-Regular.ttf': ('serif', 400),
+    #(the weights between, which workbooks often print in: 2026-10-26)
+    'NotoSans-SemiBold.ttf': ('sans', 600), 'NotoSans-Medium.ttf': ('sans', 500), 'NotoSerif-SemiBold.ttf': ('serif', 600),
+    'Lato-Semibold.ttf': ('lato', 600),
+    #(the typefaces workbooks use most, so the typed-over numbers look like the page's own: the owner, 2026-10-26)
+    'URWGothic-Demi.otf': ('gothic', 700), 'URWGothic-Book.otf': ('gothic', 400),        # Century Gothic-like
+    'C059-Bold.otf': ('schoolbook', 700), 'C059-Roman.otf': ('schoolbook', 400),         # Century Schoolbook-like
+    'NimbusSans-Bold.otf': ('helvetica', 700), 'NimbusSans-Regular.otf': ('helvetica', 400),  # Helvetica/Arial-like
+    'NimbusRoman-Bold.otf': ('times', 700), 'NimbusRoman-Regular.otf': ('times', 400),   # Times-like
+    'URWBookman-Demi.otf': ('bookman', 700), 'URWBookman-Light.otf': ('bookman', 400),   # Bookman-like
+    'Ubuntu-B.ttf': ('ubuntu', 700), 'Ubuntu-R.ttf': ('ubuntu', 400),
+    'Lato-Bold.ttf': ('lato', 700), 'Lato-Regular.ttf': ('lato', 400),
 }
+
+
+_CAPS = {}
+
+
+def cap_ratio(name, font_dir):
+    """How tall a FONTS file's capital H is, as a share of its font size (Noto's 0.714; each typeface its own), so the
+    typed-over words are as tall as the page's printed ones whatever the font (the owner, 2026-10-26)."""
+    base = os.path.basename(name or '')
+    if base not in _CAPS:
+        try:
+            from PIL import ImageFont
+            f = ImageFont.truetype(os.path.join(font_dir, base), 1000)
+            x0, y0, x1, y1 = f.getbbox('H')
+            _CAPS[base] = max(0.5, min(0.9, (y1 - y0) / 1000))
+        except (OSError, ValueError):
+            _CAPS[base] = 0.714
+    return _CAPS[base]
+
+
+def snapped_chars(slots, page, close=0.12):
+    """{slot pos: printed letter height} for one page's covered problems, the ones printed about the same size (within
+    12% of the page's usual size) all given that one size, so they don't come out in slightly different sizes from the
+    measuring; one printed clearly bigger or smaller keeps its own (the owner, 2026-10-26)."""
+    have = [(s['pos'], s['char']) for s in slots if s.get('page') == page and s.get('char')]
+    if not have:
+        return {}
+    sizes = sorted(c for _p, c in have)
+    usual = sizes[len(sizes) // 2]
+    return {p: (usual if abs(c - usual) <= close * usual else c) for p, c in have}
+
+
+def covered_words(text, number=''):
+    """The printed words a covered area holds, to judge the page's font by: no problem number, no blanks, and nothing
+    after the last "=" (a printed answer there isn't covered; comparing it too skewed the font picked; 2026-10-26)."""
+    words = text[len(number):] if number and text.startswith(number) else text
+    words = words.replace('_', '').strip()
+    if '=' in words:
+        words = words[:words.rindex('=') + 1].strip()
+    return words
+
+
+def font_weight(name):
+    """The CSS weight of a FONTS file (a path like fonts/x.ttf too), for the take page's @font-face."""
+    return FONTS.get(os.path.basename(name or ''), ('', 700 if 'Bold' in (name or '') else 400))[1]
 OPERATORS = '+-−×÷*/'
 
 
@@ -1286,7 +1342,8 @@ def pick_font(img, page, slots, samples, font_dir):
     for pid, words in samples.items():
         s = slots.get(pid) or {}
         words = (words or '').strip().split('\n')[0].strip()
-        if not s.get('text') or not words:
+        #(a fraction is printed stacked but would be drawn "3/16" on one line: nothing to judge the font by there)
+        if not s.get('text') or not words or '/' in words:
             continue
         ink = _sharp_first_line(gray, px(s['text'], W, H))
         if ink is not None and ink.shape[0] > 8 and ink.shape[1] > 8:
@@ -1295,7 +1352,7 @@ def pick_font(img, page, slots, samples, font_dir):
             break
     if not pairs:
         return 'NotoSans-Bold.ttf'
-    best = (-1, 'NotoSans-Bold.ttf')
+    best = (-99, 'NotoSans-Bold.ttf')
     for name in FONTS:
         try:
             font = ImageFont.truetype(os.path.join(font_dir, name), 200)
@@ -1308,12 +1365,19 @@ def pick_font(img, page, slots, samples, font_dir):
             drawn = _ink_box(np.asarray(canvas) > 127)
             if drawn is None:
                 continue
-            k = ink.shape[0] / drawn.shape[0]
-            drawn = np.asarray(Image.fromarray(drawn.astype(np.uint8) * 255).resize((max(1, round(drawn.shape[1] * k)), ink.shape[0]))) > 127
-            w = max(drawn.shape[1], ink.shape[1])
-            a = np.zeros((ink.shape[0], w), bool); b = a.copy()
-            a[:, :ink.shape[1]] = ink; b[:, :drawn.shape[1]] = drawn
-            total += (a & b).sum() / max(1, (a | b).sum())
+            #(the letters' shapes compared, not where each one falls: the drawing is stretched to the printed words'
+            #box, both slightly blurred so a pixel or two off doesn't count, then correlated; less the stretch it needed,
+            #so its width counts too. Lined up from the left at the printed height, letter spacing outweighed the
+            #shapes and a rounded page got Ubuntu; the owner, 2026-10-26: "really close to what is on the page")
+            from PIL import ImageFilter
+            h, w = ink.shape
+            sigma = max(1.0, h / 18)
+            x = np.asarray(Image.fromarray(drawn.astype(np.uint8) * 255).resize((w, h)).filter(ImageFilter.GaussianBlur(sigma))).astype(float)
+            y = np.asarray(Image.fromarray(ink.astype(np.uint8) * 255).filter(ImageFilter.GaussianBlur(sigma))).astype(float)
+            x -= x.mean(); y -= y.mean()
+            corr = (x * y).sum() / (np.sqrt((x * x).sum() * (y * y).sum()) + 1e-9)
+            stretch = abs(np.log((w / h) / (drawn.shape[1] / drawn.shape[0])))
+            total += corr - 0.5 * stretch
         if total / len(pairs) > best[0]:
             best = (total / len(pairs), name)
     return best[1]
