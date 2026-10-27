@@ -1668,7 +1668,7 @@ hr.section-rule.list-rule { margin: 4px 0 14px; }
 .quiz-title { font-weight: 600; }
 /* cards dragged to another column (static/js/masonry.js): the heading shows they move; the dragged
    card follows the pointer, a line shows where it will go */
-@media (min-width: 761px) { [data-movable] > details > summary { cursor: grab; } }
+@media (min-width: 761px) { [data-movable] > details > summary { cursor: grab; user-select: none; } }
 [data-movable] { position: relative; }
 .card-dragging { position: relative; z-index: 7; opacity: .85; box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.3)); pointer-events: none; }
 body.cards-dragging, body.cards-dragging * { cursor: grabbing !important; user-select: none; }

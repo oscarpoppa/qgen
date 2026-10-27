@@ -141,7 +141,8 @@
     var box = head.parentElement, grid = box && box.parentElement;
     if (!grid || !grid.dataset || !grid.dataset.movable || !box._place) return;
     if (getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length < 2) return;
-    e.preventDefault();  // (no text selected while dragging; a plain click still opens or folds it)
+    //(no text selected while dragging: app.css, user-select on the heading; not preventDefault here, which kept a
+    //clicked heading from taking focus, so Space/Enter didn't fold it: the code critic, 2026-10-26)
     drag = { box: box, grid: grid, x: e.clientX, y: e.clientY, on: false };
   });
   document.addEventListener('pointermove', function (e) {

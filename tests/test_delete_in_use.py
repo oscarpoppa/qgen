@@ -112,3 +112,23 @@ def test_a_quiz_can_take_its_own_problems_with_it(app_db):
     teach.post('/quiz/delvq/{}'.format(d.id), data={'problems': '1'})
     db.session.expire_all()
     assert db.session.get(VQuiz, d.id) is None and db.session.get(VProblem, gone_id) is None
+    # deleted from Quizzes but a student took it: the quiz goes to the Trash, and its own problem with it, its folders
+    # kept, not deleted (the critic, 2026-10-26)
+    from test_dashboard import give
+    teach.post('/quiz/subjects/problems', data={'name': 'Unit 9'})
+    teach.post('/quiz/makevprob', data=problem_form('numeric', 'Taken one', 'What is 6 + 6?', '12', []))
+    taken = VProblem.query.filter_by(title='Taken one').one()
+    S.file_one('problems', taken.id, S.subject_named('problems', 'Unit 9'))
+    db.session.commit()
+    teach.post('/quiz/makevquiz', data={'title': 'Week E', 'vplist': str(taken.id), 'keep_order': 'y'})
+    e = VQuiz.query.filter_by(title='Week E').one()
+    with app.test_request_context():
+        S.submit(give(e, 'sam'), {1: '12'})
+        db.session.commit()
+    r = teach.post('/quiz/delvq/{}'.format(e.id), data={'problems': '1'}, follow_redirects=True).data.decode()
+    db.session.expire_all()
+    p = db.session.get(VProblem, taken.id)
+    assert db.session.get(VQuiz, e.id).removed_at is not None
+    assert p is not None and p.removed_at is not None and [g.title for g in p.vpgroups] == ['Unit 9']
+    assert 'Its 1 problem went to the Trash too.' in r
+    assert r.index('Removed “Week E” from Quizzes') < r.index('Its 1 problem went to the Trash too.')  # (the action first)

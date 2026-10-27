@@ -578,14 +578,16 @@ def del_vquiz(vqid):
     except S.ServiceError as exc:
         flash('Not removed. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
-    n = S.take_problems_along(along, delete=True)
-    if n:
-        flash('Its {} problem{} went too.'.format(n, '' if n == 1 else 's'), 'success')
+    #(a quiz students took goes to the Trash, not away: its problems go to the Trash too, folders kept, not deleted;
+    #the critic, 2026-10-26)
+    n = S.take_problems_along(along, delete=done != 'removed')
     if done == 'removed':
         flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
                      'You can restore it from the <a href="{}">Trash</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
     else:
         flash('Deleted quiz “{}”.'.format(title), 'success')
+    if n:
+        flash(('Its {} problem{} went to the Trash too.' if done == 'removed' else 'Its {} problem{} went too.').format(n, '' if n == 1 else 's'), 'success')
     #(logged either way, with the page it came from, so where it went back to can be checked)
     current_app.logger.info("{} {} VQuiz: ({}) '{}' from {}".format(current_user.username, done, vqid, title, request.referrer))
     return redirect(back_to_list('qgen.list_vquizzes'))
@@ -674,10 +676,10 @@ def archive_vquiz(vqid):
         flash('Not moved to the Trash. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
     n = S.take_problems_along(along)
-    if n:
-        flash('Its {} problem{} went to the Trash too.'.format(n, '' if n == 1 else 's'), 'success')
     flash(Markup('Moved quiz “{}” to the <a href="{}">Trash</a>, where you can restore it. Students keep their copies and scores.').format(
         vq.title, url_for('qgen.archive', section='quizzes')), 'success')
+    if n:
+        flash('Its {} problem{} went to the Trash too.'.format(n, '' if n == 1 else 's'), 'success')
     current_app.logger.info("{} archived VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
     return redirect(back_to_list('qgen.list_vquizzes'))
 
@@ -711,13 +713,13 @@ def delete_removed_vquiz(vqid):
         flash('Not deleted. {}'.format(exc), 'error')
         return redirect(url_for('qgen.archive', section='quizzes'))
     n = S.take_problems_along(along, delete=True)
-    if n:
-        flash('Its {} problem{} went too.'.format(n, '' if n == 1 else 's'), 'success')
     if count:
         flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Trash</a>, where you can still read {}.').format(
             title, count, 'attempt is' if count == 1 else 'attempts are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
     else:
         flash('Deleted “{}” for good.'.format(title), 'success')
+    if n:
+        flash('Its {} problem{} went too.'.format(n, '' if n == 1 else 's'), 'success')
     current_app.logger.info("{} deleted removed VQuiz: ({}) '{}', {} tries archived".format(current_user.username, vqid, title, count))
     return redirect(url_for('qgen.archive', section='quizzes'))
 
@@ -1997,7 +1999,14 @@ def subject_page(kind, template, in_archive=False, **extra):
     #(only the rows drawn need their folders loaded: one query, not one a row)
     if pg.items and kind not in S.UPLOAD_KINDS:
         from sqlalchemy.orm import selectinload
-        item_cls.query.options(selectinload(getattr(item_cls, rel))).filter(item_cls.id.in_([x.id for x in pg.items])).all()
+        opts = [selectinload(getattr(item_cls, rel))]
+        #(and what the rows read for their chips and trash cans: a problem's quizzes; a quiz's problems and theirs, for
+        #"its own problems": one query each, not one a row or a problem; the code critic, 2026-10-26)
+        if kind == 'problems':
+            opts.append(selectinload(item_cls.vquizzes))
+        elif kind == 'quizzes':
+            opts.append(selectinload(item_cls.vproblems).selectinload(VProblem.vquizzes))
+        item_cls.query.options(*opts).filter(item_cls.id.in_([x.id for x in pg.items])).all()
     return render_template(template, fk=fk, items=pg.items, pg=pg, total=len(everything), kind=kind, in_archive=in_archive,
                            moved=request.args.get('moved', ''), show=show, **extra)
 

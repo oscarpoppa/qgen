@@ -204,6 +204,9 @@
       {%- set fix = {} %}
       {%- for m in missing %}{% set _ = fix.update({m[0]: [(fix.get(m[0]) or [0, 0])[0] + 1, (fix.get(m[0]) or [0, 0])[1]]}) %}{% endfor %}
       {%- for p in data.pages if p.state == 'done' %}{% for item in p['items'] %}{% if item.include and (checks.get((p.n, loop.index0)) or {}).get('errors') %}{% set _ = fix.update({p.n: [(fix.get(p.n) or [0, 0])[0], (fix.get(p.n) or [0, 0])[1] + 1]}) %}{% endif %}{% endfor %}{% endfor %}
+      {#- a page that can be in a join: not read yet, being read, or read as a problems page (a read picture or empty page
+          drops the join, as quiz_groups does when it builds the quizzes: the code critic, 2026-10-26) #}
+      {%- macro joinable(x) %}{{ '1' if x.state in ('waiting', 'error', 'reading') or (x.state == 'done' and x.kind == 'problems') else '' }}{% endmacro %}
       <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">
       {% for p in data.pages %}
         {% if not loop.first %}
@@ -214,7 +217,7 @@
           {%- set ok_b = before.state in ('waiting', 'error', 'reading') or (before.state == 'done' and before.kind == 'problems') %}
           {%- set can_join = movable and ok_p and ok_b %}
           {#- (joined only when both pages are read, the same test as the bar under them: the code critic, 2026-10-25) #}
-          {%- set joined_now = p.join_prev and p.state != 'saved' and before.state != 'saved' %}
+          {%- set joined_now = p.join_prev and joinable(p)|trim and joinable(before)|trim %}
           <li class="scan-join-spot" aria-hidden="false">
             {% if p.state != 'saved' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
             <button type="button" class="scan-join{% if joined_now %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if joined_now else 'false' }}"
@@ -229,7 +232,7 @@
         {#- joined pages: a whole chain between them and one bar under both (the owner, 2026-10-25: a gray or blue chain
             alone didn't show it) #}
         {%- set nxt = data.pages[loop.index0 + 1] if not loop.last else none %}
-        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state != 'saved' and not loop.first and data.pages[loop.index0 - 1].state != 'saved' else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state != 'saved' and p.state != 'saved' else '') %}
+        {%- set join_cls = (' is-joined-prev' if p.join_prev and not loop.first and joinable(p)|trim and joinable(data.pages[loop.index0 - 1])|trim else '') ~ (' is-joined-next' if nxt and nxt.join_prev and joinable(nxt)|trim and joinable(p)|trim else '') %}
         <li class="scan-strip-page scan-strip-{{ shown_state }}{{ join_cls }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
