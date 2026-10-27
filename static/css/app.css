@@ -3872,3 +3872,4 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .theme-swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); font-weight: 600; }
 .theme-dot { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 50%, var(--accent-soft) 50%);
   border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }
+.scan-folder-row { margin-top: 8px; }  /* the Scan page's "Choose a folder", under its drop box (To do 40) */

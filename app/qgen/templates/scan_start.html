@@ -34,14 +34,15 @@
       <div class="scan-drop" id="scan-drop" tabindex="0" role="button" aria-label="Choose pages: press Enter, or drop them here" title="Drop pages here: a picture, several, a PDF or a whole folder">
         <strong class="dz-msg">Drop images here</strong>
         <span class="dz-hint">or click to choose. You can add several at once.</span>
-      {#- (no Choose files / Choose a folder buttons: a click or tap on the box chooses files, a
-          folder is dropped: the owner, 2026-10-19) #}
+      {#- (no Choose files button: a click or tap on the box chooses files, the owner 2026-10-19; a folder is dropped,
+          or chosen with "Choose a folder" under the box, the owner 2026-10-26, To do 40) #}
       <input type="file" id="scan-pages" name="pages" accept="image/*,application/pdf,.pdf,.heic,.heif,.avif,.tif,.tiff,.svg,.svgz,.dng,.cr2,.cr3,.nef,.nrw,.arw,.raf,.orf,.rw2,.pef" multiple hidden>
       <input type="file" id="scan-folder" name="folder_pages" webkitdirectory multiple hidden>
       <input type="hidden" name="from_folder" id="scan-folder-name" value="">
       {#- small pictures of what was dropped or chosen (the owner, 2026-10-19) #}
       <div class="scan-drop-thumbs" id="scan-thumbs" hidden></div>
       </div>
+      <div class="btn-row scan-folder-row"><button type="button" class="btn btn-secondary btn-sm" data-scan-folder title="Choose a folder: every page picture and PDF in it, in file-name order">Choose a folder</button></div>
       <div class="small" id="scan-chosen" aria-live="polite" hidden></div>
       <div class="help">Photos, scans or PDFs (any image type), up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
@@ -377,6 +378,7 @@
   box.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); files.click(); }
   });
+  document.querySelector('[data-scan-folder]').addEventListener('click', function () { folder.click(); });
   folder.addEventListener('change', function () {
     if (!folder.files.length) { sync(); return; }
     var path = folder.files[0].webkitRelativePath || '';

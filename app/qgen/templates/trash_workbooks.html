@@ -36,7 +36,9 @@
         {% for b in books %}{% set j = b.job %}
           <tr data-box="workbook:{{ j.id }}" data-name="{{ j.name|lower }}">
             <td class="tick-col"><input type="checkbox" name="items" value="{{ j.id }}" form="file-form" aria-label="Check “{{ j.name }}”"></td>
-            <td data-label="Workbook"><a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was"><strong>{{ j.name }}</strong></a></td>
+            {#- its first page, small, opening full size, as on the Scan page (the owner, 2026-10-26, To do 43) #}
+            <td data-label="Workbook"><div class="scan-row-name">{% if b.pages %}<a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=1) }}" data-page-zoom title="See page 1 full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=1) }}" alt="" loading="lazy"></a>{% endif %}
+              <div><a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was"><strong>{{ j.name }}</strong></a></div></div></td>
             <td data-label="Pages"><span class="badge box-count">{{ b.pages }}</span></td>
             <td data-label="Quizzes made">{% for m in b.made %}{% if not loop.first %}, {% endif %}<a href="{{ url_for('qgen.view_vquiz', vqid=m.quiz) }}">“{{ m.title }}”</a>{% else %}<span class="muted">none</span>{% endfor %}</td>
             <td data-label="Moved to the Trash" class="small" data-sort="{{ b.at.isoformat() if b.at else '' }}">{% if b.at %}{{ b.at|when('date') }}{% endif %}{% if b.by %}<br><span class="muted">by {{ b.by.shown_name }}</span>{% endif %}</td>
@@ -58,7 +60,7 @@
 {% endcall %}
 {% endblock %}
 
-{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script>
+{% block scripts %}<script src="{{ asset('js/folders.js') }}"></script><script src="{{ asset('js/pagezoom.js') }}" defer></script>
 <script>
 //the checked workbooks: Restore or Delete for good, asked first with how many (the owner, 2026-10-25, To do 52)
 document.addEventListener('click', function (e) {

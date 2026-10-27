@@ -202,7 +202,7 @@
       </div>
       <div class="t-numeric t-text t-truefalse"><div class="name-chips" data-default="answer" hidden><span class="muted">Insert a value:</span></div></div>
     </div>
-    <div class="t-numeric">{{ field(form.precision, 'Students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
+    <div class="t-numeric">{{ field(form.precision, 'With “Answer must be a plain number” unchecked, students can type fractions like 3/4 or 1 1/2. Rounding goes half up, so 6.5 rounds to 7.', tip_body=tip_precision) }}</div>
     <div class="t-numeric">
       {% set display_bar %}{% with math_target = 'answer_display' %}{% include "_math_toolbar.html" %}{% endwith %}{% endset %}
       {# a worked example: what to write, with a value in [brackets], and what a student then sees #}
