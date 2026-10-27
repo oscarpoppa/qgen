@@ -35,8 +35,12 @@
     for (var i = 0; i < areas.length; i++) if (room(areas[i], down) >= 1) { to = areas[i]; break; }
     //(everything in a dialog as far as it goes: nothing moves, not the page behind it)
     if (!to) { if (areas[areas.length - 1] !== page) e.preventDefault(); return; }
+    //(the area under the mouse can still go that way: the browser scrolls it, smoothly, as usual; set by hand it
+    //moved a row at a time, the owner 2026-10-27)
+    if (to === areas[0]) return;
+    //(handing over to an area further out: smoothly too)
     var dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
     e.preventDefault();
-    if (to === page) window.scrollBy(0, dy); else to.scrollTop += dy;
+    (to === page ? window : to).scrollBy({ top: dy, behavior: 'smooth' });
   }, { passive: false });
 })();
