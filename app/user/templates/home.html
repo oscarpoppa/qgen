@@ -32,7 +32,7 @@
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
-        <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>“{{ cq.vquiz.title }}”</strong></span>
+        <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>{{ cq.vquiz.title }}</strong></span>
           {% if cq.status == 'started' %}{{ status_icon('going', 'In progress') }}{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}{{ status_icon('fresh', 'New') }}{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm btn-icon dash-go" disabled title="Start: you can’t start this yet. It opens {{ cq.opens_at|when }}.">{{ icon_label('lc-play', 'Start') }}</button>
@@ -52,7 +52,7 @@
       <ul class="dash-list">
       {% for cq in recent %}
         {#- (the quiz's name opens the same place as its eye icon: the owner, 2026-10-23) #}
-        <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”"><strong>“{{ cq.vquiz.title }}”</strong></a></span>
+        <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”"><strong>{{ cq.vquiz.title }}</strong></a></span>
           {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
           {% else %}{{ status_icon('going', 'In progress', tip='handed in; your teacher is checking your written answers') }}{% endif %}
           <span class="small muted">{{ cq.compdate|when }}</span>

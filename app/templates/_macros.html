@@ -136,8 +136,9 @@
    survey of name links, 2026-10-22) #}
 {#- href: the title opens the same place as its row's icon (Dashboard rows: the owner, 2026-10-22) #}
 {% macro quiz_name(vq, href=none, tip=none) -%}
-  {%- if href %}<a class="name-link" href="{{ href }}"{% if tip %} data-tip="{{ tip }}"{% endif %}>“{{ vq.title }}”</a>
-  {%- else %}“{{ vq.title }}”{% endif -%}
+  {#- no quotes: the name a little bolder instead (the owner, 2026-10-26) #}
+  {%- if href %}<a class="name-link quiz-title" href="{{ href }}"{% if tip %} data-tip="{{ tip }}"{% endif %}>{{ vq.title }}</a>
+  {%- else %}<span class="quiz-title">{{ vq.title }}</span>{% endif -%}
 {%- endmacro %}
 
 {# Expand all / Collapse all for a list of boxes that fold (target: what holds them; what: the
