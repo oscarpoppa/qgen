@@ -20,10 +20,16 @@
     main.insertBefore(list, main.firstChild);
     if (window.qgenFloat) window.qgenFloat(list);  // (over the page, not in it: nothing below moves)
   }
+  //(the same page: its address and what it shows, the folder or Trash tab; not what's lit up after, ?moved= or ?show=)
   function samePage(loc) {
     if (!loc) return true;
-    var u = new URL(loc, location.href);
-    return u.origin === location.origin && u.pathname === location.pathname;
+    var u = new URL(loc, location.href), here = new URL(location.href);
+    return u.origin === here.origin && u.pathname === here.pathname &&
+      ['folder', 'section', 'checked'].every(function (k) {
+        //(one with none is the page's own start, often the same thing: only two different ones are another page)
+        var a = u.searchParams.get(k), b = here.searchParams.get(k);
+        return a === null || b === null || a === b;
+      });
   }
   //redrawn in place, if this page can; false: it can't (the caller goes there instead)
   function redraw() {

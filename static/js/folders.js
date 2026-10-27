@@ -27,6 +27,9 @@
   //folders in the list whose inner folders are hidden (the one being looked at always shows)
   var FOLD = layout.dataset.foldKey, folded = load(FOLD), shows = [];
   path.forEach(function (id) { delete folded[id]; });
+  //(again when the folder list is drawn anew in place: a folder made, renamed, moved or deleted; the owner, 2026-10-27)
+  function setUpFolds() {
+  shows.length = 0;
   document.querySelectorAll('.side-item').forEach(function (li) {
     var btn = li.querySelector(':scope > .side-row > .side-fold');
     if (!btn) return;
@@ -46,6 +49,8 @@
     btn.addEventListener('click', function () { show(btn.getAttribute('aria-expanded') !== 'true'); save(FOLD, folded); });
   });
   save(FOLD, folded);
+  }
+  setUpFolds();
   //a folder opened from its tab on the right is shown in this list too: the folders above it
   //unfold (the owner, 2026-10-15; static/js/folderfilter.js asks)
   window.qgenSideReveal = function (id) {
@@ -67,11 +72,17 @@
     sideHead.appendChild(levels);
   }
   if (levels) levels.hidden = false;
-  if (levels && !shows.length) levels.querySelectorAll('[data-side-level]').forEach(function (b) {
-    b.disabled = true;
-    b.title = 'No folder here has folders inside it';
-  });
-  if (levels && shows.length) {
+  //(grayed, with why, while no folder has folders inside it; checked again after a redraw in place)
+  function levelsState() {
+    if (!levels) return;
+    levels.querySelectorAll('[data-side-level]').forEach(function (b) {
+      if (!b.dataset.titleWas) b.dataset.titleWas = b.title;
+      b.disabled = !shows.length;
+      b.title = shows.length ? b.dataset.titleWas : 'No folder here has folders inside it';
+    });
+  }
+  levelsState();
+  if (levels) {
     levels.addEventListener('click', function (e) {
       var b = e.target.closest('[data-side-level]');
       if (!b) return;
@@ -183,6 +194,33 @@
       row.classList.toggle('is-empty', n.classList.contains('is-empty'));
     });
   }
+  //the folder list's folders, names and nesting, as one string: a change means it must be drawn anew
+  function sideShape(doc) {
+    var ul = doc.querySelector('.folder-side ul.side-top');
+    return ul ? Array.prototype.map.call(ul.querySelectorAll('.side-row'), function (r) {
+      var a = r.querySelector('a[href], button');
+      return (r.dataset.drop || '') + '|' + (a ? a.textContent.replace(/\s+/g, ' ').replace(/\d+\s*$/, '').trim() : '') + '|' + (r.closest('ul') ? r.closest('ul').className : '');
+    }).join('\n') : '';
+  }
+  //the folders' list, the open folder's title, the + New folder dialog and the Move dialogs' folders, from a fresh copy
+  function newFolders(doc) {
+    function swap(sel) {
+      var a = document.querySelector(sel), b = doc.querySelector(sel);
+      if (a && b) a.replaceWith(document.importNode(b, true));
+      return a && b ? document.querySelector(sel) : null;
+    }
+    var ul = swap('.folder-side ul.side-top');
+    swap('.folder-side .side-card-head');
+    swap('.folder-side-now');
+    swap('#folder-title');
+    var sel = document.querySelector('#file-form select'), nsel = doc.querySelector('#file-form select');
+    if (sel && nsel) sel.innerHTML = nsel.innerHTML;
+    var nl = doc.querySelector('.folders-layout');
+    if (nl && nl.dataset.path) { layout.dataset.path = nl.dataset.path; try { path = JSON.parse(nl.dataset.path); } catch (e) {} }
+    setUpFolds();
+    levelsState();
+    if (ul && window.qgenPinAuto) window.qgenPinAuto(ul);
+  }
   //(a folder chip's ✕, done without leaving the page: only the counts change; static/js/takeout.js, the owner 2026-10-27)
   window.qgenRefreshCounts = function () {
     fetch(location.href, { credentials: 'same-origin' }).then(function (r) { return r.ok && !r.redirected ? r.text() : null; })
@@ -204,7 +242,8 @@
       var oldBoxes = document.querySelectorAll('.folder-main [data-folder-filter]'), newBoxes = doc.querySelectorAll('.folder-main [data-folder-filter]');
       var oldPagers = document.querySelectorAll('nav.pager'), newPagers = doc.querySelectorAll('nav.pager');
       if (!oldBoxes.length || oldBoxes.length !== newBoxes.length || oldPagers.length !== newPagers.length) throw new Error('not the same page');
-      sideCounts(doc);
+      //(the folders themselves changed, a folder made, renamed, moved or deleted: their list drawn anew; else only counts)
+      if (sideShape(doc) !== sideShape(document)) newFolders(doc); else sideCounts(doc);
       Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
       Array.prototype.forEach.call(oldBoxes, function (b, i) {
         var nb = document.importNode(newBoxes[i], true);

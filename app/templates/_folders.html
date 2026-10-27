@@ -74,7 +74,7 @@
     {%- set deep = 'Folders can go only ' ~ fk.max_depth ~ ' levels deep.' %}
     {%- set ns = namespace(rows=[], start='top') %}{% for g, depth in fk.flat %}{% set ns.rows = ns.rows + [[g.id, fk.name(g), depth, fk.folder_icon(g), deep if depth >= fk.max_depth else '']] %}{% if here and g.id == here.id and depth < fk.max_depth %}{% set ns.start = g.id %}{% endif %}{% endfor %}
     <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" data-fopt-dialog="new" aria-label="New folder">
-      <form method="post" action="{{ fk.create_url }}">
+      <form method="post" data-in-place action="{{ fk.create_url }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="view" value="{{ fk.view }}">
         <p data-pick-head><strong>New folder</strong><br>
@@ -335,7 +335,7 @@
    here: the folder it's in now (None: in no folder). The dialog's folders are the page's one
    move_folders list, not a hidden drop-down in every row (the owner, 2026-10-22). #}
 {% macro move_mini(fk, what, ident, label, here) %}
-  <form method="post" action="{{ fk.move_url }}" class="move-form move-mini">
+  <form method="post" data-in-place action="{{ fk.move_url }}" class="move-form move-mini">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="{{ what }}" value="{{ ident }}">
     <input type="hidden" name="view" value="{{ fk.view }}">
@@ -389,7 +389,7 @@
               <span class="folder-opt">
                 <button type="button" class="btn btn-secondary btn-xs" data-fopt="rename">Rename</button>
                 <dialog class="ask folder-dialog" data-fopt-dialog="rename" aria-label="Rename “{{ fk.name(n.folder) }}”">
-                  <form method="post" action="{{ fk.rename_url(f.id) }}">
+                  <form method="post" data-in-place action="{{ fk.rename_url(f.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="view" value="{{ fk.view }}">
                     <p><strong>Rename “{{ fk.name(n.folder) }}”</strong></p>
@@ -407,7 +407,7 @@
                     the folders' table, each folder indented by its depth as in the side list
                     (static/js/dialogfilter.js builds it when it opens; the owner, 2026-10-22) #}
                 <dialog class="ask ask-many assign-many pick-dialog put-dialog folder-dialog" data-fopt-dialog="move" aria-label="Move “{{ fk.name(n.folder) }}” to another folder">
-                  <form method="post" action="{{ fk.move_url }}">
+                  <form method="post" data-in-place action="{{ fk.move_url }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="view" value="{{ fk.view }}">
                     <input type="hidden" name="folder" value="{{ f.id }}">
@@ -428,7 +428,7 @@
                 </dialog>
               </span>
               {% if n.depth < fk.max_depth %}{{ new_folder(fk, f, 'btn-xs') }}{% endif %}
-              <form method="post" action="{{ fk.delete_url(f.id) }}" class="folder-form"
+              <form method="post" data-in-place action="{{ fk.delete_url(f.id) }}" class="folder-form"
                     data-confirm="Delete the folder “{{ fk.name(n.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if n.folders }} in it move up {{ 'into “' ~ fk.name(fk.nodes[f.parent_id].folder) ~ '” (its Unsorted)' if f.parent_id and f.parent_id in fk.nodes else 'to Uncategorized' }}." data-confirm-ok="Delete folder">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="view" value="{{ fk.view }}">
@@ -441,7 +441,7 @@
               <p class="small muted purge-note">{{ blocked }}</p>
               {% elif fk.purge_url %}
               {# the folder and what's in it go (the warning says exactly what happens) #}
-              <form method="post" action="{{ fk.purge_url(f.id) }}" class="folder-form"
+              <form method="post" data-in-place action="{{ fk.purge_url(f.id) }}" class="folder-form"
                     data-confirm="{{ fk.purge_question(n) }}" data-confirm-ok="Delete everything">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="view" value="{{ fk.view }}">
