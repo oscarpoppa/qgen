@@ -91,11 +91,8 @@
       if (b.value === 'add') { putIn(checkedIds(), '', []); return; }
       var what = n === 1 ? 'the checked ' + unit : 'the ' + n + ' checked ' + units;
       var words = b.textContent.trim();
-      //"Put in folder" → "Put the 2 checked problems in a folder"; "Take out of folder" →
-      //"Take … out of a folder"; the Archive's "Move" → "Move … to a folder"
-      strong.textContent = b.value === 'add' ? 'Put ' + what + ' in a folder'
-        : b.value === 'remove' ? 'Take ' + what + ' out of a folder'
-        : words + ' ' + what + ' to a folder';
+      //"Put in folder" → "Put the 2 checked problems in a folder"; the Archive's "Move" → "Move … to a folder"
+      strong.textContent = b.value === 'add' ? 'Put ' + what + ' in a folder' : words + ' ' + what + ' to a folder';
       go.textContent = words;
       go.title = b.dataset.titleWas || b.title || '';
       if (b.name) { go.name = b.name; go.value = b.value; } else { go.removeAttribute('name'); go.removeAttribute('value'); }

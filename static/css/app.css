@@ -2690,18 +2690,15 @@ dialog.add-quiz select, dialog.folder-dialog select { width: 100%; margin-bottom
 .move-form > select.add-select { position: absolute; inset: 0; width: 100% !important; height: 100%; opacity: 0; border: 0; }
 .move-form:has(> .add-select:hover) > .add-folder-icon { filter: brightness(1.25); }
 .move-form:has(> .add-select:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
-dialog.takeout-dialog .takeout-lines { margin: 0 0 16px; padding-left: 18px; }
 /* a person card: its Take out of folder icon at the Folders line's end; its own icons (Student
    page, Reset password, Remove picture) side by side on one line (the owner, 2026-10-15) */
 .person-card .person-folders { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
-.person-card .person-folders > .take-out-one { margin-left: 0; }  /* (right beside the folder-with-plus) */
 .person-card > .btn-row { display: flex; flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: 8px; }
 .person-card > .btn-row > form, .person-card > .btn-row > .inline-form { display: inline-flex; margin: 0; }
 .person-card > .btn-row > *, .person-card > .btn-row .btn, .person-card > .btn-row .inline-form { width: auto; flex: none; }
-.take-out-one { vertical-align: middle; margin: 0 0 4px; }
 /* the two folder icons beside a thing's folder chips, always together (the owner, 2026-10-15) */
 .folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 6px 4px 0; }
-.folder-icons > .move-form, .folder-icons > .take-out-one { margin: 0; }
+.folder-icons > .move-form { margin: 0; }
 /* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
 dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
 dialog.assign-many .assign-defaults ul { margin: 4px 0 6px; padding-left: 18px; columns: 2 150px; }

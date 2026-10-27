@@ -435,7 +435,8 @@ def test_they_are_called_folders_on_screen(app_db):
     assert 'Folder “Algebra” made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
     #(each row's own way into a folder is now its Move to folder icon, not a "+" menu)
-    assert 'Move to folder' in page and 'Take out of folder' in page and 'title="Move to folder: move “Add” to a folder' in page
+    #(no Take out of folder: the Move dialog's Uncategorized does it; the owner, 2026-10-26)
+    assert 'Move to folder' in page and 'Take out of folder' not in page and 'title="Move to folder: move “Add” to a folder' in page
     from app.qgen.models import VPGroup
     page = teacher.get('/quiz/listvp?folder={}'.format(VPGroup.query.one().id)).data.decode()
     assert 'Delete the folder “Algebra”? Nothing in it is deleted' in page and 'Folder options' in page
@@ -710,8 +711,8 @@ def test_out_of_its_only_folder_asks_delete_or_uncategorized(app_db):
 
 
 def test_the_checked_bars_take_out_asks_the_forms_own_address():
-    """The checked bar's buttons are named "action", which hides form.action in the browser:
-    "Take out of folder" asked nowhere and did nothing (Quizzes, Problems, People)."""
+    """The checked bar's buttons are named "action", which hides form.action in the browser: takeout.js reads the
+    form's own address. The bar has no Take out of folder any more (the owner, 2026-10-26)."""
     import os, re
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     js = open(os.path.join(here, 'static', 'js', 'takeout.js')).read()
@@ -719,7 +720,7 @@ def test_the_checked_bars_take_out_asks_the_forms_own_address():
     assert not re.search(r'\bform\.action\b(?!")', js.replace('form.action:', '').replace('hides form.action', ''))
     for t in ('app/qgen/templates/_folder_tools.html', 'app/user/templates/udet.html'):
         html = open(os.path.join(here, t)).read()
-        assert 'data-takeout="remove"' in html and 'name="action" value="remove"' in html
+        assert 'name="action" value="remove"' not in html and 'Take out of folder' not in html
 
 
 def test_deleting_a_folder_says_what_moved_where(app_db):
@@ -735,7 +736,7 @@ def test_deleting_a_folder_says_what_moved_where(app_db):
     teacher.post('/quiz/subjects/problems/file', data={'subject': alg.id, 'items': [probs['Add'].id]})
     teacher.post('/quiz/subjects/problems/file', data={'subject': math.id, 'items': [probs['Area'].id]})
     r = teacher.post('/quiz/subjects/problems/{}/delete'.format(alg.id), follow_redirects=True).data.decode()
-    assert 'Deleted the folder “Algebra”. Moved to “Math” (its Unsorted): “Add”.' in r
+    assert 'Deleted the folder “Math › Algebra”. Moved to “Math” (its Unsorted): “Add”.' in r  # (its full path)
     r = teacher.post('/quiz/subjects/problems/{}/delete'.format(math.id), follow_redirects=True).data.decode()
     assert 'Deleted the folder “Math”. Moved to Uncategorized: “Add”, “Area”.' in r
     # the delete question says where things go, and the folder tabs carry the Folder options
@@ -764,7 +765,8 @@ def test_back_up_to_the_outer_folder_says_where_else_it_is(app_db):
         teacher.post('/quiz/subjects/problems/file', data={'subject': g.id, 'items': [probs['Add'].id]})
     res = teacher.post('/folders/problems/takeout', data={'items': [probs['Add'].id], 'folder': inner.id, 'just': '1'},
                        headers={'X-Requested-With': 'fetch'}).get_json()
-    assert res['message'] == 'Took “Add” out of “Inner”; it’s now in “Outer” (its Unsorted) and still in “Top”.'
+    #(folders named by their full path, as their chips: the owner, 2026-10-26)
+    assert res['message'] == 'Took “Add” out of “Outer › Inner”; it’s now in “Outer” (its Unsorted) and still in “Top”.'
     db.session.expire_all()
     assert sorted(g.title for g in db.session.get(type(probs['Add']), probs['Add'].id).vpgroups) == ['Outer', 'Top']
     # (the trash can no longer carries each folder's outer folders: nothing read them, the code

@@ -1890,7 +1890,7 @@ def test_assigned_counts_on_quizzes_and_problems(app_db):
     page = teach.get('/quiz/listvq?folder=all').data.decode()
     assert '<th data-sort-key="assigned">Assigned</th>' in page
     cell = page.split('data-label="Assigned"')[1].split('</td>')[0]
-    assert 'data-sort="000002"' in cell and 'href="/quiz/results/{}"'.format(vq.id) in cell and '>2</a>' in cell
+    assert 'data-sort="000002"' in cell and 'href="/quiz/results/{}"'.format(vq.id) in cell and '>2</span></a>' in cell  # (in the count circle)
     page = teach.get('/quiz/listvp?folder=all').data.decode()
     cell = page.split('data-label="Assigned"')[1].split('</td>')[0]
     assert 'data-sort="000001"' in cell and '>1<' in cell

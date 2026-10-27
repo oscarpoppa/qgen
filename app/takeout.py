@@ -134,7 +134,8 @@ def plan(kind, item_ids, folder, by=None, one_folder=False, no_up=False):
         if mine - ids:
             out.append(item)
             continue
-        why = _blocker(kind, item, by)
+        #(the Move dialog's Uncategorized never deletes: no need to ask what would block it; the code critic, 2026-10-26)
+        why = None if no_up else _blocker(kind, item, by)
         (blocked.append((item, why)) if why else delete.append(item))
     return {'out': out, 'up': up, 'delete': delete, 'blocked': blocked, 'ids': ids, 'parent': parent}
 
@@ -386,7 +387,7 @@ def folder_delete_plan(kind, folder):
         items = User.query.filter(User.id.in_(ids)).all() if ids else []
     else:
         from app.qgen import services as S
-        #(pictures and files have no removed_at: everything in their folder counts)
+        #(one in the Trash isn't counted: problems, quizzes, and pictures and files since 2026-10-26)
         items = [i for i in getattr(folder, S.subject_kind(kind)[3]) if not getattr(i, 'removed_at', None)]
     alone = [i for i in items if _folders_of(kind, i) == {folder.id}]  # in no other folder
     name = folder_name(kind, folder)

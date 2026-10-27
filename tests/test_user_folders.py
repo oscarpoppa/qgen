@@ -295,10 +295,10 @@ def test_taking_people_out_of_their_only_folder(app_db):
         teach.post('/users/folders/add', data={'user': ids(who), 'to': g8})
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
     page = teach.get('/userdet?folder=all').data.decode()
-    # the bar: the same folder menu, Move to folder and Take out of folder as Problems and Quizzes;
-    # each row: Take out of folder (it asks which folder when they're in several)
-    assert 'id="file-form" class="file-bar" data-takeout="remove"' in page and '>Take out of folder</button>' in page and '>Move to folder</button>' in page
-    assert page.count('aria-label="Take out of folder"') >= 2  # (icon buttons: their words for screen readers)
+    # the bar: the same folder menu and Move to folder as Problems and Quizzes; no Take out of folder, on the bar or
+    # the rows (the Move dialog's Uncategorized does it: the owner, 2026-10-26)
+    assert 'id="file-form" class="file-bar"' in page and '>Move to folder</button>' in page
+    assert 'Take out of folder' not in page
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')
     assert sorted(in_folders('sam')) == ['8th grade', 'Math club']  # nothing changed
@@ -325,7 +325,7 @@ def test_out_of_a_folder_inside_another_goes_back_up(app_db):
     assert in_folders('kim') == ['needs special attention']
     # the ✕ on the folder, the card's Remove (just that folder), and the checked bar: all the same
     res = teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': special}, headers=FETCH).get_json()
-    assert res['message'] == 'Took kim out of “needs special attention”; he/she is now in “8th grade” (its Unsorted).'
+    assert res['message'] == 'Took kim out of “8th grade › needs special attention”; he/she is now in “8th grade” (its Unsorted).'
     assert in_folders('kim') == ['8th grade']
     teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
     teach.post('/folders/people/takeout', data={'items': [ids('kim')], 'folder': special, 'just': '1', 'confirm': 'uncategorized'})
