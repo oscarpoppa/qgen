@@ -1143,7 +1143,11 @@ ol.attempt-list > li { padding-bottom: 2px; }
 /* (in an open row, each attempt sits centered between its lines, the last one too: the owner, 2026-10-27) */
 details.row-fold[open] > ol.attempt-list > li { margin: 0; padding-top: 8px; padding-bottom: 6px; }
 details.row-fold[open] > ol.attempt-list > li:last-child { padding-bottom: 0; }
-details.row-fold[open] > ol.attempt-list { margin-bottom: -5px; }
+details.row-fold[open] > ol.attempt-list { margin-bottom: 0; }
+/* (the row's cell a little shorter below them instead of a negative margin, which Firefox doesn't take; the shade
+   stops above the row's outline and its bottom line) */
+tr:has(> td > details.row-fold[open] > ol.attempt-list) > td:first-child { padding-bottom: 5px; }
+details.row-fold[open]:has(> ol.attempt-list)::after { bottom: -2px; }
 .not-open-note { overflow-wrap: anywhere; }
 
 /* the worked example under "Show the correct answer as" */
@@ -2956,7 +2960,9 @@ tr:has(> td > details.row-fold[open]) > td { border-bottom: 2px solid var(--open
    else right after the heading; static/js/dividers.js measures --body-top/l/r */
 details.row-fold[open] { position: relative; z-index: 0; }
 details.row-fold[open]::after { content: ""; position: absolute; z-index: -1; pointer-events: none;
-  top: var(--body-top, 100%); bottom: -10px; left: var(--body-l, 0); right: var(--body-r, 0);
+  /* (stops 3px above the cell's 10px padding: reaching all of it, Firefox painted the shade over the open row's
+     outline and its bottom line, as on People: the owner, 2026-10-27) */
+  top: var(--body-top, 100%); bottom: -7px; left: var(--body-l, 0); right: var(--body-r, 0);
   background: color-mix(in srgb, var(--open-tint) 5%, var(--surface));
   /* (one light line between the heading part and the contents, on every open row of every page,
      the same everywhere: the owner, 2026-10-21) */
@@ -3404,6 +3410,9 @@ table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width
 /* the open row's heading stays at the top of the list while its contents scroll under it
    (static/js/dividers.js: .row-stuck, --thead-h), on its band across the whole row */
 .folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { position: sticky; top: calc(var(--thead-h, 40px) - 12px); z-index: 1; }
+/* (on the open row's own color from the start: the band below comes from a script after the scroll, and in Firefox,
+   for a moment before it, the contents showed through the heading: the owner, 2026-10-27) */
+.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); }
 /* ...and a table inside the open row (a problem's history, Grading) pins its own column headings
    just under that heading while its rows go by (the owner, 2026-10-22). Its wrapper doesn't scroll
    sideways there (that would hold the headings in place), on a wide screen; on a narrow one the
