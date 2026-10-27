@@ -25,10 +25,35 @@
     var cols = cs.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
     var tops = [], i = 0, c;
     for (c = 0; c < cols; c++) tops.push(1);
-    Array.prototype.forEach.call(grid.children, function (box) {
-      if (box.hidden || getComputedStyle(box).display === 'none') return;
+    function spanOf(box) {
       var m = getComputedStyle(box), h = box.getBoundingClientRect().height + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
-      var span = Math.max(1, Math.ceil((h + gap) / UNIT));
+      return Math.max(1, Math.ceil((h + gap) / UNIT));
+    }
+    //cards that can be dragged to another column (Home, the Dashboard: the owner, 2026-10-26):
+    //each goes where it was put (remembered in this browser), the rest take the columns in turn
+    if (grid.dataset.movable && cols > 1) {
+      var saved = placesOf(grid), lists = [], n = 0;
+      for (c = 0; c < cols; c++) lists.push([]);
+      Array.prototype.forEach.call(grid.children, function (box, k) {
+        if (box.hidden || getComputedStyle(box).display === 'none') return;
+        var at = saved[box.dataset.box];
+        if (at) lists[Math.min(at[0], cols - 1)].push({ box: box, seq: at[1], k: k });
+        else { lists[n % cols].push({ box: box, seq: n, k: k }); }
+        n++;
+      });
+      lists.forEach(function (list, c) {
+        list.sort(function (a, b) { return a.seq - b.seq || a.k - b.k; });
+        list.forEach(function (it, s) {
+          var span = spanOf(it.box);
+          it.box.style.gridColumn = (c + 1) + ' / span 1';
+          it.box.style.gridRow = tops[c] + ' / span ' + span;
+          it.box._place = [c, s];
+          tops[c] += span;
+        });
+      });
+    } else Array.prototype.forEach.call(grid.children, function (box) {
+      if (box.hidden || getComputedStyle(box).display === 'none') return;
+      var span = spanOf(box);
       if (box.classList.contains('dash-wide') || cols === 1) {
         var top = Math.max.apply(null, tops);
         box.style.gridColumn = cols === 1 ? '' : '1 / -1';
@@ -45,6 +70,9 @@
     //laid out: a page that hid its boxes until now (the Dashboard) shows them, in place
     var settling = grid.closest('.dash-settling');
     if (settling) setTimeout(function () { settling.classList.remove('dash-settling'); }, 30);
+  }
+  function placesOf(grid) {
+    try { return JSON.parse(localStorage.getItem('qgen-cards:' + grid.dataset.movable)) || {}; } catch (e) { return {}; }
   }
   function soon(grid) {
     if (pending.indexOf(grid) === -1) pending.push(grid);
@@ -79,4 +107,86 @@
   document.addEventListener('qgen-filtered', all);
   window.addEventListener('resize', all);
   scan();
+
+  //dragging a card by its heading to another column, or higher or lower in one (mouse or pen;
+  //on a phone there's one column); a line shows where it will go
+  var drag = null;
+  function columnsOf(grid) {
+    var cs = getComputedStyle(grid), r = grid.getBoundingClientRect(), x = r.left + parseFloat(cs.paddingLeft);
+    var gapX = parseFloat(cs.columnGap) || 0;
+    return cs.gridTemplateColumns.split(' ').filter(Boolean).map(function (w) {
+      var col = { left: x, width: parseFloat(w) }; x += col.width + gapX; return col;
+    });
+  }
+  function target(e) {
+    var grid = drag.grid, cols = columnsOf(grid), c = 0, d = Infinity;
+    cols.forEach(function (col, k) { var m = Math.abs(e.clientX - (col.left + col.width / 2)); if (m < d) { d = m; c = k; } });
+    var here = Array.prototype.filter.call(grid.children, function (b) {
+      return b !== drag.box && b._place && b._place[0] === c && !b.hidden && b.offsetParent;
+    }).sort(function (a, b) { return a._place[1] - b._place[1]; });
+    var at = here.filter(function (b) { var r = b.getBoundingClientRect(); return r.top + r.height / 2 < e.clientY; }).length;
+    var gr = grid.getBoundingClientRect(), y;
+    if (!here.length) y = gr.top;
+    else if (at === 0) y = here[0].getBoundingClientRect().top - 6;
+    else y = here[at - 1].getBoundingClientRect().bottom + 6;
+    return { col: c, at: at, here: here, left: cols[c].left - gr.left, width: cols[c].width, top: y - gr.top };
+  }
+  document.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    var head = e.target.closest && e.target.closest('summary');
+    if (!head || e.target.closest('a, button, input, select, label')) return;
+    var box = head.parentElement, grid = box && box.parentElement;
+    if (!grid || !grid.dataset || !grid.dataset.movable || !box._place) return;
+    if (getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length < 2) return;
+    e.preventDefault();  // (no text selected while dragging; a plain click still opens or folds it)
+    drag = { box: box, grid: grid, x: e.clientX, y: e.clientY, on: false };
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    if (!drag.on) {
+      if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 8) return;
+      drag.on = true;
+      drag.box.classList.add('card-dragging');
+      document.body.classList.add('cards-dragging');
+      drag.line = document.createElement('div');
+      drag.line.className = 'card-drop-line';
+      drag.grid.appendChild(drag.line);
+    }
+    e.preventDefault();
+    drag.box.style.transform = 'translate(' + (e.clientX - drag.x) + 'px,' + (e.clientY - drag.y) + 'px)';
+    var t = drag.t = target(e);
+    drag.line.style.left = t.left + 'px'; drag.line.style.width = t.width + 'px'; drag.line.style.top = t.top + 'px';
+  });
+  function end(e, keep) {
+    if (!drag) return;
+    var d = drag; drag = null;
+    if (!d.on) return;
+    d.box.classList.remove('card-dragging');
+    document.body.classList.remove('cards-dragging');
+    d.box.style.transform = '';
+    d.line.remove();
+    //(the heading's click after a drag doesn't open or fold the card)
+    var head = d.box.querySelector('summary');
+    function stop(ev) { ev.preventDefault(); ev.stopPropagation(); }
+    head.addEventListener('click', stop, true);
+    setTimeout(function () { head.removeEventListener('click', stop, true); }, 0);
+    if (!keep || !d.t) return;
+    //every shown card's place is written down, so the layout stays as it is now
+    var saved = placesOf(d.grid), cols = {};
+    Array.prototype.forEach.call(d.grid.children, function (b) {
+      if (b === d.box || !b._place || b.hidden || !b.offsetParent) return;
+      (cols[b._place[0]] = cols[b._place[0]] || []).push(b);
+    });
+    Object.keys(cols).forEach(function (c) {
+      var list = cols[c].sort(function (a, b) { return a._place[1] - b._place[1]; });
+      if (+c === d.t.col) list.splice(d.t.at, 0, d.box);
+      list.forEach(function (b, s) { saved[b.dataset.box] = [+c, s]; });
+    });
+    if (!cols[d.t.col]) saved[d.box.dataset.box] = [d.t.col, 0];
+    try { localStorage.setItem('qgen-cards:' + d.grid.dataset.movable, JSON.stringify(saved)); } catch (err) {}
+    soon(d.grid);
+  }
+  document.addEventListener('pointerup', function (e) { end(e, true); });
+  document.addEventListener('pointercancel', function (e) { end(e, false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') end(e, false); });
 })();

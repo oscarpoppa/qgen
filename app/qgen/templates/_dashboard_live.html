@@ -8,7 +8,7 @@
    on their buttons (top right), and "due soon" on the Assigned box's heading #}
 {% set soon = tuning.get('due_soon_days') %}
 
-<div class="dash-grid">
+<div class="dash-grid" data-movable="dashboard">
   {#- the Scanner card, first (the owner, 2026-10-23; it was a chip and pop-over): this teacher's scans, open while
       there are some; static/js/scanprogress.js keeps its rows current while a page is being read #}
   <details class="box card dash-card" id="scan-card" data-elastic="scanner" data-elastic-dir="v" data-box="scanner" data-url="{{ url_for('qgen.scan_progress') }}"{% if scans|selectattr('reading')|list %} data-reading="1"{% endif %}{% if scans %} open{% endif %}>
