@@ -1,4 +1,4 @@
-/* The checked bar's folder buttons (Put in folder, Take out of folder; the Archive's Move)
+/* The checked bar's folder buttons (Move to folder; the Archive's Move)
  * each open a small dialog to choose the folder, like Add to a quiz (the owner, 2026-10-15):
  * the bar's folder list moves into the dialog (still part of the bar's form), and the dialog's
  * own button sends the form as the bar's button did (so static/js/takeout.js still asks
@@ -88,7 +88,6 @@
       e.preventDefault();
       var n = checked();
       if (!n) return;
-      if (b.value === 'remove') { takeOut(checkedIds()); return; }
       if (b.value === 'add') { putIn(checkedIds(), '', []); return; }
       var what = n === 1 ? 'the checked ' + unit : 'the ' + n + ' checked ' + units;
       var words = b.textContent.trim();
@@ -111,15 +110,8 @@
     });
   });
 
-  /* Take out of folder (the owner, 2026-10-15): no folder to choose; it's the folder open now
-     (its tab, or its own page). The dialog says where each will go (up to the folder it's in,
-     else Uncategorized, never deleted), and OK does it. */
-  var confirmBox = document.createElement('dialog');
-  confirmBox.className = 'ask ask-many takeout-dialog';
-  confirmBox.innerHTML = '<p><strong data-head></strong></p><ul class="takeout-lines small" data-lines></ul>'
-    + '<div class="btn-row"><button type="button" class="btn" data-ok>Take out</button><button type="button" class="btn btn-secondary" data-no>Cancel</button></div>';
-  document.body.appendChild(confirmBox);
-  confirmBox.querySelector('[data-no]').addEventListener('click', function () { confirmBox.close(); });
+  //(the open folder: the one the Move dialog's “Uncategorized” takes things out of; Take out of folder is gone, the
+  //owner 2026-10-26)
   function openFolder() {
     var pressed = document.querySelectorAll('.folder-filter-rows .folder-tab[aria-pressed="true"]');
     var id = pressed.length ? pressed[pressed.length - 1].dataset.folder || '' : '';
@@ -129,60 +121,16 @@
     return /^\d+$/.test(page) ? page : null;
   }
   function folderName(id) {
-    var el = document.querySelector('.folder-side .side-row[data-drop="' + id + '"] .side-link');
-    return el ? el.textContent.trim() : 'this folder';
+    //(its full path, as chips and messages name it: “8th Grade › abc”; the owner, 2026-10-26)
+    var row = document.querySelector('.folder-side .side-row[data-drop="' + id + '"]');
+    var el = row && row.querySelector('.side-link');
+    return row && row.dataset.path ? row.dataset.path : el ? el.textContent.trim() : 'this folder';
   }
   function checkedIds() {
     if (window.qgenCheckedIds) return window.qgenCheckedIds();
     var ids = {};
     document.querySelectorAll('.folder-main input[name="items"]:checked, .folder-main input.pick-person:checked').forEach(function (t) { ids[t.value] = 1; });
     return Object.keys(ids);
-  }
-  function takeOut(ids, label) {
-    var n = ids.length;
-    var head = confirmBox.querySelector('[data-head]'), lines = confirmBox.querySelector('[data-lines]'), ok = confirmBox.querySelector('[data-ok]');
-    var what = label || (n === 1 ? 'the checked ' + unit : 'the ' + n + ' checked ' + units);
-    var id = openFolder();
-    lines.innerHTML = '';
-    //(no folder open, e.g. All: each comes out of the folder it's in, the owner 2026-10-15)
-    if (!id) id = 'own';
-    confirmBox.querySelector('[data-no]').hidden = false;
-    var name = id === 'own' ? '' : folderName(id);
-    head.textContent = id === 'own' ? 'Take ' + what + ' out of ' + (n === 1 ? (unit === 'person' ? 'his/her folder' : 'its folder') : 'their folders') + '?' : 'Take ' + what + ' out of “' + name + '”?';
-    var data = new FormData(form);
-    data.delete('items');
-    ids.forEach(function (i) { data.append('items', i); });
-    data.set(sel.name, id);
-    data.set('action', 'remove');
-    data.set('check', '1');
-    ok.disabled = true;
-    lines.innerHTML = '<li class="muted">Checking…</li>';
-    confirmBox.showModal();
-    fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        lines.innerHTML = '';
-        var said = res.ok ? (res.preview && res.preview.length ? res.preview : ['None of them is in “' + (name || 'a folder') + '”.']) : [res.error || 'That didn\'t work. Please reload the page and try again.'];
-        said.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; lines.appendChild(li); });
-        ok.disabled = !(res.ok && res.preview && res.preview.some(function (t) { return !/ isn’t in any folder\.$/.test(t); }));
-        ok.onclick = function () {
-          //(a form of its own with just these, so nothing else checked goes along; sent straight,
-          //past static/js/takeout.js's question: nothing is deleted from here)
-          var f = document.createElement('form');
-          f.method = 'post'; f.action = form.getAttribute('action'); f.hidden = true;
-          function hidden(k, v) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); }
-          hidden('csrf_token', form.querySelector('input[name=csrf_token]').value);
-          var view = form.querySelector('input[name=view]');
-          if (view) hidden('view', view.value);
-          ids.forEach(function (i) { hidden('items', i); });
-          hidden(sel.name, id);
-          hidden('action', 'remove');
-          hidden('confirm', 'uncategorized');
-          document.body.appendChild(f);
-          if (window.qgenCheckedClear) window.qgenCheckedClear();
-          f.submit();
-        };
-      }, function () { lines.innerHTML = '<li>That didn\'t work. Please reload the page and try again.</li>'; });
   }
   /* Put in folder (the owner, 2026-10-15): laid out like the Assign dialogs: what happens, then
      the folders (indented as in the folder list). The checked bar's button (the checked ones)
@@ -227,9 +175,18 @@
     window.qgenPickOk(putList);
     var onlyIn = d.from || (n === 1 && d.already.length === 1 ? d.already[0] : null);
     //(a folder inside another indented as in the folder list; a folder icon between the box and the
-    //name: the owner, 2026-10-16; no "out of every folder" here, so no Uncategorized)
+    //name: the owner, 2026-10-16). Moving, “Uncategorized” first: out of the folder open now only, a copy in another
+    //folder kept (the owner, 2026-10-26, when Take out of folder went); grayed with no folder open
+    var here = openFolder();
     window.qgenFolderPick.fill(putList, window.qgenFolderPick.fromSelect(sel).folders, { type: copy ? 'checkbox' : 'radio', name: 'put-to',
+      top: copy ? null : 'Uncategorized',
       each: function (f, box, lab) {
+        if (f.id === 'top') {
+          var row = box.closest('tr');
+          if (!here) { box.disabled = true; row.classList.add('pick-off'); row.title = 'Open the folder to move ' + it + ' out of first'; }
+          else row.title = 'Out of “' + folderName(here) + '” only; any other folders ' + inNow + ' in keep ' + it;
+          return;
+        }
         if (copy && d.already.indexOf(f.id) !== -1) {
           box.checked = true; box.disabled = true; lab.title = 'Already in it';
           //(said in words, not only on hover: the owner, 2026-10-26)
@@ -251,6 +208,8 @@
     });
     var where = names.length === 1 && names[0] ? '\u201c' + names[0] + '\u201d' : names.length + ' folders';
     var q = copy ? 'Copy ' + d.what + ' to ' + where + '?' : 'Move ' + d.what + ' to ' + where + '?';
+    if (!copy && picked[0] === 'top') q = 'Move ' + d.what + ' to Uncategorized? ' + (d.ids.length === 1 ? (unit === 'person' ? 'He/she comes' : 'It comes') : 'They come')
+      + ' out of \u201c' + folderName(openFolder()) + '\u201d only.';
     (window.qgenAsk ? window.qgenAsk(q, copy ? 'Copy' : 'Move') : Promise.resolve(window.confirm(q))).then(function (yes) {
       if (yes) putSend(d, copy, picked);
     });
@@ -263,6 +222,13 @@
     var view = form.querySelector('input[name=view]');
     if (view) hidden('view', view.value);
     d.ids.forEach(function (i) { hidden('items', i); });
+    if (!copy && picked[0] === 'top') {
+      hidden(sel.name, openFolder()); hidden('action', 'remove'); hidden('to_none', '1'); hidden('confirm', 'uncategorized');
+      document.body.appendChild(f);
+      if (window.qgenCheckedClear) window.qgenCheckedClear();
+      f.submit();
+      return;
+    }
     picked.forEach(function (g) { hidden(sel.name, g); });
     hidden('action', copy ? 'add' : 'move');
     //("Move from “X”", from Remove: out of that folder only, static/js/takeout.js)
@@ -285,13 +251,6 @@
     if (!b || b.disabled) return;
     e.preventDefault();
     putIn([b.dataset.putIn], b.dataset.label || '', (b.dataset.in || '').split(' ').filter(Boolean));
-  });
-  //a row's or card's own Take out of folder icon (beside its folder-with-plus): just that one
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('[data-take-out]');
-    if (!b || b.disabled) return;
-    e.preventDefault();
-    takeOut([b.dataset.takeOut], b.dataset.label || '');
   });
 })();
 

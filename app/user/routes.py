@@ -745,7 +745,8 @@ def file_people():
     if request.form.get('action') == 'remove' and folder == 'own':
         return takeout.handle_each('people', people, lambda m, error=False: _group_done(m, error=error))
     if request.form.get('action') == 'remove':
-        return takeout.handle('people', people, folder, lambda m, error=False: _group_done(m, error=error), one_folder=True)
+        return takeout.handle('people', people, folder, lambda m, error=False: _group_done(m, error=error), one_folder=True,
+                              no_up=bool(request.form.get('to_none')))
     #(one folder or several: the Put in folder dialog lets several be checked, the owner 2026-10-15)
     folders = list(dict.fromkeys(f for f in request.form.getlist('folder') if f))
     #(moving, the dialog's usual way: into one folder, out of the others, the owner 2026-10-16)

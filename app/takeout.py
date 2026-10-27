@@ -30,7 +30,17 @@ def _folder_cls(kind):
 
 
 def folder_name(kind, f):
-    return f.name if kind == 'people' else f.title
+    """A folder as every message here names it: its full path, outermost first (“8th Grade › abc”), as its chips show it,
+    so two folders of one name are told apart (the owner, 2026-10-26)."""
+    own = (lambda g: g.name) if kind == 'people' else (lambda g: g.title)
+    names, seen, g = [own(f)], set(), f
+    while getattr(g, 'parent_id', None) and g.parent_id not in seen:
+        seen.add(g.parent_id)
+        g = db.session.get(type(g), g.parent_id)
+        if g is None:
+            break
+        names.append(own(g))
+    return ' \u203a '.join(reversed(names))
 
 
 def get_folder(kind, folder_id):
@@ -102,15 +112,15 @@ def _blocker(kind, item, by):
     return S.vquiz_delete_blocker(item)
 
 
-def plan(kind, item_ids, folder, by=None, one_folder=False):
+def plan(kind, item_ids, folder, by=None, one_folder=False, no_up=False):
     """What taking these out of the folder would do: {'out': items that stay in other folders,
     'up': items that go back up into the folder this one is inside (taken out of a folder inside
     another, a thing stays in that outer one, its Unsorted: the owner 2026-10-13, like deleting a
     folder), 'delete': items left in no folder (deleted if confirmed), 'blocked': [(item, why)]
     left in no folder but can't be deleted}. one_folder: just that folder (a folder chip's ✕),
-    not the folders inside it."""
+    not the folders inside it. no_up: never up into the outer folder (the Move dialog's “Uncategorized”)."""
     ids = {folder.id} if one_folder else subtree(kind, folder)
-    parent = db.session.get(_folder_cls(kind), folder.parent_id) if folder.parent_id else None
+    parent = db.session.get(_folder_cls(kind), folder.parent_id) if folder.parent_id and not no_up else None
     near = (subtree(kind, parent) - ids) if parent is not None else set()  # (the outer folder and its others)
     out, up, delete, blocked = [], [], [], []
     for item_id in dict.fromkeys(item_ids):
@@ -206,12 +216,14 @@ def _put_in(kind, item, folder):
             rel.append(folder)
 
 
-def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
+def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False, no_up=False):
     """Take them out. What would be left in no folder: confirm='delete' deletes it (what can't be
     deleted goes in Uncategorized), 'uncategorized' leaves it in no folder; anything else changes
     nothing (TakeOutError with the question). Returns the words for the message."""
     from app.qgen import services as S
-    p = plan(kind, item_ids, folder, by, one_folder)
+    p = plan(kind, item_ids, folder, by, one_folder, no_up)
+    if no_up:
+        return _to_uncategorized(kind, p, folder)
     if (p['delete'] or p['blocked']) and confirm not in ('delete', 'uncategorized'):
         raise TakeOutError(question(kind, folder, p))
     ids, where = p['ids'], folder_name(kind, folder)
@@ -266,7 +278,23 @@ def run(kind, item_ids, folder, by=None, confirm=None, one_folder=False):
     return ' '.join(done) or 'Nothing to take out.'
 
 
-def handle(kind, item_ids, folder_id, done, one_folder=False):
+def _to_uncategorized(kind, p, folder):
+    """The Move dialog's “Uncategorized” (the owner, 2026-10-26, when Take out of folder went): out of the folder open
+    now only. One that's in other folders too stays in them (a copy elsewhere is never lost); one in no other folder
+    goes to Uncategorized. Nothing is deleted, nothing goes up into an outer folder."""
+    ids, where, done = p['ids'], folder_name(kind, folder), []
+    for item in p['out']:
+        done.append('Moved {} out of “{}”; {} still in {}.'.format(item_name(kind, item), where,
+                    'he/she is' if kind == 'people' else 'it’s', _still_in(kind, item, ids)))
+        _take_out(kind, item, ids)
+    for item in p['delete'] + [i for i, _why in p['blocked']]:
+        _take_out(kind, item, ids)
+        done.append('Moved {} to Uncategorized.'.format(item_name(kind, item)))
+    db.session.commit()
+    return ' '.join(done) or 'None of them is in “{}”.'.format(where)
+
+
+def handle(kind, item_ids, folder_id, done, one_folder=False, no_up=False):
     """What every take-out route does. With check=1 nothing changes: JSON {ok, question} (the
     "are you sure?" when something would be deleted, else null), for static/js/takeout.js. A
     drag (fetch) that would delete something gets {ok: false, confirm: question} (409), and is
@@ -276,8 +304,8 @@ def handle(kind, item_ids, folder_id, done, one_folder=False):
     fetch = request.headers.get('X-Requested-With') == 'fetch'
     try:
         folder = get_folder(kind, folder_id)
-        p = plan(kind, item_ids, folder, current_user, one_folder)
-        q = question(kind, folder, p)
+        p = plan(kind, item_ids, folder, current_user, one_folder, no_up)
+        q = None if no_up else question(kind, folder, p)
         can_delete = bool(p['delete'])  # (when nothing left can be deleted, "Delete for good" is grayed)
         if request.form.get('check'):
             return jsonify(ok=True, question=q, can_delete=can_delete, preview=preview(kind, folder, p))
@@ -285,7 +313,7 @@ def handle(kind, item_ids, folder_id, done, one_folder=False):
         if q and confirm not in ('delete', 'uncategorized') and fetch:
             return jsonify(ok=False, confirm=q, can_delete=can_delete, preview=preview(kind, folder, p)), 409
         try:
-            message = run(kind, item_ids, folder, by=current_user, confirm=confirm, one_folder=one_folder)
+            message = run(kind, item_ids, folder, by=current_user, confirm=confirm, one_folder=one_folder, no_up=no_up)
         except Exception as exc:  # e.g. someone started the quiz meanwhile (S.ServiceError)
             from app import db as _db
             _db.session.rollback()

@@ -2702,7 +2702,6 @@ dialog.takeout-dialog .takeout-lines { margin: 0 0 16px; padding-left: 18px; }
 /* the two folder icons beside a thing's folder chips, always together (the owner, 2026-10-15) */
 .folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 6px 4px 0; }
 .folder-icons > .move-form, .folder-icons > .take-out-one { margin: 0; }
-.folder-icons > .add-folder-off { width: 28px; height: 28px; padding: 0; }
 /* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
 dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
 dialog.assign-many .assign-defaults ul { margin: 4px 0 6px; padding-left: 18px; columns: 2 150px; }

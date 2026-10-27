@@ -1956,7 +1956,9 @@ def file_subject(kind):
     if not add:
         #out of the folder chosen; left in no folder: delete it or Uncategorized, asked first
         from app import takeout
-        return takeout.handle(kind, items, subject.id, lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True)
+        #(the Move dialog's “Uncategorized”: out of the open folder only, never deleted; the owner, 2026-10-26)
+        return takeout.handle(kind, items, subject.id, lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True,
+                              no_up=bool(request.form.get('to_none')))
     #(one folder or several: the Put in folder dialog lets several be checked, the owner 2026-10-15)
     subjects = [g for g in (S.get_subject(kind, x) for x in dict.fromkeys(request.form.getlist('subject'))) if g is not None]
     #(moving, the dialog's usual way: into one folder, out of the others, the owner 2026-10-16)
