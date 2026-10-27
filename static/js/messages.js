@@ -171,7 +171,7 @@
       var which = paneOf(pin);
       var on = !root.classList.contains('dock-pinned-' + which);
       root.classList.toggle('dock-pinned-' + which, on);
-      store('qgen-dock-pinned-' + which, on ? '1' : '0');  // (pinned unless unpinned: base.html)
+      store('qgen-dock-pinned-' + which, on ? '1' : '0');  // (unpinned until pinned: base.html)
       //pinning keeps this panel as it is now
       store('qgen-dock-' + which, on && isOpen(which) ? 'open' : null);
       syncButtons();

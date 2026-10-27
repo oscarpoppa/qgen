@@ -56,20 +56,20 @@
   </script>
   {% if current_user.is_authenticated %}
   <script>
-    /* the side panels are pinned unless someone unpins them (the owner, 2026-10-14): they sit
-       beside the page and stay open until closed with their ✕, across pages and reloads.
-       Not pinned (the pin in a panel's heading, remembered per browser) they slide over the page
-       and close when it's clicked. Open the pinned ones before the page draws, so it doesn't jump */
+    /* the side panels start unpinned (the owner, 2026-10-27; pinned to begin with since 2026-10-14): a pop-over card that
+       closes when the page is clicked. Pinned (the pin in a panel's heading, remembered per browser) they stay open until
+       closed with their ✕, across pages and reloads. Open the pinned ones before the page draws, so it doesn't jump */
     (function () {
       var wide = window.matchMedia('(min-width: 1001px)').matches;
       var c = document.documentElement.classList;
-      //(each panel is pinned or not on its own: Notices and Messages; pinned unless unpinned, and
-      //what was set for both before they had their own pins counts for each: the owner, 2026-10-23)
+      //(each panel is pinned or not on its own: Notices and Messages; what was set for both before they had their own pins
+      //counts for each: the owner, 2026-10-23. Unpinned until pinned: a pop-over card to begin with, the owner 2026-10-27;
+      //it was pinned unless unpinned)
       ['notices', 'messages'].forEach(function (p) {
-        var pinned = true, v = null;
+        var pinned = false, v = null;
         try {
           var mine = localStorage.getItem('qgen-dock-pinned-' + p), both = localStorage.getItem('qgen-dock-pinned');
-          pinned = (mine !== null ? mine : both) !== '0';
+          pinned = (mine !== null ? mine : both) === '1';
         } catch (e) {}
         if (pinned && wide) {
           c.add('dock-pinned-' + p);

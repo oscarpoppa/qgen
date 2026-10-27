@@ -1517,8 +1517,9 @@ def test_side_panels_slide_over_the_page_unless_pinned(app_db):
     app, db = app_db
     page = login(app, 'teach').get('/dashboard').data.decode()
     assert page.count('class="dock-pin"') == 2 and 'aria-pressed="false"' in page
-    start = page[page.index('/* the side panels are pinned unless'):page.index('})();', page.index('/* the side panels are pinned unless'))]
-    #(each panel has its own pin, pinned unless unpinned: the owner 2026-10-14 and 2026-10-23; the old shared one counts for both)
+    start = page[page.index('/* the side panels start unpinned'):page.index('})();', page.index('/* the side panels start unpinned'))]
+    #(each panel has its own pin, unpinned until pinned: the owner 2026-10-23 and 2026-10-27; the old shared one counts for both)
+    assert "=== '1'" in start
     assert "localStorage.getItem('qgen-dock-pinned-' + p)" in start and "localStorage.getItem('qgen-dock-pinned')" in start and 'roomy' not in start
     assert "if (pinned && wide) {" in start  # only pinned panels open by themselves
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
