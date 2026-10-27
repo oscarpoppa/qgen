@@ -320,7 +320,7 @@
       {#- (the full path, "8th Grade › abc": subfolders of one name told apart; the owner, 2026-10-26) #}
       {%- set path = folder_path(f, fk.name) %}
       <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ path }}”">{{ icon('folder') }} <span class="chip-name">{{ path }}</span></a>
-      <button type="button" class="chip-x" aria-label="Take {{ label }} out of {{ path }}" title="Take {{ label }} out of {{ path }} (in no other folder: you’re asked first)">✕</button>
+      <button type="button" class="chip-x" aria-label="Take {{ label }} out of “{{ path }}”" title="Take {{ label }} out of “{{ path }}” (in no other folder, {{ 'he/she goes' if what == 'user' else 'it goes' }} to Uncategorized)">✕</button>
     </span>
   {% endfor %}
 </div>{% endif %}{% endmacro %}
@@ -363,8 +363,14 @@
       went with the row's form, 2026-10-20, and a drag from Checked copied instead of moving; the owner, 2026-10-26) #}
   <span hidden data-folders="{{ ((folders or [])|map(attribute='id')|list)|tojson|forceescape }}"></span>
   {%- if no_delete %}{{ slot('Delete for good', no_delete, 'btn btn-danger btn-sm', 'lc-trash') }}{% else %}
+  {#- (deleting for good takes it out of every folder it's in: said first, naming them; the owner, 2026-10-27) #}
+  {%- set ns = namespace(names=[]) %}{% for f in (folders or []) if kind != 'archive' %}{% set ns.names = ns.names + ['“' ~ folder_path(f) ~ '”'] %}{% endfor %}
+  {%- set him = 'him/her' if kind == 'people' else 'it' %}
+  {%- set one = ('his/her folder ' if kind == 'people' else 'its folder ') %}
+  {%- set many = ('both' if ns.names|length == 2 else 'all ' ~ ns.names|length) ~ ' folders ' ~ ('he/she is' if kind == 'people' else 'it’s') ~ ' in: ' %}
+  {%- set in_note = (' Deleting ' ~ him ~ ' takes ' ~ him ~ ' out of ' ~ (one if ns.names|length == 1 else many) ~ ns.names|join(', ') ~ '.') if ns.names else '' %}
   <button type="button" class="btn btn-danger btn-sm btn-icon" data-remove-one data-kind="{{ kind }}" data-label="{{ label }}"
-          data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-delete-note="{{ delete_note }}"{% if own_problems %} data-own-problems="{{ own_problems }}"{% endif %}
+          data-delete-url="{{ delete_url }}"{% if archive_url %} data-archive-url="{{ archive_url }}"{% endif %} data-delete-label="{{ delete_label }}" data-delete-note="{{ (delete_note ~ in_note)|trim }}"{% if own_problems %} data-own-problems="{{ own_problems }}"{% endif %}
           title="Delete for good: delete {{ label }}; you’re asked first">{{ icon_label('lc-trash', 'Delete for good') }}</button>{% endif %}
 {% endmacro %}
 

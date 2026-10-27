@@ -185,15 +185,11 @@ def test_one_at_a_time_and_dragging(app_db):
     teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': fall.id}, headers=FETCH)
     db.session.expire_all()
     assert [g.title for g in q.vqgroups] == ['Spring']
-    # a chip's ✕ on its only folder: deleted, but only once the teacher agrees
+    # a chip's ✕ on its only folder: to Uncategorized, never deleted (the owner, 2026-10-27)
     res = teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': spring.id}, headers=FETCH)
-    assert res.status_code == 409 and 'only in “Spring”' in res.get_json()['confirm']
+    assert res.get_json()['message'] == 'Moved “Q1” to Uncategorized.'
     db.session.expire_all()
-    assert [g.title for g in q.vqgroups] == ['Spring']
-    qid = q.id
-    teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': qid, 'folder': spring.id, 'confirm': 'delete'})
-    db.session.expire_all()
-    assert db.session.get(VQuiz, qid) is None  # never taken: deleted for good
+    assert q.vqgroups == [] and db.session.get(VQuiz, q.id) is not None
     # a quiz that's gone
     res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': 999, 'to': fall.id}, headers=FETCH)
     assert res.status_code == 400 and 'doesn\'t exist' in res.get_json()['error']

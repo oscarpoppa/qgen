@@ -59,7 +59,7 @@ def test_make_folders_and_put_people_in_them(app_db):
     # All: one list, everyone once (sam is in both folders: two chips on one card)
     assert sorted(people(teach, 'all')) == ['kim', 'sam', 'teach']
     page = teach.get('/userdet?folder=all').data.decode()
-    assert 'title="Open the folder “7th grade”">' in page and 'aria-label="Take sam out of Math club"' in page
+    assert 'title="Open the folder “7th grade”">' in page and 'aria-label="Take sam out of “Math club”"' in page
     # dragging from one folder to another moves them (their other folders stay)
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
         'Moved sam to “8th grade”.'
@@ -77,20 +77,20 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert 'use the ✕ on the folder chip' in out['error']
     assert in_folders('sam') == ['8th grade', 'Math club']
     teach.post('/users/folders/remove', data={'user': ids('sam'), 'folder': club}, headers=FETCH)
-    # out of their only folder by the chip's ✕: that deletes their account, so it's asked first (not done here)
+    # out of their only folder by the chip's ✕: to Uncategorized, never deleted (the owner, 2026-10-27)
     res = teach.post('/users/folders/remove', data={'user': ids('sam'), 'folder': folder('8th grade')}, headers=FETCH)
-    assert res.status_code == 409 and 'Do you want me to permanently delete him/her or put him/her in Uncategorized?' in res.get_json()['confirm']
-    assert in_folders('sam') == ['8th grade']
+    assert res.get_json()['message'] == 'Moved sam to Uncategorized.'
+    assert in_folders('sam') == []
+    teach.post('/users/folders/add', data={'user': ids('sam'), 'to': folder('8th grade')})
     # the ✕ beside a folder
     # the ✕ beside a folder: the message says where they still are; out of their only folder,
     # asked first, then (as chosen) in Uncategorized
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g7})
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g8})
     assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g7}, headers=FETCH).get_json()['message'] == \
-        'Took kim out of “7th grade”; he/she is still in “8th grade”.'
-    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
-    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8, 'confirm': 'uncategorized'},
-                      headers=FETCH).get_json()['message'] == 'Took kim out of “8th grade”; he/she is now in Uncategorized.'
+        'Moved kim out of “7th grade”; he/she is still in “8th grade”.'
+    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8},
+                      headers=FETCH).get_json()['message'] == 'Moved kim to Uncategorized.'
     assert in_folders('kim') == []
     # names; renaming
     assert teach.post('/users/folders', data={'name': ' '}, headers=FETCH).get_json()['error'] == 'Please give the folder a name.'
@@ -314,9 +314,9 @@ def test_taking_people_out_of_their_only_folder(app_db):
     assert 'can’t be deleted (You can’t delete your own account)' in q
 
 
-def test_out_of_a_folder_inside_another_goes_back_up(app_db):
-    """The owner's steps (2026-10-13): Ben in 8th grade, dragged into "needs special attention"
-    inside it, then taken out of that: he's back in 8th grade (its Unsorted), not in no folder."""
+def test_out_of_a_folder_inside_another_goes_to_uncategorized(app_db):
+    """Ben in 8th grade, dragged into "needs special attention" inside it, then that chip's ✕: in no other folder, he goes to
+    Uncategorized, never up into 8th grade (the owner, 2026-10-27; it was up a level since 2026-10-13)."""
     app, db = app_db
     teach = login(app, 'teach')
     teach.post('/users/folders', data={'name': '8th grade'})
@@ -326,15 +326,9 @@ def test_out_of_a_folder_inside_another_goes_back_up(app_db):
     teach.post('/users/folders/add', data={'user': ids('kim'), 'to': g8})
     teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
     assert in_folders('kim') == ['needs special attention']
-    # the ✕ on the folder, the card's Remove (just that folder), and the checked bar: all the same
     res = teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': special}, headers=FETCH).get_json()
-    assert res['message'] == 'Took kim out of “8th grade › needs special attention”; he/she is now in “8th grade” (its Unsorted).'
-    assert in_folders('kim') == ['8th grade']
-    teach.post('/users/folders/move', data={'user': ids('kim'), 'to': special, 'from': g8}, headers=FETCH)
-    teach.post('/folders/people/takeout', data={'items': [ids('kim')], 'folder': special, 'just': '1', 'confirm': 'uncategorized'})
-    assert in_folders('kim') == ['8th grade']
-    # out of the top folder, with nothing else: still asked (delete or Uncategorized)
-    assert teach.post('/users/folders/remove', data={'user': ids('kim'), 'folder': g8}, headers=FETCH).status_code == 409
+    assert res['message'] == 'Moved kim to Uncategorized.'
+    assert in_folders('kim') == []
 
 
 def test_two_folders_side_by_side_never_share_a_name(app_db):

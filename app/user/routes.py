@@ -808,10 +808,11 @@ def add_to_user_folder():
 @admin_only
 @post_form_only
 def remove_from_user_folder():
-    #just that folder; left in no folder: deleted, asked first (app/takeout.py)
+    #(a folder chip's ✕, the one way out of a folder: just that folder; in no other, Uncategorized, never up into the
+    #outer folder, never deleted: the owner, 2026-10-27)
     from app import takeout
     return takeout.handle('people', [request.form.get('user')], request.form.get('folder'),
-                          lambda m, error=False: _group_done(m, error=error), one_folder=True)
+                          lambda m, error=False: _group_done(m, error=error), one_folder=True, no_up=True)
 
 # route to site-wide settings: name, logo, and the class code students need to sign up
 @user_bp.route('/settings', methods=['GET', 'POST'])

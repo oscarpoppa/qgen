@@ -1900,11 +1900,12 @@ def add_to_subject(kind):
 @admin_only
 @post_form_only
 def remove_from_subject(kind):
-    #(just that folder; something left in no folder is deleted, asked first: app/takeout.py)
+    #(a folder chip's ✕, the one way out of a folder: just that folder; in no other, it goes to Uncategorized, never up
+    #into the outer folder, never deleted: the owner, 2026-10-27)
     from app import takeout
     what = S.item_word(kind)
     return takeout.handle(kind, [request.form.get(what)], request.form.get('folder'),
-                          lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True)
+                          lambda m, error=False: _subject_done(kind, m, error=error), one_folder=True, no_up=True)
 
 #route for a "Take out" button on a card or row, and People's checked bar: out of the folder
 #shown (and the folders inside it); something left in no folder is deleted, asked first
