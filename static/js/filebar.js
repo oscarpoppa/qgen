@@ -173,7 +173,11 @@
           var note = document.createElement('span'); note.className = 'already-in small muted'; note.textContent = 'already in';
           lab.appendChild(note);
         }
-        if (!copy && f.id === onlyIn) { box.disabled = true; lab.title = 'Already in it'; }
+        //(moving, every folder it's in already is grayed too, said in words: the user critic, 2026-10-27)
+        if (!copy && (f.id === onlyIn || (d.ids.length === 1 && d.already.indexOf(f.id) !== -1))) {
+          box.disabled = true; lab.title = 'Already in it';
+          if (!lab.querySelector('.already-in')) { var nt = document.createElement('span'); nt.className = 'already-in small muted'; nt.textContent = 'already in'; lab.appendChild(nt); }
+        }
       } });
   }
   copyBox.addEventListener('change', putDraw);

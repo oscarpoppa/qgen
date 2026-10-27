@@ -152,6 +152,10 @@
       if (row) {
         var fs = row.querySelector('[data-folders]');
         if (fs) { try { fs.dataset.folders = JSON.stringify(JSON.parse(fs.dataset.folders).filter(function (x) { return String(x) !== String(fid); })); } catch (err) {} }
+        //(its Move dialog's "already in" too: the user critic, 2026-10-27)
+        row.querySelectorAll('[data-put-in][data-in]').forEach(function (b) {
+          b.dataset.in = b.dataset.in.split(' ').filter(function (x) { return x && x !== String(fid); }).join(' ');
+        });
         //(the row's Folders count, one less: the code critic, 2026-10-27)
         var cell = row.querySelector('td[data-label="Folders"]'), badge = cell && cell.querySelector('.badge');
         if (badge) {

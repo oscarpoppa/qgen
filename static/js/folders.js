@@ -213,7 +213,7 @@
     swap('#move-folders');  // (the row Move dialog's folders: My quizzes, the Trash)
     swap('.folder-side .side-card-head');
     swap('.folder-side-now');
-    swap('#folder-title');
+    swap('.folder-title-row');  // (its title, Folder options and their dialogs, Expand all's words: the user critic, 2026-10-27)
     var sel = document.querySelector('#file-form select'), nsel = doc.querySelector('#file-form select');
     if (sel && nsel) sel.innerHTML = nsel.innerHTML;
     var nl = doc.querySelector('.folders-layout');
@@ -248,9 +248,13 @@
       Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
       Array.prototype.forEach.call(oldBoxes, function (b, i) {
         var nb = document.importNode(newBoxes[i], true);
+        //(the list's own scroll kept: the user critic, 2026-10-27, it went back to the top)
+        var tops = Array.prototype.map.call(b.querySelectorAll('.folder-filter-list, .table-wrap'), function (el) { return el.scrollTop; });
         if (b.qgenTearDown) b.qgenTearDown();
         b.replaceWith(nb);
         window.qgenFolderFilterSetUp(nb);
+        function keepScroll() { Array.prototype.forEach.call(nb.querySelectorAll('.folder-filter-list, .table-wrap'), function (el, k) { if (tops[k]) el.scrollTop = tops[k]; }); }
+        keepScroll(); setTimeout(keepScroll, 0); setTimeout(keepScroll, 120);  // (again once its setup has settled)
         //(what's checked stays checked in the new rows, as after a sort: checked.js)
         if (window.qgenCheckedIds) {
           var kept = {}, first = null;
