@@ -322,8 +322,10 @@
     {#- a plain badge: its ✕ builds the take-out form when pressed (static/js/takeout.js), so a long
         list doesn't carry a form in every badge (the owner, 2026-10-21: page speed) #}
     <span class="folder-chip" data-chip-out="{{ fk.remove_url }}" data-view="{{ fk.view }}" data-what="{{ what }}" data-ident="{{ ident }}" data-folder="{{ f.id }}">
-      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ fk.name(f) }}”">{{ icon('folder') }} <span class="chip-name">{{ fk.name(f) }}</span></a>
-      <button type="button" class="chip-x" aria-label="Take {{ label }} out of {{ fk.name(f) }}" title="Take {{ label }} out of {{ fk.name(f) }} (in no other folder: you’re asked first)">✕</button>
+      {#- (the full path, "8th Grade › abc": subfolders of one name told apart; the owner, 2026-10-26) #}
+      {%- set path = folder_path(f, fk.name) %}
+      <a href="{{ fk.page(f.id) }}" title="Open the folder “{{ path }}”">{{ icon('folder') }} <span class="chip-name">{{ path }}</span></a>
+      <button type="button" class="chip-x" aria-label="Take {{ label }} out of {{ path }}" title="Take {{ label }} out of {{ path }} (in no other folder: you’re asked first)">✕</button>
     </span>
   {% endfor %}
 </div>{% endif %}{% endmacro %}

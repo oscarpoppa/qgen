@@ -144,6 +144,18 @@ def page_helpers():
             #e.g. before the database is upgraded
             db.session.rollback()
             return {'name': 'Quizzes', 'logo': None, 'icon': None, 'icon_svg': False}
+    def folder_path(f, name=None):
+        """A folder's name with every folder it's inside, outermost first ("8th Grade › abc"): two
+        subfolders of one name in different folders are told apart on their chips (the owner, 2026-10-26)."""
+        name = name or (lambda g: getattr(g, 'name', None) or getattr(g, 'title', '') or '')
+        names, seen, g = [name(f)], set(), f
+        while getattr(g, 'parent_id', None) and g.parent_id not in seen:
+            seen.add(g.parent_id)
+            g = db.session.get(type(g), g.parent_id)
+            if g is None:
+                break
+            names.append(name(g))
+        return ' \u203a '.join(reversed(names))
     def asset(filename):
         """A stylesheet's or script's address stamped with when the file last changed,
         so browsers fetch the new copy after an update instead of a saved old one."""
@@ -194,7 +206,7 @@ def page_helpers():
     from app.qgen.models import RETAKE_RULES_SHORT
     return dict(push_on=lambda: bool(app.config.get('PUSH')), short_rules=RETAKE_RULES_SHORT, watch=live.watch, back=nav.back, link_label=nav.link_label, link_kind=nav.link_kind, just_signed_in=just_signed_in, csrf_token=generate_csrf, home_url=home_url, online_count=online_count, tab_counts=tab_counts, nav_dots=nav_dots, tuning=tuning,
                 tuning_poll_ms=tuning.poll_ms, review_count=review_count, scan_counts=scan_counts, now=datetime.now,
-                attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, unread_messages=unread_messages, unread_notices=unread_notices,
+                attempts_by_quiz=attempts_by_quiz, site=site, asset=asset, folder_path=folder_path, unread_messages=unread_messages, unread_notices=unread_notices,
                 avatar_initials=initials, avatar_color=color,
                 people_choices=assign_dialogs.people_choices, quiz_choices=assign_dialogs.quiz_choices, assign_quizzes=assign_dialogs.assign_quizzes,
                 person_folder_map=assign_dialogs.person_folders, message_students=assign_dialogs.message_students,

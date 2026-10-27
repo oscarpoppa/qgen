@@ -31,7 +31,7 @@
                   data-home="{{ here.id if here else ('top' if not home else 'all') }}" title="Drag onto a folder to move it there">{#- (the name only opens the row, like every row's name: the owner, 2026-10-22) #}{{ a.student_name }}</span></summary>
                 {#- its folder in the opened row, a chip opening that folder (the owner, 2026-10-26: the Folder column gone from the
                     row's top line; one folder at a time, moved with the row's Move icon, so no ✕) #}
-                {%- if home %}<div class="small row-folders">In folder: <span class="folder-chip"><a href="{{ fk.page(home.id) }}" title="Open the folder “{{ fk.name(home) }}”">{{ icon('folder') }} <span class="chip-name">{{ fk.name(home) }}</span></a></span></div>{% endif %}</details>
+                {%- if home %}<div class="small row-folders">In folder: <span class="folder-chip"><a href="{{ fk.page(home.id) }}" title="Open the folder “{{ folder_path(home, fk.name) }}”">{{ icon('folder') }} <span class="chip-name">{{ folder_path(home, fk.name) }}</span></a></span></div>{% endif %}</details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
               <td data-label="Quiz">{#- (opens this archived attempt, like its View icon: the owner, 2026-10-22) #}<a class="name-link" href="{{ url_for('qgen.archived', aid=a.id) }}" data-tip="View: {{ a.student_name }}'s answers and score as they were when moved to the Trash"><strong>{{ a.quiz_title }}</strong></a>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}

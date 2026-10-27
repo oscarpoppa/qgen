@@ -1015,7 +1015,7 @@ dialog.folder-dialog p { margin-bottom: 12px; }
    tooltip, so the chips stay side by side: the owner, 2026-10-14) */
 .folder-chip { max-width: 100%; min-width: 0; }
 .folder-chip a { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
-.folder-chip .chip-name { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-chip .chip-name { max-width: 24em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }  /* (room for the full path, "8th Grade › abc": the owner, 2026-10-26) */
 .chip-x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: var(--fs-xs); line-height: 1.4; border-radius: 999px; }
 .chip-x:hover { color: var(--bad); }
 .person-folders .move-form { margin-top: 2px; }
