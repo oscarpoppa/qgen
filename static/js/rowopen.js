@@ -35,6 +35,9 @@
       if (!r.width || r.left < own.right - 1 || bottomOf(sib) > top) break;
       right = r.right - parseFloat(getComputedStyle(sib).paddingRight);
     }
+    //(never past the list's own visible edge)
+    var wrap = td.closest('.table-wrap');
+    if (wrap) right = Math.min(right, wrap.getBoundingClientRect().left + wrap.clientWidth - 8);
     var extra = Math.max(0, Math.floor(right - own.right + parseFloat(getComputedStyle(td).paddingRight)));
     d.style.setProperty('--row-extra', extra + 'px');
     d.classList.toggle('row-wide', extra > 0);
@@ -88,6 +91,11 @@
     if (!body) return;
     var box = d.closest('.folder-scroll') || document.documentElement;
     var limit = Math.min(box === document.documentElement ? innerHeight : box.getBoundingClientRect().bottom, innerHeight);
+    //(and moves left when it would run past the list's right edge)
+    body.style.left = '';
+    var edge = (d.closest('.table-wrap') || document.documentElement).getBoundingClientRect().right - 8;
+    var over = body.getBoundingClientRect().right - Math.min(edge, innerWidth - 8);
+    if (over > 0) body.style.left = -over + 'px';
     var r = body.getBoundingClientRect(), s = d.getBoundingClientRect();
     if (r.bottom > limit && s.top - r.height - 8 > (box === document.documentElement ? 0 : box.getBoundingClientRect().top)) d.classList.add('pop-up');
   }, true);

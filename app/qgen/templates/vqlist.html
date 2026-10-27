@@ -2,6 +2,8 @@
 {% from "_macros.html" import post_button, slot, scan_mark with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
+{#- a problem's chip in an opened quiz row, opening it on Problems #}
+{% macro problem_chip(p) %}<a class="pick-chip row-quiz-chip" href="{{ url_for('qgen.list_vprob', vpid=p.id) }}" title="Open “{{ p.title }}” on Problems">{{ icon('lc-puzzle') }} {{ p.title }}</a>{% endmacro %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -32,11 +34,12 @@
               <li>retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
               <span class="badge badge-warn" title="Set on People">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</li>
             </ul>
-            {#- its problems as chips, the first 10, then “+N more” showing the rest here (the owner, 2026-10-26:
-                no pop-up list; the Problems column keeps just the number) #}
+            {#- its problems as chips, the first 10, then “+N more” opening the rest in a card that pops out
+                over the row, not making it taller (the owner, 2026-10-26; the Problems column keeps just the number) #}
             {%- set pids = [] %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% endfor %}{% endfor %}
-            {%- if pids %}<div class="small row-quizzes row-problems">Problems: {% for pid in pids %}<a class="pick-chip row-quiz-chip{{ ' chip-extra' if loop.index > 10 }}" href="{{ url_for('qgen.list_vprob', vpid=pid) }}" title="Open “{{ byid[pid].title }}” on Problems"{{ ' hidden' if loop.index > 10 }}>{{ icon('lc-puzzle') }} {{ byid[pid].title }}</a>{% endfor %}
-            {%- if pids|length > 10 %}<button type="button" class="chip-more" onclick="this.parentNode.querySelectorAll('.chip-extra').forEach(function (c) { c.hidden = false; }); this.remove();">+{{ pids|length - 10 }} more</button>{% endif %}</div>{% endif %}
+            {%- if pids %}<div class="small row-quizzes row-problems">Problems: {% for pid in pids[:10] %}{{ problem_chip(byid[pid]) }}{% endfor %}
+            {%- if pids|length > 10 %}<details class="row-pop row-more-pop"><summary class="chip-more" title="See the other {{ pids|length - 10 }}">+{{ pids|length - 10 }} more</summary>
+              <div class="row-pop-body chip-pop">{% for pid in pids[10:] %}{{ problem_chip(byid[pid]) }}{% endfor %}</div></details>{% endif %}</div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           <td data-label="Problems" class="nowrap small" data-sort="{{ '%04d' % entries|length }}">{{ entries|length }}</td>
