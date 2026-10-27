@@ -135,7 +135,16 @@
     //so nothing is covered when the page opens; only what grows from here on floats)
     rest = null; card.style.marginBottom = ''; float();
     if (window.qgenRelayout) window.qgenRelayout();
-    if (window.ResizeObserver) new ResizeObserver(function () { float(); barShown(); }).observe(card);
+    //(grown by what's in it, a refresh or opening it, not by hand: laid out afresh, pushing the cards below, never lying
+    //over them; only a size pulled by hand floats: the owner, 2026-10-26, "Right now" covered a folded card under it)
+    var settle = null;
+    if (window.ResizeObserver) new ResizeObserver(function () {
+      if (!card._elasticDragging && !extra && !tall) {
+        rest = null; card.style.marginBottom = ''; card.classList.remove('is-floating');
+        clearTimeout(settle); settle = setTimeout(function () { if (window.qgenRelayout) window.qgenRelayout(); }, 30);
+      } else float();
+      barShown();
+    }).observe(card);
     card._elasticBar = barShown;
     barShown();
     card._elasticFloat = float;
