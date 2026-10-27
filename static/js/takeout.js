@@ -136,6 +136,25 @@
     document.querySelectorAll('form[data-takeout]').forEach(function (form) { form.querySelectorAll('input[data-added]').forEach(function (i) { i.remove(); }); });
   });
 
+  function chipOut(form, chip) {
+    fetchJson(form.getAttribute('action'), new FormData(form)).then(function (res) {
+      if (!res.ok) { window.qgenSay(res.error || 'That didn\'t work. Please reload the page and try again.', 'error'); return; }
+      var fid = chip.dataset.folder, row = chip.closest('tr[data-box]') || chip.closest('[data-box]');
+      var list = chip.closest('.row-folders');
+      chip.remove();
+      //(the "+N more" card's chips count too: static/js/chipcap.js)
+      if (list && !list.querySelector('.folder-chip')) list.remove();
+      if (row) {
+        var fs = row.querySelector('[data-folders]');
+        if (fs) { try { fs.dataset.folders = JSON.stringify(JSON.parse(fs.dataset.folders).filter(function (x) { return String(x) !== String(fid); })); } catch (err) {} }
+        //(out of the folder shown: its row leaves the list, as it would after a reload)
+        if (chip.dataset.view === fid) row.remove();
+      }
+      if (window.qgenMovedSay) window.qgenMovedSay(res.message); else window.qgenSay(res.message);
+      window.qgenRefreshCounts();
+    });
+  }
+
   function send(form, sub) {
     var data = new FormData(form);
     if (sub && sub.name) data.set(sub.name, sub.value);
@@ -145,6 +164,10 @@
       if (!res.ok) { window.qgenSay(res.error || 'That didn\'t work. Please reload the page and try again.', 'error'); return; }
       var go = function (choice) {
         if (choice) hidden(form, 'confirm', choice);
+        //a folder chip's ✕: done here, the page left exactly as it was but for the chip (and the row, when it has left
+        //the folder shown); a reload made the page jump (the owner, 2026-10-27)
+        var chip = form.closest('.folder-chip');
+        if (chip && window.qgenRefreshCounts) { chipOut(form, chip); return; }
         if (sub && sub.name) hidden(form, sub.name, sub.value);
         //(the checked bar's: done with the checked ones, unchecked when the page comes back; not before the
         //question is answered, so a Cancel keeps them: static/js/checked.js)

@@ -163,6 +163,32 @@
   }
   //(also for a page whose contents changed meanwhile, a hand-in or a grade: static/js/messages.js, the owner 2026-10-25)
   window.qgenRefreshList = function () { refreshInPlace(null); };
+  //the folder list's counts and dots from a fresh copy of the page, changed in place (its folds and drop places stay)
+  function sideCounts(doc) {
+    var fresh = {};
+    doc.querySelectorAll('.folder-side .side-row').forEach(function (row) { var k = sideKey(row); if (k) fresh[k] = row; });
+    document.querySelectorAll('.folder-side .side-row').forEach(function (row) {
+      var k = sideKey(row), n = k && fresh[k];
+      if (!n) return;
+      ['.side-count', '.side-flags', '.side-inner-dots'].forEach(function (sel) {
+        var a = row.querySelector(sel), b = n.querySelector(sel);
+        if (a && b) a.innerHTML = b.innerHTML;
+        else if (a) a.remove();
+        else if (b) {
+          //(in their usual order: its own dots, then the small ones for the folders inside, then the count)
+          var at = (sel === '.side-flags' && row.querySelector('.side-inner-dots')) || row.querySelector('.side-count');
+          if (at) row.insertBefore(document.importNode(b, true), at); else row.appendChild(document.importNode(b, true));
+        }
+      });
+      row.classList.toggle('is-empty', n.classList.contains('is-empty'));
+    });
+  }
+  //(a folder chip's ✕, done without leaving the page: only the counts change; static/js/takeout.js, the owner 2026-10-27)
+  window.qgenRefreshCounts = function () {
+    fetch(location.href, { credentials: 'same-origin' }).then(function (r) { return r.ok && !r.redirected ? r.text() : null; })
+      .then(function (html) { if (html) sideCounts(new DOMParser().parseFromString(html, 'text/html')); }, function () {});
+  };
+  window.qgenMovedSay = function (text) { movedSay({ text: text }); };
   function refreshInPlace(done) {
     var reload = function () {
       try { sessionStorage.setItem('qgen-moved', JSON.stringify(done)); } catch (e) {}
@@ -178,23 +204,7 @@
       var oldBoxes = document.querySelectorAll('.folder-main [data-folder-filter]'), newBoxes = doc.querySelectorAll('.folder-main [data-folder-filter]');
       var oldPagers = document.querySelectorAll('nav.pager'), newPagers = doc.querySelectorAll('nav.pager');
       if (!oldBoxes.length || oldBoxes.length !== newBoxes.length || oldPagers.length !== newPagers.length) throw new Error('not the same page');
-      var fresh = {};
-      doc.querySelectorAll('.folder-side .side-row').forEach(function (row) { var k = sideKey(row); if (k) fresh[k] = row; });
-      document.querySelectorAll('.folder-side .side-row').forEach(function (row) {
-        var k = sideKey(row), n = k && fresh[k];
-        if (!n) return;
-        ['.side-count', '.side-flags', '.side-inner-dots'].forEach(function (sel) {
-          var a = row.querySelector(sel), b = n.querySelector(sel);
-          if (a && b) a.innerHTML = b.innerHTML;
-          else if (a) a.remove();
-          else if (b) {
-            //(in their usual order: its own dots, then the small ones for the folders inside, then the count)
-            var at = (sel === '.side-flags' && row.querySelector('.side-inner-dots')) || row.querySelector('.side-count');
-            if (at) row.insertBefore(document.importNode(b, true), at); else row.appendChild(document.importNode(b, true));
-          }
-        });
-        row.classList.toggle('is-empty', n.classList.contains('is-empty'));
-      });
+      sideCounts(doc);
       Array.prototype.forEach.call(oldPagers, function (p, i) { p.replaceWith(document.importNode(newPagers[i], true)); });
       Array.prototype.forEach.call(oldBoxes, function (b, i) {
         var nb = document.importNode(newBoxes[i], true);
