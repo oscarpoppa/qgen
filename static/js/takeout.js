@@ -62,7 +62,7 @@
       f.appendChild(token);
       Object.keys(extra || {}).forEach(function (k) { var i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = extra[k]; f.appendChild(i); });
       document.body.appendChild(f);
-      f.submit();
+      f.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(f);  // (in place: static/js/inplace.js)
     }
     //(a quiz: its problems no other quiz uses can go with it, checked to start: the owner, 2026-10-26)
     var own = +(form.dataset.ownProblems || 0);
@@ -143,7 +143,12 @@
       var list = chip.closest('.row-folders');
       chip.remove();
       //(the "+N more" card's chips count too: static/js/chipcap.js)
-      if (list && !list.querySelector('.folder-chip')) list.remove();
+      //(the line stays, a muted “—” once it's in no folder: the owner, 2026-10-27)
+      if (list && !list.querySelector('.folder-chip')) {
+        list.querySelectorAll('details.row-pop, .chip-more').forEach(function (el) { el.remove(); });
+        var dash = document.createElement('span'); dash.className = 'no-data'; dash.title = 'In no folder (Uncategorized)'; dash.textContent = '—';
+        list.appendChild(dash);
+      }
       if (row) {
         var fs = row.querySelector('[data-folders]');
         if (fs) { try { fs.dataset.folders = JSON.stringify(JSON.parse(fs.dataset.folders).filter(function (x) { return String(x) !== String(fid); })); } catch (err) {} }

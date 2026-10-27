@@ -35,7 +35,7 @@
             {%- if in_archive %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ file_url(item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }}{{ ' full size' if kind == 'pictures' }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
             {#- the Trash's: Restore and Delete for good, as a problem's there (the owner, 2026-10-26) #}
-            <form method="post" action="{{ url_for('upload.restore_upload', uid=item.id) }}" class="inline-form"
+            <form method="post" action="{{ url_for('upload.restore_upload', uid=item.id) }}" class="inline-form" data-in-place
                   data-confirm="Restore “{{ item.name }}”? It goes back on the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.name }}” back on the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delete_trashed_upload', uid=item.id), delete_note='It can’t be undone.') }}

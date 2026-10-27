@@ -71,7 +71,7 @@
             {{- folder_icons(fk, 'user', item.id, item.shown_name, mine) }}
             {% if in_archive %}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
-            <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form"
+            <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form" data-in-place
                   data-confirm="Restore {{ item.shown_name }}’s account? He/she can sign in again." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
             {{ slot('Student history', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-history') }}{{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}

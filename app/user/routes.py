@@ -432,10 +432,10 @@ def deluser(uid):
     delete_account(usr, by=current_user)
     flash('Deleted {}’s account.'.format(usrname), 'success')
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
-    #back to the Users page they were on (its folder), not to the deleted person's pages
-    users = url_for('user.userdet')
-    back = back_to(users)
-    return redirect(back if back.split('?')[0] == users else users)
+    #back to the People page they were on (its folder), or the Trash when done there (the owner, 2026-10-27), not to the
+    #deleted person's pages
+    from app.nav import back_to_list
+    return redirect(back_to_list('user.userdet'))
 
 #the trash can's Move to Archive for a person (the owner, 2026-10-16): they can't log in and
 #leave every list; keep=yes keeps their quiz results and attempts, keep=no deletes them for good

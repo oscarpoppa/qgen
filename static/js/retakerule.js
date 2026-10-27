@@ -34,7 +34,7 @@
       box.close();
       if (!r || r.value === was) return;  // (nothing changed: nothing to save)
       sel.value = r.value;
-      form.submit();
+      form.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(form);  // (in place: static/js/inplace.js)
     };
     box.showModal();
     var on = list.querySelector('input:checked');

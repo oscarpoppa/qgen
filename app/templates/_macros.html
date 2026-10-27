@@ -172,7 +172,8 @@
 {# a small camera after the name of a quiz, problem or folder the scanner made (the owner, 2026-10-25); x: anything with from_scan #}
 {% macro scan_mark(x, tip='Made from a scanned page') %}{% if x and x.from_scan %}<span class="scan-mark" title="{{ tip }}" role="img" aria-label="{{ tip }}">{{ icon('camera') }}</span>{% endif %}{% endmacro %}
 {% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none, icon=none) %}
-  <form method="post" action="{{ url }}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
+  {#- (in place: the page isn't reloaded when the action comes back to it, static/js/inplace.js; the owner, 2026-10-27) #}
+  <form method="post" action="{{ url }}" class="inline-form" data-in-place{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {#- (icon: a bare icon button, its words in the tooltip and for screen readers) -#}
     {%- if icon %}<button class="{{ cls }} btn-icon" title="{{ label }}{% if tip %}: {{ tip }}{% endif %}">{{ icon_label(icon, label) }}</button>

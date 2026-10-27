@@ -206,7 +206,7 @@
     if (!copy && d.from) hidden('from', d.from);
     document.body.appendChild(f);
     if (window.qgenCheckedClear) window.qgenCheckedClear();
-    f.submit();
+    f.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(f);  // (in place: static/js/inplace.js)
   }
   function putIn(ids, label, already, from) {
     if (!ids.length) return;
@@ -375,6 +375,6 @@
     ids.forEach(function (i) { hidden('items', i); });
     document.body.appendChild(f);
     if (window.qgenCheckedClear) window.qgenCheckedClear();
-    f.submit();
+    f.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(f);  // (in place: static/js/inplace.js)
   }
 })();

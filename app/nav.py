@@ -68,7 +68,8 @@ def back_to_list(list_endpoint):
     (the page it was done on: its folder tab, filter and Show choice), else the list from the start."""
     from flask import url_for
     path = safe_next(request.referrer)
-    if path and _match(path)[0] == list_endpoint:
+    #(done in the Trash, e.g. its Delete for good: back to the Trash as it was, not to the list; the owner, 2026-10-27)
+    if path and _match(path)[0] in (list_endpoint, 'qgen.archive'):
         return _without_once(path)
     return url_for(list_endpoint)
 

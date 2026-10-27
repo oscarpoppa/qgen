@@ -37,7 +37,7 @@
             {#- its problems as chips, the first 10, then “+N more” opening the rest in a card that pops out
                 over the row (static/js/chipcap.js; the owner, 2026-10-26; the Problems column keeps just the number) #}
             {%- set pids = [] %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% endfor %}{% endfor %}
-            {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid]) }}{% endfor %}</div>{% endif %}
+            {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid]) }}{% endfor %}</div>{% else %}<div class="small row-quizzes row-problems">Problems: <span class="no-data" title="No problems yet">—</span></div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}

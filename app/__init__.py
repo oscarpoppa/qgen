@@ -376,3 +376,18 @@ def _gzip(response):
     response.headers['Content-Length'] = str(len(response.get_data()))
     response.vary.add('Accept-Encoding')
     return response
+
+
+#an action done in place (static/js/inplace.js, sent with X-In-Place: 1; the owner, 2026-10-27: no page reload that comes
+#back to the same page): where the route would reload the page with its messages, it answers JSON instead: the messages
+#(as HTML, escaped unless they were Markup: a "Trash" link stays a link) and where it would have gone, for the page to
+#change itself, or go there when that's another page. Registered after _gzip, so it runs first.
+@app.after_request
+def _in_place(response):
+    from flask import request as _rq, get_flashed_messages, jsonify
+    from markupsafe import escape
+    if _rq.headers.get('X-In-Place') != '1' or _rq.method != 'POST' or response.status_code not in (301, 302, 303):
+        return response
+    said = [{'html': str(escape(m)), 'error': cat == 'error'} for cat, m in get_flashed_messages(with_categories=True)]
+    out = jsonify(ok=True, inplace=True, messages=said, location=response.headers.get('Location', ''))
+    return out

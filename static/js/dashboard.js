@@ -27,6 +27,8 @@
   //the question is answered.
   function busy() { return !!document.querySelector('dialog[open]'); }
   var waiting = false, lastHtml = null, lastRefresh = Date.now(), soonTimer = null;
+  //(after an action done in place on the Dashboard, e.g. Unpin: redrawn now, static/js/inplace.js; the owner, 2026-10-27)
+  window.qgenDashRefresh = function () { lastHtml = null; refresh(); };
   function refresh() {
     if (document.hidden) return;
     if (busy()) { waiting = true; return; }

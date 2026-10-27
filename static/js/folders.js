@@ -584,7 +584,7 @@
       if (!r) { window.qgenPickError(list, 'Choose a folder first.'); return; }
       form.querySelector('input[name=to]').value = r.value;
       box.close();
-      form.submit();
+      form.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(form);  // (in place: static/js/inplace.js)
     };
     box.showModal();
   }

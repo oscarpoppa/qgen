@@ -69,7 +69,7 @@
       {% for p in pinned %}
         <li>{{ icon('pin') }}
           <span class="dash-pin-text">{{ p.msg.body }}</span>
-          <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go"
+          <form method="post" action="{{ url_for('messages.pin', message_id=p.msg.id) }}" class="dash-go" data-in-place
                 data-confirm="Unpin this message{{ ' for all ' ~ p.to|length ~ ' students' if p.to|length > 1 }}? It stays in {{ 'their' if p.to|length > 1 or p.everyone else 'his/her' }} messages, just not at the top." data-confirm-ok="Unpin">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="pinned" value="0">
             <button class="icon-link" title="Unpin: take this message off the top of students' messages (it isn’t deleted)">{{ icon_label('lc-pin-off', 'Unpin') }}</button>
