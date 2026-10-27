@@ -1140,6 +1140,10 @@ ol.attempt-list { position: relative; padding-top: 6px; padding-right: 12px; }
 ol.attempt-list::before { content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
   border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); pointer-events: none; }
 ol.attempt-list > li { padding-bottom: 2px; }
+/* (in an open row, each attempt sits centered between its lines, the last one too: the owner, 2026-10-27) */
+details.row-fold[open] > ol.attempt-list > li { margin: 0; padding-top: 8px; padding-bottom: 6px; }
+details.row-fold[open] > ol.attempt-list > li:last-child { padding-bottom: 0; }
+details.row-fold[open] > ol.attempt-list { margin-bottom: -5px; }
 .not-open-note { overflow-wrap: anywhere; }
 
 /* the worked example under "Show the correct answer as" */
