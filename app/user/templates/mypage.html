@@ -65,11 +65,22 @@
           {% set has_started = g.attempts|selectattr('status', 'in', ['started', 'review'])|list %}
           {% set due_cq = due_by_quiz.get(g.vquiz.id) %}
         </summary>
-        {#- (no folder chip under the quiz name: the owner, 2026-10-23; the row's Move icon shows the folder) #}
         {% set ahead = g.open or latest %}
         <p class="muted small">{{ ahead.cproblems|length }} question{{ '' if ahead.cproblems|length == 1 else 's' }}
           {% if ahead.time_limit %} · {{ ahead.time_limit }} minutes{% endif %}
           {% if ahead.closes_at and not ahead.completed %} · due {{ ahead.closes_at|when('date') }}{% endif %}</p>
+        {#- the folder it's in, as a chip in the opened row, as on every folder page (the owner, 2026-10-27; it was left out
+            on 2026-10-23, the Move icon showing it). One folder at most here: its ✕ moves it to Uncategorized; in none: “—” #}
+        {% if fk.flat %}<div class="small row-folders">In folder:
+          {%- if here %}{% set path = folder_path(here, fk.name) %}
+          <span class="folder-chip"><a href="{{ fk.page(here.id) }}" title="Open the folder “{{ path }}”">{{ icon('folder') }} <span class="chip-name">{{ path }}</span></a>
+            <form method="post" data-in-place action="{{ fk.move_url }}" class="chip-out-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="quiz" value="{{ g.vquiz.id }}"><input type="hidden" name="view" value="{{ fk.view }}">
+              <input type="hidden" name="from" value="{{ here.id }}"><input type="hidden" name="to" value="">
+              <button type="submit" class="chip-x" aria-label="Take “{{ g.vquiz.title }}” out of “{{ path }}”" title="Take “{{ g.vquiz.title }}” out of “{{ path }}” (it goes to Uncategorized)">✕</button>
+            </form></span>
+          {%- else %} <span class="no-data" title="In no folder (Uncategorized)">—</span>{% endif %}</div>{% endif %}
         {% if g.attempts|length > 1 and g.combined is not none %}
           <p><strong>Your score: {{ '%.0f' % g.combined }}%</strong> <span class="muted small">({{ student_rules.get(g.rule_key, g.rule)|lower if student_rules is defined else g.rule|lower }})</span></p>
         {% endif %}

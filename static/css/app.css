@@ -1035,6 +1035,7 @@ dialog.folder-dialog p { margin-bottom: 12px; }
   border-radius: 999px; background: var(--surface-2); font-size: var(--fs-sm); white-space: nowrap; }
 .folder-chip a { color: var(--text); text-decoration: none; }
 .folder-chip a:hover { text-decoration: underline; }
+.folder-chip > .chip-out-form { display: inline-flex; margin: 0; }  /* (My quizzes: the ✕ is a small Move form) */
 /* (a long folder name is cut short with "…", like the folder tabs; its full name is in the
    tooltip, so the chips stay side by side: the owner, 2026-10-14) */
 .folder-chip { max-width: 100%; min-width: 0; }
