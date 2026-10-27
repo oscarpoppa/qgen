@@ -48,6 +48,9 @@
           it.box.style.gridColumn = (c + 1) + ' / span 1';
           it.box.style.gridRow = tops[c] + ' / span ' + span;
           it.box._place = [c, s];
+          //(a note on the heading: the owner, 2026-10-26)
+          var head = it.box.querySelector('summary');
+          if (head && !head.title) head.title = 'Drag to move this card';
           tops[c] += span;
         });
       });
