@@ -26,7 +26,7 @@
               data-home="{{ here.id if here else ('top' if not item.vqgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title }}{{ scan_mark(item) }}</strong></summary>
             {# one fact a line, so the column stays narrow (the owner, 2026-10-16) #}
             <ul class="quiz-facts small muted">
-              <li>{{ layout.question_count(entries) }} question{{ '' if layout.question_count(entries) == 1 else 's' }} per student</li>
+              <li>{{ layout.question_count(entries) }} problem{{ '' if layout.question_count(entries) == 1 else 's' }} per student</li>  {#- (problems, not questions: the owner, 2026-10-26) #}
               <li>{% if item.calculator_allowed %}calculator OK{% else %}no calculator{% endif %}</li>
               {% if item.shuffle_order %}<li>order shuffled</li>{% endif %}
               {% set own = item.cquizzes|selectattr('own_retake_rule')|map(attribute='assignee')|unique|list|length %}
