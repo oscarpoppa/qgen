@@ -26,7 +26,7 @@
    rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
 {% macro attempt_status(cq, g) -%}
 {% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if cq in g.counted and g.attempts|length > 1 %} title="This is the score that counts ({{ g.rule|lower }})"{% endif %}>{{ '★ ' if cq in g.counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-                    {% elif cq.status == 'review' %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}
+                    {% elif cq.status == 'review' %}{{ status_icon('waiting', 'Waiting for grading', tip='handed in') }}
                     {% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
                     {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}
 {%- endmacro %}
@@ -171,7 +171,8 @@
       {#- (sorted New, In progress, Completed, as on My quizzes) -#}
       <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}"><span class="btn-row quiz-state-badges">
         {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
-        {%- if has_started %}{{ status_icon('going', 'In progress') }}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
+        {#- (only handed in and waiting for the teacher: the waiting mark, the owner 2026-10-27) -#}
+        {%- if has_started %}{% if has_started|selectattr('status', 'equalto', 'started')|list %}{{ status_icon('going', 'In progress') }}{% else %}{{ status_icon('waiting', 'Waiting for grading') }}{% endif %}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
         {%- if has_new and has_started %}{{ status_icon('fresh', 'New') }}{% endif %}</span></td>
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ print_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}{{ icons }}</span></td>

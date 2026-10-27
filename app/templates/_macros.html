@@ -199,4 +199,4 @@
 {% macro count_dot(n, kind, words) %}<span class="side-dot dot-{{ kind }}" title="{{ n }} {{ words }}" role="img" aria-label="{{ n }} {{ words }}">{{ n }}</span>{% endmacro %}
 {# a status as a small mark (the owner, 2026-10-24): done, a green check; in progress, a blue half circle; new / not started, a gold
    circle; ready to finish (graded, waiting to be finished), a green clipboard with a check #}
-{% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check'}[kind]) }}</span>{% endmacro %}
+{% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check', 'waiting': 'lc-user-check'}[kind]) }}</span>{% endmacro %}

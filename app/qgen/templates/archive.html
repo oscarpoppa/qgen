@@ -39,7 +39,7 @@
                 <span class="muted"><span class="nowrap">Moved to the Trash {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
               <td data-label="Result" data-sort="{{ '%06.1f' % a.score if a.completed and a.score is not none else '' }}">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
-                {% elif a.needs_review %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}
+                {% elif a.needs_review %}{{ status_icon('waiting', 'Waiting for grading', tip='handed in') }}
                 {% elif a.startdate %}{{ status_icon('going', 'In progress') }}
                 {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}</td>
               <td class="actions">

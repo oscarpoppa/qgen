@@ -3638,6 +3638,7 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .status-icon.status-done svg.ico, .status-icon.status-ready svg.ico { color: var(--ok); }
 .status-icon.status-going svg.ico { color: var(--accent); }
 .status-icon.status-fresh svg.ico { color: var(--warn); }
+.status-icon.status-waiting svg.ico { color: var(--muted); }  /* (handed in, waiting for the teacher: the owner, 2026-10-27) */
 
 /* help on the label itself, no "?" circle (the owner, 2026-10-24; static/js/tips.js): a faint dotted underline says there's help */
 .tip-wrap.tip-moved > button.tip { display: none; }

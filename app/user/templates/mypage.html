@@ -30,7 +30,7 @@
 {# counted: this attempt's score is the one that counts (by the retake rule) #}
 {% macro status(cq, counted=false) %}
   {% if cq.status == 'completed' %}<span class="badge {{ score_class(cq.score or 0) }}"{% if counted %} title="This is the score that counts"{% endif %}>{{ '★ ' if counted }}{{ '%.0f' % (cq.score or 0) }}%</span>
-  {% elif cq.status == 'review' %}{{ status_icon('going', 'In progress', tip='handed in; your teacher is checking your written answers') }}
+  {% elif cq.status == 'review' %}{{ status_icon('waiting', 'Waiting for your teacher', tip='handed in; your teacher is checking your written answers') }}
   {% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
   {# assigned and not opened yet: new to the student #}
   {% else %}{{ status_icon('fresh', 'New') }}{% endif %}
@@ -91,7 +91,8 @@
           Completed, a quiz with more than one at its highest: New with In progress sorts as New) -#}
       <td data-label="Status" class="quiz-state" data-sort="{{ '1' if has_new else '2' if has_started else '3' }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
         {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
-        {%- if has_started %}{{ status_icon('going', 'In progress') }}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
+        {#- (only handed in and waiting for the teacher: the waiting mark, the owner 2026-10-27) -#}
+        {%- if has_started %}{% if has_started|selectattr('status', 'equalto', 'started')|list %}{{ status_icon('going', 'In progress') }}{% else %}{{ status_icon('waiting', 'Waiting for your teacher') }}{% endif %}{% elif has_new %}{{ status_icon('fresh', 'New') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
         {%- if has_new and has_started %}{{ status_icon('fresh', 'New') }}{% endif %}
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>

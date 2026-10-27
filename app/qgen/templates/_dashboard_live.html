@@ -92,7 +92,7 @@
         <li>{{ person_name(cq.taker, href=url_for('qgen.qtake', cidx=cq.id), tip='View: ' ~ (cq.taker.shown_name if cq.taker else 'the student') ~ '’s answers and score on “' ~ cq.vquiz.title ~ '”') }}
           {# just the quiz's name, plain words (the owner, 2026-10-23): the person's name and the eye open this hand-in #}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_name(cq.vquiz) }}</span>
-          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}{{ status_icon('going', 'In progress', tip='handed in and waiting for grading') }}{% endif %}
+          {% if cq.completed and cq.score is not none %}{{ score(cq.score) }}{% else %}{{ status_icon('waiting', 'Waiting for grading', tip='handed in') }}{% endif %}
           <span class="muted small">{{ when(cq.compdate) }}</span></span>
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ cq.taker.shown_name if cq.taker else 'the student' }}’s answers and score on “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></span></li>
       {% endfor %}
