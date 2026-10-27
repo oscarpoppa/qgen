@@ -2,7 +2,7 @@
     folder list on the left, the files as rows, each with a small thumbnail (pictures). kind:
     'pictures' or 'files'; what: 'picture' or 'file'. The files are still the truth
     (app/qgen/uploads.py keeps a row for each). #}
-{% from "_macros.html" import post_button, slot with context %}
+{% from "_macros.html" import count_badge, post_button, slot with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% set what = 'picture' if kind == 'pictures' else 'file' %}
@@ -12,7 +12,7 @@
 {% macro upload_table(items, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="title">{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th data-sort-key="created">Created</th><th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="title">{{ 'Picture' if kind == 'pictures' else 'File' }}</th><th data-sort-key="created">Created</th><th data-sort-key="folders">Folders</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}{% set gs = item.picgroups if kind == 'pictures' else item.filegroups %}
         <tr data-item="{{ item.id }}" data-box="{{ what }}:{{ item.id }}" data-name="{{ item.name|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -26,6 +26,9 @@
             {%- if kind == 'pictures' %}<a class="upload-big" href="{{ file_url(item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ file_url(item.name) }}" alt="{{ item.name }}" loading="lazy"></a>{% endif %}
             {{- folder_chips(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
+          {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
+          {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}
+          <td data-label="Folders" class="nowrap" data-sort="{{ '%04d' % nf }}">{{ count_badge(nf, 'folder', 'folders', 'box-count' ~ (' muted' if not nf else '')) }}</td>
           <td class="actions">
             {#- (the folder icons first: the owner, 2026-10-26) #}
             {{- folder_icons(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}

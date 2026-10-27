@@ -20,7 +20,7 @@
       {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
           after Folders, in the site's column order; open, a row shows the person and then each of their
           quizzes with its attempts) #}
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th data-sort-key="folders">Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -51,6 +51,9 @@
               <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}none{% endif %}</dd>
             </dl></details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '<span class="no-data" title="None yet">—</span>'|safe }}</td>
+          {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
+          {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}
+          <td data-label="Folders" class="nowrap" data-sort="{{ '%04d' % nf }}">{{ count_badge(nf, 'folder', 'folders', 'box-count' ~ (' muted' if not nf else '')) }}</td>
           {% if not in_archive %}
           <td data-label="Quizzes" class="nowrap" data-sort="{{ '%04d' % n }}">{{ count_badge(n, 'quiz', 'quizzes') }}</td>
           {#- (laid out as Results by quiz's rows, the owner 2026-10-24: Average in its own column, in the same badge; then one Status

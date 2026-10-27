@@ -599,13 +599,19 @@ def _people_page_of(ulst, view, node, root, in_archive):
     state = request.args.get('state')
     if state in ('review', 'out') and not in_archive:
         listed = [u for u in listed if state in facts(u)['states']]
+    #(how many folders each person is in, one query: the Folders column, sortable; the owner, 2026-10-27, To do 68)
+    from sqlalchemy import func
+    from .models import UserFolderMember
+    nfolders = dict(db.session.query(UserFolderMember.user_id, func.count(UserFolderMember.folder_id)).group_by(UserFolderMember.user_id))
     sorts = {'name': lambda u: u.username.lower(),
              'created': lambda u: u.created_at,
+             'folders': lambda u: nfolders.get(u.id, 0),
              'quizzes': lambda u: facts(u)['quizzes'],
              'status': lambda u: (facts(u)['going'], facts(u)['fresh']) if facts(u)['going'] or facts(u)['fresh'] else None,
              'average': lambda u: facts(u)['avg'],
              'done': lambda u: facts(u)['avg']}  # (an old address's ?sort=done: the same as Average)
     pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), sorts=sorts, show=request.args.get('show'))
+    pg.nfolders = nfolders
     if checked is not None:
         pg.label, pg.icon = 'Checked', 'lc-folder-check'
     return pg

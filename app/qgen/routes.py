@@ -2063,13 +2063,19 @@ def subject_page(kind, template, in_archive=False, **extra):
         return redirect(request.path + '?' + urlencode(dict(keep, show=show)))
     assigned = extra.get('assigned') or {}
     lay = extra.get('layout')
+    #(how many folders each is in, one query: the Folders column, sortable; the owner, 2026-10-27, To do 68)
+    from sqlalchemy import func
+    cols = list(getattr(item_cls, rel).property.secondary.c)
+    nfolders = dict(db.session.query(cols[0], func.count(cols[1])).group_by(cols[0]))
     sorts = {'title': lambda i: (getattr(i, 'title', None) or getattr(i, 'name', '') or '').lower(),
-             'created': lambda i: i.create_date}
+             'created': lambda i: i.create_date,
+             'folders': lambda i: nfolders.get(i.id, 0)}
     if kind in ('quizzes', 'problems'):
         sorts['assigned'] = lambda i: assigned.get(i.id, 0)
     if kind == 'quizzes' and lay is not None:
         sorts['problems'] = lambda i: len(lay.parse(i.vpid_lst))
     pg = paging.paginate(listed, name_of=lambda i: getattr(i, 'title', None) or getattr(i, 'name', '') or '', sorts=sorts, show=show)
+    pg.nfolders = nfolders
     if checked is not None:
         pg.label, pg.icon = 'Checked', 'lc-folder-check'
     #(only the rows drawn need their folders loaded: one query, not one a row)

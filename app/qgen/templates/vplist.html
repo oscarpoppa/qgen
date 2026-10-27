@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import post_button, slot, scan_mark with context %}
+{% from "_macros.html" import count_badge, post_button, slot, scan_mark with context %}
 {% from "_pick.html" import pick_table %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
@@ -11,7 +11,7 @@
 {% macro problem_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
     <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th><th data-sort-key="folders">Folders</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr data-item="{{ item.id }}" data-box="problem:{{ item.id }}" data-name="{{ (item.title or '')|lower }}"{% if show and show == item.id|string %} data-show{% endif %}>
@@ -32,6 +32,9 @@
             {%- if fk %}{{ folder_chips(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}</details>
           </td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
+          {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
+          {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}
+          <td data-label="Folders" class="nowrap" data-sort="{{ '%04d' % nf }}">{{ count_badge(nf, 'folder', 'folders', 'box-count' ~ (' muted' if not nf else '')) }}</td>
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
           {#- how many assigned quizzes it's in, opening its history (the owner, 2026-10-22) #}
           {%- set na = (assigned or {}).get(item.id, 0) %}
