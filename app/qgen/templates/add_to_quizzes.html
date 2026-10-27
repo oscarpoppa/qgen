@@ -19,7 +19,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="view" value="{{ view }}">
     <div class="card field pick-quiz" id="add-problem-pick">
-      <div class="pick-chips" data-chips-for="items" aria-live="polite"></div>
+      <div class="pick-chips" data-chips-for="items" data-chip-icon="lc-puzzle" aria-live="polite"></div>
       <span class="label pick-wrap-head">Problems</span>
       {{ filter_bar('#add-problem-pick .folder-filter-list', 'problem', 'problems', items='tr[data-box]', id='add-problem-bar') }}
       {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
