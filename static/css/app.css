@@ -3409,7 +3409,9 @@ table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width
 .result-groups .result-group > ol.attempt-list { margin: 0 0 0 22px; border-left: 2px solid var(--border); padding-left: 14px; }
 /* the open row's heading stays at the top of the list while its contents scroll under it
    (static/js/dividers.js: .row-stuck, --thead-h), on its band across the whole row */
-.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { position: sticky; top: calc(var(--thead-h, 40px) - 12px); z-index: 1; }
+.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { position: sticky; top: calc(var(--thead-h, 40px) - 12px); z-index: 2; }
+/* (2: above the open row's contents, which are at 1 to reach across the cells beside them; at 1 too, they went over it:
+   the owner, 2026-10-27. An open +N more card, at 40, still lies over it) */
 /* (on the open row's own color from the start: the band below comes from a script after the scroll, and in Firefox,
    for a moment before it, the contents showed through the heading: the owner, 2026-10-27) */
 .folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); }
