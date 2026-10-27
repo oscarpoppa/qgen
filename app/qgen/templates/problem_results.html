@@ -6,17 +6,16 @@
 {% block body_attrs %}{{ watch('problemresults:%d' % vp.id) }}{% endblock %}
 {# one quiz this problem was in, as a row like the other folder pages' (the owner, 2026-10-21; it was a
    rounded box): the name folds the row open to every answer to the problem there; beside it Answers,
-   Average and Status, each sortable; at the row's end History (on the quiz's name before) #}
+   Average, each sortable (the Status column gone: the owner, 2026-10-26); at the row's end History (on the quiz's name before) #}
 {% macro quiz_rows(vqs) %}
   <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows problem-history-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="answers">Answers</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="answers">Answers</th><th data-sort-key="average">Average</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_answers(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
 {% macro quiz_answers(vq) %}{% set rows = answers[vq.id] %}
   {% set graded = rows|map(attribute='item')|map(attribute='credit')|reject('none')|list %}
   {% set avg = 100.0 * (graded|sum) / (graded|length) if graded else none %}
-  {% set waiting = rows|selectattr('cq.needs_review')|selectattr('item.credit', 'none')|list|length %}
   {#- (the filter finds a quiz or a student who answered there: the owner, 2026-10-17) #}
   <tr class="result-item" data-box="quiz:{{ vq.id }}" data-weight="{{ rows|length }}" data-name="{{ (vq.title or '')|lower }}{% for r in rows if r.student %} {{ r.student.username|lower }} {{ (r.student.nickname or '')|lower }}{% endfor %}">
     <td data-label="Quiz"><details class="box row-fold" data-box="problem-history-row:{{ vp.id }}-{{ vq.id }}">
@@ -46,7 +45,6 @@
     </details></td>
     <td data-label="Answers" class="nowrap" data-sort="{{ '%04d' % rows|length }}">{{ count_badge(rows|length, 'answer', 'answers') }}</td>
     <td data-label="Average" class="nowrap" data-sort="{{ '%06.1f' % avg if avg is not none else '' }}">{% if avg is not none %}<span class="badge {{ score_class(avg) }}" title="The average score on this problem in this quiz, of the answers graded">{{ '%.0f' % avg }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td data-label="Status" class="nowrap" data-sort="{{ '%04d' % waiting if waiting else '' }}">{% if waiting %}<span class="badge badge-accent badge-status" title="Handed in and waiting for grading">{{ waiting }} in progress</span>{% endif %}</td>
     <td class="actions"><span class="btn-row quiz-row-actions"><a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Everyone’s attempts and scores on “{{ vq.title }}”">{{ icon_label('lc-history', 'History') }}</a></span></td>
   </tr>
 {% endmacro %}
