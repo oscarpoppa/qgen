@@ -214,7 +214,12 @@ document.addEventListener('qgen-stash-redrawn', foldList);
     holder.textContent = '';
     kept.forEach(function (id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'items'; i.value = id; holder.appendChild(i); });
   }
-  function done() { kept = []; save(); }  // (sent: unchecked when the page comes back)
+  function done() {  // (sent: unchecked when the page comes back)
+    kept = []; save();
+    //(the Checked folder's address names what's checked, and the page is drawn again in place from that address: it
+    //follows, or the moved ones stayed listed after a Move, unchecked, with the side's count at 0; the owner, 2026-10-27)
+    if (/[?&]stash=checked/.test(location.search)) history.replaceState(history.state, '', location.pathname + '?stash=checked&checked=' + location.hash);
+  }
   //(looked up each time: the card, with its dialogs, can be drawn again)
   function el(id) { return document.getElementById(id); }
   document.addEventListener('click', function (e) {
