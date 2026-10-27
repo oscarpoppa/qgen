@@ -2228,6 +2228,9 @@ details.row-fold > .small { margin: 4px 0 0 13px; }
 /* an open row's contents indented under its title (not the title line, not the controls), so it
    reads apart from the rows around it (the owner, 2026-10-20) */
 details.row-fold[open] > :not(summary) { margin-left: 28px; }
+/* (a little room between an open row's heading and what's under it, 6px on every page as on My quizzes: the owner,
+   2026-10-27; elsewhere the list sat right under the heading) */
+details.row-fold[open] > summary { margin-bottom: 6px; }
 /* (an open row's contents reach across the empty cells to its right: static/js/rowopen.js) */
 details.row-fold.row-wide[open] > :not(summary) { margin-right: calc(-1 * var(--row-extra, 0px)); position: relative; z-index: 1; }
 /* (a card open in it lies over the rows below, theirs too) */
