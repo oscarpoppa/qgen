@@ -677,6 +677,11 @@ def files_in_use():
 def file_delete_blocker(name, kind='pictures'):
     """Why an uploaded file can't be deleted for good (a problem or quiz uses it), or None (the owner, 2026-10-26: like
     a problem's, its Delete grayed with this, and refused)."""
+    #(nor the site's logo or tab picture, chosen in Settings: the code critic, 2026-10-26)
+    from .models import Setting
+    if name and name in (Setting.get('logo'), Setting.get('favicon')):
+        return '{} “{}” is the site’s logo or tab picture. Choose another in Settings first.'.format(
+            'Picture' if kind == 'pictures' else 'File', name)
     problems, quizzes = files_in_use().get(name, ([], []))
     if not (problems or quizzes):
         return None

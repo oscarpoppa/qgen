@@ -100,20 +100,38 @@ def trashed_names():
 
 
 def _move(names, src, dst):
-    for f in names:
-        try:
-            os.replace(src + f, dst + f)
-        except FileNotFoundError:
-            pass  # (a picture's thumbnail may be missing)
+    """Move the file and its thumbnail; on a failure, the ones moved go back and the error is raised."""
+    done = []
+    try:
+        for f in names:
+            try:
+                os.replace(src + f, dst + f)
+                done.append(f)
+            except FileNotFoundError:
+                pass  # (a picture's thumbnail may be missing)
+    except OSError:
+        for f in done:
+            try:
+                os.replace(dst + f, src + f)
+            except OSError:
+                pass
+        raise
 
 
 def trash_file(u):
     """Move to Trash for a picture or other file (the owner, 2026-10-26, To do 66): its file and thumbnail go to the
     private trash folder, off Pictures / Other files and every picture picker; it stays in its folders, like a problem."""
     from app.upload.routes import static_dir, files_changed
-    _move((u.name, 'T_' + u.name), static_dir(), trash_dir())
+    #(marked first: a file still in static with its row marked is harmless, sync() keeps it; a file moved with its row
+    #not marked would lose its row at the next sync. The code critic, 2026-10-26)
     u.removed_at = datetime.now()
     db.session.commit()
+    try:
+        _move((u.name, 'T_' + u.name), static_dir(), trash_dir())
+    except OSError:
+        u.removed_at = None
+        db.session.commit()
+        raise
     files_changed()
     current_app.logger.info('moved upload {} to the Trash'.format(u.name))
 
@@ -122,7 +140,7 @@ def restore_file(u):
     """Back from the Trash, in Uncategorized (out of the folders it was in, like a restored problem). Its name can't
     have been taken meanwhile: a new upload's name is never one in the Trash (upload/routes.py unique_name)."""
     from app.upload.routes import static_dir, files_changed
-    _move((u.name, 'T_' + u.name), trash_dir(), static_dir())
+    _move((u.name, 'T_' + u.name), trash_dir(), static_dir())  # (a failure raises before the row changes)
     u.removed_at = None
     u.picgroups, u.filegroups = [], []
     db.session.commit()
@@ -131,8 +149,8 @@ def restore_file(u):
 
 
 def removed(kind):
-    """The pictures (or other files) in the Trash."""
-    return UploadFile.query.filter(UploadFile.removed_at.isnot(None), UploadFile.picture.is_(kind == 'pictures')).all()
+    """The pictures (or other files) in the Trash, as a query."""
+    return UploadFile.query.filter(UploadFile.removed_at.isnot(None), UploadFile.picture.is_(kind == 'pictures'))
 
 
 def delete_file(u):

@@ -20,3 +20,6 @@ instance/
 # design notes and check scripts for Claude and the reviewers (local only)
 docs/
 tools/
+
+# pictures and other files in the Trash, beside static when STATIC_DIR is set (config.py UPLOAD_TRASH_DIR)
+upload-trash/

@@ -652,8 +652,15 @@ def restore_many(kind):
     elif kind in S.UPLOAD_KINDS:
         from . import uploads
         for u in UploadFile.query.filter(UploadFile.id.in_(ids), UploadFile.removed_at.isnot(None)).all() if ids else []:
-            uploads.restore_file(u)
+            try:
+                uploads.restore_file(u)
+            except OSError:
+                current_app.logger.exception('could not restore {}'.format(u.name))
+                kept.append(u.name)
+                continue
             n += 1
+        if kept:
+            flash('Not restored: {}. Please try again.'.format(', '.join('“{}”'.format(t) for t in kept)), 'error')
         word = _item_word(kind, n)
     else:
         abort(404)
@@ -705,7 +712,12 @@ def trash_many(kind):
             if why:
                 kept.append(why)
                 continue
-            uploads.trash_file(u)
+            try:
+                uploads.trash_file(u)
+            except OSError:
+                current_app.logger.exception('could not move {} to the Trash'.format(u.name))
+                kept.append('Couldn’t move “{}” to the Trash. Please try again.'.format(u.name))
+                continue
             n += 1
         word, back = _item_word(kind, n), LIST_PAGES[kind]
     else:
@@ -2265,7 +2277,7 @@ def archive_counts():
     return {'attempts': ArchivedAttempt.query.count(), 'quizzes': len(S.removed_quizzes()),
             'problems': len(S.removed_problems()), 'people': len(archived_people()),
             'workbooks': ScanJob.query.filter_by(status=TRASHED).count(),
-            'pictures': len(uploads.removed('pictures')), 'files': len(uploads.removed('files'))}
+            'pictures': uploads.removed('pictures').count(), 'files': uploads.removed('files').count()}
 
 
 def archive_folder_or_404(fid):

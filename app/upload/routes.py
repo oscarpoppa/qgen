@@ -192,7 +192,12 @@ def trash_upload(uid):
     if why:
         flash(why, 'error')
         return back_to_list(page)
-    uploads.trash_file(u)
+    try:
+        uploads.trash_file(u)
+    except OSError:
+        current_app.logger.exception('could not move {} to the Trash'.format(u.name))
+        flash('Couldn’t move “{}” to the Trash. Please try again.'.format(u.name), 'error')
+        return back_to_list(page)
     flash(Markup('Moved “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(
         u.name, url_for('qgen.archive', section=_kind(u))), 'success')
     return back_to_list(page)
@@ -207,7 +212,12 @@ def restore_upload(uid):
     from app.qgen import uploads
     u = _upload_or_gone(uid)
     if u is not None and u.removed_at:
-        uploads.restore_file(u)
+        try:
+            uploads.restore_file(u)
+        except OSError:
+            current_app.logger.exception('could not restore {}'.format(u.name))
+            flash('Couldn’t restore “{}”. Please try again.'.format(u.name), 'error')
+            return redirect(url_for('qgen.archive', section=_kind(u)))
         flash('“{}” is back on the {} page.'.format(u.name, 'Pictures' if u.picture else 'Other files'), 'success')
     return redirect(url_for('qgen.archive', section=_kind(u) if u is not None else 'pictures'))
 
@@ -221,7 +231,12 @@ def delete_trashed_upload(uid):
     from app.qgen import uploads
     u = _upload_or_gone(uid)
     if u is not None and u.removed_at:
+        from app.qgen import services as S
         name, kind = u.name, _kind(u)
+        why = S.file_delete_blocker(name, kind)
+        if why:
+            flash(why, 'error')
+            return redirect(url_for('qgen.archive', section=kind))
         uploads.delete_file(u)
         flash('Deleted “{}”.'.format(name), 'success')
         current_app.logger.info('{} deleted {} from the Trash for good'.format(current_user.username, name))
