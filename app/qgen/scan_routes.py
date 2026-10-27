@@ -772,7 +772,7 @@ def scan_move(job_id):
     if to and not (to.isdigit() and db.session.get(ScanFolder, int(to))):
         abort(404)
     SC.move_scan(job, to)
-    flash('“{}” moved to {}.'.format(job.name, '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'), 'success')
+    flash('Moved “{}” to {}.'.format(job.name, '“{}”'.format(db.session.get(ScanFolder, int(to)).name) if to else 'Uncategorized'), 'success')
     #(dragged onto a folder: the view stays where it was, so scans can be dragged one after another out of the folder open: the owner, 2026-10-23)
     if 'stay' in request.form:
         return _stash_back(request.form.get('stay') or None)

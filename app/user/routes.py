@@ -719,8 +719,10 @@ def move_user_or_folder():
             return takeout.handle('people', [request.form.get('user')], here, lambda m, error=False: _group_done(m, error=error))
         else:
             person, f = groups.add(request.form.get('user'), to, moving_from=here)
-            message = 'Moved {} to “{}”.'.format(person.shown_name, f.name) if here else \
-                'Put {} in “{}”.'.format(person.shown_name, f.name)
+            #(a Ctrl+drag, which says no folder it came from, is a copy: the owner, 2026-10-26)
+            from .models import UserFolderMember
+            alone = UserFolderMember.query.filter_by(user_id=person.id).count() == 1  # (it was in none: a move)
+            message = '{} {} to “{}”.'.format('Moved' if here or came_from or alone else 'Copied', person.shown_name, f.name)
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
     return _group_done(message, moved='folder:{}'.format(request.form.get('folder')) if request.form.get('folder')
@@ -774,7 +776,7 @@ def file_people():
         return _group_done(str(exc), error=True)
     if not where:
         return _group_done('Choose a folder first.', error=True)
-    return _group_done('Put {} in {}.'.format(', '.join(names), ' and '.join(where)))
+    return _group_done('Copied {} to {}.'.format(', '.join(names), ' and '.join(where)))
 
 
 #a person's "Add to folder" list (they stay in their other folders) and a folder's ✕
@@ -789,7 +791,10 @@ def add_to_user_folder():
         person, f = groups.add(request.form.get('user'), request.form.get('to'))
     except groups.GroupError as exc:
         return _group_done(str(exc), error=True)
-    return _group_done('Put {} in “{}”.'.format(person.shown_name, f.name), moved='user:{}'.format(person.id))
+    #(they stay in their other folders: a copy; someone in none leaves Uncategorized: moved)
+    from .models import UserFolderMember
+    alone = UserFolderMember.query.filter_by(user_id=person.id).count() == 1
+    return _group_done('{} {} to “{}”.'.format('Moved' if alone else 'Copied', person.shown_name, f.name), moved='user:{}'.format(person.id))
 
 
 @user_bp.route('/users/folders/remove', methods=['POST'])

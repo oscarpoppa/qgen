@@ -44,9 +44,16 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert sorted(people(teach)) == ['kim', 'sam', 'teach']  # the main list: nobody's in a folder yet
     # dragging from the main list puts them in; the "Add to folder" list too; several folders
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g7, 'from': 'top'}, headers=FETCH).get_json() == \
-        {'ok': True, 'message': 'Put sam in “7th grade”.'}
+        {'ok': True, 'message': 'Moved sam to “7th grade”.'}  # (out of Uncategorized: a move)
     assert teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club}, headers=FETCH).get_json()['message'] == \
-        'Put sam in “Math club”.'
+        'Copied sam to “Math club”.'  # (stays in 7th grade too: a copy; the owner, 2026-10-26)
+    assert in_folders('sam') == ['7th grade', 'Math club']
+    # a Ctrl+drag (no folder it came from) of someone already in a folder: a copy, said so (the owner, 2026-10-26)
+    assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': ''}, headers=FETCH).get_json()['message'] == \
+        'Copied sam to “8th grade”.'
+    from app.user.models import UserFolderMember
+    UserFolderMember.query.filter_by(user_id=ids('sam'), folder_id=g8).delete()
+    db.session.commit()
     assert in_folders('sam') == ['7th grade', 'Math club']
     assert sorted(people(teach)) == ['kim', 'teach'] and people(teach, g7) == ['sam'] and people(teach, club) == ['sam']
     # All: one list, everyone once (sam is in both folders: two chips on one card)

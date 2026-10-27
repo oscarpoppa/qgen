@@ -1798,7 +1798,9 @@ def move_subject(kind):
             return takeout.handle(kind, [item_id], here.id, lambda m, error=False: _subject_done(kind, m, error=error))
         target = subject_or_404(kind, to)
         item = S.file_one(kind, item_id, target, moving_from=here)
-        return _subject_done(kind, ('Moved “{}” to “{}”.' if here else 'Put “{}” in “{}”.').format(item.title, target.title),
+        #(every way of filing says Moved or Copied: a Ctrl+drag, which says no folder it came from, copies; the owner, 2026-10-26)
+        alone = len(getattr(item, S.subject_kind(kind)[2])) == 1  # (it was in no folder: out of Uncategorized, a move)
+        return _subject_done(kind, ('Moved “{}” to “{}”.' if here or came_from or alone else 'Copied “{}” to “{}”.').format(item.title, target.title),
                              moved='{}:{}'.format(what, item.id))
     except S.ServiceError as exc:
         return _subject_done(kind, str(exc), error=True)
@@ -1816,7 +1818,9 @@ def add_to_subject(kind):
         item = S.file_one(kind, request.form.get(what), target)
     except S.ServiceError as exc:
         return _subject_done(kind, str(exc), error=True)
-    return _subject_done(kind, 'Put “{}” in “{}”.'.format(item.title, target.title), moved='{}:{}'.format(what, item.id))
+    #(it stays in its other folders: a copy; one that was in none leaves Uncategorized: moved)
+    alone = len(getattr(item, S.subject_kind(kind)[2])) == 1
+    return _subject_done(kind, '{} “{}” to “{}”.'.format('Moved' if alone else 'Copied', item.title, target.title), moved='{}:{}'.format(what, item.id))
 
 @qgen_bp.route('/quiz/subjects/<kind>/remove', methods=['POST'])
 @login_required
@@ -1891,11 +1895,11 @@ def file_subject(kind):
             count = max(S.file_items(kind, items, subjects[0], add=True), S.file_items(kind, items, out_of, add=False))
         else:
             count = S.move_items(kind, items, subjects[0])
-        return _subject_done(kind, '{} {} moved to “{}”.'.format(count, _item_word(kind, count), subjects[0].title))
+        return _subject_done(kind, 'Moved {} {} to “{}”.'.format(count, _item_word(kind, count), subjects[0].title))
     said = []
     for g in subjects:
         count = S.file_items(kind, items, g, add=add)
-        said.append('{} {} put in “{}”.'.format(count, _item_word(kind, count), g.title))
+        said.append('Copied {} {} to “{}”.'.format(count, _item_word(kind, count), g.title))
     return _subject_done(kind, ' '.join(said))
 
 
