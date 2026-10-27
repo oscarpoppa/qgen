@@ -1582,17 +1582,18 @@ def test_a_folded_student_says_where_they_are(app_db):
     #(a row now, its sums in its Done and Status columns: the owner, 2026-10-21; done and the average
     #are two badges, stacked)
     head = cells(page, 'sam')
-    assert 'aria-label="1 done"' in head and '>100%</span>' in head and 'aria-label="1 not started"' in head
+    # Status counts quizzes, each once by its newest attempt, so it adds up to Quizzes (the owner, 2026-10-26):
+    # sam's one quiz, done and given again, is "not started" now; its score still makes the average
+    assert '>100%</span>' in head and 'aria-label="1 not started"' in head and 'aria-label="1 done"' not in head
     assert 'to grade' not in head and 'in progress' not in head
-    # colored like every other score: green from 70%, amber from 50%, red below
-    assert 'class="side-dot dot-done" title="1 done" role="img" aria-label="1 done">1</span>' in head
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '5'})
         db.session.commit()
     page = teacher.get('/userdet').data.decode()
     #(Average in its own column, colored by the score; "1 done" in Status, like Results by quiz: the owner, 2026-10-24)
     assert '<span class="badge badge-bad" title="The average of the scores that count, for the 1 quiz with one">0%</span>' in cells(page, 'kim')
-    assert 'aria-label="1 done">1</span>' in cells(page, 'kim')
+    # colored like every other score: green from 70%, amber from 50%, red below
+    assert 'class="side-dot dot-done" title="1 done" role="img" aria-label="1 done">1</span>' in cells(page, 'kim')
     # a retake counts once, by the quiz's rule (best attempt), like the score shown inside the row
     with app.test_request_context():
         S.submit(give(vq, 'kim'), {1: '4'})

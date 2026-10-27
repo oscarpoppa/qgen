@@ -25,8 +25,10 @@
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
         {% if not in_archive %}{% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}{% set groups = attempts_by_quiz(item.cquizzes) %}
-        {% set sum_done = groups|map(attribute='combined')|reject('none')|list %}{% set sum_going = item.cquizzes|selectattr('status', 'in', ['started', 'review'])|list|length %}
-        {% set sum_fresh = item.cquizzes|selectattr('status', 'equalto', 'new')|list|length %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) if sum_done else none %}{% endif %}
+        {% set sum_done = groups|map(attribute='combined')|reject('none')|list %}{#- (Status counts quizzes, each once by its newest attempt, so the three add up to Quizzes: the owner, 2026-10-26;
+            they counted attempts, retakes too) #}{% set latest = {} %}{% for c in item.cquizzes|sort(attribute='id') %}{% set _ = latest.update({c.vquiz_id: c.status}) %}{% endfor %}
+        {% set sum_going = latest.values()|select('in', ['started', 'review'])|list|length %}{% set sum_finished = latest.values()|select('equalto', 'completed')|list|length %}
+        {% set sum_fresh = latest.values()|select('equalto', 'new')|list|length %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) if sum_done else none %}{% endif %}
         <tr{% if not in_archive %} class="result-item"{% endif %} data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
@@ -58,7 +60,7 @@
             {#- (as small numbered circles, the words in their tooltips: the owner, 2026-10-24) #}
             {% if sum_fresh %}{{ count_dot(sum_fresh, 'new', 'not started') }}{% endif %}
             {% if sum_going %}{{ count_dot(sum_going, 'started', 'in progress') }}{% endif %}
-            {% if sum_done %}{{ count_dot(sum_done|length, 'done', 'done') }}{% endif %}</span></td>
+            {% if sum_finished %}{{ count_dot(sum_finished, 'done', 'done') }}{% endif %}</span></td>
           {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">
