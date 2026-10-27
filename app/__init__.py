@@ -384,10 +384,22 @@ def _gzip(response):
 #change itself, or go there when that's another page. Registered after _gzip, so it runs first.
 @app.after_request
 def _in_place(response):
-    from flask import request as _rq, get_flashed_messages, jsonify
-    from markupsafe import escape
+    from flask import request as _rq, get_flashed_messages, jsonify, session
+    from markupsafe import escape, Markup
+    from urllib.parse import urlsplit, parse_qs
     if _rq.headers.get('X-In-Place') != '1' or _rq.method != 'POST' or response.status_code not in (301, 302, 303):
         return response
-    said = [{'html': str(escape(m)), 'error': cat == 'error'} for cat, m in get_flashed_messages(with_categories=True)]
-    out = jsonify(ok=True, inplace=True, messages=said, location=response.headers.get('Location', ''))
-    return out
+    loc = response.headers.get('Location', '')
+    #(the same page: its address and what it shows, the folder / Trash tab / Checked / workbook folder; decided here, so
+    #the messages are only taken when they'll be shown on this page: the code critic, 2026-10-27)
+    here, there = urlsplit(_rq.headers.get('X-In-Place-Page', '')), urlsplit(loc)
+    qh, qt = parse_qs(here.query), parse_qs(there.query)
+    same = bool(here.path) and here.path == there.path and all(
+        k not in qh or k not in qt or qh[k] == qt[k] for k in ('folder', 'section', 'checked', 'stash'))
+    #(a message the page shows its own way, e.g. a temporary password's dialog: the page goes there, as before)
+    plain = all(isinstance(m, str) and cat in ('success', 'error', 'info', 'warning', 'message')
+                for cat, m in session.get('_flashes', []))
+    if not (same and plain):
+        return jsonify(ok=True, inplace=True, navigate=True, location=loc)
+    said = [{'html': str(escape(m)), 'error': cat in ('error', 'warning')} for cat, m in get_flashed_messages(with_categories=True)]
+    return jsonify(ok=True, inplace=True, messages=said, location=loc)

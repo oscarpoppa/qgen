@@ -210,6 +210,7 @@
       return a && b ? document.querySelector(sel) : null;
     }
     var ul = swap('.folder-side ul.side-top');
+    swap('#move-folders');  // (the row Move dialog's folders: My quizzes, the Trash)
     swap('.folder-side .side-card-head');
     swap('.folder-side-now');
     swap('#folder-title');
@@ -596,6 +597,9 @@
     if (!b) return;
     e.preventDefault();  // (it's on the box's heading: not folding it)
     e.stopPropagation();
+    //(the folders read again each time: made, renamed or deleted in place meanwhile; the code critic, 2026-10-27)
+    var now = document.getElementById('move-folders');
+    if (now) { try { page = JSON.parse(now.textContent); folders = page.folders.map(function (f) { return { id: String(f[0]), name: f[1], depth: f[2], icon: f[3] }; }); } catch (err2) {} }
     openMove(b.closest('form'), b.dataset.label);
   }, true);
   //(also the Archive's Remove, "Move from …": the row's own Move form, static/js/takeout.js)

@@ -20,17 +20,6 @@
     main.insertBefore(list, main.firstChild);
     if (window.qgenFloat) window.qgenFloat(list);  // (over the page, not in it: nothing below moves)
   }
-  //(the same page: its address and what it shows, the folder or Trash tab; not what's lit up after, ?moved= or ?show=)
-  function samePage(loc) {
-    if (!loc) return true;
-    var u = new URL(loc, location.href), here = new URL(location.href);
-    return u.origin === here.origin && u.pathname === here.pathname &&
-      ['folder', 'section', 'checked', 'stash'].every(function (k) {
-        //(one with none is the page's own start, often the same thing: only two different ones are another page)
-        var a = u.searchParams.get(k), b = here.searchParams.get(k);
-        return a === null || b === null || a === b;
-      });
-  }
   //redrawn in place, if this page can; false: it can't (the caller goes there instead)
   function redraw() {
     if (window.qgenPageRedraw) { window.qgenPageRedraw(); return true; }  // (a page's own, e.g. the Scan page's cards)
@@ -93,16 +82,23 @@
   function go(loc) { location.assign(loc || location.href); }
 
   window.qgenInPlace = function (url, data) {
-    return fetch(url, { method: 'POST', body: data, credentials: 'same-origin', headers: { 'X-In-Place': '1' } }).then(function (r) {
+    //(the page it's on, for the server to tell whether the answer comes back here: app/__init__.py _in_place)
+    return fetch(url, { method: 'POST', body: data, credentials: 'same-origin',
+                        headers: { 'X-In-Place': '1', 'X-In-Place-Page': location.pathname + location.search } }).then(function (r) {
       var type = r.headers.get('Content-Type') || '';
+      //(an error page, e.g. the row was deleted meanwhile or the session ran out: said over the page, which stays; the
+      //code critic, 2026-10-27)
+      if (!r.ok) { say([{ html: 'That didn\u2019t work. Please reload the page and try again.', error: true }]); return false; }
       if (type.indexOf('application/json') === -1) {
         //(a page of its own came back, e.g. a form with a mistake shown on it: shown as it came)
         return r.text().then(function (html) { document.open(); document.write(html); document.close(); });
       }
       return r.json().then(function (res) {
         if (res.inplace) {
-          if (!samePage(res.location)) { go(res.location); return false; }
+          //(another page, or a message that page shows its own way: it goes there, the messages kept for it)
+          if (res.navigate) { go(res.location); return false; }
           say(res.messages);
+          lightUp(res.location);
           if (!redraw()) go(res.location);
           return !res.messages.some(function (m) { return m.error; });
         }
@@ -115,6 +111,18 @@
       say([{ html: 'That didn’t work: no connection. Please try again.', error: true }]);
     });
   };
+  //what was just moved or copied lights up, once the list is drawn again (?moved= in the answer, as after a reload)
+  function lightUp(loc) {
+    var key = loc ? new URL(loc, location.href).searchParams.get('moved') : null;
+    if (!key) return;
+    document.addEventListener('qgen-swapped', function once() {
+      document.removeEventListener('qgen-swapped', once);
+      var box = document.querySelector('[data-box="' + key + '"]');
+      if (!box) return;
+      box.classList.add('just-moved');
+      setTimeout(function () { box.classList.remove('just-moved'); }, 2600);
+    });
+  }
   function escapeHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
   //a form sent by a script (after its own question): in place when it's marked, else the usual way
@@ -125,7 +133,6 @@
     if (dlg && dlg.open) dlg.close();
     var data = new FormData(form);
     if (submitter && submitter.name) data.set(submitter.name, submitter.value);
-    if (window.qgenCheckedClear && form.dataset.clearsChecked !== undefined) window.qgenCheckedClear();
     window.qgenInPlace(form.getAttribute('action') || location.href, data).then(function (ok) {
       //(a message sent: its box empties, ready for the next)
       if (ok && 'resetAfter' in form.dataset) form.reset();

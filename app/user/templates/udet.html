@@ -48,7 +48,7 @@
               <dt>Created</dt><dd>{{ item.created_at|when if item.created_at else '—' }}</dd>
               <dt>Last seen</dt><dd>{{ item.last_seen|when if item.last_seen else '—' }}</dd>
               {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
-              <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}none{% endif %}</dd>
+              <dt>Folders</dt><dd>{% if mine %}{{ folder_chips(fk, 'user', item.id, item.shown_name, mine, lead='') }}{% else %}<span class="no-data" title="In no folder (Uncategorized)">—</span>{% endif %}</dd>
             </dl></details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '<span class="no-data" title="None yet">—</span>'|safe }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}

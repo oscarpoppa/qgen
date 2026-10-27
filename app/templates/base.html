@@ -210,7 +210,7 @@
           {% endif %}
           <div class="nav-right">
             <details class="menu">
-              <summary class="person{{ ' active' if here in ('user.profile', 'user.chpass') or (current_user.is_admin and here in ('user.home', 'user.mypage')) }}" title="{{ 'Your own quizzes, your profile, password and logging out' if current_user.is_admin else 'Your profile, password and logging out' }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}
+              <summary data-redraw="topbar-me" class="person{{ ' active' if here in ('user.profile', 'user.chpass') or (current_user.is_admin and here in ('user.home', 'user.mypage')) }}" title="{{ 'Your own quizzes, your profile, password and logging out' if current_user.is_admin else 'Your profile, password and logging out' }}">{{ avatar(current_user, 24) }}{{ current_user.shown_name }}
                 {%- if current_user.is_admin %}{{ quiz_dots_here('Quizzes for you to do (My quizzes, in this menu)') }}{% endif %}</summary>
               <div class="menu-list">
                 {% if current_user.is_admin %}

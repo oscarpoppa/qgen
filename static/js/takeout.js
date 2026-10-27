@@ -152,6 +152,14 @@
       if (row) {
         var fs = row.querySelector('[data-folders]');
         if (fs) { try { fs.dataset.folders = JSON.stringify(JSON.parse(fs.dataset.folders).filter(function (x) { return String(x) !== String(fid); })); } catch (err) {} }
+        //(the row's Folders count, one less: the code critic, 2026-10-27)
+        var cell = row.querySelector('td[data-label="Folders"]'), badge = cell && cell.querySelector('.badge');
+        if (badge) {
+          var n = Math.max(0, (parseInt(badge.textContent, 10) || 0) - 1);
+          badge.textContent = n; badge.classList.toggle('muted', !n);
+          badge.title = n + (n === 1 ? ' folder' : ' folders'); badge.setAttribute('aria-label', badge.title);
+          cell.dataset.sort = ('000' + n).slice(-4);
+        }
         //(out of the folder shown: its row leaves the list, as it would after a reload)
         if (chip.dataset.view === fid) row.remove();
       }
