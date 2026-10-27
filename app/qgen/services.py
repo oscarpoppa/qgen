@@ -641,8 +641,14 @@ def being_taken(vq, now=None):
     """Its tries someone is in the middle of: started, not handed in, and still open (its due
     date or time limit hasn't run out)."""
     now = now or datetime.now()
+    #(and its student active on the site lately: one started days ago and left counts no more, so it can't block the
+    #quiz's trash can forever; the owner, 2026-10-26, Technical setting "Still taking a quiz for")
+    from datetime import timedelta
+    from app import tuning
+    since = now - timedelta(hours=tuning.get('taking_hours'))
     return [cq for cq in vq.cquizzes if cq.startdate and not cq.completed and not cq.needs_review
-            and not (cq.deadline() and cq.deadline() <= now)]
+            and not (cq.deadline() and cq.deadline() <= now)
+            and cq.taker is not None and cq.taker.last_seen is not None and cq.taker.last_seen >= since]
 
 
 def files_in_use():

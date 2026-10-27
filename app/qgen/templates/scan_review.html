@@ -208,13 +208,17 @@
       {% for p in data.pages %}
         {% if not loop.first %}
           {%- set before = data.pages[loop.index0 - 1] %}
-          {%- set can_join = movable and p.state == 'done' and before.state == 'done' and p.kind == 'problems' and before.kind == 'problems' %}
+          {#- (pages not read yet can be joined already; once read, both must be problem pages, or the join is dropped:
+              the owner, 2026-10-26) #}
+          {%- set ok_p = p.state in ('waiting', 'error') or (p.state == 'done' and p.kind == 'problems') %}
+          {%- set ok_b = before.state in ('waiting', 'error', 'reading') or (before.state == 'done' and before.kind == 'problems') %}
+          {%- set can_join = movable and ok_p and ok_b %}
           {#- (joined only when both pages are read, the same test as the bar under them: the code critic, 2026-10-25) #}
-          {%- set joined_now = p.join_prev and p.state == 'done' and before.state == 'done' %}
+          {%- set joined_now = p.join_prev and p.state != 'saved' and before.state != 'saved' %}
           <li class="scan-join-spot" aria-hidden="false">
-            {% if p.state == 'done' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
+            {% if p.state != 'saved' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
             <button type="button" class="scan-join{% if joined_now %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if joined_now else 'false' }}"
-              {%- if not can_join %} disabled title="{{ wait_tip if reading else 'Only two pages with problems, both read and not generated yet, can be joined' }}"
+              {%- if not can_join %} disabled title="{{ wait_tip if reading else 'Only two pages not generated yet, with problems on them, can be joined' }}"
               {%- elif p.join_prev %} title="Pages {{ before.n }} and {{ p.n }} make one quiz: click to make them two"
               {%- else %} title="Make pages {{ before.n }} and {{ p.n }} one quiz"{% endif %}>{{ icon('lc-link' if joined_now else 'lc-unlink') }}</button>
           </li>
@@ -225,7 +229,7 @@
         {#- joined pages: a whole chain between them and one bar under both (the owner, 2026-10-25: a gray or blue chain
             alone didn't show it) #}
         {%- set nxt = data.pages[loop.index0 + 1] if not loop.last else none %}
-        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state == 'done' and not loop.first and data.pages[loop.index0 - 1].state == 'done' else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state == 'done' and p.state == 'done' else '') %}
+        {%- set join_cls = (' is-joined-prev' if p.join_prev and p.state != 'saved' and not loop.first and data.pages[loop.index0 - 1].state != 'saved' else '') ~ (' is-joined-next' if nxt and nxt.join_prev and nxt.state != 'saved' and p.state != 'saved' else '') %}
         <li class="scan-strip-page scan-strip-{{ shown_state }}{{ join_cls }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>

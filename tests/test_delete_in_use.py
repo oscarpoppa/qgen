@@ -47,6 +47,7 @@ def test_a_quiz_being_taken_has_its_trash_grayed(app_db):
     page = teach.get('/quiz/listvq').data.decode()
     assert 'taking “Week 3” right now' not in page
     cq.startdate = datetime.now()
+    cq.taker.last_seen = datetime.now()  # (active lately: "Still taking a quiz for", 2 hours)
     db.session.commit()
     page = teach.get('/quiz/listvq').data.decode()
     assert 'is taking “Week 3” right now. Try again once it’s handed in (or its time runs out).' in page

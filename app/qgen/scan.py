@@ -533,6 +533,9 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                             elif data.get('run') == run and data['pages'][n - 1].get('state') != 'saved':
                                 if data['pages'][n - 1].get('spread'):
                                     result['spread'] = True  # (from a photo of two pages: kept through the reading)
+                                #(joined to the page before while not read yet: kept through the reading; the owner, 2026-10-26)
+                                if data['pages'][n - 1].get('join_prev'):
+                                    result['join_prev'] = True
                                 #(a page that didn't finish keeps what was paid for: its reading and the numbers
                                 #picked so far, so reading it again goes on from there; CX1, the owner 2026-10-25)
                                 if result.get('state') in ('error', 'waiting'):
@@ -1298,6 +1301,8 @@ def use_reading(job, n):
             return False
         if data['pages'][n - 1].get('spread'):
             made['spread'] = True
+        if data['pages'][n - 1].get('join_prev'):
+            made['join_prev'] = True
         data['pages'][n - 1] = made
     return True
 
@@ -1678,6 +1683,8 @@ def read_again(data, n, note=''):
     page = {'n': int(n), 'state': 'waiting'}
     if data['pages'][int(n) - 1].get('spread'):
         page['spread'] = True
+    if data['pages'][int(n) - 1].get('join_prev'):
+        page['join_prev'] = True  # (its join to the page before stays: the owner, 2026-10-26)
     note = ' '.join((note or '').split())[:NOTE_LONGEST]
     if note:
         page['note'] = note
@@ -1707,6 +1714,10 @@ def update_from_form(data, form):
     data['folder'] = ''
     for page in data['pages']:
         if page.get('state') != 'done':
+            #(a page not read yet can be joined to the one before already, the thumbnails' chain: the owner, 2026-10-26)
+            jp = 'p{}-join_prev'.format(page['n'])
+            if jp in form and page.get('state') != 'saved':
+                page['join_prev'] = bool(form.get(jp))
             continue
         n = page['n']
         pre = 'p{}-'.format(n)
@@ -1894,7 +1905,10 @@ def quiz_groups(data):
         #(joined to the last quiz with problems: an Image only page between them isn't one, and
         #joining to it lost the page's problems; found by the tests, 2026-10-20)
         prev = next((g for g in reversed(groups) if not image_page(g[0])), None)
-        if page.get('join_prev') and prev is not None:
+        #(joined only to the page right before it, when that one is in a quiz with problems: a join made before the
+        #pages were read is dropped if the page before turned out to be a picture or nothing to use; the owner 2026-10-26)
+        before = page['n'] - 1
+        if page.get('join_prev') and prev is not None and prev[1][-1]['n'] == before:
             prev[1].append(page)
         else:
             groups.append((page, [page]))
