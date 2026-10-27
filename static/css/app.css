@@ -3890,3 +3890,7 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .person-note-status.error { color: var(--bad); }
 .person-note-mark { display: inline-flex; margin-left: 6px; color: var(--muted); }
 .person-note-mark svg { width: 14px; height: 14px; }
+/* (the cap's and the note's places, the same width filled or empty, so each mark lines up down the column) */
+.person-role-icon.person-slot { width: 18px; height: 18px; }
+.person-note-mark { width: 14px; justify-content: center; }
+.person-note-mark.person-slot { height: 14px; }

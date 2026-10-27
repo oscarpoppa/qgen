@@ -7,14 +7,16 @@
   function mark(box, text) {
     var row = box.closest('details.row-fold'), line = row && row.querySelector(':scope > summary .person-line');
     if (!line) return;
+    //(its place is always there, empty when there's no note, so the marks line up down the column)
     var m = line.querySelector('.person-note-mark');
-    if (!text) { if (m) m.remove(); return; }
-    if (!m) {
-      m = document.createElement('span');
-      m.className = 'person-note-mark'; m.setAttribute('role', 'img'); m.setAttribute('aria-label', 'Has a note');
-      m.innerHTML = window.qgenIcon ? window.qgenIcon('lc-sticky-note') : '';
-      line.appendChild(m);
+    if (!m) { m = document.createElement('span'); line.appendChild(m); }
+    if (!text) {
+      m.className = 'person-note-mark person-slot'; m.innerHTML = ''; m.removeAttribute('title'); m.removeAttribute('role');
+      m.removeAttribute('aria-label'); m.setAttribute('aria-hidden', 'true');
+      return;
     }
+    m.className = 'person-note-mark'; m.removeAttribute('aria-hidden'); m.setAttribute('role', 'img'); m.setAttribute('aria-label', 'Has a note');
+    if (!m.innerHTML) m.innerHTML = window.qgenIcon ? window.qgenIcon('lc-sticky-note') : '';
     m.title = 'Note: ' + text.split('\n')[0].slice(0, 120);
   }
   function save(box) {
