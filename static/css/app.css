@@ -3820,3 +3820,7 @@ td.actions > .folder-icons > .btn:first-child { margin-left: 0; }
 .row-folders .folder-chip .chip-x { min-width: 17px; min-height: 17px; padding: 0; line-height: 1; font-size: 11px; color: var(--muted); }
 .row-folders .folder-chip .chip-x:hover { color: var(--bad); }
 .row-quizzes, .row-folders { margin-bottom: 2px; }
+/* a quiz row's “+N more” problems: a plain chip showing the rest in the row */
+.row-problems .chip-more { display: inline-flex; padding: 1px 10px; border-radius: 999px; border: 1px dashed var(--border); background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.row-problems .chip-more:hover { color: var(--text); }
+.row-problems .chip-extra[hidden] { display: none; }

@@ -10,8 +10,8 @@
    is where a drag takes a quiz out of #}
 {% macro quiz_table(items, ticks=true, here=none) %}
   <div class="table-wrap stack">
-    <table class="even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th><th class="row-more row-count-col" data-sort-key="problems">Problems</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
+    <table class="even-cols quiz-table" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
+      <thead><tr>{% if ticks %}<th class="tick-col"><span class="sr-only">Check</span></th>{% endif %}<th data-sort-key="title">Title</th><th data-sort-key="created">Created</th><th data-sort-key="problems">Problems</th><th data-sort-key="assigned">Assigned</th><th></th></tr></thead>
       <tbody>
       {% for item in items %}
         {% set entries = layout.parse(item.vpid_lst) %}
@@ -32,27 +32,14 @@
               <li>retakes score {{ (rules[item.retake_rule] if item.retake_rule in rules else item.retake_rule)|lower|replace('the ', '', 1) }}{% if own %}
               <span class="badge badge-warn" title="Set on People">{{ own }} student{{ '' if own == 1 else 's' }} differ{{ 's' if own == 1 else '' }}</span>{% endif %}</li>
             </ul>
+            {#- its problems as chips, the first 10, then “+N more” showing the rest here (the owner, 2026-10-26:
+                no pop-up list; the Problems column keeps just the number) #}
+            {%- set pids = [] %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% endfor %}{% endfor %}
+            {%- if pids %}<div class="small row-quizzes row-problems">Problems: {% for pid in pids %}<a class="pick-chip row-quiz-chip{{ ' chip-extra' if loop.index > 10 }}" href="{{ url_for('qgen.list_vprob', vpid=pid) }}" title="Open “{{ byid[pid].title }}” on Problems"{{ ' hidden' if loop.index > 10 }}>{{ icon('lc-puzzle') }} {{ byid[pid].title }}</a>{% endfor %}
+            {%- if pids|length > 10 %}<button type="button" class="chip-more" onclick="this.parentNode.querySelectorAll('.chip-extra').forEach(function (c) { c.hidden = false; }); this.remove();">+{{ pids|length - 10 }} more</button>{% endif %}</div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
-          <td data-label="Problems" class="row-more row-count-col" data-sort="{{ '%04d' % entries|length }}">
-            {#- folded, the number of problems (the owner, 2026-10-23: it was blank until the row was opened);
-                open, the fold-out list below takes its place #}
-            <span class="row-count small">{{ entries|length }}</span>
-            {#- the problems in a card that pops out over the row, not making the row taller (the owner, 2026-10-26: "if you
-                click on something and it resizes its environment, consider making it some kind of popover"); not
-                remembered open, closed by a click elsewhere or Esc (static/js/rowopen.js) #}
-            <details class="box box-mini problem-list row-pop"><summary class="small"><span class="fold" aria-hidden="true"></span>{{ entries|length }} item{{ '' if entries|length == 1 else 's' }} in the order</summary>
-            <ol class="small row-pop-body">
-              {% for e in entries %}
-                {% if layout.is_group(e) %}
-                  <li><span class="badge badge-accent">{{ e.pick }} of these {{ e['from']|length }}</span>
-                    <ul style="margin:2px 0 4px;padding-left:1.1em">{% for pid in e['from'] %}<li>{{ byid[pid].title if pid in byid else 'missing problem ' ~ pid }}</li>{% endfor %}</ul></li>
-                {% else %}
-                  <li>{{ byid[e].title if e in byid else 'missing problem ' ~ e }}</li>
-                {% endif %}
-              {% endfor %}
-            </ol></details>
-          </td>
+          <td data-label="Problems" class="nowrap small" data-sort="{{ '%04d' % entries|length }}">{{ entries|length }}</td>
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
           {#- how many times it was assigned (retakes too), opening its history (the owner, 2026-10-22) #}
           {%- set na = (assigned or {}).get(item.id, 0) %}
