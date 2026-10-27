@@ -490,7 +490,10 @@ def attempts_by_quiz(cquizzes):
                     'combined': combined_score(rule, [c.score for c in done]),
                     'counted': counted_attempts(rule, done),
                     'rule': RETAKE_RULES.get(rule, RETAKE_RULES['best']), 'rule_key': rule,
-                    'overridden': bool(override)})
+                    'overridden': bool(override),
+                    #(the Latest column's date: the newest hand-in, start or assigning of any attempt; what it sorts by too,
+                    #the owner 2026-10-26)
+                    'last_at': max((d for d in (c.compdate or c.startdate or c.create_date for c in attempts) if d), default=None)})
     #newest activity first
     return sorted(out, key=lambda g: -g['attempts'][-1].id)
 

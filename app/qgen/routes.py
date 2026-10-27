@@ -1394,7 +1394,7 @@ def list_user(uid):
     rank = {'new': 3, 'started': 2, 'review': 2}
     pg = paging.paginate(listed, name_of=lambda g: g['vquiz'].title or '', sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
-        'latest': lambda g: g['latest'].id,
+        'latest': lambda g: g['last_at'],
         'attempts': lambda g: len(g['attempts']),
         'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
         'score': lambda g: g['combined']})
@@ -1448,7 +1448,7 @@ def quiz_results_page(vqid):
     from app import paging
     pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), show=request.args.get('show'), sorts={
         'name': lambda u: u.username.lower(),
-        'latest': lambda u: rows[u.id][1]['latest'].id,
+        'latest': lambda u: rows[u.id][1]['last_at'],
         'attempts': lambda u: len(rows[u.id][1]['attempts']),
         'status': lambda u: {'review': 2, 'out': 1}.get(group_state(u)),
         'score': lambda u: rows[u.id][1]['combined']})

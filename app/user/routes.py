@@ -157,7 +157,7 @@ def mypage():
     rank = {'new': 3, 'started': 2, 'review': 2}
     pg = paging.paginate(ordered, name_of=lambda g: g['vquiz'].title or '', sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
-        'latest': lambda g: g['latest'].id,
+        'latest': lambda g: g['last_at'],
         'attempts': lambda g: len(g['attempts']),
         'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
         'score': lambda g: g['combined']})
