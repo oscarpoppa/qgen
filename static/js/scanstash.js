@@ -240,8 +240,10 @@ document.addEventListener('qgen-stash-redrawn', foldList);
   document.addEventListener('submit', function (e) {
     var many = e.target.closest('#stash-move-many');
     if (!many) return;
-    if (!many.querySelector('input[name=to]:checked')) { e.preventDefault(); if (window.qgenPickError) window.qgenPickError(many.querySelector('[data-folder-pick]'), 'Choose a folder first.'); return; }
+    if (!many.querySelector('input[name=to]:checked')) { e.preventDefault(); e.stopImmediatePropagation(); if (window.qgenPickError) window.qgenPickError(many.querySelector('[data-folder-pick]'), 'Choose a folder first.'); return; }
     done();
-  });
+  //(first, before the in-place sending (static/js/inplace.js, loaded earlier) sends it with no folder, to Uncategorized:
+  //the owner, 2026-10-27)
+  }, true);
   restore();
 })();
