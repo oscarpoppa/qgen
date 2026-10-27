@@ -2697,7 +2697,7 @@ dialog.add-quiz select, dialog.folder-dialog select { width: 100%; margin-bottom
 .person-card > .btn-row > form, .person-card > .btn-row > .inline-form { display: inline-flex; margin: 0; }
 .person-card > .btn-row > *, .person-card > .btn-row .btn, .person-card > .btn-row .inline-form { width: auto; flex: none; }
 /* the two folder icons beside a thing's folder chips, always together (the owner, 2026-10-15) */
-.folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 6px 4px 0; }
+.folder-icons { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; margin: 0 0 4px 0; }  /* (no right margin: it holds one icon now, 40px steps like the rest; the user critic, 2026-10-27) */
 .folder-icons > .move-form { margin: 0; }
 /* the Assign dialogs: what the quizzes are given with (the owner, 2026-10-15) */
 dialog.assign-many .assign-defaults { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
@@ -3567,6 +3567,10 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
    (the owner, 2026-10-23: a lot of room was left beside the rightmost columns) */
 #scan-current table th:nth-child(n+2), #scan-current table td:nth-child(n+2),
 .stash-main table th:nth-child(n+2), .stash-main table td:nth-child(n+2) { width: 1%; white-space: nowrap; padding-left: 20px; }
+/* (but not once a row is stacked as a card: each cell full width again, or the 1% squeezed every cell to a sliver on a
+   phone and pushed the icons off the screen; the user critic, 2026-10-27) */
+@media (max-width: 640px) { #scan-current .stack table td:nth-child(n), .stash-main .stack table td:nth-child(n) { width: 100%; white-space: normal; padding-left: 14px; } }
+@container listarea (max-width: 860px) { #scan-current .stack table td:nth-child(n), .stash-main .stack table td:nth-child(n) { width: 100%; white-space: normal; padding-left: 14px; } }
 /* a tight list (the window under about 1450px wide): a little less room inside each cell, so the icons at the row's end aren't cut off */
 @container listarea (max-width: 1100px) {
   .folder-filter-list table.even-cols th, .folder-filter-list table.even-cols td { padding-left: 6px; padding-right: 6px; }

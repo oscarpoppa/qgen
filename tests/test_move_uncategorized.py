@@ -49,3 +49,30 @@ def test_people_out_of_the_open_folder_only(app_db):
     assert in_folders('sam') == ['Math club'] and in_folders('kim') == []
     from app.user.models import User
     assert User.query.filter_by(username='kim').count() == 1  # (never deleted)
+
+
+def test_a_move_never_touches_the_other_copies(app_db):
+    """A, B and C copies; moving C to another folder leaves A and B (the owner, 2026-10-27)."""
+    app, db = app_db
+    from app.qgen.models import VPGroup, VProblem
+    teacher = login(app, 'teach')
+    probs = make_problems(teacher, 'Add')
+    for name in ('A', 'B', 'C', 'D', 'E'):
+        teacher.post('/quiz/subjects/problems/new', data={'name': name})
+    g = {n: VPGroup.query.filter_by(title=n).one().id for n in 'ABCDE'}
+    teacher.post('/quiz/subjects/problems/file', data={'subject': [g['A'], g['B'], g['C']], 'items': [probs['Add'].id], 'action': 'add'})
+    titles = lambda: (db.session.expire_all(), sorted(x.title for x in VProblem.query.filter_by(title='Add').one().vpgroups))[1]
+    # from C's own page: out of C only
+    teacher.post('/quiz/subjects/problems/file', data={'subject': g['D'], 'items': [probs['Add'].id], 'action': 'move', 'view': g['C']})
+    assert titles() == ['A', 'B', 'D']
+    # from All (which copy isn't known): put in E too, every copy kept, and said
+    r = teacher.post('/quiz/subjects/problems/file', follow_redirects=True,
+                     data={'subject': g['E'], 'items': [probs['Add'].id], 'action': 'move', 'view': 'all'})
+    assert 'in several folders, so it was put there too and kept its others.' in r.data.decode().replace('&#8217;', '’')
+    assert titles() == ['A', 'B', 'D', 'E']
+    # one in a single folder, from All: out of that one
+    probs2 = make_problems(teacher, 'Sub')
+    teacher.post('/quiz/subjects/problems/file', data={'subject': g['A'], 'items': [probs2['Sub'].id], 'action': 'add'})
+    teacher.post('/quiz/subjects/problems/file', data={'subject': g['B'], 'items': [probs2['Sub'].id], 'action': 'move', 'view': 'all'})
+    db.session.expire_all()
+    assert [x.title for x in VProblem.query.filter_by(title='Sub').one().vpgroups] == ['B']

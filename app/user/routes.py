@@ -711,12 +711,8 @@ def move_user_or_folder():
             name = db.session.get(UserFolder, int(request.form.get('folder'))).name
             message = 'Moved “{}” to {}.'.format(name, '“{}”'.format(target.name) if target else 'the top level')
         elif to in (None, '', 'top', 'main'):
-            #(from the All list, like the Problems and Quizzes pages: which folder isn't known)
-            if here is None:
-                return _group_done('Drag them out of a folder to take them out (or use the ✕ on the folder).', error=True)
-            #left in no folder: deleted, asked first (app/takeout.py)
-            from app import takeout
-            return takeout.handle('people', [request.form.get('user')], here, lambda m, error=False: _group_done(m, error=error))
+            #(not by a drag: a folder chip's ✕ is the one way out of a folder; the owner, 2026-10-27)
+            return _group_done('To take someone out of a folder, use the ✕ on the folder chip in his/her opened row.', error=True)
         else:
             person, f = groups.add(request.form.get('user'), to, moving_from=here)
             #(a Ctrl+drag, which says no folder it came from, is a copy: the owner, 2026-10-26)
@@ -754,17 +750,25 @@ def file_people():
         if len(folders) != 1:
             return _group_done('Choose one folder to move to.', error=True)
         try:
-            names = []
+            #(out of the folder they're moved from only, the open one; their copies elsewhere stay: the owner, 2026-10-27)
+            from .models import UserFolderMember
+            src = request.form.get('from') or request.form.get('view') or ''
+            names, kept = [], []
             for uid in dict.fromkeys(people):
-                if request.form.get('from'):
-                    #("Move from “X”", from a card's Remove: out of that folder only)
-                    person, f = groups.add(uid, folders[0], moving_from=request.form.get('from'))
-                else:
-                    person, f = groups.move_to(uid, folders[0])
+                have = [m.folder_id for m in UserFolderMember.query.filter_by(user_id=int(uid)).all()] if str(uid).isdigit() else []
+                from_id = int(src) if src.isdigit() and int(src) in have else (have[0] if len(have) == 1 else None)
+                person, f = groups.add(uid, folders[0], moving_from=from_id)
                 names.append(person.shown_name)
+                if from_id is None and len(have) > 1:
+                    kept.append(person.shown_name)
         except groups.GroupError as exc:
             return _group_done(str(exc), error=True)
-        return _group_done('Moved {} to “{}”.'.format(', '.join(names), f.name))
+        said = 'Moved {} to “{}”.'.format(', '.join(names), f.name)
+        if kept:
+            said += ' {} {} in several folders, so {} put there too and kept {} others.'.format(
+                ', '.join(kept), 'is' if len(kept) == 1 else 'are',
+                'he/she was' if len(kept) == 1 else 'they were', 'his/her' if len(kept) == 1 else 'their')
+        return _group_done(said)
     try:
         names, where = [], []
         for fid in folders:

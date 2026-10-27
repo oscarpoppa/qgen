@@ -37,7 +37,7 @@
           <tr data-box="workbook:{{ j.id }}" data-name="{{ j.name|lower }}">
             <td class="tick-col"><input type="checkbox" name="items" value="{{ j.id }}" form="file-form" aria-label="Check “{{ j.name }}”"></td>
             {#- its first page, small, opening full size, as on the Scan page (the owner, 2026-10-26, To do 43) #}
-            <td data-label="Workbook"><div class="scan-row-name">{% if b.pages %}<a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=1) }}" data-page-zoom title="See page 1 full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=1) }}" alt="" loading="lazy"></a>{% endif %}
+            <td data-label="Workbook"><div class="scan-row-name">{% if b.pages %}<a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=1) }}" data-page-zoom title="See page 1 full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=1) }}" alt=""></a>{% endif %}
               <div><a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was"><strong>{{ j.name }}</strong></a></div></div></td>
             <td data-label="Pages"><span class="badge box-count">{{ b.pages }}</span></td>
             <td data-label="Quizzes made">{% for m in b.made %}{% if not loop.first %}, {% endif %}<a href="{{ url_for('qgen.view_vquiz', vqid=m.quiz) }}">“{{ m.title }}”</a>{% else %}<span class="muted">none</span>{% endfor %}</td>
@@ -45,8 +45,8 @@
             {#- (side by side, like every other row's icons: the owner, 2026-10-25) #}
             <td class="actions"><span class="btn-row nowrap">
               <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="View: “{{ j.name }}” as it was">{{ icon_label('lc-eye', 'View') }}</a>
-              {{- post_button(url_for('qgen.scan_restore', job_id=j.id), 'Restore', icon='lc-restore', confirm='Restore “' ~ j.name ~ '”? It goes to Stashed workbooks, Uncategorized.', tip='Restore: put “' ~ j.name ~ '” back in Stashed workbooks, Uncategorized') }}
-              {{- post_button(url_for('qgen.scan_purge', job_id=j.id), 'Delete for good', 'btn btn-danger btn-sm', icon='lc-trash', confirm='Delete “' ~ j.name ~ '” and its page pictures for good? The quizzes made from it stay. This can’t be undone.', tip='Delete for good: “' ~ j.name ~ '” and its page pictures; the quizzes made from it stay') }}
+              {{- post_button(url_for('qgen.scan_restore', job_id=j.id), 'Restore', icon='lc-restore', confirm='Restore “' ~ j.name ~ '”? It goes to Stashed workbooks, Uncategorized.', tip='put “' ~ j.name ~ '” back in Stashed workbooks, Uncategorized') }}
+              {{- post_button(url_for('qgen.scan_purge', job_id=j.id), 'Delete for good', 'btn btn-danger btn-sm', icon='lc-trash', confirm='Delete “' ~ j.name ~ '” and its page pictures for good? The quizzes made from it stay. This can’t be undone.', tip='“' ~ j.name ~ '” and its page pictures; the quizzes made from it stay') }}
             </span></td>
           </tr>
         {% endfor %}

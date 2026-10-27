@@ -153,11 +153,9 @@ def add(user_id, folder_id, moving_from=None):
     if db.session.get(UserFolderMember, (f.id, u.id)) is None:
         db.session.add(UserFolderMember(folder_id=f.id, user_id=u.id))
     if moving_from not in (None, '') and str(moving_from) != str(f.id):
-        #out of the folder it was dragged from, and the folders inside it (not the one it's going to)
-        from app import takeout
-        here = takeout.subtree('people', get(moving_from)) - {f.id}
+        #out of the folder it was dragged from only: his/her copies in other folders stay (the owner, 2026-10-27)
         UserFolderMember.query.filter(UserFolderMember.user_id == u.id,
-                                      UserFolderMember.folder_id.in_(here)).delete(synchronize_session=False)
+                                      UserFolderMember.folder_id == int(moving_from)).delete(synchronize_session=False)
     db.session.commit()
     return u, f
 

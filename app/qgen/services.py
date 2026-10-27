@@ -239,11 +239,9 @@ def file_one(kind, item_id, subject, add=True, moving_from=None):
     elif not add and subject in current:
         current.remove(subject)
     if moving_from is not None and moving_from is not subject:
-        #out of the folder it was dragged from, and the folders inside it (not the one it's going to)
-        from app import takeout
-        here = takeout.subtree(kind, moving_from) - {subject.id}
-        for g in [g for g in current if g.id in here]:
-            current.remove(g)
+        #out of the folder it was dragged from only: its copies in other folders, inside it too, stay (the owner, 2026-10-27)
+        if moving_from in current:
+            current.remove(moving_from)
     try:
         db.session.commit()
     except IntegrityError:
@@ -351,23 +349,33 @@ def file_items(kind, item_ids, subject, add=True):
     return changed
 
 
-def move_items(kind, item_ids, subject):
-    """Move several problems (or quizzes) into one folder: they leave every folder they're in
-    now (the Put in folder dialog without "copy", the owner 2026-10-16). Returns how many
-    changed."""
+def move_items(kind, item_ids, subject, from_id=None):
+    """Move several problems (or quizzes) into one folder. A move never touches the copies in other folders (the owner,
+    2026-10-27): each leaves only the folder it's moved from (from_id, the folder open), else the one folder it's in; one
+    in several folders with none of them open is put in the new folder and keeps the others (named in kept). Returns
+    (how many changed, kept titles)."""
     _group_cls, item_cls, rel, _back = subject_kind(kind)
     ids = _ids(item_ids)
-    changed = 0
+    changed, kept = 0, []
     for item in item_cls.query.filter(item_cls.id.in_(ids)).all() if ids else []:
         current = getattr(item, rel)
-        if list(current) != [subject]:
-            current[:] = [subject]
-            changed += 1
+        have = [g.id for g in current]
+        src = from_id if from_id in have else (have[0] if len(have) == 1 else None)
+        if src is None and len(have) > 1:
+            kept.append(item.title)
+        moved = False
+        if src is not None and src != subject.id:
+            current.remove(next(g for g in current if g.id == src))
+            moved = True
+        if subject not in current:
+            current.append(subject)
+            moved = True
+        changed += moved
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-    return changed
+    return changed, kept
 
 
 def subject_choices(kind):

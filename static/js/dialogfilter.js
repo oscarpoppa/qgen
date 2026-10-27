@@ -39,7 +39,10 @@
   pick.fill = function (holder, folders, o) {
     var body = holder.querySelector('tbody');
     body.textContent = '';
-    if (o.top) holder.dataset.mainLabel = o.top;
+    //(sideTop false: the top row is in the table but gets no "Uncategorized" in the side list, e.g. the Move dialog's
+    //always-grayed one, which the side list counted as a folder; the user critic, 2026-10-27)
+    if (o.top && o.sideTop !== false) holder.dataset.mainLabel = o.top; else delete holder.dataset.mainLabel;
+    if (o.top && o.sideTop === false) holder.dataset.noSideMain = ''; else delete holder.dataset.noSideMain;
     (o.top ? [{ id: 'top', name: o.top, depth: 1 }] : []).concat(folders).forEach(function (f) {
       var tr = document.createElement('tr'), c = document.createElement('td'), t = document.createElement('td');
       tr.dataset.box = 'folder:' + f.id; tr.dataset.depth = f.depth; tr.dataset.folderName = f.name; tr.dataset.icon = f.icon || 'folder';
@@ -115,6 +118,7 @@
     ds.start = 'all'; ds.style = 'list'; ds.remember = holder.dataset.remember || 'folder-pick';
     //(Uncategorized only where the dialog offers "out of every folder"; left out otherwise)
     if (holder.dataset.mainLabel) ds.mainLabel = holder.dataset.mainLabel; else ds.hideEmpty = '';
+    if ('noSideMain' in holder.dataset) ds.noSideMain = '';
     var tree = document.createElement('script');
     tree.type = 'application/json'; tree.className = 'folder-filter-tree';
     tree.textContent = JSON.stringify(treeOf(holder));

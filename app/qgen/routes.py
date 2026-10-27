@@ -1866,10 +1866,8 @@ def move_subject(kind):
                                  moved='folder:{}'.format(subject.id))
         item_id = request.form.get(what)
         if to in (None, '', 'top', 'main'):
-            if here is None:
-                return _subject_done(kind, 'Drag it out of a folder to take it out.', error=True)
-            from app import takeout
-            return takeout.handle(kind, [item_id], here.id, lambda m, error=False: _subject_done(kind, m, error=error))
+            #(not by a drag: a folder chip's ✕ is the one way out of a folder; the owner, 2026-10-27)
+            return _subject_done(kind, 'To take it out of a folder, use the ✕ on its folder chip in the opened row.', error=True)
         target = subject_or_404(kind, to)
         item = S.file_one(kind, item_id, target, moving_from=here)
         #(every way of filing says Moved or Copied: a Ctrl+drag, which says no folder it came from, copies; the owner, 2026-10-26)
@@ -1965,13 +1963,15 @@ def file_subject(kind):
     if request.form.get('action') == 'move':
         if len(subjects) != 1:
             return _subject_done(kind, 'Choose one folder to move to.', error=True)
-        out_of = S.get_subject(kind, request.form.get('from')) if request.form.get('from') else None
-        if out_of is not None:
-            #("Move from “X”", from a row's Remove: out of that folder only)
-            count = max(S.file_items(kind, items, subjects[0], add=True), S.file_items(kind, items, out_of, add=False))
-        else:
-            count = S.move_items(kind, items, subjects[0])
-        return _subject_done(kind, 'Moved {} {} to “{}”.'.format(count, _item_word(kind, count), subjects[0].title))
+        #(out of the folder it's moved from only, the open one; its copies elsewhere stay: the owner, 2026-10-27)
+        src = request.form.get('from') or request.form.get('view') or ''
+        count, kept = S.move_items(kind, items, subjects[0], from_id=int(src) if src.isdigit() else None)
+        said = 'Moved {} {} to “{}”.'.format(count, _item_word(kind, count), subjects[0].title)
+        if kept:
+            said += ' {} {} in several folders, so {} put there too and kept {} others.'.format(
+                ', '.join('“{}”'.format(t) for t in kept), 'is' if len(kept) == 1 else 'are',
+                'it was' if len(kept) == 1 else 'they were', 'its' if len(kept) == 1 else 'their')
+        return _subject_done(kind, said)
     said = []
     for g in subjects:
         count = S.file_items(kind, items, g, add=add)

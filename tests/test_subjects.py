@@ -176,8 +176,13 @@ def test_one_at_a_time_and_dragging(app_db):
     teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': fall.id, 'from': 'all'}, headers=FETCH)
     db.session.expire_all()
     assert sorted(g.title for g in q.vqgroups) == ['Fall', 'Spring']
-    # dragged out of Fall onto Uncategorized: out of Fall only
-    teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': 'top', 'from': fall.id}, headers=FETCH)
+    # dragged onto Uncategorized: refused, a folder chip's ✕ is the one way out of a folder (the owner, 2026-10-27)
+    res = teacher.post('/quiz/subjects/quizzes/move', data={'quiz': q.id, 'to': 'top', 'from': fall.id}, headers=FETCH)
+    assert 'use the ✕ on its folder chip' in res.get_json()['error']
+    db.session.expire_all()
+    assert sorted(g.title for g in q.vqgroups) == ['Fall', 'Spring']
+    # the chip's ✕ on Fall: out of Fall only
+    teacher.post('/quiz/subjects/quizzes/remove', data={'quiz': q.id, 'folder': fall.id}, headers=FETCH)
     db.session.expire_all()
     assert [g.title for g in q.vqgroups] == ['Spring']
     # a chip's ✕ on its only folder: deleted, but only once the teacher agrees

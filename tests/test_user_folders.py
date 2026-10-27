@@ -64,18 +64,21 @@ def test_make_folders_and_put_people_in_them(app_db):
     assert teach.post('/users/folders/move', data={'user': ids('sam'), 'to': g8, 'from': g7}, headers=FETCH).get_json()['message'] == \
         'Moved sam to “8th grade”.'
     assert in_folders('sam') == ['8th grade', 'Math club']
-    # onto the main list from a folder: out of that folder; from All users: out of every folder
-    teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
+    # onto the main list: refused, a folder chip's ✕ is the one way out of a folder (the owner, 2026-10-27)
+    out = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club}, headers=FETCH).get_json()
+    assert 'use the ✕ on the folder chip' in out['error']
+    assert in_folders('sam') == ['8th grade', 'Math club']
+    teach.post('/users/folders/remove', data={'user': ids('sam'), 'folder': club}, headers=FETCH)
     assert in_folders('sam') == ['8th grade']
     teach.post('/users/folders/add', data={'user': ids('sam'), 'to': club})
     # from the All list onto Uncategorized: refused, as on the Problems and Quizzes pages (which
     # folder it came out of isn't known; the ✕ on a folder takes them out of that one)
     out = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': 'all'}, headers=FETCH).get_json()
-    assert 'Drag them out of a folder' in out['error']
+    assert 'use the ✕ on the folder chip' in out['error']
     assert in_folders('sam') == ['8th grade', 'Math club']
-    teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': club})
-    # out of their only folder: that deletes their account, so it's asked first (not done here)
-    res = teach.post('/users/folders/move', data={'user': ids('sam'), 'to': 'top', 'from': folder('8th grade')}, headers=FETCH)
+    teach.post('/users/folders/remove', data={'user': ids('sam'), 'folder': club}, headers=FETCH)
+    # out of their only folder by the chip's ✕: that deletes their account, so it's asked first (not done here)
+    res = teach.post('/users/folders/remove', data={'user': ids('sam'), 'folder': folder('8th grade')}, headers=FETCH)
     assert res.status_code == 409 and 'Do you want me to permanently delete him/her or put him/her in Uncategorized?' in res.get_json()['confirm']
     assert in_folders('sam') == ['8th grade']
     # the ✕ beside a folder

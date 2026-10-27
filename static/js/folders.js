@@ -368,6 +368,9 @@
   function targetAt(x, y) {
     var el = document.elementFromPoint(x, y), t = el && el.closest ? el.closest('[data-drop]') : null;
     if (!t || t.dataset.drop === dragging.home) return null;
+    //(a thing isn't dropped on Uncategorized: a folder chip's ✕ is the one way out of a folder; a folder can still go to
+    //the top level; the owner, 2026-10-27)
+    if (t.dataset.drop === 'top' && dragging.kind !== 'folder') return null;
     if (dragging.kind === 'folder' && dragging.el.contains(t)) return null;  // not into itself
     return t;
   }

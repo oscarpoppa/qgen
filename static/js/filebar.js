@@ -107,22 +107,6 @@
     });
   });
 
-  //(the open folder: the one the Move dialog's “Uncategorized” takes things out of; Take out of folder is gone, the
-  //owner 2026-10-26)
-  function openFolder() {
-    var pressed = document.querySelectorAll('.folder-filter-rows .folder-tab[aria-pressed="true"]');
-    var id = pressed.length ? pressed[pressed.length - 1].dataset.folder || '' : '';
-    if (id.indexOf('self:') === 0) id = id.slice(5);
-    if (/^\d+$/.test(id)) return id;
-    var page = new URLSearchParams(location.search).get('folder') || '';
-    return /^\d+$/.test(page) ? page : null;
-  }
-  function folderName(id) {
-    //(its full path, as chips and messages name it: “8th Grade › abc”; the owner, 2026-10-26)
-    var row = document.querySelector('.folder-side .side-row[data-drop="' + id + '"]');
-    var el = row && row.querySelector('.side-link');
-    return row && row.dataset.path ? row.dataset.path : el ? el.textContent.trim() : 'this folder';
-  }
   function checkedIds() {
     if (window.qgenCheckedIds) return window.qgenCheckedIds();
     var ids = {};
@@ -172,16 +156,15 @@
     window.qgenPickOk(putList);
     var onlyIn = d.from || (n === 1 && d.already.length === 1 ? d.already[0] : null);
     //(a folder inside another indented as in the folder list; a folder icon between the box and the
-    //name: the owner, 2026-10-16). Moving, “Uncategorized” first: out of the folder open now only, a copy in another
-    //folder kept (the owner, 2026-10-26, when Take out of folder went); grayed with no folder open
-    var here = openFolder();
+    //name: the owner, 2026-10-16). Moving, “Uncategorized” first, always grayed: a folder chip's ✕ is the one way out of
+    //a folder (the owner, 2026-10-27)
     window.qgenFolderPick.fill(putList, window.qgenFolderPick.fromSelect(sel).folders, { type: copy ? 'checkbox' : 'radio', name: 'put-to',
-      top: copy ? null : 'Uncategorized',
+      top: copy ? null : 'Uncategorized', sideTop: false,
       each: function (f, box, lab) {
         if (f.id === 'top') {
           var row = box.closest('tr');
-          if (!here) { box.disabled = true; row.classList.add('pick-off'); row.title = 'Open the folder to move ' + it + ' out of first'; }
-          else row.title = 'Out of “' + folderName(here) + '” only; any other folders ' + inNow + ' in keep ' + it;
+          box.disabled = true; row.classList.add('pick-off');
+          row.title = 'To take ' + it + ' out of a folder, use the ✕ on its folder chip in the opened row';
           return;
         }
         if (copy && d.already.indexOf(f.id) !== -1) {
@@ -205,8 +188,6 @@
     });
     var where = names.length === 1 && names[0] ? '\u201c' + names[0] + '\u201d' : names.length + ' folders';
     var q = copy ? 'Copy ' + d.what + ' to ' + where + '?' : 'Move ' + d.what + ' to ' + where + '?';
-    if (!copy && picked[0] === 'top') q = 'Move ' + d.what + ' to Uncategorized? ' + (d.ids.length === 1 ? (unit === 'person' ? 'He/she comes' : 'It comes') : 'They come')
-      + ' out of \u201c' + folderName(openFolder()) + '\u201d only.';
     (window.qgenAsk ? window.qgenAsk(q, copy ? 'Copy' : 'Move') : Promise.resolve(window.confirm(q))).then(function (yes) {
       if (yes) putSend(d, copy, picked);
     });
@@ -219,13 +200,6 @@
     var view = form.querySelector('input[name=view]');
     if (view) hidden('view', view.value);
     d.ids.forEach(function (i) { hidden('items', i); });
-    if (!copy && picked[0] === 'top') {
-      hidden(sel.name, openFolder()); hidden('action', 'remove'); hidden('to_none', '1'); hidden('confirm', 'uncategorized');
-      document.body.appendChild(f);
-      if (window.qgenCheckedClear) window.qgenCheckedClear();
-      f.submit();
-      return;
-    }
     picked.forEach(function (g) { hidden(sel.name, g); });
     hidden('action', copy ? 'add' : 'move');
     //("Move from “X”", from Remove: out of that folder only, static/js/takeout.js)

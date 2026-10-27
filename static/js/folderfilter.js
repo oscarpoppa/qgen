@@ -283,7 +283,7 @@
         //(grayed only when nothing is in it: with no folders yet it holds everything, and opens, the
         //owner 2026-10-20; it was grayed then, 2026-10-19)
         //(left out when empty on a page that hides empty folders: a history, the owner 2026-10-22)
-        if (loose || !('hideEmpty' in box.dataset)) {
+        if ((loose || !('hideEmpty' in box.dataset)) && !('noSideMain' in box.dataset)) {
           var noneBtn = button('none', box.dataset.mainLabel || 'Uncategorized', loose, 'tray');
           if (!loose) { noneBtn.disabled = true; noneBtn.title = 'Everything is in a folder'; }
           sideRow(noneBtn, 1, null).classList.add('side-auto');
