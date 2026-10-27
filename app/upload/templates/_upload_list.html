@@ -33,7 +33,7 @@
             {#- (the folder icons first: the owner, 2026-10-26) #}
             {{- folder_icons(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}
             {%- if in_archive %}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ file_url(item.name) }}"{% if kind == 'pictures' %} data-page-zoom title="View: See {{ item.name }} full size"{% else %} target="_blank" rel="noopener" title="View: Open {{ item.name }} in a new tab"{% endif %}>{{ icon_label('lc-eye', 'View') }}</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ file_url(item.name) }}"{% if kind == 'pictures' %} data-page-zoom title="View: See {{ item.name }} full size"{% else %} title="View: Open {{ item.name }}"{% endif %}>{{ icon_label('lc-eye', 'View') }}</a>
             {#- the Trash's: Restore and Delete for good, as a problem's there (the owner, 2026-10-26) #}
             <form method="post" action="{{ url_for('upload.restore_upload', uid=item.id) }}" class="inline-form" data-in-place
                   data-confirm="Restore “{{ item.name }}”? It goes back on the {{ 'Pictures' if kind == 'pictures' else 'Other files' }} page." data-confirm-ok="Restore">
@@ -46,7 +46,7 @@
             {#- (grayed, with what uses it, while a problem or quiz does: the owner, 2026-10-26) #}
             {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delimg', fname=item.name), archive_url=url_for('upload.trash_upload', uid=item.id), no_delete=file_blocker(item.name, 'pictures') if file_blocker else none) }}
             {%- else %}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" target="_blank" rel="noopener" title="View: Open {{ item.name }} in a new tab">{{ icon_label('lc-eye', 'View') }}</a>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('static', filename=item.name) }}" title="View: Open {{ item.name }}">{{ icon_label('lc-eye', 'View') }}</a>
             {{ remove_button(kind, item.id, '“' ~ item.name ~ '”', gs, url_for('upload.delnonimg', fname=item.name), archive_url=url_for('upload.trash_upload', uid=item.id), no_delete=file_blocker(item.name, 'files') if file_blocker else none) }}
             {%- endif %}
           </td>

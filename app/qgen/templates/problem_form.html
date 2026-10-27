@@ -102,7 +102,7 @@
 </div>
 
 {{ error_box(errors) }}
-{% if same %}<div class="alert alert-warning" role="alert">{{ icon('warning') }} You already have this problem: <a href="{{ url_for('qgen.view_vprob', vpid=same.id) }}" title="Open it (this page stays as it is)" target="_blank" rel="noopener">“{{ same.title or 'Untitled' }}”</a></div>{% endif %}
+{% if same %}<div class="alert alert-warning" role="alert">{{ icon('warning') }} You already have this problem: <a href="{{ url_for('qgen.view_vprob', vpid=same.id) }}" title="Open it (you’re asked first if this page has changes)">“{{ same.title or 'Untitled' }}”</a></div>{% endif %}
 
 <div class="editor">
 <form method="post" id="problem-form" data-fresh-page data-unsaved novalidate>

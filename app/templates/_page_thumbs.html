@@ -6,7 +6,7 @@
 {%- if L and L.pages %}
 <div class="page-thumbs">
   {%- for pg in L.pages %}{% set many = L.pages|length > 1 %}
-  <a class="page-thumb" href="{{ url_for('static', filename=pg.image) }}" target="_blank" rel="noopener" data-page-zoom
+  <a class="page-thumb" href="{{ url_for('static', filename=pg.image) }}" data-page-zoom
      title="{{ 'See scanned page ' ~ loop.index if many else 'See the scanned page' }}">
     <span class="page-thumb-paper"><img src="{{ url_for('static', filename=pg.image) }}" alt="{{ 'Scanned page ' ~ loop.index if many else 'Scanned page' }}" width="68" height="96">
       {%- for b in pg.hide or [] %}<span class="page-thumb-hide" style="left:{{ b.left * 100 }}%;top:{{ b.top * 100 }}%;width:{{ (b.right - b.left) * 100 }}%;height:{{ (b.bottom - b.top) * 100 }}%"></span>{% endfor %}</span>
