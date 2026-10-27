@@ -22,7 +22,7 @@
      data-style="list"), laid out like the students beside it: All quizzes, the folders, Uncategorized #}
   <div class="card field pick-quiz{% if form.vquiz.errors %} has-error{% endif %}" id="pick-quiz">
     {# the checked ones as chips, in the card's top right (the owner, 2026-10-24) #}
-    <div class="pick-chips" data-chips-for="vquiz" aria-live="polite"></div>
+    <div class="pick-chips" data-chips-for="vquiz" data-chip-icon="note" aria-live="polite"></div>
     <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
     {% if not quizzes %}
     {# (the same words as the Quizzes page with none) #}
@@ -51,7 +51,7 @@
       sat a row lower, under the Quiz card's height); on a phone Assign is last, after When #}
   <div class="assign-side">
   <div class="card pick-people-card">
-    <div class="pick-chips" data-chips-for="users" aria-live="polite"></div>
+    <div class="pick-chips" data-chips-for="users" data-chip-icon="user" aria-live="polite"></div>
     {#- (no "Assignee" block above the students: the checked ones are in the Students card's Checked
         folder, and both cards start at the top, level: the owner, 2026-10-22) #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
