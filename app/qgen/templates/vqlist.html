@@ -40,11 +40,11 @@
             {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid]) }}{% endfor %}</div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
-          <td data-label="Problems" class="nowrap small" data-sort="{{ '%04d' % entries|length }}">{{ entries|length }}</td>
+          <td data-label="Problems" class="nowrap small" data-sort="{{ '%04d' % entries|length }}"><span class="badge box-count">{{ entries|length }}</span></td>
           {#- when it was made, to sort by (the owner, 2026-10-18) #}
           {#- how many times it was assigned (retakes too), opening its history (the owner, 2026-10-22) #}
           {%- set na = (assigned or {}).get(item.id, 0) %}
-          <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na %}<a class="name-link small" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" data-tip="Assigned {{ na }} time{{ '' if na == 1 else 's' }}: open the history of “{{ item.title }}”">{{ na }}</a>{% else %}<span class="muted small" title="Not assigned yet">0</span>{% endif %}</td>
+          <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na %}<a class="name-link small" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" data-tip="Assigned {{ na }} time{{ '' if na == 1 else 's' }}: open the history of “{{ item.title }}”"><span class="badge box-count">{{ na }}</span></a>{% else %}<span class="badge box-count muted" title="Not assigned yet">0</span>{% endif %}</td>
           <td class="actions">
             {#- (the folder icons first, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
             {%- if fk %}{{ folder_icons(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}

@@ -74,7 +74,7 @@
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
             <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}{{ scan_working(x) }}</div></div></td>
           <td data-label="Last changed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
-          <td data-label="Pages">{{ j.pages }}</td>
+          <td data-label="Pages"><span class="badge box-count">{{ j.pages }}</span></td>
           <td>{{ scan_controls(x, 'scans') }}</td>
         </tr>
       {% endfor %}
@@ -172,7 +172,7 @@
               {#- how far it got, a column of its own to sort by (the owner, 2026-10-25, CC): being read, stopped, paused, ready, draft #}
               <td data-label="State" class="small" data-sort="{{ {'reading': 1, 'stopped': 2, 'paused': 3, 'ready': 4}.get(x.kind, 5) }}">{% include '_scan_kind.html' %}</td>
               <td data-label="Stashed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
-              <td data-label="Pages">{{ j.pages }}</td>
+              <td data-label="Pages"><span class="badge box-count">{{ j.pages }}</span></td>
               <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans') }}
                 <button type="button" class="btn btn-secondary btn-sm btn-icon" data-stash-dialog="stash-move" data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-here="{{ j.folder_id or '' }}" title="Move: put “{{ j.name }}” in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button></span></td>
             </tr>
