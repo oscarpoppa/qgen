@@ -3407,27 +3407,8 @@ table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width
 .result-groups .result-group-head { background: none; border-left: 0; padding: 2px 0; margin: 0; font-size: var(--fs-md); }
 .result-groups .result-group-head a, .result-groups .result-group-head .person-name { font-weight: 700; }
 .result-groups .result-group > ol.attempt-list { margin: 0 0 0 22px; border-left: 2px solid var(--border); padding-left: 14px; }
-/* the open row's heading stays at the top of the list while its contents scroll under it
-   (static/js/dividers.js: .row-stuck, --thead-h), on its band across the whole row */
-.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { position: sticky; top: calc(var(--thead-h, 40px) - 12px); z-index: 2; }
-/* (2: above the open row's contents, which are at 1 to reach across the cells beside them; at 1 too, they went over it:
-   the owner, 2026-10-27. An open +N more card, at 40, still lies over it) */
-/* (on the open row's own color from the start: the band below comes from a script after the scroll, and in Firefox,
-   for a moment before it, the contents showed through the heading: the owner, 2026-10-27) */
-.folder-filter-list.folder-scroll tr > td > details.row-fold[open] > summary { background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); }
-/* ...and a table inside the open row (a problem's history, Grading) pins its own column headings
-   just under that heading while its rows go by (the owner, 2026-10-22). Its wrapper doesn't scroll
-   sideways there (that would hold the headings in place), on a wide screen; on a narrow one the
-   table is cards with no headings anyway. */
-@media (min-width: 761px) {
-  .folder-filter-list.folder-scroll details.row-fold[open] > .answer-rows { overflow: visible; }
-  .folder-filter-list.folder-scroll details.row-fold[open] > .answer-rows > table > thead th {
-    position: sticky; top: calc(var(--thead-h, 40px) - 12px + var(--sum-h, 40px)); z-index: 1;
-    background: color-mix(in srgb, var(--open-tint) 5%, var(--surface)); }
-}
-.folder-filter-list.folder-scroll details.row-fold > summary.row-stuck::before { content: "" !important;  /* (a row summary's ::before is content: none elsewhere) */
-  position: absolute; z-index: -1; top: -4px; bottom: -4px;
-  left: var(--stuck-l, 0); right: var(--stuck-r, 0); background: color-mix(in srgb, var(--open-tint) 10%, var(--surface)); box-shadow: 0 2px 0 var(--open-edge); }
+/* (an open row scrolls with the list like any other: its heading isn't pinned at the top, nor a table's
+   column headings inside it; pinning was jerky, the owner 2026-10-27) */
 /* People fits a laptop's window with no sideways scrolling (the owner, 2026-10-22: at 1300px wide the
    row icons were off the edge and "claudecheck" broke letter by letter): a name keeps whole words,
    the Teacher badge going under it when there's no room beside it; the folder chips wrap and shrink;
