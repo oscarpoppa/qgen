@@ -356,7 +356,7 @@
           <span class="box-end"><button class="btn btn-sm" name="generate" value="{{ n }}" data-generate="{{ n }}" data-group="{{ grp.ns|join(' ') }}" data-tip="Make this page’s quiz and problems now"
             {%- if joined %} disabled data-joined title="Joined with page {{ leads[n] }}"
             {#- (a page that makes no quiz: nothing to use, or none of its problems checked; the user critic, 2026-10-25) #}
-            {%- elif page.kind != 'problems' and leads.get(n) %} disabled data-nothing title="Its picture goes in the quiz from page {{ leads[n] }}: use page {{ leads[n] }}’s Generate quiz"
+            {%- elif page.kind != 'problems' and leads.get(n) and leads[n] != n %} disabled data-nothing title="Its picture goes in the quiz from page {{ leads[n] }}: use page {{ leads[n] }}’s Generate quiz"
             {%- elif leads.get(n) != n %} disabled data-nothing title="Nothing on this page to make into a quiz"
             {%- elif fx.n %} disabled title="Fix the problems marked ! first"
             {%- elif grp.gaps %} disabled title="Every problem needs its place on the page first ({{ grp.gaps|join(', ') }})"

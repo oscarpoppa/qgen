@@ -956,7 +956,8 @@ def helper_hints(job, data, urls):
         if bad:
             heads.append('{} problem{} to fix (marked !)'.format(len(bad), '' if len(bad) == 1 else 's'))
             steps.append('Open each one and correct it.')
-        lead = leads.get(n) == n and p.get('kind') == 'problems'
+        #(an image-only page is a quiz of its own too: the owner, 2026-10-27)
+        lead = leads.get(n) == n and (p.get('kind') == 'problems' or image_page(p))
         if lead:
             title = ' '.join((p.get('title') or '').split())
             if not title:
@@ -1907,8 +1908,9 @@ def apply_names(data, plan=None):
 def image_page(page):
     """A read page with no questions whose picture is kept: it becomes an Image only quiz of its
     own (the owner, 2026-10-19: "store it as a quiz instead of just storing the image")."""
-    return page.get('state') == 'done' and page.get('kind') != 'problems' and page.get('save') is not False \
-        and any(p.get('keep') for p in page.get('pictures') or [])
+    #(any read page with no problems, a picture kept on it or not: then the whole page is its picture; the owner, 2026-10-27,
+    #"I want these to have the ability to be image-only quizzes")
+    return page.get('state') == 'done' and page.get('kind') != 'problems' and page.get('save') is not False
 
 
 def quiz_groups(data):
@@ -2272,8 +2274,12 @@ def _save_all(job, data, author, made_so_far):
     for lead, pages in quiz_groups(data):
         ids, places = [], []
         if image_page(lead):
-            #a page with no questions: an Image only quiz, its one problem the page's picture
-            files = kept_of.get(lead['n'])[:1]
+            #a page with no questions: an Image only quiz, its one problem the page's picture (the one kept on it, else the
+            #whole page: the owner, 2026-10-27)
+            files = (kept_of.get(lead['n']) or [])[:1] or [save_picture(job, lead['n'], {'left': 0, 'top': 0, 'right': 1, 'bottom': 1},
+                                                                         '{}-p{}-page'.format(book, lead['n']))]
+            if files[0] not in pictures:
+                pictures.append(files[0])
             vp = VProblem(author_id=author.id, from_scan=True)
             errors = S.save_problem(vp, 'look', '{}-1'.format(lead['title'])[:64], '', '', {'markup': 'friendly', 'values': [],
                                     'images': [{'file': f, 'label': ''} for f in files]})
