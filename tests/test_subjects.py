@@ -422,7 +422,7 @@ def test_written_answers_say_teacher_graded_and_pages_link_up(app_db):
     assert teacher.get('/quiz/listuser').headers['Location'] == '/userdet'
     assert '<tr class="result-item" data-box="user:' in results and '<details class="box row-fold" data-box="user-row:' in results
     #(an opened row shows the person's account only; quizzes are on his/her own page: the owner, 2026-10-25)
-    assert '<ul class="quiz-facts small muted" data-fold-body>' in results and 'Username: ' in results and '<div class="result-groups' not in results
+    assert '<div class="person-open" data-fold-body>' in results and '<ul class="quiz-facts small muted">' in results and 'Username: ' in results and '<div class="result-groups' not in results
     assert 'data-level="open"' in results and 'js/folders.js' in results and 'class="state-filter"' not in results
 
 
