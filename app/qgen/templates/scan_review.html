@@ -210,9 +210,11 @@
       {#- the order and the joins, a step of its own to look at, numbered after the upload card's 1 and 2 (the owner,
           2026-10-27: it was easy to miss; arranging happens here, once read, not before uploading) #}
       {%- if not trashed %}
-      <div class="scan-step-head">
+      {#- (one page: grayed, with why, never left out: the owner, 2026-10-27) #}
+      {%- set one_page = data.pages|length < 2 %}
+      <div class="scan-step-head{{ ' is-off' if one_page }}">
         <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Order and join the pages</h2></div>
-        <p class="muted small">{% if reading %}You can do this once every page has been read.{% else %}Drag a page to move it. Click the chain between two pages to make them one quiz.{% endif %}</p>
+        <p class="muted small">{% if one_page %}Only one page: nothing to order or join.{% elif reading %}You can do this once every page has been read.{% else %}Drag a page to move it. Click the chain between two pages to make them one quiz.{% endif %}</p>
       </div>
       {%- endif %}
       <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">

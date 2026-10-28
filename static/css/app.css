@@ -3900,3 +3900,4 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .scan-step-head .card-head { margin: 0; }
 .scan-step-head > p { margin: 2px 0 0; }
 .scan-step-head h2 { margin: 0; }
+.scan-step-head.is-off .card-head { opacity: .5; }  /* (one page: step 3 grayed, the line says why) */
