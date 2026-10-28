@@ -167,7 +167,7 @@ def test_a_students_own_pages(app_db):
         for k in ('mine', key):
             assert live.state(k, opens - timedelta(minutes=1)) != live.state(k, opens + timedelta(minutes=1))
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert "You can't start this quiz yet" in page and 'data-watch-ask' in page and 'Go to the quiz' in page
+    assert "You Can't Start This Quiz Yet" in page and 'data-watch-ask' in page and 'Go to the quiz' in page
     cq.opens_at = None
     db.session.commit()
     # taking it: starting and saving answers don't change the student's own fingerprint...

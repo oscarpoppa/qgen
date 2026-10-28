@@ -144,26 +144,26 @@
              current by messages.js); teachers find their own under their name, top right #}
           {% if not current_user.is_admin %}
           {{ item('user.home', 'Home', tip='Your start page: quizzes to do and your awards') }}
-          {% call item('user.mypage', 'My quizzes', tip='All the quizzes your teacher gave you, in folders') %}
+          {% call item('user.mypage', 'My Quizzes', tip='All the quizzes your teacher gave you, in folders') %}
             {{ quiz_dots_here('Quizzes for you to do') }}{% endcall %}
           {% endif %}
           {% if current_user.is_admin %}
             <details class="menu">
               <summary{{ under(('qgen.list_vprobs', 'qgen.list_vprob', 'qgen.mkvprob', 'qgen.edvprob', 'qgen.view_vprob', 'qgen.add_to_quiz_page')) }} title="Find, write and edit problems">Problems</summary>
               <div class="menu-list">
-                {{ item('qgen.list_vprobs', 'All problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob'), tip='Browse, edit and organize every problem') }}
-                {{ item('qgen.mkvprob', 'New problem', tip='Write a new problem to use in quizzes') }}
+                {{ item('qgen.list_vprobs', 'All Problems', ('qgen.list_vprob', 'qgen.edvprob', 'qgen.view_vprob'), tip='Browse, edit and organize every problem') }}
+                {{ item('qgen.mkvprob', 'New Problem', tip='Write a new problem to use in quizzes') }}
                 {#- (the owner, 2026-10-24) #}
-                {{ item('qgen.add_to_quiz_page', 'Add to quizzes', tip='Put problems at the end of quizzes you pick') }}
+                {{ item('qgen.add_to_quiz_page', 'Add to Quizzes', tip='Put problems at the end of quizzes you pick') }}
               </div>
             </details>
             <details class="menu">
               <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign',
                                 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }} title="Make, assign and see results of quizzes">Quizzes</summary>
               <div class="menu-list">
-                {{ item('qgen.list_vquizzes', 'All quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.quiz_results_page'), tip='Browse, edit and organize every quiz') }}
-                {{ item('qgen.mkvquiz', 'New quiz', tip='Build a new quiz from your problems') }}
-                {{ item('qgen.assign', 'Assign quizzes', tip='Give quizzes to students or groups, with a due date') }}
+                {{ item('qgen.list_vquizzes', 'All Quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.quiz_results_page'), tip='Browse, edit and organize every quiz') }}
+                {{ item('qgen.mkvquiz', 'New Quiz', tip='Build a new quiz from your problems') }}
+                {{ item('qgen.assign', 'Assign Quizzes', tip='Give quizzes to students or groups, with a due date') }}
                 {#- (no "Results by quiz": each quiz's history, from its row on All quizzes, shows it; the owner, 2026-10-25) #}
                 {#- (no "Results by student": People shows each person's results now, the owner 2026-10-21) #}
               </div>
@@ -174,17 +174,17 @@
             {% call item('qgen.review_list', 'Grading', ('qgen.review',), tip='Written answers waiting for you to grade') %}
               {% set nav_review_count = review_count() %}<span class="count nav-review" aria-label="{{ nav_review_count }} waiting" {% if not nav_review_count %}hidden{% endif %}>{{ nav_review_count }}</span>
             {% endcall %}
-            {#- a main link of its own, after Grading (it was in More; after People until 2026-10-24), named "Scan pages" (the owner, 2026-10-22); grayed out,
+            {#- a main link of its own, after Grading (it was in More; after People until 2026-10-24), named "Scan pages" (the owner, 2026-10-22), "Scanner" since 2026-10-28; grayed out,
                 not left out, when the site has no AI key (the owner, 2026-10-18) #}
             {#- (its badges: green the scans being read, blue the paused ones, red the ones that stopped by themselves; stashed scans
                 not counted: the owner, 2026-10-24) #}
-            {% if config.ANTHROPIC_API_KEY %}{% call item('qgen.scan_start', 'Scan pages', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') %}
+            {% if config.ANTHROPIC_API_KEY %}{% call item('qgen.scan_start', 'Scanner', ('qgen.scan_review', 'qgen.scan_done'), tip='Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check') %}
               {%- set sc = scan_counts() %}
               {%- if sc.reading %}<span class="count count-ok" aria-label="{{ sc.reading }} being read" title="{{ sc.reading }} being read">{{ sc.reading }}</span>{% endif %}
               {%- if sc.paused %}<span class="count count-blue" aria-label="{{ sc.paused }} paused" title="{{ sc.paused }} paused">{{ sc.paused }}</span>{% endif %}
               {%- if sc.stopped %}<span class="count" aria-label="{{ sc.stopped }} stopped" title="{{ sc.stopped }} stopped">{{ sc.stopped }}</span>{% endif %}
             {%- endcall %}
-            {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scan pages</span>{% endif %}
+            {%- else %}<span class="menu-disabled" aria-disabled="true" title="Needs an AI key, which this site doesn’t have">Scanner</span>{% endif %}
             {# used now and then: Archive, Files and Settings, in one drop-down #}
             <details class="menu">
               <summary{{ under(('qgen.archive', 'qgen.archived', 'messages.inbox', 'messages.conversation', 'messages.teachers_page', 'upload.upload', 'upload.images', 'upload.nonimages',
@@ -198,9 +198,9 @@
                 <details class="menu submenu">
                   <summary{{ under(('upload.upload', 'upload.images', 'upload.nonimages')) }} title="Upload files, and see the pictures and other files you uploaded">Files</summary>
                   <div class="menu-list">
-                    {{ item('upload.upload', 'Upload files', tip='Upload pictures and other files for your problems') }}
+                    {{ item('upload.upload', 'Upload Files', tip='Upload pictures and other files for your problems') }}
                     {{ item('upload.images', 'Pictures', tip='See and manage the pictures you uploaded') }}
-                    {{ item('upload.nonimages', 'Other files', tip='See and manage uploaded files that aren’t pictures') }}
+                    {{ item('upload.nonimages', 'Other Files', tip='See and manage uploaded files that aren’t pictures') }}
                   </div>
                 </details>
                 <hr class="menu-rule">
@@ -215,13 +215,13 @@
               <div class="menu-list">
                 {% if current_user.is_admin %}
                 {# a teacher's own quizzes (teachers take quizzes too, and see them as students do) #}
-                {% call item('user.mypage', 'My quizzes', tip='Quizzes given to you, to take like a student') %}
+                {% call item('user.mypage', 'My Quizzes', tip='Quizzes given to you, to take like a student') %}
                   {{ quiz_dots_here('Quizzes for you to do') }}{% endcall %}
                 {{ item('user.home', 'Home', tip='Your student start page: quizzes to do and your awards') }}
                 {% endif %}
-                {{ item('user.profile', 'My profile', tip='Change your nickname and picture') }}
-                {{ item('user.chpass', 'Change password', tip='Pick a new password for logging in') }}
-                <a href="{{ url_for('user.logout') }}" title="Sign out of the site on this device">Log out</a>
+                {{ item('user.profile', 'My Profile', tip='Change your nickname and picture') }}
+                {{ item('user.chpass', 'Change Password', tip='Pick a new password for logging in') }}
+                <a href="{{ url_for('user.logout') }}" title="Sign out of the site on this device">Log Out</a>
               </div>
             </details>
           </div>
@@ -245,7 +245,7 @@
           <p><strong id="temp-pw-head">Temporary password for {{ message.name }}</strong><br>
             <span class="muted small">It must be changed at the next login.</span></p>
           <p class="temp-pw"><code data-temp-pw>{{ message.password }}</code></p>
-          <div class="btn-row"><button type="button" class="btn btn-secondary" data-copy-pw>Copy password</button>
+          <div class="btn-row"><button type="button" class="btn btn-secondary" data-copy-pw>Copy Password</button>
             <button type="button" class="btn" data-done>Close</button></div>
         </dialog>
         <script>
@@ -256,7 +256,7 @@
           d.addEventListener('close', function () { d.remove(); });
           var copy = d.querySelector('[data-copy-pw]'), pw = d.querySelector('[data-temp-pw]').textContent;
           copy.addEventListener('click', function () {
-            function said() { copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy password'; }, 2000); }
+            function said() { copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy Password'; }, 2000); }
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pw).then(said, function () {});
             else { var r = document.createRange(); r.selectNodeContents(d.querySelector('[data-temp-pw]')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); said(); }
           });

@@ -7,10 +7,10 @@
 {% block body_attrs %}{{ watch('settings', note='The settings have been changed somewhere else since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Settings</h1>
-  <div class="actions">{{ back_home() }}<a class="btn btn-secondary" href="{{ url_for('user.technical_settings') }}" title="Time spans and limits the site works with">Technical settings →</a></div></div>
+  <div class="actions">{{ back_home('btn btn-secondary btn-sm') }}<a class="btn btn-secondary btn-sm" href="{{ url_for('user.technical_settings') }}" title="Time spans and limits the site works with">Technical Settings →</a></div></div>
 <form method="post" class="card form-cols" novalidate>
   {{ form.hidden_tag() }}
-  <h2>Your site</h2>
+  <h2>Your Site</h2>
   {{ field(form.site_name, 'Shown at the top of every page, next to the logo.') }}
   {{ image_drop(form.logo, 'Drop your school’s logo here', 'or click to choose it. A wide or square picture works best.') }}
   {{ image_drop(form.favicon, 'Drop a picture here', 'or click to choose one. The little picture in the browser tab. Leave it empty to use the logo. A square picture works best: a wide one is shrunk to fit, which makes it tiny.') }}

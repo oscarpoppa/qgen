@@ -99,7 +99,7 @@ def test_every_question_type_end_to_end(app_db):
     # --- the start card, then the quiz: each kind gets its own way to answer
     cq = CQuiz.query.one()
     start = student.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'Start the quiz' in start
+    assert 'Start the Quiz' in start
     page = take_page(student, cq.id).data.decode()
     sensible(page, 'take page')
     assert page.count('<section class="card question"') == 7  # five, one of the group of two, the paper page
@@ -132,7 +132,7 @@ def test_every_question_type_end_to_end(app_db):
     r = student.post('/quiz/take/{}'.format(cq.id), data=data)
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/take/{}'.format(cq.id))
     waiting = student.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'Handed in!' in waiting
+    assert 'Handed In!' in waiting
     sensible(waiting, 'handed-in page')
     db.session.expire_all()
     cq = db.session.get(CQuiz, cq.id)
@@ -205,12 +205,12 @@ def test_problem_history(app_db):
     assert 'href="/quiz/problem-results/{}"'.format(vp.id) in page
     page = teacher.get('/quiz/problem-results/{}'.format(vp.id)).data.decode()
     sensible(page, 'problem history')
-    assert 'Problem history:</span> <span class="title-name">Capital</span></h1>' in page  # (two lines: the owner, 2026-10-21)
+    assert 'Problem History:</span> <span class="title-name">Capital</span></h1>' in page  # (two lines: the owner, 2026-10-21)
     assert 'aria-label="History"' in teacher.get('/quiz/listvp').data.decode()
     assert True and 'aria-label="History"' in teacher.get('/quiz/listvp').data.decode()  # (an icon button: its words for screen readers)
     # Expand all / Collapse all over its quizzes (the page is laid out in the Quizzes page's folders now)
-    assert 'data-level="open" aria-label="Expand all in All quizzes"' in page
-    assert 'Quiz history:</span> <span class="title-name">Geo 1</span></h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
+    assert 'data-level="open" aria-label="Expand all in All Quizzes"' in page
+    assert 'Quiz History:</span> <span class="title-name">Geo 1</span></h1>' in teacher.get('/quiz/results/{}'.format(VQuiz.query.filter_by(title='Geo 1').one().id)).data.decode()
     home = login(app, 'sam').get('/home').data.decode()
     assert 'data-level-of="#home-boxes"' in home and 'id="home-boxes"' in home
     assert '4 answers from 2 students' in page and 'Average 50%' in page and '2 fully right' in page

@@ -15,14 +15,14 @@ class ValueRow(Form):
     kind = SelectField('Kind', choices=[('', 'Choose…')] + list(KINDS.items()))
     min = StringField('From')
     max = StringField('To')
-    step = StringField('In steps of')
-    places = StringField('Decimal places')
+    step = StringField('In Steps of')
+    places = StringField('Decimal Places')
     nonzero = BooleanField('Not zero')
     items = StringField('List (comma separated)')
-    pick_n = StringField('How many to pick')
+    pick_n = StringField('How Many to Pick')
     formula = StringField('Formula')
-    im_min = StringField('Imaginary part from')
-    im_max = StringField('Imaginary part to')
+    im_min = StringField('Imaginary Part from')
+    im_max = StringField('Imaginary Part to')
     different_from = StringField('Different from')
 
 
@@ -34,25 +34,25 @@ class ImageRow(Form):
 
 #form for creating and editing a problem
 class ProblemForm(FlaskForm):
-    qtype = SelectField('Question type', choices=[(t.key, t.label) for t in REGISTRY.values()])
+    qtype = SelectField('Question Type', choices=[(t.key, t.label) for t in REGISTRY.values()])
     title = StringField('Title', validators=[DataRequired(message='Please give the problem a short title.')])
     question = TextAreaField('Question')
     values = FieldList(FormField(ValueRow), min_entries=0)
     answer = TextAreaField('Answer')
     choices = TextAreaField('Choices (one per line, put * in front of correct ones)')
-    combos = TextAreaField('Other correct combinations (optional)')
+    combos = TextAreaField('Other Correct Combinations (optional)')
     shuffle = BooleanField('Shuffle the choices for each student', default=True)
-    show_n = IntegerField('Show only this many choices', validators=[Optional(), NumberRange(min=2, max=50)])
+    show_n = IntegerField('Show Only This Many Choices', validators=[Optional(), NumberRange(min=2, max=50)])
     case_sensitive = BooleanField('Case sensitive (capital letters must match)')
     precision = SelectField('How close must the answer be?', choices=list(PRECISIONS.items()), default='close')
     ordered = BooleanField('Order matters (like a point (x, y))')
     plain = BooleanField('Answer must be a plain number', default=True)
-    answer_display = StringField('Show the correct answer as (optional)')
+    answer_display = StringField('Show the Correct Answer as (optional)')
     complex = BooleanField('Use complex numbers (i = √−1)')
-    grading_notes = TextAreaField('Grading notes (only you see these)')
+    grading_notes = TextAreaField('Grading Notes (only you see these)')
     images = FieldList(FormField(ImageRow), min_entries=0)
     calculator_ok = BooleanField('Calculator allowed')
-    submit = SubmitField('Save problem')
+    submit = SubmitField('Save Problem')
 
     def options(self):
         """The problem's settings as stored in VProblem.options."""
@@ -126,15 +126,15 @@ class CheckboxList(SelectMultipleField):
 #form for creating and editing a quiz; problems are checked on the page and their
 #order kept in vplist ("4, 7, 5")
 class QuizForm(FlaskForm):
-    title = StringField('Quiz title', validators=[DataRequired(message='Please give the quiz a title.')])
+    title = StringField('Quiz Title', validators=[DataRequired(message='Please give the quiz a title.')])
     vplist = HiddenField('Problems')
-    image = StringField('Picture shown at the top (optional)')
+    image = StringField('Picture Shown at the Top (optional)')
     calculator_ok = BooleanField('Calculator allowed')
     #checked: every student gets the problems in the quiz's order; unchecked: shuffled (vq.shuffle_order),
     #checked for new quizzes (the owner, 2026-10-24)
     keep_order = BooleanField('Keep the problems in this order', default=True)
     retake_rule = SelectField('If a student takes this quiz more than once, the score is', choices=list(RETAKE_RULES.items()), default='best')
-    submit = SubmitField('Save quiz')
+    submit = SubmitField('Save Quiz')
 
 
 #form for assigning a quiz to one or more students
@@ -144,8 +144,8 @@ class AssignForm(FlaskForm):
     users = CheckboxList('Students', coerce=int, validators=[DataRequired(message='Check at least one student first.')])
     opens_at = DateTimeLocalField('Opens', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     closes_at = DateTimeLocalField('Closes', format='%Y-%m-%dT%H:%M', validators=[Optional()])
-    time_limit = IntegerField('Time limit (minutes)', validators=[Optional(), NumberRange(min=1, max=600, message='Between 1 and 600 minutes.')])
-    same = SelectField('Every student gets', default='', choices=[
+    time_limit = IntegerField('Time Limit (minutes)', validators=[Optional(), NumberRange(min=1, max=600, message='Between 1 and 600 minutes.')])
+    same = SelectField('Every Student Gets', default='', choices=[
         ('', 'A version of his/her own'),
         ('order', 'The same order, own numbers'),
         ('all', 'The exact same quiz')])
@@ -168,13 +168,13 @@ class AssignForm(FlaskForm):
 class ReviewItem(Form):
     cpid = HiddenField()
     credit = IntegerField('Credit (%)', validators=[Optional(), NumberRange(min=0, max=100, message='Credit must be 0 to 100.')])
-    feedback = TextAreaField('Comment for the student')
+    feedback = TextAreaField('Comment for the Student')
     highlights = HiddenField()
 
 
 class ReviewForm(FlaskForm):
     items = FieldList(FormField(ReviewItem), min_entries=0)
-    save = SubmitField('Save draft')
-    finalize = SubmitField('Finish grading')
+    save = SubmitField('Save Draft')
+    finalize = SubmitField('Finish Grading')
     #the same, then straight on to the next attempt waiting
-    finalize_next = SubmitField('Finish and grade next')
+    finalize_next = SubmitField('Finish and Grade Next')

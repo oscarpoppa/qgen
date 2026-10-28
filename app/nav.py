@@ -105,8 +105,8 @@ def _named(endpoint, args):
     fixed = {
         'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.list_users': 'People',
         'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
-        'user.userdet': 'People', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Teachers’ messages',
-        'qgen.archive': 'Trash', 'user.home': 'Home', 'user.mypage': 'My quizzes',
+        'user.userdet': 'People', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Teachers’ Messages',
+        'qgen.archive': 'Trash', 'user.home': 'Home', 'user.mypage': 'My Quizzes',
     }
     if endpoint in fixed:
         return fixed[endpoint]
@@ -118,19 +118,19 @@ def _named(endpoint, args):
         return vq.title if vq else None
     if endpoint == 'qgen.list_user':
         name = user('uid')
-        return 'Student history: {}'.format(name) if name else None
+        return 'Student History: {}'.format(name) if name else None
     if endpoint == 'messages.conversation':
         name = user('student_id')
         return 'Messages: {}'.format(name) if name else None
     if endpoint == 'qgen.quiz_results_page':
         title = quiz('vqid')
-        return 'Quiz history: {}'.format(title) if title else None
+        return 'Quiz History: {}'.format(title) if title else None
     if endpoint in ('qgen.list_vquiz', 'qgen.view_vquiz'):
         return quiz('vqid')
     if endpoint == 'qgen.problem_results':
         from app.qgen.models import VProblem
         vp = db.session.get(VProblem, int(args['vpid'])) if str(args.get('vpid', '')).isdigit() else None
-        return 'Problem history: {}'.format(vp.title or 'Untitled') if vp else None
+        return 'Problem History: {}'.format(vp.title or 'Untitled') if vp else None
     return None
 
 

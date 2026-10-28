@@ -9,8 +9,8 @@
 {% block content %}
 <div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}Hi, {{ current_user.nickname or current_user.username }}!</h1>
   {{ expand_collapse('#home-boxes', 'boxes') }}
-  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My quizzes</a>
-    <a class="btn btn-secondary" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My profile</a>
+  <div class="actions"><a class="btn btn-secondary" href="{{ url_for('user.mypage') }}" title="See all your quizzes and your folders">My Quizzes</a>
+    <a class="btn btn-secondary" href="{{ url_for('user.profile') }}" title="Change your nickname or picture">My Profile</a>
 </div></div>
 
 {% set days = tuning.get('due_soon_days') %}
@@ -28,7 +28,7 @@
 <div class="dash-grid" id="home-boxes" data-movable="home" data-redraw="home-boxes">
   {# each box folds away (remembered in this browser), like the Dashboard's #}
   <details class="box card dash-card" id="waiting" data-elastic="waiting" data-elastic-dir="v" data-box="waiting">
-    <summary class="dash-head">{{ box_label('hourglass', 'Waiting for you', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('hourglass', 'Waiting for You', count_of(waiting|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
@@ -47,7 +47,7 @@
   </details>
 
   <details class="box card dash-card" data-elastic="recent" data-elastic-dir="v" data-box="recent">
-    <summary class="dash-head">{{ box_label('checkbox', 'Just finished', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('checkbox', 'Just Finished', count_of(recent|length, 'quiz', 'quizzes'), 'h2') }}</summary>
     <p class="dash-links small"><span class="muted">Handed in during the last {{ recent_days }} days.</span>
       <a href="{{ url_for('user.mypage', folder='all') }}" title="See every quiz you’ve had, old and new">All my quizzes →</a></p>
     {% if recent %}
@@ -69,7 +69,7 @@
   {# stretches both ways by its corner, over the boxes around it; the other two only taller
      (static/js/elastic.js; the owner, 2026-10-14) #}
   <details class="box card dash-card" data-elastic="awards" data-box="awards">
-    <summary class="dash-head">{{ box_label('trophy', 'Your awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('trophy', 'Your Awards', count_of(awards|length, 'award', 'awards'), 'h2') }}</summary>
     {% if awards %}
       {{ award_list(awards) }}
     {% else %}
@@ -77,7 +77,7 @@
     {% endif %}
     {% if to_earn %}
       <details class="box home-sub" data-box="to-earn">
-        <summary>{{ box_label('target', 'Still to earn', count_of(to_earn|length, 'award', 'awards'), 'h3') }}</summary>
+        <summary>{{ box_label('target', 'Still to Earn', count_of(to_earn|length, 'award', 'awards'), 'h3') }}</summary>
         {{ award_list(to_earn, locked=true) }}
       </details>
     {% endif %}

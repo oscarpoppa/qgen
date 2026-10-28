@@ -116,12 +116,12 @@
 <div class="page-head">
   {#- (one quiz's history: "Quiz history:" on the top line, the quiz's name under it, so the words
       aren't broken across lines and the name has the room: the owner, 2026-10-21) #}
-  {% if single %}<h1 class="title-two"><span class="title-kind">Quiz history:</span> <span class="title-name">{{ quizzes[0].vquiz.title }}</span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
+  {% if single %}<h1 class="title-two"><span class="title-kind">Quiz History:</span> <span class="title-name">{{ quizzes[0].vquiz.title }}</span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   {% if single %}<span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=quizzes[0].vquiz.id) }}" title="View quiz: look at “{{ quizzes[0].vquiz.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvquiz', vqid=quizzes[0].vquiz.id) }}" title="Edit quiz: change “{{ quizzes[0].vquiz.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a></span>{% endif %}
   {% if not laid_out %}<div class="actions">{% if single %}{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}{% endif %}
     {% if single %}
-      {% if quizzes[0].vquiz.removed_at %}{{ slot('Assign it', 'A removed quiz can’t be assigned: restore it first', 'btn') }}{% else %}<a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) }}" data-what="“{{ quizzes[0].vquiz.title }}”" title="Give “{{ quizzes[0].vquiz.title }}” to students">Assign it</a>{% endif %}
+      {% if quizzes[0].vquiz.removed_at %}{{ slot('Assign It', 'A removed quiz can’t be assigned: restore it first', 'btn') }}{% else %}<a class="btn" href="{{ url_for('qgen.assign', vq=quizzes[0].vquiz.id) }}" data-what="“{{ quizzes[0].vquiz.title }}”" title="Give “{{ quizzes[0].vquiz.title }}” to students">Assign It</a>{% endif %}
     {% endif %}</div>{% endif %}
 </div>
 
@@ -132,7 +132,7 @@
     {#- the way back and Assign it at the right end of the filter row (View and Edit beside the title), as on a
         problem's history (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes', 'btn btn-secondary btn-sm') }}
-      {% if vq.removed_at %}{{ slot('Assign it', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% else %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Give “{{ vq.title }}” to students">Assign it</a>{% endif %}</div></div>
+      {% if vq.removed_at %}{{ slot('Assign It', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% else %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Give “{{ vq.title }}” to students">Assign It</a>{% endif %}</div></div>
   {#- the quiz at a glance, the same card as a problem's history's (removed and put back: the owner, 2026-10-21) #}
   <div class="card problem-summary">
     <div class="btn-row">
@@ -159,7 +159,7 @@
   {#- (its way back first, here too: the owner, 2026-10-16) -#}
   {% set filter_right %}{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}
     {#- (no "Results by student": People shows each person's results, the owner 2026-10-21) #}
-    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose quizzes and give them to students">Assign quizzes</a>{% endset %}
+    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Choose quizzes and give them to students">Assign Quizzes</a>{% endset %}
   {% set filter_one, filter_many = 'quiz', 'quizzes' %}{% include "_results_filter.html" %}
   <div id="folder-items">
     {#- one folder's quizzes, a page at a time (app/paging.py) #}

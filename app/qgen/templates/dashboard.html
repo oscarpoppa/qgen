@@ -6,11 +6,11 @@
   {#- (Expand all / Collapse all beside the page's title, not at the far end of its buttons: the owner, 2026-10-19) #}
   {{ expand_collapse('#dash-live', 'boxes') }}
   <div class="actions dash-actions" aria-label="Quick actions">
-    <a class="btn btn-secondary" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New problem</a>
-    <a class="btn btn-secondary" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem to use in quizzes">+ New Problem</a>
+    <a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New Quiz</a>
     {#- (no “Scan workbook pages” button here: it's “Scan pages” in the menu just above; the owner, 2026-10-26) #}
     {#- (no "Message students": the top bar's Messages opens the same panel; the owner, 2026-10-19) #}
-    <a class="btn" href="{{ url_for('qgen.assign') }}" title="Give quizzes to students, with optional open and close times">Assign quizzes</a>
+    <a class="btn btn-sm" href="{{ url_for('qgen.assign') }}" title="Give quizzes to students, with optional open and close times">Assign Quizzes</a>
   </div>
 </div>
 

@@ -6,7 +6,7 @@
 
 {% block body_attrs %}{{ watch('profile', note='Your profile has been changed somewhere else since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>My profile</h1>
+<div class="page-head"><h1>My Profile</h1>
   <div class="actions">{{ back_home() }}</div></div>
 <div class="card-grid">
 <div class="card" data-redraw="nickname">
@@ -20,7 +20,7 @@
     <input type="text" id="nickname" name="nickname" maxlength="{{ current_user.NICKNAME_MAX }}" value="{{ current_user.nickname or '' }}"
            placeholder="Nickname (optional)" autocomplete="nickname" style="flex:1;min-width:180px">
     <button class="btn" title="Use the nickname typed here">Save</button>
-    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1" title="Stop using a nickname. Just your name will show">Remove nickname</button>{% else %}{{ slot('Remove nickname', 'You don’t have a nickname', 'btn btn-secondary') }}{% endif %}
+    {% if current_user.nickname %}<button class="btn btn-secondary" name="clear" value="1" title="Stop using a nickname. Just your name will show">Remove Nickname</button>{% else %}{{ slot('Remove Nickname', 'You don’t have a nickname', 'btn btn-secondary') }}{% endif %}
   </form>
 </div>
 
@@ -37,9 +37,9 @@
       </div>
       <div data-redraw="avatar-remove">{% if current_user.avatar %}
       <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px" data-in-place
-            data-confirm="Remove your picture? Your initials show instead." data-confirm-ok="Remove picture">
+            data-confirm="Remove your picture? Your initials show instead." data-confirm-ok="Remove Picture">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove my picture</button>
+        <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove My Picture</button>
       </form>
       {% endif %}</div>
     </div>
@@ -78,7 +78,7 @@
   <form method="post" action="{{ url_for('user.create_token') }}" class="btn-row" style="margin-bottom:12px">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="text" name="name" maxlength="64" placeholder="Name, e.g. My phone" aria-label="Token name" style="flex:1;min-width:180px">
-    <button class="btn btn-secondary" title="Make a new token with the name typed here; it’s shown once">Create token</button>
+    <button class="btn btn-secondary" title="Make a new token with the name typed here; it’s shown once">Create Token</button>
   </form>
   {% if tokens %}
   <div class="table-wrap stack">

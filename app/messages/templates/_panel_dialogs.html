@@ -60,7 +60,7 @@
         {% for t in staff.teachers %}{{ choice('t' ~ t.teacher.id, t.teacher.shown_name ~ (' (online)' if t.online else ''), (' (' ~ t.unread ~ ' new)') if t.unread else '', box=false) }}{% endfor %}
       {% endif %}
     {% endcall %}
-    <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All students" data-main-label="Uncategorized"
+    <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All Students" data-main-label="Uncategorized"
          data-unit="student" data-units="students" data-remember="showing" data-tools-home="#showing-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ sh_tree|tojson }}</script>
       <div class="folder-filter-list">

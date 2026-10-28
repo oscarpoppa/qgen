@@ -356,7 +356,7 @@ def test_every_route_is_documented(app_db):
     assert shape(actual) == shape(documented)
     spec = Api(app).get('/openapi.json').get_json()
     assert spec['openapi'].startswith('3.1') and '/my/quizzes' in spec['paths']
-    assert b'API for apps' in app.test_client().get('/api/v2/docs').data
+    assert b'API for Apps' in app.test_client().get('/api/v2/docs').data
 
 
 def test_retake_only_after_finishing(app_db):

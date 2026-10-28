@@ -14,7 +14,7 @@ FETCH = {'X-Requested-With': 'fetch'}
 def badge(page):
     """The dots next to "My quizzes" in the menu (gold new, blue in progress, red due soon): how many are
     new or in progress, or None when there are none (the owner, 2026-10-23: they replaced the red number)."""
-    m = re.search(r'href="/mypage"[^>]*>My quizzes\s*<span class="nav-dots"[^>]*? aria-label="(\d+) new, (\d+) in progress, (\d+) due soon"', page)
+    m = re.search(r'href="/mypage"[^>]*>My Quizzes\s*<span class="nav-dots"[^>]*? aria-label="(\d+) new, (\d+) in progress, (\d+) due soon"', page)
     assert m, 'no My quizzes dots'
     n = int(m.group(1)) + int(m.group(2))
     return n or None

@@ -5,7 +5,7 @@
 <div class="online-list">
   {# what "online" means: a "?" beside the heading, not a note every time #}
   {% set online_help %}“Online” means a page is open (checked every {{ tuning.get('poll_seconds') }} seconds). Closing the browser doesn't log anyone out, so this shows who's actually here.{% endset %}
-  <h3 class="dash-sub">Online now <span class="badge badge-ok">{{ online|length }}</span>{{ tip('Online now', online_help) }}</h3>
+  <h3 class="dash-sub">Online Now <span class="badge badge-ok">{{ online|length }}</span>{{ tip('Online Now', online_help) }}</h3>
   {% if online %}
     {% macro online_row(u) %}<li>{# a student's name opens his/her student page (the owner, 2026-10-23); teachers have none #}{% if u.is_admin %}{{ person_name(u, 24, strong=false) }}{% else %}{{ person_link(u, 24, strong=false) }}{% endif %}
         {% if u.id == current_user.id %}<span class="muted small">(you)</span>{% elif u.is_admin %}<span class="badge">teacher</span>{% endif %}</li>{% endmacro %}
@@ -16,7 +16,7 @@
     <p class="muted small">Nobody is online.</p>
   {% endif %}
   {% if recent %}
-    <h3 class="dash-sub">Active in the last {{ 'hour' if recent_min == 60 else ('{} hours'.format(recent_min // 60) if recent_min % 60 == 0 else '{} minutes'.format(recent_min)) }}</h3>
+    <h3 class="dash-sub">Active in the Last {{ 'Hour' if recent_min == 60 else ('{} Hours'.format(recent_min // 60) if recent_min % 60 == 0 else '{} Minutes'.format(recent_min)) }}</h3>
     {% macro recent_row(u) %}<li>{# a student's name opens his/her student page (the owner, 2026-10-23); teachers have none #}{% if u.is_admin %}{{ person_name(u, 24, strong=false) }}{% else %}{{ person_link(u, 24, strong=false) }}{% endif %}
         {% if u.is_admin %}<span class="badge">teacher</span>{% endif %}
         <span class="muted small">{{ u.seen_label(now) }}</span></li>{% endmacro %}

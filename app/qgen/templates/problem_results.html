@@ -53,7 +53,7 @@
 {% block content %}
 <div class="page-head">
   {#- ("Problem history:" on the top line, the problem's name under it, as on a quiz's history: the owner, 2026-10-21) #}
-  <h1 class="title-two"><span class="title-kind">Problem history:</span> <span class="title-name">{{ vp.title or 'Untitled' }}</span></h1>
+  <h1 class="title-two"><span class="title-kind">Problem History:</span> <span class="title-name">{{ vp.title or 'Untitled' }}</span></h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View problem: three students' versions of {{ vp.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View problem') }}</a><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit problem: change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit problem') }}</a></span>
   {#- (no answers yet: no filter row, so the buttons stay here) #}

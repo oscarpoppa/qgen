@@ -4,8 +4,8 @@ A problem has a list of random values, each described by a small dict
 (a "row" on the problem page), and text containing [name] or [formula]
 placeholders.  For example:
 
-    values:   speed  Whole number  from 40 to 80
-              hours  Whole number  from 2 to 5
+    values:   speed  Whole Number  from 40 to 80
+              hours  Whole Number  from 2 to 5
     question: A train goes [speed] mph for [hours] hours. How far does it go?
     answer:   speed * hours
 
@@ -37,12 +37,12 @@ def tidy(prob):
 
 
 KINDS = {
-    'whole': 'Whole number',
+    'whole': 'Whole Number',
     'decimal': 'Decimal',
-    'list': 'Pick from list',
+    'list': 'Pick from List',
     'calc': 'Calculated',
-    'imaginary': 'Imaginary number (bi)',
-    'complex': 'Complex number (a + bi)',
+    'imaginary': 'Imaginary Number (bi)',
+    'complex': 'Complex Number (a + bi)',
 }
 #choosing one of these kinds turns complex numbers on for the problem
 COMPLEX_KINDS = ('imaginary', 'complex')
@@ -571,7 +571,7 @@ def numbered_pick(name, known):
 def _suggest(name, known):
     picked = numbered_pick(name, known)
     if picked:
-        return (' To use [{0}{1}], put {1} or more in “how many” for {0} (Pick from list): '
+        return (' To use [{0}{1}], put {1} or more in “how many” for {0} (Pick from List): '
                 'then {0}1, {0}2… are different items from its list.'.format(*picked))
     close = get_close_matches(name, known, n=1)
     return ' Did you mean “{}”?'.format(close[0]) if close else ''

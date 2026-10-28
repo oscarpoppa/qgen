@@ -33,7 +33,7 @@ def test_student_sets_and_removes_own_picture(app_db):
     assert saved.size == (256, 256) and saved.format == 'PNG' and not saved.getexif()  # cropped, location data gone
     # shown on the home page and in the menu
     home = sam.get('/home').data.decode()
-    assert u.avatar in home and 'title="Change your nickname or picture">My profile</a>' in home  # a button on Home, and in the menu
+    assert u.avatar in home and 'title="Change your nickname or picture">My Profile</a>' in home  # a button on Home, and in the menu
     # not a picture
     r = sam.post('/profile/avatar', data={'file': (io.BytesIO(b'hello'), 'x.png')}, content_type='multipart/form-data')
     assert not r.get_json()['ok']
@@ -78,7 +78,7 @@ def test_tokens_on_the_profile_page_are_for_teachers(app_db):
     # students see no app/API section and can't make tokens from the page
     sam = login(app, 'sam')
     page = sam.get('/profile').data.decode()
-    assert 'Apps' not in page and 'Create token' not in page and '/api/' not in page
+    assert 'Apps' not in page and 'Create Token' not in page and '/api/' not in page
     sam.post('/profile/tokens', data={'name': 'x'})
     assert ApiToken.query.count() == 0
     # teachers do

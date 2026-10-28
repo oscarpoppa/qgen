@@ -38,9 +38,9 @@ def test_paper_only_needs_a_picture(app_db):
     assert teacher.post('/quiz/makevprob', data=flower).status_code == 302
     # it's on the editor's list of question kinds, with its tip
     page = teacher.get('/quiz/makevprob').data.decode()
-    assert 'value="paper"' in page and 'Paper only' in page
+    assert 'value="paper"' in page and 'Paper Only' in page
     # for Paper only the Pictures card becomes "The page to print" (problem_form.js), and Random values hides
-    assert 'id="pictures-card"' in page and 'data-paper="The page to print"' in page
+    assert 'id="pictures-card"' in page and 'data-paper="The Page to Print"' in page
     assert 'class="card t-numeric t-text t-choice_one t-choice_many t-truefalse t-essay"' in page
 
 

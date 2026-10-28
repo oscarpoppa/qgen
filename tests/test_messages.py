@@ -385,7 +385,7 @@ def test_clearing_notices(app_db):
     t = notify_teachers(sam_id, 'sam handed in "A": 90%.')
     db.session.commit()
     page = sam.get('/messages/notices?seen=1').data.decode()
-    assert page.count('aria-label="Clear this notice"') == 2 and 'Clear all' in page
+    assert page.count('aria-label="Clear this notice"') == 2 and 'Clear All' in page
     # each person clears only their own notices
     assert sam.post('/messages/notices/clear/{}'.format(k.id), headers=J).status_code == 404
     assert sam.post('/messages/notices/clear/{}'.format(t.id), headers=J).status_code == 404
@@ -500,7 +500,7 @@ def test_sending_to_everyone_asks_first(app_db):
     teacher = login(app, 'teach')
     panel = teacher.get('/messages/panel?student=all').data.decode()
     assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in panel
-    assert 'data-confirm-ok="Send to everyone"' in panel
+    assert 'data-confirm-ok="Send to Everyone"' in panel
     page = teacher.get('/messages/panel').data.decode()
     assert 'data-confirm="Are you sure you want to send this to all 2 students?"' in page
     # one student's conversation doesn't ask
@@ -563,7 +563,7 @@ def test_all_messages_view_shows_an_announcement_once(app_db):
     assert 'to all 2 students' not in box
     import os
     js = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'js', 'messages.js')).read()
-    assert "label: 'Only from ' + who" in js and "label: 'From all ' + n + ' students'" in js
+    assert "label: 'Only From ' + who" in js and "label: 'From All ' + n + ' Students'" in js
 
 
 def test_teachers_get_a_notice_when_a_retake_is_given(app_db):

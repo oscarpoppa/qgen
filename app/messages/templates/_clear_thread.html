@@ -9,11 +9,11 @@
 {# an "All" view clears every conversation in it, and the question says so #}
 {% set every = view|string in ('all', 'teachers') %}
 <form method="post" data-in-place action="{{ url_for('messages.clear_thread') }}" class="{{ 'dock-form ' if panel }}thread-clear-all"
-      data-confirm="{{ 'Clear your view of every conversation here? ' ~ who ~ ' still see them, and pinned messages stay. This can’t be undone.' if every else 'Clear this conversation from your view? ' ~ who ~ ' still sees it, and pinned messages stay. This can’t be undone.' }}" data-confirm-ok="Clear all">
+      data-confirm="{{ 'Clear your view of every conversation here? ' ~ who ~ ' still see them, and pinned messages stay. This can’t be undone.' if every else 'Clear this conversation from your view? ' ~ who ~ ' still sees it, and pinned messages stay. This can’t be undone.' }}" data-confirm-ok="Clear All">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="view" value="{{ view }}">
-  {% if any %}<button class="btn-link small" title="{{ 'Take every message in these conversations out of your view (asks first). ' ~ who ~ ' still see them' if every else 'Take every message in this conversation out of your view (asks first). ' ~ who ~ ' still sees them' }}">Clear all</button>
-  {% elif items %}<button class="btn-link small" disabled title="Only pinned messages are left; they stay">Clear all</button>
-  {% else %}<button class="btn-link small" disabled title="There’s nothing to clear here">Clear all</button>{% endif %}
+  {% if any %}<button class="btn-link small" title="{{ 'Take every message in these conversations out of your view (asks first). ' ~ who ~ ' still see them' if every else 'Take every message in this conversation out of your view (asks first). ' ~ who ~ ' still sees them' }}">Clear All</button>
+  {% elif items %}<button class="btn-link small" disabled title="Only pinned messages are left; they stay">Clear All</button>
+  {% else %}<button class="btn-link small" disabled title="There’s nothing to clear here">Clear All</button>{% endif %}
 </form>
 {% endmacro %}

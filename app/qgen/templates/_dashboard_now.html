@@ -1,12 +1,12 @@
 {# The Dashboard's "Right now" box (part of _dashboard_live.html). #}
 {% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of with context %}
 <details class="box card dash-card" id="dash-right-now" data-elastic="now" data-elastic-dir="v" data-box="now" open>
-  <summary class="dash-head">{{ box_label('lc-activity', 'Right now', none, 'h2') }}
+  <summary class="dash-head">{{ box_label('lc-activity', 'Right Now', none, 'h2') }}
     <span class="badge badge-ok" title="Online now">{{ online|length }} online</span>
     {% if taking %}<span class="badge badge-accent">{{ taking|length }} taking a quiz</span>{% endif %}
     <span class="muted small">updated {{ '{}:{:%M} {:%p}'.format(now.hour % 12 or 12, now, now) }}</span></summary>
   <div class="dash-body">
-    <h3 class="dash-sub">Taking a quiz</h3>
+    <h3 class="dash-sub">Taking a Quiz</h3>
     {% if taking %}
       {% macro taking_row(t) %}
         <li>{{ person_name(t.cq.taker, href=url_for('qgen.qtake', cidx=t.cq.id), tip='View: ' ~ (t.cq.taker.shown_name if t.cq.taker else 'the student') ~ '’s questions and answers so far on “' ~ t.cq.vquiz.title ~ '”') }}

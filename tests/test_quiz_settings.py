@@ -78,7 +78,7 @@ def test_open_and_close_window(app_db):
     cq = CQuiz.query.one()
     sam = login(app, 'sam')
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert "You can't start this quiz yet" in page and 'It opens' in page and 'and closes' in page
+    assert "You Can't Start This Quiz Yet" in page and 'It opens' in page and 'and closes' in page
     assert 'name="Number1"' not in page  # no questions
     home = sam.get('/mypage').data.decode()
     assert "You can't start this yet. It opens" in home and 'disabled' in home
@@ -857,7 +857,7 @@ def test_results_by_quiz(app_db):
     assert '>Results by quiz<' not in teacher.get('/dashboard').data.decode()
     one = teacher.get('/quiz/results/{}'.format(vq.id)).data.decode()
     #(one quiz's history: a row per student in People's folders, not one box for the quiz)
-    assert 'Quiz history:</span> <span class="title-name">Settings quiz</span></h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
+    assert 'Quiz History:</span> <span class="title-name">Settings quiz</span></h1>' in one and 'data-watch="quizresults:{}"'.format(vq.id) in one
     assert 'data-box="student:{}"'.format(student(db, 'sam').id) in one and 'data-box="student:{}"'.format(student(db, 'kim').id) in one
     assert teacher.get('/quiz/results/99999').status_code == 302  # gone: back to Quizzes
     # where it's linked from: the quiz's row on Quizzes
@@ -899,10 +899,10 @@ def test_a_quiz_starts_only_from_its_start_card(app_db):
     cq = CQuiz.query.filter_by(assignee=sam_u.id).one()
     sam = login(app, 'sam')
     card = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'Start the quiz' in card and '2 questions' in card and '20 minutes</strong> once you start' in card
+    assert 'Start the Quiz' in card and '2 questions' in card and '20 minutes</strong> once you start' in card
     # a way out beside Start, nothing started (the owner, 2026-10-25)
     assert 'class="btn btn-secondary btn-lg start-cancel"' in card and 'data-back-href title="Leave without starting the quiz">Cancel</a>' in card
-    assert 'Calculator allowed' in card and 'saved as you go' in card and 'Hand it in' not in card
+    assert 'Calculator allowed' in card and 'saved as you go' in card and 'Hand It In' not in card
     db.session.expire_all()
     assert cq.startdate is None  # a look starts nothing
 
@@ -910,7 +910,7 @@ def test_a_quiz_starts_only_from_its_start_card(app_db):
     teacher.post('/quiz/take/{}/start'.format(cq.id))
     db.session.expire_all()
     assert cq.startdate is None
-    assert 'Start the quiz' not in teacher.get('/quiz/take/{}'.format(cq.id)).data.decode()
+    assert 'Start the Quiz' not in teacher.get('/quiz/take/{}'.format(cq.id)).data.decode()
 
     r = sam.post('/quiz/take/{}/start'.format(cq.id))
     assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/take/{}'.format(cq.id))
@@ -918,7 +918,7 @@ def test_a_quiz_starts_only_from_its_start_card(app_db):
     started = cq.startdate
     assert started is not None
     page = sam.get('/quiz/take/{}'.format(cq.id)).data.decode()
-    assert 'value="Hand it in"' in page and 'id="timer"' in page
+    assert 'value="Hand It In"' in page and 'id="timer"' in page
     sam.post('/quiz/take/{}/start'.format(cq.id))  # again: the time it started stays
     db.session.expire_all()
     assert cq.startdate == started

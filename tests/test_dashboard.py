@@ -31,7 +31,7 @@ def test_teachers_land_on_the_dashboard_and_students_dont(app_db):
     assert r.headers['Location'].endswith('/dashboard')
     page = c.get('/dashboard').data.decode()
     assert '<h1>Dashboard</h1>' in no_titles(page) and 'href="/dashboard" class="active" aria-current="page">Dashboard</a>' in no_titles(page)
-    assert 'class="brand" href="/dashboard"' in no_titles(page) and 'href="/mypage">My quizzes' in no_titles(page)
+    assert 'class="brand" href="/dashboard"' in no_titles(page) and 'href="/mypage">My Quizzes' in no_titles(page)
     # ?next= still wins; going to the login page when signed in goes home
     c2 = app.test_client()
     r = c2.post('/login?next=/quiz/listvq', data={'username': 'teach', 'password': 'pw-for-tests'})
@@ -54,7 +54,7 @@ def test_the_dashboard_is_for_administrators_only(app_db):
         assert r.status_code == 302 and r.headers['Location'].endswith('/mypage')
         body = sam.get(url, follow_redirects=True).data.decode()
         assert 'That page is for administrators only.' in body
-        assert 'id="dash-live"' not in body and 'dash-counters' not in body and 'Site at a glance' not in body
+        assert 'id="dash-live"' not in body and 'dash-counters' not in body and 'Site at a Glance' not in body
     # signed out: log in first
     r = app.test_client().get('/dashboard')
     assert r.status_code == 302 and '/login' in r.headers['Location']
@@ -134,7 +134,7 @@ def test_taking_a_quiz_right_now(app_db):
     # it shows on the page (the quiz's name opens sam's quiz as it is), and refreshes on its own
     sam.get('/messages/poll?watch=attempt:{}'.format(other.id))
     part = teacher.get('/dashboard/now').data.decode()
-    assert 'Taking a quiz' in part and '<strong>sam</strong>' in part
+    assert 'Taking a Quiz' in part and '<strong>sam</strong>' in part
     # the quiz's name is plain words; the student's name opens what the eye opens, their quiz as it
     # is now (the owner, 2026-10-22)
     assert 'href="/quiz/take/{}"'.format(other.id) in part and '<span class="dash-quiz"><span class="quiz-title">Other</span></span>' in part and 'aria-label="View"' in part  # (the eye: the student's copy, owner 2026-10-14)
@@ -210,7 +210,7 @@ def test_site_at_a_glance(app_db):
     g = D.site_glance(now)
     assert g['signup_open'] is True and g['ai_calls'] == 1 and g['ai_tokens'] == 150
     page = teacher.get('/dashboard').data.decode()
-    assert 'Site at a glance' in page and 'badge-ok">open' in page
+    assert 'Site at a Glance' in page and 'badge-ok">open' in page
 
 
 def test_who_is_logged_in(app_db):
@@ -232,7 +232,7 @@ def test_who_is_logged_in(app_db):
     assert [u.username for u in D.recently_active(now)] == ['sam']
 
     page = teacher.get('/dashboard').data.decode()
-    assert 'Online now' in page and '(you)' in page and 'Active in the last hour' in page and '12 min ago' in page
+    assert 'Online Now' in page and '(you)' in page and 'Active in the Last Hour' in page and '12 min ago' in page
     part = teacher.get('/dashboard/online').data.decode()
     assert 'teach' in part and '(you)' in part and 'sam' in part and 'kim' not in part
     users = teacher.get('/userdet').data.decode()
@@ -308,7 +308,7 @@ def test_assigned_but_not_handed_in(app_db):
     assert states == {fresh.id: 'new', going.id: 'started', later.id: 'not_open'}
     assert len(D.out_now(now, limit=2)[0]) == 2
     page = teacher.get('/dashboard').data.decode()
-    assert 'Assigned, not handed in yet' in page and 'Not started' in page and 'In progress' in page and 'Opens tomorrow' in page
+    assert 'Assigned, Still Open' in page and 'Not started' in page and 'In progress' in page and 'Opens tomorrow' in page
 
 
 def test_logging_out_takes_you_off_online(app_db):
@@ -330,7 +330,7 @@ def test_logging_out_takes_you_off_online(app_db):
     assert 'sam' not in [u.username for u in D.online(datetime.now())]
     assert 'sam' in [u.username for u in D.recently_active(datetime.now())]
     part = teacher.get('/dashboard/online').data.decode()
-    assert part.index('Active in the last hour') < part.index('sam')
+    assert part.index('Active in the Last Hour') < part.index('sam')
     assert teacher.get('/messages/poll').get_json()['online'] == 1  # just the teacher
     # the laptop is still signed in: its next request counts
     laptop.get('/messages/poll')
@@ -343,13 +343,13 @@ def test_pinned_messages_box(app_db):
     import re
     teach, sam = login(app, 'teach'), login(app, 'sam')
     page = teach.get('/dashboard').data.decode()
-    assert 'class="box-title">Pinned messages</h2><span class="badge box-count">0 messages</span>' in page and 'Nothing is pinned.' in page
+    assert 'class="box-title">Pinned Messages</h2><span class="badge box-count">0 messages</span>' in page and 'Nothing is pinned.' in page
     teach.post('/messages/send', data={'to': 'all', 'body': 'No class Friday', 'pin': '1'})
     teach.post('/messages/send', data={'to': str(ids('sam')), 'body': 'See me after class', 'pin': '1'})
     teach.post('/messages/send', data={'to': 'all', 'body': 'Not pinned'})
     sam.get('/messages/panel')  # sam reads his messages
     page = teach.get('/dashboard/now').data.decode()
-    assert 'class="box-title">Pinned messages</h2><span class="badge box-count">2 messages</span>' in page and 'Not pinned' not in page
+    assert 'class="box-title">Pinned Messages</h2><span class="badge box-count">2 messages</span>' in page and 'Not pinned' not in page
     assert re.search(r'No class Friday</span>.*?to every student\s*· read by 1 of 2', page, re.S)
     assert re.search(r'See me after class</span>.*?to sam\s*· read ·', page, re.S)
     # Unpin from the Dashboard: every copy
@@ -357,7 +357,7 @@ def test_pinned_messages_box(app_db):
     mid = Message.query.filter_by(body='No class Friday').first().id
     teach.post('/messages/pin/{}'.format(mid), data={'pinned': '0'})
     assert Message.query.filter_by(body='No class Friday', pinned=True).count() == 0
-    assert 'class="box-title">Pinned messages</h2><span class="badge box-count">1 message</span>' in teach.get('/dashboard/now').data.decode()
+    assert 'class="box-title">Pinned Messages</h2><span class="badge box-count">1 message</span>' in teach.get('/dashboard/now').data.decode()
 
 
 def test_refresh_keeps_the_page_where_it_was():

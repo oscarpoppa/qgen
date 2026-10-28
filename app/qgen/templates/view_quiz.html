@@ -13,8 +13,8 @@
   <div class="actions">
     {{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}
     {#- (grayed out when every student gets the same: the owner, 2026-10-19) #}
-    {% if varies %}<a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" data-reroll title="Draw another student’s version">Roll another</a>
-    {%- else %}<button type="button" class="btn" disabled title="Every student gets the same questions">Roll another</button>{% endif %}
+    {% if varies %}<a class="btn" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" data-reroll title="Draw another student’s version">Roll Another</a>
+    {%- else %}<button type="button" class="btn" disabled title="Every student gets the same questions">Roll Another</button>{% endif %}
   </div>
 </div>
 {#- a quiz from scanned pages: the page, small, at the top in the middle; a click shows it large

@@ -33,7 +33,7 @@
         messages; each opens in a box of its own (static/js/messages.js) #}
     {#- one line of small buttons: Showing…, Write to…, Pinned (the owner, 2026-10-22: Showing was a
         big drop-down on a line of its own) #}
-    {% set showing_name = (other.shown_name if other else 'All teachers') if teachers_view else (student.shown_name if student else folder.name if folder else 'All students') %}
+    {% set showing_name = (other.shown_name if other else 'All Teachers') if teachers_view else (student.shown_name if student else folder.name if folder else 'All Students') %}
     {#- Showing is the open folder's tab, wide enough to read, on the line the messages hang from; Write to… and
         Pinned are bare icons beside it, their words in their tooltips (the owner, 2026-10-25, CT1) #}
     {% if rows %}<div class="btn-row small panel-extras">
@@ -64,7 +64,7 @@
       <button class="btn" title="{{ 'Send this to the teachers you checked' if staff.teachers|length > 1 else 'Send this to ' ~ to_whom }}">Send</button>
       <p class="muted small" style="margin:4px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>
     </form>
-    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}" title="Open the full page of messages between teachers">Teachers’ messages, as a page</a></p>
+    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}" title="Open the full page of messages between teachers">Teachers’ Messages, as a page</a></p>
   {% elif rows %}
     {% if everyone %}
       <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>
@@ -73,7 +73,7 @@
       {% set n_to = folder.students|length if folder else rows|length %}
       {% set to_whom_all = ('the ' ~ n_to ~ ' student' ~ ('' if n_to == 1 else 's') ~ ' in “' ~ folder.name ~ '”') if folder else ('all ' ~ n_to ~ ' student' ~ ('' if n_to == 1 else 's')) %}
       <form method="post" action="{{ url_for('messages.send') }}" class="reply-box" novalidate
-            data-confirm="Are you sure you want to send this to {{ to_whom_all }}?" data-confirm-ok="{{ 'Send to them' if folder else 'Send to everyone' }}">
+            data-confirm="Are you sure you want to send this to {{ to_whom_all }}?" data-confirm-ok="{{ 'Send to Them' if folder else 'Send to Everyone' }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="to" value="{{ ('folder:' ~ folder.id) if folder else 'all' }}">
         <label for="reply" class="sr-only">{{ ('Message to the students in “' ~ folder.name ~ '”') if folder else 'Message to all students' }}</label>
@@ -87,7 +87,7 @@
       </form>
     {% else %}
       <div class="btn-row convo-bar">
-        <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student’s messages together">← All messages</button>
+        <button type="button" class="btn-link small show-student" data-student="all" title="Back to every student’s messages together">← All Messages</button>
         {{ clear_thread(current, items or [], clear_who) }}
         {% if waiting %}
           {# one student: go to that conversation; several: to all messages, where the new ones are marked #}

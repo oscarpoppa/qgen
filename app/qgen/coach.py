@@ -172,15 +172,15 @@ def problem_hints(qtype_key, question, answer, options):
         hints.append(hint('tip', 'Questions that ask students to explain usually work best as a written answer that you grade: set “Question type” to “Long text (instructor grades)”.',
                           _switch('essay', 'Switch to Long text')))
     elif re.search(r'\b(select|choose|tick|check) all\b|\ball that apply\b', low) and qt.key != 'choice_many':
-        hints.append(hint('tip', '“Select all” questions need “Pick several” in “Question type”, so students can check more than one.',
+        hints.append(hint('tip', '“Select all” questions need “Pick Several” in “Question type”, so students can check more than one.',
                           _switch('choice_many', 'Switch to Pick several')))
     if qt.key == 'choice_one' and len([c for c in parse_choices(options.get('choices')) if c[1]]) > 1 and not options.get('show_n'):
-        hints.append(hint('tip', 'You marked more than one correct choice: set “Question type” to “Pick several”.', _switch('choice_many', 'Switch to Pick several')))
+        hints.append(hint('tip', 'You marked more than one correct choice: set “Question type” to “Pick Several”.', _switch('choice_many', 'Switch to Pick several')))
     if qt.key == 'numeric' and answer.strip() and '[' not in answer and not re.search(r'\d', answer) and not _formula_names(answer) & set(known):
         try:
             F.parse_expr(answer)
         except F.FriendlyError:
-            hints.append(hint('tip', 'The answer looks like words, not a number: set “Question type” to “Short text”.', _switch('text', 'Switch to Short text')))
+            hints.append(hint('tip', 'The answer looks like words, not a number: set “Question type” to “Short Text”.', _switch('text', 'Switch to Short text')))
 
     #choice lists
     if qt.uses_choices:
@@ -204,7 +204,7 @@ def problem_hints(qtype_key, question, answer, options):
     if qt.key == 'essay' and not (options.get('grading_notes') or answer).strip():
         hints.append(hint('tip', 'Consider adding grading notes or a model answer — they\'ll be shown to you while grading.'))
     if not [h for h in hints if h['level'] in ('error', 'warn')]:
-        hints.insert(0, hint('ok', 'Looks good. Press “Show me 3 examples” to check what students will see.'))
+        hints.insert(0, hint('ok', 'Looks good. Press “Show Me 3 Examples” to check what students will see.'))
     return hints
 
 

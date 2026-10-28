@@ -66,7 +66,7 @@
   <span class="new-folder">
     {% set say = 'Make a new folder inside this one' if parent else 'Make a new folder to sort your ' ~ fk.units ~ ' into' %}
     {% if as_icon %}<button type="button" class="btn btn-secondary btn-xs btn-icon" data-fopt="new" title="New folder: {{ say }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button>
-    {%- else %}<button type="button" class="btn btn-secondary {{ size }}" data-fopt="new"{% if parent %} data-new-at="{{ parent.id }}"{% endif %} title="{{ say }}">+ New folder{{ ' inside' if parent }}</button>{% endif %}
+    {%- else %}<button type="button" class="btn btn-secondary {{ size }}" data-fopt="new"{% if parent %} data-new-at="{{ parent.id }}"{% endif %} title="{{ say }}">+ New Folder{{ ' Inside' if parent }}</button>{% endif %}
     {#- (one dialog on the page, with the icon over the folder list; a folder's "+ New folder inside" opens that
         one on its folder, static/js/folders.js: a copy of the folder list per folder made big pages slow) #}
     {%- if not parent %}
@@ -83,7 +83,7 @@
         <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="parent" data-checked="{{ ns.start }}" data-home="{{ ns.start }}">
           <script type="application/json" data-pick-rows>{{ ns.rows|tojson }}</script>
         </div>
-        <div class="btn-row"><button class="btn" title="Make the folder with the name you typed, where you chose">Make folder</button>
+        <div class="btn-row"><button class="btn" title="Make the folder with the name you typed, where you chose">Make Folder</button>
           <button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
       </form>
     </dialog>
@@ -308,7 +308,7 @@
       2026-10-15): no drop-down that files it the moment a folder is picked #}
   <button type="button" class="btn btn-secondary btn-sm btn-icon put-in-one" data-put-in="{{ ident }}" data-label="{{ label }}" data-in="{{ have|join(' ') }}" title="Move to folder: move {{ label }} to a folder (or copy {{ 'him/her' if what == 'user' else 'it' }} there)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button>
   {#- (no Take out of folder icon: the Move dialog's “Uncategorized” does it; the owner, 2026-10-26) #}
-  </span>{% else %}{#- (no folders yet: the icon grayed, with why, not the word "none": the owner, 2026-10-19) #}<span class="folder-icons"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move to folder: make a folder first (+ New folder)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button></span>{% endif %}
+  </span>{% else %}{#- (no folders yet: the icon grayed, with why, not the word "none": the owner, 2026-10-19) #}<span class="folder-icons"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move to folder: make a folder first (+ New Folder)">{{ icon_label('lc-folder-plus', 'Move to folder') }}</button></span>{% endif %}
 {% endmacro %}
 
 {#- the folders a thing is in, as chips with ✕ (take it out), in its opened row: "In folders: …" (the owner, 2026-10-26) #}
@@ -429,23 +429,23 @@
               </span>
               {% if n.depth < fk.max_depth %}{{ new_folder(fk, f, 'btn-xs') }}{% endif %}
               <form method="post" data-in-place action="{{ fk.delete_url(f.id) }}" class="folder-form"
-                    data-confirm="Delete the folder “{{ fk.name(n.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if n.folders }} in it move up {{ 'into “' ~ fk.name(fk.nodes[f.parent_id].folder) ~ '” (its Unsorted)' if f.parent_id and f.parent_id in fk.nodes else 'to Uncategorized' }}." data-confirm-ok="Delete folder">
+                    data-confirm="Delete the folder “{{ fk.name(n.folder) }}”? Nothing in it is deleted: the {{ fk.units }}{{ ' and folders' if n.folders }} in it move up {{ 'into “' ~ fk.name(fk.nodes[f.parent_id].folder) ~ '” (its Unsorted)' if f.parent_id and f.parent_id in fk.nodes else 'to Uncategorized' }}." data-confirm-ok="Delete Folder">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="view" value="{{ fk.view }}">
-                <button class="btn btn-secondary btn-xs" title="Delete just the folder; what’s in it moves up a level">Delete folder</button>
+                <button class="btn btn-secondary btn-xs" title="Delete just the folder; what’s in it moves up a level">Delete Folder</button>
               </form>
               {% set blocked = fk.purge_blocked(n) if fk.purge_url and fk.purge_blocked else none %}
               {% if blocked %}
               {# not yet (My quizzes: a quiz in it still to do): the button says why it can't #}
-              <button type="button" class="btn btn-danger btn-xs" disabled title="{{ blocked }}">Delete folder and everything in it</button>
+              <button type="button" class="btn btn-danger btn-xs" disabled title="{{ blocked }}">Delete Folder and Everything in It</button>
               <p class="small muted purge-note">{{ blocked }}</p>
               {% elif fk.purge_url %}
               {# the folder and what's in it go (the warning says exactly what happens) #}
               <form method="post" data-in-place action="{{ fk.purge_url(f.id) }}" class="folder-form"
-                    data-confirm="{{ fk.purge_question(n) }}" data-confirm-ok="Delete everything">
+                    data-confirm="{{ fk.purge_question(n) }}" data-confirm-ok="Delete Everything">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="view" value="{{ fk.view }}">
-                <button class="btn btn-danger btn-xs" title="Delete this folder and all that’s in it for good; it can’t be undone">Delete folder and everything in it</button>
+                <button class="btn btn-danger btn-xs" title="Delete this folder and all that’s in it for good; it can’t be undone">Delete Folder and Everything in It</button>
               </form>
               {% endif %}
             </div>

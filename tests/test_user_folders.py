@@ -168,7 +168,7 @@ def test_assigning_and_messaging_a_folder(app_db):
     assert [(t['id'], [c['id'] for c in t['children']]) for t in tree] == [(g7, [p2])]
     assert tree[0]['children'][0]['keys'] == ['user:{}'.format(ids('sam'))]
     assert page.count('type="checkbox" name="users"') == 3 and page.count('data-user="{}"'.format(ids('sam'))) == 1
-    assert 'data-all-label="All people"' in page and 'data-start="all"' in page
+    assert 'data-all-label="All People"' in page and 'data-start="all"' in page
     # someone checked twice gets one copy
     from test_dashboard import make_quiz
     from app.qgen.models import CQuiz
@@ -267,7 +267,7 @@ def test_results_pages_lead_back_to_users(app_db):
         assert back_by_the_trail(teach.get(url).data.decode()), url
     # one student's page: Assign a quiz to them
     #(it opens the Assign a quiz dialog: data-what names who it's for)
-    assert 'href="/quiz/assign?users={}" data-what="sam">Assign quizzes to sam</a>'.format(ids('sam')) in \
+    assert 'href="/quiz/assign?users={}" data-what="sam">Assign Quizzes to sam</a>'.format(ids('sam')) in \
         no_titles(teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode())
 
 
@@ -300,7 +300,7 @@ def test_taking_people_out_of_their_only_folder(app_db):
     page = teach.get('/userdet?folder=all').data.decode()
     # the bar: the same folder menu and Move to folder as Problems and Quizzes; no Take out of folder, on the bar or
     # the rows (the Move dialog's Uncategorized does it: the owner, 2026-10-26)
-    assert 'id="file-form" class="file-bar"' in page and '>Move to folder</button>' in page
+    assert 'id="file-form" class="file-bar"' in page and '>Move to Folder</button>' in page
     assert 'Take out of folder' not in page
     res = teach.post('/users/folders/file', data={'items': [ids('sam'), ids('kim')], 'folder': g8, 'action': 'remove'}, headers=FETCH)
     assert res.status_code == 409 and res.get_json()['confirm'].startswith('kim is only in “8th grade”.')

@@ -5,13 +5,13 @@
    dialog opens by itself; on screen there's Print again and the way back. #}
 {% block content %}
 <div class="page-head no-print">
-  <h1>Print the paper pages</h1>
+  <h1>Print the Paper Pages</h1>
   <div class="actions">
     <button type="button" class="btn" id="print-again" title="Open the print dialog again">{{ icon('printer') }} Print</button>
   </div>
 </div>
 {% if not pages %}
-  <div class="card empty"><span class="big">{{ icon('printer') }}</span>“{{ vquiz.title }}” has no Paper only problems, so there’s nothing to print.</div>
+  <div class="card empty"><span class="big">{{ icon('printer') }}</span>“{{ vquiz.title }}” has no Paper Only problems, so there’s nothing to print.</div>
 {% else %}
   <p class="muted small no-print">{{ students|length }} cop{{ 'y' if students|length == 1 else 'ies' }} of {{ pages|length }} page{{ '' if pages|length == 1 else 's' }}, each copy starting on a new sheet.</p>
   {% for u in students %}

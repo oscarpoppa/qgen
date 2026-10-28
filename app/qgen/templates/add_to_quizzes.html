@@ -24,7 +24,7 @@
       {{ filter_bar('#add-problem-pick .folder-filter-list', 'problem', 'problems', items='tr[data-box]', id='add-problem-bar') }}
       {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
       <div class="error pick-error" data-problem-error role="alert" hidden>Check at least one problem first.</div>
-      <div class="folder-filter" data-folder-filter data-prefix="problem:" data-all-label="All problems" data-main-label="Uncategorized"
+      <div class="folder-filter" data-folder-filter data-prefix="problem:" data-all-label="All Problems" data-main-label="Uncategorized"
            data-unit="problem" data-units="problems" data-start="{{ problem_start }}" data-remember="add-problems" data-tools-home="#add-problem-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
         <div class="folder-filter-list">
@@ -40,7 +40,7 @@
       <span class="label pick-wrap-head">Quizzes</span>
       {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
       <div class="error pick-error" data-quiz-error role="alert" hidden>Check at least one quiz first.</div>
-      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+      <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All Quizzes" data-main-label="Uncategorized"
            data-unit="quiz" data-units="quizzes" data-remember="add-quiz" data-tools-home="#add-quiz-bar" data-style="list">
         <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
         <div class="folder-filter-list">
@@ -50,7 +50,7 @@
         </div>
       </div>
       {# or a new quiz with the problems checked in it; its Back comes back to the Problems page #}
-      <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make new quiz</a></p>
+      <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make New Quiz</a></p>
     </div>
     <div class="assign-go btn-row"><button class="btn btn-big" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
   </div>

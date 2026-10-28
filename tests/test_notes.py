@@ -19,7 +19,7 @@ def test_teachers_notes_on_problems_and_quizzes(app_db):
     page = teacher.get('/quiz/listvp').data.decode()
     assert 'title="Note: This problem needs to be fixed."' in page and 'placeholder="Only teachers see this"' in page
     dash = teacher.get('/dashboard').data.decode()
-    assert 'Notes on problems and quizzes' in dash and 'This quiz needs work.' in dash and '/quiz/listvq?show={}'.format(vq.id) in dash
+    assert 'Problem and Quiz Notes' in dash and 'This quiz needs work.' in dash and '/quiz/listvq?show={}'.format(vq.id) in dash
     # a student can't write one
     sam = login(app, 'sam')
     r = sam.post('/notes/problem/{}'.format(probs[1].id), json={'note': 'mine'})
@@ -44,7 +44,7 @@ def test_a_note_to_the_students_on_an_assigned_quiz(app_db):
     assert 'popovertarget="note-pop-{}"'.format(a.id) in home and 'Note from your teacher' in home
     # the teacher changes it from sam's row: kim's changes too
     hist = teacher.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert 'Note to the student' in hist and '/quiz/assign-note/{}'.format(a.id) in hist
+    assert 'Note to the Student' in hist and '/quiz/assign-note/{}'.format(a.id) in hist
     assert teacher.post('/quiz/assign-note/{}'.format(a.id), json={'note': 'You can do it.'}).get_json()['ok']
     db.session.expire_all()
     assert [c.assign_note for c in copies(vq)] == ['You can do it.', 'You can do it.']

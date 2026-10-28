@@ -139,7 +139,7 @@ def mkvprob():
                 form.qtype.data, form.question.data, form.answer.data, form.options()):
             same = S.same_problem(form.qtype.data, form.question.data, form.answer.data, form.options())
         if same is not None:
-            return problem_page(form, None, [], 'New problem', same=same)
+            return problem_page(form, None, [], 'New Problem', same=same)
         errors = [subject_error] if subject_error else save_from_form(form, nuprob)
         if not errors:
             save_subjects('problems', nuprob)
@@ -148,7 +148,7 @@ def mkvprob():
             return redirect(back_after_save('qgen.list_vprobs', nuprob.id, new=True))
     elif request.method == 'GET' and not form.values.entries:
         form.values.append_entry()
-    return problem_page(form, None, errors, 'New problem', subject_error)
+    return problem_page(form, None, errors, 'New Problem', subject_error)
 
 #one problem's History: every handed-in answer to it, in whatever quiz, by quiz
 @qgen_bp.route('/quiz/problem-results/<int:vpid>', methods=['GET'])
@@ -201,11 +201,11 @@ def problem_results(vpid):
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.problem_results', vpid=vp.id, folder=v),
-        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(vqs), name=lambda f: f.title,
+        unit='quiz', units='quizzes', all_label='All Quizzes', all_count=len(vqs), name=lambda f: f.title,
         #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-problem-results-folders', hide_empty=True)
     return render_template('problem_results.html', vp=vp, qt=qt, quizzes=quizzes, answers=answers, shown=shown, pg=pg, fk=fk,
-                           summary=summary, common=common, title='Problem history: {}'.format(vp.title or 'Untitled'))
+                           summary=summary, common=common, title='Problem History: {}'.format(vp.title or 'Untitled'))
 
 #route to view a problem as students get it (three sample versions), without editing
 @qgen_bp.route('/quiz/viewvprob/<vpid>', methods=['GET'])
@@ -240,7 +240,7 @@ def edvprob(vpid):
             flash('Updated problem “{}”. Quizzes already assigned keep the version they were given.'.format(vpobj.title), 'success')
             current_app.logger.info('{} updated VProblem: ({}) "{}"'.format(current_user.username, vpobj.id, vpobj.title))
             return redirect(back_after_save('qgen.list_vprobs', vpobj.id))
-    return problem_page(form, vpobj, errors, 'Edit problem', subject_error)
+    return problem_page(form, vpobj, errors, 'Edit Problem', subject_error)
 
 #"Show me 3 examples": run the problem without saving it
 @qgen_bp.route('/quiz/previewvprob', methods=['POST'])
@@ -277,7 +277,7 @@ def add_to_quiz_page():
     quizzes, quiz_tree = assign_quizzes()
     #(the problems' list opens on the folder the Problems page was showing)
     problem_start = view if view.isdigit() else ('none' if view == 'main' else 'all')
-    return render_template('add_to_quizzes.html', title='Add to quizzes', problems=all_problems, chosen=ids, view=view,
+    return render_template('add_to_quizzes.html', title='Add to Quizzes', problems=all_problems, chosen=ids, view=view,
                            problem_tree=problem_tree, problem_start=problem_start,
                            quizzes=quizzes, quiz_tree=quiz_tree, back_to_problems=back_to_problems)
 
@@ -456,7 +456,7 @@ def mkvquiz():
                 nq.title, count, '' if count == 1 else 's', url_for('qgen.assign', vq=nq.id), nq.title, nq.title), 'success')
             current_app.logger.info('{} created VQuiz: ({}) "{}"'.format(current_user.username, nq.id, nq.title))
             return redirect(back_after_save('qgen.list_vquizzes', nq.id, new=True))
-    return quiz_page(form, 'New quiz', subject_error=subject_error)
+    return quiz_page(form, 'New Quiz', subject_error=subject_error)
 
 #route to view a quiz as one student would get it, without editing or assigning
 @qgen_bp.route('/quiz/viewvquiz/<vqid>', methods=['GET'])
@@ -497,7 +497,7 @@ def edvquiz(vqid):
                     'one' if had_own == 1 else had_own, 'his/her' if had_own == 1 else 'their'), 'success')
             current_app.logger.info('{} updated VQuiz: ({}) "{}"'.format(current_user.username, vqobj.id, vqobj.title))
             return redirect(back_after_save('qgen.list_vquizzes', vqobj.id))
-    return quiz_page(form, 'Edit quiz', vqobj, subject_error)
+    return quiz_page(form, 'Edit Quiz', vqobj, subject_error)
 
 #the checked quizzes given to the people picked in the Quizzes page's Assign quizzes dialog:
 #each opens now, with no closing time or time limit (the Assign page sets those), the owner
@@ -913,7 +913,7 @@ def assign():
     target = request.form.get('next') if request.method == 'POST' else None
     came_from = back(None, None) if not target else (safe_next(target), place_name(safe_next(target)))
     came_from = came_from if came_from and came_from[0] and came_from[1] else None
-    return render_template('assign.html', title='Assign quizzes', form=form, came_from=came_from,
+    return render_template('assign.html', title='Assign Quizzes', form=form, came_from=came_from,
                            quizzes=quizzes, quiz_tree=quiz_tree, quiz_start=quiz_start,
                            people=people, root=root, chosen=chosen, pick_tree=pick_tree, pick_start=start)
 
@@ -1019,7 +1019,7 @@ def qtake(cidx):
             return redirect(url_for('qgen.qtake', cidx=cidx))
         if request.method == 'POST' and form.csrf_token.errors:
             #(never silent: the answers sent are still filled in below, to hand in again)
-            flash('Your quiz wasn’t handed in. Your answers are still here: press “Hand it in” again.', 'error')
+            flash('Your quiz wasn’t handed in. Your answers are still here: press “Hand It In” again.', 'error')
         if not cq.startdate:
             S.start(cq)
             current_app.logger.info('{} is starting "{}" ({})'.format(current_user.username, title, cidx))
@@ -1221,7 +1221,7 @@ def review_list():
         page=lambda v: url_for('qgen.review_list', folder=v),
         unit='quiz', units='quizzes', count_unit='attempt', count_units='attempts',
         main_count=sum(weight.get(q.id, 0) for q in root['items']),
-        all_label='All quizzes', all_count=len(waiting), name=lambda f: f.title,
+        all_label='All Quizzes', all_count=len(waiting), name=lambda f: f.title,
         hint=None,  # (no note under the folder list: clutter, the owner 2026-10-21)
         fold_key='qgen-folded-grading-folders')
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, pg=pg, fk=fk, title='Grading')
@@ -1431,7 +1431,7 @@ def list_user(uid):
             n['keys'] = []
             strip(n['children'])
     strip(quiz_filter)
-    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title='Student history: {}'.format(ulst.shown_name),
+    return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title='Student History: {}'.format(ulst.shown_name),
                            awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter,
                            pg=pg, shown_groups=pg.items, server_view=str(ask), groups_total=len(groups),
                            groups_loose=len([g for g in groups if g['vquiz'].id not in in_some]))
@@ -1483,11 +1483,11 @@ def quiz_results_page(vqid):
     fk = folder_tree.kit(
         view, node, root, flat, nodes, readonly=True,
         page=lambda v: url_for('qgen.quiz_results_page', vqid=vq.id, folder=v),
-        unit='student', units='students', all_label='All students', all_count=len(students), name=lambda f: f.name,
+        unit='student', units='students', all_label='All Students', all_count=len(students), name=lambda f: f.name,
         #(no "make and fill them there" note: the owner, 2026-10-22)
         fold_key='qgen-folded-quiz-history-folders', hide_empty=True)
     return render_template('results_by_quiz.html', quizzes=[q], rules=RETAKE_RULES, single=True, fk=fk, shown=shown, pg=pg,
-                           rows=rows, title='Quiz history: {}'.format(vq.title))
+                           rows=rows, title='Quiz History: {}'.format(vq.title))
 
 def quiz_results(quizzes):
     """[{'vquiz', 'rows': [(student, group from attempts_by_quiz)] by name, 'students', 'average'
@@ -1525,7 +1525,7 @@ def list_cquiz(cqid):
     #a number answer as numbers (an old saved "sqrt(3)" shows as 1.7321), with its exact form
     correct = lambda cp: get_qtype('numeric').show_correct(cp.conc_ansr, cp.conc_opts) \
         if cp.vproblem.qtype == 'numeric' else cp.conc_ansr
-    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title="Answer key: {} – {}".format(cqlst.taker.shown_name if cqlst.taker else 'Someone', cqlst.vquiz.title))
+    return render_template('cqlist.html', cqlst=[cqlst], shown=shown, correct=correct, title="Answer Key: {} – {}".format(cqlst.taker.shown_name if cqlst.taker else 'Someone', cqlst.vquiz.title))
 
 #route to delete a specific concrete quiz from a user's record
 @qgen_bp.route('/quiz/delcq/<cqid>', methods=['POST'])
@@ -2012,7 +2012,7 @@ def subject_kit(kind, view, node, root, flat, nodes, in_archive=False):
         rename_url=lambda fid: url_for('qgen.rename_subject', kind=kind, sid=fid),
         delete_url=lambda fid: url_for('qgen.delete_subject', kind=kind, sid=fid),
         add_url=url_for('qgen.add_to_subject', kind=kind), remove_url=url_for('qgen.remove_from_subject', kind=kind),
-        unit=unit, units=units, all_label='All ' + units, all_count=root['all_count'],
+        unit=unit, units=units, all_label='All ' + units.title(), all_count=root['all_count'],
         name=lambda f: f.title, placeholder='e.g. ' + first, add_words='+', drag_what='a ' + unit,
         #(none on Problems, and no drag note either: the owner, 2026-10-22, clutter under the list)
         hint=None if kind == 'problems' else 'Your own folders for sorting {}, e.g. {}. A {} can be in several folders. '
@@ -2278,7 +2278,7 @@ def trash_workbooks_page(section, counts):
     root['all_count'] = len(jobs)
     fk = folder_tree.kit(view, node, root, flat, nodes,
                          page=lambda v: url_for('qgen.archive', section='workbooks', folder=v),
-                         unit='workbook', units='workbooks', all_label='All workbooks', all_count=len(jobs),
+                         unit='workbook', units='workbooks', all_label='All Workbooks', all_count=len(jobs),
                          name=lambda f: f.name, readonly=True, drag_what='a workbook')
     books = []
     for job in pg.items:

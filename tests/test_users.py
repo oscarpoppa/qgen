@@ -58,9 +58,9 @@ def test_class_code_controls_sign_up(client):
     from app.user.models import User
     from app.qgen.models import Setting
     r = client.get('/register')
-    assert b'Sign-up is closed' in r.data
+    assert b'Sign-Up Is Closed' in r.data
     Setting.put('class_code', 'Maple-7')
-    assert b'Class code' in client.get('/register').data
+    assert b'Class Code' in client.get('/register').data
     r = register(client, 'hal', '', code='wrong')
     assert r.status_code == 200 and b"class code isn" in r.data
     assert register(client, 'hal', '', code='  maple-7 ').status_code == 302
@@ -72,7 +72,7 @@ def test_web_login_is_throttled_like_the_api(client):
     for _ in range(10):
         client.post('/login', data={'username': 'ivy', 'password': 'wrong-guess'})
     r = client.post('/login', data={'username': 'ivy', 'password': 'pw-for-tests'}, follow_redirects=True)
-    assert b'Too many wrong passwords' in r.data and b'My quizzes' not in r.data
+    assert b'Too many wrong passwords' in r.data and b'My Quizzes' not in r.data
 
 
 def test_passwords_need_eight_characters(client):

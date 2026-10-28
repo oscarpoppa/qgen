@@ -57,8 +57,8 @@
 </form>
 
 <form method="post" action="{{ url_for('user.save_technical_settings') }}" class="tech-reset-all"
-      data-confirm="Put every technical setting back to its default?" data-confirm-ok="Reset everything">
+      data-confirm="Put every technical setting back to its default?" data-confirm-ok="Reset Everything">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button class="btn btn-secondary btn-sm" name="reset" value="all" title="Put every setting on this page back to its default (asks first)">Reset everything to defaults</button>
+  <button class="btn btn-secondary btn-sm" name="reset" value="all" title="Put every setting on this page back to its default (asks first)">Reset Everything to Defaults</button>
 </form>
 {% endblock %}

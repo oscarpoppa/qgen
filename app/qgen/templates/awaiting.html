@@ -9,16 +9,16 @@
 <div class="card card-narrow empty">
   {% if current_user == cq.taker %}
     <span class="big">{{ icon('party') }}</span>
-    <h1>Handed in!</h1>
+    <h1>Handed In!</h1>
     <p>Your answers to <strong>{{ cq.vquiz.title }}</strong> are in. Your teacher is checking your written answers.
       Your score will show up here when he/she is done.</p>
     <p class="btn-row" style="justify-content:center">{{ after_quiz() }}</p>
   {% else %}
     <span class="big">{{ icon('hourglass') }}</span>
-    <h1>Waiting for grading</h1>
+    <h1>Waiting for Grading</h1>
     <p>{{ cq.taker.shown_name }}'s answers to <strong>{{ cq.vquiz.title }}</strong> are in. The written answers need grading;
       the score will appear here when grading is done.</p>
-    <p><a class="btn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name }}'s written answers on “{{ cq.vquiz.title }}”">Grade it now</a></p>
+    <p><a class="btn" href="{{ url_for('qgen.review', cqid=cq.id) }}" title="Grade {{ cq.taker.shown_name }}'s written answers on “{{ cq.vquiz.title }}”">Grade It Now</a></p>
     <p class="btn-row" style="justify-content:center">{{ attempt_links(cq) }}</p>
   {% endif %}
 </div>

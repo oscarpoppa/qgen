@@ -349,8 +349,8 @@
     e.preventDefault();
     var wrap = b.parentNode, who = b.dataset.who, n = b.dataset.n;
     window.qgenChoose('Delete this announcement? This can\u2019t be undone.', [
-      { value: 'one', label: 'Only from ' + who, title: 'Delete it from ' + who + '\u2019s messages; the others keep it' },
-      { value: 'all', label: 'From all ' + n + ' students', danger: true, title: 'Delete every copy of this announcement' }
+      { value: 'one', label: 'Only From ' + who, title: 'Delete it from ' + who + '\u2019s messages; the others keep it' },
+      { value: 'all', label: 'From All ' + n + ' Students', danger: true, title: 'Delete every copy of this announcement' }
     ]).then(function (v) {
       if (!v) return;
       var f = wrap.querySelector(v === 'all' ? 'form[data-ann-all]' : 'form[data-ann-one]');

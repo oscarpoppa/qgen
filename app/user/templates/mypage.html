@@ -143,13 +143,13 @@
 {#- a teacher's way to try a quiz as a student would: always here, empty or not, at the right end of
     the list's heading row ("My quizzes  15 quizzes"), or of the page's title row when there's no list
     yet (the owner, 2026-10-20) #}
-{% set assign_me %}{% if current_user.is_admin %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', users=current_user.id) }}" title="Choose quizzes to give yourself, to take them as a student would">Assign quizzes to me</a>{% endif %}{% endset %}
-<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My quizzes</h1>
+{% set assign_me %}{% if current_user.is_admin %}<a class="btn btn-sm" href="{{ url_for('qgen.assign', users=current_user.id) }}" title="Choose quizzes to give yourself, to take them as a student would">Assign Quizzes to Me</a>{% endif %}{% endset %}
+<div class="page-head"><h1 class="person">{{ avatar(current_user, 44) }}My Quizzes</h1>
   {% if not (groups or fk.root.folders) and current_user.is_admin %}<div class="actions">{{ assign_me }}</div>{% endif %}</div>
 
 {# the last few handed in, whatever folder they're in, newest first: a pop-over from its button
    under the folder list (the owner, 2026-10-17; static/js/popcard.js) #}
-{% set finished_button %}{% if finished %}<button type="button" class="btn btn-secondary btn-sm side-pop-toggle" data-popcard="#finished-pop" aria-expanded="false" title="The quizzes you handed in last">{{ icon('hourglass') }} Just finished ({{ finished|length }})</button>{% endif %}{% endset %}
+{% set finished_button %}{% if finished %}<button type="button" class="btn btn-secondary btn-sm side-pop-toggle" data-popcard="#finished-pop" aria-expanded="false" title="The quizzes you handed in last">{{ icon('hourglass') }} Just Finished ({{ finished|length }})</button>{% endif %}{% endset %}
 {% if groups or fk.root.folders %}
 {% call folders_page(fk, actions=assign_me, under_side=finished_button) %}
   {# (in the same bar as the other folder pages, so the folder's heading sits in its middle) #}
@@ -165,7 +165,7 @@
       {#- (an empty folder says so even with folders inside it: the old rows of folder tabs that said it are gone; the
           owner, 2026-10-24: two rows deep, with its message, on every folder page) #}
       {% elif not pg.q and fk.view in ('new', 'started', 'soon') %}<p class="card empty small">{{ nothing }}</p>
-      {% elif not pg.q and (fk.node or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All quizzes.{% endif %}</p>
+      {% elif not pg.q and (fk.node or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All Quizzes.{% endif %}</p>
       {% endif %}{% endcall %}
   </div>
 {% endcall %}
@@ -182,7 +182,7 @@
 
 {% if finished %}
 <section class="card pop-card" id="finished-pop" aria-labelledby="finished-pop-head" hidden>
-  <div class="pop-card-top"><h2 id="finished-pop-head" class="pop-card-head">Just finished</h2>
+  <div class="pop-card-top"><h2 id="finished-pop-head" class="pop-card-head">Just Finished</h2>
     <button type="button" class="btn btn-secondary btn-sm btn-icon pop-card-close" title="Close">{{ icon_label('lc-x', 'Close') }}</button></div>
   <ul class="dash-list">
   {% for cq in finished %}

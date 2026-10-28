@@ -85,7 +85,7 @@ def test_the_teachers_page_deleting_and_the_pop_up(app_db):
     assert '<optgroup label="Teachers">' in teach.get('/messages/panel').data.decode()
     # the page writes with a plain form (one other teacher: no checkboxes, it's to all of them)
     page = teach.get('/messages/teachers').data.decode()
-    assert 'All messages (every teacher)' in page and 'name="to" value="all"' in page
+    assert 'All Messages (every teacher)' in page and 'name="to" value="all"' in page
     r = teach.post('/messages/teachers/send', data={'body': 'Hello lee', 'to': 'all'})
     assert r.status_code == 302
     msg = StaffMessage.query.one()

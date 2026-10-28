@@ -114,7 +114,7 @@
     var d = holder.closest('dialog'), wrap = holder.querySelector('.pick-wrap');
     var box = document.createElement('div'), ds = box.dataset;
     box.className = 'folder-filter';
-    ds.prefix = 'folder:'; ds.allLabel = 'All folders'; ds.unit = 'folder'; ds.units = 'folders';
+    ds.prefix = 'folder:'; ds.allLabel = 'All Folders'; ds.unit = 'folder'; ds.units = 'folders';
     ds.start = 'all'; ds.style = 'list'; ds.remember = holder.dataset.remember || 'folder-pick';
     //(Uncategorized only where the dialog offers "out of every folder"; left out otherwise)
     if (holder.dataset.mainLabel) ds.mainLabel = holder.dataset.mainLabel; else ds.hideEmpty = '';

@@ -9,14 +9,14 @@
 {% block content %}
 <div class="page-head no-print">
   {#- (it was “Results”: the owner, 2026-10-20, from the Oct 7 review) #}
-  <h1>Quiz results</h1>
+  <h1>Quiz Results</h1>
   <div class="actions">
     {# (the way back always first, on every page: the owner, 2026-10-14) #}
     {% if current_user == cq.taker %}{{ after_quiz() }}
     {% else %}{{ attempt_links(cq) }}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s questions next to the correct answers">Answer key</a>{% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('qgen.list_cquiz', cqid=cq.id) }}" title="See {{ cq.taker.shown_name if cq.taker else 'the student' }}'s questions next to the correct answers">Answer Key</a>{% endif %}
     {#- (a finished attempt's grades can be changed any time: the owner, 2026-10-25, CP9) #}
-    {% if current_user.is_admin and cq.completed %}<a class="btn btn-secondary" href="{{ url_for('qgen.change_grades', cqid=cq.id) }}" title="Change the credit or comment on any answer; the score is worked out again">Change grades</a>{% endif %}
+    {% if current_user.is_admin and cq.completed %}<a class="btn btn-secondary" href="{{ url_for('qgen.change_grades', cqid=cq.id) }}" title="Change the credit or comment on any answer; the score is worked out again">Change Grades</a>{% endif %}
     <button type="button" class="btn btn-secondary" onclick="window.print()" title="Print these results on paper, or save them as a PDF">{{ icon('printer') }} Print</button>
   </div>
 </div>

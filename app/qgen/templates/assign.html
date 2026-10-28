@@ -31,7 +31,7 @@
     {{ filter_bar('#pick-quiz .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='quiz-filter-bar') }}
     {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
     <div class="error pick-error" data-pick-error="vquiz" role="alert"{% if not form.vquiz.errors %} hidden{% endif %}>{{ form.vquiz.errors[0] if form.vquiz.errors else 'Check at least one quiz first.' }}</div>
-    <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All quizzes" data-main-label="Uncategorized"
+    <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All Quizzes" data-main-label="Uncategorized"
          data-unit="quiz" data-units="quizzes" data-start="{{ quiz_start }}" data-remember="assign-quizzes" data-tools-home="#quiz-filter-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
       <div class="folder-filter-list">
@@ -62,7 +62,7 @@
     {#- (checking everyone shown: the check box in the list's heading row, static/js/checkall.js; the owner, 2026-10-22) #}
     {{ filter_bar('#pick-people .folder-filter-list', 'person', 'people', items='tr[data-box]', id='people-pick-bar') }}
     <div class="error pick-error" data-pick-error="users" role="alert"{% if not form.users.errors %} hidden{% endif %}>{{ form.users.errors[0] if form.users.errors else 'Check at least one student first.' }}</div>
-    <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All people" data-main-label="Uncategorized"
+    <div class="folder-filter" data-folder-filter data-prefix="user:" data-all-label="All People" data-main-label="Uncategorized"
          data-unit="person" data-units="people" data-start="{{ pick_start }}" data-remember="assign-people" data-tools-home="#people-pick-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pick_tree|tojson }}</script>
       <div class="folder-filter-list">
@@ -101,7 +101,7 @@
   {#- a note the students see on this quiz, one for everyone given it here; changed later from a copy's row on its results
       (the owner, 2026-10-28) #}
   <fieldset class="assign-note">
-    <legend><label for="assign_note">Note to the student</label></legend>
+    <legend><label for="assign_note">Note to the Student</label></legend>
     <textarea id="assign_note" name="assign_note" rows="3" maxlength="4000" placeholder="The student sees this">{{ request.form.get('assign_note', '') }}</textarea>
   </fieldset>
   </div>

@@ -18,7 +18,7 @@
 <div class="page-thumbs-top">{{ page_thumbs(cq.vquiz) }}</div>
 <p class="muted">Type each score in <strong>Credit</strong>. If you like, you can also highlight an answer for the student: select words, then press <strong>Mark right</strong> or <strong>Mark wrong</strong> (with nothing selected, the whole answer is highlighted). Click a highlight to remove it.</p>
 
-<form method="post" id="review-form" data-unsaved novalidate{% if changing %} data-confirm="Change the grades on this attempt? Its score will be worked out again." data-confirm-ok="Save changes"{% endif %}>
+<form method="post" id="review-form" data-unsaved novalidate{% if changing %} data-confirm="Change the grades on this attempt? Its score will be worked out again." data-confirm-ok="Save Changes"{% endif %}>
   {{ form.hidden_tag() }}{% if came_from %}<input type="hidden" name="back" value="{{ came_from }}">{% endif %}
   {% for row in items %}
     {% set it = row.item %}
@@ -73,7 +73,7 @@
   {% endfor %}
   <div class="card btn-row">
     {% if changing %}
-    <button type="submit" class="btn" title="Save the new grades and tell the student">Save changes</button>
+    <button type="submit" class="btn" title="Save the new grades and tell the student">Save Changes</button>
     <a class="btn btn-secondary" href="{{ came_from }}" data-back-href>Cancel</a>
     {% else %}
     {% if others %}{{ form.finalize_next(class='btn', title='Save the score, show it to ' ~ cq.taker.shown_name ~ ', and open the next one waiting') }}

@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Scan workbook pages</h1>
+  <h1>Scan Workbook Pages</h1>
   <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}</div>
 </div>
 <p class="muted">Photograph or scan workbook pages. You check each one before anything is saved.</p>
@@ -19,7 +19,7 @@
   <form method="post" action="{{ url_for('qgen.scan_upload') }}" enctype="multipart/form-data" id="scan-upload" class="card-col" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">1</span><h2>Workbook name</h2></div>
+    <div class="card-head"><span class="step-num" aria-hidden="true">1</span><h2>Workbook Name</h2></div>
     <div class="field">
       <label class="sr-only" for="scan-name">Workbook name</label>
       <input type="text" id="scan-name" name="name" maxlength="128" placeholder="e.g. Math Grade 2, pages 10–15" required>
@@ -42,14 +42,14 @@
       {#- small pictures of what was dropped or chosen (the owner, 2026-10-19) #}
       <div class="scan-drop-thumbs" id="scan-thumbs" hidden></div>
       </div>
-      <div class="btn-row scan-folder-row"><button type="button" class="btn btn-secondary btn-sm" data-scan-folder title="Choose a folder: every page picture and PDF in it, in file-name order">Choose a folder</button></div>
+      <div class="btn-row scan-folder-row"><button type="button" class="btn btn-secondary btn-sm" data-scan-folder title="Choose a folder: every page picture and PDF in it, in file-name order">Choose a Folder</button></div>
       <div class="small" id="scan-chosen" aria-live="polite" hidden></div>
       <div class="help">Photos, scans or PDFs (any image type), up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
     </div>
     {#- the buttons just under the Images card, not inside it (the owner, 2026-10-23) #}
     <div class="btn-row">
-      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and read</button>
+      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and Read</button>
       {#- (Cancel on a page of its own reloads it, throwing away what's typed; only a page opened from another to do one thing goes back there: the owner, 2026-10-24) #}
       <a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Undo the changes not saved yet">Cancel</a>
       <span class="muted small" id="scan-wait" hidden>Uploading…</span>
@@ -61,7 +61,7 @@
 <div class="card-col">
 <div class="card" id="scan-current">
   {#- ("Current", like the Dashboard's pop-over: finished scans are in it too, the owner 2026-10-19) #}
-  <h2>Current workbooks</h2>
+  <h2>Current Workbooks</h2>
   {% if jobs %}
   <div class="table-wrap stack">
     <table class="even-cols">
@@ -106,7 +106,7 @@
       {% if n.folders %}<ul class="side-list">{{ stash_tree(n.folders) }}</ul>{% endif %}
     </li>
   {% endfor %}{% endmacro %}
-  <div class="card-head"><h2>Stashed workbooks</h2>
+  <div class="card-head"><h2>Stashed Workbooks</h2>
 </div>
   {% if away or stash_flat %}
   {#- the width kept in this browser is put on the page before the list is drawn (static/js/splitter.js keeps it after), so the list doesn't move when the page's script runs #}
@@ -122,7 +122,7 @@
       <div class="side-card-head"><button type="button" class="btn btn-secondary btn-xs btn-icon" data-stash-dialog="stash-new" title="New folder: {{ 'Make a new folder inside this one' if stash_node else 'Make a new folder to sort your workbooks into' }}">{{ icon_label('lc-folder-plus', 'New folder') }}</button></div>
       <ul class="side-list side-top">
         <li class="side-auto side-auto-first"><div class="side-row{{ ' current' if stash_view == 'all' }}" data-stash-drop="all"><span class="side-fold-space" aria-hidden="true"></span>
-          <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed workbooks, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All workbooks</a>
+          <a href="{{ url_for('qgen.scan_start') }}#scan-away" title="See all your stashed workbooks, from every folder" class="side-link"{% if stash_view == 'all' %} aria-current="page"{% endif %}>{{ icon('folders') }} All Workbooks</a>
           <span class="side-count muted small">{{ away|length }}</span></div></li>
         {#- the Checked folder: the scans checked, in any folder (static/js/scanstash.js keeps them; the owner, 2026-10-24, To do 10) #}
         <li class="side-auto"><div class="side-row{{ ' current' if stash_view == 'checked' }}"><span class="side-fold-space" aria-hidden="true"></span>
@@ -137,19 +137,19 @@
     <div class="vsplit stash-bar"></div>
     {#- the open folder as a tab over a framed panel, the same as every other folder page (the owner, 2026-10-24): the tab names the folder with
         its count, the Folder options icon at the right end of the tab's row, the scans in the panel under it #}
-    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All workbooks{% endif %}{% endset %}
+    {%- set stash_name %}{% if stash_node %}{% for f in stash_path %}{{ ' › ' if not loop.first }}{{ f.title if f.title is defined else f.name }}{% endfor %}{% elif stash_view == 'main' %}Uncategorized{% elif stash_view == 'checked' %}Checked{% else %}All Workbooks{% endif %}{% endset %}
     <div class="stash-main folder-filter named-box has-onetab{{ ' folder-open-empty' if not stash_shown }}">
       <div class="folder-filter-rows folder-filter-onetab"><div class="folder-tabs">
         <span class="folder-tab folder-tab-name" aria-pressed="true" title="{{ stash_name }}">{{ icon('folder' if stash_node else 'tray' if stash_view == 'main' else 'lc-folder-check' if stash_view == 'checked' else 'folders') }}<span class="box-title">{{ stash_name }}</span><span class="badge box-count" title="{{ stash_shown|length }} workbook{{ '' if stash_shown|length == 1 else 's' }}">{{ stash_shown|length }}</span></span>
-        {#- (the Checked folder's “Apply to checked”: Move to folder, Discard; on the tab row, where every folder page has it) #}
-        {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked workbooks to a folder, or to the Trash">Apply to checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
+        {#- (the Checked folder's “Apply to Checked”: Move to folder, Discard; on the tab row, where every folder page has it) #}
+        {% if stash_view == 'checked' %}<span class="folder-filter-tools-now"><button type="button" class="btn btn-sm with-checked" data-stash-apply title="Apply to checked: move the checked workbooks to a folder, or to the Trash">Apply to Checked (<span data-stash-checked-count>0</span>)</button></span>{% endif %}
         {% if stash_node %}<span class="folder-filter-tools-now">
           <details class="folder-tools">
             <summary class="btn btn-secondary btn-xs btn-icon" title="Folder options: Rename, make a folder inside, or remove this folder">{{ icon_label('lc-folder-cog', 'Folder options') }}</summary>
             <div class="folder-tools-box folder-menu">
               <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-rename" data-url="{{ url_for('qgen.scan_rename_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}">Rename</button></span>
               <span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-move-folder" data-url="{{ url_for('qgen.scan_move_folder', fid=stash_node.folder.id) }}" data-name="{{ stash_node.folder.name }}" data-here="{{ stash_node.folder.parent_id or '' }}">Move to</button></span>
-              {% if stash_node.depth < tuning.get('folder_depth') %}<span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-new">+ New folder inside</button></span>{% endif %}
+              {% if stash_node.depth < tuning.get('folder_depth') %}<span class="folder-opt"><button type="button" class="btn btn-secondary btn-xs" data-stash-dialog="stash-new">+ New Folder Inside</button></span>{% endif %}
               <span class="folder-opt">{{ post_button(url_for('qgen.scan_delete_folder', fid=stash_node.folder.id), 'Delete folder', cls='btn btn-secondary btn-xs', confirm='Delete the folder “' ~ stash_node.folder.name ~ '”? Nothing in it is deleted: its workbooks and folders move up a level.', tip='Delete just the folder; what’s in it moves up a level') }}</span>
             </div>
           </details>
@@ -201,7 +201,7 @@
       <div class="field pick-people folder-pick" data-folder-pick data-main-label="Not inside another folder" data-name="parent" data-checked="{{ stash_new_at }}">
         <script type="application/json" data-pick-rows>{{ stash_new_rows|tojson }}</script>
       </div>
-      <div class="btn-row"><button class="btn" title="Make the folder with the name you typed, where you chose">Make folder</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
+      <div class="btn-row"><button class="btn" title="Make the folder with the name you typed, where you chose">Make Folder</button><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>
     </form>
   </dialog>
   <dialog class="ask folder-dialog" id="stash-rename" aria-label="Rename folder">
@@ -230,7 +230,7 @@
   <dialog class="ask ask-many with-checked-dialog" id="stash-apply" aria-labelledby="stash-apply-head">
     <p><strong id="stash-apply-head">Apply to the <span data-stash-checked-words></span></strong></p>
     <div class="with-checked-actions">
-      <button type="button" class="btn btn-sm" data-stash-apply-move title="Move the checked workbooks to a folder">Move to folder</button>
+      <button type="button" class="btn btn-sm" data-stash-apply-move title="Move the checked workbooks to a folder">Move to Folder</button>
       <button type="button" class="btn btn-sm btn-danger" data-stash-apply-discard title="Move the checked workbooks to the Trash; you can restore them there">Move to Trash</button>
     </div>
     <div class="btn-row"><button type="button" class="btn btn-secondary" data-cancel>Cancel</button></div>

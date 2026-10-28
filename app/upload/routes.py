@@ -83,7 +83,7 @@ def upload():
             flash('Uploaded “{}” as “{}”, since a file called “{}” is already there.'.format(fname, saved, fname), 'success')
         current_app.logger.info('{} uploaded {}'.format(current_user.username, saved))
         return redirect(url_for('upload.upload'))
-    return render_template('upload.html', title='Upload files', form=form)
+    return render_template('upload.html', title='Upload Files', form=form)
 
 #admin-only list images on server
 @upload_bp.route('/images', methods=['GET'])

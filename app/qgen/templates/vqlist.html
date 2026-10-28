@@ -99,7 +99,7 @@
     title only when there's no list (the owner, 2026-10-20) #}
 {% set head_buttons %}
     {% if removed_count %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.archive', section='quizzes') }}" title="See quizzes you moved to the Trash, and restore them">Trash ({{ removed_count }})</a>{% else %}{{ slot('Trash (0)', 'No quizzes are in the Trash', 'btn btn-secondary btn-sm') }}{% endif %}
-    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New quiz</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}
+    <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New Quiz</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan Workbook Pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan Workbook Pages</button>{% endif %}
 {% endset %}
 <div class="page-head">
   <h1>{{ title }}</h1>

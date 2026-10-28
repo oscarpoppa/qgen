@@ -80,7 +80,7 @@ def test_every_folder_dialog_is_built_the_same_way():
     # "out of every folder" first, and Uncategorized in the side list only where it's offered
     assert "(o.top ? [{ id: 'top', name: o.top, depth: 1 }] : []).concat(folders)" in pick
     assert "if (holder.dataset.mainLabel) ds.mainLabel = holder.dataset.mainLabel; else ds.hideEmpty = '';" in pick
-    assert "ds.allLabel = 'All folders'" in pick and '<th>Folder</th>' in pick
+    assert "ds.allLabel = 'All Folders'" in pick and '<th>Folder</th>' in pick
     for js in (bar, rows):
         assert 'pick-dialog put-dialog' in js and 'qgenFolderPick.html()' in js and 'ul class="assign-many-people put-list"' not in js
     # Put in folder: "Copy instead" on its own line under the amber box, which keeps only its lines
@@ -158,7 +158,7 @@ def test_new_folder_asks_where_it_goes(app_db):
     holder = re.search(r'<div class="field pick-people folder-pick" data-folder-pick ([^>]*)>', box).group(1)
     assert 'data-name="parent"' in holder and 'data-main-label="Not inside another folder"' in holder
     assert 'data-checked="top"' in holder
-    assert box.index('Make folder') < box.index('data-cancel')
+    assert box.index('Make Folder') < box.index('data-cancel')
     # inside Term 1: it starts there; one dialog on the page, and each folder's "+ New folder inside" opens it
     # on that folder (static/js/folders.js), not a copy of the folder list per folder
     page = teacher.get('/quiz/archive?folder={}'.format(term.id)).data.decode()

@@ -11,7 +11,7 @@
         {% if grouped %}
           {# shown once for everyone who got it: the ✕ removes every copy #}
           <form method="post" data-in-place action="{{ url_for('messages.delete', message_id=m.id) }}" class="msg-x-wrap dock-form"
-                data-confirm="Delete this announcement for all {{ m.copies }} students who got it? This can’t be undone." data-confirm-ok="Delete for everyone">
+                data-confirm="Delete this announcement for all {{ m.copies }} students who got it? This can’t be undone." data-confirm-ok="Delete for Everyone">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="everyone" value="1">
             <button class="msg-x" aria-label="Delete this message" title="Delete this message">✕</button>
           </form>

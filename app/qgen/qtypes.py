@@ -517,7 +517,7 @@ class Numeric(QType):
 
 class Text(QType):
     key = 'text'
-    label = 'Short text'
+    label = 'Short Text'
     answer_label = 'Accepted answers (one per line)'
     answer_help = 'Put each answer you’ll accept on its own line. A student’s answer must match a whole line; capitals, extra spaces and a final period don’t matter. Any other answer comes to you to grade.'
 
@@ -551,7 +551,7 @@ class Text(QType):
 
 class ChoiceOne(QType):
     key = 'choice_one'
-    label = 'Pick one'
+    label = 'Pick One'
     uses_choices = True
     multi = False
 
@@ -653,7 +653,7 @@ class ChoiceMany(ChoiceOne):
     """Several boxes to check. The right answer is the set of * choices, and/or
     any of the teacher's "other correct combinations"."""
     key = 'choice_many'
-    label = 'Pick several'
+    label = 'Pick Several'
     multi = True
 
     def validate_parts(self, answer, options, known):
@@ -758,7 +758,7 @@ class TrueFalse(ChoiceOne):
 
 class Essay(QType):
     key = 'essay'
-    label = 'Long text (instructor grades)'
+    label = 'Long Text (instructor grades)'
     auto_graded = False
     answer_label = 'Model answer (optional, only you see it)'
     answer_help = 'Shown to you while grading, and on the finished transcript.'
@@ -777,7 +777,7 @@ class PaperOnly(QType):
     """Done on paper (draw, circle, color in): the page is the problem's picture, the
     student has no answer box, and the teacher types the score from the paper."""
     key = 'paper'
-    label = 'Paper only (done on paper; you grade it)'
+    label = 'Paper Only (done on paper; you grade it)'
     auto_graded = False
     paper = True
     answer_label = 'Answer key (optional, only you see it)'
@@ -790,7 +790,7 @@ class PaperOnly(QType):
         return super().validate(question, answer, options)
 
     def validate_parts(self, answer, options, known):
-        errors = [] if options.get('images') else ['A Paper only problem needs its page in the picture section.']
+        errors = [] if options.get('images') else ['A Paper Only problem needs its page in the picture section.']
         return errors + F.check_text('answer key', answer, known)
 
     def make_field(self, name, conc_opts):
@@ -812,7 +812,7 @@ class LookOnly(QType):
     these counts as done, 100%). Made by the scanner for a page with no questions (the owner,
     2026-10-19)."""
     key = 'look'
-    label = 'Image only (not graded)'
+    label = 'Image Only (not graded)'
     look = True
     answer_label = 'Notes (optional, only you see them)'
 
@@ -820,7 +820,7 @@ class LookOnly(QType):
         return self.validate_parts(answer, options, [])
 
     def validate_parts(self, answer, options, known):
-        return [] if options.get('images') else ['An Image only problem needs its picture in the picture section.']
+        return [] if options.get('images') else ['An Image Only problem needs its picture in the picture section.']
 
     def render(self, question, answer, options, env, rng):
         return question or '', '', {}

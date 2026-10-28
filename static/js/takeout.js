@@ -22,7 +22,7 @@
 
   //canDelete false: nothing left can be deleted (the question says why), so that choice is grayed
   window.qgenTakeOutChoices = function (canDelete) {
-    return [{ value: 'delete', label: 'Delete for good', danger: true, title: 'Delete it (asked because it’s in no other folder)',
+    return [{ value: 'delete', label: 'Delete for Good', danger: true, title: 'Delete it (asked because it’s in no other folder)',
               disabled: canDelete === false ? 'It can’t be deleted (the question above says why)' : null },
             { value: 'uncategorized', label: 'Put in Uncategorized', title: 'Keep it, in no folder' }];
   };
@@ -73,8 +73,8 @@
       if (answer !== 'archive') return;
       if (!person) { send(archive, extra); return; }
       window.qgenChoose('Move ' + label + ' to the Trash? He/she won’t be able to log in until you restore him/her. What about his/her quiz results and attempts?', [
-        { value: 'yes', label: 'Keep their results', title: 'His/her attempts and scores stay, and come back with him/her' },
-        { value: 'no', label: 'Delete their results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Trash' }
+        { value: 'yes', label: 'Keep Their Results', title: 'His/her attempts and scores stay, and come back with him/her' },
+        { value: 'no', label: 'Delete Their Results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Trash' }
       ]).then(function (keep) { if (keep) send(archive, { keep: keep }); });
     });
   }

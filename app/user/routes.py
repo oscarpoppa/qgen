@@ -120,7 +120,7 @@ def mypage():
         create_url=url_for('user.create_folder'), move_url=url_for('user.move_to_folder'),
         rename_url=lambda fid: url_for('user.rename_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_folder', folder_id=fid),
-        unit='quiz', units='quizzes', all_label='All quizzes', all_count=len(groups), main_count=len(root['groups']),
+        unit='quiz', units='quizzes', all_label='All Quizzes', all_count=len(groups), main_count=len(root['groups']),
         name=lambda f: f.name, add_words='Move to…', drag_what='a quiz',
         hint='Your own folders: nobody else sees them. A quiz is in one place at a time.',
         fold_key='qgen-folded-folders', title=heading,
@@ -178,7 +178,7 @@ def mypage():
         'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
         'score': lambda g: g['combined']})
     shown = pg.items
-    return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My quizzes',
+    return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My Quizzes',
                            due_by_quiz=due_by_quiz, pg=pg,
                            groups=groups, fk=fk, shown=shown, home=home, finished=finished,
                            showing=showing, nothing=nothing, quiz_filter=quiz_filter)
@@ -388,7 +388,7 @@ def register():
         flash('Your account “{}” is ready.'.format(form.username.data), 'success')
         return redirect(url_for('user.login'))
     else:
-        return render_template('register.html', title='Create an account', form=form)
+        return render_template('register.html', title='Create an Account', form=form)
 
 # route to user password-change action
 @user_bp.route('/chpass', methods=['POST','GET'])
@@ -405,7 +405,7 @@ def chpass():
         user.save()
         flash('Password changed.', 'success')
         return redirect(home_url())
-    return render_template('chpass.html', title='Change password', form=form)
+    return render_template('chpass.html', title='Change Password', form=form)
 
 # route to admin-initiated user password-reset action
 @user_bp.route('/resetpass/<uid>', methods=['POST'])
@@ -509,7 +509,7 @@ def eduser(uid):
         taken = email and User.query.filter(User.email == email, User.id != uobj.id).first()
         if taken:
             flash('{} already uses that email address.'.format(taken.shown_name), 'error')
-            return render_template('eduser.html', title='Edit user: {}'.format(uobj.shown_name), form=form)
+            return render_template('eduser.html', title='Edit User: {}'.format(uobj.shown_name), form=form)
         uobj.username = form.username.data
         uobj.email = email
         if uobj == current_user and uobj.is_admin != form.is_admin.data:
@@ -520,7 +520,7 @@ def eduser(uid):
         flash('Updated user: ({}) {}'.format(uobj.id, uobj.shown_name))
         current_app.logger.info('{} updated user ({}) {}'.format(current_user.username, uobj.id, uobj.username))
         return redirect(next_arg(url_for('user.userdet')))
-    return render_template('eduser.html', title='Edit user: {}'.format(uobj.shown_name), form=form)
+    return render_template('eduser.html', title='Edit User: {}'.format(uobj.shown_name), form=form)
 
 # route to admin-initiated user detail listing
 #People: everyone in the user folders, seen two ways: Accounts (this page: roles, last seen,
@@ -593,7 +593,7 @@ def people_page(in_archive=False, **extra):
         rename_url=lambda fid: url_for('user.rename_user_folder', folder_id=fid),
         delete_url=lambda fid: url_for('user.delete_user_folder', folder_id=fid),
         add_url=url_for('user.add_to_user_folder'), remove_url=url_for('user.remove_from_user_folder'),
-        unit='person', units='people', all_label='All people', all_count=len(ulst), name=lambda f: f.name,
+        unit='person', units='people', all_label='All People', all_count=len(ulst), name=lambda f: f.name,
         placeholder='e.g. 7th grade', add_words='+', drag_what='a person',
         hint='Folders are shared by all teachers; students never see them. Someone can be in several folders.',
         #(no Assign paper plane at the top for a folder, Uncategorized or everyone: people are assigned from the
@@ -926,7 +926,7 @@ def technical_settings():
 def render_technical(shown, errors):
     from app import tuning
     groups = [(key, label, [t for t in tuning.TUNABLES if t['group'] == key]) for key, label in tuning.GROUPS]
-    return render_template('settings_technical.html', title='Technical settings', groups=groups, shown=shown,
+    return render_template('settings_technical.html', title='Technical Settings', groups=groups, shown=shown,
                            errors=errors, current=tuning.values(),
                            current_changed=[k for k, v in tuning.values().items() if v != tuning.BY_KEY[k]['default']])
 
@@ -964,7 +964,7 @@ def save_technical_settings():
 def profile():
     from app.api.models import ApiToken
     tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all() if current_user.is_admin else []
-    return render_template('profile.html', tokens=tokens, title='My profile')
+    return render_template('profile.html', tokens=tokens, title='My Profile')
 
 def clean_nickname(text):
     """A nickname as it's kept: spaces tidied, None for none. Raises ValueError (the reason,
@@ -1068,7 +1068,7 @@ def create_token():
     current_app.logger.info('{} created API token {} ({})'.format(current_user.username, row.prefix, name))
     tokens = ApiToken.query.filter_by(user_id=current_user.id).order_by(ApiToken.created.desc()).all()
     #the token is only ever shown on this one page
-    return render_template('profile.html', tokens=tokens, new_token=token, title='My profile')
+    return render_template('profile.html', tokens=tokens, new_token=token, title='My Profile')
 
 # route to revoke one of your app tokens; teachers only
 @user_bp.route('/profile/tokens/<int:token_id>/revoke', methods=['POST'])

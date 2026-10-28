@@ -337,7 +337,7 @@ def start_reading(job, api_key, user_id, only=None):
 #a page whose reading runs longer than this is stopped, and the scan goes on with the next one (the owner, 2026-10-23: the
 #site's SCAN_PAGE_MINUTES setting, when set, instead); at the end the pages that didn't make it say why
 PAGE_TOO_SLOW = ('This page took longer than {} minutes to read, so it was stopped and the workbook went on with the next page. '
-                 'Press \u201cRead this page\u201d to read it again, or photograph just this page, closer up.')
+                 'Press \u201cRead This Page\u201d to read it again, or photograph just this page, closer up.')
 
 
 READ_AT_ONCE = 3   # pages read at the same time (each takes a minute or so of AI calls: the owner, 2026-10-20);
@@ -388,18 +388,18 @@ _OLD_BUTTONS_LATER = re.compile('Press \u201c(?:Read the rest|Try again)\u201d(?
 
 def shown_error(text):
     """A page's saved error as it's shown now: one saved before the buttons were renamed names the button the
-    page has now, \u201cRead this page\u201d (the owner, 2026-10-25: an old page said \u201cRead the rest\u201d, which
+    page has now, \u201cRead This Page\u201d (the owner, 2026-10-25: an old page said \u201cRead the rest\u201d, which
     isn't on the page)."""
     if not text:
         return text
-    text = _OLD_BUTTONS.sub('Press \u201cRead this page\u201d to read it again', text)
-    text = _OLD_BUTTONS_LATER.sub('Press \u201cRead this page\u201d in a while', text)
-    return text.replace('\u201cRead the rest\u201d', '\u201cRead this page\u201d').replace('\u201cTry again\u201d', '\u201cRead this page\u201d')
+    text = _OLD_BUTTONS.sub('Press \u201cRead This Page\u201d to read it again', text)
+    text = _OLD_BUTTONS_LATER.sub('Press \u201cRead This Page\u201d in a while', text)
+    return text.replace('\u201cRead the rest\u201d', '\u201cRead This Page\u201d').replace('\u201cTry again\u201d', '\u201cRead This Page\u201d').replace('\u201cRead this page\u201d', '\u201cRead This Page\u201d')
 
 
 #a page whose reading ran too long: what to do next, step by step (the owner, 2026-10-21)
 PAGE_TOO_LONG = ('This page was read, but picking its random numbers ran too long, so it stopped. '
-                 'Press \u201cRead this page\u201d to go on from there. If it stops again, photograph half the page at a time, closer up.')
+                 'Press \u201cRead This Page\u201d to go on from there. If it stops again, photograph half the page at a time, closer up.')
 
 
 def _read_page(app, job_id, n, api_key, user_id, reserved, cancel=None):
@@ -419,7 +419,7 @@ def _read_page(app, job_id, n, api_key, user_id, reserved, cancel=None):
         except Exception as exc:
             db.session.rollback()
             app.logger.exception('reading scan {} page {} failed: {}'.format(job_id, n, exc))
-            return {'n': n, 'state': 'error', 'error': 'Something went wrong while reading this page. Press \u201cRead this page\u201d to read it again.'}
+            return {'n': n, 'state': 'error', 'error': 'Something went wrong while reading this page. Press \u201cRead This Page\u201d to read it again.'}
         finally:
             db.session.remove()
 
@@ -570,7 +570,7 @@ def _read_all(app, job_id, api_key, user_id, run=None):
                 data = get_data(job)
                 for p in data['pages']:
                     if p['state'] in ('waiting', 'reading'):
-                        p.update(state='error', error='Something went wrong while reading this page. Press \u201cRead this page\u201d to read it again.')
+                        p.update(state='error', error='Something went wrong while reading this page. Press \u201cRead This Page\u201d to read it again.')
                 #(no page is still out with the AI after this, so reading one again starts at once; and a workbook
                 #moved to the Trash meanwhile stays there: the code critic, 2026-10-25)
                 data.pop('out', None)
@@ -598,7 +598,7 @@ def _tell_done(job):
         body = 'Your workbook “{}” has been read: {} of {} pages are ready to check; {} didn’t make it{}.'.format(
             job.name, done, len(pages), failed, ' ({} took too long)'.format(slow) if slow else '')
     else:
-        body = 'Your workbook “{}” couldn’t be read. Open it and press “Read this page”.'.format(job.name)
+        body = 'Your workbook “{}” couldn’t be read. Open it and press “Read This Page”.'.format(job.name)
     notify(job.author_id, body, '/quiz/scan/{}'.format(job.id))
 
 
@@ -911,7 +911,7 @@ def helper_hints(job, data, urls):
     seen = {}
     #(each page that isn't ready says what to do next, as numbered steps; a page ready to make says so: the owner,
     #2026-10-25, "more helpful about what steps need to be taken instead of just throwing a bunch of problems at me")
-    gen = 'Press \u201cGenerate quiz\u201d.'
+    gen = 'Press \u201cGenerate Quiz\u201d.'
     #(the pages being read now, as one gray line first, so the Helper isn't blank while a workbook is read: the owner, 2026-10-25)
     now = [p['n'] for p in pages if p.get('state') == 'reading']
     #(the workbook being read, as the page decides it (scan_routes._reading): its buttons wait till then)
@@ -924,7 +924,7 @@ def helper_hints(job, data, urls):
     #be telling me what to do for step 3")
     if not reading_now and sum(1 for p in pages if p.get('state') != 'saved') > 1:
         hints.append({'level': 'tip', 'key': 'step-3', 'text': 'Step 3: put the pages in order and join any that make one quiz. '
-                      'Then press \u201cGenerate quiz\u201d on each.'})
+                      'Then press \u201cGenerate Quiz\u201d on each.'})
     for p in pages:
         n, state = p['n'], p.get('state')
         #(nothing more about a page being read or made already: its card shows how it's going)
@@ -934,17 +934,17 @@ def helper_hints(job, data, urls):
             #(gray, like the quiz Helper's tips: nothing to fix, it's waiting for its turn or for Resume)
             #(with its next step: the code critic and the user critic, 2026-10-25)
             hints.append({'level': 'tip', 'key': 'page-{}'.format(n), 'text': 'Page {} hasn\u2019t been read yet.{}'.format(
-                n, '' if reading_now else ' Press \u201cResume all\u201d.')})
+                n, '' if reading_now else ' Press \u201cResume All\u201d.')})
             continue
         if state != 'done':
             why = 'the AI\u2019s answer ran too long' if p.get('timed_out') or 'too long' in (p.get('error') or '') else None
             text = 'Page {} didn\u2019t make it ({})'.format(n, why) if why else \
                 'Page {} didn\u2019t make it: {}'.format(n, shown_error(p.get('error')) or 'it couldn\u2019t be read.')
-            steps = ['Press \u201cRead this page\u201d to finish it (a few AI calls), or \u201cUse what was read\u201d to finish it by hand.'] \
-                if p.get('qs_reading') else ['Press \u201cRead this page\u201d to read it again (a few AI calls).']
+            steps = ['Press \u201cRead This Page\u201d to finish it (a few AI calls), or \u201cUse What Was Read\u201d to finish it by hand.'] \
+                if p.get('qs_reading') else ['Press \u201cRead This Page\u201d to read it again (a few AI calls).']
             #(those buttons are drawn once reading ends: the user critic, 2026-10-25)
             if reading_now:
-                steps = ['Wait until every page has been read, then press \u201cRead this page\u201d.']
+                steps = ['Wait until every page has been read, then press \u201cRead This Page\u201d.']
             hints.append({'level': 'error', 'key': 'page-{}'.format(n), 'text': text, 'steps': steps})
             continue
         #(the reader's note on a page, e.g. a question printed with no number: a yellow line, so it's read before generating;
@@ -957,7 +957,7 @@ def helper_hints(job, data, urls):
         if gaps.get(n):
             k = len(gaps[n])
             heads.append('{} answer box{} to place'.format(k, '' if k == 1 else 'es'))
-            steps += ['Press \u201cPlace the answer boxes again (free)\u201d under the page picture.',
+            steps += ['Press \u201cPlace the Answer Boxes Again (Free)\u201d under the page picture.',
                       'Drag any dashed box that\u2019s off onto where its answer goes.']
         if bad:
             heads.append('{} problem{} to fix (marked !)'.format(len(bad), '' if len(bad) == 1 else 's'))
@@ -984,9 +984,9 @@ def helper_hints(job, data, urls):
             grp = sorted(k for k, v in leads.items() if v == n)
             if len(grp) > 1:
                 names = '{} and {}'.format(', '.join(map(str, grp[:-1])), grp[-1])
-                text = 'Pages {} are joined and ready: press \u201cGenerate quiz\u201d on page {}.'.format(names, n)
+                text = 'Pages {} are joined and ready: press \u201cGenerate Quiz\u201d on page {}.'.format(names, n)
             else:
-                text = 'Page {} is ready: press \u201cGenerate quiz\u201d.'.format(n)
+                text = 'Page {} is ready: press \u201cGenerate Quiz\u201d.'.format(n)
             hints.append({'level': 'ok', 'key': 'page-{}'.format(n), 'text': text})
     if data.get('folder'):
         err = S.new_subject_name_error('problems', data['folder'])
@@ -1169,7 +1169,7 @@ def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
     if not ai_room(user_id, calls_for(kept), reserved):
         return {'n': n, 'state': 'waiting', 'stop': True,
                 'error': 'You’ve used the AI helper {} times in the last hour, so this page is waiting. '
-                         'Press “Read this page” on it in a while.'.format(hourly)}
+                         'Press “Read This Page” on it in a while.'.format(hourly)}
     try:
         import quizscan
     except ImportError:

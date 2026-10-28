@@ -382,19 +382,19 @@ def test_teachers_only_and_needs_a_key(app_db):
     assert '<span class="menu-disabled" aria-disabled="true" title="Needs an AI key' in html
     #(and the page's own button grayed, with the reason: the owner, 2026-10-25, To do 45)
     assert 'href="/quiz/scan"' not in html
-    assert 'disabled title="Needs an AI key, which this site doesn’t have"><svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg> Scan workbook pages</button>' in html
+    assert 'disabled title="Needs an AI key, which this site doesn’t have"><svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg> Scan Workbook Pages</button>' in html
     r = teacher.get('/quiz/scan')
     assert r.status_code == 302 and '/quiz/listvq' in r.headers['Location']
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
     try:
         html = teacher.get('/quiz/listvq').data.decode()
-        assert 'menu-disabled' not in html and '>Scan pages</a>' in no_titles(html)
-        assert '</svg> Scan workbook pages' in html
-        assert '</svg> Scan workbook pages' in teacher.get('/quiz/listvp').data.decode()
-        assert 'Upload and read' in teacher.get('/quiz/scan').data.decode()
+        assert 'menu-disabled' not in html and '>Scanner</a>' in no_titles(html)
+        assert '</svg> Scan Workbook Pages' in html
+        assert '</svg> Scan Workbook Pages' in teacher.get('/quiz/listvp').data.decode()
+        assert 'Upload and Read' in teacher.get('/quiz/scan').data.decode()
         # students still don't get it, nor the menu item
         assert sam.get('/quiz/scan').status_code == 302
-        assert 'Scan workbook pages' not in sam.get(sam.get('/quiz/scan').headers['Location']).data.decode()
+        assert 'Scan Workbook Pages' not in sam.get(sam.get('/quiz/scan').headers['Location']).data.decode()
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
 
@@ -432,11 +432,11 @@ def test_upload_read_check_and_save(app_db, ai):
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     # (quizzes named after the workbook: one per page, the picture page an Image only quiz)
     assert 'Page 1: Math Grade 2 1' in page and 'Page 2: Math Grade 2 2' in page and 'Picture only' in page
-    assert 'It becomes an Image only quiz' in page
+    assert 'It becomes an Image Only quiz' in page
     assert 'Some versions have a negative answer' in page  # the take-away pool can go below zero
     assert 'Students get versions like:' in page
     assert 'Kept as on the page: Counts the apples in the picture.' in page
-    assert '</svg> Paper only</span>' in page and 'The bottom is blurry.' in page
+    assert '</svg> Paper Only</span>' in page and 'The bottom is blurry.' in page
     assert 'Directions on the page: Add or subtract.' in page
     assert 'built-in method' not in page  # a missing setting shows as empty, never as Python's own names
     assert 'data-for="p1i3-box"' in page and 'id="p1i3-box"' in page  # the paper item's print box is drawn
@@ -584,7 +584,7 @@ def test_one_bad_item_saves_nothing(app_db, ai):
     assert kept['pages'][0]['title'] == 'Doubles to 20' and kept['kept_at'] and kept['put_away']
     page = teacher.get(r.headers['Location']).data.decode()
     assert '“{}” stashed, with your edits.'.format(job_of(db).name) in page
-    assert 'Math Grade 2' in page and 'Stashed workbooks' in page
+    assert 'Math Grade 2' in page and 'Stashed Workbooks' in page
     # another teacher can move it to the Trash too (the owner, 2026-10-25: Discard became Move to Trash)
     jid = job_of(db).id
     add_teacher(db)
@@ -644,7 +644,7 @@ def test_errors_limits_and_retry(app_db, ai):
     assert not fakes.qs.calls and len(fakes.api.calls) == 1
     #(read now: the Helper says it's ready, with what to press; the owner, 2026-10-25)
     assert [h['text'] for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1'] \
-        == ['Page 1 is ready: press “Generate quiz”.']
+        == ['Page 1 is ready: press “Generate Quiz”.']
     # the hourly limit: a page needs room for its three AI calls (QuizScan's photo check and
     # reading, then the numbers)
     from datetime import datetime
@@ -661,7 +661,7 @@ def test_errors_limits_and_retry(app_db, ai):
     page = json.loads(second.data)['pages'][0]
     assert page['state'] == 'waiting' and 'in the last hour' in page['error'] and not fakes.qs.calls and not fakes.api.calls
     #(the Helper says the page hasn't been read; the page's own card says why: the owner, 2026-10-25, CL2)
-    assert any(h['text'] == 'Page 1 hasn’t been read yet. Press “Resume all”.' for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
+    assert any(h['text'] == 'Page 1 hasn’t been read yet. Press “Resume All”.' for h in teacher.post('/quiz/scan/{}/helper'.format(second.id)).get_json()['hints'])
     assert 'in the last hour' in teacher.get('/quiz/scan/{}'.format(second.id)).data.decode()
     # with room for two, it still waits; with room for three, it's read
     AICall.query.filter_by(kind='problem').limit(1).one().created = datetime(2000, 1, 1)
@@ -695,8 +695,8 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     db.session.commit()
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     #(one Generate quiz per page: the owner, 2026-10-25)
-    assert '>Generate quiz</button>' in page and 'Generate quiz(zes)' not in page and '>Save</button>' not in page
-    assert 'value="keep"' in page and 'Stash draft' in page and 'Unstash draft' not in page
+    assert '>Generate Quiz</button>' in page and 'Generate quiz(zes)' not in page and '>Save</button>' not in page
+    assert 'value="keep"' in page and 'Stash Draft' in page and 'Unstash Draft' not in page
     assert 'id="helper"' in page and 'js/helper.js' in page
     hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
     mine = [h for h in hints if h.get('key') == 'page-2'][0]
@@ -704,19 +704,19 @@ def test_review_page_helper_choices_discard_page_and_button_words(app_db, ai):
     #(the Helper only says it: Read this page and Discard page are on the page's own card, the owner 2026-10-25)
     assert not mine.get('actions')
     card = page[page.index('id="scan-page-2"'):]
-    assert '>Read this page</button>' in card and '/quiz/scan/{}/page/2/drop'.format(job.id) in card
+    assert '>Read This Page</button>' in card and '/quiz/scan/{}/page/2/drop'.format(job.id) in card
     #(every page not generated has the trash icon and its state's badge: the owner, 2026-10-25)
     assert 'aria-label="Take page 1 out"' in page and 'Take page 2 out of “' in page
     assert 'class="scan-head-state scan-strip-error"' in card and 'class="scan-head-state scan-strip-' in page.split('id="scan-page-1"')[1]
     #(a page not read yet hasn't failed: the owner, 2026-10-23)
     data['pages'].append({'n': 3, 'state': 'waiting', 'error': SC.PAUSED_NOTE})
     waiting = SC.helper_hints(job, data, {'again': lambda n: '/a/{}'.format(n), 'drop': lambda n: '/d/{}'.format(n)})
-    assert 'Page 3 hasn’t been read yet. Press “Resume all”.' in [h['text'] for h in waiting]
+    assert 'Page 3 hasn’t been read yet. Press “Resume All”.' in [h['text'] for h in waiting]
     #(in the stash: Unstash draft)
     SC.put_away(job)
     db.session.commit()
     stashed = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'Unstash draft' in stashed and 'value="unstash"' in stashed and 'value="keep"' not in stashed
+    assert 'Unstash Draft' in stashed and 'value="unstash"' in stashed and 'value="keep"' not in stashed
     # Discard page: just that page goes
     r = teacher.post('/quiz/scan/{}/page/2/drop'.format(job.id))
     assert r.status_code == 302
@@ -741,7 +741,7 @@ def test_the_stash_has_folders(app_db, ai):
     SC.put_away(job)
     db.session.commit()
     page = teacher.get('/quiz/scan').data.decode()
-    assert 'Stashed workbooks' in page and 'Workbook A' in page and 'id="stash-new"' in page and 'Uncategorized' in page
+    assert 'Stashed Workbooks' in page and 'Workbook A' in page and 'id="stash-new"' in page and 'Uncategorized' in page
     # the stashed workbook keeps its controls: continue, take out, move to Trash
     assert 'aria-label="Continue"' in page and 'aria-label="Take out"' in page and 'aria-label="Move to Trash"' in page
     # make a folder, then one inside it
@@ -859,8 +859,8 @@ def test_every_blank_needs_a_place_on_its_page(app_db, ai):
     assert 'data-place-note' not in html
     steps = [h for h in teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints'] if h.get('key') == 'page-1'][0]
     assert steps['text'] == 'Page 1: 1 answer box to place' and steps['steps'] == [
-        'Press “Place the answer boxes again (free)” under the page picture.',
-        'Drag any dashed box that’s off onto where its answer goes.', 'Press “Generate quiz”.']
+        'Press “Place the Answer Boxes Again (Free)” under the page picture.',
+        'Drag any dashed box that’s off onto where its answer goes.', 'Press “Generate Quiz”.']
     assert 'disabled title="Every problem needs its place on the page first (1.)"' in html
     # saving anyway is refused, with the red line once, and nothing is made
     r = teacher.post('/quiz/scan/{}'.format(job.id), data=form_from(data, placed=False, generate='1'))
@@ -1147,7 +1147,7 @@ def test_read_a_page_again_with_a_note(app_db, ai):
     assert [p['state'] for p in data['pages']] == ['done', 'done'] and not any(c['note'] for c in fakes.qs.calls)
     # the page shows the button, its note box and what it asks first
     html = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
-    assert 'Read this page again' in html and 'name="p1-again_note"' in html and 'Read page 1 again?' in html
+    assert 'Read This Page Again' in html and 'name="p1-again_note"' in html and 'Read page 1 again?' in html
     # page 1 read again with a note; the change made on page 2 meanwhile is kept
     fakes = ai([QS_ADD], [NUM_ADD])
     form = form_from(data, **{'p2-title': 'Doubles, changed', 'p1-again_note': '  Problem 6 is   missing. '})
@@ -1208,7 +1208,7 @@ def test_put_away_and_take_out(app_db, ai):
     html = teacher.get('/quiz/scan').data.decode()
     current, away = html.split('id="scan-away"')
     assert 'Week 1' not in current.split('id="scan-current"')[1] and 'No workbooks yet.' in current
-    assert '<h2>Stashed workbooks</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
+    assert '<h2>Stashed Workbooks</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
     assert 'Week 1' in away and 'Take “Week 1” out' in away and 'Continue: go on checking “Week 1”' in away
     # ...and never in the Dashboard's pop-over nor on its chip (the owner, 2026-10-21; it had a list
     # of its own there)
@@ -1548,8 +1548,8 @@ def test_an_old_page_error_names_the_button_the_page_has(app_db, ai):
     from app.qgen import scan as SC
     old = ('The AI’s answer for this page ran too long, so the page wasn’t read. Press “Read the rest” to try it again. '
            'If it stops again, photograph just this page, closer up, and scan that photo as a new scan.')
-    assert 'Press “Read this page” to read it again. If it stops again' in SC.shown_error(old)
-    assert SC.shown_error('Press “Try again” on it in a while.') == 'Press “Read this page” in a while.'
+    assert 'Press “Read This Page” to read it again. If it stops again' in SC.shown_error(old)
+    assert SC.shown_error('Press “Try again” on it in a while.') == 'Press “Read This Page” in a while.'
     ai([QS_TIMES, QS_TIMES], [NUM_TIMES, NUM_TIMES])
     teacher = login(app, 'teach')
     upload(teacher, [(picture(), 'p.png'), (picture(), 'q.png')])
@@ -1566,7 +1566,7 @@ def test_an_old_page_error_names_the_button_the_page_has(app_db, ai):
     #(the Helper: the reason, short, and the next step naming today's buttons; the owner, 2026-10-25)
     mine = [h for h in hints if h.get('key') == 'page-1'][0]
     assert mine['text'] == 'Page 1 didn’t make it (the AI’s answer ran too long)'
-    assert mine['steps'] == ['Press “Read this page” to read it again (a few AI calls).']
+    assert mine['steps'] == ['Press “Read This Page” to read it again (a few AI calls).']
 
 
 def test_a_problem_with_no_blank_gets_a_box_right_after_it(app_db):

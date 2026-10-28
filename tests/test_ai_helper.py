@@ -90,7 +90,7 @@ def test_routes_guard_key_limit_and_log(app_db, monkeypatch):
         # the AI helper box starts folded (and stays so on every visit)
         #(inside the question's card, under its numbered heading, like the values' box: the owner, 2026-10-23)
         assert '<details class="box ai-box ai-problem-field" data-fixed>' in page
-        assert page.index('<h2>The question</h2>') < page.index('ai-problem-field') < page.index('id="question"')
+        assert page.index('<h2>The Question</h2>') < page.index('ai-problem-field') < page.index('id="question"')
         assert 'Fill in for me' in page and 'Review with AI' not in page and 'data-review-url' not in page
         from app.qgen.models import VProblem
         teacher.post('/quiz/makevprob', data=problem_form('numeric', 'T', '[a] + 1', 'a + 1', [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '9'}]))
@@ -196,7 +196,7 @@ def test_fill_list_route(app_db, monkeypatch):
     app.config['ANTHROPIC_API_KEY'] = 'test-key'
     try:
         page = teacher.get('/quiz/makevprob').data.decode()
-        assert '</svg> Fill list</button>' in page and 'data-url="/quiz/ai/list"' in page
+        assert '</svg> Fill List</button>' in page and 'data-url="/quiz/ai/list"' in page
         monkeypatch.setattr(ai_helper, '_client', lambda key: FakeClient(SQUARES))
         r = teacher.post('/quiz/ai/list', json={'text': 'all the perfect squares from 4 to 100', 'name': 'n'})
         assert r.get_json() == {'ok': True, 'items': '4, 9, 16, 25, 36, 49, 64, 81, 100', 'count': 9, 'note': None}
@@ -213,7 +213,7 @@ def test_fill_list_route(app_db, monkeypatch):
         assert login(app, 'sam').post('/quiz/ai/list', json={'text': 'x'}).status_code == 302  # teachers only
     finally:
         app.config['ANTHROPIC_API_KEY'] = None
-    assert '</svg> Fill list' not in teacher.get('/quiz/makevprob').data.decode()  # no key: not shown
+    assert '</svg> Fill List' not in teacher.get('/quiz/makevprob').data.decode()  # no key: not shown
 
 
 def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):
@@ -223,7 +223,7 @@ def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):
         {'name': 'who', 'kind': 'list', 'items': 'Maria, Li'},
         {'name': 'x', 'kind': 'bogus'}, 'not a row'], name='n')
     assert ctx == ('The question: Is [n] bigger than [a]?\n\nThe other random values:\n'
-                   '- a (Whole number), min: 2, max: 12\n- who (Pick from list), items: Maria, Li')
+                   '- a (Whole Number), min: 2, max: 12\n- who (Pick from List), items: Maria, Li')
     fake = FakeClient(SQUARES)
     ai_helper.ask_list('key', "every whole number between a's from and to", client=fake, context=ctx)
     sent = fake.calls[0]['messages'][0]['content']
@@ -239,7 +239,7 @@ def test_fill_list_sees_the_question_and_other_values(app_db, monkeypatch):
         r = teacher.post('/quiz/ai/list', json={'text': 'squares up to a', 'name': 'n', 'question': 'What is [n] + [a]?',
                                                  'values': [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '100'}]})
         assert r.get_json()['ok']
-        assert '- a (Whole number), min: 1, max: 100' in fake.calls[0]['messages'][0]['content']
+        assert '- a (Whole Number), min: 1, max: 100' in fake.calls[0]['messages'][0]['content']
         assert teacher.post('/quiz/ai/list', json={'text': 'x', 'name': 'n', 'values': 'junk'}).get_json()['ok']  # bad context: ignored
     finally:
         app.config['ANTHROPIC_API_KEY'] = None

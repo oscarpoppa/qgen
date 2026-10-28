@@ -18,7 +18,7 @@
   {% include "_dashboard_now.html" %}
   {# numbers to look at now and then: starts folded (opening it is remembered) #}
   <details class="box card dash-card" data-elastic="glance" data-elastic-dir="v" data-box="glance" open>
-    <summary class="dash-head">{{ box_label('chart', 'Site at a glance', none, 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('chart', 'Site at a Glance', none, 'h2') }}</summary>
     <div class="dash-body">
     {#- (no links on the cards but Messages: names, quizzes and counts are plain words, so a click never
         lands somewhere unexpected; the owner, 2026-10-21) #}
@@ -48,7 +48,7 @@
       changed; the name opens People with that row open, where the note is (?show=), its tooltip saying so (not the note:
       the owner, 2026-10-28) #}
   <details class="box card dash-card" data-elastic="notes" data-elastic-dir="v" data-box="notes" data-follows="glance">
-    <summary class="dash-head">{{ box_label('lc-sticky-note', 'Student notes', count_of(noted|length, 'student', 'students'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('lc-sticky-note', 'Student Notes', count_of(noted|length, 'student', 'students'), 'h2') }}</summary>
     <div class="dash-body">
     {% if noted %}
       <ul class="dash-list dash-notes">
@@ -68,7 +68,7 @@
   {#- problems and quizzes with a teacher's note, under Student notes, folded, built the same way (the owner, 2026-10-28): the
       name opens its row on Problems or Quizzes (?show=), the note icon shows the note #}
   <details class="box card dash-card" data-elastic="thing-notes" data-elastic-dir="v" data-box="thing-notes" data-follows="notes">
-    <summary class="dash-head">{{ box_label('lc-sticky-note', 'Notes on problems and quizzes', count_of(noted_things|length, 'note', 'notes'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('lc-sticky-note', 'Problem and Quiz Notes', count_of(noted_things|length, 'note', 'notes'), 'h2') }}</summary>
     <div class="dash-body">
     {% if noted_things %}
       <ul class="dash-list dash-notes">
@@ -86,7 +86,7 @@
     </div>
   </details>
   <details class="box card dash-card" data-elastic="queue" data-elastic-dir="v" data-box="queue">
-    <summary class="dash-head">{#- (a list cut short says so: the owner, 2026-10-20) #}{{ box_label('pencil', 'Waiting for grading', ('oldest ' ~ queue|length ~ ' of ' ~ waiting) if queue|length < waiting else count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
+    <summary class="dash-head">{#- (a list cut short says so: the owner, 2026-10-20) #}{{ box_label('pencil', 'Waiting for Grading', ('oldest ' ~ queue|length ~ ' of ' ~ waiting) if queue|length < waiting else count_of(waiting, 'attempt', 'attempts'), 'h2') }}</summary>
     <div class="dash-body">
     {% if queue %}
       <ul class="dash-list">
@@ -105,7 +105,7 @@
   </details>
   {# what's pinned to the top of students' messages, and whether they've read it #}
   <details class="box card dash-card" data-elastic="pinned" data-elastic-dir="v" data-box="pinned">
-    <summary class="dash-head">{{ box_label('pin', 'Pinned messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('pin', 'Pinned Messages', count_of(pinned|length, 'message', 'messages'), 'h2') }}</summary>
     <div class="dash-body">
     {% if pinned %}
     {#- (only beside a list: with nothing pinned, the note below links to Messages itself; the owner, 2026-10-23) #}
@@ -129,7 +129,7 @@
     </div>
   </details>
   <details class="box card dash-card" data-elastic="handins" data-elastic-dir="v" data-box="handins">
-    <summary class="dash-head">{{ box_label('tray', 'Recent hand-ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
+    <summary class="dash-head">{{ box_label('tray', 'Recent Hand-Ins', count_of(handins|length, 'hand-in', 'hand-ins'), 'h2') }}</summary>
     <div class="dash-body">
     {% if handins %}
       <ul class="dash-list">
@@ -150,7 +150,7 @@
   {# last, one column wide: it comes in under the shorter column's last box (masonry.js), so no
      hole is left beside a short box; the boxes keep their order, for the keyboard too #}
   <details class="box card dash-card" id="dash-out" data-elastic="out" data-elastic-dir="v" data-box="out">
-    <summary class="dash-head">{{ box_label('outbox', 'Assigned, not handed in yet', ('newest ' ~ out|length ~ ' of ' ~ out_total) if out|length < out_total else count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
+    <summary class="dash-head">{{ box_label('outbox', 'Assigned, Still Open', ('newest ' ~ out|length ~ ' of ' ~ out_total) if out|length < out_total else count_of(out_total, 'quiz', 'quizzes'), 'h2') }}
       {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn’t handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">
     {#- (no "Results by student → · by quiz →" links here: the owner, 2026-10-20) #}

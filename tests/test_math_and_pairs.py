@@ -299,7 +299,7 @@ def test_examples_and_details_show_numbers(app_db):
     teacher = login(app, 'teach')
     A = [{'name': 'a', 'kind': 'whole', 'min': '2', 'max': '9'}]
     page = teacher.post('/quiz/previewvprob', data=problem_form('numeric', 'Roots', r'\( x^2 = [a] \)', 'sqrt([a]), -sqrt([a])', A)).data.decode()
-    assert 'Correct answer' in page and 'sqrt' not in page.split('Three example versions')[1]
+    assert 'Correct answer' in page and 'sqrt' not in page.split('Three Example Versions')[1]
 
 
 def test_each_row_of_math_buttons_sits_under_its_label(app_db):
@@ -325,7 +325,7 @@ def test_every_bar_of_math_keys_looks_the_same(app_db):
     import re
     app, db = app_db
     page = login(app, 'teach').get('/quiz/makevprob').data.decode()
-    bars = re.findall(r'<details class="math-keys"( open)?>\s*<summary class="math-keys-head"[^>]*>Math keys</summary>'
+    bars = re.findall(r'<details class="math-keys"( open)?>\s*<summary class="math-keys-head"[^>]*>Math Keys</summary>'
                       r'\s*<div class="math-toolbar"[^>]*data-target="(\w+)"(.*?)</div>\s*</details>', page, re.S)
     found = {target: (bool(opened), re.findall(r'<button[^>]*>([^<]+)</button>', keys)) for opened, target, keys in bars}
     assert set(found) == {'question', 'choices', 'answer', 'answer_display'}

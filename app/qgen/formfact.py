@@ -41,7 +41,7 @@ def problem_image(cprob):
 def quiz_form_class(cquiz):
     #class defined per call so fields never leak between quizzes
     class QuizTakeForm(FlaskForm):
-        submit = SubmitField('Hand it in')
+        submit = SubmitField('Hand It In')
     for cprob in cquiz.cproblems:
         field = qtype_of(cprob).make_field(fieldname_base.format(cprob.ordinal), cprob.conc_opts)
         setattr(QuizTakeForm, fieldname_base.format(cprob.ordinal), field)

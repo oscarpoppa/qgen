@@ -94,7 +94,7 @@
                  delete_note=('His/her quiz results are kept in the Trash’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash’s Attempts.')) }}
             {% else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign quizzes: choose quizzes to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign quizzes') }}</a>
-            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
+            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ Messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# their page: quizzes and results, awards #}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student history: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>
@@ -147,16 +147,16 @@
           <select id="file-subject" name="folder">
             {% for f, depth in fk.flat %}<option value="{{ f.id }}"{% if fk.node and fk.node.folder.id == f.id %} selected{% endif %}>{{ fk.indent(depth) }}{{ fk.name(f) }}</option>{% endfor %}
           </select>
-          <button class="btn btn-sm" name="action" value="add" title="Move the checked people to a folder (or copy them there)">Move to folder</button>
+          <button class="btn btn-sm" name="action" value="add" title="Move the checked people to a folder (or copy them there)">Move to Folder</button>
           {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
-          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign quizzes</button>
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign Quizzes</button>
           <button type="button" class="btn btn-sm" data-trash-many data-one="person" data-noun="people" data-url="{{ url_for('qgen.trash_many', kind='people') }}" title="Move the checked people to the Trash">Move to Trash</button>{% endif %}
         {% else %}
           {#- (no folders yet: grayed, with why, never left out: the owner, 2026-10-19) #}
-          <span class="muted small file-hint-nofolder">Make a folder first (+ New folder), then check people to put in it.</span>
-          <button type="button" class="btn btn-sm" data-no-folder="Move to folder: make a folder first (+ New folder)">Move to folder</button>
+          <span class="muted small file-hint-nofolder">Make a folder first (+ New Folder), then check people to put in it.</span>
+          <button type="button" class="btn btn-sm" data-no-folder="Move to Folder: make a folder first (+ New Folder)">Move to Folder</button>
           {% if in_archive %}<button type="button" class="btn btn-sm" data-restore-many data-one="person" data-noun="people" data-then="They can sign in again." data-then-one="He/she can sign in again." data-url="{{ url_for('qgen.restore_many', kind='people') }}" title="Turn the checked people’s accounts back on">Restore</button>
-          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign quizzes</button>
+          {% else %}<button type="button" class="btn btn-sm btn-quiz" data-assign-checked title="Give quizzes to the checked people">Assign Quizzes</button>
           <button type="button" class="btn btn-sm" data-trash-many data-one="person" data-noun="people" data-url="{{ url_for('qgen.trash_many', kind='people') }}" title="Move the checked people to the Trash">Move to Trash</button>{% endif %}
         {% endif %}
       </form></div>{% endif %}

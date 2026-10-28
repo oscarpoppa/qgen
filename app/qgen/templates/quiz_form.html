@@ -40,10 +40,10 @@
   {% set came = back(url_for('qgen.list_vquizzes'), 'Quizzes') %}
   <div class="actions">
     {# back to how the page was when it opened: blank for a new quiz, the saved version when editing #}
-    {% if vq and vq.id %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
-        data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo changes" title="Go back to the saved version">↺ Undo changes</button>
-    {% else %}<button type="button" class="btn btn-secondary" data-start-over="{{ request.full_path.rstrip('?') }}"
-        data-ask="Clear everything on this page and start over?" data-ok="Start over" title="Clear the form back to blank">↺ Start over</button>{% endif %}
+    {% if vq and vq.id %}<button type="button" class="btn btn-secondary btn-sm" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo Changes" title="Go back to the saved version">↺ Undo Changes</button>
+    {% else %}<button type="button" class="btn btn-secondary btn-sm" data-start-over="{{ request.full_path.rstrip('?') }}"
+        data-ask="Clear everything on this page and start over?" data-ok="Start Over" title="Clear the form back to blank">↺ Start Over</button>{% endif %}
   </div>
 </div>
 
@@ -67,7 +67,7 @@
     {{ check(form.calculator_ok, help='A quiz with any problem that allows a calculator allows one anyway; check this to allow a calculator on the others too.') }}
   </div>
   <div class="card">
-    <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Question order</h2></div>
+    <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Question Order</h2></div>
     {{ check(form.keep_order) }}
   </div>
   <div class="card">
@@ -97,7 +97,7 @@
         {# every problem once, with the folders down the side of the list (data-style="list"): All
            problems, the folders, Uncategorized; a tab says how many in it are checked #}
         <div class="folder-filter" id="problem-picker" data-folder-filter data-prefix="p:" data-key-attr="fkey"
-             data-all-label="All problems" data-main-label="Uncategorized" data-unit="problem" data-units="problems" data-remember="quiz-builder" data-tools-home="#problem-filter-bar" data-style="list">
+             data-all-label="All Problems" data-main-label="Uncategorized" data-unit="problem" data-units="problems" data-remember="quiz-builder" data-tools-home="#problem-filter-bar" data-style="list">
           <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
           <div id="all-problems" class="folder-filter-list">{{ problem_rows(all_problems, 'all') }}</div>
         </div>
@@ -123,7 +123,7 @@
 {% with form_id='quiz-form', check_url=url_for('qgen.check_vquiz', vq=vq.id if vq else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="card" id="quiz-contents">
     {# (wide and set off, the list of what's in it: always in sight while picking, the owner 2026-10-15) #}
-    <div class="card-head"><h2>Problems in this quiz</h2></div>
+    <div class="card-head"><h2>Problems in This Quiz</h2></div>
     <p class="order-total" id="order-total" aria-live="polite"></p>
     <p class="muted small" id="order-shuffled">Each student gets them in a different order (you chose that above).
       So the order of this list doesn't matter.</p>

@@ -84,7 +84,7 @@
       <input type="hidden" name="view" value="{{ fk.view }}">
       {# several at once: grayed out until some are checked (each row also has its own "Move to") #}
       <span class="muted small file-count" aria-live="polite" data-hint="Check attempts below to move several at once.">Check attempts below to move several at once.</span>
-      <label class="small" for="move-folder">Move them to</label>
+      <label class="small" for="move-folder">Move Them to</label>
       <select id="move-folder" name="folder">
         <option value="" selected>Choose a folder…</option>
         {% for f, depth in fk.flat %}<option value="{{ f.id }}" data-icon="{{ fk.folder_icon(f) }}">{{ fk.indent(depth) }}{{ f.name }}</option>{% endfor %}

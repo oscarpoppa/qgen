@@ -177,7 +177,7 @@
     {% endfor %}
   </div>
   <div class="btn-row calc-actions">
-    <button type="button" class="btn btn-sm calc-use" title="Put the calculator’s answer in your answer box">Use in answer</button>
+    <button type="button" class="btn btn-sm calc-use" title="Put the calculator’s answer in your answer box">Use in Answer</button>
     <button type="button" class="btn btn-secondary btn-sm calc-copy" title="Copy the calculator’s answer so you can paste it">Copy</button>
   </div>
   <div class="small muted calc-note" aria-live="polite"></div>
@@ -256,7 +256,7 @@
       ok = 'Hand it in anyway'; back = 'Go back and answer';
     } else {
       question = 'Hand in your quiz? You can\'t change your answers after.';
-      ok = 'Hand it in'; back = 'Keep working';
+      ok = 'Hand It In'; back = 'Keep working';
     }
     var ask = window.qgenAsk ? window.qgenAsk(question, ok, false, back) : Promise.resolve(window.confirm(question));
     var submitter = e.submitter;

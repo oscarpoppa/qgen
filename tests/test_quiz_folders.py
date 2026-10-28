@@ -49,7 +49,7 @@ def test_make_folders_and_put_quizzes_in_them(app_db):
     # All quizzes: every one, each saying its folder
     all_page = sam.get('/mypage?folder=all').data.decode()
     assert sorted(cards(sam, 'all')) == ['Week 1', 'Week 2'] and 'quiz-folder-label' not in all_page  # (no folder chip under a quiz's name: the owner, 2026-10-23)
-    assert 'aria-current="page">{} All quizzes'.format(ico('folders')) in all_page
+    assert 'aria-current="page">{} All Quizzes'.format(ico('folders')) in all_page
     import re
     assert re.search(r'aria-current="page">\s*<svg class="ico"[^>]*>.*?</svg> <span class="side-name">Unit 1',
                      sam.get('/mypage?folder={}'.format(unit)).data.decode())
@@ -89,7 +89,7 @@ def test_folders_inside_folders_and_removing_them(app_db):
     # Math's page: everything in it in one list, with the tabs every level has (All,
     # Algebra, Uncategorized: static/js/folderfilter.js)
     #(20 to a page, one folder at a time: the folders are links, each its own page; the owner, 2026-10-23)
-    assert '+ New folder inside' in page and 'data-paged' in page and 'href="/mypage?folder={}"'.format(algebra) in page
+    assert '+ New Folder Inside' in page and 'data-paged' in page and 'href="/mypage?folder={}"'.format(algebra) in page
     page = sam.get('/mypage?folder={}'.format(algebra)).data.decode()
     #(the path is the heading, "Math › Algebra", with Up going back to Math)
     assert ' Math › Algebra</h2>' in page and 'folder-up" href="/mypage?folder={}"'.format(math) in page

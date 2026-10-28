@@ -138,7 +138,7 @@ def test_whole_school_week(app_db):
     ]
     # the preview shows three examples and catches mistakes
     r = teacher.post('/quiz/previewvprob', data=forms[0])
-    assert r.data.count(b'Example ') == 3
+    assert r.data.count(b'Example ') == 4  # three versions and the heading
     bad = dict(forms[0], answer='a + bb')
     assert b'Did you mean' in teacher.post('/quiz/previewvprob', data=bad).data
     assert b'Did you mean' in teacher.post('/quiz/makevprob', data=bad).data
@@ -198,7 +198,7 @@ def test_whole_school_week(app_db):
     db.session.expire_all()
     sam_q = db.session.get(CQuiz, sam_q.id)
     assert sam_q.needs_review and not sam_q.completed
-    assert b'Handed in!' in sam.get('/quiz/take/{}'.format(sam_q.id)).data
+    assert b'Handed In!' in sam.get('/quiz/take/{}'.format(sam_q.id)).data
     assert b'Mentions inertia' not in sam.get('/quiz/take/{}'.format(sam_q.id)).data
 
     # --- kim submits everything blank except the essay, also blank -> no review needed
@@ -216,7 +216,7 @@ def test_whole_school_week(app_db):
     assert '&lt;b&gt;train&lt;/b&gt;' in page  # student's text escaped, never HTML
     item = {'items-0-cpid': essay.id, 'items-0-feedback': 'Good, but say why.',
             'items-0-highlights': json.dumps([[4, 13, 'right'], [0, 3, 'wrong']])}
-    r = teacher.post('/quiz/review/{}'.format(sam_q.id), data=dict(item, save='Save draft'))
+    r = teacher.post('/quiz/review/{}'.format(sam_q.id), data=dict(item, save='Save Draft'))
     assert r.status_code == 302
     r = teacher.post('/quiz/review/{}'.format(sam_q.id), data=dict(item, finalize='Finish'))
     assert r.status_code == 302  # finishing without a credit is refused...
@@ -266,7 +266,7 @@ def test_pick_several_combinations_through_the_pages(app_db):
     form = problem_form('choice_many', 'Make ten', 'Check two numbers that add up to 10.', '',
                         [{'name': 'a', 'kind': 'whole', 'min': '1', 'max': '4'}],
                         choices='[a]\n[10 - a]\n5\n9', combos='[a], [10 - a]')
-    assert teacher.post('/quiz/previewvprob', data=form).data.count(b'Example ') == 3
+    assert teacher.post('/quiz/previewvprob', data=form).data.count(b'Example ') == 4  # three versions and the heading
     assert teacher.post('/quiz/makevprob', data=form).status_code == 302
     vp = VProblem.query.one()
     assert vp.options['combos'] == '[a], [10 - a]'

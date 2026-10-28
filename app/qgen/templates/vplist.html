@@ -89,7 +89,7 @@
 {# (its buttons small, beside the title: the title row only as tall as the title, the owner 2026-10-15) #}
 {#- the page's own buttons at the top, at the open right end of the list's heading row; under the
     title only when there's no list (the owner, 2026-10-20) #}
-{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan workbook pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan workbook pages</button>{% endif %}{% endset %}
+{% set head_buttons %}<a class="btn btn-sm" href="{{ url_for('qgen.mkvprob') }}" title="Write a new problem with random values">+ New Problem</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan Workbook Pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan Workbook Pages</button>{% endif %}{% endset %}
 <div class="page-head title-inline">
   <h1>{{ title }}</h1>
   {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}

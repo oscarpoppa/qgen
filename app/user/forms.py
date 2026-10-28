@@ -27,18 +27,18 @@ def email_optional(form, field):
 
 
 class ChPassForm(FlaskForm):
-    old_password = PasswordField('Old password', validators=[DataRequired()])
-    password = PasswordField('New password', validators=[DataRequired(), long_enough])
-    retype_password = PasswordField('Re-type new password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
+    old_password = PasswordField('Old Password', validators=[DataRequired()])
+    password = PasswordField('New Password', validators=[DataRequired(), long_enough])
+    retype_password = PasswordField('Re-type New Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
 
 
 class RegistrationForm(FlaskForm):
-    class_code = StringField('Class code', validators=[DataRequired(message='Ask your teacher for the class code.')])
+    class_code = StringField('Class Code', validators=[DataRequired(message='Ask your teacher for the class code.')])
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email (optional)', validators=[email_optional, Email(message='That doesn\'t look like an email address.')])
     password = PasswordField('Password', validators=[DataRequired(), long_enough])
-    retype_password = PasswordField('Re-type password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
+    retype_password = PasswordField('Re-type Password', validators=[DataRequired(), EqualTo('password', message='Passwords do not match')])
     submit = SubmitField('Submit')
 
     def validate_class_code(self, field):
@@ -69,8 +69,8 @@ class LoginForm(FlaskForm):
 
 #admin: site-wide settings
 class SettingsForm(FlaskForm):
-    site_name = StringField('Site name', validators=[DataRequired(message='Please give the site a name.')])
+    site_name = StringField('Site Name', validators=[DataRequired(message='Please give the site a name.')])
     logo = StringField('Logo')
-    favicon = StringField('Browser tab icon')
-    code = StringField('Class code for sign-up')
-    submit = SubmitField('Save settings')
+    favicon = StringField('Browser Tab Icon')
+    code = StringField('Class Code for Sign-up')
+    submit = SubmitField('Save Settings')

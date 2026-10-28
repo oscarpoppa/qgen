@@ -49,8 +49,8 @@
       <input type="file" accept="image/*" hidden>
     </div>
     <div class="btn-row dz-actions">
-      <button type="button" class="btn btn-secondary btn-sm dz-pick" title="Pick a picture from the ones uploaded before">Choose one already uploaded</button>
-      <button type="button" class="btn btn-danger btn-sm dz-clear" title="Take the picture off (the uploaded file is kept)" {% if not f.data %}hidden{% endif %}>Remove picture</button>
+      <button type="button" class="btn btn-secondary btn-sm dz-pick" title="Pick a picture from the ones uploaded before">Choose One Already Uploaded</button>
+      <button type="button" class="btn btn-danger btn-sm dz-clear" title="Take the picture off (the uploaded file is kept)" {% if not f.data %}hidden{% endif %}>Remove Picture</button>
     </div>
     <div class="dz-gallery thumbs" hidden></div>
     {{ f(type='hidden') }}
@@ -87,7 +87,7 @@
 {# a teacher looking at one attempt: its student, the quiz's results, and the answer key #}
 {% macro attempt_links(cq) %}
   {{ back_button(url_for('qgen.list_user', uid=cq.assignee), (cq.taker.shown_name if cq.taker else 'Student') ~ "’s student history") }}
-  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone’s attempts and scores on “{{ cq.vquiz.title }}”">Quiz history</a>
+  <a class="btn btn-secondary" href="{{ url_for('qgen.quiz_results_page', vqid=cq.vquiz_id) }}" title="Everyone’s attempts and scores on “{{ cq.vquiz.title }}”">Quiz History</a>
 {%- endmacro %}
 
 {# a person in a teacher's list: picture and name, plain (the item's own buttons, such as

@@ -212,7 +212,7 @@ def test_menu_marks_where_you_are(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     page = teach.get('/quiz/listvq').data.decode()
-    assert 'href="/quiz/listvq" class="active" aria-current="page">All quizzes</a>' in no_titles(page)
+    assert 'href="/quiz/listvq" class="active" aria-current="page">All Quizzes</a>' in no_titles(page)
     assert re.search(r'<summary class="active">Quizzes</summary>', no_titles(page))
     assert '<a class="skip-link" href="#main">' in no_titles(page) and '<main id="main"' in no_titles(page)
 
@@ -269,14 +269,14 @@ def test_grade_next(app_db):
     S.submit(first, {1: 'Light makes sugar.'})
     S.submit(second, {1: 'Plants eat sun.'})
     page = teach.get('/quiz/review/{}'.format(first.id)).data.decode()
-    assert '1 of 2 waiting' in page and 'Finish and grade next' in page
+    assert '1 of 2 waiting' in page and 'Finish and Grade Next' in page
     cp = first.cproblems[0]
     data = {'items-0-cpid': cp.id, 'items-0-credit': '80', 'items-0-feedback': '', 'items-0-highlights': '[]',
-            'finalize_next': 'Finish and grade next'}
+            'finalize_next': 'Finish and Grade Next'}
     r = teach.post('/quiz/review/{}'.format(first.id), data=data)
     assert r.headers['Location'] == '/quiz/review/{}'.format(second.id)
     page = teach.get('/quiz/review/{}'.format(second.id)).data.decode()
-    assert '1 of 1 waiting' in page and 'Finish and grade next' not in page
+    assert '1 of 1 waiting' in page and 'Finish and Grade Next' not in page
 
 
 def test_after_handing_in_there_is_no_next_quiz_only_back(app_db):
@@ -290,7 +290,7 @@ def test_after_handing_in_there_is_no_next_quiz_only_back(app_db):
     from app.qgen import services as S
     S.submit(done, {1: 'Light makes sugar.'})
     page = sam.get('/quiz/take/{}'.format(done.id)).data.decode()
-    assert 'Handed in!' in page and 'Your teacher is checking' in page
+    assert 'Handed In!' in page and 'Your teacher is checking' in page
     assert 'Next:' not in page and 'href="/quiz/take/{}"'.format(nxt.id) not in page
     assert back_by_the_trail(page)  # (the way back: the top bar's arrows)
     assert 'instructor' not in page.lower()
@@ -309,7 +309,7 @@ def test_names_and_titles_lead_somewhere(app_db):
     assert 'class="name-link person" href="/quiz/review/{}"'.format(cq.id) in page and 'href="/quiz/results/{}"'.format(vq.id) not in page
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     #(no "Message sam" button: the Messages pop-over does it, the owner 2026-10-21)
-    assert 'href="/messages/{}"'.format(ids('sam')) not in page and 'Edit user' in page
+    assert 'href="/messages/{}"'.format(ids('sam')) not in page and 'Edit User' in page
     page = teach.get('/quiz/results/{}'.format(vq.id)).data.decode()
     assert 'href="/quiz/editvquiz/{}"'.format(vq.id) in page and 'href="/quiz/viewvquiz/{}"'.format(vq.id) in page
 
@@ -385,11 +385,11 @@ def test_student_wording(app_db):
     vq = make_quiz(app, teach)
     cq = give(vq, 'sam')
     page = take_page(sam, cq.id).data.decode()
-    assert 'value="Hand it in"' in page and "Once you hand it in, you can't change your answers." in page
+    assert 'value="Hand It In"' in page and "Once you hand it in, you can't change your answers." in page
     mine = sam.get('/mypage').data.decode()
     assert 'aria-label="1 attempt">1</span>' in mine
     # the teacher's pages keep their own words
-    assert 'Hand it in' not in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
+    assert 'Hand It In' not in teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
 
 
 # ---------------------------------------------------------------- one folder style
@@ -572,9 +572,9 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">' in page
+    assert '<h1 class="title-two"><span class="title-kind">Student History:</span> <span class="title-name">' in page
     assert '<span>sam</span></span></h1>' in page  # (his/her picture before the name: the owner, 2026-10-28)
-    assert '<title>Student history: sam' in page
+    assert '<title>Student History: sam' in page
     # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
     # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder
     # with none of sam's quizzes isn't a button
@@ -626,7 +626,7 @@ def test_taking_a_quiz_away_updates_everything(app_db):
                                  (teach, 'byquiz'), (teach, 'quizresults:{}'.format(a.id))), keys.values()):
         assert poll(who, k) != before, k
     home = sam.get('/home').data.decode()
-    assert 'Perfect score' not in home.split('Still to earn')[0]
+    assert 'Perfect score' not in home.split('Still to Earn')[0]
     results = teach.get('/quiz/results/{}'.format(a.id)).data.decode()
     assert 'Average 0%' in results
     # take away the unfinished one: off Home's "Waiting for you" and the Dashboard's list
@@ -682,8 +682,8 @@ def test_editors_can_start_over(app_db):
     app, db = app_db
     teach = login(app, 'teach')
     vq = make_quiz(app, teach)
-    for url, label in (('/quiz/makevprob', 'Start over'), ('/quiz/makevquiz', 'Start over'),
-                       ('/quiz/editvquiz/{}'.format(vq.id), 'Undo changes')):
+    for url, label in (('/quiz/makevprob', 'Start Over'), ('/quiz/makevquiz', 'Start Over'),
+                       ('/quiz/editvquiz/{}'.format(vq.id), 'Undo Changes')):
         page = teach.get(url).data.decode()
         assert re.search(r'data-start-over="{}"'.format(re.escape(url)), page), url
         assert '↺ {}</button>'.format(label) in page, url
@@ -698,7 +698,7 @@ def test_my_quizzes_lists_the_last_few_handed_in(app_db):
     from app.qgen import services as S
     from app.user.routes import LATEST_FINISHED
     page = sam.get('/mypage').data.decode()
-    assert 'Just finished' not in page                      # nothing handed in yet
+    assert 'Just Finished' not in page                      # nothing handed in yet
     quizzes = [make_quiz(app, teach, 'Q{}'.format(i)) for i in range(LATEST_FINISHED + 1)]
     attempts = [give(q, 'sam') for q in quizzes]
     for cq in attempts:
@@ -739,7 +739,7 @@ def test_home_counters_open_my_quizzes_showing_just_those(app_db):
 
     def titles(show):
         page = sam.get('/mypage?show=' + show).data.decode()
-        assert 'data-keep-open' in page and 'Just finished' in page and 'Show all my quizzes' not in page
+        assert 'data-keep-open' in page and 'Just Finished' in page and 'Show all my quizzes' not in page
         return re.findall(r'<span title="([^"]+)" class="box-title">', page)
     assert set(titles('todo')) == {'New one', 'Soon'}
     assert titles('started') == ['Begun']
@@ -786,7 +786,7 @@ def test_home_counter_views_say_what_they_show(app_db):
     teach, sam = login(app, 'teach'), login(app, 'sam')
     give(make_quiz(app, teach, 'New one'), 'sam')
     page = sam.get('/mypage?show=todo').data.decode()
-    assert '<h2 id="folder-title" class="folder-title" data-page-name="My quizzes">To do: quizzes you haven’t started</h2>' in page
+    assert '<h2 id="folder-title" class="folder-title" data-page-name="My Quizzes">To do: quizzes you haven’t started</h2>' in page
     page = sam.get('/mypage?show=started').data.decode()
     assert '>In progress: quizzes you’ve started, or handed in and not graded yet</h2>' in page
     assert 'Nothing in progress right now. {}'.format(ico('party')) in page
@@ -797,7 +797,7 @@ def test_home_counter_views_say_what_they_show(app_db):
     within = '{} day{}'.format(days, '' if days == 1 else 's')
     assert '>Due soon: not handed in, closing within {}</h2>'.format(within) in page and 'Nothing is due within {}.'.format(within) in page
     # All: its own name, like any folder (not the page's: the owner, 2026-10-21; it was the page's, 2026-10-14)
-    assert re.search(r'class="folder-title" data-page-name="My quizzes">All[^<]*</h2>', sam.get('/mypage?folder=all').data.decode())
+    assert re.search(r'class="folder-title" data-page-name="My Quizzes">All[^<]*</h2>', sam.get('/mypage?folder=all').data.decode())
 
 
 # ---------------------------------------------------------------- removing a quiz, taking one away
@@ -986,7 +986,7 @@ def test_a_student_deletes_a_folder_and_its_quizzes(app_db):
     assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=a.id).count() == 1
     S.submit(a_try, {1: '4'})
     page = sam.get('/mypage?folder={}'.format(old.id)).data.decode()
-    assert 'Delete folder and everything in it' in page and 'disabled title="First hand in' not in page
+    assert 'Delete Folder and Everything in It' in page and 'disabled title="First hand in' not in page
     assert 'Delete the folder “Old” and the folders inside it and the 1 quiz in it? It goes to your teacher' in page
     r = sam.post('/mypage/folders/{}/purge'.format(old.id), data={'view': str(old.id)}, follow_redirects=True).data.decode()
     assert 'Deleted the folder “Old” and its 1 quiz' in r
@@ -1077,7 +1077,7 @@ def test_an_archive_folder_can_be_deleted_for_good(app_db):
         teach.post('/quiz/delcq/{}'.format(give(vq, name).id))
     sam_folder = ArchiveFolder.query.filter_by(student_id=ids('sam')).one()
     page = teach.get('/quiz/archive?folder={}'.format(sam_folder.id)).data.decode()
-    assert 'Delete folder and everything in it' in page
+    assert 'Delete Folder and Everything in It' in page
     assert 'Delete the folder “sam” and the 1 attempt in it for good?' in page
     r = teach.post('/quiz/archive/folders/{}/purge'.format(sam_folder.id), follow_redirects=True).data.decode()
     assert 'Deleted the folder “sam” and its 1 attempt.' in r
@@ -1231,7 +1231,7 @@ def test_standard_wording_and_history_buttons(app_db):
     assert 'data-pick="clear"' not in page and 'js/checkall.js' in page
     # the teachers' messages page: one name, and the way back is the top bar's arrows
     page = teach.get('/messages/teachers').data.decode()
-    assert 'Teachers’ messages' in page and back_by_the_trail(page) and 'Messages with' not in page
+    assert 'Teachers’ Messages' in page and back_by_the_trail(page) and 'Messages with' not in page
 
 
 def test_pages_come_back_as_they_were_left(app_db):
@@ -1305,7 +1305,7 @@ def test_folder_lists_have_one_order(app_db):
     # the folder menus too: All, the folders, Uncategorized
     from app.qgen import services as S
     with app.test_request_context():
-        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All quizzes', 'Uncategorized', 'Fall']  # (the side lists' order: the owner, 2026-10-22)
+        assert [label for _v, label, _n in S.subject_choices('quizzes')] == ['All Quizzes', 'Uncategorized', 'Fall']  # (the side lists' order: the owner, 2026-10-22)
 
 
 def test_one_set_of_sizes_and_accessible_controls():
@@ -1444,13 +1444,13 @@ def test_teacher_menu_fits_one_line(app_db):
     top, name_menu = nav.split('<div class="nav-right">')
     for label in ('>Dashboard</a>', '>People</a>', '>More</summary>', '>Problems</summary>', '>Quizzes</summary>', 'Grading'):
         assert label in top, label
-    assert '>Messages</a>' not in nav and '>Home</a>' not in top and 'My quizzes' not in top
+    assert '>Messages</a>' not in nav and '>Home</a>' not in top and 'My Quizzes' not in top
     more = top.split('>More</summary>')[1]
-    for label in ('>Trash</a>', '>Upload files</a>', '>Pictures</a>', '>Other files</a>', '>Settings</a>'):
+    for label in ('>Trash</a>', '>Upload Files</a>', '>Pictures</a>', '>Other Files</a>', '>Settings</a>'):
         assert label in more, label
-    assert 'My quizzes' in name_menu and '>Home</a>' in name_menu and 'class="nav-dots"' in name_menu.split('</summary>')[0]
+    assert 'My Quizzes' in name_menu and '>Home</a>' in name_menu and 'class="nav-dots"' in name_menu.split('</summary>')[0]
     student = no_titles(sam.get('/home').data.decode()).split('<nav class="nav')[1].split('<div class="nav-right">')[0]
-    assert '>Home</a>' in student and 'My quizzes' in student and '>More</summary>' not in student
+    assert '>Home</a>' in student and 'My Quizzes' in student and '>More</summary>' not in student
 
 
 def test_kid_friendly_review_batch(app_db):
@@ -1487,7 +1487,7 @@ def test_kid_friendly_review_batch(app_db):
     #(Upload files, Pictures and Other files are in a Files menu inside More now)
     more = teach.get('/dashboard').data.decode().split('>More</summary>')[1]
     more = more[:more.index('>Settings</a>')]
-    assert more.count('<hr class="menu-rule">') == 2 and '>Files</summary>' in more and '>Upload files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
+    assert more.count('<hr class="menu-rule">') == 2 and '>Files</summary>' in more and '>Upload Files</a>' in more and '>Pictures</a>' in more and 'menu-label' not in more
     assert '<h1>Pictures</h1>' in teach.get('/images').data.decode()
     # 15 and 16: the quiz builder's problem boxes have names; the "?" buttons are 24px
     from test_flow import problem_form
@@ -1682,11 +1682,11 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         '/quiz/results/{}'.format(vq.id): ['disabled title="Grade: Nothing to grade: not handed in yet">',
                                            'disabled title="Give another attempt: A new attempt can be given once the latest one is handed in and graded">'],
         #(no printer for a whole class on Results by quiz: one student's paper pages print from his/her own row, the owner 2026-10-21, To do 7)
-        '/profile': ['disabled title="You don’t have a nickname">Remove nickname</button>'],
+        '/profile': ['disabled title="You don’t have a nickname">Remove Nickname</button>'],
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
         '/userdet': ['disabled title="Delete for good: You can’t delete your own account">',
-                     'disabled title="Move to folder: make a folder first (+ New folder)">',
-                     'title="Message: teachers write to each other in Teachers’ messages">'],
+                     'disabled title="Move to folder: make a folder first (+ New Folder)">',
+                     'title="Message: teachers write to each other in Teachers’ Messages">'],
     }
     for url, wanted in pages.items():
         page = teacher.get(url).data.decode()

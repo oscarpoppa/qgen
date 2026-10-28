@@ -20,7 +20,7 @@
 {# the form an "Archive all" on a heading line sends (a form can't sit inside a heading) #}
 {% macro archive_all_form(g, student, form_id) -%}
 <form method="post" action="{{ url_for('qgen.take_away', vqid=g.vquiz.id, uid=student.id) }}" id="{{ form_id }}" class="inline-form" hidden
-  data-confirm="{{ archive_all_words(g, student) }}" data-confirm-ok="Move all to Trash ({{ g.attempts|length }})"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+  data-confirm="{{ archive_all_words(g, student) }}" data-confirm-ok="Move All to Trash ({{ g.attempts|length }})"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
 {%- endmacro %}
 {# the pieces of an attempt's line, used by the results tables (result_cells) and by a student page's
    rows (ulist.html result_row, laid out like My quizzes': the owner, 2026-10-21) #}
@@ -80,7 +80,7 @@
 {%- set n = paper_pages(g.vquiz) %}
 {%- if n %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.print_paper', vqid=g.vquiz.id, users=[student.id], next=request.full_path) }}" data-print-pages="{{ n }}" title="Print: {{ student.shown_name }}’s paper page{{ '' if n == 1 else 's' }} of “{{ g.vquiz.title }}” ({{ n }} page{{ '' if n == 1 else 's' }}), with his/her name on top">{{ icon_label('lc-printer', 'Print') }}</a>
 {#- (no paper pages: grayed, with why, so the row's icons stay in their columns; the owner, 2026-10-26) #}
-{%- else %}{{ slot('Print', 'nothing to print: “' ~ g.vquiz.title ~ '” has no Paper only problems', icon='lc-printer') }}{% endif %}
+{%- else %}{{ slot('Print', 'nothing to print: “' ~ g.vquiz.title ~ '” has no Paper Only problems', icon='lc-printer') }}{% endif %}
 {%- endmacro %}
 {% macro result_cells(g, student, rules, archive_all=true) %}
               {#- (sort keys for a sorted column, static/js/sorttable.js: the latest attempt's date; the score) -#}
@@ -169,7 +169,7 @@
               the same Assign, so a change here changes it for all of them (the owner, 2026-10-28) #}
           {%- set nq = g.latest %}{% if nq and nq.id is defined %}
           <div class="person-note card assign-note-card" data-no-rowclick>
-            <label class="person-note-head small" for="anote-{{ nq.id }}">{{ icon('lc-sticky-note') }} Note to the student</label>
+            <label class="person-note-head small" for="anote-{{ nq.id }}">{{ icon('lc-sticky-note') }} Note to the Student</label>
             <textarea id="anote-{{ nq.id }}" class="person-note-text" rows="2" maxlength="4000" data-note-url="{{ url_for('qgen.save_assign_note', cqid=nq.id) }}"
                       placeholder="The student sees this">{{ nq.assign_note or '' }}</textarea>
             <div class="person-note-status small muted" aria-live="polite">{% if nq.assign_note_at %}Changed {{ nq.assign_note_at|when }}{% endif %}</div>

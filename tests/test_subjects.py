@@ -106,7 +106,7 @@ def test_problems_page_lists_by_folder(app_db):
     assert shown(teacher, 'problems', alg.id) == ['Area', 'Add'] and shown(teacher, 'problems', geo.id) == ['Angles', 'Area']
     assert shown(teacher, 'problems', 'main') == []
     page = teacher.get('/quiz/listvp').data.decode()
-    assert side_counts(page) == {'All problems': 3, 'Uncategorized': 0, 'Algebra': 2, 'Geometry': 2}
+    assert side_counts(page) == {'All Problems': 3, 'Uncategorized': 0, 'Algebra': 2, 'Geometry': 2}
     assert 'Expand all' in page and 'Collapse all' in page and 'Move to folder' in page
     # taken out of a folder: it stays in its others; out of its only folder it's deleted, but
     # only once the teacher agrees (the page asks first: check=1 gives the question)
@@ -349,7 +349,7 @@ def test_quiz_builder_shows_problems_in_containers(app_db):
     keys = {t['name']: t['keys'] for t in tree}
     assert keys == {'Algebra': ['p:{}'.format(probs['Add'].id)],
                     'Geometry': sorted(['p:{}'.format(probs['Add'].id), 'p:{}'.format(probs['Area'].id)])}
-    assert 'data-all-label="All problems"' in builder and 'data-fkey="p:{}"'.format(probs['Area'].id) in builder
+    assert 'data-all-label="All Problems"' in builder and 'data-fkey="p:{}"'.format(probs['Area'].id) in builder
     # a quiz made from problems in two subjects
     teacher.post('/quiz/makevquiz', data={'title': 'Mixed', 'vplist': '[{}, {}]'.format(probs['Add'].id, probs['Area'].id)})
     assert sorted(p.title for p in VQuiz.query.one().vproblems) == ['Add', 'Area']
@@ -431,7 +431,7 @@ def test_they_are_called_folders_on_screen(app_db):
     teacher = login(app, 'teach')
     make_problems(teacher, 'Add')
     page = teacher.get('/quiz/listvp').data.decode()
-    assert '+ New folder' in page and 'Make a folder first' in page
+    assert '+ New Folder' in page and 'Make a folder first' in page
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'Algebra'}, follow_redirects=True)
     assert 'Folder “Algebra” made.' in r.data.decode()
     page = teacher.get('/quiz/listvp').data.decode()
@@ -444,7 +444,7 @@ def test_they_are_called_folders_on_screen(app_db):
     r = teacher.post('/quiz/subjects/problems/new', data={'name': 'algebra'}, follow_redirects=True)
     assert 'There&#39;s already a folder called' in r.data.decode()
     form = teacher.get('/quiz/makevprob').data.decode()
-    assert '<h2>Folder</h2>' in form and 'Or a new folder' in form  # (its own card, "Folder", as on New quiz: the owner, 2026-10-26)
+    assert '<h2>Folder</h2>' in form and 'Or a New Folder' in form  # (its own card, "Folder", as on New quiz: the owner, 2026-10-26)
     for url in ('/quiz/listvp', '/quiz/listvq', '/quiz/makevprob', '/quiz/makevquiz', '/quiz/assign'):
         text = teacher.get(url).data.decode()
         assert '>Subject' not in text and 'subject “' not in text and 'New subject' not in text, url
@@ -471,7 +471,7 @@ def test_the_quiz_builder_says_what_students_get(app_db):
     app, db = app_db
     teacher = login(app, 'teach')
     page = teacher.get('/quiz/makevquiz').data.decode()
-    assert '<h2>Problems in this quiz</h2>' in page and 'id="order-total"' in page
+    assert '<h2>Problems in This Quiz</h2>' in page and 'id="order-total"' in page
     assert 'Want each student to get only some of these?' in page
     assert 'Order in the quiz' not in page and 'shuffle-note' not in page
 

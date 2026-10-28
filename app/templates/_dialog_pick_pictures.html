@@ -10,7 +10,7 @@
   {% if pp_pictures %}
   <div class="field pick-people" id="pick-pictures-pick">
     {{ filter_bar('#pick-pictures-pick .folder-filter-list', 'picture', 'pictures', items='tr[data-box]', id='pick-pictures-bar') }}
-    <div class="folder-filter" data-folder-filter data-prefix="pic:" data-all-label="All pictures" data-main-label="Uncategorized"
+    <div class="folder-filter" data-folder-filter data-prefix="pic:" data-all-label="All Pictures" data-main-label="Uncategorized"
          data-unit="picture" data-units="pictures" data-remember="pick-pictures" data-tools-home="#pick-pictures-bar" data-style="list">
       <script type="application/json" class="folder-filter-tree">{{ pp_tree|tojson }}</script>
       <div class="folder-filter-list">

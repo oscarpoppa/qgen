@@ -25,8 +25,8 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm" title="Put this attempt back; {{ a.student_name }} will see it on My quizzes again">Restore</button></form>
     {% endif %}
     <form method="post" action="{{ url_for('qgen.purge_archived', aid=a.id) }}" class="inline-form"
-          data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for good">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" title="Delete this attempt permanently; it can’t be undone">Delete for good</button></form>
+          data-confirm="Delete {{ a.student_name }}’s attempt at “{{ a.quiz_title }}” for good? This can’t be undone." data-confirm-ok="Delete for Good">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm" title="Delete this attempt permanently; it can’t be undone">Delete for Good</button></form>
   </div>
 </div>
 {{ results }}

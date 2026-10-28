@@ -162,7 +162,7 @@ def teachers_page():
     choice = request.args.get('with') or 'teachers'
     view = teachers_view(M.inbox(current_user), staff_picker(current_user),
                          choice if choice == 'teachers' else 't' + choice.lstrip('t'))
-    return render_template('teachers_messages.html', title='Teachers’ messages', **view)
+    return render_template('teachers_messages.html', title='Teachers’ Messages', **view)
 
 #route to pin or unpin a message (and every copy sent with it)
 @messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])

@@ -574,7 +574,7 @@
           showType();
         }
         fillValues(f.values);
-        var msg = kind === 'problem' ? 'Filled in. Please check it, then press “Show me 3 examples”.' : 'Values filled in. Please check them.';
+        var msg = kind === 'problem' ? 'Filled in. Please check it, then press “Show Me 3 Examples”.' : 'Values filled in. Please check them.';
         if (res.note) msg += ' Note: ' + res.note;
         if (res.problems && res.problems.length) msg += ' Still to fix: ' + res.problems.join(' ');
         status.textContent = msg;

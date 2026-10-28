@@ -72,7 +72,7 @@ def scan_start():
     deep = tuning.get('folder_depth')
     shown = ([j for j in away if j.id in want] if view == 'checked' else away if view == 'all'
              else root['items'] if view == 'main' else FT.own(node))
-    return render_template('scan_start.html', title='Scan workbook pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
+    return render_template('scan_start.html', title='Scan Workbook Pages', jobs=jobs, away=away, folders=folders, kinds=kinds,
                            max_pages=SC.max_pages(), stash_root=root, stash_flat=flat, stash_nodes=nodes, stash_view=view,
                            stash_node=node, stash_shown=shown, stash_path=FT.path(nodes, node) if node else [],
                            #(the Move dialog's folders, each [id, name, depth, icon], in the side list's order)
@@ -463,7 +463,7 @@ def scan_restore(job_id):
         return redirect(url_for('qgen.archive', section='workbooks'))
     SC.restore_job(job)
     current_app.logger.info('{} restored scan {} "{}" from the Trash'.format(current_user.username, job.id, job.name))
-    flash(Markup('Restored “{}”. It’s in <a href="{}">Stashed workbooks</a>, Uncategorized.').format(
+    flash(Markup('Restored “{}”. It’s in <a href="{}">Stashed Workbooks</a>, Uncategorized.').format(
         job.name, url_for('qgen.scan_start', stash='main') + '#scan-away'), 'success')
     return redirect(url_for('qgen.archive', section='workbooks'))
 
@@ -492,7 +492,7 @@ def scan_trash_apply():
         for job in jobs:
             current_app.logger.info('{} restored scan {} "{}" from the Trash'.format(current_user.username, job.id, job.name))
             SC.restore_job(job)
-        flash(Markup('Restored {}. {} in <a href="{}">Stashed workbooks</a>, Uncategorized.').format(
+        flash(Markup('Restored {}. {} in <a href="{}">Stashed Workbooks</a>, Uncategorized.').format(
             one, 'It’s' if len(jobs) == 1 else 'They’re', url_for('qgen.scan_start', stash='main') + '#scan-away'), 'success')
     return redirect(back)
 
