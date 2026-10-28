@@ -638,7 +638,7 @@ def scan_pause(job_id):
     the pages being read are hung up on and go back to not read yet, the ones read are kept; Resume reads the rest."""
     job = _mine(job_id)
     SC.pause_reading(job, _reading(job), now=True)
-    current_app.logger.info('{} paused reading scan {} "{}"'.format(current_user.username, job.id, job.name))
+    current_app.logger.info('{} stopped reading scan {} "{}"'.format(current_user.username, job.id, job.name))
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
     #(from Scan workbook pages' Current scans: back there, the owner 2026-10-20)
