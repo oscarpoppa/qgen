@@ -3881,7 +3881,7 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 
 /* People: an open row's facts on the left, the teachers' Notes card in the free room on the right; one under the other when
    narrow (the owner, 2026-10-27; static/js/personnote.js) */
-.person-open { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px; }
+.person-open { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px; padding-top: 8px; }  /* (room under the open row's line, as the facts had: the owner, 2026-10-27) */
 .person-open-facts { flex: 1 1 220px; min-width: 0; }
 .person-open > .person-note { flex: 0 1 400px; min-width: 220px; margin-left: auto; margin: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; cursor: auto; }
 .person-note-head { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--muted); }
