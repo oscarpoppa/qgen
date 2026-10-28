@@ -127,6 +127,17 @@ def noted_students():
             .order_by(User.teacher_note_at.desc()).all())
 
 
+def noted_things():
+    """Problems and quizzes with a teacher's note, the newest-changed note first (the Dashboard's Notes on problems and
+    quizzes card; the owner, 2026-10-28): [{'kind', 'thing'}]."""
+    #(not those in the Trash)
+    out = [{'kind': 'problem', 'thing': p} for p in VProblem.query.filter(VProblem.removed_at.is_(None), VProblem.teacher_note.isnot(None),
+                                                                           VProblem.teacher_note != '')]
+    out += [{'kind': 'quiz', 'thing': q} for q in VQuiz.query.filter(VQuiz.removed_at.is_(None), VQuiz.teacher_note.isnot(None),
+                                                                     VQuiz.teacher_note != '')]
+    return sorted(out, key=lambda x: x['thing'].teacher_note_at or x['thing'].create_date, reverse=True)
+
+
 def site_glance(now):
     """Counts and settings at a glance."""
     month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -141,7 +152,24 @@ def site_glance(now):
             'signup_open': bool(Setting.get('class_code')),
             'ai_on': bool(current_app.config.get('ANTHROPIC_API_KEY')),
             'ai_calls': calls[0], 'ai_tokens': int(calls[1]) + int(calls[2]),
-            'month': '{:%B}'.format(now)}
+            'month': '{:%B}'.format(now), 'notes': note_counts()}
+
+
+def note_counts():
+    """How many notes there are of each kind, for Site at a glance (the owner, 2026-10-28): students', problems', quizzes',
+    pictures' and files', workbooks' (not those in the Trash), and notes to students (one per Assign)."""
+    from .models import ScanJob, UploadFile
+
+    def noted(model, *more):
+        return model.query.filter(model.teacher_note.isnot(None), model.teacher_note != '', *more).count()
+    groups = db.session.query(db.func.count(db.distinct(db.func.coalesce(CQuiz.assign_group, db.cast(CQuiz.id, db.String))))) \
+        .filter(CQuiz.assign_note.isnot(None), CQuiz.assign_note != '').scalar()
+    return [(len(noted_students()), 'student note', 'student notes'),
+            (noted(VProblem, VProblem.removed_at.is_(None)), 'problem note', 'problem notes'),
+            (noted(VQuiz, VQuiz.removed_at.is_(None)), 'quiz note', 'quiz notes'),
+            (noted(UploadFile, UploadFile.removed_at.is_(None)), 'picture and file note', 'picture and file notes'),
+            (noted(ScanJob, ScanJob.status != 'trashed'), 'workbook note', 'workbook notes'),
+            (groups or 0, 'note to students', 'notes to students')]
 
 
 def pinned():

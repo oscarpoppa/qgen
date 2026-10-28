@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, post_button, box_label, count_of, expand_collapse with context %}
+{% from "_macros.html" import back_button, post_button, box_label, count_of, expand_collapse, note_card with context %}
 {# The draft of a scan (app/qgen/scan.py): each page beside its picture, with its quiz
    settings, crop boxes and drafted problems. Nothing is saved until Save. #}
 
@@ -161,6 +161,9 @@
 </div>
 {% endif %}
 
+  {#- the teachers' Notes card, as People's, outside the workbook's form so a note isn't one of its unsaved changes
+      (the owner, 2026-10-28) #}
+  <div class="scan-note">{{ note_card(job, url_for('qgen.save_note', kind='workbook', item_id=job.id), '“' ~ job.name ~ '”', 'workbook-' ~ job.id) }}</div>
   {#- (no yellow "N pages weren't read yet" card: the Helper has each page's choices; the owner, 2026-10-23) #}
   {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
 

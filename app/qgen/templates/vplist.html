@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import count_badge, post_button, slot, scan_mark with context %}
+{% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_mark, note_card with context %}
 {% from "_pick.html" import pick_table %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
@@ -19,7 +19,9 @@
           {# the row folds to its title (and folders and buttons); open, it shows its kind, question
              and answer too. Folded to begin with; Expand all / Collapse all and the page remember it #}
           <td data-label="Title"><details class="box row-fold" data-box="problem-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><strong{% if fk %} class="drag-item" data-drag="problem" data-id="{{ item.id }}" data-name="{{ item.title or 'Untitled' }}"
-              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}{{ scan_mark(item) }}</strong></summary>
+              data-home="{{ here.id if here else ('top' if not item.vpgroups else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)"{% endif %}>{{ item.title or 'Untitled' }}{{ scan_mark(item) }}</strong>{{ note_mark(item) }}</summary>
+            {#- open: its facts on the left, the teachers' Notes card on the right, as People's (the owner, 2026-10-28) #}
+            <div class="person-open" data-fold-body><div class="person-open-facts">
             {#- its facts as a list with small circles, as every open row's (the owner, 2026-10-27; they were one line with dots) #}
             <ul class="quiz-facts small muted">
               <li><span class="badge badge-accent">{{ qtypes[item.qtype].label if item.qtype in qtypes else item.qtype }}</span></li>
@@ -30,7 +32,8 @@
             </ul>
             {#- the quizzes it's in, each opening its row on Quizzes (the owner, 2026-10-26) #}
             {%- if item.vquizzes %}<div class="small row-quizzes" data-chip-cap="10">In quizzes: {% for q in item.vquizzes|sort(attribute='title') %}<a class="pick-chip row-quiz-chip" href="{{ url_for('qgen.list_vquiz', vqid=q.id) }}" title="Open “{{ q.title }}” on Quizzes">{{ icon('note') }} {{ q.title }}</a>{% endfor %}</div>{% else %}<div class="small row-quizzes">In quizzes: <span class="no-data" title="In no quiz">—</span></div>{% endif %}
-            {%- if fk %}{{ folder_chips(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}</details>
+            {%- if fk %}{{ folder_chips(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}</div>
+            {{ note_card(item, url_for('qgen.save_note', kind='problem', item_id=item.id), '“' ~ (item.title or 'Untitled') ~ '”', 'problem-' ~ item.id) }}</div></details>
           </td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}

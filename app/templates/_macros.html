@@ -200,3 +200,28 @@
 {# a status as a small mark (the owner, 2026-10-24): done, a green check; in progress, a blue half circle; new / not started, a gold
    circle; ready to finish (graded, waiting to be finished), a green clipboard with a check #}
 {% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check', 'waiting': 'lc-user-check'}[kind]) }}</span>{% endmacro %}
+{# teachers' notes on a thing, as People's (the owner, 2026-10-28): the small mark after its name, its place kept when
+   there's no note so the marks line up down the column; and the open row's Notes card, saved as typed
+   (static/js/personnote.js), every teacher seeing the same ones and students never #}
+{% macro note_mark(item) -%}
+{%- if item.teacher_note %}<span class="person-note-mark" title="Note: {{ item.teacher_note.splitlines()[0][:120] }}" role="img" aria-label="Has a note">{{ icon('lc-sticky-note') }}</span>{% else %}<span class="person-note-mark person-slot" aria-hidden="true"></span>{% endif %}
+{%- endmacro %}
+{% macro note_card(item, url, about, key) -%}
+<div class="person-note card" data-no-rowclick>
+  <label class="person-note-head small" for="note-{{ key }}">{{ icon('lc-sticky-note') }} Notes</label>
+  <textarea id="note-{{ key }}" class="person-note-text" rows="3" maxlength="{{ item.TEACHER_NOTE_MAX }}" data-note-url="{{ url }}"
+            placeholder="Only teachers see this" title="Notes about {{ about }}, for teachers only: saved as you type">{{ item.teacher_note or '' }}</textarea>
+  <div class="person-note-status small muted" aria-live="polite">{% if item.teacher_note_at %}Changed {{ item.teacher_note_at|when }}{% if item.teacher_note_by %} by {{ item.teacher_note_by.shown_name }}{% endif %}{% endif %}</div>
+</div>
+{%- endmacro %}
+{# the teacher's note to the student on an assigned quiz (the owner, 2026-10-28), where he/she sees it: the start card, the top of
+   the quiz, its results, My quizzes' open row #}
+{% macro from_teacher(cq) -%}
+{%- if cq and cq.assign_note %}<div class="hint teacher-note">{{ icon('lc-sticky-note') }}<div><strong>From your teacher</strong><div class="teacher-note-text">{{ cq.assign_note }}</div></div></div>{% endif %}
+{%- endmacro %}
+{# a note shown by its icon in a card over the page (static/js/notepop.js; the owner, 2026-10-28): the Dashboard's notes,
+   Home's Waiting for you, My quizzes' attempts #}
+{% macro note_pop(text, key, tip='Note', cls='') -%}
+<button type="button" class="icon-link{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note') }}</button>
+<div class="note-pop" id="note-pop-{{ key }}" popover><p class="note-pop-text">{{ text }}</p></div>
+{%- endmacro %}

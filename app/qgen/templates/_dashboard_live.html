@@ -1,6 +1,6 @@
 {# Everything on the Dashboard below its title: rendered in the page, and again every
    so often (Technical settings) from /dashboard/now by static/js/dashboard.js. #}
-{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of, status_icon with context %}
+{% from "_macros.html" import avatar, person_name, quiz_name, box_label, count_of, status_icon, note_pop with context %}
 {% macro score(value) -%}
   <span class="badge {{ score_class(value) }}">{{ '%.0f' % value }}%</span>
 {%- endmacro %}
@@ -27,7 +27,11 @@
       <span class="dash-glance-item"><span class="dash-num">{{ glance.teachers }}</span> teacher{{ '' if glance.teachers == 1 else 's' }}</span>
       <span class="dash-glance-item"><span class="dash-num">{{ glance.problems }}</span> problem{{ '' if glance.problems == 1 else 's' }}</span>
       <span class="dash-glance-item"><span class="dash-num">{{ glance.quizzes }}</span> quiz{{ '' if glance.quizzes == 1 else 'zes' }}</span>
-      <span class="dash-glance-item"><span class="dash-num">{{ glance.archived }}</span> attempt{{ '' if glance.archived == 1 else 's' }} in the Trash</span>
+      {#- (no "attempts in the Trash" count: the owner, 2026-10-28) #}
+      {#- the notes there are, each kind (the owner, 2026-10-28) #}
+      {%- for n, one, many in glance.notes %}
+      <span class="dash-glance-item"><span class="dash-num">{{ n }}</span> {{ one if n == 1 else many }}</span>
+      {%- endfor %}
     </div>
     <p class="small">
       Sign-up:
@@ -53,12 +57,31 @@
           <span class="dash-what"><span class="muted small">changed {{ when(u.teacher_note_at) if u.teacher_note_at else '' }}</span></span>
           {#- the note icon shows the note in a card over the page (static/js/dashboard.js); the name opens the row on People
               (the owner, 2026-10-28) #}
-          <span class="btn-row dash-go"><button type="button" class="icon-link" popovertarget="note-pop-{{ u.id }}" title="Note" aria-label="Note">{{ icon('lc-sticky-note') }}</button></span>
-          <div class="note-pop" id="note-pop-{{ u.id }}" popover><p class="note-pop-text">{{ u.teacher_note }}</p></div></li>
+          <span class="btn-row dash-go">{{ note_pop(u.teacher_note, u.id) }}</span></li>
       {% endfor %}
       </ul>
     {% else %}
       <p class="muted small">No student has a note. Add one from a student's row on People.</p>
+    {% endif %}
+    </div>
+  </details>
+  {#- problems and quizzes with a teacher's note, under Student notes, folded, built the same way (the owner, 2026-10-28): the
+      name opens its row on Problems or Quizzes (?show=), the note icon shows the note #}
+  <details class="box card dash-card" data-elastic="thing-notes" data-elastic-dir="v" data-box="thing-notes" data-follows="notes">
+    <summary class="dash-head">{{ box_label('lc-sticky-note', 'Notes on problems and quizzes', count_of(noted_things|length, 'note', 'notes'), 'h2') }}</summary>
+    <div class="dash-body">
+    {% if noted_things %}
+      <ul class="dash-list dash-notes">
+      {% for x in noted_things %}{% set t = x.thing %}{% set name = t.title or 'Untitled' %}
+        <li><a class="name-link person" href="{{ url_for('qgen.list_vprobs' if x.kind == 'problem' else 'qgen.list_vquizzes', show=t.id) }}" data-tip="Open “{{ name }}” on {{ 'Problems' if x.kind == 'problem' else 'Quizzes' }}">
+          {#- (its kind's icon first, as a problem's and a quiz's chips have, where a student's picture is: the owner, 2026-10-28) #}
+          {{- icon('lc-puzzle' if x.kind == 'problem' else 'note') }}<strong>{{ name }}</strong></a>
+          <span class="dash-what"><span class="muted small">changed {{ when(t.teacher_note_at) if t.teacher_note_at else '' }}</span></span>
+          <span class="btn-row dash-go">{{ note_pop(t.teacher_note, x.kind ~ '-' ~ t.id) }}</span></li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small">No problem or quiz has a note. Add one from its row on Problems or Quizzes.</p>
     {% endif %}
     </div>
   </details>

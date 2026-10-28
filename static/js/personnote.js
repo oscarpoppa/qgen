@@ -1,15 +1,16 @@
-/* A person's notes on People (the owner, 2026-10-27): the open row's Notes card saves itself a moment after typing stops,
+/* Teachers' notes: a person's on People (the owner, 2026-10-27), and a problem's, quiz's, picture's or file's, or workbook's
+ * (2026-10-28): the open row's Notes card saves itself a moment after typing stops,
  * no button and no reload, and says so under the box. The small note mark by the name follows. Teachers only (the route
  * checks); every teacher sees the same notes. */
 (function () {
   var timers = new WeakMap();
   function csrf() { var m = document.querySelector('meta[name="csrf-token"]'); return m ? m.content : ''; }
   function mark(box, text) {
-    var row = box.closest('details.row-fold'), line = row && row.querySelector(':scope > summary .person-line');
-    if (!line) return;
+    //(a row's mark in its heading; a page's own, e.g. a workbook's, data-note-mark: the owner, 2026-10-28, notes everywhere)
+    var row = box.closest('details.row-fold');
     //(its place is always there, empty when there's no note, so the marks line up down the column)
-    var m = line.querySelector('.person-note-mark');
-    if (!m) { m = document.createElement('span'); line.appendChild(m); }
+    var m = row ? row.querySelector(':scope > summary .person-note-mark') : document.querySelector('[data-note-mark]');
+    if (!m) return;
     if (!text) {
       m.className = 'person-note-mark person-slot'; m.innerHTML = ''; m.removeAttribute('title'); m.removeAttribute('role');
       m.removeAttribute('aria-label'); m.setAttribute('aria-hidden', 'true');

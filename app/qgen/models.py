@@ -3,6 +3,7 @@ from app.user.models import User
 from datetime import datetime, timedelta
 import json
 from sqlalchemy.dialects import mysql
+from sqlalchemy.orm import declared_attr
 
 #a long text column: MySQL's plain TEXT stops at 64 KB
 LongText = db.Text().with_variant(mysql.LONGTEXT(), "mysql")
@@ -21,6 +22,24 @@ class SaveMixin:
 #database's NOW() is UTC on SQLite)
 class DateMixin:
     create_date = db.Column(db.DateTime, default=datetime.now)
+
+
+#teachers' notes on a problem, quiz, picture or file, or scanned workbook (the owner, 2026-10-28, as People's): general
+#notes, e.g. "This problem needs to be fixed". Every teacher sees and edits the same notes; students never see them.
+#When and by whom they were last changed.
+class NoteMixin:
+    TEACHER_NOTE_MAX = 4000
+    teacher_note = db.Column(db.Text, nullable=True)
+    teacher_note_at = db.Column(db.DateTime, nullable=True)
+
+    @declared_attr
+    def teacher_note_by_id(cls):
+        return db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL', name='fk_{}_teacher_note_by'.format(cls.__tablename__)),
+                         nullable=True)
+
+    @declared_attr
+    def teacher_note_by(cls):
+        return db.relationship('User', foreign_keys='{}.teacher_note_by_id'.format(cls.__name__))
 
 
 # for many-to-many between vprobs and vquizzes
@@ -88,7 +107,7 @@ upload_filegroup = db.Table('upload_filegroup',
     db.UniqueConstraint('upload_id', 'filegroup_id', name='uq_upload_filegroup'))
 
 
-class UploadFile(db.Model, DateMixin):
+class UploadFile(db.Model, DateMixin, NoteMixin):
     __tablename__ = 'upload_file'
     id = db.Column(db.Integer, primary_key=True)
     #(191: the longest a unique index fits on MySQL with utf8mb4 on any row format; a file with a
@@ -132,7 +151,7 @@ class FileGroup(db.Model, SaveMixin, DateMixin):
 
 
 #for virtual problem DB storage
-class VProblem(db.Model, SaveMixin, DateMixin):
+class VProblem(db.Model, SaveMixin, DateMixin, NoteMixin):
     __tablename__ = 'vproblem'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
@@ -170,7 +189,7 @@ class VProblem(db.Model, SaveMixin, DateMixin):
         return '<Virtual Problem: {} : {}>'.format(self.title or 'Untitled', self.raw_prob)
 
 #for virtual quiz DB storage
-class VQuiz(db.Model, SaveMixin, DateMixin):
+class VQuiz(db.Model, SaveMixin, DateMixin, NoteMixin):
     __tablename__ = 'vquiz'
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(128))
@@ -261,6 +280,12 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     id = db.Column(db.Integer, primary_key=True)
     assignee = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     vquiz_id = db.Column(db.Integer, db.ForeignKey('vquiz.id'))
+    #the teacher's note to the student on this quiz, e.g. "Give this a try. It's a little advanced, but you can do it." (the
+    #owner, 2026-10-28): the student sees it, only teachers change it. One note for everyone given the quiz in the same
+    #Assign (assign_group), so changing it changes it for all of them; a retake keeps it.
+    assign_note = db.Column(db.Text, nullable=True)
+    assign_note_at = db.Column(db.DateTime, nullable=True)
+    assign_group = db.Column(db.String(32), nullable=True, index=True)
     transcript = db.Column(db.Text)
     completed = db.Column(db.Boolean, default=False)
     score = db.Column(db.Float)
@@ -590,7 +615,7 @@ class ScanFolder(db.Model):
 #workbook pages being turned into problems and quizzes (app/qgen/scan.py): the page
 #pictures sit in a private folder, the AI's reading and the teacher's edits in `data`
 #(JSON) until Save makes the real problems and quizzes, or Discard drops it
-class ScanJob(db.Model):
+class ScanJob(db.Model, NoteMixin):
     __tablename__ = 'scan_job'
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
@@ -604,7 +629,7 @@ class ScanJob(db.Model):
     #the stash folder it's in (None: Uncategorized)
     folder_id = db.Column(db.Integer, db.ForeignKey('scan_folder.id', ondelete='SET NULL'), nullable=True, index=True)
 
-    author = db.relationship('User', lazy=True)
+    author = db.relationship('User', lazy=True, foreign_keys=[author_id])
 
     def __repr__(self):
         return '<Scan {}: {} ({} pages)>'.format(self.id, self.name, self.pages)

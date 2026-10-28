@@ -2,7 +2,7 @@
     folder list on the left, the files as rows, each with a small thumbnail (pictures). kind:
     'pictures' or 'files'; what: 'picture' or 'file'. The files are still the truth
     (app/qgen/uploads.py keeps a row for each). #}
-{% from "_macros.html" import count_badge, post_button, slot with context %}
+{% from "_macros.html" import count_badge, post_button, slot, note_mark, note_card with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% set what = 'picture' if kind == 'pictures' else 'file' %}
@@ -22,9 +22,12 @@
           <td data-label="{{ 'Picture' if kind == 'pictures' else 'File' }}"><details class="box row-fold" data-box="{{ what }}-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span><span class="upload-name">
             {%- if kind == 'pictures' %}<a class="upload-thumb" href="{{ file_url(item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ file_url('T_' ~ item.name) }}" alt="" loading="lazy"></a>
             {%- else %}<span class="upload-thumb upload-file" aria-hidden="true">{{ icon('file') }}</span>{% endif %}
-            <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span></summary>
+            <strong class="drag-item" data-drag="{{ what }}" data-id="{{ item.id }}" data-name="{{ item.name }}" data-home="{{ here.id if here else ('top' if not gs else 'all') }}" title="Drag onto a folder to move it there (Ctrl+drag copies)">{{ item.name }}</strong></span>{{ note_mark(item) }}</summary>
+            {#- open: the picture and folders on the left, the teachers' Notes card on the right, as People's (the owner, 2026-10-28) #}
+            <div class="person-open" data-fold-body><div class="person-open-facts">
             {%- if kind == 'pictures' %}<a class="upload-big" href="{{ file_url(item.name) }}" data-page-zoom title="See {{ item.name }} full size"><img src="{{ file_url(item.name) }}" alt="{{ item.name }}" loading="lazy"></a>{% endif %}
-            {{- folder_chips(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</details></td>
+            {{- folder_chips(fk, what, item.id, '“' ~ item.name ~ '”', gs|sort(attribute='title')) }}</div>
+            {{ note_card(item, url_for('qgen.save_note', kind='upload', item_id=item.id), '“' ~ item.name ~ '”', 'upload-' ~ item.id) }}</div></details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
           {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}

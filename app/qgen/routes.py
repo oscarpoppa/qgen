@@ -866,7 +866,8 @@ def assign():
         done = []
         for vquiz in vquizzes:
             created, failed = S.assign(vquiz, students, form.opens_at.data, form.closes_at.data, form.time_limit.data,
-                                       by=current_user, same=form.same.data, keep_order=keep)
+                                       by=current_user, same=form.same.data, keep_order=keep,
+                                       note=(request.form.get('assign_note') or '').strip()[:S.ASSIGN_NOTE_MAX])
             for student, err in failed:
                 flash(err, 'error')
                 current_app.logger.error(err)
@@ -2473,9 +2474,57 @@ def dashboard_data():
     return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
             'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
             'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now),
-            'pinned': D.pinned(), 'noted': D.noted_students(),
+            'pinned': D.pinned(), 'noted': D.noted_students(), 'noted_things': D.noted_things(),
             #(the Scanner card: this teacher's scans, not the stashed ones; the owner, 2026-10-23)
             'scans': [x for x in scan_progress_data(current_user, put_away=None) if not x['put_away']]}
+
+#teachers' notes on a problem, quiz, picture or file, or scanned workbook (the owner, 2026-10-28, as People's): saved as
+#typed by static/js/personnote.js, JSON {note}; every teacher sees the same notes (a workbook's, its own teacher), students never
+@qgen_bp.route('/notes/<kind>/<int:item_id>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def save_note(kind, item_id):
+    from .models import ScanJob
+    from app import when_filter
+    model = {'problem': VProblem, 'quiz': VQuiz, 'upload': UploadFile, 'workbook': ScanJob}.get(kind)
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='The page was out of date. Please reload it.'), 400
+    thing = db.session.get(model, item_id) if model else None
+    if thing is None or (kind == 'workbook' and thing.author_id != current_user.id):
+        return jsonify(ok=False, error='That isn\u2019t here any more.'), 404
+    note = ((request.get_json(silent=True) or {}).get('note') or '').strip()
+    if len(note) > model.TEACHER_NOTE_MAX:
+        return jsonify(ok=False, error='Notes can be at most {} characters.'.format(model.TEACHER_NOTE_MAX)), 400
+    thing.teacher_note = note or None
+    thing.teacher_note_at = datetime.now()
+    thing.teacher_note_by_id = current_user.id
+    db.session.commit()
+    return jsonify(ok=True, changed='Changed {} by {}'.format(when_filter(thing.teacher_note_at), current_user.shown_name))
+
+
+#the teacher's note to the student on an assigned quiz (the owner, 2026-10-28): from a copy's row on its results, saved as
+#typed (static/js/personnote.js), JSON {note}; one for everyone given it in the same Assign, so all of theirs change
+@qgen_bp.route('/quiz/assign-note/<int:cqid>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def save_assign_note(cqid):
+    from app import when_filter
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='The page was out of date. Please reload it.'), 400
+    cq = db.session.get(CQuiz, cqid)
+    if cq is None:
+        return jsonify(ok=False, error='That quiz isn\u2019t here any more.'), 404
+    note = ((request.get_json(silent=True) or {}).get('note') or '').strip()
+    if len(note) > S.ASSIGN_NOTE_MAX:
+        return jsonify(ok=False, error='Notes can be at most {} characters.'.format(S.ASSIGN_NOTE_MAX)), 400
+    now = datetime.now()
+    for c in (CQuiz.query.filter_by(assign_group=cq.assign_group).all() if cq.assign_group else [cq]):
+        c.assign_note, c.assign_note_at = note or None, now
+    db.session.commit()
+    return jsonify(ok=True, changed='Changed {} by {}'.format(when_filter(now), current_user.shown_name))
+
 
 #route to the administrators' landing page: what needs doing and what's going on
 @qgen_bp.route('/dashboard', methods=['GET'])

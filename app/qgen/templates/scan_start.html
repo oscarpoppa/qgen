@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#- (the usual width: New scan and Current scans side by side, the owner 2026-10-20) #}
-{% from "_macros.html" import back_button, post_button with context %}
+{% from "_macros.html" import back_button, post_button, note_mark with context %}
 {% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {#- the whole width of the window, for the longer rows on the right (the owner, 2026-10-23) #}
 {% block main_class %} container-wide{% endblock %}
@@ -71,7 +71,7 @@
         <tr>
           {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}
           <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
-            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{#- (the name opens the scan's page even while it's waiting or being read: its progress; the owner, 2026-10-23) #}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="{{ 'See how far “' ~ j.name ~ '” has got' if x.kind in ('reading', 'paused') else 'Go on checking “' ~ j.name ~ '”' }}">{{ j.name }}</a>
+            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{#- (the name opens the scan's page even while it's waiting or being read: its progress; the owner, 2026-10-23) #}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="{{ 'See how far “' ~ j.name ~ '” has got' if x.kind in ('reading', 'paused') else 'Go on checking “' ~ j.name ~ '”' }}">{{ j.name }}</a>{% if j.teacher_note %}{{ note_mark(j) }}{% endif %}
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
             <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}{{ scan_working(x) }}</div></div></td>
           <td data-label="Last changed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
@@ -167,7 +167,7 @@
               <td class="tick-col"><input type="checkbox" class="stash-pick" value="{{ j.id }}" data-name="{{ j.name }}" aria-label="Check “{{ j.name }}”"></td>
               <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
                 <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""></a>
-                <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
+                <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}{% if j.teacher_note %}{{ note_mark(j) }}{% endif %}
                 {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
                 {% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
               {#- how far it got, a column of its own to sort by (the owner, 2026-10-25, CC): being read, stopped, paused, ready, draft #}

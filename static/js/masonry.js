@@ -48,7 +48,7 @@
       follow.forEach(function (f) {
         for (c = 0; c < cols; c++) {
           var lead = lists[c].filter(function (it) { return it.box.dataset.box === f.box.dataset.follows; })[0];
-          if (lead) { lists[c].push({ box: f.box, seq: lead.seq + 0.5, k: f.k }); return; }
+          if (lead) { lists[c].push({ box: f.box, seq: lead.seq + 0.01, k: f.k }); return; }  // (a little after it, so a card following that one comes next)
         }
         lists[n++ % cols].push({ box: f.box, seq: n, k: f.k });
       });

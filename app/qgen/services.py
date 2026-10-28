@@ -9,6 +9,7 @@ or by returning lists of plain-language errors.
 import json
 import copy
 import random
+import uuid
 from datetime import datetime
 
 from flask import url_for, render_template
@@ -977,12 +978,16 @@ def time_limit_error(opens_at, closes_at, time_limit, now=None):
             .format(time_limit, window, '' if window == 1 else 's', window))
 
 
-def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None, same='', keep_order=None):
+ASSIGN_NOTE_MAX = 4000
+
+
+def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=None, same='', keep_order=None, note=''):
     """Give each student a separate copy; returns (created quizzes, [(student, error), ...]).
     `by` is the teacher assigning it: the teachers' notices say who assigned what. `same`:
     '' each student's own version, 'order' the same problems in the same order (own numbers),
     'all' the very same quiz for everyone (the owner, 2026-10-24). `keep_order`: None for the
-    quiz's own setting, True/False to keep or shuffle its order for this assignment only."""
+    quiz's own setting, True/False to keep or shuffle its order for this assignment only. `note`: the teacher's note to the
+    students on it, one for everyone given it here (assign_group; the owner, 2026-10-28)."""
     shuffle = None if keep_order is None else not keep_order
     if opens_at and closes_at and closes_at <= opens_at:
         raise ServiceError('The closing time must be after the opening time.')
@@ -993,6 +998,7 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
         raise ServiceError(too_long)
     created, failed = [], []
     plan = None
+    group = uuid.uuid4().hex
     if same in ('order', 'all'):
         try:
             plan = draw_quiz(vquiz, same, shuffle)
@@ -1004,6 +1010,9 @@ def assign(vquiz, students, opens_at=None, closes_at=None, time_limit=None, by=N
         except ServiceError as exc:
             failed.append((student, str(exc)))
             continue
+        cq.assign_group = group
+        if note:
+            cq.assign_note, cq.assign_note_at = note, datetime.now()
         when = ' It opens {}.'.format(_when(cq.opens_at)) if cq.opens_at else ''
         notify(student.id, 'New quiz: “{}”.{}'.format(vquiz.title, when), url_for('qgen.qtake', cidx=cq.id))
         created.append(cq)
@@ -1049,6 +1058,8 @@ def retake(cq, by=None):
         raise ServiceError('{} hasn\'t finished “{}” yet.'.format(cq.taker.shown_name, cq.vquiz.title))
     new = create_cquiz(cq.vquiz, cq.taker)
     new.retake_rule = cq.retake_rule
+    #(the teacher's note to the student, and its Assign group, go with it: the owner, 2026-10-28)
+    new.assign_note, new.assign_note_at, new.assign_group = cq.assign_note, cq.assign_note_at, cq.assign_group
     #a quiz to take again comes out of the student's folders, back where they'll see it
     from .models import QuizPlacement
     QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)

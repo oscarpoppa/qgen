@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
-{% from "_macros.html" import after_quiz, attempt_links with context %}
+{% from "_macros.html" import after_quiz, attempt_links, from_teacher with context %}
 {% from "_page_thumbs.html" import page_thumbs with context %}
 {# kept up to date: grading, a regrade, the attempt deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
@@ -21,6 +21,7 @@
   </div>
 </div>
 {#- a quiz from scanned pages: the page, small, at the top in the middle; a click shows it large (the owner, 2026-10-19) #}
+{{ from_teacher(cq) }}
 <div class="no-print page-thumbs-top">{{ page_thumbs(cq.vquiz) }}</div>
 {{ transcript }}
 {% endblock %}

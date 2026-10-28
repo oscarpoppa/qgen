@@ -156,13 +156,24 @@
               at the row's right end, lines end to end; no table inside (the owner, 2026-10-21) #}
           {#- (a div: the pencil is a form, and a form ends a <p> early, which put it on a line of its own) #}
           <div class="small student-score-line"><span class="muted">Score counted:</span> {{ score_counted(g, item, rules) }}</div>
-          <ol class="small attempt-list" data-fold-body>
+          {#- open: the attempts on the left, the note to the student in a card on the right, as People's (the owner, 2026-10-28) #}
+          <div class="person-open result-open" data-fold-body><div class="person-open-facts">
+          <ol class="small attempt-list">
             {% for cq in g.attempts %}
               <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
                 {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
                 <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, item) }}</span></li>
             {% endfor %}
-          </ol>
+          </ol></div>
+          {#- the teacher's note to the student on this quiz (the newest copy's), which he/she sees; one for everyone given it in
+              the same Assign, so a change here changes it for all of them (the owner, 2026-10-28) #}
+          {%- set nq = g.latest %}{% if nq and nq.id is defined %}
+          <div class="person-note card assign-note-card" data-no-rowclick>
+            <label class="person-note-head small" for="anote-{{ nq.id }}">{{ icon('lc-sticky-note') }} Note to the student</label>
+            <textarea id="anote-{{ nq.id }}" class="person-note-text" rows="2" maxlength="4000" data-note-url="{{ url_for('qgen.save_assign_note', cqid=nq.id) }}"
+                      placeholder="The student sees this">{{ nq.assign_note or '' }}</textarea>
+            <div class="person-note-status small muted" aria-live="polite">{% if nq.assign_note_at %}Changed {{ nq.assign_note_at|when }}{% endif %}</div>
+          </div>{% endif %}</div>
         </details></td>
       {#- the newest thing that happened to any of its attempts: handed in, started, or assigned -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, count_badge, status_icon with context %}
+{% from "_macros.html" import filter_bar, count_badge, status_icon, note_pop with context %}
 {% from "_macros.html" import avatar, box_label, count_of, back_button with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, move_mini, move_folders, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
@@ -92,7 +92,9 @@
           {% for cq in g.attempts %}
             {#- (every attempt has its button, in one column under the row's own: the owner 2026-10-20;
                 before, the one the row's button already did was left out, which looked like a missing icon) #}
-            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} <span class="attempt-act">{{ action(cq, compact=true) }}</span></li>
+            {#- (the teacher's note on this attempt: its icon beside the attempt's own, showing it in a card, not one box for the whole quiz;
+                the owner, 2026-10-28) #}
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} <span class="attempt-act">{% if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'attempt-note') }}{% endif %}{{ action(cq, compact=true) }}</span></li>
           {% endfor %}
         </ol>
       </details></td>

@@ -1142,9 +1142,9 @@ ol.attempt-list::before { content: ""; position: absolute; top: 0; left: var(--l
   border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); pointer-events: none; }
 ol.attempt-list > li { padding-bottom: 2px; }
 /* (in an open row, each attempt sits centered between its lines, the last one too: the owner, 2026-10-27) */
-details.row-fold[open] > ol.attempt-list > li { margin: 0; padding-top: 8px; padding-bottom: 6px; }
-details.row-fold[open] > ol.attempt-list > li:last-child { padding-bottom: 0; }
-details.row-fold[open] > ol.attempt-list { margin-bottom: 0; }
+details.row-fold[open] > ol.attempt-list > li, .result-open ol.attempt-list > li { margin: 0; padding-top: 8px; padding-bottom: 6px; }
+details.row-fold[open] > ol.attempt-list > li:last-child, .result-open ol.attempt-list > li:last-child { padding-bottom: 0; }
+details.row-fold[open] > ol.attempt-list, .result-open ol.attempt-list { margin-bottom: 0; }
 /* (the row's cell a little shorter below them instead of a negative margin, which Firefox doesn't take; the shade
    stops above the row's outline and its bottom line) */
 tr:has(> td > details.row-fold[open] > ol.attempt-list) > td:first-child { padding-bottom: 5px; }
@@ -2968,7 +2968,7 @@ details.row-fold[open]::after { content: ""; position: absolute; z-index: -1; po
      the same everywhere: the owner, 2026-10-21) */
   border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); }
 /* (the list's own line under a heading would make it two) */
-details.row-fold[open] > ol.attempt-list::before { border-top: 0; }
+details.row-fold[open] > ol.attempt-list::before, .result-open ol.attempt-list::before { border-top: 0; }
 .quiz-rows td.quiz-sum { white-space: nowrap; }
 .quiz-rows .quiz-row-actions { justify-content: flex-end; flex-wrap: nowrap; }
 /* a button under the folder list that opens a pop-over (Just finished) */
@@ -3935,3 +3935,24 @@ details.row-fold[open]:not(:has(> [data-fold-body])) > summary + * { padding-top
 .dash-notes > li > .name-link { max-width: 14rem; }
 .dash-notes > li > .name-link strong { overflow-wrap: break-word; }
 .dash-notes > li > .dash-what .small { white-space: nowrap; }
+/* a row's note mark (Problems, Quizzes, Pictures, Files): at the right end of its name line, so the marks line up down the
+   column (the owner, 2026-10-28) */
+details.row-fold > summary > .person-note-mark { margin-left: auto; padding-left: 8px; box-sizing: content-box; align-self: center; flex: none; }
+/* a workbook's Notes card, under its page's title (the owner, 2026-10-28) */
+.scan-note > .person-note { max-width: 400px; margin: 0 0 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+/* the teacher's note to the student, under a copy's attempts on its results (the owner, 2026-10-28) */
+/* (on the right of the open row, beside the attempts, as People's Notes card: the owner, 2026-10-28) */
+.result-open { padding-top: 0; }
+/* the teacher's note to the student (the owner, 2026-10-28): a soft box with the note icon, its words kept as typed */
+.hint.teacher-note { margin: 0 0 12px; }
+.hint.teacher-note > svg.ico { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--accent); }
+.teacher-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.quiz-start .hint.teacher-note { margin: 12px 0; text-align: left; }
+/* Home's Waiting for you: a quiz's note icon at the line's right end, just before Start, as the Dashboard's Student notes
+   (the owner, 2026-10-28) */
+.dash-list > li > .home-note { margin-left: auto; }
+.dash-list > li > .home-note ~ .dash-go { margin-left: 0; }
+/* My quizzes: an attempt's note icon just left of its own icon, placed as that one is (the owner, 2026-10-28) */
+.attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 36px); }
+/* (the icons are 44px to tap on a touch screen: as far again; its own column either way, empty on an attempt with no note) */
+@media (pointer: coarse) { .attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 46px); } }

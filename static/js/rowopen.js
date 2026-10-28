@@ -32,7 +32,11 @@
     //of them, People's: the owner, 2026-10-27)
     var head = d.querySelector(':scope > summary'), top = head.getBoundingClientRect().bottom + 6;
     var own = td.getBoundingClientRect(), right = own.right, sib = td.nextElementSibling;
+    //(a results row's attempts have their icons in the icon column: its open part, with the note card on the right, stops
+    //short of that column, so the card is never under them; the owner, 2026-10-28)
+    var keepIcons = !!d.querySelector('.result-open');
     for (; sib; sib = sib.nextElementSibling) {
+      if (keepIcons && sib.matches('td.actions')) break;
       var r = sib.getBoundingClientRect();
       if (!r.width || r.left < own.right - 1 || bottomOf(sib) > top) break;
       right = r.right - parseFloat(getComputedStyle(sib).paddingRight);
