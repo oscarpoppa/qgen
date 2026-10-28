@@ -1603,3 +1603,48 @@ def test_a_read_page_with_things_to_fix_shows_a_mark_not_a_check(app_db, ai):
     page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
     assert 'scan-strip-page scan-strip-fix' in page and 'data-fix="; 1 answer box to place"' in page
     assert 'title="Page 1: read; 1 answer box to place. See page 1 full size"' in page and '<b>!</b>' in page
+
+
+def test_choices_with_no_marks_found_get_no_typing_box(app_db):
+    """A question with choices whose printed marks weren't found is asked in the list under the page, never in a guessed
+    typing box: the box drew its whole choice list in big letters over the page (the owner, 2026-10-28, "superhero trivia")."""
+    from app.qgen import scan as SC
+    qs = [{'id': 'q1', 'type': 'choice_one', 'choices': ['a', 'b'], 'box': {'left': 0.1, 'top': 0.1, 'right': 0.4, 'bottom': 0.14}},
+          {'id': 'q2', 'type': 'text', 'box': {'left': 0.1, 'top': 0.2, 'right': 0.4, 'bottom': 0.24}}]
+    slots = SC.guess_places(qs, {})
+    assert 'q1' not in slots and slots['q2']['kind'] == 'field'
+    page = {'kind': 'problems', 'qs': qs, 'slots': slots}
+    assert SC.place_of(page, {'kind': 'question', 'qs_id': 'q1', 'qtype': 'choice_one'}) is None
+    assert SC.place_of(page, {'kind': 'question', 'qs_id': 'q2', 'qtype': 'text'})[1] is True
+
+
+def test_a_pages_heading_says_what_kind_of_quiz_it_makes(app_db):
+    """In everyday words, from the checked items (the owner, 2026-10-28)."""
+    from app.qgen import scan as SC
+    q = lambda t, inc=True, kind='question': {'qtype': t, 'include': inc, 'kind': kind}  # noqa: E731
+    assert SC.kind_summary({'state': 'done', 'kind': 'problems', 'items': [q('choice_one')] * 16}) == 'Multiple choice'
+    assert SC.kind_summary({'state': 'done', 'kind': 'problems', 'items': [q('choice_one')] * 12 + [q('text')] * 4
+                            + [q('numeric', False)]}) == '12 multiple choice · 4 short answer'
+    assert SC.kind_summary({'state': 'done', 'kind': 'problems', 'items': [q('numeric')] * 3 + [q('x', kind='paper')]}) \
+        == '3 number · 1 on paper'
+    assert SC.kind_summary({'state': 'done', 'kind': 'picture', 'items': []}) == 'Picture only'
+    assert SC.kind_summary({'state': 'waiting', 'kind': 'problems', 'items': [q('text')]}) == ''
+
+
+def test_a_pages_warning_is_yellow_and_in_the_helper(app_db, ai):
+    """The reader's note on a page (e.g. a question printed with no number) is a yellow warning on the page, and the
+    Helper has a yellow line for it (the owner, 2026-10-28)."""
+    app, db = app_db
+    ai([QS_TIMES], [NUM_TIMES])
+    teacher = login(app, 'teach')
+    upload(teacher, [(picture(), 'p.png')])
+    job = job_of(db)
+    data = json.loads(job.data)
+    data['pages'][0]['notes'] = 'One question is printed without a number.'
+    job.data = json.dumps(data)
+    db.session.commit()
+    page = teacher.get('/quiz/scan/{}'.format(job.id)).data.decode()
+    assert '<p class="hint hint-warn small">' in page and 'One question is printed without a number.' in page
+    assert 'class="badge scan-kinds"' in page
+    hints = teacher.post('/quiz/scan/{}/helper'.format(job.id)).get_json()['hints']
+    assert {'level': 'warn', 'key': 'note-1', 'text': 'Page 1 has a warning: read it before you generate.'} in hints

@@ -3929,3 +3929,7 @@ details.row-fold[open]:not(:has(> [data-fold-body])) > summary + * { padding-top
   overflow: auto; padding: 8px 12px; background: var(--surface); color: var(--text); border: 1px solid color-mix(in srgb, var(--text) 60%, transparent);
   border-radius: var(--r); box-shadow: 0 6px 20px rgba(0, 0, 0, .25); }
 .note-pop-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sm); }
+/* (each line uncluttered: “changed …” on one line, a long name wrapping past 14rem rather than squeezing it: the owner, 2026-10-28) */
+.dash-notes > li > .name-link { max-width: 14rem; }
+.dash-notes > li > .name-link strong { overflow-wrap: break-word; }
+.dash-notes > li > .dash-what .small { white-space: nowrap; }

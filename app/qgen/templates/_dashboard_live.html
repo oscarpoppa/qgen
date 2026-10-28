@@ -46,7 +46,7 @@
     <summary class="dash-head">{{ box_label('lc-sticky-note', 'Student notes', count_of(noted|length, 'student', 'students'), 'h2') }}</summary>
     <div class="dash-body">
     {% if noted %}
-      <ul class="dash-list">
+      <ul class="dash-list dash-notes">
       {% for u in noted %}
         <li>{{ person_name(u, href=url_for('user.userdet', show=u.id), tip=u.teacher_note|truncate(300)) }}
           <span class="dash-what"><span class="muted small">changed {{ when(u.teacher_note_at) if u.teacher_note_at else '' }}</span></span>

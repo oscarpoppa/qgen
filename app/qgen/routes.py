@@ -1121,6 +1121,11 @@ def page_layout(vq, cq=None):
         return None
     if cq is not None and len(cq.cproblems) != len(L['ids']):
         return None
+    #(a typing box given to a question with choices, whose printed marks weren't found: dropped, so it's asked in the list
+    #under the page; in the box its whole choice list was drawn in big letters over the page, the owner 2026-10-28)
+    types = dict(db.session.query(VProblem.id, VProblem.qtype).filter(VProblem.id.in_(L['ids'])).all()) if L.get('ids') else {}
+    kinds = {n: types.get(pid) for n, pid in enumerate(L['ids'], 1)}
+    L['slots'] = [s for s in L['slots'] if not (s.get('kind') == 'field' and kinds.get(s.get('pos')) in ('choice_one', 'choice_many', 'truefalse'))]
     L['by_pos'] = {s['pos']: s for s in L['slots']}
     return L
 

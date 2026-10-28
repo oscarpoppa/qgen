@@ -278,7 +278,7 @@ def review_page(job, data, problems=None, status=200):
                            reused=SC.reused_as(data),
                            matches=SC.reused_as(data, ignore_new=True), uses=SC.use_choices(data), leads=SC.lead_of(data),
                            qtypes={k: SC.REGISTRY[k].label for k in SC.QTYPES}, kinds=SC.SCAN_KINDS,
-                           place_of=SC.place_of, label_of=SC.label_of, no_place=SC.NO_PLACE,
+                           place_of=SC.place_of, label_of=SC.label_of, no_place=SC.NO_PLACE, kind_summary=SC.kind_summary,
                            missing=SC.missing_places(data),
                            unread=[p['n'] for p in data['pages'] if p['state'] not in ('done', 'saved')]), status
 

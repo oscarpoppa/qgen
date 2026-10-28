@@ -60,6 +60,7 @@ def page_minutes():
 
 DRAWS = 200             # versions drawn to check a problem's random values
 QTYPES = ('numeric', 'text', 'choice_one', 'choice_many', 'truefalse', 'essay')  # typed kinds a scanned item can be
+CHOICE_TYPES = ('choice_one', 'choice_many', 'truefalse')  # answered by checking a printed choice, never typed in a box
 VALUE_KEYS = ('name', 'kind', 'min', 'max', 'step', 'places', 'items', 'pick_n', 'formula', 'different_from', 'nonzero')
 SCAN_KINDS = ('whole', 'decimal', 'list', 'calc')  # value kinds offered for workbook pages
 
@@ -946,6 +947,11 @@ def helper_hints(job, data, urls):
                 steps = ['Wait until every page has been read, then press \u201cRead this page\u201d.']
             hints.append({'level': 'error', 'key': 'page-{}'.format(n), 'text': text, 'steps': steps})
             continue
+        #(the reader's note on a page, e.g. a question printed with no number: a yellow line, so it's read before generating;
+        #the owner, 2026-10-28)
+        if (p.get('notes') or '').strip():
+            hints.append({'level': 'warn', 'key': 'note-{}'.format(n),
+                          'text': 'Page {} has a warning: read it before you generate.'.format(n)})
         bad = [e for e in (checked_item(it)['errors'] for it in p.get('items') or [] if it.get('include')) if e]
         heads, steps = [], []
         if gaps.get(n):
@@ -1293,6 +1299,10 @@ def guess_places(problems, slots, covered=()):
     boxes = [q for q in problems if isinstance(q.get('box'), dict)]
     for q in boxes:
         if q['id'] in slots:
+            continue
+        #(never a typing box for choices whose marks weren't found: it's asked in the list under the page instead;
+        #a box drew the whole choice list in big letters over the page, the owner 2026-10-28, "superhero trivia")
+        if q.get('type') in CHOICE_TYPES:
             continue
         b = q['box']
         #(the nearest problem to its right on the same line: the box stops short of it)
@@ -1984,6 +1994,31 @@ def use_choices(data):
 NO_PLACE = 'No place on the page yet. Drag its blue box onto its blank.'
 
 
+#(what a page's quiz will ask, in everyday words, on its heading: the owner, 2026-10-28)
+KIND_WORDS = {'numeric': 'number', 'text': 'short answer', 'choice_one': 'multiple choice', 'choice_many': 'check all that apply',
+              'truefalse': 'true or false', 'essay': 'long answer'}
+
+
+def kind_summary(page):
+    """The kind of quiz a read page makes, for its heading: "Multiple choice", "12 multiple choice · 4 short answer",
+    "Picture only"; '' for a page not read yet or with nothing checked."""
+    if page.get('state') != 'done':
+        return ''
+    if page.get('kind') != 'problems':
+        return 'Picture only'
+    counts = {}
+    for it in page.get('items') or []:
+        if it.get('include'):
+            w = 'on paper' if it.get('kind') == 'paper' else KIND_WORDS.get(it.get('qtype'), 'other')
+            counts[w] = counts.get(w, 0) + 1
+    if not counts:
+        return ''
+    if len(counts) == 1:
+        w = next(iter(counts))
+        return w[0].upper() + w[1:]
+    return ' \u00b7 '.join('{} {}'.format(k, w) for w, k in sorted(counts.items(), key=lambda x: -x[1]))
+
+
 def place_of(page, item):
     """Where a drafted problem is answered on its page (the owner, 2026-10-20: a scanned quiz has no
     ordinary questions; every blank gets a place, found or put there by hand): (box, found), or
@@ -1997,6 +2032,9 @@ def place_of(page, item):
         return None
     slot = page['slots'].get(item['qs_id']) or {}
     if slot.get('kind') in ('choices', 'paper'):
+        return None
+    #(choices whose printed marks weren't found: no box; asked in the list under the page, the owner 2026-10-28)
+    if item.get('qtype') in CHOICE_TYPES:
         return None
     if slot.get('kind') == 'field' and isinstance(slot.get('answer'), dict):
         return slot['answer'], True

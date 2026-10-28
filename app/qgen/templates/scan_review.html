@@ -342,6 +342,8 @@
           <span class="mark mark-ok scan-page-ok" data-errors="{{ 1 if pe.errors else 0 }}" title="Page {{ n }} is ready to generate"{% if pe.errors or missing|selectattr(0, 'equalto', n)|list %} hidden{% endif %}>{{ icon_label('lc-check', 'Ready to generate') }}</span>
           {#- (the ready mark right after the name, then the count, the same order on every page's heading: the owner, 2026-10-27) #}
           {% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
+          {#- (what kind of quiz it makes, in everyday words: the owner, 2026-10-28) #}
+          {%- set ks = kind_summary(page) %}{% if ks %}<span class="badge scan-kinds">{{ ks }}</span>{% endif %}
           {#- (half of a photo of two pages, cut at the spine: the owner, 2026-10-23) #}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
           {#- (a page with no problems joined to the next: its picture starts that quiz, the owner 2026-10-27) -#}
@@ -390,7 +392,7 @@
             </details>
           </div>
           <div class="scan-right">
-            {% if page.notes %}<p class="hint small">{{ icon('note') }} {{ page.notes }}</p>{% endif %}
+            {#- (the reader's note as a warning, yellow like the other scan warnings: the owner, 2026-10-28) #}{% if page.notes %}<p class="hint hint-warn small">{{ icon('warning') }} {{ page.notes }}</p>{% endif %}
             {% if page.kind == 'problems' %}
               <div class="scan-quiz">
                 <label class="label" for="{{ pre }}title">Quiz title</label>
