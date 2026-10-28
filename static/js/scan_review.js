@@ -493,6 +493,9 @@
       });
       strip.innerHTML = newStrip.innerHTML;
       oldEnd.replaceWith(document.importNode(newEnd, true));
+      //(step 3's line too, “once every page has been read” → how to order and join: the owner, 2026-10-27)
+      var oldStep = form.querySelector('.scan-step-head'), newStep = doc.querySelector('#scan-form .scan-step-head');
+      if (oldStep && newStep) oldStep.replaceWith(document.importNode(newStep, true));
       refreshSave();
       form.dispatchEvent(new Event('helper-refresh'));
       return true;

@@ -919,6 +919,11 @@ def helper_hints(job, data, urls):
         names = str(now[0]) if len(now) == 1 else '{} and {}'.format(', '.join(map(str, now[:-1])), now[-1])
         hints.append({'level': 'tip', 'key': 'reading', 'text': 'Page{} {} {} being read\u2026'.format(
             '' if len(now) == 1 else 's', names, 'is' if len(now) == 1 else 'are')})
+    #(step 3 of the workbook page, once every page is read, two or more not made yet: the owner, 2026-10-27, "the Helper should
+    #be telling me what to do for step 3")
+    if not reading_now and sum(1 for p in pages if p.get('state') != 'saved') > 1:
+        hints.append({'level': 'tip', 'key': 'step-3', 'text': 'Step 3: put the pages in order and join any that make one quiz. '
+                      'Then press \u201cGenerate quiz\u201d on each.'})
     for p in pages:
         n, state = p['n'], p.get('state')
         #(nothing more about a page being read or made already: its card shows how it's going)
@@ -1890,7 +1895,7 @@ def apply_names(data, plan=None):
             lead['title'] = quiz
         k = 0
         for page in pages:
-            for item in page['items']:
+            for item in page.get('items') or []:  # (a cover has none)
                 if not item.get('include'):
                     continue
                 k += 1
@@ -1911,7 +1916,12 @@ def quiz_groups(data):
     it's joined to the one before; a page with no questions whose picture is kept is a quiz of its
     own (an Image only one)."""
     groups = []
+    pages_by_n = {p['n']: p for p in data['pages']}
+    cover = None  # a page with no problems joined to the next one: its picture starts that page's quiz
     for page in data['pages']:
+        if is_cover(page, pages_by_n.get(page['n'] + 1)):
+            cover = page
+            continue
         if image_page(page):
             groups.append((page, [page]))
             continue
@@ -1926,11 +1936,23 @@ def quiz_groups(data):
         #(joined only to the page right before it, when that one is in a quiz with problems: a join made before the
         #pages were read is dropped if the page before turned out to be a picture or nothing to use; the owner 2026-10-26)
         before = page['n'] - 1
-        if page.get('join_prev') and prev is not None and prev[1][-1]['n'] == before:
+        if cover is not None and cover['n'] == before:
+            #(its quiz opens with the page before's picture; the quiz is still this page's, its name and settings)
+            groups.append((page, [cover, page]))
+        elif page.get('join_prev') and prev is not None and prev[1][-1]['n'] == before:
             prev[1].append(page)
         else:
             groups.append((page, [page]))
+        cover = None
     return groups
+
+
+def is_cover(page, after):
+    """A read page with no problems (a picture, a cover, nothing to use) joined to the page after it, a page with problems:
+    its picture starts that page's quiz (the owner, 2026-10-27; it couldn't be joined)."""
+    return bool(after) and after.get('join_prev') and page.get('state') == 'done' and page.get('kind') != 'problems' \
+        and page.get('save') is not False and after.get('state') == 'done' and after.get('kind') == 'problems' \
+        and after.get('save') is not False and any(i['include'] for i in after.get('items') or [])
 
 
 def lead_of(data):
@@ -1995,7 +2017,7 @@ def missing_places(data):
     out = []
     for _lead, pages in quiz_groups(data):
         for page in pages:
-            for i, item in enumerate(page['items']):
+            for i, item in enumerate(page.get('items') or []):
                 place = place_of(page, item) if item.get('include') else None
                 if place and not place[1]:
                     out.append((page['n'], i, label_of(page, item)))
@@ -2266,6 +2288,21 @@ def _save_all(job, data, author, made_so_far):
             by_quiz.append([vp.id])
             continue
         for page in pages:
+            if page.get('kind') != 'problems':
+                #a cover joined to this quiz: its picture first, as an Image only problem (the owner, 2026-10-27); the picture
+                #kept on it, else the whole page
+                files = (kept_of.get(page['n']) or [])[:1] or [save_picture(job, page['n'], {'left': 0, 'top': 0, 'right': 1, 'bottom': 1},
+                                                                           '{}-p{}-page'.format(book, page['n']))]
+                if files[0] not in pictures:
+                    pictures.append(files[0])
+                vp = VProblem(author_id=author.id, from_scan=True)
+                errors = S.save_problem(vp, 'look', '{}-1'.format(page.get('title') or lead['title'])[:64], '', '',
+                                        {'markup': 'friendly', 'values': [], 'images': [{'file': f, 'label': ''} for f in files]})
+                if errors:
+                    raise ScanError('“{}” couldn’t be saved: {}'.format(page.get('title') or lead['title'], ' '.join(errors)))
+                made.append(vp.id)
+                ids.append(vp.id)
+                continue
             for i, item in enumerate(page['items']):
                 if not item['include']:
                     continue

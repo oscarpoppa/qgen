@@ -207,6 +207,9 @@
       {#- a page that can be in a join: not read yet, being read, or read as a problems page (a read picture or empty page
           drops the join, as quiz_groups does when it builds the quizzes: the code critic, 2026-10-26) #}
       {%- macro joinable(x) %}{{ '1' if x.state in ('waiting', 'error', 'reading') or (x.state == 'done' and x.kind == 'problems') else '' }}{% endmacro %}
+      {#- the page before a join may also be a read page with no problems (a cover, a picture): its picture starts the quiz
+          (the owner, 2026-10-27; scan.is_cover) #}
+      {%- macro leadable(x) %}{{ '1' if joinable(x)|trim or (x.state == 'done' and x.kind != 'problems' and x.save is not false) else '' }}{% endmacro %}
       {#- the order and the joins, a step of its own to look at, numbered after the upload card's 1 and 2 (the owner,
           2026-10-27: it was easy to miss; arranging happens here, once read, not before uploading) #}
       {%- if not trashed %}
@@ -224,10 +227,10 @@
           {#- (pages not read yet can be joined already; once read, both must be problem pages, or the join is dropped:
               the owner, 2026-10-26) #}
           {%- set ok_p = p.state in ('waiting', 'error') or (p.state == 'done' and p.kind == 'problems') %}
-          {%- set ok_b = before.state in ('waiting', 'error', 'reading') or (before.state == 'done' and before.kind == 'problems') %}
+          {%- set ok_b = leadable(before)|trim %}
           {%- set can_join = movable and ok_p and ok_b %}
           {#- (joined only when both pages are read, the same test as the bar under them: the code critic, 2026-10-25) #}
-          {%- set joined_now = p.join_prev and joinable(p)|trim and joinable(before)|trim %}
+          {%- set joined_now = p.join_prev and joinable(p)|trim and leadable(before)|trim %}
           <li class="scan-join-spot" aria-hidden="false">
             {% if p.state != 'saved' %}<input type="hidden" name="p{{ p.n }}-join_prev" value="{{ '1' if p.join_prev else '' }}">{% endif %}
             <button type="button" class="scan-join{% if joined_now %} is-joined{% endif %}" data-join="{{ p.n }}" aria-pressed="{{ 'true' if joined_now else 'false' }}"
@@ -242,7 +245,7 @@
         {#- joined pages: a whole chain between them and one bar under both (the owner, 2026-10-25: a gray or blue chain
             alone didn't show it) #}
         {%- set nxt = data.pages[loop.index0 + 1] if not loop.last else none %}
-        {%- set join_cls = (' is-joined-prev' if p.join_prev and not loop.first and joinable(p)|trim and joinable(data.pages[loop.index0 - 1])|trim else '') ~ (' is-joined-next' if nxt and nxt.join_prev and joinable(nxt)|trim and joinable(p)|trim else '') %}
+        {%- set join_cls = (' is-joined-prev' if p.join_prev and not loop.first and joinable(p)|trim and leadable(data.pages[loop.index0 - 1])|trim else '') ~ (' is-joined-next' if nxt and nxt.join_prev and joinable(nxt)|trim and leadable(p)|trim else '') %}
         <li class="scan-strip-page scan-strip-{{ shown_state }}{{ join_cls }}" data-n="{{ p.n }}"{% if f %} data-fix="{{ fix_words }}"{% endif %}{% if movable and p.state != 'saved' %} draggable="true" title="Drag to change the order"{% endif %}>
           {#- how it went as the thumbnail's outline, its words in the tooltip (the owner, 2026-10-25: no words under it) #}
           <a href="{{ url_for('qgen.scan_page_image', job_id=job.id, n=p.n) }}" data-page-zoom data-state-tip="See page {{ p.n }} full size" title="Page {{ p.n }}: {{ ('read' ~ fix_words) if f else {'waiting': 'not read yet', 'reading': 'reading…', 'done': 'done ✓', 'error': 'didn’t make it', 'saved': 'generated'}[p.state] }}. See page {{ p.n }} full size"><img class="scan-strip-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=job.id, n=p.n) }}" alt="Page {{ p.n }}" loading="lazy"></a>
@@ -329,7 +332,7 @@
       <details class="box card scan-page" id="scan-page-{{ n }}" data-page="{{ n }}" data-box="scan-page:{{ n }}" data-fixed{% if pb.bad or pb.fix %} open data-keep-open{% endif %}>
         <summary>
           {#- (its thumbnail where the page icon was: the owner, 2026-10-25) #}
-          <span class="fold" aria-hidden="true"></span>{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>{% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
+          <span class="fold" aria-hidden="true"></span>{{ state_badge(page, fix) }}{{ thumb }}<h2 class="box-title">Page {{ n }}: {{ page.title }}</h2>
           {#- a green check mark on a page read and with nothing left to fix (the owner, 2026-10-21);
               scan_review.js shows it once the page's last answer box is placed #}
           {#- (the check inside the loop, not as its filter: there loop.index0 is the pages', the code critic 2026-10-22) #}
@@ -337,9 +340,13 @@
           {#- how many of its problems need fixing (the owner, 2026-10-25, CL1); scan_review.js keeps it current #}
           <span class="badge badge-warn" data-fix-count{% if not pe.count %} hidden{% endif %}>{{ pe.count }} to fix</span>
           <span class="mark mark-ok scan-page-ok" data-errors="{{ 1 if pe.errors else 0 }}" title="Page {{ n }} is ready to generate"{% if pe.errors or missing|selectattr(0, 'equalto', n)|list %} hidden{% endif %}>{{ icon_label('lc-check', 'Ready to generate') }}</span>
+          {#- (the ready mark right after the name, then the count, the same order on every page's heading: the owner, 2026-10-27) #}
+          {% if page.kind == 'problems' %}<span class="badge box-count">{{ count_of(page['items']|length, 'item', 'items') }}</span>{% endif %}
           {#- (half of a photo of two pages, cut at the spine: the owner, 2026-10-23) #}
           {% if page.spread %}<span class="badge" title="This page and its neighbor were cut from one photo of two pages">From a photo of two pages</span>{% endif %}
-          {% if page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
+          {#- (a page with no problems joined to the next: its picture starts that quiz, the owner 2026-10-27) -#}
+          {% if page.kind != 'problems' and leads.get(n) and leads[n] != n %}<span class="badge badge-accent" title="Its picture is the first thing in the quiz from page {{ leads[n] }}">Starts the quiz from page {{ leads[n] }}</span>
+          {%- elif page.kind == 'picture' %}<span class="badge">Picture only</span>{% elif page.kind == 'other' %}<span class="badge">Nothing to use</span>{% elif leads.get(n) and leads[n] != n %}<span class="badge" title="Its problems go in the quiz from page {{ leads[n] }}">Joined to page {{ leads[n] }}</span>{% endif %}
           {#- each page made into its quiz on its own (the owner, 2026-10-25: it was one Generate for every checked page); a joined
               page goes with its quiz's first page, and the button waits for every answer box of the pages in it #}
           {%- set joined = page.kind == 'problems' and leads.get(n) and leads[n] != n %}
@@ -349,6 +356,7 @@
           <span class="box-end"><button class="btn btn-sm" name="generate" value="{{ n }}" data-generate="{{ n }}" data-group="{{ grp.ns|join(' ') }}" data-tip="Make this page’s quiz and problems now"
             {%- if joined %} disabled data-joined title="Joined with page {{ leads[n] }}"
             {#- (a page that makes no quiz: nothing to use, or none of its problems checked; the user critic, 2026-10-25) #}
+            {%- elif page.kind != 'problems' and leads.get(n) %} disabled data-nothing title="Its picture goes in the quiz from page {{ leads[n] }}: use page {{ leads[n] }}’s Generate quiz"
             {%- elif leads.get(n) != n %} disabled data-nothing title="Nothing on this page to make into a quiz"
             {%- elif fx.n %} disabled title="Fix the problems marked ! first"
             {%- elif grp.gaps %} disabled title="Every problem needs its place on the page first ({{ grp.gaps|join(', ') }})"
