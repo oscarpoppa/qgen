@@ -3402,7 +3402,9 @@ th.tick-col input.check-all { margin: 0; }
 .people-table .stacked-sums { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 /* (its Name column narrower than a list's usual 30%, the room going to the columns after it: the
    owner, 2026-10-21) */
-table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width: 16%; }
+table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width: 19rem; }
+/* (one fixed width, room for a 10.5rem name and the cap and note marks, so the column is the same on every list whatever its
+   longest name; it was 16%, wider when a long name needed it: the owner, 2026-10-28) */
 /* an open row's groups (each quiz under a person, each student under a quiz): the group's heading flush left with its name in bold,
    its attempts indented under a thin line, and a hairline between groups: nothing colored or at an odd edge (the owner, 2026-10-24:
    the bands and the thick colored line made the left edge zigzag; they were the 2026-10-21 look) */
