@@ -3894,3 +3894,9 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .person-role-icon.person-slot { width: 18px; height: 18px; }
 .person-note-mark { width: 14px; justify-content: center; }
 .person-note-mark.person-slot { height: 14px; }
+
+/* the workbook page's step 3, Order and join the pages, above the page thumbnails (the owner, 2026-10-27) */
+.scan-step-head { margin: 12px 0 6px; }
+.scan-step-head .card-head { margin: 0; }
+.scan-step-head > p { margin: 2px 0 0; }
+.scan-step-head h2 { margin: 0; }

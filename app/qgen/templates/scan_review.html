@@ -207,6 +207,14 @@
       {#- a page that can be in a join: not read yet, being read, or read as a problems page (a read picture or empty page
           drops the join, as quiz_groups does when it builds the quizzes: the code critic, 2026-10-26) #}
       {%- macro joinable(x) %}{{ '1' if x.state in ('waiting', 'error', 'reading') or (x.state == 'done' and x.kind == 'problems') else '' }}{% endmacro %}
+      {#- the order and the joins, a step of its own to look at, numbered after the upload card's 1 and 2 (the owner,
+          2026-10-27: it was easy to miss; arranging happens here, once read, not before uploading) #}
+      {%- if not trashed %}
+      <div class="scan-step-head">
+        <div class="card-head"><span class="step-num" aria-hidden="true">3</span><h2>Order and join the pages</h2></div>
+        <p class="muted small">{% if reading %}You can do this once every page has been read.{% else %}Drag a page to move it. Click the chain between two pages to make them one quiz.{% endif %}</p>
+      </div>
+      {%- endif %}
       <ol class="scan-strip" aria-label="The pages of this workbook" data-arrange="{{ url_for('qgen.scan_arrange', job_id=job.id) }}">
       {% for p in data.pages %}
         {% if not loop.first %}
