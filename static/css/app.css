@@ -3901,3 +3901,4 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .scan-step-head > p { margin: 2px 0 0; }
 .scan-step-head h2 { margin: 0; }
 .scan-step-head.is-off .card-head { opacity: .5; }  /* (one page: step 3 grayed, the line says why) */
+.pick-chip .chip-times { margin-left: 4px; font-size: var(--fs-xs); min-width: 16px; height: 16px; padding: 0 4px; line-height: 16px; }  /* (how many times the quiz uses it: the owner, 2026-10-27) */

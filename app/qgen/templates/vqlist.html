@@ -3,7 +3,8 @@
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {#- a problem's chip in an opened quiz row, opening it on Problems #}
-{% macro problem_chip(p) %}<a class="pick-chip row-quiz-chip" href="{{ url_for('qgen.list_vprob', vpid=p.id) }}" title="Open “{{ p.title }}” on Problems">{{ icon('lc-puzzle') }} {{ p.title }}</a>{% endmacro %}
+{#- times: how many times the quiz uses it, a small count circle after it when more than once (the owner, 2026-10-27) #}
+{% macro problem_chip(p, times=1) %}<a class="pick-chip row-quiz-chip" href="{{ url_for('qgen.list_vprob', vpid=p.id) }}" title="Open “{{ p.title }}” on Problems">{{ icon('lc-puzzle') }} {{ p.title }}{% if times > 1 %} <span class="badge box-count chip-times" title="In this quiz {{ times }} times" aria-label="{{ times }} times">{{ times }}</span>{% endif %}</a>{% endmacro %}
 {% block body_attrs %}{{ watch('quizzes') }}{% endblock %}
 {# the folder list beside the quizzes needs the room: the whole width of the window #}
 {% block main_class %} container-wide{% endblock %}
@@ -36,8 +37,8 @@
             </ul>
             {#- its problems as chips, the first 10, then “+N more” opening the rest in a card that pops out
                 over the row (static/js/chipcap.js; the owner, 2026-10-26; the Problems column keeps just the number) #}
-            {%- set pids = [] %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% endfor %}{% endfor %}
-            {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid]) }}{% endfor %}</div>{% else %}<div class="small row-quizzes row-problems">Problems: <span class="no-data" title="No problems yet">—</span></div>{% endif %}
+            {%- set pids = [] %}{% set times = {} %}{% for e in entries %}{% for pid in (e['from'] if layout.is_group(e) else [e]) %}{% if pid in byid and pid not in pids %}{% set _ = pids.append(pid) %}{% endif %}{% set _ = times.update({pid: times.get(pid, 0) + 1}) %}{% endfor %}{% endfor %}
+            {%- if pids %}<div class="small row-quizzes row-problems" data-chip-cap="10">Problems: {% for pid in pids %}{{ problem_chip(byid[pid], times.get(pid, 1)) }}{% endfor %}</div>{% else %}<div class="small row-quizzes row-problems">Problems: <span class="no-data" title="No problems yet">—</span></div>{% endif %}
             {%- if fk %}{{ folder_chips(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}</details></td>
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.create_date.isoformat() if item.create_date else '' }}">{{ item.create_date|when('date') if item.create_date else '' }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
