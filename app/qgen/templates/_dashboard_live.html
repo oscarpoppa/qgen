@@ -41,14 +41,15 @@
     </div>
   </details>
   {#- students with a teacher's note, after Site at a glance, folded (the owner, 2026-10-28): the name and when the note
-      changed, the note in the name's tooltip; the name opens People with that row open, where the note is (?show=) #}
+      changed; the name opens People with that row open, where the note is (?show=), its tooltip saying so (not the note:
+      the owner, 2026-10-28) #}
   <details class="box card dash-card" data-elastic="notes" data-elastic-dir="v" data-box="notes" data-follows="glance">
     <summary class="dash-head">{{ box_label('lc-sticky-note', 'Student notes', count_of(noted|length, 'student', 'students'), 'h2') }}</summary>
     <div class="dash-body">
     {% if noted %}
       <ul class="dash-list dash-notes">
       {% for u in noted %}
-        <li>{{ person_name(u, href=url_for('user.userdet', show=u.id), tip=u.teacher_note|truncate(300)) }}
+        <li>{{ person_name(u, href=url_for('user.userdet', show=u.id), tip='Open ' ~ u.shown_name ~ '’s row on People') }}
           <span class="dash-what"><span class="muted small">changed {{ when(u.teacher_note_at) if u.teacher_note_at else '' }}</span></span>
           {#- the note icon shows the note in a card over the page (static/js/dashboard.js); the name opens the row on People
               (the owner, 2026-10-28) #}

@@ -434,7 +434,8 @@
     row.appendChild(close);
     t.appendChild(title); t.appendChild(text); t.appendChild(row);
     box.appendChild(t);
-    //stays until dismissed or opened: easy to miss otherwise
+    //(gone after 30 seconds if it isn't dismissed or opened first: the owner, 2026-10-28; it stayed until then)
+    setTimeout(function () { if (t.parentNode) t.remove(); }, 30000);
   }
 
   function pulse(p) {
