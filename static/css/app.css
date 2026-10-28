@@ -3910,3 +3910,7 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 @media (max-width: 640px) { .level-buttons.level-in-tab { display: inline-flex; } }
 @container listarea (max-width: 860px) { .level-buttons.level-in-tab { display: inline-flex; } }
 @container page (max-width: 780px) { .level-buttons.level-in-tab { display: inline-flex; } }
+
+/* an open row with no [data-fold-body] (Quizzes, Problems...): its contents start a little under the line, as People's do
+   (the owner, 2026-10-27) */
+details.row-fold[open]:not(:has(> [data-fold-body])) > summary + * { padding-top: 14px; }

@@ -121,7 +121,10 @@
     if (!row || !d.open || !d.offsetParent) return null;
     var r = row.getBoundingClientRect(), e = d.getBoundingClientRect();
     var start = d.querySelector('[data-fold-body]'), sum = d.querySelector(':scope > summary');
-    var top = start ? start.getBoundingClientRect().top : sum ? sum.getBoundingClientRect().bottom : e.top;
+    //(no [data-fold-body]: the line where the contents start, under the heading's own bottom margin, as on People; it ran
+    //along the heading's bottom: the owner, 2026-10-27)
+    var top = start ? start.getBoundingClientRect().top
+      : sum ? sum.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(sum).marginBottom) || 0) : e.top;
     var set = {};
     set['--body-top'] = Math.round(top - e.top) + 'px';
     //(just inside the row's own outline)
