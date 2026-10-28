@@ -376,7 +376,9 @@
   //a click or tap on the box (not on its thumbnails' "more") chooses files, as the Pictures drop
   //zones do (the owner, 2026-10-19)
   var box = document.getElementById('scan-drop');
-  box.addEventListener('click', function (e) { if (e.target !== files) window.qgenOpenPicker(files); });
+  //(not a click on its hidden inputs: "Choose a folder" opens the folder one by clicking it, and that click came here
+  //too and opened the files' picker as well, two pickers at once; the owner, 2026-10-27)
+  box.addEventListener('click', function (e) { if (!(e.target.closest && e.target.closest('input'))) window.qgenOpenPicker(files); });
   box.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.qgenOpenPicker(files); }
   });
