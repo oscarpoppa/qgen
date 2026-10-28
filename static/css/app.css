@@ -3357,6 +3357,8 @@ table.pick-table img { width: 40px; height: 40px; object-fit: cover; border-radi
 /* a title in two parts: what the page is on the top line, the thing's name under it (Quiz history) */
 h1.title-two > .title-kind { display: block; white-space: nowrap; }
 h1.title-two > .title-name { display: block; font-size: var(--fs-lg); margin-top: 2px; }  /* (smaller, so a long name wraps as little as it can: the owner, 2026-10-21) */
+/* (a student's picture before his/her name on Student history: the owner, 2026-10-28) */
+h1.title-two > .title-name:has(> .avatar) { display: flex; align-items: center; gap: 8px; }
 /* (Grading's open row: its Grade icons right under the row's History icon, no scroll bar room) */
 .grading-rows details.grading-group > .answer-rows { padding-right: 0; }
 /* the checked bar's "With checked (3)" dialog: its actions one under another, each its own button
