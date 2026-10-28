@@ -572,7 +572,8 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">sam</span></h1>' in page
+    assert '<h1 class="title-two"><span class="title-kind">Student history:</span> <span class="title-name">' in page
+    assert '<span>sam</span></span></h1>' in page  # (his/her picture before the name: the owner, 2026-10-28)
     assert '<title>Student history: sam' in page
     # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
     # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder

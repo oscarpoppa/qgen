@@ -119,6 +119,14 @@ def when(d, now):
     return '{:%b} {}'.format(d, d.day)
 
 
+def noted_students():
+    """Students with a teacher's note, the newest-changed note first (the Dashboard's Student notes card; the owner,
+    2026-10-28)."""
+    return (User.query.filter(db.or_(User.is_admin.is_(False), User.is_admin.is_(None)), User.archived_at.is_(None),
+                              User.teacher_note.isnot(None), User.teacher_note != '')
+            .order_by(User.teacher_note_at.desc()).all())
+
+
 def site_glance(now):
     """Counts and settings at a glance."""
     month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

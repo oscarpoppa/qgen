@@ -25,7 +25,11 @@
   //not while a question is being asked ("Unpin this message?"): its form is in the part
   //that refreshes, and a form that's been replaced can't be sent. It refreshes as soon as
   //the question is answered.
-  function busy() { return !!document.querySelector('dialog[open]'); }
+  //(or a note's card is up, Student notes: it would be replaced and close; the owner, 2026-10-28)
+  function busy() {
+    if (document.querySelector('dialog[open]')) return true;
+    try { return !!document.querySelector('.note-pop:popover-open'); } catch (e) { return false; }
+  }
   var waiting = false, lastHtml = null, lastRefresh = Date.now(), soonTimer = null;
   //(after an action done in place on the Dashboard, e.g. Unpin: redrawn now, static/js/inplace.js; the owner, 2026-10-27)
   window.qgenDashRefresh = function () { lastHtml = null; refresh(); };
@@ -104,5 +108,20 @@
     soonTimer = setTimeout(function () { soonTimer = null; refresh(); }, Math.max(0, lastRefresh + 1500 - Date.now()));
   });
   document.addEventListener('close', function () { if (waiting) setTimeout(refresh, 0); }, true);
+  //a student's note in a card by its icon (Student notes, the owner 2026-10-28): the browser's own pop-over, above the
+  //list that scrolls, closed by a click outside it or Esc; placed under the icon, kept inside the window
+  document.addEventListener('toggle', function (e) {
+    var pop = e.target;
+    if (!pop.matches || !pop.matches('.note-pop')) return;
+    if (e.newState !== 'open') { if (waiting) setTimeout(refresh, 0); return; }
+    var btn = document.querySelector('[popovertarget="' + pop.id + '"]');
+    if (!btn) return;
+    var b = btn.getBoundingClientRect(), r = pop.getBoundingClientRect();
+    var left = Math.min(Math.max(8, b.right - r.width), innerWidth - r.width - 8);
+    var top = b.bottom + 4;
+    if (top + r.height > innerHeight - 8 && b.top - r.height - 4 > 8) top = b.top - r.height - 4;
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }, true);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();

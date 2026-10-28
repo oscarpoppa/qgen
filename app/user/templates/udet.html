@@ -29,7 +29,7 @@
             they counted attempts, retakes too) #}{% set latest = {} %}{% for c in item.cquizzes|sort(attribute='id') %}{% set _ = latest.update({c.vquiz_id: c.status}) %}{% endfor %}
         {% set sum_going = latest.values()|select('in', ['started', 'review'])|list|length %}{% set sum_finished = latest.values()|select('equalto', 'completed')|list|length %}
         {% set sum_fresh = latest.values()|select('equalto', 'new')|list|length %}{% set sum_avg = (sum_done|map('float')|sum) / (sum_done|length) if sum_done else none %}{% endif %}
-        <tr{% if not in_archive %} class="result-item"{% endif %} data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}">
+        <tr{% if not in_archive %} class="result-item"{% endif %} data-box="user:{{ item.id }}" data-name="{{ item.username|lower }} {{ (item.nickname or '')|lower }}"{% if request.args.get('show') == item.id|string %} data-show{% endif %}>
           {# checked people can be given a quiz together (the bar above the list) #}
           <td class="tick-col"><input type="checkbox" class="pick-person" name="users" value="{{ item.id }}" aria-label="Check {{ item.shown_name }}"></td>
           <td data-label="Name"><details class="box row-fold" data-box="user-row:{{ item.id }}"><summary><span class="fold" aria-hidden="true"></span>

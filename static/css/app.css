@@ -1585,15 +1585,9 @@ html.grip-resizing, html.grip-resizing * { cursor: row-resize !important; user-s
 /* My quizzes: how many new (not started) quizzes a folder holds */
 .side-new-badge { flex: 0 0 auto; font-size: var(--fs-xs); padding: 1px 6px; margin: 0 2px 0 4px; white-space: nowrap; }
 
-/* the Archive: its Quiz column is just a title; where the row of buttons wouldn't fit beside
-   the rest (yet the list isn't cards), they make a column instead, all one width */
+/* the Archive: its Quiz column is just a title (its row icons on one line like every list's; the column of word buttons,
+   all one width, stretched each icon to 96px and pushed them past the table once they were icons: the owner, 2026-10-28) */
 .folder-main table.archive-table td[data-label="Quiz"] { min-width: 7rem; }
-@container listarea (min-width: 861px) and (max-width: 1040px) {
-  .archive-table td.actions { width: 1%; }
-  .archive-table td.actions > * { display: block; margin: 0 0 6px; }
-  .archive-table td.actions > :last-child { margin-bottom: 0; }
-  .archive-table td.actions .btn { width: 100%; text-align: center; }
-}
 /* a row's buttons sit level with the first line of its words */
 td.actions { padding-top: 5px; padding-bottom: 5px; }
 /* "+ Add…" lists all the same width; the problem count stays on one line */
@@ -3428,6 +3422,15 @@ table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width
 /* (the cap and the note in a fixed column at the name cell's right edge, so each lines up down the list whatever the name's length,
    with room before “Created”: the owner, 2026-10-28) */
 .people-table .person-line > .person-role-icon { margin-left: auto; }
+.people-table .person-line > .box-title { flex: none; max-width: 10.5rem; overflow-wrap: break-word; }  /* (the name on one line, as before the marks' column;
+   past 10.5rem it wraps, so a very long name doesn't squeeze the rest of the table: the owner, 2026-10-28) */
+/* (the Name column at least as wide as the whole name and its marks, so nothing runs into “Created”; a card's width is fixed,
+   so a long name breaks between words there and the marks stay inside it) */
+table.people-table details.row-fold > summary > .person { min-width: max-content; }
+@container listarea (max-width: 860px) {
+  table.people-table details.row-fold > summary > .person { min-width: 0; }
+  .people-table .person-line > .box-title { flex: 0 1 auto; }
+}
 .people-table .person .box-title { overflow-wrap: normal; word-break: normal; }
 table.people-table td.person-folders { min-width: 0; max-width: 16rem; }
 @container listarea (max-width: 1080px) {
@@ -3919,3 +3922,10 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 /* an open row with no [data-fold-body] (Quizzes, Problems...): its contents start a little under the line, as People's do
    (the owner, 2026-10-27) */
 details.row-fold[open]:not(:has(> [data-fold-body])) > summary + * { padding-top: 14px; }
+
+/* the Dashboard's Student notes: a student's note in a card over the page, from the note icon (the browser's pop-over,
+   placed by static/js/dashboard.js; the owner, 2026-10-28) */
+.note-pop { position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(360px, calc(100vw - 16px)); max-height: min(50vh, 360px);
+  overflow: auto; padding: 8px 12px; background: var(--surface); color: var(--text); border: 1px solid color-mix(in srgb, var(--text) 60%, transparent);
+  border-radius: var(--r); box-shadow: 0 6px 20px rgba(0, 0, 0, .25); }
+.note-pop-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sm); }

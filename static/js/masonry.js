@@ -34,12 +34,23 @@
     if (grid.dataset.movable && cols > 1) {
       var saved = placesOf(grid), lists = [], n = 0;
       for (c = 0; c < cols; c++) lists.push([]);
+      var follow = [];
       Array.prototype.forEach.call(grid.children, function (box, k) {
         if (box.hidden || getComputedStyle(box).display === 'none') return;
         var at = saved[box.dataset.box];
         if (at) lists[Math.min(at[0], cols - 1)].push({ box: box, seq: at[1], k: k });
+        //(a card not moved yet that's meant to come right after another, data-follows: under it, in its column; the
+        //Dashboard's Student notes under Site at a glance, the owner 2026-10-28)
+        else if (box.dataset.follows) { follow.push({ box: box, k: k }); return; }
         else { lists[n % cols].push({ box: box, seq: n, k: k }); }
         n++;
+      });
+      follow.forEach(function (f) {
+        for (c = 0; c < cols; c++) {
+          var lead = lists[c].filter(function (it) { return it.box.dataset.box === f.box.dataset.follows; })[0];
+          if (lead) { lists[c].push({ box: f.box, seq: lead.seq + 0.5, k: f.k }); return; }
+        }
+        lists[n++ % cols].push({ box: f.box, seq: n, k: f.k });
       });
       lists.forEach(function (list, c) {
         list.sort(function (a, b) { return a.seq - b.seq || a.k - b.k; });
