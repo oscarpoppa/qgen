@@ -258,15 +258,19 @@
         //Quiz and Students cards side by side
         if (!set.length) {
           var lv = btn && levelOf(btn);
-          var dup = lv && lv.nodeType === 1 && emptyShown.some(function (o) { return o === lv || o.contains(lv) || lv.contains(o); });
+          var dup = lv && lv.nodeType === 1 && !(pair.dataset.levelTwin && pair.classList.contains('level-in-head'))
+            && emptyShown.some(function (o) { return o === lv || o.contains(lv) || lv.contains(o); });
           if (dup) pair.hidden = true; else if (lv && lv.nodeType === 1) emptyShown.push(lv);
           return;
         }
+        //(a list's pair in its heading row and its twin beside the folder tab are one pair drawn twice, only one of them
+        //showing at a width: never taken for a copy of each other, static/js/folderfilter.js; the owner, 2026-10-27)
+        var twin = pair.dataset.levelTwin;
         var same = shown.some(function (other) {
-          return other.length === set.length && other.every(function (d, i) { return d === set[i]; });
+          return !(twin && other.twin === twin) && other.length === set.length && other.every(function (d, i) { return d === set[i]; });
         });
         if (same) pair.hidden = true;
-        else shown.push(set);
+        else { set.twin = twin; shown.push(set); }
       });
       syncToggles();
     }, 0);

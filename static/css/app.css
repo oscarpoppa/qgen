@@ -3902,3 +3902,11 @@ details.row-pop > .row-pop-body.chip-pop { display: flex; flex-wrap: wrap; align
 .scan-step-head h2 { margin: 0; }
 .scan-step-head.is-off .card-head { opacity: .5; }  /* (one page: step 3 grayed, the line says why) */
 .pick-chip .chip-times { margin-left: 4px; font-size: var(--fs-xs); min-width: 16px; height: 16px; padding: 0 4px; line-height: 16px; }  /* (how many times the quiz uses it: the owner, 2026-10-27) */
+
+/* a list's Expand all / Collapse all: in its heading row, above the rows' triangles (the owner, 2026-10-27); beside the folder
+   tab only while the list is cards and its heading row is hidden (the same widths as .stack) */
+.level-buttons.level-in-head { display: inline-flex; margin: 0 6px 0 -10px; vertical-align: middle; }
+.level-buttons.level-in-tab { display: none; }
+@media (max-width: 640px) { .level-buttons.level-in-tab { display: inline-flex; } }
+@container listarea (max-width: 860px) { .level-buttons.level-in-tab { display: inline-flex; } }
+@container page (max-width: 780px) { .level-buttons.level-in-tab { display: inline-flex; } }

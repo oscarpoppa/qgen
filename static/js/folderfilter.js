@@ -167,7 +167,25 @@
       });
       //(only where the rows open and close: a picker's rows never do, so it would do nothing; the
       //owner, 2026-10-21, and 2026-10-23: the quiz editor's Problems card had one)
-      if (list.querySelector('details.box')) span.appendChild(pair);
+      if (list.querySelector('details.box')) {
+        //(in the list's heading row, above the rows' little triangles, when the list is a table: the owner, 2026-10-27;
+        //beside the folder tab only while the list is cards, its heading row hidden: app.css .level-in-tab)
+        list.querySelectorAll('.level-buttons.level-in-head').forEach(function (p) { p.remove(); });
+        var cell = list.querySelector('tbody > tr > td > details.row-fold'), th = null;
+        if (cell) {
+          var td = cell.parentElement, table = td.closest('table');
+          var at = Array.prototype.indexOf.call(td.parentElement.children, td);
+          th = table && table.querySelector(':scope > thead > tr > th:nth-child(' + (at + 1) + ')');
+        }
+        if (th) {
+          pair.dataset.levelTwin = list.id || 'list';
+          var head = pair.cloneNode(true);
+          head.classList.add('level-in-head');
+          th.insertBefore(head, th.firstChild);
+          pair.classList.add('level-in-tab');
+        }
+        span.appendChild(pair);
+      }
       //(the Checked folder's header: "Apply to checked (N)", on the page's own list)
       if (id === 'checked' && ownList() && window.qgenApplyChecked) span.appendChild(window.qgenApplyChecked);
       var t = box.querySelector('template.folder-filter-tools[data-for="' + id + '"]');
