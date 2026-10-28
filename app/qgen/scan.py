@@ -601,7 +601,7 @@ def _tell_done(job):
     notify(job.author_id, body, '/quiz/scan/{}'.format(job.id))
 
 
-PAUSED_NOTE = 'Paused before this page was read.'
+PAUSED_NOTE = 'Stopped before this page was read.'  # (Stop, at once: the owner, 2026-10-27; it was Pause)
 
 
 def still_out(data, run=None, limit=None):
@@ -739,6 +739,10 @@ def _paused(data):
 
 
 STOPPED_NOTE = 'Stopped before this page was read.'
+
+
+class ScanStopped(Exception):
+    """A page's reading stopped while an answer was coming in (Stop, Stop this page, Move to Trash)."""
 
 
 def stop_page(job, n):
@@ -1039,15 +1043,15 @@ class _Logged:
             self._progress.step(name, 0)
             on = self._progress.counter(name)
         try:
-            return _LoggedStream(self._client.messages.stream(**request), call, on)
+            return _LoggedStream(self._client.messages.stream(**request), call, on, self._cancel)
         except Exception:
             _log_call(call)
             raise
 
 
 class _LoggedStream:
-    def __init__(self, manager, call, on_progress=None):
-        self._manager, self._call, self._running, self._on = manager, call, None, on_progress
+    def __init__(self, manager, call, on_progress=None, cancel=None):
+        self._manager, self._call, self._running, self._on, self._cancel = manager, call, None, on_progress, cancel
 
     def __enter__(self):
         try:
@@ -1059,7 +1063,16 @@ class _LoggedStream:
 
     def get_final_message(self):
         from .ai_helper import streamed
-        msg = streamed(self._running, self._on)
+
+        #(Stop, Stop this page or Move to Trash while the answer comes in: it's hung up on at once, so the AI stops
+        #working, and costing, right there; it used to run to its end and be thrown away; the owner, 2026-10-27)
+        def tick(n):
+            if self._cancel is not None and self._cancel.is_set():
+                import quizscan
+                raise quizscan.QuizScanError('Stopped.')
+            if self._on is not None:
+                self._on(n)
+        msg = streamed(self._running, tick)
         usage = getattr(msg, 'usage', None)
         self._call.ok = True
         self._call.input_tokens = getattr(usage, 'input_tokens', None)
@@ -1203,10 +1216,16 @@ def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
         base = len(done)
         try:
             share = STEP_TOKENS['numbers'] * len(group) / whole
-            got, usage = ai_helper.page_numbers(api_key, qs, ids=set(group), on_progress=lambda t, base=base, size=len(group): progress.step(
-                'numbers', min(95, int(100 * (base + size * min(1, t / share)) / whole))))
+            def numbers_tick(t, base=base, size=len(group)):
+                #(hung up on at once when stopped, as the reading is: the owner, 2026-10-27)
+                if cancel is not None and cancel.is_set():
+                    raise ScanStopped()
+                progress.step('numbers', min(95, int(100 * (base + size * min(1, t / share)) / whole)))
+            got, usage = ai_helper.page_numbers(api_key, qs, ids=set(group), on_progress=numbers_tick)
             call.ok = True
             call.input_tokens, call.output_tokens = usage['input_tokens'], usage['output_tokens']
+        except ScanStopped:
+            return stopped
         except ai_helper.AITooLong:
             #(not the description box's "Please shorten it": a way forward for this page: the owner, 2026-10-21)
             return {'n': n, 'state': 'error', 'error': PAGE_TOO_LONG, 'qs_reading': qs, 'numbers_so_far': numbers, 'numbers_done': done}

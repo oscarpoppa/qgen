@@ -376,11 +376,11 @@
   //a click or tap on the box (not on its thumbnails' "more") chooses files, as the Pictures drop
   //zones do (the owner, 2026-10-19)
   var box = document.getElementById('scan-drop');
-  box.addEventListener('click', function (e) { if (e.target !== files) files.click(); });
+  box.addEventListener('click', function (e) { if (e.target !== files) window.qgenOpenPicker(files); });
   box.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); files.click(); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.qgenOpenPicker(files); }
   });
-  document.querySelector('[data-scan-folder]').addEventListener('click', function () { folder.click(); });
+  document.querySelector('[data-scan-folder]').addEventListener('click', function () { window.qgenOpenPicker(folder); });  // (one picker at a time: static/js/dropzone.js)
   folder.addEventListener('change', function () {
     if (!folder.files.length) { sync(); return; }
     var path = folder.files[0].webkitRelativePath || '';

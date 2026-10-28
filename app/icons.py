@@ -39,6 +39,8 @@ PATHS = {
     #(scans: Pause and Resume, and a scan that stopped on a page that couldn't be read: the owner, 2026-10-19)
     'lc-file-text': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
     'lc-clipboard-check': '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+    #(Stop: the scan's reading stopped at once, the owner 2026-10-27; it was Pause)
+    'lc-stop': '<rect x="6" y="6" width="12" height="12" rx="1.5"/>',
     'lc-pause': '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
     'lc-resume': '<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/>',
     'lc-alert': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',

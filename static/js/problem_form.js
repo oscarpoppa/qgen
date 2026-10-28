@@ -308,9 +308,9 @@
       });
     }
     function slotZone(e) { return e.target.closest && e.target.closest('.image-row .dropzone'); }
-    area.addEventListener('click', function (e) { if (e.target !== pick) pick.click(); });
+    area.addEventListener('click', function (e) { if (e.target !== pick) window.qgenOpenPicker(pick); });
     area.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick.click(); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.qgenOpenPicker(pick); }
     });
     pick.addEventListener('change', function () { take(pick.files); pick.value = ''; });
     ['dragenter', 'dragover'].forEach(function (ev) {

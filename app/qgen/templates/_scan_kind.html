@@ -1,10 +1,10 @@
 {#- one scan's kind, with its mark (the owner, 2026-10-19): x from scan_progress_data #}
 {%- if x.kind == 'reading' -%}
-  {%- if x.pausing %}Pausing after these pages…{% elif x.now %}Reading page {{ x.now }} of {{ x.total }}…{% else %}Reading the pages…{% endif -%}
+  {%- if x.now %}Reading page {{ x.now }} of {{ x.total }}…{% else %}Reading the pages…{% endif -%}
 {%- elif x.kind == 'ready' -%}
   <span class="scan-chip-done" aria-hidden="true">✓</span> Ready to check
 {%- elif x.kind == 'paused' -%}
-  <span class="scan-chip-wait" aria-hidden="true">{{ icon('lc-pause') }}</span> Paused: {{ x.done }} of {{ x.total }} pages read
+  <span class="scan-chip-wait" aria-hidden="true">{{ icon('lc-stop') }}</span> Stopped: {{ x.done }} of {{ x.total }} pages read
 {%- elif x.kind == 'stopped' -%}
   <span class="scan-chip-stopped" aria-hidden="true">{{ icon('lc-alert') }}</span> Stopped: {{ x.failed }} page{{ '' if x.failed == 1 else 's' }} didn’t make it{% if x.slow %} ({{ x.slow }} took too long){% endif %}
 {%- endif -%}

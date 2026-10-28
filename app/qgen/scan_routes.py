@@ -634,9 +634,10 @@ def scan_check(job_id):
 @admin_only
 @post_form_only
 def scan_pause(job_id):
-    """Pause the reading after the pages being read; Resume goes on (the owner, 2026-10-19; it was Cancel)."""
+    """Stop the reading at once (the owner, 2026-10-27: one Stop, it was Pause, which let the pages with the AI finish):
+    the pages being read are hung up on and go back to not read yet, the ones read are kept; Resume reads the rest."""
     job = _mine(job_id)
-    SC.pause_reading(job, _reading(job))
+    SC.pause_reading(job, _reading(job), now=True)
     current_app.logger.info('{} paused reading scan {} "{}"'.format(current_user.username, job.id, job.name))
     if request.args.get('back') == 'dashboard':
         return redirect(url_for('qgen.dashboard'))
@@ -673,7 +674,7 @@ def scan_put_away(job_id):
     """Put away a paused or stopped scan, or a draft: out of Current scans into the Put away card (the owner, 2026-10-20)."""
     job = _mine(job_id)
     if _reading(job):
-        flash('“{}” is being read. Pause it first, then stash it.'.format(job.name), 'error')
+        flash('“{}” is being read. Stop it first, then stash it.'.format(job.name), 'error')
     else:
         SC.put_away(job)
         current_app.logger.info('{} put away scan {} "{}"'.format(current_user.username, job.id, job.name))

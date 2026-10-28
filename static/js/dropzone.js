@@ -1,3 +1,18 @@
+/* The browser's file or folder picker for an <input type=file>, one at a time: another click while it's open does nothing
+ * (the owner, 2026-10-27: Scan's "Choose a folder" opened a second one). It's open until a choice is made, it's canceled,
+ * or the window gets the focus back. */
+window.qgenOpenPicker = function (input) {
+  if (input.qgenPicking) return;
+  input.qgenPicking = true;
+  function done() {
+    input.qgenPicking = false;
+    input.removeEventListener('change', done); input.removeEventListener('cancel', done); window.removeEventListener('focus', back);
+  }
+  //(no "cancel" in an older browser: the window's focus coming back, a moment later so a choice is read first)
+  function back() { setTimeout(done, 400); }
+  input.addEventListener('change', done); input.addEventListener('cancel', done); window.addEventListener('focus', back);
+  input.click();
+};
 /* Drag-and-drop picture picker.
  *
  * <div class="dropzone" data-target="image" data-upload="/upload/json" data-list="/upload/imagelist">
@@ -193,10 +208,10 @@
     zone.addEventListener('click', function (e) {
       //(a tile's link opens its page; its ✕ takes it out; a click on a tile does nothing)
       if (e.target === input || (e.target.closest && e.target.closest('a, [data-dz-done]'))) return;
-      input.click();
+      window.qgenOpenPicker(input);
     });
     zone.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.qgenOpenPicker(input); }
     });
     input.addEventListener('change', function () { handle(input.files); input.value = ''; });
     ['dragenter', 'dragover'].forEach(function (ev) {
