@@ -7,7 +7,20 @@
   document.addEventListener('click', function (e) {
     if (e.defaultPrevented || e.button) return;
     var t = e.target;
-    if (!t.closest || t.closest('a, button, input, select, textarea, label, summary, dialog, td.tick-col, [data-no-rowclick], details.row-pop, .folder-chip, .pick-chip, .grip-bar, [contenteditable], [role=separator]')) return;
+    if (!t.closest || t.closest('a, button, input, select, textarea, label, summary, [data-no-rowclick], [contenteditable]')) return;
+    //(a row, or a check box's line, whose one control is a check box or radio button: anywhere on it checks it, or
+    //picks it, as a click on the box would, in a dialog too: the pickers on Assign and Add to Quizzes, a quiz's
+    //"Calculator allowed"; the owner, 2026-10-28, To do 74)
+    var line = t.closest('tr, .check');
+    if (line && !(window.getSelection && String(window.getSelection()).length)) {
+      var controls = line.querySelectorAll('input:not([type=hidden]), select, textarea, button, a[href], summary');
+      var only = controls.length === 1 ? controls[0] : null;
+      if (only && only.matches('input[type=checkbox], input[type=radio]') && !only.disabled) {
+        only.click();
+        return;
+      }
+    }
+    if (t.closest('dialog, td.tick-col, details.row-pop, .folder-chip, .pick-chip, .grip-bar, [role=separator]')) return;
     var row = t.closest('tbody > tr');
     if (!row) return;
     var table = row.closest('table');
