@@ -31,8 +31,8 @@
     {#- Cancel beside Start, back to where the student came from (static/js/trail.js), nothing started; it was a small
         "← Home" link under it (the owner, 2026-10-25) #}
     <div class="start-row">
-      <button class="btn btn-lg start-btn" title="{{ 'Show the questions (your time starts now)' if cq.time_limit else 'Show the questions and begin' }}">Start the Quiz</button>
-      <a class="btn btn-secondary btn-lg start-cancel" href="{{ url_for('user.mypage') }}" data-back-href title="Leave without starting the quiz">Cancel</a>
+      <button class="btn start-btn" title="{{ 'Show the questions (your time starts now)' if cq.time_limit else 'Show the questions and begin' }}">Start the Quiz</button>
+      <a class="btn btn-secondary start-cancel" href="{{ url_for('user.mypage') }}" data-back-href title="Leave without starting the quiz">Cancel</a>
     </div>
   </form>
 </div>

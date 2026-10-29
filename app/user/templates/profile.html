@@ -39,7 +39,7 @@
       <form method="post" action="{{ url_for('user.remove_avatar', uid=current_user.id) }}" style="margin-top:8px" data-in-place
             data-confirm="Remove your picture? Your initials show instead." data-confirm-ok="Remove Picture">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn btn-danger btn-sm" title="Take your picture away. Your initials show instead">Remove My Picture</button>
+        <button class="btn btn-danger" title="Take your picture away. Your initials show instead">Remove My Picture</button>
       </form>
       {% endif %}</div>
     </div>

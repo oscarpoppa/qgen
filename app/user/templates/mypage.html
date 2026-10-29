@@ -9,7 +9,7 @@
 
 {# compact: the small version for a row in a list of attempts, so the row stays on one line #}
 {% macro action(cq, compact=false) %}
-  {% set size = 'btn-xs' if compact else 'btn-sm' %}
+  {% set size = 'btn-sm' %}{#- (one size in every row, like every row icon: the owner, 2026-10-28; it was btn-xs when compact) #}
   {% if cq.status == 'completed' %}
     <a class="icon-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: how you did on this attempt">{{ icon_label('lc-eye', 'View') }}</a>
   {% elif cq.status == 'review' %}
@@ -21,9 +21,9 @@
     <button type="button" class="btn btn-secondary {{ size }} btn-icon" disabled title="Start: you can’t start this yet. It opens {{ opens }}.">{{ icon_label('lc-play', 'Start') }}</button>
     <span class="muted small not-open-note">You can't start this yet. It opens {{ opens }}.</span>
   {% elif cq.status == 'started' %}
-    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>
+    <a class="btn btn-secondary {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Continue: keep working on this quiz">{{ icon_label('lc-play', 'Continue') }}</a>
   {% else %}
-    <a class="btn {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: begin this quiz">{{ icon_label('lc-play', 'Start') }}</a>
+    <a class="btn btn-secondary {{ size }} btn-icon" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="Start: begin this quiz">{{ icon_label('lc-play', 'Start') }}</a>
   {% endif %}
 {% endmacro %}
 

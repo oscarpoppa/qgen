@@ -65,7 +65,7 @@
         <div class="kind-hint" aria-live="polite"></div>
       </div>
     </td>
-    <td class="actions"><button type="button" class="btn btn-danger btn-sm remove-row" aria-label="Remove this value" title="Remove this value">✕</button></td>
+    <td class="actions"><button type="button" class="btn btn-secondary btn-sm btn-icon remove-row" title="Remove this value">{{ icon_label('lc-trash', 'Remove this value') }}</button></td>
   </tr>
 {% endmacro %}
 
@@ -256,7 +256,7 @@
 <div class="side-col">
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="editor-go">
-    {{ form.submit(class='btn btn-big', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
+    {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
     {# beside Save (the owner, 2026-10-16); the examples still show under the form #}
     <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show Me 3 Examples</button>
     {#- (Cancel last: the main button first, discard last, the owner 2026-10-23) #}

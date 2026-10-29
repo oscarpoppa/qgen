@@ -12,9 +12,11 @@
 
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions"></div></div>
+  {#- Assign and Cancel at the top too, so nobody has to scroll to the bottom for them (small, like every button by a
+      page title; the bottom row stays: the owner, 2026-10-28) #}
+  <div class="actions"><button type="submit" form="assign-form" name="submit" value="Assign" class="btn btn-sm" title="Give the quizzes to the checked students">Assign</button><a class="btn btn-secondary btn-sm" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div></div>
 
-<form method="post" class="assign-form" data-fresh-page novalidate>
+<form method="post" id="assign-form" class="assign-form" data-fresh-page novalidate>
   {{ form.hidden_tag() }}
   {# where they came from (a student page, a quiz's results...): back there once it's assigned #}
   {% if came_from %}<input type="hidden" name="next" value="{{ came_from[0] }}">{% endif %}
@@ -81,7 +83,7 @@
   </div>
   </div>
   {#- (Cancel last, back to the page they came from: the owner, 2026-10-24) #}
-  <div class="assign-go btn-row">{{ form.submit(class='btn btn-big', title='Give the quizzes to the checked students') }}<a class="btn btn-secondary" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div>
+  <div class="assign-go btn-row">{{ form.submit(class='btn', title='Give the quizzes to the checked students') }}<a class="btn btn-secondary" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div>
   </div>
   {# when: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">

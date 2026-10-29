@@ -1677,8 +1677,9 @@ details.result-folder > .result-folder-body, details.month-box > .table-wrap, de
 .quiz-start .start-facts { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; }
 .quiz-start .start-facts li { display: flex; gap: 10px; align-items: baseline; }
 .quiz-start .start-row { display: flex; gap: 10px; }
-.quiz-start .start-btn { flex: 1 1 auto; padding: 12px; font-size: var(--fs-lg); }
-.quiz-start .start-cancel { flex: none; display: inline-flex; align-items: center; padding: 12px 18px; font-size: var(--fs-lg); }
+/* (the standard size, like every page's main button: the owner, 2026-10-28; it was large) */
+.quiz-start .start-btn { flex: 1 1 auto; }
+.quiz-start .start-cancel { flex: none; display: inline-flex; align-items: center; }
 
 /* My quizzes: the page scrolls, not the list (quiz boxes in a grid, scrolled inside a scrolled
    page, were clumsy and got cut off at the list's edge); only a quiz box's tries keep their own */
@@ -2465,7 +2466,6 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .assign-side { display: contents; }
 .assign-side > .assign-go { order: 1; }
 /* (a bigger button: the page's one main action) */
-.btn.btn-big { font-size: var(--fs-lg); padding: 10px 32px; min-height: 48px; }
 .assign-when .dates { max-width: 760px; }
 .assign-go { margin-top: 4px; }
 .pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }

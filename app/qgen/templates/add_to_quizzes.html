@@ -11,11 +11,12 @@
 {% block body_attrs %}{{ watch('addquiz', note='The problems, quizzes or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head"><h1>{{ title }}</h1>
-  <div class="actions"></div></div>
+  {#- Add and Cancel at the top too (as on Assign Quizzes; the bottom row stays: the owner, 2026-10-28) #}
+  <div class="actions"><button form="add-quiz-form" class="btn btn-sm" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary btn-sm" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div></div>
 
 {#- laid out exactly as the Assign page (.assign-form): Problems where its Quiz card is, Quizzes where its
     Students card is, Add and Cancel under that card (the owner, 2026-10-24: "almost identical") #}
-<form method="post" action="{{ url_for('qgen.add_to_quiz') }}" class="assign-form add-quiz-page" novalidate>
+<form method="post" action="{{ url_for('qgen.add_to_quiz') }}" id="add-quiz-form" class="assign-form add-quiz-page" novalidate>
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="view" value="{{ view }}">
     <div class="card field pick-quiz" id="add-problem-pick">
@@ -52,7 +53,7 @@
       {# or a new quiz with the problems checked in it; its Back comes back to the Problems page #}
       <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make New Quiz</a></p>
     </div>
-    <div class="assign-go btn-row"><button class="btn btn-big" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
+    <div class="assign-go btn-row"><button class="btn" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
   </div>
 </form>
 {% endblock %}
