@@ -333,6 +333,23 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
         return bool(self.opens_at and (now or datetime.now()) < self.opens_at)
 
     @property
+    def took_label(self):
+        """How long it took, Start to hand-in, time away included (the owner, 2026-10-28, To do 73): "under 1 min",
+        "12 min", "1 h 5 min", "2 days 3 h"; None until it's started and handed in."""
+        if not (self.startdate and self.compdate) or self.compdate < self.startdate:
+            return None
+        mins = int((self.compdate - self.startdate).total_seconds() // 60)
+        if mins < 1:
+            return 'under 1 min'
+        days, rest = divmod(mins, 24 * 60)
+        hours, mins = divmod(rest, 60)
+        if days:
+            return '{} day{}'.format(days, '' if days == 1 else 's') + (' {} h'.format(hours) if hours else '')
+        if hours:
+            return '{} h'.format(hours) + (' {} min'.format(mins) if mins else '')
+        return '{} min'.format(mins)
+
+    @property
     def when_label(self):
         """How an attempt is named in lists: its hand-in time, or when it was started or assigned."""
         def day(d):

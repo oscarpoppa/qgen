@@ -12,7 +12,7 @@
       <div class="muted small">{{ cq.taker.shown_name if cq.taker else '' }}</div>
       <div class="muted small">
         {% if cq.startdate %}Started {{ cq.startdate|when }} · {% endif %}
-        {% if cq.compdate %}Handed in {{ cq.compdate|when }}{% else %}Not handed in{% endif %}
+        {% if cq.compdate %}Handed in {{ cq.compdate|when }}{% else %}Not handed in{% endif %}{% if cq.took_label %} · <span title="How long it took, from Start to hand-in">{{ cq.took_label }}</span>{% endif %}
         {% if cq.graded_date %} · Graded {{ cq.graded_date|when('short') }}{% endif %}
         {% if cq.changed_date %} · Grades changed{% if cq.changer %} by {{ cq.changer.shown_name }}{% endif %} on {{ cq.changed_date|when('short') }}{% endif %}
       </div>

@@ -126,6 +126,7 @@
   <ol class="small attempt-list">
     {% for cq in g.attempts %}
       <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
+        {%- if cq.took_label %} <span class="small muted nowrap attempt-took" title="How long it took, from Start to hand-in">{{ cq.took_label }}</span>{% endif %}
         {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
         <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, student) }}</span></li>
     {% endfor %}
@@ -161,6 +162,7 @@
           <ol class="small attempt-list">
             {% for cq in g.attempts %}
               <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ attempt_status(cq, g) }}
+        {%- if cq.took_label %} <span class="small muted nowrap attempt-took" title="How long it took, from Start to hand-in">{{ cq.took_label }}</span>{% endif %}
                 {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
                 <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, item) }}</span></li>
             {% endfor %}
