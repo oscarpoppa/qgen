@@ -30,6 +30,25 @@
     if (document.querySelector('dialog[open]')) return true;
     try { return !!document.querySelector('.note-pop:popover-open'); } catch (e) { return false; }
   }
+  //"Assigned, Still Open"'s two tabs, In Progress and New (the owner, 2026-10-28): the one picked last is
+  //remembered in this browser and shown again after every redraw; In Progress when nothing was picked
+  function outTab(pick) {
+    var want = pick;
+    if (!want) { try { want = localStorage.getItem('qgen-dash-out-tab'); } catch (e) { want = null; } }
+    if (want !== 'new') want = 'started';
+    box.querySelectorAll('[data-out-tab]').forEach(function (a) {
+      if (a.dataset.outTab === want) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    box.querySelectorAll('[data-out-list]').forEach(function (l) { l.hidden = l.dataset.outList !== want; });
+  }
+  box.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-out-tab]');
+    if (!a) return;
+    e.preventDefault();
+    try { localStorage.setItem('qgen-dash-out-tab', a.dataset.outTab); } catch (err) { /* not kept: still switches */ }
+    outTab(a.dataset.outTab);
+  });
+  outTab();
   var waiting = false, lastHtml = null, lastRefresh = Date.now(), soonTimer = null;
   //(after an action done in place on the Dashboard, e.g. Unpin: redrawn now, static/js/inplace.js; the owner, 2026-10-27)
   window.qgenDashRefresh = function () { lastHtml = null; refresh(); };
@@ -73,6 +92,7 @@
           if (key(d)) keep[key(d)] = { col: d.style.gridColumn, row: d.style.gridRow, open: d.open };
         });
         box.innerHTML = html;
+        outTab();
         var newGrid = box.querySelector('.dash-grid');
         if (oldGrid && newGrid) {
           if (oldGrid.classList.contains('masonry-on')) { newGrid.classList.add('masonry-on'); newGrid.dataset.gap = oldGrid.dataset.gap; }

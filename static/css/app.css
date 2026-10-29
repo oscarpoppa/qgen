@@ -205,6 +205,12 @@ main.container.container-wide { max-width: none; }
 .seg-switch a + a { border-left: 1px solid var(--field-border); }
 .seg-switch a:hover { background: var(--surface-2); }
 .seg-switch a[aria-current="page"] { background: var(--accent); color: var(--accent-text); }
+/* "Assigned, Still Open"'s In Progress / New switch, and a stale attempt's mark: the yellow warning icon and
+   "started 2 days ago" (the owner, 2026-10-28) */
+.out-switch { margin: 0 0 10px; }
+.out-switch a { padding: 4px 12px; font-size: var(--fs-sm); }
+.stale-mark { display: inline-flex; color: var(--warn); margin-left: 4px; vertical-align: middle; }
+.stale-note { color: var(--warn); font-weight: 600; white-space: nowrap; }
 @media (pointer: coarse) { .seg-switch a { min-height: 44px; display: inline-flex; align-items: center; } }
 .page-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
