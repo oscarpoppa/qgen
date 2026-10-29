@@ -367,7 +367,7 @@ def login():
         #only a page on this site (a link could otherwise send them elsewhere after signing in)
         return redirect(safe_next(request.args.get('next'), home_url()))
     from app.qgen.models import Setting
-    return render_template('login.html', title='Log in', form=form, signup_open=bool(Setting.get('class_code')))
+    return render_template('login.html', title='Log In', form=form, signup_open=bool(Setting.get('class_code')))
 
 # route to user registration action
 @user_bp.route('/register', methods=['POST','GET'])

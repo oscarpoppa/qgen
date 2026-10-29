@@ -5,18 +5,18 @@
 
 {% block content %}
 <div class="card card-narrow">
-  <h1>Log in</h1>
+  <h1>Log In</h1>
   {#- (its own address: shown in place of a page whose sign-in ran out, e.g. the Dashboard, a form with
       none was sent to that page and refused, "Method Not Allowed": the owner, 2026-10-22) #}
   <form method="post" action="{{ url_for('user.login', next=request.args.get('next') or (request.path if request.path != url_for('user.login') else none)) }}" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.username, attrs={'autocomplete': 'username', 'autofocus': true}) }}
     {{ field(form.password, attrs={'autocomplete': 'current-password'}) }}
-    {{ form.submit(class='btn', value='Log in', style='width:100%', title='Go in with the name and password above') }}
+    {{ form.submit(class='btn', value='Log In', style='width:100%', title='Go in with the name and password above') }}
   </form>
   {#- grayed, with why, while sign-up is closed (never left out); a forgotten password is the
       teacher's to reset (the owner, 2026-10-20, from the Oct 7 review) #}
-  <p class="muted small" style="margin-top:14px">New here? {% if signup_open %}<a href="{{ url_for('user.register') }}" title="Make a new account with the class code from your teacher">Create an account</a>{% else %}<span class="link-disabled" aria-disabled="true" title="Sign-up is closed. Ask your teacher for an account.">Create an account</span>{% endif %}</p>
+  <p class="muted small" style="margin-top:14px">New here? {% if signup_open %}<a href="{{ url_for('user.register') }}" title="Make a new account with the class code from your teacher">Create an Account</a>{% else %}<span class="link-disabled" aria-disabled="true" title="Sign-up is closed. Ask your teacher for an account.">Create an account</span>{% endif %}</p>
   <p class="muted small">Forgot your password? Ask your teacher.</p>
 </div>
 {% endblock %}

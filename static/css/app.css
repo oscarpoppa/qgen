@@ -1729,10 +1729,16 @@ details.box .box-icon { flex: 0 0 auto; display: inline-flex; align-items: cente
 details.box .box-icon .avatar { margin: 0; }
 details.box .box-title { margin: 0; font-size: var(--fs-lg); font-weight: 700; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
 details.box .box-title a { color: inherit; }
-/* the Dashboard's card titles set apart from what's under them: the accent color, like their icons, and a line under
-   the title row while the card is open (the owner, 2026-10-28) */
-#dash-live details.box > summary.dash-head .box-title { color: var(--accent); }
-#dash-live details.box[open] > summary.dash-head { border-bottom: 2px solid color-mix(in srgb, var(--text) 25%, var(--border)); border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding-bottom: 8px; margin-bottom: 10px; }
+/* card titles set apart from what's under them: the accent color, like their icons, and a straight line under the
+   title row (while the card is open), stopping short of the card's edges (the owner, 2026-10-28: the Dashboard first,
+   then student Home and Technical Settings (the same cards), the numbered editor cards, My profile's and the Scanner's
+   cards, and the editor's folding helpers) */
+details.box > summary.dash-head .box-title, details.ai-box > summary .box-title, details.help-box > summary .box-title,
+.card:not(.sample-item) > div.card-head h2, #scan-current > h2 { color: var(--accent); }
+details.box[open] > summary.dash-head, details.ai-box[open] > summary, details.help-box[open] > summary,
+.card:not(.sample-item) > div.card-head, #scan-current > h2 {
+  border-bottom: 2px solid color-mix(in srgb, var(--text) 25%, var(--border)); border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  padding-bottom: 8px; margin-bottom: 10px; }
 details.box .box-count { flex: 0 0 auto; white-space: nowrap; }
 details.box .box-end { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
 /* small ones */

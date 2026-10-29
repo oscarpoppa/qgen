@@ -18,7 +18,7 @@ def test_clear_page_names_and_back_buttons(app_db):
     assert teach.get('/quiz/listvq/{}'.format(vq.id)).headers['Location'] == '/quiz/listvq?show={}'.format(vq.id)
     assert title(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode()).startswith("Answer Key: sam – Week 1")
     assert title(teach.get('/edituser/{}'.format(ids('sam'))).data.decode()).startswith('Edit User: sam')
-    assert title(app.test_client().get('/login').data.decode()).startswith('Log in')
+    assert title(app.test_client().get('/login').data.decode()).startswith('Log In')
     # the way back is the top bar's arrows (worded Back buttons removed)
     from test_flow import back_by_the_trail
     assert back_by_the_trail(teach.get('/quiz/listcq/{}'.format(cq.id)).data.decode())
