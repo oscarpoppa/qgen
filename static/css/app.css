@@ -2871,7 +2871,7 @@ td.attempt-buttons { text-align: right; }
 .folder-filter-list.folder-scroll thead th { position: sticky; top: -12px; z-index: 2; }
 /* the folder list down the side scrolls inside itself once it's as tall as the window has room
    for (static/js/folders.js; the owner, 2026-10-17) */
-.folder-side > nav.side-scroll { overflow-y: auto; overscroll-behavior: auto; padding-right: 4px; position: relative; }
+.folder-side > nav.side-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: auto; padding-right: 4px; position: relative; }  /* (never sideways: the cover over the first automatic folder reaches 4px past its edge, which gave every folder list a sideways scroll bar at any width; the owner, 2026-10-28) */
 /* (position: relative, so screen-reader-only words inside stay in the scroll area instead of
    stretching the page) */
 /* a folder's list sorted by a column: its heading is a button, with an arrow once sorted
