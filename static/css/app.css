@@ -598,7 +598,7 @@ input[type=datetime-local], input[type=date], input[type=time] {
   padding: 9px 12px; min-height: 40px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface);
 }
 .cal-row { position: relative; display: flex; gap: 6px; align-items: stretch; }
-.cal-row input { flex: 1; min-width: 0; }
+.cal-row input { flex: 1; min-width: 0; height: 2.8em; }  /* (a date box as tall as a text box, 45px, and its Choose button with it: the browser drew the date fields 2px taller; the owner, 2026-10-28) */
 .cal-btn { padding: 6px 10px; min-height: 40px; font-size: var(--fs-lg); }
 .cal-reading { margin-top: 4px; min-height: 1.2em; }
 .cal-pop {
