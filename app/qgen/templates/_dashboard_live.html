@@ -154,31 +154,22 @@
       {%- if counts.closing %}<span class="badge badge-warn" title="Assigned quizzes with a closing time in the next {{ soon }} day{{ '' if soon == 1 else 's' }} that the student hasn’t handed in yet (one per student)">{{ counts.closing }} due within {{ soon }} day{{ '' if soon == 1 else 's' }}</span>{% endif %}</summary>
     <div class="dash-body">
     {#- (no "Results by student → · by quiz →" links here: the owner, 2026-10-20) #}
-    {#- two tabs, In Progress first (the owner, 2026-10-28): the stale ones, started longer ago than the Technical setting,
-        marked and listed first; New holds the ones not started and not open yet. The choice is remembered (dashboard.js). #}
-    {%- set sp = out_split %}
-    {% if not out_total %}<p class="muted small">Every assigned quiz has been handed in.</p>{% else %}
-    <nav class="seg-switch out-switch" aria-label="Which assigned quizzes">
-      <a href="#dash-out" data-out-tab="started" aria-current="page" title="Started, not handed in yet; the stale ones first">In Progress ({{ sp.started_total }})</a><a href="#dash-out" data-out-tab="new" title="Not started yet, or not open yet; newest first">New ({{ sp.new_total }})</a>
-    </nav>
-    {% for tab, rows, none_text in (('started', sp.started, 'Nothing is in progress.'), ('new', sp.new, 'Every assigned quiz has been started.')) %}
-    {% if rows %}
-      <ul class="dash-list" data-out-list="{{ tab }}"{% if tab != 'started' %} hidden{% endif %}>
-      {% for o in rows %}
+    <p class="dash-links small"><span class="muted">Newest first.</span>{#- (how many of how many: the heading's count, "newest 10 of 26", the owner 2026-10-20) #}</p>
+    {% if out %}
+      <ul class="dash-list">
+      {% for o in out %}
         <li>{{ person_name(o.cq.taker, href=url_for('qgen.qtake', cidx=o.cq.id), tip='View: ' ~ (o.cq.taker.shown_name if o.cq.taker else 'the student') ~ '’s copy of “' ~ o.cq.vquiz.title ~ '”, as it is now') }}
           <span class="dash-what"><span class="dash-quiz">{{ quiz_name(o.cq.vquiz) }}</span>
-          {% if o.state == 'started' %}{{ status_icon('going', 'In progress') }}{% if o.stale %}<span class="stale-mark" role="img" aria-label="Going stale" title="Going stale: started {{ o.ago }} and not handed in">{{ icon('warning') }}</span>{% endif %}
+          {% if o.state == 'started' %}{{ status_icon('going', 'In progress') }}
           {% elif o.state == 'not_open' %}<span class="badge">Opens {{ when(o.cq.opens_at) }}</span>
           {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}
-          {% if o.stale %}<span class="small stale-note">started {{ o.ago }}</span> {% endif %}<span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span></span>
+          <span class="muted small">assigned {{ when(o.cq.create_date) if o.cq.create_date else '' }}{% if o.cq.closes_at %} · closes {{ when(o.cq.closes_at) }}{% endif %}</span></span>
           {# this student's own copy of the quiz (their questions and answers so far); the name opens it too (the owner, 2026-10-22) #}
           <span class="btn-row dash-go"><a class="icon-link" href="{{ url_for('qgen.qtake', cidx=o.cq.id) }}" title="View: {{ o.cq.taker.shown_name if o.cq.taker else 'the student' }}’s copy of “{{ o.cq.vquiz.title }}”, as it is now">{{ icon_label('lc-eye', 'View') }}</a></span></li>
       {% endfor %}
       </ul>
     {% else %}
-      <p class="muted small" data-out-list="{{ tab }}"{% if tab != 'started' %} hidden{% endif %}>{{ none_text }}</p>
-    {% endif %}
-    {% endfor %}
+      <p class="muted small">Every assigned quiz has been handed in.</p>
     {% endif %}
     </div>
   </details>

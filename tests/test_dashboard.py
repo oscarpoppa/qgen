@@ -311,32 +311,6 @@ def test_assigned_but_not_handed_in(app_db):
     assert 'Assigned, Still Open' in page and 'Not started' in page and 'In progress' in page and 'Opens tomorrow' in page
 
 
-def test_assigned_still_open_tabs_and_stale(app_db):
-    """In Progress and New tabs; a quiz started longer ago than the setting (a day) is stale: marked, listed first
-    (the owner, 2026-10-28)."""
-    app, db = app_db
-    from app.qgen import dashboard as D
-    from app.qgen import services as S
-    teacher = login(app, 'teach')
-    now = datetime.now()
-    vq = make_quiz(app, teacher, 'Stale ones')
-    recent = give(vq, 'sam')
-    S.start(recent)
-    old = give(vq, 'kim')
-    S.start(old)
-    old.startdate = now - timedelta(days=2, hours=1)
-    waiting = give(vq, 'sam')
-    db.session.commit()
-    sp = D.out_split(now)
-    assert [r['cq'].id for r in sp['started']] == [old.id, recent.id] and sp['started_total'] == 2
-    assert sp['started'][0]['stale'] and sp['started'][0]['ago'] == '2 days ago' and not sp['started'][1]['stale']
-    assert [r['cq'].id for r in sp['new']] == [waiting.id] and sp['new_total'] == 1
-    page = teacher.get('/dashboard').data.decode()
-    assert 'data-out-tab="started" aria-current="page"' in page and 'In Progress (2)</a>' in page and 'New (1)</a>' in page
-    assert 'title="Going stale: started 2 days ago and not handed in"' in page and 'started 2 days ago</span>' in page
-    assert '<ul class="dash-list" data-out-list="new" hidden>' in page
-
-
 def test_logging_out_takes_you_off_online(app_db):
     # logging out ends "online" at once (the logout click itself doesn't count as being
     # here); still signed in on another device, the next request brings you back

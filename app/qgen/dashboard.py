@@ -88,37 +88,6 @@ def out_now(now, limit=None):
     return out, q.count()
 
 
-def out_split(now, limit=None):
-    """"Assigned, Still Open" as its two tabs (the owner, 2026-10-28): the ones in progress, the stale ones (started
-    longer ago than the Technical setting) first, oldest start first, then the newest started; and the new ones (not
-    started, or not open yet), newest assignment first. Each row {'cq', 'state', 'stale', 'ago'}; each list cut to
-    the setting's length, with how many in all."""
-    limit = limit or tuning.get('list_assigned')
-    stale_before = now - timedelta(hours=tuning.get('stale_hours'))
-    q = _unfinished().options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz))
-    started_q = q.filter(CQuiz.startdate.isnot(None))
-    stale = started_q.filter(CQuiz.startdate < stale_before).order_by(CQuiz.startdate, CQuiz.id).limit(limit).all()
-    fresh = (started_q.filter(CQuiz.startdate >= stale_before).order_by(CQuiz.startdate.desc(), CQuiz.id.desc())
-             .limit(max(0, limit - len(stale))).all())
-    new_q = _unfinished().filter(CQuiz.startdate.is_(None))
-    new = (new_q.options(joinedload(CQuiz.taker), joinedload(CQuiz.vquiz))
-           .order_by(CQuiz.create_date.desc(), CQuiz.id.desc()).limit(limit).all())
-    def row(cq, stale_one=False):
-        state = 'not_open' if cq.not_open_yet(now) else 'started' if cq.startdate else 'new'
-        return {'cq': cq, 'state': state, 'stale': stale_one, 'ago': ago(cq.startdate, now) if stale_one else None}
-    return {'started': [row(cq, True) for cq in stale] + [row(cq) for cq in fresh], 'started_total': started_q.count(),
-            'new': [row(cq) for cq in new], 'new_total': new_q.count()}
-
-
-def ago(when, now):
-    """"2 days ago", "1 day ago", "5 h ago" (a stale attempt's start)."""
-    hours = int((now - when).total_seconds() // 3600)
-    days = hours // 24
-    if days:
-        return '{} day{} ago'.format(days, '' if days == 1 else 's')
-    return '{} h ago'.format(max(hours, 1))
-
-
 def grading_queue(limit=None):
     """The attempts waiting longest for grading (the same order as Grading), and how many wait."""
     q = _waiting()

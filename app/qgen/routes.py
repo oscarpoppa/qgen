@@ -2473,7 +2473,7 @@ def dashboard_data():
     out, out_total = D.out_now(now)
     return {'counts': D.counts(current_user, now), 'online': D.online(now), 'recent': D.recently_active(now),
             'taking': D.taking_now(now), 'now': now, 'when': lambda d: D.when(d, now),
-            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'out_split': D.out_split(now), 'glance': D.site_glance(now),
+            'queue': queue, 'waiting': waiting, 'handins': D.recent_handins(), 'out': out, 'out_total': out_total, 'glance': D.site_glance(now),
             'pinned': D.pinned(), 'noted': D.noted_students(), 'noted_things': D.noted_things(),
             #(the Scanner card: this teacher's scans, not the stashed ones; the owner, 2026-10-23)
             'scans': [x for x in scan_progress_data(current_user, put_away=None) if not x['put_away']]}
