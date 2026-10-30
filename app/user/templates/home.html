@@ -35,11 +35,12 @@
         <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>{{ cq.vquiz.title }}</strong></span>
           {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}{% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}{{ status_icon('fresh', 'New') }}{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
+          {#- the teacher's note on it: the note icon, showing it in a card, as the Dashboard's Student notes (the owner, 2026-10-28);
+              before Start / Continue, as on My Quizzes, grayed when there's none (the owner, 2026-10-29, D27) #}
+          {%- if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'home-note') }}{% else %}<button type="button" class="icon-link home-note" disabled title="Note from your teacher: none for this quiz">{{ icon_label('lc-sticky-note', 'Note from your teacher') }}</button>{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm btn-icon dash-go" disabled title="Start: you can’t start this yet. It opens {{ cq.opens_at|when }}.">{{ icon_label('lc-play', 'Start') }}</button>
           {% else %}<a class="btn btn-sm btn-icon dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Continue: keep working on' if cq.status == 'started' else 'Start:' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-play', 'Continue' if cq.status == 'started' else 'Start') }}</a>{% endif %}
-          {#- the teacher's note on it: the note icon, showing it in a card, as the Dashboard's Student notes (the owner, 2026-10-28);
-              after Start / Continue, in the one order for every row's icons (the owner, 2026-10-29) #}
-          {%- if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'home-note') }}{% endif %}</li>
+</li>
       {% endfor %}
       </ul>
     {% else %}

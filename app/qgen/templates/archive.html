@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, status_icon, trash_note_mark with context %}
+{% from "_macros.html" import filter_bar, status_icon, trash_note_mark, search_box with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, move_mini, move_folders, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
@@ -18,7 +18,7 @@
       <summary>{{ box_label('calendar', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="student">Student</th><th data-sort-key="quiz">Quiz</th><th class="row-more" data-sort-key="when">When</th><th data-sort-key="result">Result</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="student">Student</th><th class="row-more date-col" data-sort-key="when">When</th><th data-sort-key="quiz">Quiz</th><th data-sort-key="result">Result</th><th></th></tr></thead>
           <tbody>
           {% for a in month['items'] %}
             {% set blocker = blockers.get(a.id) %}
@@ -33,10 +33,10 @@
                     row's top line; one folder at a time, moved with the row's Move icon, so no ✕) #}
                 {%- if home %}<div class="small row-folders">In folder: <span class="folder-chip"><a href="{{ fk.page(home.id) }}" title="Open the folder “{{ folder_path(home, fk.name) }}”">{{ icon('folder') }} <span class="chip-name">{{ folder_path(home, fk.name) }}</span></a></span></div>{% endif %}</details>
                 {% if not blocker is none and 'account was deleted' in blocker %}<div class="small muted">account deleted</div>{% endif %}</td>
-              <td data-label="Quiz">{#- (opens this archived attempt, like its View icon: the owner, 2026-10-22) #}<a class="name-link" href="{{ url_for('qgen.archived', aid=a.id) }}" data-tip="View: {{ a.student_name }}'s answers and score as they were when moved to the Trash"><strong>{{ a.quiz_title }}</strong></a>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               {# one line each: "Taken <date>", "Archived <date>", "by <who>" (a date is never broken in two) #}
               <td data-label="When" class="small when-col row-more" data-sort="{{ a.archived_at.isoformat() if a.archived_at else '' }}">{% if a.compdate or a.startdate %}<span class="nowrap">Taken {{ (a.compdate or a.startdate)|when('date') }}</span><br>{% endif %}
                 <span class="muted"><span class="nowrap">Moved to the Trash {{ a.archived_at|when('date') }}</span>{% if a.archiver %}<br>by {{ a.archiver.shown_name }}{% endif %}</span></td>
+              <td data-label="Quiz">{#- (opens this archived attempt, like its View icon: the owner, 2026-10-22) #}<a class="name-link" href="{{ url_for('qgen.archived', aid=a.id) }}" data-tip="View: {{ a.student_name }}'s answers and score as they were when moved to the Trash"><strong>{{ a.quiz_title }}</strong></a>{% if a.vquiz is none %}<div class="small muted">quiz deleted</div>{% endif %}</td>
               <td data-label="Result" data-sort="{{ '%06.1f' % a.score if a.completed and a.score is not none else '' }}">
                 {% if a.completed and a.score is not none %}<span class="badge {{ score_class(a.score) }}">{{ '%.0f' % a.score }}%</span>
                 {% elif a.needs_review %}{{ status_icon('waiting', 'Waiting for grading', tip='handed in') }}
@@ -78,7 +78,7 @@
 
 {% call folders_page(fk, actions=archive_switch(section, counts), under_side=('<p class="muted small side-hint archive-note">'|safe) ~ archive_note ~ ('</p>'|safe)) %}
   <div class="folder-tools-bar">
-    {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box', paged=pg.total) }}{% endif %}
+    {% if total %}{{ filter_bar('#folder-items', 'attempt', 'attempts', boxes='details.sub-box, details.month-box', paged=pg.total) }}{{ search_box(fk, keep=('section',)) }}{% endif %}
     {% if total %}
     <form method="post" action="{{ url_for('qgen.move_archived') }}" id="file-form" class="file-bar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

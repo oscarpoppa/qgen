@@ -81,6 +81,19 @@ def _trash_note(kind, item_id):
         cache[kind] = {n.item_id: n for n in TrashNote.query.filter_by(kind=kind)}
     return cache[kind].get(item_id)
 app.jinja_env.globals.update(trash_note=_trash_note)
+#one student's version of a problem, for its open row on Problems (the owner, 2026-10-29): {text, choices, image}; as
+#written when a version can't be drawn
+def _problem_sample(vp):
+    from app.qgen.services import instantiate_problem
+    try:
+        text, _answer, opts = instantiate_problem(vp)
+    except Exception:
+        text, opts = vp.raw_prob or '', {}
+    opts = opts or {}
+    pics = (vp.options or {}).get('images') or []
+    return {'text': text or '', 'choices': opts.get('choices') or [],
+            'image': opts.get('image') or vp.image or (pics[0].get('file') if pics else None)}
+app.jinja_env.globals.update(problem_sample=_problem_sample)
 
 @app.template_filter('when')
 def when_filter(d, style='day'):

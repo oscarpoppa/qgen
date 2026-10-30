@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, count_badge, count_dot with context %}
+{% from "_macros.html" import filter_bar, search_box, count_badge, count_dot with context %}
 {% from "_archive_sections.html" import archive_switch %}
-{% from "_macros.html" import post_button, slot, trash_note_mark with context %}
+{% from "_macros.html" import post_button, slot, trash_note_mark, note_button with context %}
 {% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
 {% from "_results.html" import result_group with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
@@ -20,7 +20,7 @@
       {#- (one People page: Accounts and Results together, the owner 2026-10-21: Quizzes, Status and Done
           after Folders, in the site's column order; open, a row shows the person and then each of their
           quizzes with its attempts) #}
-      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th><th data-sort-key="created">Created</th><th data-sort-key="folders">Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
+      <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="name">Name</th>{% if not in_archive %}<th data-sort-key="note" class="note-col">Note</th>{% endif %}<th data-sort-key="created" class="date-col">Created</th><th data-sort-key="folders" class="folders-col">Folders</th>{% if not in_archive %}<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>{% endif %}<th></th></tr></thead>
       <tbody>
       {% for item in people %}
         {% set mine = folders_of.get(item.id, []) %}
@@ -40,9 +40,7 @@
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
                     column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · In the Trash since {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{#- each mark has its own place after the name, kept when it's empty, so the same marks line up down the column: the
                     teacher's cap, then the note (the owner, 2026-10-27) -#}
-                    {% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% else %}<span class="person-role-icon person-slot" aria-hidden="true"></span>{% endif %}
-                    {#- a note about him/her: a small mark, its first line in the tooltip (the owner, 2026-10-27) #}
-                    {%- if item.teacher_note %}<span class="person-note-mark" title="Note: {{ item.teacher_note.splitlines()[0][:120] }}" role="img" aria-label="Has a note">{{ icon('lc-sticky-note') }}</span>{% else %}<span class="person-note-mark person-slot" aria-hidden="true"></span>{% endif %}</span></span></summary>
+                    {% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% else %}<span class="person-role-icon person-slot" aria-hidden="true"></span>{% endif %}</span></span></summary>
             {#- opened: the person's account only; his/her quizzes are on his/her own page (the owner, 2026-10-25: People is
                 for who someone is and which folders, grade, he/she is in; it was every quiz and attempt) #}
             {#- the facts as a list with small circles, as every open row's; the folders on their own “In folders:” line under it,
@@ -56,15 +54,20 @@
               <li>Last seen: {{ item.last_seen|when if item.last_seen else '—' }}</li>
             </ul>
             {#- (as chips with ✕, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
-            {{ folder_chips(fk, 'user', item.id, item.shown_name, mine) }}</div>
-            {#- teachers' notes about him/her, in the open row's free room on the right; saved as typed (static/js/personnote.js),
-                every teacher sees the same ones, he/she never does (the owner, 2026-10-27) #}
-            <div class="person-note card" data-no-rowclick>
-              <label class="person-note-head small" for="note-{{ item.id }}">{{ icon('lc-sticky-note') }} Notes</label>
-              <textarea id="note-{{ item.id }}" class="person-note-text" rows="3" maxlength="{{ item.TEACHER_NOTE_MAX }}" data-note-url="{{ url_for('user.save_teacher_note', user_id=item.id) }}"
-                        placeholder="Only teachers see this" title="Notes about {{ item.shown_name }}, for teachers only: saved as you type">{{ item.teacher_note or '' }}</textarea>
-              <div class="person-note-status small muted" aria-live="polite">{% if item.teacher_note_at %}Changed {{ item.teacher_note_at|when }}{% if item.teacher_note_by %} by {{ item.teacher_note_by.shown_name }}{% endif %}{% endif %}</div>
-            </div></div></details></td>
+            {{ folder_chips(fk, 'user', item.id, item.shown_name, mine) }}
+            </div>
+            {#- the account's own icons, in the open row's upper-right corner: Edit, Reset password, Remove picture (the owner, 2026-10-29) #}
+            <div class="btn-row person-open-icons" data-no-rowclick>
+            {%- if in_archive %}
+            {{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
+            {%- else %}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
+            {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
+            {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
+            {%- endif %}</div>
+            </div></details></td>
+          {#- the teachers' Notes, in their own column, sortable (the owner, 2026-10-29, D29–D31); none in the Trash (D8) -#}
+          {%- if not in_archive %}<td data-label="Note" class="note-col" data-sort="{{ '0' if item.teacher_note else '1' }}">{{ note_button(item, url_for('user.save_teacher_note', user_id=item.id), item.shown_name) }}</td>{% endif %}
           <td data-label="Created" class="nowrap small muted" data-sort="{{ item.created_at.isoformat() if item.created_at else '' }}">{#- (date and time, as before: the owner, 2026-10-22) #}{{ item.created_at|when('date') if item.created_at else '<span class="no-data" title="None yet">—</span>'|safe }}</td>
           {#- how many folders it's in, sortable (the owner, 2026-10-27, To do 68) #}
           {%- set nf = (pg.nfolders if pg and pg.nfolders is defined else {}).get(item.id, 0) %}
@@ -82,14 +85,13 @@
           {% endif %}
           {#- when the account was made, to sort by (the owner, 2026-10-18); blank for accounts from before it was kept #}
           <td class="actions">
-            {#- in the one order for every row's icons (the owner, 2026-10-29): Assign, Message, History, Edit, the folder
-                icons, Reset password, Remove picture, then Move to Trash / Delete for good #}
+            {#- in the one order for every row's icons (the owner, 2026-10-29): Assign, Message, History, the folder icons, then
+                Move to Trash / Delete for good; Edit, Reset password and Remove picture are inside the open row #}
             {% if in_archive %}
             {{- trash_note_mark('person', item.id) }}
             {# the Archive's People (the owner, 2026-10-16): Restore and Delete for good; the rest grayed until restored #}
             {{ slot('Student history', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-history') }}
             {{- folder_icons(fk, 'user', item.id, item.shown_name, mine) }}
-            {{ slot('Reset password', 'Restore ' ~ item.shown_name ~ ' first', icon='lc-key') }}
             <form method="post" action="{{ url_for('user.restore_user', uid=item.id) }}" class="inline-form" data-in-place
                   data-confirm="Restore {{ item.shown_name }}’s account? He/she can sign in again." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: turn {{ item.shown_name }}’s account back on">{{ icon_label('lc-restore', 'Restore') }}</button></form>
@@ -100,10 +102,7 @@
             {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ Messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
             {# their page: quizzes and results, awards #}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student history: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('user.eduser', uid=item.id) }}" title="Edit: Change {{ item.shown_name }}'s name, email or teacher access">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {{- folder_icons(fk, 'user', item.id, item.shown_name, mine) }}
-            {{ post_button(url_for('user.resetpass', uid=item.id), 'Reset password', 'btn btn-secondary btn-sm', 'Reset ' ~ (item.shown_name)|string ~ '’s password? You’ll be shown a temporary one to pass on.', tip='Give ' ~ (item.shown_name)|string ~ ' a temporary password to log in with', icon='lc-key') }}
-            {% if item.avatar %}{{ post_button(url_for('user.remove_avatar', uid=item.id), 'Remove picture', 'btn btn-secondary btn-sm', 'Remove ' ~ (item.shown_name)|string ~ '’s picture?', tip='Take down ' ~ (item.shown_name)|string ~ '’s picture; their initials show instead', icon='lc-image-minus') }}{% else %}{{ slot('Remove picture', 'No picture to remove') }}{% endif %}
             {{ remove_button('people', item.id, item.shown_name, mine, url_for('user.deluser', uid=item.id), 'Delete for good', archive_url=url_for('user.archive_user', uid=item.id) if item != current_user else none, no_delete= 'You can’t delete your own account' if item == current_user else none,
                  delete_note=('His/her quiz results are kept in the Trash.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash.'), trash_message=true) }}
             {% endif %}
@@ -140,6 +139,7 @@
       {#- (no "Show" menu: it filtered the quizzes under each person, which are on his/her own page now; the owner,
           2026-10-25) #}
       {{ filter_bar('#folder-items', 'person', 'people', items='tr[data-box]', boxes='details.sub-box', paged=pg.total, id='results-filter') }}{% endif %}
+      {{- search_box(fk, keep=('section',)) }}
       {# the checked people: in a folder, or out of it; the same bar as the Problems and Quizzes
          pages' (grayed until someone is checked: static/js/folders.js; out of someone's only
          folder: asked first, static/js/takeout.js) #}

@@ -8,6 +8,7 @@
   --muted: #5b6474;
   --border: #d9dde4;
   --accent: #2f5bd3;
+  --going: #2f5bd3;  /* in progress: always blue, whatever the theme's accent (the owner, 2026-10-30: gold and blue is the standard) */
   --accent-text: #ffffff;
   --accent-soft: #e6ecfb;
   --tab-open: color-mix(in srgb, var(--accent) 9%, var(--surface));   /* an open folder tab and its panel */
@@ -15,6 +16,7 @@
   --ok: #1d7a46;
   --ok-soft: #e3f4ea;
   --bad: #b3261e;
+  --bad-deep: #8c1d17;  /* expired: a deeper red than late (the owner, 2026-10-30, D63) */
   --bad-soft: #fbe7e5;
   --warn: #8a5a00;
   --new-edge: #b08300;     /* a new quiz's box: gold (3:1 against the page) */
@@ -54,12 +56,14 @@
     --muted: #9aa3b2;
     --border: #2e3442;
     --accent: #7c9cf5;
+    --going: #7c9cf5;
     --accent-text: #0f1320;
     --accent-soft: #232c45;
     --tab-open: color-mix(in srgb, var(--accent) 14%, var(--surface));
     --ok: #5cc98b;
     --ok-soft: #173325;
     --bad: #f08a80;
+    --bad-deep: #c4554b;
     --bad-soft: #3a1c1a;
     --warn: #e6b450;
     --new-edge: #e3b341;
@@ -880,7 +884,52 @@ dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color
 dialog.ask .ask-message { display: flex; flex-direction: column; gap: 4px; margin: 0 0 16px; }
 dialog.ask .ask-message-label { font-weight: 600; }
 dialog.ask .ask-message textarea { width: 100%; resize: vertical; font: inherit; font-size: var(--fs-sm); }
+/* a note's dialog (static/js/personnote.js; the owner, 2026-10-29, To do 77) */
+dialog.ask.note-dialog { width: min(480px, calc(100vw - 32px)); }
+dialog.ask .note-dialog-head { font-weight: 600; margin-bottom: 8px; }
+dialog.ask .note-dialog-text { width: 100%; box-sizing: border-box; min-height: 7em; resize: vertical; font: inherit; font-size: var(--fs-sm); }
+dialog.ask .note-dialog-status { min-height: 1.2em; margin: 4px 0 12px; font-size: var(--fs-sm); }
+dialog.ask .note-dialog-status.error { color: var(--bad); }
+/* the Note icon filled in when there's a note */
+/* an open row's own icons (People: Edit, Reset password, Remove picture; Problems, Quizzes: Edit, Copy) in its upper-right
+   corner, the last thing in the open row (the owner, 2026-10-29) */
+.person-open > .person-open-icons { flex: none; align-self: flex-start; margin: 0 0 0 auto; gap: 4px; flex-wrap: nowrap; }
+/* (a phone, or a list as narrow: the open row's things stack, so the icons go first, on a line of their own at its right) */
+@media (max-width: 640px) { .person-open > .person-open-icons { order: -1; width: 100%; justify-content: flex-end; margin: 0; } }
+@container listarea (max-width: 560px) { .person-open > .person-open-icons { order: -1; width: 100%; justify-content: flex-end; margin: 0; } }
+/* a list's Note column (the owner, 2026-10-29, D29–D31) */
+/* (only as wide as its heading or icon, the same padding on every page, so the next column starts the same distance
+   after it everywhere: the owner, 2026-10-29) */
+/* (no fixed width now: a share like the other columns, never narrower than 4rem, the same padding as every column: the owner,
+   2026-10-30, D59) */
+table.even-cols > thead > tr > th.note-col, table.even-cols > tbody > tr > td.note-col { white-space: nowrap; }
+/* (as cards, on a phone or in a narrow list, the Note cell is a full line like every other: the owner, 2026-10-29: it was
+   squeezed to its icon and ran into the date under it) */
+@media (max-width: 640px) { .stack table.even-cols > tbody > tr > td.note-col, .stack table.even-cols > tbody > tr > td.note-col + td { width: 100%; padding: 6px !important; } }
+@container listarea (max-width: 860px) { .stack table.even-cols > tbody > tr > td.note-col, .stack table.even-cols > tbody > tr > td.note-col + td { width: 100%; padding: 6px !important; } }
+@container page (max-width: 780px) { .stack table.even-cols > tbody > tr > td.note-col, .stack table.even-cols > tbody > tr > td.note-col + td { width: 100%; padding: 6px !important; } }
+.note-open .note-full, .note-open.has-note .note-empty { display: none; }
+.note-open.has-note .note-full { display: contents; }
+/* a note with something in it: the sticky note with a star, gold, on the row and by its name (the owner, 2026-10-29, D12–D13) */
+.note-open.has-note .note-full svg, .note-filled svg { color: var(--new-edge); }
 dialog.ask .ask-message p { margin: 0; font-size: var(--fs-sm); }
+/* Search Everything… beside the filter box (the owner, 2026-10-29): the filter box's own look */
+.search-bar { margin: 0 0 0 2rem; }  /* (set apart from the filter box: the owner, 2026-10-29) */
+@media (max-width: 640px) {  /* (under it on a phone, lined up with it; the box gives way so Search and Clear Search fit) */
+  .search-bar { margin-left: 0; max-width: 100%; }
+  .search-bar .filter-box { display: flex; max-width: 100%; min-width: 0; }
+  .search-bar .filter-box input.search-everything[type=search] { min-width: 0; flex: 1 1 auto; } }
+.search-bar .filter-box input[type=search] { min-width: 12rem; }
+/* Problems' open row: the problem itself, between its facts and its Notes (the owner, 2026-10-29): one student's version, its
+   first lines then "…", a small picture */
+/* (the problem itself narrower than the facts, which grow as its quizzes and folders build up: the owner, 2026-10-29) */
+.person-open > .problem-peek { flex: 1 1 220px; min-width: 0; max-width: 380px; display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2); }
+.problem-peek-pic img { width: 64px; height: 64px; object-fit: cover; border-radius: 4px; display: block; }
+.problem-peek-text { min-width: 0; }
+.problem-peek-text p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+.problem-peek-choices { margin: 4px 0 0; padding-left: 18px; }
+.problem-peek-choices li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trash-note-slot { visibility: hidden; }  /* (a Trash row with no message keeps the icon's place: the owner, 2026-10-29) */
 dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere; padding: 6px 8px; border-left: 3px solid var(--border); }
 
@@ -917,7 +966,14 @@ dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere;
    and everything else right). Every list table is marked .even-cols */
 @media (min-width: 641px) {
   table.even-cols { table-layout: auto; width: 100%; }
-  table.even-cols > thead > tr > th:first-child:not(.tick-col), table.even-cols > thead > tr > th.tick-col + th { width: 30%; }
+  /* every folder page's columns evened out (the owner, 2026-10-30, D59: "weaken the conditions… even out the columns so nothing
+     is jammed together"; it was fixed widths, D35–D39): each column an equal share of the table, the name two shares, the
+     icons only as wide as they are; each kind of column never narrower than its floor (the name 10rem, the Note 4rem, a
+     date 7.5rem and on one line), and the same padding between every two columns. The order: docs/ui-patterns.md, D58. */
+  table.even-cols > thead > tr > th:not(.tick-col):not(:last-child) { width: 10%; }
+  table.even-cols > thead > tr > th:first-child:not(.tick-col), table.even-cols > thead > tr > th.tick-col + th { width: 20%; min-width: 10rem; }
+  table.even-cols > thead > tr > th.note-col { min-width: 4rem; }
+  table.even-cols > thead > tr > th.date-col { min-width: 7.5rem; white-space: nowrap; }
   table.even-cols > thead > tr > th.tick-col { width: 36px; }
   table.even-cols td.actions { width: 1%; white-space: nowrap; }
 }
@@ -950,6 +1006,13 @@ dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere;
 /* (a long name wraps under itself, not under its icon) */
 .side-link { display: flex; align-items: flex-start; gap: 4px; }
 .side-link > svg.ico { flex: none; margin-top: .1em; }
+/* an automatic folder's icon in the color of the state it holds, on every folder list (the owner, 2026-10-30, D63–D64): New gold,
+   In progress blue, Waiting for grading gray (as its mark), Late and Due soon red, Expired a deeper red */
+:is(.side-link, .folder-tab).side-view-new svg.ico { color: var(--warn); }
+:is(.side-link, .folder-tab).side-view-started svg.ico { color: var(--going); }
+:is(.side-link, .folder-tab).side-view-review svg.ico { color: var(--muted); }
+:is(.side-link, .folder-tab):is(.side-view-late, .side-view-soon) svg.ico { color: var(--bad); }
+:is(.side-link, .folder-tab).side-view-expired svg.ico { color: var(--bad-deep); }
 .side-link > .side-name { min-width: 0; }
 .side-count { flex: 0 0 auto; padding-right: 6px; }
 .side-fold, .side-fold-space { flex: 0 0 18px; width: 18px; height: 22px; }
@@ -1151,6 +1214,11 @@ ol.attempt-list { position: relative; padding-top: 6px; padding-right: 12px; }
 ol.attempt-list::before { content: ""; position: absolute; top: 0; left: var(--line-l, 0); right: var(--line-r, 0);
   border-top: 1px solid color-mix(in srgb, var(--border), var(--muted) 15%); pointer-events: none; }
 ol.attempt-list > li { padding-bottom: 2px; }
+/* each attempt with a solid blue dot before it, to catch the eye: bigger than an open row's hollow fact circles, so the
+   attempts stand apart from the facts above them; on every attempt list (the owner, 2026-10-30, D61–D62). Part of the
+   line's date, so it stays with the date when a narrow line wraps */
+ol.attempt-list > li.attempt-row > .nowrap:first-child::before { content: ""; display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 0.05em; }
 /* (in an open row, each attempt sits centered between its lines, the last one too: the owner, 2026-10-27) */
 details.row-fold[open] > ol.attempt-list > li, .result-open ol.attempt-list > li { margin: 0; padding-top: 8px; padding-bottom: 6px; }
 details.row-fold[open] > ol.attempt-list > li:last-child, .result-open ol.attempt-list > li:last-child { padding-bottom: 0; }
@@ -1812,7 +1880,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 .side-dot { display: inline-block; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--r); flex: none;
   font-size: var(--fs-xs); font-weight: 700; line-height: 16px; text-align: center; color: var(--surface); }
 .side-dot.dot-new { background: var(--warn); }
-.side-dot.dot-started { background: var(--accent); }
+.side-dot.dot-started { background: var(--going); }
 .side-dot.dot-due { background: var(--bad); }
 .side-dot.dot-unread { background: var(--bad); }
 
@@ -1908,7 +1976,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
 /* a quiz box with a quiz waiting: gold while it's new (not started), blue once it's in
    progress (My quizzes, the teacher's student page, Home's Waiting for you) */
 .quiz-is-new { border-color: var(--new-edge) !important; box-shadow: inset 0 0 0 1px var(--new-edge); }
-.quiz-is-started { border-color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
+.quiz-is-started { border-color: var(--going) !important; box-shadow: inset 0 0 0 1px var(--going); }
 .dash-list > li.quiz-is-new, .dash-list > li.quiz-is-started { border: 1px solid; border-radius: var(--r); padding-left: 8px; padding-right: 8px; margin: 4px 0; }
 
 /* Paper only: one page to print, so no labels or more slots: the card's drop strip and its
@@ -2191,7 +2259,11 @@ a.name-link:hover, a.name-link:focus-visible { color: var(--accent); text-decora
 /* the Dashboard's rows: the student | the quiz (its whole name, wrapping if need be) with its
    state and time under it | the row's button. The rows share these columns (subgrid), so names,
    quizzes and buttons line up from row to row */
-.dash-list:has(> li > .dash-what) { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 24px; }  /* (room between the name, the quiz and the eye: the owner, 2026-10-14) */
+.dash-list:has(> li > .dash-what) { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr) max-content; column-gap: 24px; }  /* (room between the name, the quiz and the eye: the owner, 2026-10-14) */
+/* (the name column at most two-fifths of the card, a long name wrapping inside it, so the quiz and its status keep their
+   room: "Stanislaus-Avery-Dickenson-smythe (shorty)" squeezed the quiz to one letter and the eye onto its words: the owner,
+   2026-10-29) */
+.dash-list > li:has(> .dash-what) > .person { min-width: 0; overflow-wrap: anywhere; }
 .dash-list > li:has(> .dash-what) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; column-gap: 24px; }
 .dash-list > li > .dash-what { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; min-width: 0; }
 .dash-list > li > .dash-what > .dash-quiz { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
@@ -2852,6 +2924,10 @@ td.actions { padding-top: 4px; padding-bottom: 4px; }
 /* People's Results: Results by quiz and Assign a quiz at the right end of the filter bar (the owner, 2026-10-16) */
 .folder-tools-bar .results-filter-right { margin-left: auto; flex-wrap: nowrap; }
 @media (max-width: 760px) { .folder-tools-bar .results-filter-right { margin-left: 0; } }
+/* (on a phone its buttons wrap, and a long name wraps inside its button, e.g. "Assign Quizzes to <a long name>": the page
+   scrolled sideways; the owner, 2026-10-29, D10) */
+@media (max-width: 760px) { .folder-tools-bar .results-filter-right { flex-wrap: wrap; max-width: 100%; }
+  .folder-tools-bar .results-filter-right .btn { white-space: normal; max-width: 100%; overflow-wrap: anywhere; } }
 /* a results row: the quiz's name, the score counted and the row's buttons line up with the
    first attempt's line (the owner, 2026-10-16) */
 td.attempts > .result-attempt:first-of-type { margin-top: 0; }
@@ -2950,7 +3026,7 @@ td.attempt-buttons { text-align: right; }
 /* (a new or started quiz's row outlined all the way round, its cells drawing the edge so no side
    is cut off: the owner, 2026-10-17) */
 tr.row-is-new { --row-edge: var(--new-edge); }
-tr.row-is-started { --row-edge: var(--accent); }
+tr.row-is-started { --row-edge: var(--going); }
 /* (a new or started quiz's whole row outlined in its color, all four sides, drawn inside its
    cells so the standard line between rows stays: the owner, 2026-10-19; it was a stripe down
    the left edge. Every table that marks New / In progress uses it, like the boxes' .quiz-is-new) */
@@ -3423,7 +3499,6 @@ th.tick-col input.check-all { margin: 0; }
 .people-table .stacked-sums { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 /* (its Name column narrower than a list's usual 30%, the room going to the columns after it: the
    owner, 2026-10-21) */
-table.even-cols.people-table.result-rows > thead > tr > th.tick-col + th { width: 19rem; }
 /* (one fixed width, room for a 10.5rem name and the cap and note marks, so the column is the same on every list whatever its
    longest name; it was 16%, wider when a long name needed it: the owner, 2026-10-28) */
 /* an open row's groups (each quiz under a person, each student under a quiz): the group's heading flush left with its name in bold,
@@ -3462,6 +3537,11 @@ table.people-table td.person-folders { min-width: 0; max-width: 16rem; }
 }
 @container listarea (max-width: 980px) {
   table.even-cols.people-table td.actions { width: 11rem; min-width: 11rem; }  /* (four to a line, two lines with the folder icons: the owner, 2026-10-26) */
+}
+/* (Quizzes and People, the most crowded folder pages: when the list is too narrow for the standard columns and one line of
+   icons, the icons go three to a line, so the standard columns keep their widths: the owner, 2026-10-29, D38) */
+@container listarea (max-width: 1180px) {
+  table.even-cols.people-table td.actions, table.even-cols.quiz-table td.actions { white-space: normal; width: 8rem; min-width: 8rem; }
 }
 /* (who gets a problem: a bare icon with its group's letter, opening a dialog: the owner, 2026-10-22) */
 .order-who { gap: 2px; }
@@ -3513,6 +3593,13 @@ dialog.ask.showing-dialog { width: min(820px, calc(100vw - 32px)); max-width: mi
 .folder-side > .side-list-head { display: flex; align-items: center; gap: 6px; min-height: 36px; margin: 0 0 4px;
   font-weight: 600; font-size: var(--fs-sm); }
 .folder-side > .side-list-head .side-levels { margin: 0; }
+/* the folder list's Expand all / Collapse all together in the quiet gray oval the counts are in (.badge; the owner,
+   2026-10-29, To do 78), on every folder page and Student History's list */
+.folder-side > .side-list-head .side-levels:not([hidden]),
+.folder-filter[data-style="list"] > .side-list-head .side-levels:not([hidden]) {
+  display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); }
+.folder-side > .side-list-head .side-levels .btn-icon,
+.folder-filter[data-style="list"] > .side-list-head .side-levels .btn-icon { background: none; border-color: transparent; }
 @media (max-width: 760px) {
   .folder-side > .side-list-head .side-list-title { display: none; }
   .folder-side > .side-list-head:not(:has(.side-levels:not([hidden]))) { display: none; }
@@ -3608,9 +3695,10 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 @container listarea (max-width: 860px) { #scan-current .stack table td:nth-child(n), .stash-main .stack table td:nth-child(n) { width: 100%; white-space: normal; padding-left: 14px; } }
 /* a tight list (the window under about 1450px wide): a little less room inside each cell, so the icons at the row's end aren't cut off */
 @container listarea (max-width: 1100px) {
-  .folder-filter-list table.even-cols th, .folder-filter-list table.even-cols td { padding-left: 6px; padding-right: 6px; }
+  .folder-filter-list table.even-cols th, .folder-filter-list table.even-cols td { padding-left: 8px; padding-right: 8px; }  /* (8px: never under 16px between two columns, D59) */
   /* (and a row's many icons go four to a line, as the same rule at 1080 does, so the table fits its panel) */
-  .folder-filter-list table.even-cols:not(.people-table) td.actions { white-space: nowrap; width: auto; }  /* (one line now the Folders column is gone: the owner, 2026-10-26) */
+  .folder-filter-list table.even-cols:not(.people-table):not(.quiz-table) td.actions { white-space: nowrap; }  /* (one line now the Folders column is gone: the owner, 2026-10-26;
+     only as wide as the icons, the room left over going to the columns: the owner, 2026-10-30, D59) */
 }
 /* a column's icons end on one vertical line, rows with fewer icons too (the owner, 2026-10-23: everything stays vertically aligned) */
 #scan-current td:last-child .btn-row, .stash-main td:last-child .btn-row { justify-content: flex-end; }
@@ -3667,12 +3755,12 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .status-icon { display: inline-flex; align-items: center; vertical-align: middle; }
 .status-icon svg.ico { width: 20px; height: 20px; }
 .status-icon.status-done svg.ico, .status-icon.status-ready svg.ico { color: var(--ok); }
-.status-icon.status-going svg.ico { color: var(--accent); }
+.status-icon.status-going svg.ico { color: var(--going); }
 .status-icon.status-fresh svg.ico { color: var(--warn); }
 .status-icon.status-waiting svg.ico { color: var(--muted); }  /* (handed in, waiting for the teacher: the owner, 2026-10-27) */
 /* (late: a clock, gold not started, blue in progress; expired: the fish bones, the same colors: the owner, 2026-10-29) */
 .status-icon.status-late-new svg.ico, .status-icon.status-expired-new svg.ico { color: var(--warn); }
-.status-icon.status-late-going svg.ico, .status-icon.status-expired-going svg.ico { color: var(--accent); }
+.status-icon.status-late-going svg.ico, .status-icon.status-expired-going svg.ico { color: var(--going); }
 
 /* help on the label itself, no "?" circle (the owner, 2026-10-24; static/js/tips.js): a faint dotted underline says there's help */
 .tip-wrap.tip-moved > button.tip { display: none; }
@@ -3805,6 +3893,9 @@ fieldset.scan-form-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* a small camera after a quiz's, problem's or folder's name when the scanner made it (the owner, 2026-10-25) */
 .scan-mark { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--muted); opacity: .5; }  /* (fainter: the owner, 2026-10-25) */
 .scan-mark svg { width: 13px; height: 13px; }
+/* (in a folder list's row, which lines its things up along the top for a name on two lines: the mark centered on the
+   name's first line, not riding high: the owner, 2026-10-30) */
+.side-link > .scan-mark { margin-top: calc((1lh - 13px) / 2); }
 /* a paged list being sorted in place (sorttable.js; the owner, 2026-10-25, CR1): dimmed for the moment it takes */
 table.is-sorting { opacity: .55; transition: opacity .15s; }
 @media (prefers-reduced-motion: reduce) { table.is-sorting { transition: none; } }
@@ -3959,11 +4050,12 @@ details.row-fold[open]:not(:has(> [data-fold-body])) > summary + * { padding-top
 .dash-notes > li > .name-link { max-width: 14rem; }
 .dash-notes > li > .name-link strong { overflow-wrap: break-word; }
 .dash-notes > li > .dash-what .small { white-space: nowrap; }
+/* (a narrow card: "changed yesterday 3:19 PM" may wrap, instead of running under the eye: the owner, 2026-10-29) */
+@media (max-width: 1000px) { .dash-notes > li > .dash-what .small { white-space: normal; } }
 /* a row's note mark (Problems, Quizzes, Pictures, Files): at the right end of its name line, so the marks line up down the
    column (the owner, 2026-10-28) */
 details.row-fold > summary > .person-note-mark { margin-left: auto; padding-left: 8px; box-sizing: content-box; align-self: center; flex: none; }
 /* a workbook's Notes card, under its page's title (the owner, 2026-10-28) */
-.scan-note > .person-note { max-width: 400px; margin: 0 0 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
 /* the teacher's note to the student, under a copy's attempts on its results (the owner, 2026-10-28) */
 /* (on the right of the open row, beside the attempts, as People's Notes card: the owner, 2026-10-28) */
 .result-open { padding-top: 0; }
@@ -3972,16 +4064,8 @@ details.row-fold > summary > .person-note-mark { margin-left: auto; padding-left
 .hint.teacher-note > svg.ico { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--accent); }
 .teacher-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .quiz-start .hint.teacher-note { margin: 12px 0; text-align: left; }
-/* Home's Waiting for you: a quiz's note icon at the line's right end, just after Start (the one order for every row's
-   icons: the owner, 2026-10-29; it was before it, 2026-10-28) */
-.dash-list > li > .dash-go ~ .home-note { margin-left: 6px; }
-/* My quizzes: an attempt's note icon just left of its own icon, placed as that one is (the owner, 2026-10-28) */
-.attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 36px); }
-/* (after Start / Continue, before View: the one order for every row's icons, the owner 2026-10-29). After: Start / Continue
-   steps one place left and the note takes its place, so nothing hangs past the row's end */
-.attempt-act > .attempt-note.attempt-note-after { right: var(--act-r, 20px); }
-.attempt-act:has(> .attempt-note-after) > :not(.attempt-note):not(.note-pop) { right: calc(var(--act-r, 20px) + 36px); }
-/* (the icons are 44px to tap on a touch screen: as far again; its own column either way, empty on an attempt with no note) */
-@media (pointer: coarse) { .attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 46px); }
-  .attempt-act > .attempt-note.attempt-note-after { right: var(--act-r, 20px); }
-  .attempt-act:has(> .attempt-note-after) > :not(.attempt-note):not(.note-pop) { right: calc(var(--act-r, 20px) + 46px); } }
+/* Home's Waiting for you: a quiz's note icon at the line's right end, just before Start, as on My Quizzes (the owner,
+   2026-10-29, D27) */
+.dash-list > li > .home-note { margin-left: auto; }
+.dash-list > li > .home-note ~ .dash-go { margin-left: 6px; }
+/* (My quizzes' notes: in the row's own Note column now, not on the attempt lines: the owner, 2026-10-29, D29) */

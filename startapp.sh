@@ -48,7 +48,10 @@ else
     rm -f /tmp/qgen.sock
     #one worker with many threads: each open page keeps a connection for instant updates
     #(app/push.py), which needs them all in one process; QGEN_PUSH=1 turns them on
-    QGEN_PUSH=1 gunicorn --bind unix:/tmp/qgen.sock --workers 1 --threads 100 quizapp:app --daemon --log-level DEBUG
+    #its messages and errors (the app's and the scanner's too) go to qgen-errors.log here; in the
+    #background they used to go nowhere (the owner, 2026-10-30, D45)
+    QGEN_PUSH=1 gunicorn --bind unix:/tmp/qgen.sock --workers 1 --threads 100 quizapp:app --daemon --log-level info \
+        --error-logfile "$HERE/qgen-errors.log" --capture-output
     #it runs in the background: make sure it's still there once it has had time to start
     for i in 1 2 3 4 5 6 7 8 9 10; do
         [ -S /tmp/qgen.sock ] && break
@@ -69,5 +72,5 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
     [ "$code" = "200" ] && echo "site: up at http://localhost:8080" && exit 0
     sleep 1
 done
-echo "site: NOT answering yet (last status $code); check the logs"
+echo "site: NOT answering yet (last status $code); check the logs ($HERE/qgen-errors.log)"
 exit 1

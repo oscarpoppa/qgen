@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, post_button, box_label, count_of, expand_collapse, note_card with context %}
+{% from "_macros.html" import back_button, post_button, box_label, count_of, expand_collapse, note_button with context %}
 {# The draft of a scan (app/qgen/scan.py): each page beside its picture, with its quiz
    settings, crop boxes and drafted problems. Nothing is saved until Save. #}
 
@@ -149,6 +149,9 @@
   <h1>Workbook: {{ job.name }}</h1>
   {{ expand_collapse('#scan-form', 'pages', fixed=true) }}
   <div class="actions">
+    {#- the teachers' Notes, an icon opening its dialog, outside the workbook's form so a note isn't one of its unsaved
+        changes (the owner, 2026-10-28; an icon, 2026-10-29, D9); none in the Trash (D8) #}
+    {% if not trashed %}{{ note_button(job, url_for('qgen.save_note', kind='workbook', item_id=job.id), '“' ~ job.name ~ '”') }}{% endif %}
     {% if trashed %}{{ back_button(url_for('qgen.archive', section='workbooks'), 'Trash') }}{% else %}{{ back_button(url_for('qgen.scan_start'), 'Scan workbook pages') }}{% endif %}
   </div>
 </div>
@@ -161,9 +164,6 @@
 </div>
 {% endif %}
 
-  {#- the teachers' Notes card, as People's, outside the workbook's form so a note isn't one of its unsaved changes
-      (the owner, 2026-10-28) #}
-  <div class="scan-note">{{ note_card(job, url_for('qgen.save_note', kind='workbook', item_id=job.id), '“' ~ job.name ~ '”', 'workbook-' ~ job.id) }}</div>
   {#- (no yellow "N pages weren't read yet" card: the Helper has each page's choices; the owner, 2026-10-23) #}
   {% for e in problems.get('nothing', []) %}<div class="alert alert-error">{{ e }}</div>{% endfor %}
 

@@ -1279,6 +1279,11 @@ def review_list():
         weigh(c)
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
     listed = quizzes if view == 'all' else root['items'] if view == 'main' else folder_tree.own(node)
+    #(Search Everything…: every folder, the quiz's name and its students', the owner 2026-10-29)
+    from app import search as SR
+    words = SR.text()
+    if words:
+        listed = SR.hits(quizzes, 'grading', words, extra=lambda q: [n for cq in by_quiz[q.id] if cq.taker for n in (cq.taker.username, cq.taker.nickname)])
     #(20 quizzes to a page, app/paging.py; the counts still count attempts waiting: the owner, 2026-10-19)
     from app import paging
     def todo(cq):
@@ -1299,6 +1304,8 @@ def review_list():
         all_label='All Quizzes', all_count=len(waiting), name=lambda f: f.title,
         hint=None,  # (no note under the folder list: clutter, the owner 2026-10-21)
         fold_key='qgen-folded-grading-folders')
+    if words:
+        SR.apply(fk, words, sum(weight.get(q.id, 0) for q in listed))
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, pg=pg, fk=fk, title='Grading')
 
 def open_attempts():
@@ -1321,14 +1328,20 @@ def open_quizzes():
     attempts = [cq for cq in open_attempts() if cq.taker and cq.vquiz]
     kind = {cq.id: cq.state_kind(now) for cq in attempts}
     #(a folder for each state; an attempt can be in two, as on My Quizzes: a late new one is in Late and New)
-    folders = [('late', 'Late', 'clock', lambda cq: kind[cq.id] in ('late-new', 'late-going')),
-               ('new', 'New', 'sparkle', lambda cq: cq.status == 'new' and not cq.expired),
+    #(in the one order of every folder list's automatic folders: All, New, In progress, Waiting for grading, Late / Due
+    #soon, Expired: the owner, 2026-10-30)
+    folders = [('new', 'New', 'sparkle', lambda cq: cq.status == 'new' and not cq.expired),
                ('started', 'In Progress', 'pencil', lambda cq: cq.status == 'started' and not cq.expired),
                ('review', 'Waiting for Grading', 'lc-user-check', lambda cq: cq.status == 'review'),
+               ('late', 'Late', 'clock', lambda cq: kind[cq.id] in ('late-new', 'late-going')),
                ('expired', 'Expired', 'fish-bones', lambda cq: kind[cq.id] == 'expired')]
     inside = {key: [cq for cq in attempts if test(cq)] for key, _l, _i, test in folders}
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), {}, default='all', extra=tuple(inside))
     listed = inside.get(view, attempts)
+    from app import search as SR
+    words = SR.text()
+    if words:
+        listed = SR.hits(attempts, 'pending', words)  # (Search Everything…: the owner, 2026-10-29)
     pg = paging.paginate(listed, name_of=lambda cq: '{} {} {}'.format(cq.vquiz.title or '', cq.taker.username, cq.taker.nickname or ''),
                          sorts={'quiz': lambda cq: (cq.vquiz.title or '').lower(),
                                 'student': lambda cq: cq.taker.shown_name.lower(),
@@ -1341,6 +1354,8 @@ def open_quizzes():
         unit='attempt', units='attempts', all_label='All Pending', all_count=len(attempts),
         auto_views=[{'key': key, 'icon': ic, 'label': label, 'count': len(inside[key]), 'badge': None} for key, label, ic, _t in folders],
         hint=None, fold_key='qgen-folded-open-folders')
+    if words:
+        SR.apply(fk, words, len(listed))
     return render_template('open_quizzes.html', attempts=attempts, shown=pg.items, pg=pg, fk=fk, title='Pending Quizzes')
 
 
@@ -1527,7 +1542,15 @@ def list_user(uid):
     in_some = set().union(*folder_keys.values()) if folder_keys else set()
     ask = folder_tree.choice_of(request.args)
     ask = 'none' if ask == 'main' else ask
-    if ask == 'new':
+    #(Search Everything…: every one of his/her quizzes, its name and its problems', a folder of its own at the top of the
+    #list: the owner, 2026-10-29)
+    from app import search as SR
+    words = SR.text()
+    if words:
+        ask, listed = 'search', SR.hits(groups, 'groups', words)
+        quiz_filter.insert(0, {'id': 'search', 'name': SR.label(words), 'icon': 'search', 'count': len(listed),
+                               'keys': keys(listed), 'children': [], 'url': None})
+    elif ask == 'new':
         listed = fresh
     elif ask == 'started':
         listed = working
@@ -1542,6 +1565,8 @@ def list_user(uid):
     #(?show=<quiz id>: lands on that quiz's page and opens its row, from Pending Quizzes: the owner, 2026-10-29)
     pg = paging.paginate(listed, name_of=lambda g: g['vquiz'].title or '', show=request.args.get('show'), id_of=lambda g: g['vquiz'].id, sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
+        #(the ones with a Note to the Student first: the owner, 2026-10-29, D31)
+        'note': lambda g: 0 if g['latest'].assign_note else 1,
         'latest': lambda g: g['last_at'],
         'attempts': lambda g: len(g['attempts']),
         #(its most urgent attempt first, CQuiz.URGENCY: the owner, 2026-10-29)
@@ -1602,6 +1627,8 @@ def quiz_results_page(vqid):
     from app import paging
     pg = paging.paginate(listed, name_of=lambda u: u.username + ' ' + (u.nickname or ''), show=request.args.get('show'), sorts={
         'name': lambda u: u.username.lower(),
+        #(the ones with a Note to the Student first: the owner, 2026-10-29, D32)
+        'note': lambda u: 0 if rows[u.id][1]['latest'].assign_note else 1,
         'latest': lambda u: rows[u.id][1]['last_at'],
         'attempts': lambda u: len(rows[u.id][1]['attempts']),
         'status': lambda u: {'review': 2, 'out': 1}.get(group_state(u)),
@@ -2196,10 +2223,16 @@ def subject_page(kind, template, in_archive=False, **extra):
     #words typed (?q=), the sort (?sort=, ?dir=) and the page (?page=) asked for are drawn. What's
     #checked in other folders (?checked=1,2,3, the Checked folder) is listed the same way.
     from app import paging
+    from app import search as SR
     checked = request.args.get('checked')
+    words = SR.text() if checked is None else ''
     if checked is not None:
         want = {x for x in checked.split(',') if x}
         listed = [x for x in everything if str(x.id) in want]
+    elif words:
+        #(Search Everything…: every folder, names and what's inside, a folder view of its own; the owner, 2026-10-29)
+        listed = SR.hits(everything, kind, words)
+        SR.apply(fk, words, len(listed))
     elif view == 'all':
         listed = everything
     elif view == 'main':
@@ -2208,7 +2241,7 @@ def subject_page(kind, template, in_archive=False, **extra):
         listed = folder_tree.own(node)
     #(a thing that was just saved or opened by a link, ?show=, is in the All list when it isn't here)
     show = request.args.get('show', '')
-    if show and checked is None and view != 'all' and not any(str(x.id) == show for x in listed) \
+    if show and checked is None and not words and view != 'all' and not any(str(x.id) == show for x in listed) \
             and any(str(x.id) == show for x in everything):
         keep = {k: v for k, v in request.args.items() if k in ('section',)}
         return redirect(request.path + '?' + urlencode(dict(keep, show=show)))
@@ -2220,7 +2253,9 @@ def subject_page(kind, template, in_archive=False, **extra):
     nfolders = dict(db.session.query(cols[0], func.count(cols[1])).group_by(cols[0]))
     sorts = {'title': lambda i: (getattr(i, 'title', None) or getattr(i, 'name', '') or '').lower(),
              'created': lambda i: i.create_date,
-             'folders': lambda i: nfolders.get(i.id, 0)}
+             'folders': lambda i: nfolders.get(i.id, 0),
+             #(the ones with a note first: the owner, 2026-10-29, D31)
+             'note': lambda i: 0 if getattr(i, 'teacher_note', None) else 1}
     if kind in ('quizzes', 'problems'):
         sorts['assigned'] = lambda i: assigned.get(i.id, 0)
     if kind == 'quizzes' and lay is not None:
@@ -2350,10 +2385,14 @@ def archive():
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
     #(20 attempts to a page, one folder at a time, app/paging.py; the owner, 2026-10-23)
     from app import paging
+    from app import search as SR
     checked = request.args.get('checked')
+    words = SR.text() if checked is None else ''
     if checked is not None:
         want = {x for x in checked.split(',') if x}
         listed = [a for a in attempts if str(a.id) in want]
+    elif words:
+        listed = SR.hits(attempts, 'attempts', words)  # (Search Everything…: the owner, 2026-10-29)
     elif view == 'all':
         listed = attempts
     elif view == 'main':
@@ -2373,6 +2412,8 @@ def archive():
     #whether each attempt shown can be put back
     blockers = {a.id: S.restore_blocker(a) for a in shown}
     fk = archive_kit(view, node, root, flat, nodes, len(attempts))
+    if words:
+        SR.apply(fk, words, len(listed))
     return render_template('archive.html', fk=fk, items=shown, pg=pg, blockers=blockers, total=len(attempts), title='Trash',
                            section='attempts', counts=counts,
                            moved=request.args.get('moved', ''))
@@ -2389,10 +2430,14 @@ def trash_workbooks_page(section, counts):
     folders = ScanFolder.query.order_by(ScanFolder.name).all()
     root, flat, nodes = folder_tree.tree(folders, lambda f: f.name, jobs, {j.id: [j.folder_id] for j in jobs if j.folder_id})
     view, node = folder_tree.view_of(folder_tree.choice_of(request.args), nodes, default='all')
+    from app import search as SR
     checked = request.args.get('checked')
+    words = SR.text() if checked is None else ''
     if checked is not None:
         want = {x for x in checked.split(',') if x}
         listed = [j for j in jobs if str(j.id) in want]
+    elif words:
+        listed = SR.hits(jobs, 'workbooks', words)  # (Search Everything…: the owner, 2026-10-29)
     elif view == 'all':
         listed = jobs
     elif view == 'main':
@@ -2417,6 +2462,8 @@ def trash_workbooks_page(section, counts):
                          page=lambda v: url_for('qgen.archive', section='workbooks', folder=v),
                          unit='workbook', units='workbooks', all_label='All Workbooks', all_count=len(jobs),
                          name=lambda f: f.name, readonly=True, drag_what='a workbook')
+    if words:
+        SR.apply(fk, words, len(listed))
     books = []
     for job in pg.items:
         d = info(job)

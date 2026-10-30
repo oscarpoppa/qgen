@@ -1,7 +1,7 @@
 {# One student's attempts at one quiz, as table cells: their attempts (Details, Delete), the
    score that counts (with this student's own retake rule) and Retake. Shared by
    Results by student and Results by quiz. g: one group from attempts_by_quiz(). #}
-{% from "_macros.html" import post_button, slot, box_label, count_of, avatar, count_badge, status_icon, attempt_mark, row_state, most_urgent with context %}
+{% from "_macros.html" import post_button, slot, box_label, count_of, avatar, count_badge, status_icon, attempt_mark, row_state, most_urgent, note_open with context %}
 {# "Archive all (n)": every one of this student's attempts at the quiz. With one attempt it's the
    only archive button (the attempt's own Archive is left out then: the owner, 2026-10-19; it was
    grayed out beside it, 2026-10-16) #}
@@ -140,8 +140,13 @@
    key, open_key, name, icons) a student on a quiz's history (the owner, 2026-10-21). On a student page (the owner, 2026-10-21): its name folds open
    to its attempts (Grade, View, Answer key, Archive, the score that counts); beside it Latest,
    Attempts, Status and Score, each sortable, and Archive all #}
-{% macro result_row(g, item, label=none, key=none, open_key=none, name=none, icons='') %}
+{% macro result_row(g, item, label=none, key=none, open_key=none, name=none, icons='', note_col=false) %}
     {% set latest = g.latest %}
+    {#- the teacher's note to the student on this quiz (the newest copy's), which he/she sees; one for everyone given it in
+        the same Assign, so a change here changes it for all of them (the owner, 2026-10-28). note_col: in its own Note
+        column, sortable (Student History: the owner, 2026-10-29, D29–D31); else an icon after Retake #}
+    {%- set nq = g.latest %}{% set note %}{% if nq and nq.id is defined and current_user.is_admin %}
+        {{- note_open(url_for('qgen.save_assign_note', cqid=nq.id), nq.assign_note, 'Note to the Student', 'Note to the Student: he/she sees this', 'Note to the Student', 'The student sees this', 4000, 'Changed ' ~ (nq.assign_note_at|when) if nq.assign_note_at else '') }}{% endif %}{% endset %}
     {#- (an attempt is any one copy of the quiz, whatever its status, a new one not started yet too:
         the owner, 2026-10-21) #}
     {% set tried = g.attempts|length %}
@@ -170,29 +175,22 @@
                 {%- if cq.closes_at and not cq.completed %} <span class="small muted">closes {{ cq.closes_at|when }}</span>{% endif %}
                 <span class="attempt-act attempt-act-group">{{ attempt_buttons(cq, g, item) }}</span></li>
             {% endfor %}
-          </ol></div>
-          {#- the teacher's note to the student on this quiz (the newest copy's), which he/she sees; one for everyone given it in
-              the same Assign, so a change here changes it for all of them (the owner, 2026-10-28) #}
-          {%- set nq = g.latest %}{% if nq and nq.id is defined %}
-          <div class="person-note card assign-note-card" data-no-rowclick>
-            <label class="person-note-head small" for="anote-{{ nq.id }}">{{ icon('lc-sticky-note') }} Note to the Student</label>
-            <textarea id="anote-{{ nq.id }}" class="person-note-text" rows="2" maxlength="4000" data-note-url="{{ url_for('qgen.save_assign_note', cqid=nq.id) }}"
-                      placeholder="The student sees this">{{ nq.assign_note or '' }}</textarea>
-            <div class="person-note-status small muted" aria-live="polite">{% if nq.assign_note_at %}Changed {{ nq.assign_note_at|when }}{% endif %}</div>
-          </div>{% endif %}</div>
+          </ol></div></div>
         </details></td>
       {#- the newest thing that happened to any of its attempts: handed in, started, or assigned -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
+      {%- if note_col %}<td data-label="Note" class="note-col" data-sort="{{ '0' if nq and nq.assign_note else '1' }}">{{ note }}</td>{% endif %}
       <td data-label="Last Activity" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
       <td data-label="Attempts" class="quiz-tries" data-sort="{{ '%04d' % tried if tried else '' }}">{% if tried %}{{ count_badge(tried, 'attempt', 'attempts') }}{% endif %}</td>
       {#- (sorted New, In progress, Completed, as on My quizzes) -#}
       {#- (its most urgent attempt's icon, sorted by that: the owner, 2026-10-29) -#}
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td data-label="Status" class="quiz-state" data-sort="{{ most_urgent(g.attempts) }}"><span class="btn-row quiz-state-badges">
         {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
         {#- (only handed in and waiting for the teacher: the waiting mark, the owner 2026-10-27) -#}
         {{- row_state(g.attempts, own=item.id == current_user.id) }}</span></td>
-      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % g.combined if g.combined is not none and not has_started else '' }}">{% if g.combined is not none and not has_started %}<span class="badge {{ score_class(g.combined) }}" title="The score that counts">{{ '%.0f' % g.combined }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-      <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{{ icons }}{{ print_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}</span></td>
+      <td class="actions"><span class="btn-row quiz-row-actions">{{ retake_button(g, item) }}{% if not note_col %}{{ note }}{% endif %}
+        {{- icons }}{{ print_button(g, item) }}{{ archive_all_button(g, item, 'archive-all-' ~ item.id ~ '-' ~ g.vquiz.id) }}</span></td>
       {#- (icons: a page's own History-type icon, Student history on a quiz's history; in the one order for every row's
           icons, after Retake and before Print: the owner, 2026-10-29) #}
     </tr>

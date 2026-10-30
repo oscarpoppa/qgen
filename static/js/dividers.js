@@ -142,24 +142,6 @@
       if (d.style.getPropertyValue('--body-r') !== right) { d.style.setProperty('--body-r', right); unsettled = true; }
     };
   }
-  //an open row's note card beside its attempts (Student History's Note to the Student) ends before the attempts' icons,
-  //which sit at the row's right end, under the row's own (the owner, 2026-10-29: the card covered them)
-  function clearIcons(open) {
-    var card = open.querySelector(':scope > .person-note');
-    var group = open.querySelector('.attempt-act-group'), row = open.closest('tr'), cell = row && row.querySelector('td.actions');
-    if (!card || !group || !cell || folded(open) || !open.offsetParent) return null;
-    //(from the row's own edge and the icons' width, never from where the card or the attempts are now: they move
-    //when this is set, and the icons with them)
-    var c = cell.getBoundingClientRect(), o = open.getBoundingClientRect();
-    //(a stacked row, on a phone: its icons aren't off to the right, so nothing to keep clear of)
-    if (c.left < open.closest('td').getBoundingClientRect().right) {
-      return open.style.maxWidth ? function () { open.style.maxWidth = ''; unsettled = true; } : null;
-    }
-    var iconsLeft = c.right - parseFloat(getComputedStyle(cell).paddingRight) - group.getBoundingClientRect().width;
-    //(its widest from its left edge, which doesn't move; the card can then go under the attempts, clear of the icons too)
-    var want = Math.max(0, Math.floor(iconsLeft - 16 - o.left)) + 'px';
-    return open.style.maxWidth === want ? null : function () { open.style.maxWidth = want; unsettled = true; };
-  }
   function batch(els, measure) {
     var sets = Array.prototype.map.call(els, measure);
     sets.forEach(function (f) { if (f) f(); });
@@ -174,7 +156,6 @@
     batch(document.querySelectorAll('tr > td > details.row-fold[open]'), foldBody);
     document.querySelectorAll('tr > td > details.row-fold[open]').forEach(alignColumns);
     batch(document.querySelectorAll('ol.attempt-list > li, .result-group-head'), underRowButton);
-    batch(document.querySelectorAll('.result-open'), clearIcons);
     if (unsettled && again < 3) { again++; soon(); } else again = 0;
   }
   function soon() {

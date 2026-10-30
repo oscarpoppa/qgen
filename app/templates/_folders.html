@@ -135,7 +135,7 @@
              in it ("1 new", "3 started", "1 due") #}
           <li class="side-auto"><div class="side-row{{ ' current' if fk.view == av.key }}">
             <span class="side-fold-space" aria-hidden="true"></span>
-            <a href="{{ fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
+            <a href="{{ av.url or fk.page(av.key) }}" title="{{ av.tip or ('See only the ' ~ fk.units ~ ' that are ' ~ av.label|lower) }}" class="side-link side-view-{{ av.key }}"{% if fk.view == av.key %} aria-current="page"{% endif %}>{{ draw_icon(av.icon) }} {{ av.label }}</a>
             {#- (its badge while something is in it, like a folder's: gold for New, blue for In progress, the
                 owner 2026-10-22) -#}
             {%- if av.count and av.badge %}<span class="side-flags"><span class="side-dot dot-{{ av.key }}" title="{{ av.badge_title or av.badge }}" role="img" aria-label="{{ av.badge }}">{{ av.count }}</span></span>{% endif %}
@@ -291,7 +291,7 @@
 {# what's shown when the folder (or Uncategorized) has nothing of its own #}
 {% macro empty_note(fk, has_folders=false) %}
   {#- (a list that's only looked at here, Grading and the results lists: nothing to move in from this page; the owner, 2026-10-24) #}
-  <p class="card empty small">{% if fk.node and fk.readonly %}No {{ fk.units }} in this folder.{% elif fk.node %}Nothing {{ 'uncategorized ' if has_folders }}in this folder yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
+  <p class="card empty small">{% if fk.view == 'search' %}Nothing matches “{{ fk.search_words }}”.{% elif fk.node and fk.readonly %}No {{ fk.units }} in this folder.{% elif fk.node %}Nothing {{ 'uncategorized ' if has_folders }}in this folder yet. Use “{{ fk.add_words }}” beside {{ fk.drag_what }}, or (on a computer) drag {{ fk.drag_what }} onto it.
   {% elif fk.view == 'main' %}Everything is in a folder. Pick a folder, or {{ fk.all_label }}.{% else %}Nothing here yet.{% endif %}</p>
 {% endmacro %}
 

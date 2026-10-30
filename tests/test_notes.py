@@ -17,7 +17,8 @@ def test_teachers_notes_on_problems_and_quizzes(app_db):
     assert db.session.get(VQuiz, vq.id).teacher_note_by_id == ids('teach')
     assert teacher.post('/notes/nothing/1', json={'note': 'x'}).status_code == 404
     page = teacher.get('/quiz/listvp').data.decode()
-    assert 'title="Note: This problem needs to be fixed."' in page and 'placeholder="Only teachers see this"' in page
+    assert 'data-note-text="This problem needs to be fixed."' in page and 'data-note-placeholder="Only teachers see this"' in page
+    assert 'title="Note: This problem needs to be fixed."' not in page  # (no mark in the title column beside the Note icon)
     dash = teacher.get('/dashboard').data.decode()
     assert 'Problem and Quiz Notes' in dash and 'This quiz needs work.' in dash and '/quiz/listvq?show={}'.format(vq.id) in dash
     # a student can't write one
@@ -57,3 +58,31 @@ def test_a_note_to_the_students_on_an_assigned_quiz(app_db):
     assert new.assign_note == 'You can do it.' and new.assign_group == a.assign_group
     # its results show it
     assert 'You can do it.' in teacher.get('/quiz/take/{}'.format(a.id)).data.decode()
+
+
+def test_notes_open_from_an_icon_with_the_rows_icons(app_db):
+    """A row's note is an icon in its own Note column, a gold star note when there's one, opening
+    a dialog (static/js/personnote.js); the open row has no note box; none in the Trash (the owner, 2026-10-29, To do 77)."""
+    import re
+    app, db = app_db
+    teacher = login(app, 'teach')
+    vq, probs = quiz_of(teacher, 'K1', 'K2')
+    teacher.post('/notes/problem/{}'.format(probs[0].id), json={'note': 'Check the units.'})
+    page = teacher.get('/quiz/listvp').data.decode()
+    assert 'class="person-note card"' not in page and 'textarea' not in page.split('<table', 1)[1].split('</table>', 1)[0]
+    assert 'data-note-text="Check the units."' in page and 'note-open has-note' in page
+    assert '#i-lc-sticky-note-star' in page  # (written in: the gold sticky note with a star, D12)
+    assert 'title="Notes: about “K1”, for teachers only"' in page and 'data-note-heading="Notes about “K1”"' in page
+    # (in its own Note column, sortable, notes first; not with the row's icons: the owner, 2026-10-29, D29–D31)
+    row = page.split('data-item="{}"'.format(probs[0].id), 1)[1].split('</tr>', 1)[0]
+    assert 'class="note-col" data-sort="0"' in row and 'note-open' not in row.split('class="actions"', 1)[1]
+    assert '<th data-sort-key="note">Note</th>' in page
+    first = teacher.get('/quiz/listvp?sort=note&dir=asc').data.decode()
+    assert first.index('data-item="{}"'.format(probs[0].id)) < first.index('data-item="{}"'.format(probs[1].id))
+    for url in ('/quiz/listvq', '/people'):
+        assert '<th data-sort-key="note">Note</th>' in teacher.get(url).data.decode()
+    # the Trash: no Note icon
+    teacher.post('/quiz/archivevp/{}'.format(probs[1].id))
+    teacher.post('/notes/problem/{}'.format(probs[1].id), json={'note': 'Old one.'})
+    trash = teacher.get('/quiz/archive?section=problems').data.decode()
+    assert 'note-open' not in trash and 'title="Note: Old one."' not in trash  # (no mark by the name either: the owner, 2026-10-29)

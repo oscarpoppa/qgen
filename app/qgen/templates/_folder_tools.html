@@ -1,4 +1,4 @@
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, search_box with context %}
 {# Above the Problems and Quizzes pages' lists: a search, and a bar for the checked rows
    (put them in a folder, or take them out). It stays at the top while scrolling. #}
 {#- (the things' word, for Pictures and Other files too: the owner, 2026-10-19) #}
@@ -7,6 +7,7 @@
 {% set page_name = {'problems': 'Problems', 'quizzes': 'Quizzes', 'pictures': 'Pictures', 'files': 'Other files'}[kind] %}
 <div class="folder-tools-bar">
   {% if total %}{{ filter_bar('#folder-items', one, noun, boxes='details.sub-box, details.subject-box', paged=pg.total if pg else none, url=not pg) }}{% endif %}
+  {%- if total %}{{ search_box(fk, keep=('section',)) }}{% endif %}
   <form method="post" action="{{ url_for('qgen.file_subject', kind=kind) }}" id="file-form" class="file-bar" data-takeout="remove">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="view" value="{{ fk.view }}">

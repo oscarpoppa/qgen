@@ -159,6 +159,22 @@
 {# count_one / count_many: what its count counts when it isn't the things themselves (Grading: the
    attempts waiting, each thing weighing its data-weight; the owner, 2026-10-19) #}
 {#- paged: how many match, on a list shown a page at a time (app/paging.py): the words typed go to the server, which sends the matching page (static/js/filter.js) -#}
+{# Search Everything…, beside the filter box (app/search.py; the owner, 2026-10-29, To do 76): every folder, names and what's
+   inside, on Enter; the folder you were in goes along (?folder=), so Clear Search takes you back there. keep: the page's
+   other arguments that stay (the Trash's section) #}
+{% macro search_box(fk, keep=()) -%}
+{%- set now = request.args.get('search', '') %}
+<form method="get" action="{{ request.path }}" class="btn-row small search-bar" role="search">
+  {%- set back = request.args.get('folder') if fk and fk.view == 'search' else (fk.view if fk else none) %}
+  {%- if back and back not in ('all', 'search') %}<input type="hidden" name="folder" value="{{ back }}">{% endif %}
+  {%- for k in keep %}{% if request.args.get(k) %}<input type="hidden" name="{{ k }}" value="{{ request.args.get(k) }}">{% endif %}{% endfor %}
+  <span class="filter-box"><input type="search" name="search" class="search-everything" value="{{ now }}" maxlength="100" placeholder="Search Everything…"
+    aria-label="Search Everything" title="Look in every folder, in names and what’s inside; press Enter">
+  <button class="btn btn-sm" title="Search: look in every folder, in names and what’s inside">Search</button>
+  {%- if now %}{% set args = request.args.to_dict() %}{% set _ = args.pop('search', none) %}{% set _ = args.pop('page', none) %}
+  <a class="btn btn-secondary btn-sm" href="{{ request.path }}{{ ('?' ~ (args|urlencode)) if args else '' }}" title="Clear Search: back to the folder you were in">Clear Search</a>{% endif %}</span>
+</form>
+{%- endmacro %}
 {% macro filter_bar(target, one, many, items='tbody tr', boxes=none, compact=false, id=none, url=false, count_one=none, count_many=none, paged=none) -%}
 <div class="btn-row small pick-bar filter-bar"{% if paged is not none %} data-paged data-matches="{{ paged }}"{% endif %} data-filter-bar data-filter="{{ target }}" data-items="{{ items }}" data-one="{{ one }}" data-many="{{ many }}"{% if count_many %} data-count-one="{{ count_one }}" data-count-many="{{ count_many }}"{% endif %}{% if boxes %} data-boxes="{{ boxes }}"{% endif %}{% if id %} id="{{ id }}"{% endif %}{% if url %} data-url-filter{% endif %} hidden>
   {# the box and Clear stay side by side (only the box gets narrower on a small screen) #}
@@ -217,19 +233,18 @@
 {%- elif cq.status == 'new' %}{{ status_icon('fresh', 'New') }}{% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
 {%- elif cq.status == 'review' %}{{ status_icon('waiting', 'Waiting for your teacher' if own else 'Waiting for grading') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
 {%- endmacro %}
-{# teachers' notes on a thing, as People's (the owner, 2026-10-28): the small mark after its name, its place kept when
-   there's no note so the marks line up down the column; and the open row's Notes card, saved as typed
-   (static/js/personnote.js), every teacher seeing the same ones and students never #}
-{% macro note_mark(item) -%}
-{%- if item.teacher_note %}<span class="person-note-mark" title="Note: {{ item.teacher_note.splitlines()[0][:120] }}" role="img" aria-label="Has a note">{{ icon('lc-sticky-note') }}</span>{% else %}<span class="person-note-mark person-slot" aria-hidden="true"></span>{% endif %}
+{#- a note's icon with the row's icons, after Message (the owner, 2026-10-29, To do 77): a gold sticky note with a star when there's a note (D12); it
+   opens the note in a dialog with Save and Cancel (static/js/personnote.js). note_open: any note; note_button: the teachers'
+   Notes on a problem, quiz, picture, file, workbook or person #}
+{% macro note_open(url, text, label, tip, heading, placeholder, max, status='') -%}
+<button type="button" class="btn btn-secondary btn-sm btn-icon note-open{{ ' has-note' if text }}" data-note-url="{{ url }}" data-note-text="{{ text or '' }}"
+        data-note-heading="{{ heading }}" data-note-placeholder="{{ placeholder }}" data-note-max="{{ max }}" data-note-status="{{ status }}" title="{{ tip }}">
+  {#- (blank: the plain sticky note; written in: the gold one with a star, D12; the button's has-note shows which) -#}
+  <span class="note-empty">{{ icon_label('lc-sticky-note', label) }}</span><span class="note-full">{{ icon_label('lc-sticky-note-star', label) }}</span></button>
 {%- endmacro %}
-{% macro note_card(item, url, about, key) -%}
-<div class="person-note card" data-no-rowclick>
-  <label class="person-note-head small" for="note-{{ key }}">{{ icon('lc-sticky-note') }} Notes</label>
-  <textarea id="note-{{ key }}" class="person-note-text" rows="3" maxlength="{{ item.TEACHER_NOTE_MAX }}" data-note-url="{{ url }}"
-            placeholder="Only teachers see this" title="Notes about {{ about }}, for teachers only: saved as you type">{{ item.teacher_note or '' }}</textarea>
-  <div class="person-note-status small muted" aria-live="polite">{% if item.teacher_note_at %}Changed {{ item.teacher_note_at|when }}{% if item.teacher_note_by %} by {{ item.teacher_note_by.shown_name }}{% endif %}{% endif %}</div>
-</div>
+{% macro note_button(item, url, about) -%}
+{%- set changed %}{% if item.teacher_note_at %}Changed {{ item.teacher_note_at|when }}{% if item.teacher_note_by %} by {{ item.teacher_note_by.shown_name }}{% endif %}{% endif %}{% endset %}
+{{- note_open(url, item.teacher_note, 'Notes', 'Notes: about ' ~ about ~ ', for teachers only', 'Notes about ' ~ about, 'Only teachers see this', item.TEACHER_NOTE_MAX, changed) }}
 {%- endmacro %}
 {# the teacher's note to the student on an assigned quiz (the owner, 2026-10-28), where he/she sees it: the start card, the top of
    the quiz, its results, My quizzes' open row #}
@@ -242,14 +257,16 @@
    message (any teacher can change it, saved as typed, static/js/personnote.js) and who wrote it when; nothing without one #}
 {% macro trash_note_mark(kind, item_id) -%}
 {%- set n = trash_note(kind, item_id) %}{% if n %}
-<button type="button" class="icon-link trash-note-mark" popovertarget="trash-note-{{ kind }}-{{ item_id }}" title="Message from when it was moved to the Trash" aria-label="Message from when it was moved to the Trash">{{ icon('lc-sticky-note') }}</button>
+{#- (always written in: the gold sticky note with a star, as every note with something in it: the owner, 2026-10-29, D28) #}
+<button type="button" class="icon-link trash-note-mark note-filled" popovertarget="trash-note-{{ kind }}-{{ item_id }}" title="Message from when it was moved to the Trash" aria-label="Message from when it was moved to the Trash">{{ icon('lc-sticky-note-star') }}</button>
 <div class="note-pop trash-note-pop" id="trash-note-{{ kind }}-{{ item_id }}" popover data-no-rowclick><div class="person-note">
-  <textarea class="person-note-text" data-no-mark rows="3" maxlength="{{ tuning.get('max_message') }}" aria-label="Message from when it was moved to the Trash" data-note-url="{{ url_for('qgen.save_trash_note', kind=kind, item_id=item_id) }}">{{ n.text }}</textarea>
+  <textarea class="person-note-text" rows="3" maxlength="{{ tuning.get('max_message') }}" aria-label="Message from when it was moved to the Trash" data-note-url="{{ url_for('qgen.save_trash_note', kind=kind, item_id=item_id) }}">{{ n.text }}</textarea>
   <div class="person-note-status small muted">{{ n.stamp }}</div></div></div>
 {%- else %}<span class="icon-link trash-note-slot" aria-hidden="true">{{ icon('lc-sticky-note') }}</span>{#- (its place kept, so the icons line up) #}
 {%- endif %}
 {%- endmacro %}
 {% macro note_pop(text, key, tip='Note', cls='') -%}
-<button type="button" class="icon-link{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note') }}</button>
+{#- (a note with something in it: the gold sticky note with a star, as the row Note icons: the owner, 2026-10-29, D25) #}
+<button type="button" class="icon-link note-filled{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note-star') }}</button>
 <div class="note-pop" id="note-pop-{{ key }}" popover><p class="note-pop-text">{{ text }}</p></div>
 {%- endmacro %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, count_badge, status_icon, attempt_mark, row_state, most_urgent, note_pop with context %}
+{% from "_macros.html" import filter_bar, count_badge, status_icon, attempt_mark, row_state, most_urgent, note_pop, search_box with context %}
 {% from "_macros.html" import avatar, box_label, count_of, back_button with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, move_mini, move_folders, folder_options, folder_up with context %}
 {# a student's quiz list: kept up to date as quizzes are assigned, open, are graded, retaken or deleted (app/live.py) #}
@@ -47,7 +47,7 @@
   <table class="quiz-rows even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
     {#- (attempts and status are columns of their own, sortable, and lined up by the table itself
         whatever badges come and go: the owner, 2026-10-20) #}
-    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="folders">Folders</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="note" class="note-col">Note</th><th data-sort-key="latest" class="date-col" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="folders" class="folders-col">Folders</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="score">Score</th><th data-sort-key="status">Status</th><th></th></tr></thead>
     <tbody>
   {% for g in gs %}
     {% set latest = g.latest %}{% set here = home.get(g.vquiz.id) %}
@@ -96,13 +96,17 @@
                 before, the one the row's button already did was left out, which looked like a missing icon) #}
             {#- (the teacher's note on this attempt: its icon beside the attempt's own, showing it in a card, not one box for the whole quiz;
                 the owner, 2026-10-28) #}
-            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} <span class="attempt-act">{% if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'attempt-note' ~ (' attempt-note-after' if cq.status in ('new', 'started') else '')) }}{% endif %}{{ action(cq, compact=true) }}</span></li>
+            <li class="attempt-row"><span class="nowrap">{{ cq.when_label }}</span> {{ status(cq, cq in g.counted) }} <span class="attempt-act">{#- (the note is in the row's Note column: the owner, 2026-10-29, D29) -#}{{ action(cq, compact=true) }}</span></li>
           {% endfor %}
         </ol>
       </details></td>
       {#- the newest thing that happened to any of its attempts: handed in, started, or assigned
           (sortable; right after the name, as on every list: the owner 2026-10-20) -#}
       {%- set ns_l = namespace(d=none) %}{% for a in g.attempts %}{% set d = a.compdate or a.startdate or a.create_date %}{% if d and (ns_l.d is none or d > ns_l.d) %}{% set ns_l.d = d %}{% endif %}{% endfor %}
+      {#- the Note from your teacher, in its own column, sortable: the newest attempt's that has one (a retake may have
+          none); grayed when there's none (the owner, 2026-10-29, D29–D31) -#}
+      {%- set nc = g.attempts|selectattr('assign_note')|list|last %}
+      <td data-label="Note" class="note-col" data-sort="{{ '0' if nc else '1' }}">{% if nc %}{{ note_pop(nc.assign_note, 'q' ~ nc.id, 'Note from your teacher') }}{% else %}<button type="button" class="icon-link" disabled title="Note from your teacher: none for this quiz">{{ icon_label('lc-sticky-note', 'Note from your teacher') }}</button>{% endif %}</td>
       <td data-label="Last Activity" class="nowrap small muted quiz-latest" data-sort="{{ ns_l.d.isoformat() if ns_l.d else '' }}">{{ ns_l.d|when if ns_l.d else '' }}</td>
       {#- how many folders it's in, sortable, as on every folder page (the owner, 2026-10-27): 0 or 1 here, a quiz being in
           one place at a time -#}
@@ -113,15 +117,15 @@
       {#- (Completed: every attempt handed in and graded, the owner 2026-10-20. Sorted New, In progress,
           Completed, a quiz with more than one at its highest: New with In progress sorts as New) -#}
       {#- (its most urgent attempt's icon, sorted by that: the owner, 2026-10-29) -#}
+      {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
+      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{#- (no ★ on the quiz's own row: it marks the attempt that counts only in the opened list
+        of attempts; the owner, 2026-10-26) #}{{ status(latest) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       <td data-label="Status" class="quiz-state" data-sort="{{ most_urgent(g.attempts) }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
         {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
         {#- (only handed in and waiting for the teacher: the waiting mark, the owner 2026-10-27) -#}
         {{- row_state(g.attempts, own=true) }}
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
-      {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
-      <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{#- (no ★ on the quiz's own row: it marks the attempt that counts only in the opened list
-        of attempts; the owner, 2026-10-26) #}{{ status(latest) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       {#- no Start / Continue / View of its own: they're on each attempt's line, where it's clear which
           attempt they mean (the owner, 2026-10-20); only Move -#}
       <td class="actions"><span class="btn-row quiz-row-actions">
@@ -157,7 +161,7 @@
   {# (in the same bar as the other folder pages, so the folder's heading sits in its middle) #}
   {#- (the way back at the filter row's right end, as on the other list pages; one line under the
       row, not two: the owner, 2026-10-17) #}
-  {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}
+  {% if groups %}<div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr[data-box]', boxes='details.sub-box', paged=pg.total) }}{{ search_box(fk, keep=('section',)) }}
     <div class="btn-row results-filter-right">{{ back_button(url_for('user.home'), 'Home', 'btn btn-secondary btn-sm') }}</div></div>{% endif %}
   <div id="folder-items"{% if showing %} data-keep-open{% endif %}>
     {#- one folder's quizzes, a page at a time (app/paging.py): the side list's folders and New / In progress are links, each its own page #}
@@ -166,6 +170,7 @@
       {% elif showing and not pg.q %}<p class="card empty small">{{ nothing }} {{ icon('party') }}</p>
       {#- (an empty folder says so even with folders inside it: the old rows of folder tabs that said it are gone; the
           owner, 2026-10-24: two rows deep, with its message, on every folder page) #}
+      {% elif not pg.q and fk.view == 'search' %}<p class="card empty small">Nothing matches “{{ fk.search_words }}”.</p>
       {% elif not pg.q and fk.view in ('new', 'started', 'soon') %}<p class="card empty small">{{ nothing }}</p>
       {% elif not pg.q and (fk.node or fk.view == 'main') %}<p class="card empty small">{% if fk.node %}No quizzes in this folder. Use a quiz's Move icon (or, on a computer, drag it onto the folder).{% else %}Every quiz is in a folder. Pick a folder, or All Quizzes.{% endif %}</p>
       {% endif %}{% endcall %}

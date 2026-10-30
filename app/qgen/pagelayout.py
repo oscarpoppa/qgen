@@ -413,12 +413,50 @@ def _groups(line_ink, gap):
     return out
 
 
-def _lettered(full, region, exclude, ch, want, box_bottom=None):
+_CHOICE_LETTER = re.compile(r'(?:^|\s)[A-Ha-h][.,)](?=\s)')
+
+
+def _letters_per_line(text, want):
+    """How many lettered choices each printed line holds, from the words read ("a, Tony Stark b, Bruce
+    Wayne c, Bruce Banner" is one line of 3), bottom line last; [] when they don't add up to `want`."""
+    counts = [len(_CHOICE_LETTER.findall(line)) for line in (text or '').split('\n')]
+    counts = [c for c in counts if c]
+    return counts if sum(counts) == want else []
+
+
+def _split_at_letters(line_ink, groups, ch, need, choices):
+    """A choice line whose blanks don't part all its choices (printed close together, "Bruce Wayne c,
+    Bruce Banner"): cut before the letters that start them instead (the owner, 2026-10-30, D43: "look
+    for A, B, and C rather than relying on spacing, which is arbitrary"). A letter is a short word
+    ("b," or "C.") after a space; of those, the cuts whose pieces are the closest to the choices' own
+    lengths. [(left, right)] of `need` pieces, or None."""
+    from itertools import combinations
+    a0, b0 = groups[0][0], groups[-1][1]
+    words = [(a0 + x, a0 + y) for x, y in _groups(line_ink[:, a0:b0], 0.3 * ch)]
+    starts = [i for i, (x, y) in enumerate(words) if i and y - x <= 1.6 * ch]
+    if len(starts) < need - 1 or len(starts) > 12:
+        return None
+    sizes = [len(c) + 3 for c in choices]
+    best = None
+    for cut in combinations(starts, need - 1):
+        bounds = [0] + list(cut) + [len(words)]
+        pieces = [(words[i][0], words[j - 1][1]) for i, j in zip(bounds, bounds[1:])]
+        width = float(pieces[-1][1] - pieces[0][0])
+        score = sum(abs((y - x) / width - n / sum(sizes)) for (x, y), n in zip(pieces, sizes))
+        if best is None or score < best[0]:
+            best = (score, pieces)
+    return best[1]
+
+
+def _lettered(full, region, exclude, ch, want, box_bottom=None, why=None, text=None, choices=None):
     """Choices printed with letters and nothing to check ("a. Blue   b. Red   c. Brown" on a
     line, or "A. Horse" one per line), as a student circles one (the owner, 2026-10-19): the
     last lines of the problem holding exactly `want` choices. Each choice's letter (the mark,
     circled when picked) and the whole choice (what's clicked), in page pixels, in reading
-    order; None when the lines don't split into `want` choices that each start with a letter."""
+    order; None when the lines don't split into `want` choices that each start with a letter.
+    why: a list the reason it gave up is added to (the owner, 2026-10-30, D45). text, choices: the
+    problem's words and choices as read, so a line with its choices printed close together is cut at
+    their letters (D43)."""
     X0, Y0, X1, Y1 = region
     ink = _blank_out(full[Y0:Y1, X0:X1], exclude, X0, Y0)
     #(a "line" much taller than the letters below the problem's own box is a picture, e.g. a border
@@ -436,25 +474,40 @@ def _lettered(full, region, exclude, ch, want, box_bottom=None):
         else:
             split.append((a, b))
     lines = split
+    per_line = _letters_per_line(text, want) if choices and len(choices) == want else []
     picked, count = [], 0
-    for top, bottom in reversed(lines):
+    for k, (top, bottom) in enumerate(reversed(lines)):
         groups = _groups(ink[top:bottom], 1.6 * ch)
+        if k < len(per_line) and 0 < len(groups) < per_line[-1 - k]:
+            need = per_line[-1 - k]
+            done = sum(per_line[len(per_line) - k:])
+            groups = _split_at_letters(ink[top:bottom], groups, ch, need, choices[want - done - need:want - done]) or groups
         if count + len(groups) > want:
+            if why is not None:
+                why.append('its choice lines split into more than {} pieces'.format(want))
             return None
         picked.insert(0, (top, bottom, groups))
         count += len(groups)
         if count == want:
             break
     if count != want or len(picked) == len(lines):
+        if why is not None:
+            #(all its lines taken: the choices came up short and the question's own line was counted as one)
+            short = count if count != want else count - len(picked[0][2])
+            why.append('its choice lines split into {} pieces, wanted {} (choices printed close together run into one)'.format(short, want))
         return None  # (it's all choices and no question: not this kind of page)
     marks, rows, parts = [], [], []
     for top, bottom, groups in picked:
         for a, b in groups:
             words = _groups(ink[top:bottom, a:b], 0.22 * ch)
             if len(words) < 2:
+                if why is not None:
+                    why.append('a choice was a single word, with no letter before it')
                 return None
             la, lb = words[0]
             if lb - la > 1.6 * ch:
+                if why is not None:
+                    why.append('a choice didn\'t start with a letter like "a." or "B."')
                 return None  # (doesn't start with a letter like "a." or "B.")
             size = max(lb - la, bottom - top)
             cx, cy = X0 + a + (la + lb) / 2, Y0 + (top + bottom) / 2
@@ -1086,7 +1139,7 @@ def _printed_answer(p, ink, number, ch, X0, Y0, X1):
     return answer, erase
 
 
-def find_slots(img, page, covered=()):
+def find_slots(img, page, covered=(), why=None):
     """Where each problem on a QuizScan page is answered. img: the flat page (PIL); page:
     QuizScan's page dict; covered: ids of problems whose numbers change (their wording is
     covered and written again for each student).
@@ -1095,7 +1148,9 @@ def find_slots(img, page, covered=()):
       {'kind': 'field', 'answer': box, 'text': box or None, 'char': letter height}
       {'kind': 'choices', 'marks': [box...], 'rows': [box...]}
       {'kind': 'paper'}
-    and problems not in it are taken the usual way, under the page."""
+    and problems not in it are taken the usual way, under the page.
+    why: a dict filled with {problem id: the reason} for each choice problem left under the page
+    (the owner, 2026-10-30, D45: "question 7 and 14 went below; why?")."""
     #(a problem QuizScan couldn't place (no box) is answered under the page; the rest are found
     #without it: the owner, 2026-10-19)
     page = dict(page, problems=[p for p in page.get('problems') or [] if isinstance(p.get('box'), dict)],
@@ -1148,10 +1203,14 @@ def find_slots(img, page, covered=()):
         if p.get('type') in ('choice_one', 'choice_many', 'truefalse'):
             want = len(p.get('choices') or []) or (2 if p.get('type') == 'truefalse' else 0)
             if not want:
+                if why is not None:
+                    why[p['id']] = 'no choices were read for it'
                 continue
             region = (X0, Y0, min(W, X1 + padx), Y1)
             marks = by_line.get(p['id']) or _marks(full, region, pictures + number, ch, want) or _marks(pale, region, pictures + number, ch, want)
             if marks == 'skip':
+                if why is not None:
+                    why[p['id']] = 'its line of check boxes doesn\'t show all {} of them'.format(want)
                 continue
             if not marks:
                 #the boxes can be printed well away from the words, e.g. a column of TRUE / FALSE
@@ -1166,7 +1225,9 @@ def find_slots(img, page, covered=()):
                 below = [px(o['box'], W, H)[1] for o in page['problems'] if o is not p
                          and px(o['box'], W, H)[1] > y0 + 2 and px(o['box'], W, H)[0] < x1 and px(o['box'], W, H)[2] > x0]
                 reach = min([y1 + int(3 * ch)] + [t - 2 for t in below])
-                found = _lettered(full, (X0, Y0, X1, min(H, max(Y1, reach))), pictures + number, ch, want, box_bottom=y1)
+                tried = []
+                found = _lettered(full, (X0, Y0, X1, min(H, max(Y1, reach))), pictures + number, ch, want, box_bottom=y1, why=tried,
+                                  text=p.get('text'), choices=p.get('choices'))
                 if found:
                     lm, lr, lp = found
                     out[p['id']] = {'kind': 'choices', 'lettered': True, 'marks': [frac(*m, W, H) for m in lm],
@@ -1179,6 +1240,8 @@ def find_slots(img, page, covered=()):
                     out[p['id']] = {'kind': 'choices', 'cells': True, 'marks': [frac(*c, W, H) for c in cells],
                                     'rows': [frac(*c, W, H) for c in cells]}
                     continue
+                if why is not None:
+                    why[p['id']] = 'no check boxes or cells found, and ' + (tried[0] if tried else 'its lettered choices weren\'t found')
             if marks:
                 rows = []
                 printed = p.get('choices') or (['False', 'False'] if p.get('type') == 'truefalse' else [])

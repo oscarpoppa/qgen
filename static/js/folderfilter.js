@@ -294,7 +294,8 @@
         //(the automatic folders a page brings in its tree (a student's New and In progress: ids that aren't a folder's
         //number) go right after All, pinned above the line with the others, never among the folders: the owner, 2026-10-26)
         var autoNodes = tree.filter(function (n) { return !/^\d+$/.test(String(n.id)); });
-        autoNodes.forEach(function (n) { sideRow(button(String(n.id), n.name, n.count, n.icon || 'folder'), 1, n).classList.add('side-auto'); });
+        //(each in its state's color: side-view-new, -started…, as every folder list's: the owner, 2026-10-30, D64)
+        autoNodes.forEach(function (n) { var b = button(String(n.id), n.name, n.count, n.icon || 'folder'); b.classList.add('side-view-' + n.id); sideRow(b, 1, n).classList.add('side-auto'); });
         if (hasChecks()) sideRow(button('checked', checkedNode.name, checkedNode.count, checkedNode.icon), 1, null).classList.add('side-auto');
         //(the automatic folders pinned at the top, in one order: All, Checked, Uncategorized; the folders
         //scroll under them: the owner, 2026-10-21)
@@ -664,8 +665,10 @@
       //(a paged list's folders are other pages: the server sends the folder asked for, from its first page)
       if (paged) {
         var u = new URL(location.href), f = b.dataset.folder;
+        //(the search's own entry is already the page shown; any other folder leaves the search: the owner, 2026-10-29)
+        if (f === 'search') return;
         u.searchParams.set('folder', f === 'none' ? 'main' : f);
-        ['page', 'q', 'tab', 'show', 'moved'].forEach(function (k) { u.searchParams.delete(k); });
+        ['page', 'q', 'tab', 'show', 'moved', 'search'].forEach(function (k) { u.searchParams.delete(k); });
         location.assign(u.pathname + u.search + u.hash);
         return;
       }

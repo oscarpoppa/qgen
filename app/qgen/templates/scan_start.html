@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {#- (the usual width: New scan and Current scans side by side, the owner 2026-10-20) #}
-{% from "_macros.html" import back_button, post_button, note_mark with context %}
+{% from "_macros.html" import back_button, post_button with context %}
 {% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {#- the whole width of the window, for the longer rows on the right (the owner, 2026-10-23) #}
 {% block main_class %} container-wide{% endblock %}
@@ -65,13 +65,13 @@
   {% if jobs %}
   <div class="table-wrap stack">
     <table class="even-cols">
-      <thead><tr><th>Workbook</th><th>Last changed</th><th>Pages</th><th></th></tr></thead>
+      <thead><tr><th>Workbook</th><th class="date-col">Last changed</th><th>Pages</th><th></th></tr></thead>
       <tbody>
       {% for j in jobs %}
         <tr>
           {%- set x = kinds.get(j.id) or {'job': j, 'kind': 'draft'} %}
           <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
-            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{#- (the name opens the scan's page even while it's waiting or being read: its progress; the owner, 2026-10-23) #}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="{{ 'See how far “' ~ j.name ~ '” has got' if x.kind in ('reading', 'paused') else 'Go on checking “' ~ j.name ~ '”' }}">{{ j.name }}</a>{% if j.teacher_note %}{{ note_mark(j) }}{% endif %}
+            <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt="Page {{ x.now or 1 }}" loading="lazy"></a><div>{#- (the name opens the scan's page even while it's waiting or being read: its progress; the owner, 2026-10-23) #}<a href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="{{ 'See how far “' ~ j.name ~ '” has got' if x.kind in ('reading', 'paused') else 'Go on checking “' ~ j.name ~ '”' }}">{{ j.name }}</a>
             {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
             <br><span class="small muted">{% include '_scan_kind.html' %}</span>{% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}{{ scan_working(x) }}</div></div></td>
           <td data-label="Last changed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
@@ -159,7 +159,7 @@
       {% if stash_shown %}
       <div class="table-wrap stack">
         <table class="even-cols">
-          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every workbook shown" title="Check every workbook shown"></th><th>Workbook</th><th>State</th><th>Stashed</th><th>Pages</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><input type="checkbox" data-stash-all aria-label="Check every workbook shown" title="Check every workbook shown"></th><th>Workbook</th><th class="date-col">Stashed</th><th>Pages</th><th>State</th><th></th></tr></thead>
           <tbody>
           {% for j in stash_shown %}{% set x = kinds.get(j.id) or {'job': j, 'kind': 'draft', 'put_away': true} %}
             {#- (dragged onto a folder in the list to move it: static/js/scanstash.js) #}
@@ -167,13 +167,13 @@
               <td class="tick-col"><input type="checkbox" class="stash-pick" value="{{ j.id }}" data-name="{{ j.name }}" aria-label="Check “{{ j.name }}”"></td>
               <td data-label="Workbook"><div class="scan-row-name">{#- the page being read, else the first, opening full size (the owner, 2026-10-22) #}
                 <a class="scan-row-thumb" href="{{ url_for('qgen.scan_page_image', job_id=j.id, n=x.now or 1) }}" data-page-zoom title="See page {{ x.now or 1 }} full size"><img class="scan-thumb" src="{{ url_for('qgen.scan_page_thumb', job_id=j.id, n=x.now or 1) }}" alt=""></a>
-                <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}{% if j.teacher_note %}{{ note_mark(j) }}{% endif %}
+                <div>{% if x.kind == 'reading' %}<span class="name-link">{{ j.name }}</span>{% else %}<a class="name-link" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Go on checking “{{ j.name }}”">{{ j.name }}</a>{% endif %}
                 {%- if folders.get(j.id) %}<br><span class="small muted">{{ icon('folder') }} From the folder “{{ folders[j.id] }}”</span>{% endif %}
                 {% if x.by %}<br><span class="small muted">Started by {{ x.by }}</span>{% endif %}</div></div></td>
               {#- how far it got, a column of its own to sort by (the owner, 2026-10-25, CC): being read, stopped, paused, ready, draft #}
-              <td data-label="State" class="small" data-sort="{{ {'reading': 1, 'stopped': 2, 'paused': 3, 'ready': 4}.get(x.kind, 5) }}">{% include '_scan_kind.html' %}</td>
               <td data-label="Stashed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
               <td data-label="Pages"><span class="badge box-count">{{ j.pages }}</span></td>
+              <td data-label="State" class="small" data-sort="{{ {'reading': 1, 'stopped': 2, 'paused': 3, 'ready': 4}.get(x.kind, 5) }}">{% include '_scan_kind.html' %}</td>
               {#- (Move before Move to Trash, in the one order for every row's icons: the owner, 2026-10-29) #}
               {%- set move_btn %}<button type="button" class="btn btn-secondary btn-sm btn-icon" data-stash-dialog="stash-move" data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-here="{{ j.folder_id or '' }}" title="Move: put “{{ j.name }}” in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button>{% endset %}
               <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans', move=move_btn) }}</span></td>

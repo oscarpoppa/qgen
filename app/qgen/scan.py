@@ -785,8 +785,22 @@ def find_places_again(job_id, page):
         return False
     flat = Image.open(page_file(job_id, page['n'])).convert('RGB')
     covered = {item['qs_id'] for item in page.get('items') or [] if item.get('qs_id') and item.get('values') and item.get('page_text')}
-    page['slots'] = guess_places(page['qs'], pagelayout.find_slots(flat, {'problems': page['qs'], 'pictures': []}, covered), covered)
+    why = {}
+    #(the page's pictures blanked out, as the first look did; pages read before 2026-10-30 have none kept)
+    page['slots'] = guess_places(page['qs'], pagelayout.find_slots(flat, {'problems': page['qs'], 'pictures': page.get('qs_pictures') or []},
+                                                                    covered, why), covered)
+    page['below'] = below_why(job_id, page['n'], page['qs'], why)
     return True
+
+
+def below_why(job_id, n, problems, why):
+    """Why each choice problem the finder couldn't place went under the page, written to the log and
+    kept on the scan's page as {problem id: reason} (the owner, 2026-10-30, D45)."""
+    for i, p in enumerate(problems, 1):
+        if p['id'] in why:
+            current_app.logger.info('scan {} page {} question {} ({}) goes under the page: {}'.format(
+                job_id, n, i, (p.get('number') or 'no number').strip(), why[p['id']]))
+    return dict(why)
 
 
 def keep_corrections(job, data):
@@ -811,7 +825,7 @@ def keep_corrections(job, data):
             covered = [it['qs_id'] for it in page.get('items') or [] if it.get('qs_id') and it.get('values') and it.get('page_text')]
             truth = {k: {'kind': s.get('kind'), 'answer': s.get('answer')} for k, s in slots.items() if s.get('kind') == 'field' and s.get('answer')}
             with open(os.path.join(out, 'page.json'), 'w') as f:
-                json.dump({'problems': page.get('qs') or [], 'pictures': [], 'covered': covered, 'truth': truth,
+                json.dump({'problems': page.get('qs') or [], 'pictures': page.get('qs_pictures') or [], 'covered': covered, 'truth': truth,
                            'by_hand': sorted(k for k, s in slots.items() if s.get('by_hand')),
                            'source': 'scan {} “{}” page {}, boxes fixed by hand {}'.format(job.id, data.get('name') or job.name, page['n'], stamp)}, f, indent=1)
     except Exception as exc:
@@ -1184,20 +1198,31 @@ def read_one(job, n, api_key, user_id, reserved=0, cancel=None):
         src = orig_file(job.id, n) if os.path.exists(orig_file(job.id, n)) else path
         #(read again with the teacher's words on what was wrong: the owner, 2026-10-20)
         note = (get_data(job)['pages'][n - 1] or {}).get('note')
+        #(made truly level before Claude reads it, not after, so it reads the page students will see:
+        #the owner, 2026-10-30, D50; a QuizScan without `level` reads it first, as before)
+        import inspect
+
+        def level(img):
+            small = img.convert('RGB')
+            small.thumbnail((long_side(), long_side()))
+            return pagelayout.level_page(small, {}, full=img.convert('RGB'))[2]
+        early = 'level' in inspect.signature(quizscan.convert_image).parameters
         try:
-            qs = quizscan.convert_image(src, model=tuning.get('scan_model'),
-                                        client=_Logged(_quizscan_client(api_key), job.id, n, user_id, cancel, progress),
-                                        **({'note': note} if note else {}))[0]
+            read = quizscan.convert_image(src, model=tuning.get('scan_model'),
+                                          client=_Logged(_quizscan_client(api_key), job.id, n, user_id, cancel, progress),
+                                          **({'note': note} if note else {}), **({'level': level, 'flats': True} if early else {}))[0]
         except quizscan.QuizScanError as exc:
             return {'n': n, 'state': 'error', 'error': str(exc)}
+        qs, full = read if early else (read, None)
         if step('QuizScan reading'):
             return stopped
         #the page as QuizScan read it: flattened and leveled, so every box is a place on it; then
         #made truly level (its rows straight across, its margins straight down, the paper's dark
         #edge painted out) and QuizScan's boxes laid on its own printed lines (the owner, 2026-10-20).
         #Measured on the smaller page (where the places are found, and quick), and the full-size
-        #page made level the same way, for cutting pictures from (the owner, 2026-10-20)
-        full = quizscan.flat_page(src, qs).convert('RGB')
+        #page made level the same way, for cutting pictures from (the owner, 2026-10-20). Leveled before the
+        #reading now (D50), this second look finds it level and leaves it, or takes out what's left
+        full = (full if full is not None else quizscan.flat_page(src, qs)).convert('RGB')
         small = full.copy()
         small.thumbnail((long_side(), long_side()))
         small, qs, full = pagelayout.level_page(small, qs, full=full)
@@ -1269,7 +1294,9 @@ def finish_page(job, n, qs, numbers, flat, api_key=None, user_id=None, progress=
     if progress:
         progress.step('places')
     covered = {pid for pid, item in numbers.items() if item.get('values') and item.get('page_text')}
-    slots = guess_places(qs.get('problems') or [], pagelayout.find_slots(flat, qs, covered), covered)
+    why = {}
+    slots = guess_places(qs.get('problems') or [], pagelayout.find_slots(flat, qs, covered, why), covered)
+    below = below_why(job.id, n, qs.get('problems') or [], why)
     if step('finding the answer places'):
         return stopped
     #(the AI looks at the page as a student will see it, and the places it moves are checked here)
@@ -1286,7 +1313,10 @@ def finish_page(job, n, qs, numbers, flat, api_key=None, user_id=None, progress=
     font = pagelayout.pick_font(flat, qs, slots, samples, os.path.join(current_app.static_folder, 'fonts'))
     step('choosing the font')
     page = draft_page(n, quizscan_raw(qs, numbers))
-    page.update(size=qs['size'], slots=slots, font=font, checked=checked,
+    #(every picture QuizScan found, decorations too, so finding the places again blanks them out as this
+    #first look did: the owner, 2026-10-30, D46; the page's own 'pictures' are only those saved as pictures)
+    page.update(size=qs['size'], slots=slots, font=font, checked=checked, below=below,
+                qs_pictures=[{'id': p.get('id'), 'box': p['box']} for p in qs.get('pictures') or [] if isinstance(p.get('box'), dict)],
                 qs=[{k: p.get(k) for k in ('id', 'type', 'box', 'choices', 'text', 'number')} for p in qs['problems']])
     return page
 
@@ -2194,7 +2224,8 @@ def page_layout_of(job, pages, places, ids, shuffled=False):
         size = page.get('size') or {}
         #(QuizScan's boxes are kept too, so the places can be found again later without reading the page again)
         out['pages'].append({'image': name, 'width': size.get('width'), 'height': size.get('height'), 'hide': hide,
-                             'qs': page.get('qs') or [], 'items': [item.get('qs_id') for item in page['items']]})
+                             'qs': page.get('qs') or [], 'pictures': page.get('qs_pictures') or [],
+                             'items': [item.get('qs_id') for item in page['items']]})
     #(the page is shown even when no answer place was found on it: the problems are then all
     #answered under it, the owner 2026-10-18)
     return out

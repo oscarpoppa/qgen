@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, filter_bar, slot, back_button, count_badge, status_icon with context %}
+{% from "_macros.html" import person_name, person_link, quiz_name, quiz_link, box_label, count_of, filter_bar, slot, back_button, count_badge, status_icon, search_box with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note with context %}
 {% block body_attrs %}{{ watch('review') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
@@ -10,7 +10,7 @@
    sortable #}
 {% macro quiz_rows(vqs) %}
   <div class="table-wrap stack"><table class="quiz-rows even-cols result-rows grading-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="to_grade">To grade</th><th data-sort-key="oldest">Oldest</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="oldest" class="date-col">Oldest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="to_grade">To grade</th><th></th></tr></thead>
     <tbody>{% for vq in vqs %}{{ quiz_group(vq) }}{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
@@ -21,7 +21,7 @@
       <summary>{{ box_label('note', vq.title, none, 'span', vq.title) }}</summary>
     <div class="table-wrap stack answer-rows" data-fold-body>
       <table class="even-cols">
-        <thead><tr><th>Student</th><th>Handed in</th><th>To grade</th><th></th></tr></thead>
+        <thead><tr><th>Student</th><th class="date-col">Handed in</th><th>To grade</th><th></th></tr></thead>
         <tbody>
         {% for cq in rows %}
           {% set todo = cq.cproblems|selectattr('credit', 'none')|list|length %}
@@ -36,13 +36,14 @@
       </table>
     </div>
     </details></td>
+    {#- (the hand-in that has waited longest here, sortable: the owner, 2026-10-21; right after the name, every folder page's
+        date in the same place: the owner, 2026-10-29, D37) -#}
+    {%- set old = rows|map(attribute='compdate')|reject('none')|min if rows|map(attribute='compdate')|reject('none')|list else none %}
+    <td data-label="Oldest" class="nowrap small muted" data-sort="{{ old.isoformat() if old else '' }}">{{ old|when if old else '' }}</td>
     <td data-label="Attempts" class="nowrap" data-sort="{{ '%04d' % rows|length }}">{{ count_badge(rows|length, 'attempt', 'attempts') }}</td>
     {#- (how many answers wait for grading in all its attempts, in the words its lines use: the owner, 2026-10-21) -#}
     {%- set ns_t = namespace(n=0) %}{% for cq in rows %}{% set ns_t.n = ns_t.n + cq.cproblems|selectattr('credit', 'none')|list|length %}{% endfor %}
     <td data-label="To grade" class="nowrap" data-sort="{{ '%05d' % ns_t.n }}">{% if ns_t.n %}{{ count_badge(ns_t.n, 'answer', 'answers', 'badge-warn') }}{% else %}{{ status_icon('ready', 'Ready to finish') }}{% endif %}</td>
-    {#- (the hand-in that has waited longest here, sortable: the owner, 2026-10-21) -#}
-    {%- set old = rows|map(attribute='compdate')|reject('none')|min if rows|map(attribute='compdate')|reject('none')|list else none %}
-    <td data-label="Oldest" class="nowrap small muted" data-sort="{{ old.isoformat() if old else '' }}">{{ old|when if old else '' }}</td>
     {#- (no History icon: Grading is for grading, the quiz's history is off its point: the owner, 2026-10-21) #}
     <td class="actions"></td>
   </tr>
@@ -54,7 +55,7 @@
 {% if waiting %}
 {#- (no "Waiting for grading" button or its pop-over of the oldest five here: the owner, 2026-10-21) #}
 {% call folders_page(fk) %}
-  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', paged=(pg.weight if pg.weight is not none else pg.total), count_one='attempt', count_many='attempts') }}
+  <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'quiz', 'quizzes', items='tr.result-item', boxes='details.sub-box', paged=(pg.weight if pg.weight is not none else pg.total), count_one='attempt', count_many='attempts') }}{{ search_box(fk, keep=('section',)) }}
     {#- the way back at the right end of the filter row, as on Results by quiz (the owner, 2026-10-17) #}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>
   <div id="folder-items">

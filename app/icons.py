@@ -63,6 +63,11 @@ PATHS = {
     #(handed in, waiting for the teacher: the owner, 2026-10-27)
     #(a person's notes, for teachers, on People: the owner, 2026-10-27)
     'lc-sticky-note': '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/>',
+    #(a note with something written in it: the sticky note with a star on it, drawn gold; the owner, 2026-10-29)
+    #(filled solid, its fold and star drawn in the page's color over it: the owner, 2026-10-29, D14)
+    'lc-sticky-note-star': '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z" style="fill:currentColor"/>'
+                           '<path d="M15 3v4a2 2 0 0 0 2 2h4" style="stroke:var(--surface)"/>'
+                           '<path d="M10.5 8.5 11.7 11.8 15.3 12 12.5 14.1 13.4 17.5 10.5 15.6 7.6 17.5 8.5 14.1 5.7 12 9.3 11.8Z" style="stroke:var(--surface);fill:var(--surface)"/>',
     'lc-user-check': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
     'lc-circle-half': '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
     'lc-users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -193,7 +198,8 @@ BUTTON_ICONS = {'View': 'lc-eye', 'Edit': 'lc-pencil', 'History': 'lc-history', 
                 'Folder options': 'lc-folder-cog', 'Unpin': 'lc-pin-off', 'Message': 'lc-message', 'Start': 'lc-play', 'Continue': 'lc-play',
                 'Grade': 'lc-grade', 'Answer key': 'lc-answer-key', 'Move to Trash': 'lc-trash', 'Retake': 'lc-retake',
                 'Student page': 'lc-user', 'Student history': 'lc-history', 'Reset password': 'lc-key', 'Remove picture': 'lc-image-minus', 'Restore': 'lc-restore',
-                'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil', 'Add to a quiz': 'lc-list-plus'}
+                'View quiz': 'lc-eye', 'Edit quiz': 'lc-pencil', 'View problem': 'lc-eye', 'Edit problem': 'lc-pencil', 'Add to a quiz': 'lc-list-plus',
+                'Notes': 'lc-sticky-note', 'Note to the Student': 'lc-sticky-note'}
 
 
 def icon_label(name, label):

@@ -1066,6 +1066,9 @@ def retake(cq, by=None):
     new.retake_rule = cq.retake_rule
     #(the teacher's note to the student, and its Assign group, go with it: the owner, 2026-10-28)
     new.assign_note, new.assign_note_at, new.assign_group = cq.assign_note, cq.assign_note_at, cq.assign_group
+    #(an expired attempt given again leaves Pending Quizzes; the new one shows there instead: the owner, 2026-10-29, D42)
+    if cq.expired:
+        cq.expired_seen = True
     #a quiz to take again comes out of the student's folders, back where they'll see it
     from .models import QuizPlacement
     QuizPlacement.query.filter_by(owner_id=cq.assignee, vquiz_id=cq.vquiz_id).delete(synchronize_session=False)

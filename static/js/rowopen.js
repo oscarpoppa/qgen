@@ -38,7 +38,9 @@
     for (; sib; sib = sib.nextElementSibling) {
       if (keepIcons && sib.matches('td.actions')) break;
       var r = sib.getBoundingClientRect();
-      if (!r.width || r.left < own.right - 1 || bottomOf(sib) > top) break;
+      //(a few pixels of slack: the Note column's icon ends 2px under where the contents start, and stopped every People
+      //row short at it, its icons wrapping under the facts: the owner, 2026-10-29)
+      if (!r.width || r.left < own.right - 1 || bottomOf(sib) > top + 4) break;
       right = r.right - parseFloat(getComputedStyle(sib).paddingRight);
     }
     //(never past the list's own visible edge)

@@ -47,6 +47,11 @@ def pw_check(func):
     return inner
 
 # route to user homepage
+def _teacher_note(g):
+    """My Quizzes' Note column: the newest of a quiz's attempts with a Note from your teacher (a retake may have none)."""
+    return next((a for a in reversed(g['attempts']) if a.assign_note), None)
+
+
 @user_bp.route('/mypage')
 @login_required
 @pw_check
@@ -159,6 +164,13 @@ def mypage():
     if node:
         #(only what's loose in it: the owner, 2026-10-25)
         quiz_filter, shown = [tab(c) for c in node['folders']], node['groups']
+    #(Search Everything…: every one of his/her quizzes, its name and its problems', a folder view of its own: the owner,
+    #2026-10-29)
+    from app import search as SR
+    words = SR.text() if not showing else ''
+    if words:
+        shown = SR.hits(groups, 'groups', words)
+        SR.apply(fk, words, len(shown))
     #the last few handed in (any folder, any time), newest first, above the folders
     finished = sorted((cq for cq in current_user.cquizzes if cq.status in ('completed', 'review') and cq.compdate),
                       key=lambda cq: cq.compdate, reverse=True)[:LATEST_FINISHED]
@@ -170,6 +182,8 @@ def mypage():
     ordered = [g for g in shown if g['open']] + [g for g in shown if not g['open']]
     pg = paging.paginate(ordered, name_of=lambda g: g['vquiz'].title or '', sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
+        #(the ones with a Note from your teacher first: the owner, 2026-10-29, D31)
+        'note': lambda g: 0 if _teacher_note(g) else 1,
         'latest': lambda g: g['last_at'],
         #(how many folders it's in: 0 or 1, a quiz being in one place at a time; the owner, 2026-10-27)
         'folders': lambda g: 1 if home.get(g['vquiz'].id) else 0,
@@ -621,22 +635,29 @@ def people_page(in_archive=False, **extra):
         #Checked folder's "Apply to checked", each person from his/her own row: the owner, 2026-10-24)
         fold_key='qgen-folded-user-folders')
     from app.qgen.models import RETAKE_RULES
-    pg = _people_page_of(ulst, view, node, root, in_archive)
+    pg = _people_page_of(ulst, view, node, root, in_archive, fk)
     return render_template('udet.html', ulst=ulst, title='Trash' if in_archive else 'People', fk=fk, shown=pg.items, pg=pg,
                            folders_of=folders_of, in_archive=in_archive, rules=RETAKE_RULES, **extra)
 
 
-def _people_page_of(ulst, view, node, root, in_archive):
+def _people_page_of(ulst, view, node, root, in_archive, fk=None):
     """The people to draw: the folder shown (or what's checked, ?checked=), narrowed by the words
     typed (?q=) and People's Show choice (?state=review or out: someone with an attempt waiting for
     grading, or not handed in yet), sorted (?sort=), 20 to the page (app/paging.py; the owner,
     2026-10-23)."""
     from app import folder_tree, paging
     from app.qgen.models import attempts_by_quiz
+    from app import search as SR
     checked = request.args.get('checked')
+    words = SR.text() if checked is None else ''
     if checked is not None:
         want = {x for x in checked.split(',') if x}
         listed = [u for u in ulst if str(u.id) in want]
+    elif words:
+        #(Search Everything…: everyone, names, email and notes, a folder view of its own; the owner, 2026-10-29)
+        listed = SR.hits(ulst, 'people', words)
+        if fk is not None:
+            SR.apply(fk, words, len(listed))
     elif view == 'all':
         listed = ulst
     elif view == 'main':
@@ -665,6 +686,8 @@ def _people_page_of(ulst, view, node, root, in_archive):
     from .models import UserFolderMember
     nfolders = dict(db.session.query(UserFolderMember.user_id, func.count(UserFolderMember.folder_id)).group_by(UserFolderMember.user_id))
     sorts = {'name': lambda u: u.username.lower(),
+             #(the ones with a note first: the owner, 2026-10-29, D31)
+             'note': lambda u: 0 if u.teacher_note else 1,
              'created': lambda u: u.created_at,
              'folders': lambda u: nfolders.get(u.id, 0),
              'quizzes': lambda u: facts(u)['quizzes'],
