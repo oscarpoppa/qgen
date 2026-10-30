@@ -158,12 +158,13 @@
               </div>
             </details>
             <details class="menu">
-              <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign',
+              <summary{{ under(('qgen.list_vquizzes', 'qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.mkvquiz', 'qgen.assign', 'qgen.open_quizzes',
                                 'qgen.results_by_quiz', 'qgen.quiz_results_page', 'qgen.list_cquiz')) }} title="Make, assign and see results of quizzes">Quizzes</summary>
               <div class="menu-list">
                 {{ item('qgen.list_vquizzes', 'All Quizzes', ('qgen.list_vquiz', 'qgen.edvquiz', 'qgen.view_vquiz', 'qgen.quiz_results_page'), tip='Browse, edit and organize every quiz') }}
                 {{ item('qgen.mkvquiz', 'New Quiz', tip='Build a new quiz from your problems') }}
                 {{ item('qgen.assign', 'Assign Quizzes', tip='Give quizzes to students or groups, with a due date') }}
+                {{ item('qgen.open_quizzes', 'Pending Quizzes', tip='Assigned quizzes not handed in yet, and the ones that expired') }}
                 {#- (no "Results by quiz": each quiz's history, from its row on All quizzes, shows it; the owner, 2026-10-25) #}
                 {#- (no "Results by student": People shows each person's results now, the owner 2026-10-21) #}
               </div>

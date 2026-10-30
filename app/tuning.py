@@ -48,6 +48,11 @@ TUNABLES = [
     _t('due_soon_days', 'online', '“Due soon” means closing within',
        'Quizzes not handed in that close within this many days: the Due soon folder, and the counts on Home and the Dashboard.',
        'days', 2, 1, 14),
+    #(the late clocks on attempt lines, and Pending Quizzes' Late folder; the owner, 2026-10-29)
+    _t('late_new_days', 'online', '“Late”: a new quiz not started after',
+       'A quiz not started this long after it opens is late.', 'days', 1, 1, 30),
+    _t('late_started_days', 'online', '“Late”: a started quiz not handed in after',
+       'A quiz started this long ago and not handed in is late.', 'days', 1, 1, 30),
     _t('list_grading', 'online', 'Dashboard: grading queue shows', 'How many attempts waiting for grading are listed.',
        'items', 5, 3, 50),
     _t('list_handins', 'online', 'Dashboard: recent hand-ins shows', 'How many recent hand-ins are listed.',
@@ -186,6 +191,14 @@ def recently():
 
 def due_soon():
     return timedelta(days=get('due_soon_days'))
+
+
+def late_new():
+    return timedelta(days=get('late_new_days'))
+
+
+def late_started():
+    return timedelta(days=get('late_started_days'))
 
 
 def grace():

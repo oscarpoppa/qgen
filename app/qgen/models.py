@@ -316,6 +316,10 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
     #the taker has had My quizzes open since it was given to them (else it's counted next to
     #"My quizzes" in the menu); set False only when a quiz is given (assign, retake)
     seen_by_taker = db.Column(db.Boolean, default=True, nullable=False, server_default=db.true())
+    #handed in by the app by itself: 'closed' (its quiz's closing time passed) or 'time' (its time limit ran out), else
+    #None; and whether a teacher has opened it since (Pending Quizzes lists it till then; the owner, 2026-10-29)
+    expired = db.Column(db.String(8), nullable=True)
+    expired_seen = db.Column(db.Boolean, default=False, nullable=False, server_default=db.false())
 
     cproblems = db.relationship('CProblem', backref='cquiz', lazy=True, order_by='CProblem.ordinal')
     taker = db.relationship('User', backref='cquizzes', lazy=True, foreign_keys=[assignee])
@@ -331,6 +335,61 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
 
     def not_open_yet(self, now=None):
         return bool(self.opens_at and (now or datetime.now()) < self.opens_at)
+
+    def late_since(self, now=None):
+        """When this attempt became late, or None: not started a day (a Technical setting) after it opened, or started
+        that long ago and not handed in (the late clocks; the owner, 2026-10-29). One waiting for grading never is."""
+        from app import tuning
+        now = now or datetime.now()
+        if self.completed or self.needs_review:
+            return None
+        if self.startdate:
+            since = self.startdate + tuning.late_started()
+        else:
+            opened = self.opens_at or self.create_date
+            since = opened + tuning.late_new() if opened else None
+        return since if since and since <= now else None
+
+    #how urgent each kind of attempt is, most first: what a quiz's folded row shows of its attempts, and Pending Quizzes'
+    #order of states (the owner, 2026-10-29)
+    URGENCY = ('late-new', 'late-going', 'expired', 'new', 'started', 'review', 'completed')
+
+    def state_kind(self, now=None):
+        """'late-new', 'late-going', 'expired', 'new', 'started', 'review' or 'completed'."""
+        if self.expired:
+            return 'expired'
+        if self.late_since(now):
+            return 'late-going' if self.startdate else 'late-new'
+        return self.status
+
+    def marked_kind(self, now=None):
+        """'late-new', 'late-going', 'expired-new' or 'expired-going' when its icon is a clock or fish bones (in place of
+        the new / in progress icon, or of the score), else None."""
+        kind = self.state_kind(now)
+        if kind == 'expired':
+            return 'expired-going' if self.startdate else 'expired-new'
+        return kind if kind.startswith('late') else None
+
+    def urgency(self, now=None):
+        """1 (late, not started) to 7 (completed): see URGENCY."""
+        return self.URGENCY.index(self.state_kind(now)) + 1
+
+    def state_label(self, own=False, now=None):
+        """The hover words of a late or expired attempt's icon, or None; own: the student's own page ("you"), else a
+        teacher's ("he/she")."""
+        kind = self.state_kind(now)
+        if kind == 'late-new':
+            d = self.opens_at or self.create_date
+            return 'Late: not started since it opened {:%b} {}'.format(d, d.day)
+        if kind == 'late-going':
+            d = self.startdate
+            return 'Late: started {:%b} {} {}:{:%M} {:%p}, not handed in'.format(d, d.day, d.hour % 12 or 12, d, d)
+        if kind != 'expired':
+            return None
+        score = ' · {:.0f}%'.format(self.score or 0) if self.completed else ''
+        if not self.startdate:
+            return 'Expired: closed before {} started it; handed in automatically{}'.format('you' if own else 'he/she', score)
+        return 'Expired: handed in automatically when {}{}'.format('it closed' if self.expired == 'closed' else 'its time ran out', score)
 
     @property
     def took_label(self):
@@ -360,6 +419,25 @@ class CQuiz(db.Model, SaveMixin, DateMixin):
         if self.startdate:
             return 'started {}'.format(day(self.startdate))
         return 'assigned {}'.format(day(self.create_date)) if self.create_date else 'not started'
+
+    @property
+    def assigned_label(self):
+        """'assigned Oct 28, 2:52 PM', or None (Student History's open rows, beside when it was started or handed in: the
+        owner, 2026-10-29)."""
+        d = self.create_date
+        return 'assigned {:%b} {}, {}:{:%M} {:%p}'.format(d, d.day, d.hour % 12 or 12, d, d) if d else None
+
+    @property
+    def when_label_timed(self):
+        """when_label with the time on started and assigned too: "started Oct 29, 9:16 PM" (Student History's open rows:
+        the owner, 2026-10-29)."""
+        def at(d):
+            return '{:%b} {}, {}:{:%M} {:%p}'.format(d, d.day, d.hour % 12 or 12, d, d)
+        if self.compdate and (self.completed or self.needs_review):
+            return self.when_label
+        if self.startdate:
+            return 'started {}'.format(at(self.startdate))
+        return 'assigned {}'.format(at(self.create_date)) if self.create_date else 'not started'
 
     @property
     def status(self):
@@ -583,6 +661,30 @@ class QuizPlacement(db.Model):
 #a student's attempt the teacher deleted (or whose account was deleted), kept so it can
 #be looked at, restored or deleted for good later. The attempt is moved here whole, so
 #the rest of the site never has to tell archived attempts from live ones.
+#the message a teacher wrote when moving something to the Trash (or a student, deleting his/her own folder): sent in the
+#notice and kept with it in the Trash, where any teacher can change it (the owner, 2026-10-29; informational, never asking
+#why). kind: 'problem', 'quiz', 'person' or 'attempt' (item_id: the ArchivedAttempt's id); one per item, gone with it.
+class TrashNote(db.Model):
+    __tablename__ = 'trash_note'
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(16), nullable=False)
+    item_id = db.Column(db.Integer, nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    by_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    changed_by_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    changed_at = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (db.UniqueConstraint('kind', 'item_id', name='uq_trash_note_item'),)
+    by = db.relationship('User', foreign_keys=[by_id])
+    changed_by = db.relationship('User', foreign_keys=[changed_by_id])
+
+    @property
+    def stamp(self):
+        """Who wrote it and when: "dan, Oct 29 3:10 PM"."""
+        d = self.at
+        return '{}, {:%b} {} {}:{:%M} {:%p}'.format(self.by.username if self.by else 'Someone', d, d.day, d.hour % 12 or 12, d, d)
+
+
 class ArchivedAttempt(db.Model):
     __tablename__ = 'archived_attempt'
     id = db.Column(db.Integer, primary_key=True)

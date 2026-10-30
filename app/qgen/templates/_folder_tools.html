@@ -26,7 +26,7 @@
       {#- (straight to New quiz with them in it: the owner, 2026-10-21) #}
       <button type="button" class="btn btn-sm btn-quiz" data-make-quiz="{{ url_for('qgen.mkvquiz') }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it">Make New Quiz</button>{% endif %}
       {%- if not in_archive %}
-      <button type="button" class="btn btn-sm" data-trash-many data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
+      <button type="button" class="btn btn-sm" data-trash-many{% if kind in ('problems', 'quizzes') %} data-trash-message="{{ tuning.get('max_message') }}"{% endif %} data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
     {% else %}
       {#- (no folders yet: the folder buttons grayed, with why, never left out; the page's own button
           still works: the owner, 2026-10-19) #}
@@ -38,7 +38,7 @@
       {#- (straight to New quiz with them in it: the owner, 2026-10-21) #}
       <button type="button" class="btn btn-sm btn-quiz" data-make-quiz="{{ url_for('qgen.mkvquiz') }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it">Make New Quiz</button>{% endif %}
       {%- if not in_archive %}
-      <button type="button" class="btn btn-sm" data-trash-many data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
+      <button type="button" class="btn btn-sm" data-trash-many{% if kind in ('problems', 'quizzes') %} data-trash-message="{{ tuning.get('max_message') }}"{% endif %} data-one="{{ one }}" data-noun="{{ noun }}" data-url="{{ url_for('qgen.trash_many', kind=kind) }}" title="Move the checked {{ noun }} to the Trash">Move to Trash</button>{% endif %}
     {% endif %}
   </form>
 </div>

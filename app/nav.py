@@ -103,7 +103,7 @@ def _named(endpoint, args):
     from app.user.models import User
     from app.qgen.models import VQuiz
     fixed = {
-        'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.list_users': 'People',
+        'qgen.dashboard': 'Dashboard', 'qgen.review_list': 'Grading', 'qgen.open_quizzes': 'Pending Quizzes', 'qgen.list_users': 'People',
         'qgen.list_vquizzes': 'Quizzes', 'qgen.list_vprobs': 'Problems',
         'user.userdet': 'People', 'messages.inbox': 'Messages', 'messages.teachers_page': 'Teachers’ Messages',
         'qgen.archive': 'Trash', 'user.home': 'Home', 'user.mypage': 'My Quizzes',

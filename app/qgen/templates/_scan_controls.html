@@ -6,7 +6,8 @@
     back there. A paused or stopped scan or a draft also has Put away (stopped too: the owner, 2026-10-21), and one put away has Take out instead,
     on Scan workbook pages and in the Dashboard's pop-over alike (the owner, 2026-10-20). -#}
 {% from "_macros.html" import post_button with context %}
-{% macro scan_controls(x, back='') -%}
+{#- move: a row's own Move icon, put before Move to Trash (the one order for every row's icons: the owner, 2026-10-29) #}
+{% macro scan_controls(x, back='', move='') -%}
 {%- set j = x.job -%}
 <span class="btn-row nowrap scan-controls">
   {%- if x.kind == 'reading' -%}
@@ -14,6 +15,8 @@
     {{- post_button(url_for('qgen.scan_pause', job_id=j.id, back=back or none), 'Stop', icon='lc-stop', tip='Stop reading “' ~ j.name ~ '” now: the pages already read are kept; the others wait for “Resume”.') }}
     {#- (Stash grayed while it's being read, with why: the owner, 2026-10-25) #}
     {%- if back != 'dashboard' %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Stash: stop it first, then stash it">{{ icon_label('lc-folder-input', 'Stash') }}</button>{% endif %}
+    {#- (its Move grayed, with why, while it's read: never left out, so the icons line up; the critic, 2026-10-29) #}
+    {%- if move %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Move: stop it first">{{ icon_label('lc-folder-input', 'Move') }}</button>{% endif %}
     {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Stop and move to Trash', 'btn btn-danger btn-sm', icon='lc-x', confirm='Stop reading “' ~ j.name ~ '” and move it to the Trash? You can restore it there.', tip='Stop reading “' ~ j.name ~ '” and move it to the Trash (asks first)') }}
   {%- else -%}
     {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}
@@ -24,7 +27,8 @@
     {#- (Stash only on Scan workbook pages, where the stash and its folders are; not on the Dashboard's Scanner card: the owner, 2026-10-24, To do 11) #}
     {#- (every workbook not being read can be stashed from its row, a ready one too: the owner, 2026-10-25) #}
     {%- elif back != 'dashboard' %}{{ post_button(url_for('qgen.scan_put_away', job_id=j.id, back=back or none), 'Stash', icon='lc-folder-input', tip='Stash “' ~ j.name ~ '” until you want it again: out of Current workbooks and the Dashboard') }}{% endif %}
-    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Move to Trash', icon='lc-trash', confirm='Move “' ~ j.name ~ '” to the Trash? You can restore it there.', tip='Move this workbook to the Trash; you can restore it there') }}
+    {{- move }}
+    {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Move to Trash', 'btn btn-danger btn-sm', icon='lc-trash', confirm='Move “' ~ j.name ~ '” to the Trash? You can restore it there.', tip='Move this workbook to the Trash; you can restore it there') }}
   {%- endif -%}
 </span>
 {%- endmacro %}

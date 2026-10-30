@@ -67,15 +67,18 @@
     //(a quiz: its problems no other quiz uses can go with it, checked to start: the owner, 2026-10-26)
     var own = +(form.dataset.ownProblems || 0);
     var check = own ? { label: 'Also its ' + (own === 1 ? 'problem' : own + ' problems') + ' no other quiz uses', checked: true } : null;
-    window.qgenChoose(q, choices, check).then(function (got) {
-      var answer = check ? got.value : got, extra = check && got.checked ? { problems: '1' } : {};
+    //(data-trash-message: the message box, its words sent as trash_message for the notice and the Trash; the owner, 2026-10-29)
+    var msg = 'trashMessage' in form.dataset ? { max: form.dataset.trashMessage, before: form.dataset.trashMessageBefore || '' } : null;
+    window.qgenChoose(q, choices, check, msg).then(function (got) {
+      var answer = check || msg ? got.value : got, extra = check && got.checked ? { problems: '1' } : {};
+      if (msg && got.message) extra.trash_message = got.message;
       if (answer === 'delete') { send(form.dataset.deleteUrl, extra); return; }
       if (answer !== 'archive') return;
       if (!person) { send(archive, extra); return; }
       window.qgenChoose('Move ' + label + ' to the Trash? He/she won’t be able to log in until you restore him/her. What about his/her quiz results and attempts?', [
         { value: 'yes', label: 'Keep Their Results', title: 'His/her attempts and scores stay, and come back with him/her' },
         { value: 'no', label: 'Delete Their Results', danger: true, title: 'His/her attempts and scores are deleted for good, also any in the Trash' }
-      ]).then(function (keep) { if (keep) send(archive, { keep: keep }); });
+      ]).then(function (keep) { if (keep) { extra.keep = keep; send(archive, extra); } });  // (with the message, if one was written)
     });
   }
 

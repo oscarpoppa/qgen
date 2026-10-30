@@ -80,11 +80,11 @@
         {% if q.states.done %}{{ count_dot(q.states.done, 'done', 'done') }}{% endif %}
         {% if not q.students %}<span class="muted small" title="Not assigned to anyone yet">–</span>{% endif %}</span></td>
     <td class="actions"><span class="btn-row quiz-row-actions">
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
-      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
-      {#- (Assign on every row, in the row icon order: View, Edit, Copy, Assign, History, …; the owner, 2026-10-21) #}
+      {#- (the one order for every row's icons: Assign, View, History, Edit; the owner, 2026-10-29) #}
       {% if vq.removed_at %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first') }}{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give “{{ vq.title }}” to students">{{ icon_label('lc-send', 'Assign') }}</a>{% endif %}
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View quiz: look at “{{ vq.title }}” and its problems without changing it">{{ icon_label('lc-eye', 'View quiz') }}</a>
       {% if q.rows %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student’s attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
+      <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=vq.id) }}" title="Edit quiz: change “{{ vq.title }}” (its problems and settings)">{{ icon_label('lc-pencil', 'Edit quiz') }}</a>
       {#- (no printer for the whole class here: one student's paper pages print from his/her own row, the owner 2026-10-21, To do 7) #}
     </span></td>
   </tr>
@@ -98,7 +98,7 @@
   {% if people %}
   {#- (the Score colors' cut-offs, for the folder tabs' averages: static/js/folderfilter.js) #}
   <div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}" data-score-green="{{ tuning.get('score_green') }}" data-score-amber="{{ [tuning.get('score_amber'), tuning.get('score_green')]|min }}">
-    <thead><tr><th data-sort-key="name">Student</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="name">Student</th><th data-sort-key="latest" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
     <tbody>
     {% for person in people %}{% set student, g = rows[person.id] %}
       {% set page_icon %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=student.id) }}" title="Student history: {{ student.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>{% endset %}

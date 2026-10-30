@@ -55,7 +55,7 @@
         <script type="application/json" class="folder-filter-tree">{{ quiz_filter|tojson }}</script>
         {#- (rows like My quizzes', sortable by every column: the owner, 2026-10-21; they were boxes) #}
         <div class="folder-filter-list"><div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows">
-          <thead><tr><th>Quiz</th><th>Latest</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
+          <thead><tr><th>Quiz</th><th title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th>Attempts</th><th>Status</th><th>Score</th><th></th></tr></thead>
           <tbody>{% for g in attempts_by_quiz(item.cquizzes) %}{{ result_row(g, item) }}{% endfor %}</tbody>
         </table></div></div>
       </div>
@@ -93,7 +93,7 @@
 <div class="page-head">
   {#- ("Student history:" on the top line, the name under it, like a quiz's history: the owner, 2026-10-25; his/her picture
       before the name: the owner, 2026-10-28) #}
-  {% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student History:</span> <span class="title-name">{{ avatar(ulst[0], 28) }}<span>{{ ulst[0].shown_name }}</span></span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
+  {% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student History:</span> <a class="title-name name-link" href="{{ url_for('user.userdet', folder=people_folder, show=ulst[0].id) if people_folder is defined else url_for('user.userdet', show=ulst[0].id) }}" title="Open {{ ulst[0].shown_name }}’s row on People">{{ avatar(ulst[0], 28) }}<span>{{ ulst[0].shown_name }}</span></a></h1>{% else %}<h1>{{ title }}</h1>{% endif %}
   {# one student: back where they came from (Dashboard, Grading, a quiz's results...), else People #}
   <div class="actions">{{ single_buttons }}</div>
 </div>
@@ -122,7 +122,7 @@
        data-main-label="Uncategorized" data-unit="quiz" data-units="quizzes" data-remember="student-page" data-style="list"
        data-paged data-server-view="{{ server_view }}" data-total="{{ groups_total }}" data-loose="{{ groups_loose }}" data-shown-total="{{ pg.total }}">
     {#- the title over the folder list, as on the other list pages (the owner, 2026-10-17) #}
-    <div class="page-head student-head">{% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student History:</span> <span class="title-name">{{ avatar(ulst[0], 28) }}<span>{{ ulst[0].shown_name }}</span></span></h1>{% else %}<h1>{{ title }}</h1>{% endif %}</div>
+    <div class="page-head student-head">{% if single and ulst %}<h1 class="title-two"><span class="title-kind">Student History:</span> <a class="title-name name-link" href="{{ url_for('user.userdet', folder=people_folder, show=ulst[0].id) if people_folder is defined else url_for('user.userdet', show=ulst[0].id) }}" title="Open {{ ulst[0].shown_name }}’s row on People">{{ avatar(ulst[0], 28) }}<span>{{ ulst[0].shown_name }}</span></a></h1>{% else %}<h1>{{ title }}</h1>{% endif %}</div>
     <div class="folder-tools-bar student-filter">{{ filter_bar('#student-' ~ item.id ~ ' .folder-filter-list', 'quiz', 'quizzes', items='tr[data-fkey]', paged=pg.total, id='student-filter-bar') }}
       <div class="btn-row results-filter-right">{{ single_buttons }}</div></div>
     {#- Awards: a button under the folder list that opens them as a pop-over (the owner, 2026-10-17) #}
@@ -134,7 +134,7 @@
     {#- the pager at the top too (folderfilter.js moves it to the right end of the tab's row) and under the list, 20 quizzes at a time (app/paging.py) #}
     {% if pg.count > 1 %}<div class="pager-top">{{ pager(pg) }}</div>{% endif %}
     <div class="folder-filter-list"><div class="table-wrap stack"><table class="quiz-rows even-cols student-quiz-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-      <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
+      <thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>
       <tbody>{% for g in shown_groups %}{{ result_row(g, item) }}{% endfor %}</tbody>
     </table></div>{{ pager(pg) }}</div>
   </div>

@@ -71,6 +71,16 @@ from app import icons as _icons
 app.jinja_env.globals.update(icon=_icons.icon, draw_icon=_icons.icon_or, icon_script=_icons.icon_script, icon_sprite=_icons.icon_sprite, icon_label=_icons.icon_label, button_icons=_icons.BUTTON_ICONS)
 from app import tuning as _tuning  # noqa: E402
 app.jinja_env.globals.update(score_class=_tuning.score_class)
+#the message something was moved to the Trash with (app/qgen/trashnotes.py), for its row there and its delete question
+def _trash_note(kind, item_id):
+    #(every one of a kind looked up once per page, not a query per row: the critic, 2026-10-29)
+    from flask import g
+    from app.qgen.models import TrashNote
+    cache = g.setdefault('trash_notes', {})
+    if kind not in cache:
+        cache[kind] = {n.item_id: n for n in TrashNote.query.filter_by(kind=kind)}
+    return cache[kind].get(item_id)
+app.jinja_env.globals.update(trash_note=_trash_note)
 
 @app.template_filter('when')
 def when_filter(d, style='day'):
@@ -275,8 +285,11 @@ def close_expired_command():
     """Hand in and score every quiz whose time is up, and tell students about quizzes
     that have opened (for cron)."""
     from app.qgen.services import close_expired, announce_opened
-    print('closed {} quiz attempt(s)'.format(close_expired()))
-    print('told {} student(s) a quiz is open'.format(announce_opened()))
+    #(as inside a page request: handing in draws its transcript, whose pictures need url_for; it crashed at the first
+    #attempt with a picture, found 2026-10-29; the notices' links come out as the site's own addresses too)
+    with app.test_request_context('/'):
+        print('closed {} quiz attempt(s)'.format(close_expired()))
+        print('told {} student(s) a quiz is open'.format(announce_opened()))
     from app.qgen.scan import remove_old_jobs
     print('removed {} old workbook scan(s)'.format(remove_old_jobs()))
 

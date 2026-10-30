@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, status_icon with context %}
+{% from "_macros.html" import filter_bar, status_icon, trash_note_mark with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, move_mini, move_folders, remove_button with context %}
 {% from "_macros.html" import box_label, count_of, quiz_link with context %}
@@ -43,9 +43,10 @@
                 {% elif a.startdate %}{{ status_icon('going', 'In progress') }}
                 {% else %}{{ status_icon('fresh', 'Not started') }}{% endif %}</td>
               <td class="actions">
-                {#- (its Move icon first, as every row's folder icons: the owner, 2026-10-26) #}
-                {{- move_mini(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}
+                {#- (the one order for every row's icons: its message (Note), View, Move, Restore, Delete for good; the owner, 2026-10-29) #}
+                {{- trash_note_mark('attempt', a.id) }}
                 <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.archived', aid=a.id) }}" title="View: See {{ a.student_name }}'s answers and score as they were when moved to the Trash">{{ icon_label('lc-eye', 'View') }}</a>
+                {{- move_mini(fk, 'attempt', a.id, a.student_name ~ '’s “' ~ a.quiz_title ~ '”', home) }}
                 {% if blocker %}
                   <button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Restore: {{ blocker }}">{{ icon_label('lc-restore', 'Restore') }}</button>
                 {% else %}
@@ -55,7 +56,7 @@
                 {% endif %}
                 {# one Remove, as on every folder page: take it out of its folder, or delete it for good #}
                 {{ remove_button('archive', a.id, a.student_name ~ '’s attempt at “' ~ a.quiz_title ~ '”', [fk.nodes[a.folder_id].folder] if a.folder_id in fk.nodes else [],
-                                 url_for('qgen.purge_archived', aid=a.id), delete_note='Deleting it can’t be undone.') }}
+                                 url_for('qgen.purge_archived', aid=a.id), delete_note='Deleting it can’t be undone.', trash_message=true, trash_kind='attempt') }}
               </td>
             </tr>
           {% endfor %}

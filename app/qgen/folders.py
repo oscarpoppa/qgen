@@ -151,10 +151,8 @@ def not_handed_in_note(titles):
 
 def delete_folder_and_quizzes(user, folder_id):
     """Delete a folder, the folders inside it and every quiz in them, once every one has been
-    handed in (FolderError otherwise): each try at those quizzes goes to the Archive (as if a teacher took it away; it can be put back) and the
-    teachers get a notice. Returns (folder name, how many quizzes)."""
-    from flask import url_for
-    from app.messages.models import notify_teachers
+    handed in (FolderError otherwise): each try at those quizzes goes to the Archive (as if a teacher took it away; it can be put back);
+    nobody is told (the owner, 2026-10-29). Returns (folder name, how many quizzes)."""
     from .services import archive_attempt
     f = _folder(user, folder_id)
     if f is None:
@@ -175,12 +173,7 @@ def delete_folder_and_quizzes(user, folder_id):
     name = f.name
     for g in tree:
         db.session.delete(g)
-    if titles:
-        notify_teachers(user.id, '{} deleted his/her folder “{}” with {} quiz{} in it: {}. {} in the Trash, where you can '
-                        'put {} back.'.format(user.username, name, len(titles), '' if len(titles) == 1 else 'zes',
-                                              ', '.join('“{}”'.format(t) for t in titles),
-                                              'It\'s' if len(titles) == 1 else 'They\'re', 'it' if len(titles) == 1 else 'them'),
-                        link=url_for('qgen.archive'))
+    #(no notice to anyone: the owner, 2026-10-29; the quizzes are in the Trash's Attempts, as before)
     db.session.commit()
     return name, len(titles)
 

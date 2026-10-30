@@ -168,14 +168,14 @@ def mypage():
     #(a try new or started, not only the latest), then the rest, each in the usual order (newest first)
     from app import paging
     ordered = [g for g in shown if g['open']] + [g for g in shown if not g['open']]
-    rank = {'new': 3, 'started': 2, 'review': 2}
     pg = paging.paginate(ordered, name_of=lambda g: g['vquiz'].title or '', sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
         'latest': lambda g: g['last_at'],
         #(how many folders it's in: 0 or 1, a quiz being in one place at a time; the owner, 2026-10-27)
         'folders': lambda g: 1 if home.get(g['vquiz'].id) else 0,
         'attempts': lambda g: len(g['attempts']),
-        'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
+        #(its most urgent attempt first, CQuiz.URGENCY: the owner, 2026-10-29)
+        'status': lambda g: 8 - min(a.urgency() for a in g['attempts']),
         'score': lambda g: g['combined']})
     shown = pg.items
     return render_template('mypage.html', current_user=current_user, student_rules=RETAKE_RULES_FOR_STUDENT, title='My Quizzes',
@@ -445,7 +445,20 @@ def deluser(uid):
         return redirect(url_for('user.userdet'))
     #their quiz attempts are kept in the archive
     from .accounts import delete_account
+    from app.qgen import trashnotes as TN
+    usr_id, what = usr.id, TN.person(usr)
+    tries = [cq.id for cq in usr.cquizzes]
     delete_account(usr, by=current_user)
+    #(every teacher is told, with the message; the Trash's message, if any, goes with it, and the message is kept on each
+    #of his/her attempts that went to the Trash's Attempts: the owner, 2026-10-29)
+    TN.drop('person', [usr_id])
+    from app.qgen.models import ArchivedAttempt
+    message = request.form.get('trash_message', '')
+    if tries:
+        TN.keep('attempt', [a.id for a in ArchivedAttempt.query.filter(ArchivedAttempt.original_id.in_(tries),
+                                                                       ArchivedAttempt.reason == 'student deleted')], message, current_user)
+    TN.tell(current_user, what, deleted=True, text=message)
+    db.session.commit()
     flash('Deleted {}’s account.'.format(usrname), 'success')
     current_app.logger.info('{} deleted user: {}'.format(current_user.username, usrname))
     #back to the People page they were on (its folder), or the Trash when done there (the owner, 2026-10-27), not to the
@@ -470,6 +483,11 @@ def archive_user(uid):
         return redirect(url_for('user.userdet'))
     keep = request.form.get('keep') != 'no'
     archive_account(usr, by=current_user, keep_results=keep)
+    from app.qgen import trashnotes as TN
+    message = request.form.get('trash_message', '')
+    TN.keep('person', [usr.id], message, current_user)
+    TN.tell(current_user, TN.person(usr), text=message)
+    db.session.commit()
     flash(Markup('Moved {} to the <a href="{}">Trash</a>{}. You can restore him/her there.').format(
         usr.shown_name, url_for('qgen.archive', section='people'),
         '; his/her quiz results are kept' if keep else '; his/her quiz results were deleted'), 'success')
@@ -490,6 +508,9 @@ def restore_user(uid):
     if usr is None:
         abort(404)
     restore_account(usr)
+    from app.qgen import trashnotes as TN
+    TN.drop('person', [usr.id])  # (the Trash's message goes with him/her out of the Trash)
+    db.session.commit()
     flash('{} is back; he/she can log in again.'.format(usr.shown_name), 'success')
     return redirect(url_for('qgen.archive', section='people'))
 

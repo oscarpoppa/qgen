@@ -184,7 +184,7 @@ def test_my_quizzes_status_column_says_completed(app_db):
     S.submit(CQuiz.query.one(), {})
     db.session.commit()
     assert CQuiz.query.one().completed and 'aria-label="Completed"' in status()
-    # sorted New, In progress, Completed: a quiz with a new and a started attempt sorts as New
-    assert 'data-label="Status" class="quiz-state" data-sort="3' in s.get('/mypage').data.decode()
+    # sorted by its most urgent attempt (CQuiz.URGENCY, the owner 2026-10-29): completed 7; with a new one too, new 4
+    assert 'data-label="Status" class="quiz-state" data-sort="7' in s.get('/mypage').data.decode()
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [sam.id]})
-    assert 'data-label="Status" class="quiz-state" data-sort="1' in s.get('/mypage').data.decode()
+    assert 'data-label="Status" class="quiz-state" data-sort="4' in s.get('/mypage').data.decode()

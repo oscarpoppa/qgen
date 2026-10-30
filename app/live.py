@@ -335,6 +335,13 @@ def _problemresults(vpid, now):
     return row, [tuple(a) for a in answers], [tuple(q) for q in quizzes]
 
 
+def _openquizzes(now):
+    """Pending Quizzes: each open attempt's state (late ones too, as the clock moves) and names."""
+    from app.qgen.routes import open_attempts
+    return [(cq.id, cq.state_kind(now), cq.create_date, cq.vquiz.title if cq.vquiz else None,
+             cq.taker.username if cq.taker else None, cq.taker.nickname if cq.taker else None) for cq in open_attempts()]
+
+
 def _viewquiz(vqid, now):
     """A quiz shown as one student would get it: the quiz and the problems in it."""
     from app.qgen.models import VQuiz
@@ -373,6 +380,7 @@ KINDS = {
     'byquiz': (True, lambda arg, now: _byquiz(None, now)),
     'quizresults': (True, _byquiz),
     'review': (True, lambda arg, now: _review(now)),
+    'openquizzes': (True, lambda arg, now: _openquizzes(now)),
     'grading': (True, _grading),
     'quizzes': (True, lambda arg, now: _quizzes(None, now)),
     'quiz': (True, _quizzes),

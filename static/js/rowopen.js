@@ -113,4 +113,24 @@
     var s = d.querySelector(':scope > summary');
     if (s) s.focus();
   });
+
+  //a row asked for by ?show= on a list that isn't a folder page (Student History, from Open Quizzes' quiz name: the
+  //owner, 2026-10-29): opened, lit up and scrolled to, as folders.js does on the folder pages
+  var shown = document.querySelector('tr[data-show]');
+  if (shown && !shown.closest('.folder-main')) {
+    var fold = shown.querySelector('details.row-fold');
+    if (fold) fold.open = true;
+    shown.classList.add('just-saved');
+    //(seen whole, or from its top when it's taller than the window; again once the page has settled, its open row's
+    //lines laid out)
+    var into = function () {
+      //(the folder it's in, marked in the folder list, brought into view in that list first: the owner, 2026-10-29)
+      //(Student History's list marks it aria-pressed; a folder page's side list, .current; never the menu's own mark)
+      var here = document.querySelector('.folder-filter button.folder-tab[aria-pressed="true"], .folder-side .side-row.current');
+      if (here) here.scrollIntoView({ block: 'center' });
+      shown.scrollIntoView({ block: shown.getBoundingClientRect().height > window.innerHeight - 20 ? 'start' : 'center' });
+    };
+    into();
+    window.addEventListener('load', into);
+  }
 })();

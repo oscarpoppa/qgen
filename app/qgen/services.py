@@ -784,11 +784,17 @@ def delete_vquiz(vq):
     return 'deleted'
 
 
+def removed_quiz_delete_blocker(vq):
+    """Why a quiz in the Trash can't be deleted for good, or None: while any student still has an attempt at it (the owner,
+    2026-10-29: never taken from students along with the quiz)."""
+    return 'Students have attempts at this quiz; move those to the Trash first' if vq.cquizzes else None
+
+
 def delete_removed_vquiz(vq, by=None):
     """Delete a removed quiz for good: every student's try at it goes to the Archive first
     (readable there, not restorable), then the quiz is deleted. Refused while someone is
     taking it. Returns how many tries were archived."""
-    blocker = vquiz_delete_blocker(vq)
+    blocker = vquiz_delete_blocker(vq) or removed_quiz_delete_blocker(vq)
     if blocker:
         raise ServiceError(blocker)
     tries = list(vq.cquizzes)
@@ -1078,21 +1084,37 @@ def _erase_attempt(cq):
     db.session.delete(cq)
 
 
-def delete_attempt(cq, by=None, reason='deleted'):
+def delete_attempt(cq, by=None, reason='deleted', message=''):
     """Take one attempt away from the student and keep it in the Archive, where a teacher
     can look at it, restore it or delete it for good. The student's last attempt at a
-    quiz takes the quiz's box off their My quizzes."""
+    quiz takes the quiz's box off their My quizzes. message: kept with it in the Trash and sent in the notices, to every
+    teacher and to the student (the owner, 2026-10-29)."""
+    from . import trashnotes as TN
+    student_id, name, title = cq.assignee, cq.taker.username if cq.taker else '(unknown)', cq.vquiz.title or 'Untitled'
+    #(a teacher's own attempt: the teachers' notice only, never "Your teacher took away…"; the owner, 2026-10-29)
+    is_student = bool(cq.taker and not cq.taker.is_admin)
     archived = archive_attempt(cq, by, reason)
+    TN.keep('attempt', [archived.id], message, by)
+    TN.tell(by, TN.attempt(name, title), text=message)
+    if student_id and is_student:
+        TN.tell_student(student_id, title, message)
     db.session.commit()
     return archived
 
 
-def take_away(student, vq, by=None):
+def take_away(student, vq, by=None, message=''):
     """Take a quiz away from a student: every try at it goes to the Archive (as one by one),
-    together or not at all. Returns how many."""
+    together or not at all. Returns how many. message: one for all of them, kept on each in the Trash, in one notice to
+    every teacher and one to the student (the owner, 2026-10-29)."""
+    from . import trashnotes as TN
     tries = [cq for cq in vq.cquizzes if cq.assignee == student.id]
-    for cq in tries:
-        archive_attempt(cq, by)
+    ids = [archive_attempt(cq, by).id for cq in tries]
+    if ids:
+        TN.keep('attempt', ids, message, by)
+        TN.tell(by, TN.attempt(student.username, vq.title or 'Untitled') if len(ids) == 1
+                else 'all {} of {}’s attempts at “{}”'.format(len(ids), student.username, vq.title or 'Untitled'), text=message)
+        if not student.is_admin:  # (a teacher's own: the teachers' notice only)
+            TN.tell_student(student.id, vq.title or 'Untitled', message)
     db.session.commit()
     return len(tries)
 
@@ -1431,6 +1453,10 @@ def delete_archive_folder_and_contents(folder):
     A student's folder is kept out of sight (made again when they next have an attempt
     archived). Returns how many attempts were deleted."""
     tree = archive_subtree(folder)
+    #(their Trash messages go with them: the owner, 2026-10-29)
+    from . import trashnotes as TN
+    TN.drop('attempt', [a.id for a in ArchivedAttempt.query.filter(ArchivedAttempt.folder_id.in_([f.id for f in tree]))
+                        .with_entities(ArchivedAttempt.id)])
     gone = ArchivedAttempt.query.filter(ArchivedAttempt.folder_id.in_([f.id for f in tree])) \
         .delete(synchronize_session=False)
     for f in tree:
@@ -1495,8 +1521,12 @@ def restore_attempt(a):
     return cq
 
 
-def purge_archived(a):
-    """Delete an archived attempt for good."""
+def purge_archived(a, by=None, message=''):
+    """Delete an archived attempt for good. Its Trash message goes with it; every teacher is told, with message (the
+    student isn't: it was off his/her My Quizzes already; the owner, 2026-10-29)."""
+    from . import trashnotes as TN
+    TN.drop('attempt', [a.id])
+    TN.tell(by, TN.attempt(a.student_name, a.quiz_title), deleted=True, text=message)
     db.session.delete(a)
     db.session.commit()
 
@@ -1676,6 +1706,8 @@ def submit(cq, answers=None, timed_out=False):
     said = '{} handed in “{}”'.format(who, cq.vquiz.title)
     if timed_out:
         reason = 'it closed' if cq.closes_at and datetime.now() >= cq.closes_at else 'time ran out'
+        #(the fish bones on its lines, and on Pending Quizzes till a teacher opens it; the owner, 2026-10-29)
+        cq.expired = 'closed' if reason == 'it closed' else 'time'
         said = ('{}\'s “{}” was handed in automatically ({})' if cq.startdate else
                 '{} never started “{}”; it was handed in automatically ({})').format(who, cq.vquiz.title, reason)
     if record_answers(cq, answers, ai=not timed_out):

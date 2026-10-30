@@ -56,7 +56,7 @@ class Page:
         return out
 
 
-def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, weight_of=None, group_of=None):
+def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, weight_of=None, group_of=None, id_of=None):
     """The page of items the address asks for. items: the folder's things, in their usual order.
     name_of(item) -> the words ?q= is looked for in; sorts: {'title': key function...} (a key of None
     or '' goes last, either way); show: the id of a thing to land on (?show=, lit up on arrival).
@@ -92,7 +92,8 @@ def paginate(items, name_of=None, sorts=None, show=None, size=None, args=None, w
         number = 1
     if show:
         for at, item in enumerate(items):
-            if str(getattr(item, 'id', '')) == str(show):
+            #(id_of(item): what ?show= names when the item isn't a thing with an id, e.g. Student History's quizzes)
+            if str(id_of(item) if id_of else getattr(item, 'id', '')) == str(show):
                 number = at // size + 1
                 break
     number = min(max(number, 1), count)

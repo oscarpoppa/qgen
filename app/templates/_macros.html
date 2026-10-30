@@ -171,9 +171,10 @@
 
 {# a small camera after the name of a quiz, problem or folder the scanner made (the owner, 2026-10-25); x: anything with from_scan #}
 {% macro scan_mark(x, tip='Made from a scanned page') %}{% if x and x.from_scan %}<span class="scan-mark" title="{{ tip }}" role="img" aria-label="{{ tip }}">{{ icon('notebook') }}</span>{% endif %}{% endmacro %}
-{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none, icon=none) %}
+{#- trash_message: the message box in its question, sent with it for the notice and the Trash (the owner, 2026-10-29) #}
+{% macro post_button(url, label, cls='btn btn-secondary btn-sm', confirm=none, tip=none, icon=none, trash_message=false) %}
   {#- (in place: the page isn't reloaded when the action comes back to it, static/js/inplace.js; the owner, 2026-10-27) #}
-  <form method="post" action="{{ url }}" class="inline-form" data-in-place{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}>
+  <form method="post" action="{{ url }}" class="inline-form" data-in-place{% if confirm %} data-confirm="{{ confirm }}" data-confirm-ok="{{ label }}"{% endif %}{% if trash_message %} data-trash-message="{{ tuning.get('max_message') }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {#- (icon: a bare icon button, its words in the tooltip and for screen readers) -#}
     {%- if icon %}<button class="{{ cls }} btn-icon" title="{{ label }}{% if tip %}: {{ tip }}{% endif %}">{{ icon_label(icon, label) }}</button>
@@ -199,7 +200,23 @@
 {% macro count_dot(n, kind, words) %}<span class="side-dot dot-{{ kind }}" title="{{ n }} {{ words }}" role="img" aria-label="{{ n }} {{ words }}">{{ n }}</span>{% endmacro %}
 {# a status as a small mark (the owner, 2026-10-24): done, a green check; in progress, a blue half circle; new / not started, a gold
    circle; ready to finish (graded, waiting to be finished), a green clipboard with a check #}
-{% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check', 'waiting': 'lc-user-check'}[kind]) }}</span>{% endmacro %}
+{% macro status_icon(kind, words, tip=none) %}<span class="status-icon status-{{ kind }}" title="{{ (words ~ ': ' ~ tip) if tip else words }}" role="img" aria-label="{{ words }}">{{ icon({'done': 'lc-check', 'going': 'lc-circle-half', 'fresh': 'lc-circle', 'ready': 'lc-clipboard-check', 'waiting': 'lc-user-check', 'late-new': 'clock', 'late-going': 'clock', 'expired-new': 'fish-bones', 'expired-going': 'fish-bones'}[kind]) }}</span>{% endmacro %}
+{# a late or expired attempt's icon (CQuiz.marked_kind), in place of its new / in progress icon or its score; nothing
+   otherwise, the page showing its own. own: the student's own page ("you") (the owner, 2026-10-29) #}
+{% macro attempt_mark(cq, own=false) -%}
+{%- set k = cq.marked_kind() %}{% if k %}{{ status_icon(k, cq.state_label(own)) }}{% endif %}
+{%- endmacro %}
+{# a quiz's folded row: the icon of its most urgent attempt (CQuiz.URGENCY: late new, late in progress, expired, new, in
+   progress, waiting for grading, completed; the owner, 2026-10-29), and that attempt, for the sort key (its urgency) #}
+{% macro most_urgent(attempts) -%}
+{%- set ns = namespace(cq=none, u=99) %}{% for a in attempts %}{% set u = a.urgency() %}{% if u < ns.u %}{% set ns.cq = a %}{% set ns.u = u %}{% endif %}{% endfor %}{{ ns.u }}
+{%- endmacro %}
+{% macro row_state(attempts, own=false) -%}
+{%- set ns = namespace(cq=none, u=99) %}{% for a in attempts %}{% set u = a.urgency() %}{% if u < ns.u %}{% set ns.cq = a %}{% set ns.u = u %}{% endif %}{% endfor %}
+{%- set cq = ns.cq %}{% if cq is none %}{% elif cq.marked_kind() %}{{ attempt_mark(cq, own) }}
+{%- elif cq.status == 'new' %}{{ status_icon('fresh', 'New') }}{% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}
+{%- elif cq.status == 'review' %}{{ status_icon('waiting', 'Waiting for your teacher' if own else 'Waiting for grading') }}{% else %}{{ status_icon('done', 'Completed') }}{% endif %}
+{%- endmacro %}
 {# teachers' notes on a thing, as People's (the owner, 2026-10-28): the small mark after its name, its place kept when
    there's no note so the marks line up down the column; and the open row's Notes card, saved as typed
    (static/js/personnote.js), every teacher seeing the same ones and students never #}
@@ -221,6 +238,17 @@
 {%- endmacro %}
 {# a note shown by its icon in a card over the page (static/js/notepop.js; the owner, 2026-10-28): the Dashboard's notes,
    Home's Waiting for you, My quizzes' attempts #}
+{# a Trash row's message from when it was moved to the Trash (the owner, 2026-10-29): the note icon, its card showing the
+   message (any teacher can change it, saved as typed, static/js/personnote.js) and who wrote it when; nothing without one #}
+{% macro trash_note_mark(kind, item_id) -%}
+{%- set n = trash_note(kind, item_id) %}{% if n %}
+<button type="button" class="icon-link trash-note-mark" popovertarget="trash-note-{{ kind }}-{{ item_id }}" title="Message from when it was moved to the Trash" aria-label="Message from when it was moved to the Trash">{{ icon('lc-sticky-note') }}</button>
+<div class="note-pop trash-note-pop" id="trash-note-{{ kind }}-{{ item_id }}" popover data-no-rowclick><div class="person-note">
+  <textarea class="person-note-text" data-no-mark rows="3" maxlength="{{ tuning.get('max_message') }}" aria-label="Message from when it was moved to the Trash" data-note-url="{{ url_for('qgen.save_trash_note', kind=kind, item_id=item_id) }}">{{ n.text }}</textarea>
+  <div class="person-note-status small muted">{{ n.stamp }}</div></div></div>
+{%- else %}<span class="icon-link trash-note-slot" aria-hidden="true">{{ icon('lc-sticky-note') }}</span>{#- (its place kept, so the icons line up) #}
+{%- endif %}
+{%- endmacro %}
 {% macro note_pop(text, key, tip='Note', cls='') -%}
 <button type="button" class="icon-link{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note') }}</button>
 <div class="note-pop" id="note-pop-{{ key }}" popover><p class="note-pop-text">{{ text }}</p></div>

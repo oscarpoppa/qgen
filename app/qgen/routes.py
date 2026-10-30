@@ -358,7 +358,17 @@ def del_vprob(vpid):
         flash(why, 'error')
         return redirect(back_to_list('qgen.list_vprobs'))
     #(one a quiz uses, or students answered, is kept for those and quietly taken off the page)
+    from . import trashnotes as TN
+    vp_id, what, message = vp.id, TN.problem(vp), request.form.get('trash_message', '')
     how = S.delete_problem(vp)
+    #(the message for the notice: deleted for good, or kept quietly, in the Trash, with its message: the owner, 2026-10-29)
+    if how == 'deleted':
+        TN.drop('problem', [vp_id])
+    else:
+        TN.keep('problem', [vp_id], message, current_user)
+    #(kept quietly, because students answered it: it went to the Trash, not away; the critic, 2026-10-29)
+    TN.tell(current_user, what, deleted=how == 'deleted', text=message)
+    db.session.commit()
     flash('Deleted problem “{}”.'.format(title) if how == 'deleted' else
           'Deleted problem “{}” from Problems; the quizzes that use it keep it.'.format(title), 'success')
     current_app.logger.info("{} deleted VProblem: ({}) '{}'".format(current_user.username, vpid, title))
@@ -381,6 +391,11 @@ def archive_vprob(vpid):
         flash(why, 'error')
         return redirect(back_to_list('qgen.list_vprobs'))
     S.archive_problem(vp)
+    from . import trashnotes as TN
+    message = request.form.get('trash_message', '')
+    TN.keep('problem', [vp.id], message, current_user)
+    TN.tell(current_user, TN.problem(vp), text=message)
+    db.session.commit()
     flash(Markup('Moved problem “{}” to the <a href="{}">Trash</a>, where you can restore it.').format(
         vp.title, url_for('qgen.archive', section='problems')), 'success')
     current_app.logger.info("{} archived VProblem: ({}) '{}'".format(current_user.username, vpid, vp.title))
@@ -397,6 +412,9 @@ def restore_vprob(vpid):
     if vp is None:
         return gone('That problem has been deleted.', url_for('qgen.archive', section='problems'))
     S.restore_problem(vp)
+    from . import trashnotes as TN
+    TN.drop('problem', [vp.id])  # (the Trash's message goes with it out of the Trash)
+    db.session.commit()
     flash('“{}” is back on the Problems page.'.format(vp.title), 'success')
     return redirect(url_for('qgen.archive', section='problems'))
 
@@ -573,6 +591,8 @@ def del_vquiz(vqid):
     title = vq.title
     #(its problems no other quiz uses, when the check box under the question was left checked: the owner, 2026-10-26)
     along = S.own_problems(vq) if request.form.get('problems') == '1' else []
+    from . import trashnotes as TN
+    vq_id, along_ids, what, message = vq.id, [p.id for p in along], TN.quiz(vq), request.form.get('trash_message', '')
     try:
         done = S.delete_vquiz(vq)
     except S.ServiceError as exc:
@@ -581,6 +601,16 @@ def del_vquiz(vqid):
     #(a quiz students took goes to the Trash, not away: its problems go to the Trash too, folders kept, not deleted;
     #the critic, 2026-10-26)
     n = S.take_problems_along(along, delete=done != 'removed')
+    #(the message for the notice, kept in the Trash on the quiz and its problems when they went there: the owner, 2026-10-29)
+    if done == 'removed':
+        TN.keep('quiz', [vq_id], message, current_user)
+        TN.keep('problem', along_ids, message, current_user)
+    else:
+        TN.drop('quiz', [vq_id])
+        TN.drop('problem', along_ids)
+    TN.tell(current_user, what + (' and its {}'.format(TN.many(n, 'problem', 'problems')) if n else ''),
+            deleted=done != 'removed', text=message)
+    db.session.commit()
     if done == 'removed':
         flash(Markup('Removed “{}” from Quizzes. Students keep their copies and scores, and its results stay. '
                      'You can restore it from the <a href="{}">Trash</a>.').format(title, url_for('qgen.archive', section='quizzes')), 'success')
@@ -620,6 +650,13 @@ def copy_item(kind, iid):
     return redirect(url_for('qgen.edvprob', vpid=new.id) if kind == 'problems' else url_for('qgen.edvquiz', vqid=new.id))
 
 
+def _drop_trash_note(kind, item_id):
+    """Restored: its Trash message goes with it out of the Trash (the owner, 2026-10-29)."""
+    from . import trashnotes as TN
+    TN.drop(kind, [item_id])
+    db.session.commit()
+
+
 #the checked bar's Restore in the Archive's Problems, Quizzes and People (the owner, 2026-10-16)
 @qgen_bp.route('/quiz/archive/restore/<kind>', methods=['POST'])
 @login_required
@@ -635,6 +672,7 @@ def restore_many(kind):
             usr = any_person(uid)
             if usr is not None and usr.archived_at:
                 restore_account(usr)
+                _drop_trash_note('person', usr.id)
                 n += 1
         word = 'person' if n == 1 else 'people'
     elif kind in ('problems', 'quizzes'):
@@ -644,6 +682,7 @@ def restore_many(kind):
                 kept.append(item.title)  # (two quizzes may not share a name: the owner, 2026-10-19)
                 continue
             (S.restore_problem if kind == 'problems' else S.bring_back_vquiz)(item)  # (in Uncategorized)
+            _drop_trash_note('problem' if kind == 'problems' else 'quiz', item.id)
             n += 1
         word = _item_word(kind, n)
         if kept:
@@ -683,6 +722,7 @@ def restore_many(kind):
 def trash_many(kind):
     ids = [int(i) for i in request.form.getlist('items') if str(i).isdigit()]
     n, kept = 0, []
+    moved, names = [], []  # (for the message and the one notice: the owner, 2026-10-29)
     if kind == 'people':
         from app.user.accounts import any_person, archive_account
         for uid in ids:
@@ -693,6 +733,8 @@ def trash_many(kind):
                 kept.append('You can’t move your own account to the Trash.')
                 continue
             archive_account(usr, by=current_user, keep_results=True)
+            moved.append(usr.id)
+            names.append(usr.username)
             n += 1
         word, back = ('person' if n == 1 else 'people'), 'user.userdet'
     elif kind in ('problems', 'quizzes'):
@@ -703,6 +745,8 @@ def trash_many(kind):
                 kept.append(why)
                 continue
             (S.archive_problem if kind == 'problems' else S.archive_vquiz)(item)
+            moved.append(item.id)
+            names.append('“{}”'.format(item.title or 'Untitled'))
             n += 1
         word, back = _item_word(kind, n), LIST_PAGES[kind]
     elif kind in S.UPLOAD_KINDS:
@@ -722,6 +766,15 @@ def trash_many(kind):
         word, back = _item_word(kind, n), LIST_PAGES[kind]
     else:
         abort(404)
+    #(one message for all of them, kept on each in the Trash, and one notice naming them; pictures and files send none)
+    if moved:
+        from . import trashnotes as TN
+        message, tk = request.form.get('trash_message', ''), {'people': 'person', 'problems': 'problem', 'quizzes': 'quiz'}[kind]
+        TN.keep(tk, moved, message, current_user)
+        what = {'people': TN.many(n, 'person’s account', 'people’s accounts'), 'problems': TN.many(n, 'problem', 'problems'),
+                'quizzes': TN.many(n, 'quiz', 'quizzes')}[kind]
+        TN.tell(current_user, what, text=message, names=names)
+        db.session.commit()
     if n:
         flash(Markup('Moved {} {} to the <a href="{}">Trash</a>, where you can restore {}.').format(
             n, word, url_for('qgen.archive', section=kind), 'it' if n == 1 and kind != 'people' else 'him/her' if n == 1 else 'them'), 'success')
@@ -748,6 +801,13 @@ def archive_vquiz(vqid):
         flash('Not moved to the Trash. {}'.format(exc), 'error')
         return redirect(back_to(url_for('qgen.list_vquizzes')))
     n = S.take_problems_along(along)
+    #(the message for the notice, kept in the Trash on the quiz and the problems that went with it: the owner, 2026-10-29)
+    from . import trashnotes as TN
+    message = request.form.get('trash_message', '')
+    TN.keep('quiz', [vq.id], message, current_user)
+    TN.keep('problem', [p.id for p in along], message, current_user)
+    TN.tell(current_user, TN.quiz(vq) + (' and its {}'.format(TN.many(n, 'problem', 'problems')) if n else ''), text=message)
+    db.session.commit()
     flash(Markup('Moved quiz “{}” to the <a href="{}">Trash</a>, where you can restore it. Students keep their copies and scores.').format(
         vq.title, url_for('qgen.archive', section='quizzes')), 'success')
     if n:
@@ -785,6 +845,12 @@ def delete_removed_vquiz(vqid):
         flash('Not deleted. {}'.format(exc), 'error')
         return redirect(url_for('qgen.archive', section='quizzes'))
     n = S.take_problems_along(along, delete=True)
+    from . import trashnotes as TN
+    TN.drop('quiz', [vqid])
+    TN.drop('problem', [p.id for p in along])
+    TN.tell(current_user, 'the quiz “{}”'.format(title or 'Untitled') + (' and its {}'.format(TN.many(n, 'problem', 'problems')) if n else ''),
+            deleted=True, text=request.form.get('trash_message', ''))
+    db.session.commit()
     if count:
         flash(Markup('Deleted “{}” for good. Its {} {} in the <a href="{}">Trash</a>, where you can still read {}.').format(
             title, count, 'attempt is' if count == 1 else 'attempts are', url_for('qgen.archive'), 'it' if count == 1 else 'them'), 'success')
@@ -810,6 +876,9 @@ def bring_back_vquiz(vqid):
         flash('There’s already a quiz called “{}” on the Quizzes page. Rename that one first, then restore this one.'.format(vq.title), 'error')
         return redirect(url_for('qgen.archive', section='quizzes'))
     S.bring_back_vquiz(vq)
+    from . import trashnotes as TN
+    TN.drop('quiz', [vq.id])  # (the Trash's message goes with it out of the Trash)
+    db.session.commit()
     flash('“{}” is back on the Quizzes page.'.format(vq.title), 'success')
     current_app.logger.info("{} brought back VQuiz: ({}) '{}'".format(current_user.username, vqid, vq.title))
     return redirect(url_for('qgen.list_vquizzes', show=vq.id))
@@ -983,7 +1052,9 @@ def qtake(cidx):
         flash('That quiz belongs to someone else.', 'error')
         return redirect(url_for('user.mypage'))
     title = cq.vquiz.title
-    is_taker = current_user == cq.taker
+    #(?view=1: a teacher's own attempt seen as a student's would be, read only, not started: his/her Student History's eye,
+    #beside its Start; the owner, 2026-10-29)
+    is_taker = current_user == cq.taker and not (current_user.is_admin and request.args.get('view') == '1')
     #their quiz page is on screen (the Dashboard's "Taking a quiz"; its check-ins keep it so)
     if is_taker:
         from app.user.models import note_page
@@ -991,6 +1062,10 @@ def qtake(cidx):
     #opened from Home or a notice: no longer new (the count beside "My quizzes" goes down)
     if is_taker and not cq.seen_by_taker:
         cq.seen_by_taker = True
+        db.session.commit()
+    #a teacher has looked at an attempt that expired: off Pending Quizzes (the owner, 2026-10-29)
+    if not is_taker and cq.expired and not cq.expired_seen:
+        cq.expired_seen = True
         db.session.commit()
     state = S.attempt_state(cq)
     if state == 'completed':
@@ -1226,6 +1301,49 @@ def review_list():
         fold_key='qgen-folded-grading-folders')
     return render_template('review_list.html', waiting=waiting, by_quiz=by_quiz, shown=shown, pg=pg, fk=fk, title='Grading')
 
+def open_attempts():
+    """Pending Quizzes' attempts: not handed in yet, waiting for grading, or expired (handed in by the app) and not opened by a
+    teacher since; newest assigned first (the owner, 2026-10-29)."""
+    from sqlalchemy.orm import joinedload, selectinload
+    return (CQuiz.query.filter(db.or_(CQuiz.completed.is_(False), db.and_(CQuiz.expired.isnot(None), CQuiz.expired_seen.is_(False))))
+            .options(joinedload(CQuiz.taker), selectinload(CQuiz.vquiz).selectinload(VQuiz.vqgroups))
+            .order_by(CQuiz.create_date.desc(), CQuiz.id.desc()).all())
+
+
+#every assigned quiz still out, one row per attempt, in folders by state (the owner, 2026-10-29, To do 75)
+@qgen_bp.route('/quiz/open', methods=['GET'])
+@login_required
+@pw_check
+@admin_only
+def open_quizzes():
+    from app import folder_tree, paging
+    now = datetime.now()
+    attempts = [cq for cq in open_attempts() if cq.taker and cq.vquiz]
+    kind = {cq.id: cq.state_kind(now) for cq in attempts}
+    #(a folder for each state; an attempt can be in two, as on My Quizzes: a late new one is in Late and New)
+    folders = [('late', 'Late', 'clock', lambda cq: kind[cq.id] in ('late-new', 'late-going')),
+               ('new', 'New', 'sparkle', lambda cq: cq.status == 'new' and not cq.expired),
+               ('started', 'In Progress', 'pencil', lambda cq: cq.status == 'started' and not cq.expired),
+               ('review', 'Waiting for Grading', 'lc-user-check', lambda cq: cq.status == 'review'),
+               ('expired', 'Expired', 'fish-bones', lambda cq: kind[cq.id] == 'expired')]
+    inside = {key: [cq for cq in attempts if test(cq)] for key, _l, _i, test in folders}
+    view, node = folder_tree.view_of(folder_tree.choice_of(request.args), {}, default='all', extra=tuple(inside))
+    listed = inside.get(view, attempts)
+    pg = paging.paginate(listed, name_of=lambda cq: '{} {} {}'.format(cq.vquiz.title or '', cq.taker.username, cq.taker.nickname or ''),
+                         sorts={'quiz': lambda cq: (cq.vquiz.title or '').lower(),
+                                'student': lambda cq: cq.taker.shown_name.lower(),
+                                'assigned': lambda cq: cq.create_date,
+                                'status': lambda cq: 8 - cq.urgency(now)})
+    root = {'folders': [], 'count': 0, 'items': [], 'groups': []}
+    fk = folder_tree.kit(
+        view, None, root, [], {}, readonly=True, hide_empty=True,
+        page=lambda v: url_for('qgen.open_quizzes', folder=v),
+        unit='attempt', units='attempts', all_label='All Pending', all_count=len(attempts),
+        auto_views=[{'key': key, 'icon': ic, 'label': label, 'count': len(inside[key]), 'badge': None} for key, label, ic, _t in folders],
+        hint=None, fold_key='qgen-folded-open-folders')
+    return render_template('open_quizzes.html', attempts=attempts, shown=pg.items, pg=pg, fk=fk, title='Pending Quizzes')
+
+
 #a finished attempt's grades, changed by a teacher (the owner, 2026-10-25, CP9): every graded question,
 #the answers as they were; asked first (data-confirm), then the score is worked out again
 @qgen_bp.route('/quiz/review/<cqid>/change', methods=['GET', 'POST'])
@@ -1288,6 +1406,9 @@ def review(cqid):
     if not cq.needs_review:
         flash("That quiz hasn't been submitted yet.", 'info')
         return redirect(url_for('qgen.review_list'))
+    if cq.expired and not cq.expired_seen:
+        cq.expired_seen = True
+        db.session.commit()
     form = ReviewForm()
     #where Finish grading goes back to: the page whose Grade button opened this (a quiz's or a
     #problem's results, the Dashboard); the Grading list when it was that, a notice or unknown
@@ -1418,12 +1539,13 @@ def list_user(uid):
         listed = [g for g in groups if g['vquiz'].id in folder_keys[int(ask)]]
     else:
         ask, listed = 'all', groups
-    rank = {'new': 3, 'started': 2, 'review': 2}
-    pg = paging.paginate(listed, name_of=lambda g: g['vquiz'].title or '', sorts={
+    #(?show=<quiz id>: lands on that quiz's page and opens its row, from Pending Quizzes: the owner, 2026-10-29)
+    pg = paging.paginate(listed, name_of=lambda g: g['vquiz'].title or '', show=request.args.get('show'), id_of=lambda g: g['vquiz'].id, sorts={
         'title': lambda g: (g['vquiz'].title or '').lower(),
         'latest': lambda g: g['last_at'],
         'attempts': lambda g: len(g['attempts']),
-        'status': lambda g: max(rank.get(a.status, 1) for a in g['attempts']),
+        #(its most urgent attempt first, CQuiz.URGENCY: the owner, 2026-10-29)
+        'status': lambda g: 8 - min(a.urgency() for a in g['attempts']),
         'score': lambda g: g['combined']})
     def strip(nodes):
         #(the browser has nothing to narrow, so the tree carries names and counts only)
@@ -1431,7 +1553,12 @@ def list_user(uid):
             n['keys'] = []
             strip(n['children'])
     strip(quiz_filter)
+    #(the heading's name opens People in his/her own folder, the first by name, else Uncategorized: the owner, 2026-10-29)
+    from app.user import groups as people_groups
+    mine = people_groups.tree([ulst], only={ulst.id})[3].get(ulst.id) or []
+    people_folder = mine[0].id if mine else 'main'
     return render_template('ulist.html', ulst=[ulst], rules=RETAKE_RULES, single=True, title='Student History: {}'.format(ulst.shown_name),
+                           people_folder=people_folder,
                            awards=awards.earned(ulst), quiz_tree=quiz_tree, fresh=fresh, working=working, quiz_filter=quiz_filter,
                            pg=pg, shown_groups=pg.items, server_view=str(ask), groups_total=len(groups),
                            groups_loose=len([g for g in groups if g['vquiz'].id not in in_some]))
@@ -1536,7 +1663,7 @@ def list_cquiz(cqid):
 def del_cquiz(cqid):
     cq = CQuiz.query.filter_by(id=cqid).first_or_404('No CQuiz with id {}'.format(cqid))
     title, owner = cq.vquiz.title, cq.taker.shown_name
-    archived = S.delete_attempt(cq, by=current_user)
+    archived = S.delete_attempt(cq, by=current_user, message=request.form.get('trash_message', ''))
     flash(Markup('Moved {}\'s attempt at "{}" to the Trash. <a href="{}">View it</a>').format(
         owner, title, url_for('qgen.archived', aid=archived.id)), 'success')
     current_app.logger.info("{} archived {}'s CQuiz: ({}) '{}'".format(current_user.username, owner, cqid, title))
@@ -1552,7 +1679,7 @@ def take_away(vqid, uid):
     vq, student = db.session.get(VQuiz, vqid), db.session.get(User, uid)
     if vq is None or student is None:
         return gone('That quiz or student is gone.', back_to(url_for('user.userdet')))
-    count = S.take_away(student, vq, by=current_user)
+    count = S.take_away(student, vq, by=current_user, message=request.form.get('trash_message', ''))
     if count:
         flash(Markup('Moved {}’s {} {} at “{}” to the <a href="{}">Trash</a>, where you can view or restore {}.').format(
             student.shown_name, count, 'attempt' if count == 1 else 'attempts', vq.title,
@@ -1847,6 +1974,14 @@ def purge_subject(kind, sid):
     unit, units = ('problem', 'problems') if kind == 'problems' else ('quiz', 'quizzes')
     def n(count):
         return '{} {}'.format(count, unit if count == 1 else units)
+    #(one message and one notice for the folder and what went with it; kept on the quizzes that went to the Trash instead:
+    #the owner, 2026-10-29)
+    from . import trashnotes as TN
+    message, gone_n = request.form.get('trash_message', ''), len(plan['delete']) + len(plan['remove'])
+    if kind == 'quizzes':
+        TN.keep('quiz', [q.id for q in plan['remove']], message, current_user)
+    TN.tell(current_user, 'the folder “{}”'.format(name) + (' and the {} in it'.format(n(gone_n)) if gone_n else ''), deleted=True, text=message)
+    db.session.commit()
     said = ['Deleted the folder “{}”.'.format(name)]
     if plan['delete']:
         said.append('{} deleted.'.format(n(len(plan['delete']))))
@@ -2021,6 +2156,7 @@ def subject_kit(kind, view, node, root, flat, nodes, in_archive=False):
         fold_key='qgen-folded-{}-folders'.format(kind),
         #(no "Delete folder and everything in it" for uploads: deleting files is done one by one)
         purge_url=None if upload else (lambda fid: url_for('qgen.purge_subject', kind=kind, sid=fid)),
+        purge_message=True,
         purge_question=None if upload else (lambda n: S.purge_question(kind, n['folder'])))
 
 
@@ -2152,6 +2288,7 @@ def archive_kit(view, node, root, flat, nodes, total):
         hint='Each student has a folder (the one with a person on it) for his/her attempts in the Trash; you can add your own and put folders inside folders.',
         fold_key='qgen-folded-archive-folders',
         purge_url=lambda fid: url_for('qgen.purge_archive_folder', fid=fid),
+        purge_message=True,
         purge_question=lambda n: archive_purge_question(n['folder']))
 
 
@@ -2368,6 +2505,11 @@ def purge_archive_folder(fid):
     folder = archive_folder_or_404(fid)
     name, parent = folder.name, folder.parent_id
     gone = S.delete_archive_folder_and_contents(folder)
+    #(one notice to every teacher, with the message: the owner, 2026-10-29)
+    from . import trashnotes as TN
+    TN.tell(current_user, 'the folder “{}”'.format(name) + (' and the {} in it'.format(TN.many(gone, 'attempt', 'attempts')) if gone else ''),
+            deleted=True, text=request.form.get('trash_message', ''))
+    db.session.commit()
     current_app.logger.info('{} deleted archive folder ({}) "{}" and {} archived attempts'.format(current_user.username, fid, name, gone))
     return _archive_done('Deleted the folder “{}”{}.'.format(name, ' and its {} attempt{}'.format(gone, '' if gone == 1 else 's') if gone else ''),
                          show=(parent or 'all') if request.form.get('view') == str(fid) else None)
@@ -2439,7 +2581,11 @@ def restore_archived(aid):
     a = db.get_or_404(ArchivedAttempt, aid)
     name, title = a.student_name, a.quiz_title
     try:
+        aid_was = a.id
         cq = S.restore_attempt(a)
+        from . import trashnotes as TN
+        TN.drop('attempt', [aid_was])  # (the Trash's message goes with it out of the Trash)
+        db.session.commit()
     except S.ServiceError as exc:
         flash(str(exc), 'error')
         return redirect(url_for('qgen.archived', aid=aid))
@@ -2456,7 +2602,7 @@ def restore_archived(aid):
 def purge_archived(aid):
     a = db.get_or_404(ArchivedAttempt, aid)
     name, title, original = a.student_name, a.quiz_title, a.original_id
-    S.purge_archived(a)
+    S.purge_archived(a, by=current_user, message=request.form.get('trash_message', ''))
     flash('Deleted {}\'s attempt at “{}” for good.'.format(name, title), 'success')
     current_app.logger.info('{} purged archived CQuiz ({}) of {} "{}"'.format(current_user.username, original, name, title))
     return redirect(back_to_list('qgen.archive'))
@@ -2501,6 +2647,31 @@ def save_note(kind, item_id):
     thing.teacher_note_by_id = current_user.id
     db.session.commit()
     return jsonify(ok=True, changed='Changed {} by {}'.format(when_filter(thing.teacher_note_at), current_user.shown_name))
+
+
+#a Trash message changed by a teacher (the owner, 2026-10-29), saved as typed (static/js/personnote.js), JSON {note}; an
+#empty one goes, and its icon with it
+@qgen_bp.route('/trash-note/<kind>/<int:item_id>', methods=['POST'])
+@login_required
+@pw_check
+@admin_only
+def save_trash_note(kind, item_id):
+    from app import when_filter, tuning
+    from . import trashnotes as TN
+    if not json_csrf_ok():
+        return jsonify(ok=False, error='The page was out of date. Please reload it.'), 400
+    n = TN.of(kind, item_id)
+    if n is None:
+        return jsonify(ok=False, error='That isn\u2019t here any more.'), 404
+    text = ((request.get_json(silent=True) or {}).get('note') or '').strip()
+    if len(text) > tuning.get('max_message'):
+        return jsonify(ok=False, error='A message can be at most {} characters.'.format(tuning.get('max_message'))), 400
+    if text:
+        n.text, n.changed_at, n.changed_by_id = text, datetime.now(), current_user.id
+    else:
+        db.session.delete(n)
+    db.session.commit()
+    return jsonify(ok=True, changed='Changed {} by {}'.format(when_filter(datetime.now()), current_user.shown_name))
 
 
 #the teacher's note to the student on an assigned quiz (the owner, 2026-10-28): from a copy's row on its results, saved as

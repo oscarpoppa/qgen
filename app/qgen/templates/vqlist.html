@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_mark, note_card with context %}
+{% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_mark, note_card, trash_note_mark with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {#- a problem's chip in an opened quiz row, opening it on Problems #}
@@ -53,30 +53,32 @@
           {%- set na = (assigned or {}).get(item.id, 0) %}
           <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na %}<a class="name-link small" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" data-tip="Assigned {{ na }} time{{ '' if na == 1 else 's' }}: open the history of “{{ item.title }}”"><span class="badge box-count">{{ na }}</span></a>{% else %}<span class="badge box-count muted" title="Not assigned yet">0</span>{% endif %}</td>
           <td class="actions">
-            {#- (the folder icons first, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
-            {%- if fk %}{{ folder_icons(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}
+            {#- (the one order for every row's icons: Assign, View, History, Edit, Copy, the folder icons, Restore, Move to Trash /
+                Delete for good; the owner, 2026-10-29) #}
             {% if in_archive %}
+            {{- trash_note_mark('quiz', item.id) }}
             {# the Archive's Quizzes (the owner, 2026-10-16): Restore, View, History and Delete for good #}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student’s version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
+            {%- if fk %}{{ folder_icons(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}
             <form method="post" action="{{ url_for('qgen.bring_back_vquiz', vqid=item.id) }}" class="inline-form"
                   data-confirm="Restore “{{ item.title }}”? It goes back on the Quizzes page and Assign." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title }}” back on the Quizzes page and Assign">{{ icon_label('lc-restore', 'Restore') }}</button></form>
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student’s version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
-            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
             {% set n = item.cquizzes|length %}
             {{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.delete_removed_vquiz', vqid=item.id),
-                 own_problems=(own_problems(item)|length) if own_problems else 0, delete_note='This can’t be undone.' ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Trash’s Attempts, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '.' if n else '') ~ archive_warning(archived.get(item.id, 0), 'quiz')) }}
+                 own_problems=(own_problems(item)|length) if own_problems else 0, delete_note='This can’t be undone.' ~ (' Its ' ~ n ~ (' attempt leaves its student’s My quizzes and goes' if n == 1 else ' attempts leave students’ My quizzes and go') ~ ' to the Trash’s Attempts, where you can still read ' ~ ('it' if n == 1 else 'them') ~ '.' if n else '') ~ archive_warning(archived.get(item.id, 0), 'quiz'), trash_message=true, trash_kind='quiz', no_delete='Students have attempts at this quiz; move those to the Trash first' if item.cquizzes else none) }}
             {% else %}
+            {% if not item.removed_at %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=item.id) }}" data-what="“{{ item.title }}”" title="Assign: Give {{ item.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=item.id) }}" title="View: See one student’s version of {{ item.title }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvquiz', vqid=item.id) }}" title="Edit: Change this quiz’s questions and settings">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# a copy, named in a small dialog (static/js/copy.js): the owner, 2026-10-16 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-copy-url="{{ url_for('qgen.copy_item', kind='quizzes', iid=item.id) }}" data-copy-name="{{ item.title }}" data-copy-kind="quiz" title="Copy: Make a new quiz from “{{ item.title }}”">{{ icon_label('lc-copy', 'Copy') }}</button>
-            {#- (one order on every list: View, Edit, Copy, the page's own action, History, Delete: the owner, 2026-10-19) #}
-            {% if not item.removed_at %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', vq=item.id) }}" data-what="“{{ item.title }}”" title="Assign: Give {{ item.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-sm') }}{% endif %}
-            {% if item.cquizzes %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=item.id) }}" title="History: Every student’s attempts and scores on {{ item.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet') }}{% endif %}
+            {%- if fk %}{{ folder_icons(fk, 'quiz', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title')) }}{% endif %}
             {#- (grayed, with who's taking it, while someone is: it was refused only after the click; the owner, 2026-10-26) #}
             {% if not item.removed_at %}{{ remove_button('quizzes', item.id, '“' ~ item.title ~ '”', item.vqgroups|sort(attribute='title'), url_for('qgen.del_vquiz', vqid=item.id), archive_url=url_for('qgen.archive_vquiz', vqid=item.id),
                  no_delete=delete_blocker(item) if delete_blocker else none, own_problems=(own_problems(item)|length) if own_problems else 0,
-                 delete_note=('A quiz students have taken goes to the Trash instead, where you can restore it.' if item.cquizzes else 'Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'quiz'))) }}{% endif %}
+                 delete_note=('A quiz students have taken goes to the Trash instead, where you can restore it.' if item.cquizzes else 'Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'quiz')), trash_message=true) }}{% endif %}
             {% endif %}
           </td>
         </tr>

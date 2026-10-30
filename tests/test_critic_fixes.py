@@ -11,7 +11,7 @@ def test_archive_restore_of_checked_items_sends(app_db):
     from a name out of reach there, so nothing was ever sent)."""
     js = open(os.path.join(ROOT, 'static', 'js', 'filebar.js')).read()
     part = js[js.index('[data-restore-many]'):]
-    assert 'send(b.dataset.url, ids)' in part and 'function send(url, ids)' in part and 'f.action = url' in part
+    assert 'send(b.dataset.url, ids)' in part and 'function send(url, ids, message)' in part and 'f.action = url' in part
 
 
 def test_deleting_a_pictures_folder_with_a_picture_in_it(app_db):

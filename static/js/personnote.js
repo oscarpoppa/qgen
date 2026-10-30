@@ -31,7 +31,8 @@
         if (!res.ok) { status.textContent = res.error || 'Not saved. Please try again.'; status.classList.add('error'); return; }
         status.classList.remove('error');
         status.textContent = 'Saved · ' + res.changed;
-        mark(box, text);
+        //(data-no-mark: a box that isn't the row's own note, e.g. a Trash message: the owner, 2026-10-29)
+        if (!box.hasAttribute('data-no-mark')) mark(box, text);
       }, function () { status.textContent = 'Not saved: no connection. Please try again.'; status.classList.add('error'); });
   }
   document.addEventListener('input', function (e) {

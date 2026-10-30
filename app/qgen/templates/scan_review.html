@@ -46,7 +46,7 @@
 {#- take a page out of the workbook, any page not generated yet (the owner, 2026-10-25: it was only for pages that
     didn't make it); grayed, with why, while pages are being read #}
 {% macro drop_icon(n, reading, wait_tip) %}
-  <button type="button" class="btn btn-secondary btn-sm btn-icon btn-danger" data-page-go="{{ url_for('qgen.scan_drop_page', job_id=job.id, n=n) }}"
+  <button type="button" class="btn btn-danger btn-sm btn-icon" data-page-go="{{ url_for('qgen.scan_drop_page', job_id=job.id, n=n) }}"
     data-ask="Take page {{ n }} out of “{{ job.name }}”? Its problems aren’t kept. It can’t be undone." data-ok="Take It Out"
     {%- if reading %} disabled title="{{ wait_tip }}"{% else %} title="Take page {{ n }} out of this workbook"{% endif %}>{{ icon_label('lc-trash', 'Take page ' ~ n ~ ' out') }}</button>
 {%- endmacro %}

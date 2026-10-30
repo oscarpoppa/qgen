@@ -13,6 +13,32 @@
 (function () {
   var box = null;
 
+  /* A message for the notice, kept with it in the Trash (the owner, 2026-10-29: informational, never asking why), in either
+   * dialog the same way: opts {max, before} turns it on, before being the message it was moved to the Trash with. */
+  var nextId = 0;
+  function messageBox(dialog) {
+    var m = dialog.querySelector('.ask-message');
+    if (m) return m;
+    var id = 'ask-message-' + (++nextId);
+    m = document.createElement('div');
+    m.className = 'ask-message';
+    m.hidden = true;
+    m.innerHTML = '<p class="ask-message-before small"></p><label class="ask-message-label" for="' + id + '">Message (Optional)</label>'
+      + '<textarea id="' + id + '" rows="3"></textarea><p class="small muted ask-message-hint">Sent in the notice and kept in the Trash</p>';
+    dialog.insertBefore(m, dialog.querySelector('.btn-row'));
+    return m;
+  }
+  function setMessage(dialog, opts) {
+    var m = messageBox(dialog), text = m.querySelector('textarea'), before = m.querySelector('.ask-message-before');
+    m.hidden = !opts;
+    text.value = '';
+    if (!opts) return null;
+    text.maxLength = +opts.max || 2000;
+    before.hidden = !opts.before;
+    before.textContent = opts.before ? 'Message from when it was moved to the Trash: ' + opts.before : '';
+    return text;
+  }
+
   function build() {
     box = document.createElement('dialog');
     box.className = 'ask';
@@ -24,9 +50,14 @@
     document.body.appendChild(box);
   }
 
-  window.qgenAsk = function (question, okLabel, danger, cancelLabel) {
-    if (!window.HTMLDialogElement) return Promise.resolve(window.confirm(question));
+  //(message: {max, before}, the message box under the question; then it resolves to {ok, message} instead of true / false)
+  window.qgenAsk = function (question, okLabel, danger, cancelLabel, message) {
+    if (!window.HTMLDialogElement) {
+      var yes = window.confirm(question);
+      return Promise.resolve(message ? { ok: yes, message: '' } : yes);
+    }
     if (!box) build();
+    var typed = setMessage(box, message);
     box.querySelector('#ask-text').textContent = question;
     box.querySelector('.ask-cancel').textContent = cancelLabel || 'Cancel';
     var ok = box.querySelector('.ask-ok');
@@ -41,7 +72,7 @@
         box.querySelector('.ask-cancel').removeEventListener('click', no);
         box.removeEventListener('cancel', no);
         if (box.open) box.close();
-        resolve(answer);
+        resolve(message ? { ok: answer, message: answer && typed ? typed.value.trim() : '' } : answer);
       }
       function yes() { done(true); }
       function no(e) { if (e) e.preventDefault(); done(false); }
@@ -60,11 +91,13 @@
   var many = null;
   //(check: {label, checked}, a check box under the question (a quiz's own problems going with it: the owner, 2026-10-26);
   //then it resolves to {value, checked} instead of the value)
-  window.qgenChoose = function (question, choices, check) {
+  //(message: {max, before}, the message box, as qgenAsk's; then it resolves to {value, checked, message})
+  window.qgenChoose = function (question, choices, check, message) {
     //(no dialog in this browser: OK means the first choice that isn't a danger, never a delete)
     if (!window.HTMLDialogElement) {
       var safe = choices.filter(function (c) { return !c.danger && !c.disabled; })[0];
-      return Promise.resolve(safe && window.confirm(question + '\n\nOK: ' + safe.label) ? safe.value : null);
+      var v = safe && window.confirm(question + '\n\nOK: ' + safe.label) ? safe.value : null;
+      return Promise.resolve(check || message ? { value: v, checked: false, message: '' } : v);
     }
     if (!many) {
       many = document.createElement('dialog');
@@ -74,13 +107,18 @@
       document.body.appendChild(many);
     }
     many.querySelector('#choose-text').textContent = question;
+    var typed = setMessage(many, message);
     var box = many.querySelector('.choose-check'), tick = box.querySelector('input');
     box.hidden = !check;
     if (check) { box.querySelector('span').textContent = check.label; tick.checked = !!check.checked; }
     var row = many.querySelector('.btn-row');
     row.textContent = '';
     return new Promise(function (resolve) {
-      function done(v) { many.removeEventListener('cancel', esc); if (many.open) many.close(); resolve(check ? { value: v, checked: tick.checked } : v); }
+      function done(v) {
+        many.removeEventListener('cancel', esc);
+        if (many.open) many.close();
+        resolve(check || message ? { value: v, checked: tick.checked, message: v !== null && typed ? typed.value.trim() : '' } : v);
+      }
       function esc(e) { e.preventDefault(); done(null); }
       //(the answers first, Cancel last: the owner, 2026-10-23)
       choices.concat([{ value: null, label: 'Cancel', title: 'Don\'t do it; nothing changes' }]).forEach(function (c) {
@@ -128,8 +166,15 @@
     //tooltip's first part, e.g. "Archive" from "Archive: move it to the Archive")
     var own = submitter ? (submitter.getAttribute('aria-label') || (submitter.title || '').split(':')[0] || submitter.textContent || '').trim() : '';
     var label = form.dataset.confirmOk || own || 'Yes';
-    window.qgenAsk(form.dataset.confirm, label, /delete|remove|clear/i.test(label)).then(function (yes) {
-      if (!yes) return;
+    //(data-trash-message: the message box too, its words sent as trash_message; the owner, 2026-10-29)
+    var msg = 'trashMessage' in form.dataset ? { max: form.dataset.trashMessage, before: form.dataset.trashMessageBefore || '' } : null;
+    window.qgenAsk(form.dataset.confirm, label, /delete|remove|clear/i.test(label), undefined, msg).then(function (answer) {
+      if (!(msg ? answer.ok : answer)) return;
+      if (msg) {
+        var field = form.querySelector('input[name="trash_message"]');
+        if (!field) { field = document.createElement('input'); field.type = 'hidden'; field.name = 'trash_message'; form.appendChild(field); }
+        field.value = answer.message;
+      }
       form.dataset.confirmed = '1';
       if (form.requestSubmit) form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
       else form.submit();

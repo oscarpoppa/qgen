@@ -144,10 +144,16 @@ def update_problem(pid):
 @api_bp.route('/problems/<int:pid>', methods=['DELETE'])
 @teacher
 def delete_problem(pid):
+    from app.qgen import trashnotes as TN
+    vp = get_or_404(VProblem, pid, 'That problem')
+    what = TN.problem(vp)
     try:
-        S.delete_problem(get_or_404(VProblem, pid, 'That problem'))
+        how = S.delete_problem(vp)
     except S.ServiceError as exc:
         raise conflict(str(exc))
+    #(the teachers' notice, with no message: the owner, 2026-10-29; "deleted for good" only when it was)
+    TN.tell(g.api_user, what, deleted=how == 'deleted')
+    db.session.commit()
     return '', 204
 
 
@@ -207,10 +213,16 @@ def update_vquiz(qid):
 @api_bp.route('/quizzes/<int:qid>', methods=['DELETE'])
 @teacher
 def delete_vquiz(qid):
+    from app.qgen import trashnotes as TN
+    vq = get_or_404(VQuiz, qid, 'That quiz')
+    what = TN.quiz(vq)
     try:
-        S.delete_vquiz(get_or_404(VQuiz, qid, 'That quiz'))
+        done = S.delete_vquiz(vq)
     except S.ServiceError as exc:
         raise conflict(str(exc))
+    #(the teachers' notice, with no message: the owner, 2026-10-29)
+    TN.tell(g.api_user, what, deleted=done != 'removed')
+    db.session.commit()
     return '', 204
 
 
@@ -304,7 +316,7 @@ def restore_archived(aid):
 @api_bp.route('/archive/<int:aid>', methods=['DELETE'])
 @teacher
 def purge_archived(aid):
-    S.purge_archived(get_or_404(ArchivedAttempt, aid, 'That archived attempt'))
+    S.purge_archived(get_or_404(ArchivedAttempt, aid, 'That archived attempt'), by=g.api_user)  # (the teachers' notice, no message)
     return '', 204
 
 

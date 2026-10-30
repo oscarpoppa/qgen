@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import expand_collapse, status_icon, note_pop with context %}
+{% from "_macros.html" import expand_collapse, status_icon, attempt_mark, note_pop with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_awards.html" import award_list %}
 {# a student's Home: what's waiting for them, and the awards they've earned. It follows
@@ -33,12 +33,13 @@
       <ul class="dash-list">
       {% for cq in waiting %}
         <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>{{ cq.vquiz.title }}</strong></span>
-          {% if cq.status == 'started' %}{{ status_icon('going', 'In progress') }}{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}{{ status_icon('fresh', 'New') }}{% endif %}
+          {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}{% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}{{ status_icon('fresh', 'New') }}{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
-          {#- the teacher's note on it: the note icon, showing it in a card, as the Dashboard's Student notes (the owner, 2026-10-28) #}
-          {%- if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'home-note') }}{% endif %}
           {% if cq.not_open_yet(now) %}<button type="button" class="btn btn-secondary btn-sm btn-icon dash-go" disabled title="Start: you can’t start this yet. It opens {{ cq.opens_at|when }}.">{{ icon_label('lc-play', 'Start') }}</button>
-          {% else %}<a class="btn btn-sm btn-icon dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Continue: keep working on' if cq.status == 'started' else 'Start:' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-play', 'Continue' if cq.status == 'started' else 'Start') }}</a>{% endif %}</li>
+          {% else %}<a class="btn btn-sm btn-icon dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="{{ 'Continue: keep working on' if cq.status == 'started' else 'Start:' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-play', 'Continue' if cq.status == 'started' else 'Start') }}</a>{% endif %}
+          {#- the teacher's note on it: the note icon, showing it in a card, as the Dashboard's Student notes (the owner, 2026-10-28);
+              after Start / Continue, in the one order for every row's icons (the owner, 2026-10-29) #}
+          {%- if cq.assign_note %}{{ note_pop(cq.assign_note, cq.id, 'Note from your teacher', 'home-note') }}{% endif %}</li>
       {% endfor %}
       </ul>
     {% else %}
@@ -55,7 +56,7 @@
       {% for cq in recent %}
         {#- (the quiz's name opens the same place as its eye icon: the owner, 2026-10-23) #}
         <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”"><strong>{{ cq.vquiz.title }}</strong></a></span>
-          {% if cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
+          {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}{% elif cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
           {% else %}{{ status_icon('waiting', 'Waiting for your teacher', tip='handed in; your teacher is checking your written answers') }}{% endif %}
           <span class="small muted">{{ cq.compdate|when }}</span>
           <a class="icon-link dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></li>

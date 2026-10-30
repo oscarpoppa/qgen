@@ -174,8 +174,9 @@
               <td data-label="State" class="small" data-sort="{{ {'reading': 1, 'stopped': 2, 'paused': 3, 'ready': 4}.get(x.kind, 5) }}">{% include '_scan_kind.html' %}</td>
               <td data-label="Stashed" class="nowrap small muted" data-sort="{{ j.updated_at.isoformat() if j.updated_at else '' }}">{{ j.updated_at|when }}</td>
               <td data-label="Pages"><span class="badge box-count">{{ j.pages }}</span></td>
-              <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans') }}
-                <button type="button" class="btn btn-secondary btn-sm btn-icon" data-stash-dialog="stash-move" data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-here="{{ j.folder_id or '' }}" title="Move: put “{{ j.name }}” in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button></span></td>
+              {#- (Move before Move to Trash, in the one order for every row's icons: the owner, 2026-10-29) #}
+              {%- set move_btn %}<button type="button" class="btn btn-secondary btn-sm btn-icon" data-stash-dialog="stash-move" data-url="{{ url_for('qgen.scan_move', job_id=j.id) }}" data-name="{{ j.name }}" data-here="{{ j.folder_id or '' }}" title="Move: put “{{ j.name }}” in another folder">{{ icon_label('lc-folder-input', 'Move') }}</button>{% endset %}
+              <td><span class="btn-row nowrap">{{ scan_controls(x, 'scans', move=move_btn) }}</span></td>
             </tr>
           {% endfor %}
           </tbody>

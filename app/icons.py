@@ -102,6 +102,9 @@ PATHS = {
     'alarm': '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M4 5l3-2.5M20 5l-3-2.5"/>',
     'chat': '<path d="M4 5h16v11H9l-5 4z"/>',
     'warning': '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+    #(a late attempt, gold not started, blue in progress; and an expired one, the fish bones: the owner, 2026-10-29)
+    'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    'fish-bones': '<circle cx="19" cy="12" r="2.5"/><path d="M16.5 12H6M6 12l-3.5-3.5M6 12l-3.5 3.5M9 9l1 3-1 3M12 8.5l1 3.5-1 3.5M15 9l.7 3-.7 3"/>',
     'hourglass': '<path d="M6 3h12M6 21h12M7 3v3l5 6 5-6V3M7 21v-3l5-6 5 6v3"/>',
     'chart': '<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
     'bulb': '<path d="M9 18h6M10 21h4"/>'

@@ -6,7 +6,7 @@
 <div class="page-head">
   <h1>View: {{ vp.title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
-  <span class="head-icons"><a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit: Change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to this problem, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}</span>
+  <span class="head-icons">{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to this problem, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.edvprob', vpid=vp.id) }}" title="Edit: Change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a></span>
   <div class="actions">
     {{ back_button(url_for('qgen.list_vprobs'), 'Problems') }}
     <a class="btn" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" data-reroll title="Draw three new versions">Roll Another</a>

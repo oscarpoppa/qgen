@@ -572,8 +572,9 @@ def test_student_page_is_called_that_and_groups_quizzes_by_folder(app_db):
     teach.post('/quiz/subjects/quizzes/add', data={'quiz': b.id, 'to': frac.id})
     teach.post('/quiz/subjects/quizzes/new', data={'name': 'Empty one'})
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
-    assert '<h1 class="title-two"><span class="title-kind">Student History:</span> <span class="title-name">' in page
-    assert '<span>sam</span></span></h1>' in page  # (his/her picture before the name: the owner, 2026-10-28)
+    #(the name links to People, his/her row open: the owner, 2026-10-29)
+    assert '<h1 class="title-two"><span class="title-kind">Student History:</span> <a class="title-name name-link"' in page
+    assert '<span>sam</span></a></h1>' in page  # (his/her picture before the name: the owner, 2026-10-28; a link to People since 2026-10-29)
     assert '<title>Student History: sam' in page
     # one list of their quizzes (each once) with folder buttons: New, In progress, then Math holding
     # A and (in Fractions) B; C is in no folder (Uncategorized, worked out by the page); a folder
@@ -878,7 +879,9 @@ def test_take_a_quiz_away_from_a_student_in_one_go(app_db):
     assert CQuiz.query.filter_by(vquiz_id=vq.id, assignee=ids('kim')).count() == 1
 
 
-def test_a_removed_quiz_can_be_deleted_for_good(app_db):
+def test_a_removed_quiz_with_attempts_cant_be_deleted_for_good(app_db):
+    #(the owner, 2026-10-29: while any student still has an attempt at it, its trash can is grayed and the route refuses;
+    #it was deleted, its attempts going to the Trash's Attempts)
     app, db = app_db
     teach = login(app, 'teach')
     from app.qgen import services as S
@@ -888,11 +891,11 @@ def test_a_removed_quiz_can_be_deleted_for_good(app_db):
     give(vq, 'kim')
     teach.post('/quiz/delvq/{}'.format(vq.id))
     page = teach.get('/quiz/archive?section=quizzes').data.decode()
-    assert 'data-delete-url="/quiz/removed/{}/delete"'.format(vq.id) in page and '2 attempts leave students’ My quizzes' in page
+    assert 'Students have attempts at this quiz; move those to the Trash first' in page
+    assert 'data-delete-url="/quiz/removed/{}/delete"'.format(vq.id) not in page
     r = teach.post('/quiz/removed/{}/delete'.format(vq.id), follow_redirects=True).data.decode()
-    assert 'Deleted “Gone soon” for good. Its 2 attempts are in the' in r
-    assert db.session.get(VQuiz, vq.id) is None and CQuiz.query.count() == 0
-    assert {a.quiz_title for a in ArchivedAttempt.query} == {'Gone soon'} and ArchivedAttempt.query.count() == 2
+    assert 'Students have attempts at this quiz; move those to the Trash first' in r
+    assert db.session.get(VQuiz, vq.id) is not None and CQuiz.query.count() == 2 and ArchivedAttempt.query.count() == 0
 
 
 # ---------------------------------------------------------------- the automatic "New" folder
@@ -994,7 +997,8 @@ def test_a_student_deletes_a_folder_and_its_quizzes(app_db):
     assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=a.id).count() == 0
     assert CQuiz.query.filter_by(assignee=ids('sam'), vquiz_id=b.id).count() == 1     # not in the folder: kept
     assert ArchivedAttempt.query.filter_by(student_id=ids('sam'), reason='student folder').count() == 1
-    assert Message.query.filter(Message.body.like('sam deleted his/her folder “Old”%')).count() == 1
+    #(nobody is told when a student deletes his/her own folder: the owner, 2026-10-29)
+    assert Message.query.filter(Message.body.like('sam deleted his/her folder “Old”%')).count() == 0
     # someone else's folder: refused
     teach.post('/mypage/folders', data={'name': 'T'})
     t = QuizFolder.query.filter_by(owner_id=ids('teach')).one()
@@ -1759,7 +1763,7 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert 'class="icon-link attempt-open"' in page and 'aria-label="View"' in page
     #(a student page's quizzes are rows like My quizzes', each attempt's icons one group at the row's
     #right end: the owner, 2026-10-21)
-    assert '<thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest">Latest</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>' in page
+    assert '<thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>' in page
     assert 'class="attempt-act attempt-act-group"' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
@@ -1772,14 +1776,14 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert '@container page (max-width: 1240px) { .btn-row.result-attempt-buttons { margin-left: auto; } }' in css
     # "Archive all" acts on every attempt: its own look, on the quiz's heading line
     #(with one attempt it isn't grayed any more: it does the same as the attempt's own Archive)
-    assert 'class="btn btn-secondary btn-sm btn-all btn-icon" form="archive-all-{}-{}" title="Move all to Trash (1): Move sam’s attempt'.format(ids('sam'), vq.id) in page
+    assert 'class="btn btn-danger btn-sm btn-all btn-icon" form="archive-all-{}-{}" title="Move all to Trash (1): Move sam’s attempt'.format(ids('sam'), vq.id) in page
     assert '.btn.btn-all { background: var(--surface-2); border-style: dashed;' in css
     # with two attempts it's the real button, with the same look
     give(vq, 'sam')
     page = teach.get('/quiz/listuser/{}'.format(ids('sam'))).data.decode()
     # (a button on the heading sending a form kept outside the heading: no form inside a summary)
     form_id = 'archive-all-{}-{}'.format(ids('sam'), vq.id)
-    assert '<button class="btn btn-secondary btn-sm btn-all btn-icon" form="{}" title="Move all to Trash (2): Move every one of sam'.format(form_id) in page and 'aria-label="Move all to Trash (2)"' in page
+    assert '<button class="btn btn-danger btn-sm btn-all btn-icon" form="{}" title="Move all to Trash (2): Move every one of sam'.format(form_id) in page and 'aria-label="Move all to Trash (2)"' in page
     assert 'id="{}" class="inline-form" hidden'.format(form_id) in page
 
 

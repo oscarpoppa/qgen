@@ -364,13 +364,15 @@
     if (!ids.length) return;
     var q = ids.length === 1 ? 'Move the checked ' + b.dataset.one + ' to the Trash? You can restore ' + (b.dataset.one === 'person' ? 'him/her' : 'it') + ' there.'
                              : 'Move the ' + ids.length + ' checked ' + b.dataset.noun + ' to the Trash? You can restore them there.';
-    (window.qgenAsk ? window.qgenAsk(q, 'Move to Trash') : Promise.resolve(true)).then(function (yes) {
-      if (yes) send(b.dataset.url, ids);
+    //(data-trash-message: the message box too, for the notice and the Trash: the owner, 2026-10-29)
+    var msg = 'trashMessage' in b.dataset ? { max: b.dataset.trashMessage } : null;
+    (window.qgenAsk ? window.qgenAsk(q, 'Move to Trash', false, undefined, msg) : Promise.resolve(msg ? { ok: true, message: '' } : true)).then(function (answer) {
+      if (msg ? answer.ok : answer) send(b.dataset.url, ids, msg ? answer.message : '');
     });
   });
   //(the button's address passed in: it was read from a name not in reach here, so Restore never
   //sent; found by the code critic, 2026-10-20)
-  function send(url, ids) {
+  function send(url, ids, message) {
     var form = document.getElementById('file-form');
     var f = document.createElement('form');
     f.method = 'post'; f.action = url; f.hidden = true;
@@ -379,6 +381,7 @@
     var view = form.querySelector('input[name=view]');
     if (view) hidden('view', view.value);
     ids.forEach(function (i) { hidden('items', i); });
+    if (message) hidden('trash_message', message);
     document.body.appendChild(f);
     if (window.qgenCheckedClear) window.qgenCheckedClear();
     f.dataset.inPlace = ''; (window.qgenSubmit || function (x) { x.submit(); })(f);  // (in place: static/js/inplace.js)

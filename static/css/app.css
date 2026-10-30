@@ -875,6 +875,14 @@ dialog.ask .btn-row { justify-content: flex-end; }
 /* a dialog's "Filter by name…" starts at the left, over the folder list (the owner, 2026-10-23: W3) */
 dialog.ask .btn-row.filter-bar { justify-content: flex-start; }
 dialog.ask .btn-danger { background: var(--bad); border-color: var(--bad); color: var(--on-bad); }
+/* the message for the notice, kept in the Trash (confirm.js; the owner, 2026-10-29): the same in both dialogs, a label over its
+   box as every field's, the earlier one (deleting from the Trash) above it as a note's text */
+dialog.ask .ask-message { display: flex; flex-direction: column; gap: 4px; margin: 0 0 16px; }
+dialog.ask .ask-message-label { font-weight: 600; }
+dialog.ask .ask-message textarea { width: 100%; resize: vertical; font: inherit; font-size: var(--fs-sm); }
+dialog.ask .ask-message p { margin: 0; font-size: var(--fs-sm); }
+.trash-note-slot { visibility: hidden; }  /* (a Trash row with no message keeps the icon's place: the owner, 2026-10-29) */
+dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere; padding: 6px 8px; border-left: 3px solid var(--border); }
 
 /* My quizzes: each quiz folds down to its title and score */
 .quiz-grid { align-items: start; }
@@ -3662,6 +3670,9 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
 .status-icon.status-going svg.ico { color: var(--accent); }
 .status-icon.status-fresh svg.ico { color: var(--warn); }
 .status-icon.status-waiting svg.ico { color: var(--muted); }  /* (handed in, waiting for the teacher: the owner, 2026-10-27) */
+/* (late: a clock, gold not started, blue in progress; expired: the fish bones, the same colors: the owner, 2026-10-29) */
+.status-icon.status-late-new svg.ico, .status-icon.status-expired-new svg.ico { color: var(--warn); }
+.status-icon.status-late-going svg.ico, .status-icon.status-expired-going svg.ico { color: var(--accent); }
 
 /* help on the label itself, no "?" circle (the owner, 2026-10-24; static/js/tips.js): a faint dotted underline says there's help */
 .tip-wrap.tip-moved > button.tip { display: none; }
@@ -3961,11 +3972,16 @@ details.row-fold > summary > .person-note-mark { margin-left: auto; padding-left
 .hint.teacher-note > svg.ico { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--accent); }
 .teacher-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .quiz-start .hint.teacher-note { margin: 12px 0; text-align: left; }
-/* Home's Waiting for you: a quiz's note icon at the line's right end, just before Start, as the Dashboard's Student notes
-   (the owner, 2026-10-28) */
-.dash-list > li > .home-note { margin-left: auto; }
-.dash-list > li > .home-note ~ .dash-go { margin-left: 0; }
+/* Home's Waiting for you: a quiz's note icon at the line's right end, just after Start (the one order for every row's
+   icons: the owner, 2026-10-29; it was before it, 2026-10-28) */
+.dash-list > li > .dash-go ~ .home-note { margin-left: 6px; }
 /* My quizzes: an attempt's note icon just left of its own icon, placed as that one is (the owner, 2026-10-28) */
 .attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 36px); }
+/* (after Start / Continue, before View: the one order for every row's icons, the owner 2026-10-29). After: Start / Continue
+   steps one place left and the note takes its place, so nothing hangs past the row's end */
+.attempt-act > .attempt-note.attempt-note-after { right: var(--act-r, 20px); }
+.attempt-act:has(> .attempt-note-after) > :not(.attempt-note):not(.note-pop) { right: calc(var(--act-r, 20px) + 36px); }
 /* (the icons are 44px to tap on a touch screen: as far again; its own column either way, empty on an attempt with no note) */
-@media (pointer: coarse) { .attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 46px); } }
+@media (pointer: coarse) { .attempt-act > .attempt-note { right: calc(var(--act-r, 20px) + 46px); }
+  .attempt-act > .attempt-note.attempt-note-after { right: var(--act-r, 20px); }
+  .attempt-act:has(> .attempt-note-after) > :not(.attempt-note):not(.note-pop) { right: calc(var(--act-r, 20px) + 46px); } }

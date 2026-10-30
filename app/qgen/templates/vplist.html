@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_mark, note_card with context %}
+{% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_mark, note_card, trash_note_mark with context %}
 {% from "_pick.html" import pick_table %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
@@ -44,28 +44,32 @@
           {%- set na = (assigned or {}).get(item.id, 0) %}
           <td data-label="Assigned" class="nowrap assigned-col" data-sort="{{ '%06d' % na }}">{% if na and item.id in answered %}<a class="name-link small" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" data-tip="In {{ na }} assigned quiz{{ '' if na == 1 else 'zes' }}: open the history of “{{ item.title or 'Untitled' }}”"><span class="badge box-count">{{ na }}</span></a>{% else %}<span class="badge box-count{{ ' muted' if not na }}" title="{{ 'In ' ~ na ~ ' assigned quiz' ~ ('' if na == 1 else 'zes') ~ ', not answered yet' if na else 'Not in any assigned quiz yet' }}">{{ na }}</span>{% endif %}</td>
           <td class="actions">
-            {#- (the folder icons first, the Folders column gone from the row's top line: the owner, 2026-10-26) #}
-            {%- if fk %}{{ folder_icons(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}
-            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {#- (the one order for every row's icons: Add to a quiz, View, History, Edit, Copy, the folder icons, Restore, Move to
+                Trash / Delete for good; the owner, 2026-10-29) #}
             {% if in_archive %}
+            {{- trash_note_mark('problem', item.id) }}
             {# the Archive's Problems (the owner, 2026-10-16): Restore, History and Delete for good #}
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {%- if fk %}{{ folder_icons(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}
             <form method="post" action="{{ url_for('qgen.restore_vprob', vpid=item.id) }}" class="inline-form" data-in-place
                   data-confirm="Restore “{{ item.title or 'Untitled' }}”? It goes back on the Problems page." data-confirm-ok="Restore">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-icon" title="Restore: put “{{ item.title or 'Untitled' }}” back on the Problems page">{{ icon_label('lc-restore', 'Restore') }}</button></form>
-            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
             {% if blockers[item.id] %}{{ slot('Delete for good', blockers[item.id], 'btn btn-danger btn-sm', 'lc-trash') }}
             {% else %}{{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id),
-                 delete_note=('Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}{% endif %}
+                 delete_note=('Deleting it can’t be undone.' ~ archive_warning(archived.get(item.id, 0), 'problem')), trash_message=true, trash_kind='problem') }}{% endif %}
             {% else %}
+            {# put it at the end of a quiz (static/js/quiz_pick.js), the owner 2026-10-15 #}
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-add-quiz="{{ item.id }}" data-what="“{{ item.title or 'Untitled' }}”"{% if not quizzes %} disabled title="Add to a quiz: there are no quizzes yet"{% else %} title="Add to a quiz: Put “{{ item.title or 'Untitled' }}” at the end of one of your quizzes"{% endif %}>{{ icon_label('lc-list-plus', 'Add to a quiz') }}</button>
+            <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.view_vprob', vpid=item.id) }}" title="View: See three students' versions of {{ item.title or 'Untitled' }}">{{ icon_label('lc-eye', 'View') }}</a>
+            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.edvprob', vpid=item.id) }}" title="Edit: Change this problem’s question, values and answer">{{ icon_label('lc-pencil', 'Edit') }}</a>
             {# a copy, named in a small dialog (static/js/copy.js): the owner, 2026-10-16 #}
             <button type="button" class="btn btn-secondary btn-sm btn-icon" data-copy-url="{{ url_for('qgen.copy_item', kind='problems', iid=item.id) }}" data-copy-name="{{ (item.title or 'Untitled') }}" data-copy-kind="problem" title="Copy: Make a new problem from “{{ (item.title or 'Untitled') }}”">{{ icon_label('lc-copy', 'Copy') }}</button>
-            {# put it at the end of a quiz (static/js/quiz_pick.js), the owner 2026-10-15 #}
-            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-add-quiz="{{ item.id }}" data-what="“{{ item.title or 'Untitled' }}”"{% if not quizzes %} disabled title="Add to a quiz: there are no quizzes yet"{% else %} title="Add to a quiz: Put “{{ item.title or 'Untitled' }}” at the end of one of your quizzes"{% endif %}>{{ icon_label('lc-list-plus', 'Add to a quiz') }}</button>
-            {% if item.id in answered %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.problem_results', vpid=item.id) }}" title="History: Every answer students have given to {{ item.title or 'Untitled' }}, in every quiz it’s been in">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet') }}{% endif %}
+            {%- if fk %}{{ folder_icons(fk, 'problem', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title')) }}{% endif %}
             {#- (grayed, naming the quizzes, while one uses it: the owner, 2026-10-26) #}
             {{ remove_button('problems', item.id, '“' ~ (item.title or 'Untitled') ~ '”', item.vpgroups|sort(attribute='title'), url_for('qgen.del_vprob', vpid=item.id), archive_url=url_for('qgen.archive_vprob', vpid=item.id),
-                 no_delete=in_quiz(item) if in_quiz else none, delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem'))) }}
+                 no_delete=in_quiz(item) if in_quiz else none, delete_note=('Deleting it can’t be undone; if a quiz uses it, the quiz keeps it.' ~ archive_warning(archived.get(item.id, 0), 'problem')), trash_message=true) }}
             {% endif %}
           </td>
         </tr>
