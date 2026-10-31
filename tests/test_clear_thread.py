@@ -96,10 +96,10 @@ def test_teachers_clear_teachers_messages_for_themselves(app_db):
     panel = teach.get('/messages/panel?student=teachers').data.decode()
     assert 'Lee to teach' not in panel and 'Ray to all' in panel
     clear(teach, 'teachers')
-    assert 'Ray to all' not in teach.get('/messages/teachers').data.decode()
+    assert 'Ray to all' not in teach.get('/messages/panel?student=teachers').data.decode()  # (the page is now the panel)
     # the others still have theirs
     assert 'Lee to teach' in lee.get('/messages/panel?student=teachers').data.decode()
-    assert 'Ray to all' in ray.get('/messages/teachers').data.decode()
+    assert 'Ray to all' in ray.get('/messages/panel?student=teachers').data.decode()
     # a student isn't a teacher to clear with
     assert clear(teach, 't{}'.format(ids('sam'))).status_code == 404
 

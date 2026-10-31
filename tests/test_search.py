@@ -30,7 +30,7 @@ def test_people_found_by_email(app_db):
     db.session.commit()
     page = teacher.get('/userdet?search=marsh').data.decode()
     assert 'Search: “marsh”' in page and 'data-box="user:{}"'.format(ids('kim')) in page
-    assert 'data-box="user:{}"'.format(ids('sam')) not in page
+    assert 'data-box="user:{}"'.format(ids('sam')) not in page.split('<dialog')[0]  # (the list; Write to's picker lists everyone)
 
 
 def test_every_folder_page_has_the_box(app_db):

@@ -1,3 +1,4 @@
+import re
 """Late and expired attempts (the clocks and the fish bones) and the Pending Quizzes page (it was Open Quizzes) (the owner, 2026-10-29, To do 75)."""
 from datetime import datetime, timedelta
 
@@ -76,7 +77,7 @@ def test_open_quizzes_page(app_db):
     with app.test_request_context():
         S.close_expired()
     page = teacher.get('/quiz/open').data.decode()
-    assert '<h1>Pending Quizzes</h1>' in page and 'All Pending' in page and 'Waiting for Grading' in page
+    assert re.search(r'<h1>.*?Pending Quizzes</h1>', page, re.S) and 'All Pending' in page and 'Waiting for Grading' in page
     assert 'title="Late: not started since it opened' in page
     assert 'Expired: closed before he/she started it; handed in automatically · 0%' in page
     assert 'Q O1' in teacher.get('/quiz/open?folder=late').data.decode()

@@ -36,7 +36,7 @@ def test_students_land_on_home_with_their_counts(app_db):
     assert counts == {'new': 2, 'in progress': 1, 'due within 2 days': 1}
     # waiting: due soonest first, each with its button
     waiting = page.split('class="box-title">Waiting for You</h2>')[1].split('</details>')[0]
-    assert re.findall(r'<strong>([^<]+)</strong></span>', waiting) == ['Q2', 'Q3', 'Q1']
+    assert re.findall(r'<strong>([^<]+)</strong>(?:</a>)?</span>', waiting) == ['Q2', 'Q3', 'Q1']
     assert 'aria-label="Continue"' in page and page.count('aria-label="Start"') == 2  # (the play triangle: owner 2026-10-14)
     assert '<a href="/home" class="active" aria-current="page">Home</a>' in no_titles(page)  # in the menu for students
     # the boxes fold away (remembered in the browser); they start folded (the owner, scratchpad mode)
@@ -53,7 +53,7 @@ def test_awards(app_db):
     quizzes = [make_quiz(app, teach, 'W{}'.format(i)) for i in range(6)]
     assert titles(sam.get('/home').data.decode()) == []
     page = sam.get('/home').data.decode()
-    assert 'Finish quizzes to earn awards.' in page and 'Finish your first quiz' in page
+    assert 'Finish quizzes to earn awards.' in page and 'Finish your first quiz' not in page  # (no Still to Earn: the owner, 2026-10-31)
     finish(give(quizzes[0], 'sam'), 50, t)                                  # first quiz
     finish(give(quizzes[0], 'sam'), 75, t + timedelta(days=1))              # retake +25: comeback
     finish(give(quizzes[1], 'sam'), 100, t + timedelta(days=2))             # perfect; streak 1

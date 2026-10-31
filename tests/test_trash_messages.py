@@ -1,3 +1,4 @@
+import re
 """Trash messages: written in the delete question, sent in one notice to every teacher (and the student, for his/her
 attempt), kept with the item in the Trash and changeable there (the owner, 2026-10-29). Also Pending Quizzes' link."""
 
@@ -107,6 +108,6 @@ def test_pending_quizzes_link_opens_the_quizs_folder(app_db):
     vq, _ = quiz_of(teacher, 'M7')
     teacher.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
     page = teacher.get('/quiz/open').data.decode()
-    assert '<h1>Pending Quizzes</h1>' in page
+    assert re.search(r'<h1>.*?Pending Quizzes</h1>', page, re.S)
     assert 'href="/quiz/listuser/{}?folder=none&amp;show={}"'.format(ids('sam'), vq.id) in page
     assert '<strong>Q M7</strong>' in page

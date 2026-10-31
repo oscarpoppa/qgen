@@ -247,7 +247,7 @@ def test_results_pages_lead_back_to_users(app_db):
     from test_dashboard import make_quiz
     vq = make_quiz(app, teach, 'Week 1')
     accounts = no_titles(teach.get('/userdet?folder=all').data.decode())
-    assert '<h1>People</h1>' in accounts and 'data-trail-key="people"' in accounts
+    assert re.search(r'<h1>.*?People</h1>', accounts, re.S) and 'data-trail-key="people"' in accounts
     assert '>Accounts</a>' not in accounts and '>Results</a>' not in accounts and 'href="/quiz/listuser?folder=all"' not in accounts
     # its results are on it: the Quizzes, Status and Done columns, and the results' Show filter
     assert '<th data-sort-key="quizzes">Quizzes</th><th data-sort-key="average">Average</th><th data-sort-key="status">Status</th>' in accounts and 'id="results-filter"' in accounts

@@ -72,15 +72,15 @@ def test_notes_open_from_an_icon_with_the_rows_icons(app_db):
     assert 'class="person-note card"' not in page and 'textarea' not in page.split('<table', 1)[1].split('</table>', 1)[0]
     assert 'data-note-text="Check the units."' in page and 'note-open has-note' in page
     assert '#i-lc-sticky-note-star' in page  # (written in: the gold sticky note with a star, D12)
-    assert 'title="Notes: about “K1”, for teachers only"' in page and 'data-note-heading="Notes about “K1”"' in page
+    assert 'title="Check the units."' in page and 'data-note-tip="Notes: about “K1”, for teachers only"' in page and 'data-note-heading="Notes about “K1”"' in page
     # (in its own Note column, sortable, notes first; not with the row's icons: the owner, 2026-10-29, D29–D31)
     row = page.split('data-item="{}"'.format(probs[0].id), 1)[1].split('</tr>', 1)[0]
     assert 'class="note-col" data-sort="0"' in row and 'note-open' not in row.split('class="actions"', 1)[1]
-    assert '<th data-sort-key="note">Note</th>' in page
+    assert '<th data-sort-key="note" class="note-col">Note</th>' in page
     first = teacher.get('/quiz/listvp?sort=note&dir=asc').data.decode()
     assert first.index('data-item="{}"'.format(probs[0].id)) < first.index('data-item="{}"'.format(probs[1].id))
     for url in ('/quiz/listvq', '/people'):
-        assert '<th data-sort-key="note">Note</th>' in teacher.get(url).data.decode()
+        assert '<th data-sort-key="note" class="note-col">Note</th>' in teacher.get(url, follow_redirects=True).data.decode()
     # the Trash: no Note icon
     teacher.post('/quiz/archivevp/{}'.format(probs[1].id))
     teacher.post('/notes/problem/{}'.format(probs[1].id), json={'note': 'Old one.'})

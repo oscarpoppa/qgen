@@ -21,6 +21,8 @@ def test_every_search_box_is_the_standard_bar():
                     continue  # the bar itself
                 odd.append('{}: {}'.format(os.path.relpath(path, TEMPLATES), box[:80]))
             for word in ('placeholder="Search', 'placeholder="Find', 'placeholder="Filter…"', 'Filter users…'):
+                if f == '_macros.html' and word == 'placeholder="Search':
+                    continue  # (the standard bar's own "Search Everything…")
                 assert word not in text, '{} still says {}'.format(path, word)
     assert not odd, 'search boxes outside the standard bar:\n' + '\n'.join(odd)
 

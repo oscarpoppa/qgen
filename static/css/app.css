@@ -1420,9 +1420,6 @@ tr.just-saved td { animation: just-saved 2.5s ease-out; }
   background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
 .award-icon { font-size: var(--fs-2xl); line-height: 1; }
 .award-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
-.awards-locked .award { background: var(--surface); border-style: dashed; }
-.awards-locked .award-icon { filter: grayscale(1); opacity: .5; }
-.awards-locked .award-text { color: var(--muted); }
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 /* a wide window: a third column of boxes rather than two very wide ones */
 @media (min-width: 1500px) { .dash-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -1553,7 +1550,7 @@ details.dash-card[open] > summary { margin-bottom: 6px; }
 .page-head h1 a:hover, .page-head a.person:hover { text-decoration: underline; }
 
 /* the Problems and Quizzes pages: search and the bar for checked rows, kept in view */
-.folder-tools-bar { position: sticky; top: var(--topbar-h, 56px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
+.folder-tools-bar { position: sticky; top: calc(var(--topbar-h, 56px) + var(--head-h, 0px)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
   gap: 8px 16px; padding: 8px 0 10px; margin-bottom: 14px; background: var(--bg); border-bottom: 1px solid var(--border); }
 .folder-tools-bar .file-bar { margin: 0 0 0 auto; justify-content: flex-end; row-gap: 4px; }
 /* (the bar's line, "Check … to put them in a folder …" / "2 checked", is a heading over its
@@ -2579,7 +2576,6 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 .pick-quiz .folder-filter-list > .quiz-pick-list { max-height: min(60vh, 560px); overflow: auto; margin: 0; }
 .pick-quiz .quiz-pick-list label { overflow-wrap: anywhere; }
 .pick-quiz > .pick-wrap-head { display: block; margin-bottom: 8px; }
-.assign-form .assign-go { margin: 0; }
 /* the checked quizzes / people as chips (the owner, 2026-10-24): above the list on a narrow card; on a
    wide one in the card's top right, beside the filter (the room the Folders heading leaves) */
 .pick-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 0 0 10px; }  /* (ten at most; the rest in a “+N more” card: static/js/chipcap.js) */
@@ -2596,18 +2592,9 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 }
 /* (narrower: the right-hand column's two parts join the page's one column; Assign last, after When) */
 .assign-side { display: contents; }
-.assign-side > .assign-go { order: 1; }
-/* (a bigger button: the page's one main action) */
 .assign-when .dates { max-width: 760px; }
-.assign-go { margin-top: 4px; }
 .pick-people .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 6px 8px; }
 .pick-people .pick-list > li { margin: 0; min-width: 0; }
-/* Teachers' messages: the conversation, with the box to write in beside it */
-@container page (min-width: 960px) {
-  .staff-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 0 16px; align-items: start; }
-  .staff-grid > nav { grid-column: 1 / -1; }
-  .staff-grid > form { position: sticky; top: calc(var(--topbar-h) + 12px); }
-}
 /* a box for a short number (a time limit): not stretched across a wide form */
 .field-short { max-width: 16rem; }
 /* helpers on the right (docs/ui-patterns.md principle 11): an editor's right-hand column can

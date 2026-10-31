@@ -1005,5 +1005,5 @@ def test_a_quiz_with_a_try_still_to_do_is_to_do_even_if_a_later_one_is_done(app_
     S.submit(older, {1: '4'})  # all handed in: nothing to start, and a retake can be given again
     page = login(app, 'sam').get('/mypage?folder=all').data.decode()
     card = page[page.index('data-quiz="{}"'.format(vq.id)):]
-    assert 'aria-label="Start"' not in card[:card.index('</tr>')]
+    assert 'title="Start: nothing to start; every attempt is handed in"' in card[:card.index('</tr>')]  # (grayed: D117)
     assert 'Give sam another attempt' in teacher.get('/quiz/listuser/{}'.format(sam_u.id)).data.decode()

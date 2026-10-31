@@ -6,6 +6,23 @@
  * list's heading row. The choice is kept in the address (?tab=, data-url-tab) or for the tab. Works
  * with the name filter: each hides with its own flag (filter.js). (The single folder model: the
  * owner, 2026-10-22; the rows of folder tabs and their code went 2026-10-23.) */
+/* A list's Expand all / Collapse all pair copied into its heading row, above the rows' little triangles (the column of the
+ * rows' fold), when the list is a table: when the page opens and again after a sort swaps the table in. false: no such
+ * column, nothing copied. (The copy loses the tab's own classes, so tidying the tab's pair never takes it away.) */
+window.qgenHeadTwin = function (list, pair) {
+  var cell = list.querySelector('tbody > tr > td > details.row-fold');
+  if (!cell) return false;
+  var td = cell.parentElement, table = td.closest('table');
+  var at = Array.prototype.indexOf.call(td.parentElement.children, td);
+  var th = table && table.querySelector(':scope > thead > tr > th:nth-child(' + (at + 1) + ')');
+  if (!th) return false;
+  var head = pair.cloneNode(true);
+  head.classList.remove('level-in-tab', 'tab-level-pair');
+  head.classList.add('level-in-head');
+  th.insertBefore(head, th.firstChild);
+  return true;
+};
+
 (function () {
   var uid = 0;
   function setUp(box, early) {
@@ -171,17 +188,8 @@
         //(in the list's heading row, above the rows' little triangles, when the list is a table: the owner, 2026-10-27;
         //beside the folder tab only while the list is cards, its heading row hidden: app.css .level-in-tab)
         list.querySelectorAll('.level-buttons.level-in-head').forEach(function (p) { p.remove(); });
-        var cell = list.querySelector('tbody > tr > td > details.row-fold'), th = null;
-        if (cell) {
-          var td = cell.parentElement, table = td.closest('table');
-          var at = Array.prototype.indexOf.call(td.parentElement.children, td);
-          th = table && table.querySelector(':scope > thead > tr > th:nth-child(' + (at + 1) + ')');
-        }
-        if (th) {
+        if (window.qgenHeadTwin(list, pair)) {
           pair.dataset.levelTwin = list.id || 'list';
-          var head = pair.cloneNode(true);
-          head.classList.add('level-in-head');
-          th.insertBefore(head, th.firstChild);
           pair.classList.add('level-in-tab');
         }
         span.appendChild(pair);
@@ -982,17 +990,7 @@ window.qgenPinAuto = function (list) {
     document.querySelectorAll('.level-buttons.level-in-tab[data-level-twin]').forEach(function (pair) {
       var btn = pair.querySelector('[data-level-of]');
       var list = btn && document.querySelector(btn.dataset.levelOf);
-      if (!list || list.querySelector('.level-buttons.level-in-head')) return;
-      var cell = list.querySelector('tbody > tr > td > details.row-fold');
-      if (!cell) return;
-      var td = cell.parentElement, table = td.closest('table');
-      var at = Array.prototype.indexOf.call(td.parentElement.children, td);
-      var th = table && table.querySelector(':scope > thead > tr > th:nth-child(' + (at + 1) + ')');
-      if (!th) return;
-      var head = pair.cloneNode(true);
-      head.classList.remove('level-in-tab', 'tab-level-pair');
-      head.classList.add('level-in-head');
-      th.insertBefore(head, th.firstChild);
+      if (list && !list.querySelector('.level-buttons.level-in-head')) window.qgenHeadTwin(list, pair);
     });
     if (window.qgenBoxes) window.qgenBoxes.levels();
   });
