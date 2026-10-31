@@ -20,7 +20,9 @@
     {{- post_button(url_for('qgen.scan_discard', job_id=j.id, back=back or none), 'Stop and move to Trash', 'btn btn-danger btn-sm', icon='lc-x', confirm='Stop reading “' ~ j.name ~ '” and move it to the Trash? You can restore it there.', tip='Stop reading “' ~ j.name ~ '” and move it to the Trash (asks first)') }}
   {%- else -%}
     {%- if x.kind == 'paused' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Resume', icon='lc-resume', tip='Go on reading the pages not read yet (each page uses a few AI calls)') }}
-    {%- elif x.kind == 'stopped' %}{{ post_button(url_for('qgen.scan_read', job_id=j.id, back=back or none), 'Read the rest', icon='lc-resume', tip='Have the AI read the pages that are missing (each page uses a few AI calls)') }}{% endif %}
+    {%- endif %}
+    {#- (no “Read the rest” on a scan with a page that failed: it read that page all over again, the whole scan when it was one page; a
+        failed page is read again only from the workbook’s own page, Resume All or the page’s card: the owner, 2026-10-30, D83) #}
     {#- (the scan's own page opens whatever state the scan is in, like its name: the owner, 2026-10-23; it was grayed out while paused) #}
     <a class="btn btn-sm btn-icon" href="{{ url_for('qgen.scan_review', job_id=j.id) }}" title="Continue: go on checking “{{ j.name }}”">{{ icon_label('lc-arrow-right', 'Continue') }}</a>
     {%- if x.put_away %}{{ post_button(url_for('qgen.scan_take_out', job_id=j.id, back=back or none), 'Take out', icon='lc-folder-up', tip='Take “' ~ j.name ~ '” out, back into Current workbooks') }}

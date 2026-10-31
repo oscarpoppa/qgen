@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import expand_collapse, status_icon, attempt_mark, note_pop with context %}
+{% from "_macros.html" import expand_collapse, status_icon, attempt_mark, note_pop, kind_icon with context %}
 {% from "_macros.html" import avatar, box_label, count_of with context %}
 {% from "_awards.html" import award_list %}
 {# a student's Home: what's waiting for them, and the awards they've earned. It follows
@@ -32,7 +32,8 @@
     {% if waiting %}
       <ul class="dash-list">
       {% for cq in waiting %}
-        <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}"><span><strong>{{ cq.vquiz.title }}</strong></span>
+        <li class="{{ 'quiz-is-started' if cq.status == 'started' else 'quiz-is-new' if cq.status == 'new' }}">{#- (the quiz icon, and the name opening the same place as its Start / Continue icon, as the
+            Dashboard's rows: the owner, 2026-10-30, D80; plain while it can't be started yet) #}<span>{% if cq.not_open_yet(now) %}{{ kind_icon('note') }}<strong>{{ cq.vquiz.title }}</strong>{% else %}<a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="{{ 'Continue: keep working on' if cq.status == 'started' else 'Start:' }} “{{ cq.vquiz.title }}”">{{ kind_icon('note') }}<strong>{{ cq.vquiz.title }}</strong></a>{% endif %}</span>
           {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}{% elif cq.status == 'started' %}{{ status_icon('going', 'In progress') }}{% elif cq.not_open_yet(now) %}<span class="badge">Opens {{ cq.opens_at|when }}</span>{% else %}{{ status_icon('fresh', 'New') }}{% endif %}
           {% if cq.closes_at %}<span class="small {{ 'home-due' if cq in soon else 'muted' }}">due {{ cq.closes_at|when }}</span>{% endif %}
           {#- the teacher's note on it: the note icon, showing it in a card, as the Dashboard's Student notes (the owner, 2026-10-28);
@@ -56,7 +57,7 @@
       <ul class="dash-list">
       {% for cq in recent %}
         {#- (the quiz's name opens the same place as its eye icon: the owner, 2026-10-23) #}
-        <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”"><strong>{{ cq.vquiz.title }}</strong></a></span>
+        <li><span><a class="name-link" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" data-tip="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ kind_icon('note') }}<strong>{{ cq.vquiz.title }}</strong></a></span>
           {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}{% elif cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
           {% else %}{{ status_icon('waiting', 'Waiting for your teacher', tip='handed in; your teacher is checking your written answers') }}{% endif %}
           <span class="small muted">{{ cq.compdate|when }}</span>
@@ -77,12 +78,7 @@
     {% else %}
       <p class="muted small">Finish quizzes to earn awards.</p>
     {% endif %}
-    {% if to_earn %}
-      <details class="box home-sub" data-box="to-earn">
-        <summary>{{ box_label('target', 'Still to Earn', count_of(to_earn|length, 'award', 'awards'), 'h3') }}</summary>
-        {{ award_list(to_earn, locked=true) }}
-      </details>
-    {% endif %}
+    {#- (no "Still to Earn" box under them: the owner, 2026-10-31) #}
   </details>
 </div>
 {% endblock %}

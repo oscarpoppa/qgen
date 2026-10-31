@@ -1,4 +1,4 @@
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, avatar with context %}
 {# The teacher's Messages panel: what the retired Messages page did (the owner, 2026-10-17).
    Pinned opens from its button above the conversation (static/js/messages.js copies it out of
    the panel, so the panel can reload behind it); Write to… is on every teacher's page
@@ -51,7 +51,7 @@
     {{ filter_bar('#showing-pick .folder-filter-list', 'name', 'names', items='tr[data-box]', id='showing-bar') }}
     {#- the choices that aren't one student (every student, a folder, the teachers): on top, in every
         folder, and not counted as names (the owner, 2026-10-25) #}
-    {% macro choice(value, label, extra='', box=true) %}<tr{% if box %} data-box="user:{{ value }}"{% endif %}><td class="tick-col"><input type="radio" name="show-pick" value="{{ value }}" id="sh-{{ value }}"{% if value|string == current|string %} checked{% endif %}></td><td><label for="sh-{{ value }}">{{ label }}{{ extra }}</label></td></tr>{% endmacro %}
+    {% macro choice(value, label, extra='', box=true, who=none) %}<tr{% if box %} data-box="user:{{ value }}"{% endif %}{% if who %} data-name="{{ who.shown_name|lower }}"{% endif %}><td class="tick-col"><input type="radio" name="show-pick" value="{{ value }}" id="sh-{{ value }}"{% if value|string == current|string %} checked{% endif %}></td><td><label for="sh-{{ value }}">{% if who %}{{ avatar(who, 20) }}{% endif %}{{ label }}{{ extra }}</label></td></tr>{% endmacro %}
     {% call pick_table('Whose messages', 'showing-top') %}
       {{ choice('all', 'All messages (every student)', box=false) }}
       {% for f in folders or [] %}{{ choice('f' ~ f.id, '  ' * (f.depth - 1) ~ f.name ~ ' (its students)', (' (' ~ f.unread ~ ' new)') if f.unread else '', box=false) }}{% endfor %}
@@ -65,7 +65,7 @@
       <script type="application/json" class="folder-filter-tree">{{ sh_tree|tojson }}</script>
       <div class="folder-filter-list">
         {% call pick_table('Whose messages', 'showing-students') %}
-          {% for u in sh_students %}{{ choice(u.id, u.shown_name, (' (' ~ unread_of[u.id] ~ ' new)') if unread_of.get(u.id) else '') }}{% endfor %}
+          {% for u in sh_students %}{{ choice(u.id, u.shown_name, (' (' ~ unread_of[u.id] ~ ' new)') if unread_of.get(u.id) else '', who=u) }}{% endfor %}
         {% endcall %}
       </div>
     </div>

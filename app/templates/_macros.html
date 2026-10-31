@@ -203,6 +203,10 @@
    in the box's <summary>; status badges come after it, buttons last in <span class="box-end">.
    The box itself is <details class="box ...">. icon: an icon's name (app/icons.py) or other markup (an avatar); tag: h2 for a
    page's own sections; count: the words, from count_of(). #}
+{# a kind's icon before its name: the puzzle piece for problems, the quiz icon (a page with lines) for
+   quizzes, the person for people; on headings and picker rows site-wide (the owner, 2026-10-30) #}
+{% macro kind_icon(name) -%}<span class="box-icon kind-icon" aria-hidden="true">{{ draw_icon(name) }}</span>{%- endmacro %}
+
 {% macro box_label(icon, title, count=none, tag='span', full=none) -%}
 <span class="fold" aria-hidden="true"></span>{% if icon %}<span class="box-icon" aria-hidden="true">{{ draw_icon(icon) }}</span>{% endif %}<{{ tag }}{% if full %} title="{{ full }}"{% endif %} class="box-title">{{ title }}</{{ tag }}>{% if count is not none %}<span class="badge box-count">{{ count }}</span>{% endif %}
 {%- endmacro %}
@@ -236,9 +240,12 @@
 {#- a note's icon with the row's icons, after Message (the owner, 2026-10-29, To do 77): a gold sticky note with a star when there's a note (D12); it
    opens the note in a dialog with Save and Cancel (static/js/personnote.js). note_open: any note; note_button: the teachers'
    Notes on a problem, quiz, picture, file, workbook or person #}
+{#- a note's tooltip: the start of its own words, about 100 characters, cut at a word with … (static/js/personnote.js the same
+   after a save; the owner, 2026-10-31, D129–D130) #}
+{% macro note_peek(text) -%}{{ text.split()|join(' ')|truncate(100, false, '…', 0) }}{%- endmacro %}
 {% macro note_open(url, text, label, tip, heading, placeholder, max, status='') -%}
 <button type="button" class="btn btn-secondary btn-sm btn-icon note-open{{ ' has-note' if text }}" data-note-url="{{ url }}" data-note-text="{{ text or '' }}"
-        data-note-heading="{{ heading }}" data-note-placeholder="{{ placeholder }}" data-note-max="{{ max }}" data-note-status="{{ status }}" title="{{ tip }}">
+        data-note-heading="{{ heading }}" data-note-placeholder="{{ placeholder }}" data-note-max="{{ max }}" data-note-status="{{ status }}" data-note-tip="{{ tip }}" title="{{ note_peek(text) if text else tip }}">
   {#- (blank: the plain sticky note; written in: the gold one with a star, D12; the button's has-note shows which) -#}
   <span class="note-empty">{{ icon_label('lc-sticky-note', label) }}</span><span class="note-full">{{ icon_label('lc-sticky-note-star', label) }}</span></button>
 {%- endmacro %}
@@ -258,7 +265,7 @@
 {% macro trash_note_mark(kind, item_id) -%}
 {%- set n = trash_note(kind, item_id) %}{% if n %}
 {#- (always written in: the gold sticky note with a star, as every note with something in it: the owner, 2026-10-29, D28) #}
-<button type="button" class="icon-link trash-note-mark note-filled" popovertarget="trash-note-{{ kind }}-{{ item_id }}" title="Message from when it was moved to the Trash" aria-label="Message from when it was moved to the Trash">{{ icon('lc-sticky-note-star') }}</button>
+<button type="button" class="icon-link trash-note-mark note-filled" popovertarget="trash-note-{{ kind }}-{{ item_id }}" title="{{ note_peek(n.text) if n.text else 'Message from when it was moved to the Trash' }}" aria-label="Message from when it was moved to the Trash">{{ icon('lc-sticky-note-star') }}</button>
 <div class="note-pop trash-note-pop" id="trash-note-{{ kind }}-{{ item_id }}" popover data-no-rowclick><div class="person-note">
   <textarea class="person-note-text" rows="3" maxlength="{{ tuning.get('max_message') }}" aria-label="Message from when it was moved to the Trash" data-note-url="{{ url_for('qgen.save_trash_note', kind=kind, item_id=item_id) }}">{{ n.text }}</textarea>
   <div class="person-note-status small muted">{{ n.stamp }}</div></div></div>
@@ -267,6 +274,6 @@
 {%- endmacro %}
 {% macro note_pop(text, key, tip='Note', cls='') -%}
 {#- (a note with something in it: the gold sticky note with a star, as the row Note icons: the owner, 2026-10-29, D25) #}
-<button type="button" class="icon-link note-filled{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note-star') }}</button>
+<button type="button" class="icon-link note-filled{{ ' ' ~ cls if cls }}" popovertarget="note-pop-{{ key }}" title="{{ note_peek(text) if text else tip }}" aria-label="{{ tip }}">{{ icon('lc-sticky-note-star') }}</button>
 <div class="note-pop" id="note-pop-{{ key }}" popover><p class="note-pop-text">{{ text }}</p></div>
 {%- endmacro %}

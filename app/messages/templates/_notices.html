@@ -19,11 +19,15 @@
             <div>{{ m.body }}</div>
             <div class="small muted">{{ m.created|when }}
               {% if m.id in unread_ids %}<span class="badge badge-warn">new</span>{% endif %}
-              {% if m.link %} · <a href="{{ m.link }}" title="Go to the page this notice is about">{{ link_label(m.link, for_student=not teacher) }}</a>{% endif %}</div>
+</div>
           </div>
+          {#- (its link and its ✕ as bare icons at the end, the words in their tooltips, as every list item's controls: the owner, 2026-10-30, D95) #}
+          {#- (a student's notices are just their words and the ✕, no links: a quiz is started only from My Quizzes and Home's
+              Waiting for You, results seen there too; the owner, 2026-10-31, D125–D127) #}
+          {%- if m.link and teacher %}{% set lab = link_label(m.link) %}<a class="icon-link notice-go" href="{{ m.link }}" title="{{ lab }}" aria-label="{{ lab }}">{{ icon(link_icon(lab)) }}</a>{% endif %}
           <form method="post" action="{{ url_for('messages.clear_notices', notice_id=m.id) }}" class="dock-form notice-clear">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="notice-x" aria-label="Clear this notice" title="Clear this notice">✕</button>
+            <button class="icon-link notice-x" aria-label="Clear this notice" title="Clear this notice">{{ icon('lc-x') }}</button>
           </form>
         </li>
       {% endfor %}

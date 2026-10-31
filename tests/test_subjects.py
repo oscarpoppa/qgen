@@ -631,7 +631,9 @@ def test_cards_that_pick_from_folders_show_a_folder_list_down_their_side(app_db)
     assert 'data-remember="write-to" data-tools-home="#write-to-bar" data-style="list"' in page
     assert page.count('data-style="list"') == 3
     assert 'data-tools-home="#quiz-filter-bar" data-style="list"' in page and 'data-tools-home="#people-pick-bar" data-style="list"' in page
-    assert page.index('id="pick-quiz"') < page.index('class="assign-side"') < page.index('id="pick-people"') < page.index('class="assign-go btn-row"') < page.index('class="card assign-when"')
+    #(Assign and Cancel only in the pinned title line now, no row under the Students card: the owner, 2026-10-30, D104)
+    assert page.index('id="pick-quiz"') < page.index('class="assign-side"') < page.index('id="pick-people"') < page.index('class="card assign-when"')
+    assert 'class="assign-go btn-row"' not in page and 'form="assign-form" name="submit" value="Assign"' in page
     assert 'data-tools-home="#problem-filter-bar" data-style="list"' in teacher.get('/quiz/makevquiz').data.decode()
 
 

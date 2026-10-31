@@ -6,6 +6,14 @@
 (function () {
   var timers = new WeakMap();
   function csrf() { var m = document.querySelector('meta[name="csrf-token"]'); return m ? m.content : ''; }
+  //a note's tooltip: the start of its own words, about 100 characters, cut at a word with … (as note_peek in _macros.html;
+  //the owner, 2026-10-31, D129–D130)
+  function peek(t) {
+    t = t.replace(/\s+/g, ' ').trim();
+    if (t.length <= 100) return t;
+    var cut = t.slice(0, 100), sp = cut.lastIndexOf(' ');
+    return (sp > 0 ? cut.slice(0, sp) : cut) + '…';
+  }
   function save(box) {
     var status = box.parentElement.querySelector('.person-note-status');
     var text = box.value.trim();
@@ -17,6 +25,8 @@
         if (!res.ok) { status.textContent = res.error || 'Not saved. Please try again.'; status.classList.add('error'); return; }
         status.classList.remove('error');
         status.textContent = 'Saved · ' + res.changed;
+        var pop = box.closest('[popover]'), mark = pop && document.querySelector('[popovertarget="' + pop.id + '"]');
+        if (mark) mark.title = text ? peek(text) : 'Message from when it was moved to the Trash';
       }, function () { status.textContent = 'Not saved: no connection. Please try again.'; status.classList.add('error'); });
   }
   document.addEventListener('input', function (e) {
@@ -82,6 +92,7 @@
         btn.dataset.noteText = kept;
         btn.dataset.noteStatus = res.changed || '';
         btn.classList.toggle('has-note', !!kept);
+        btn.title = kept ? peek(kept) : (btn.dataset.noteTip || btn.title);
         dlg.close();
       }, function () { fail('Not saved: no connection. Please try again.'); });
   }

@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {#- (the usual width: New scan and Current scans side by side, the owner 2026-10-20) #}
-{% from "_macros.html" import back_button, post_button with context %}
+{% from "_macros.html" import back_button, post_button, kind_icon with context %}
 {% from "_scan_controls.html" import scan_controls, scan_working with context %}
 {#- the whole width of the window, for the longer rows on the right (the owner, 2026-10-23) #}
 {% block main_class %} container-wide{% endblock %}
 
 {% block content %}
 <div class="page-head">
-  <h1>Scan Workbook Pages</h1>
-  <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}</div>
+  <h1>{{ kind_icon('notebook') }}Scan Workbook Pages</h1>
+  {#- Upload and Read and Cancel at the top right too, small, as on Assign and Add to Quizzes; the row under Images stays (the owner, 2026-10-30) #}
+  <div class="actions">{{ back_button(url_for('qgen.list_vquizzes'), 'Quizzes') }}<button type="submit" form="scan-upload" class="btn btn-sm" data-scan-go title="Upload the pages and have the AI read them (about half a minute per page)">Upload and Read</button><a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Undo the changes not saved yet">Cancel</a><span class="muted small" id="scan-wait" hidden>Uploading…</span></div>
 </div>
 <p class="muted">Photograph or scan workbook pages. You check each one before anything is saved.</p>
 
@@ -47,13 +48,7 @@
       <div class="help">Photos, scans or PDFs (any image type), up to {{ max_pages }} pages. Shoot each page straight on, in good light.</div>
     </div>
     </div>
-    {#- the buttons just under the Images card, not inside it (the owner, 2026-10-23) #}
-    <div class="btn-row">
-      <button class="btn" id="scan-go" title="Upload the pages and have the AI read them (about half a minute per page)">Upload and Read</button>
-      {#- (Cancel on a page of its own reloads it, throwing away what's typed; only a page opened from another to do one thing goes back there: the owner, 2026-10-24) #}
-      <a class="btn btn-secondary" href="{{ url_for('qgen.scan_start') }}" title="Undo the changes not saved yet">Cancel</a>
-      <span class="muted small" id="scan-wait" hidden>Uploading…</span>
-    </div>
+    {#- (no Upload and Read / Cancel under Images: they're in the pinned title line, with its “Uploading…”: the owner, 2026-10-30, D104) #}
   </form>
 
 {#- (always shown, at the right of New scan, saying so when there are none: the owner, 2026-10-20;
@@ -436,7 +431,7 @@ document.getElementById('scan-upload').addEventListener('submit', function (e) {
     (form.name.value.trim() ? document.getElementById('scan-drop') : form.name).focus();
     return;
   }
-  document.getElementById('scan-go').disabled = true;
+  document.querySelectorAll('[data-scan-go]').forEach(function (b) { b.disabled = true; });
   document.getElementById('scan-wait').hidden = false;
 });
 </script>

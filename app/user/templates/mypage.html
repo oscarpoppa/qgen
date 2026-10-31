@@ -119,16 +119,20 @@
       {#- (its most urgent attempt's icon, sorted by that: the owner, 2026-10-29) -#}
       {%- set sort_score = g.combined if g.attempts|length > 1 and g.combined is not none else latest.score if not g.open and latest.status == 'completed' else none -%}
       <td data-label="Score" class="quiz-sum" data-sort="{{ '%06.1f' % sort_score if sort_score is not none else '' }}">{% if g.attempts|length > 1 and g.combined is not none %}<span class="badge {{ score_class(g.combined) }}">{{ '%.0f' % g.combined }}%</span>{% elif not g.open %}{#- (no ★ on the quiz's own row: it marks the attempt that counts only in the opened list
-        of attempts; the owner, 2026-10-26) #}{{ status(latest) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        of attempts; the owner, 2026-10-26) #}{% if latest.status == 'review' %}{#- (no score yet: “—”, as every Score column; the waiting mark is Status's: the owner, 2026-10-30, D87) #}<span class="muted">—</span>{% else %}{{ status(latest) }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
       <td data-label="Status" class="quiz-state" data-sort="{{ most_urgent(g.attempts) }}{{ ' due' if due_cq else '' }}"><span class="btn-row quiz-state-badges">
         {#- (as small marks, the words in their tooltips: the owner, 2026-10-24) -#}
         {#- (only handed in and waiting for the teacher: the waiting mark, the owner 2026-10-27) -#}
         {{- row_state(g.attempts, own=true) }}
         {%- if due_cq %}<span class="badge badge-bad" title="Hand it in by {{ due_cq.closes_at|when }}">Due soon</span>{% endif %}
         <span class="badge badge-warn quiz-flag" hidden></span></span></td>
-      {#- no Start / Continue / View of its own: they're on each attempt's line, where it's clear which
-          attempt they mean (the owner, 2026-10-20); only Move -#}
+      {#- Start / Continue for the attempt that sets the row's status (its most urgent), before Move; grayed when every
+          attempt is handed in (the owner, 2026-10-31, D117–D118; before, only each attempt's line had one, 2026-10-20) -#}
+      {%- set ns_u = namespace(cq=none, u=99) %}{% for a in g.attempts %}{% set u = a.urgency() %}{% if u < ns_u.u %}{% set ns_u.cq = a %}{% set ns_u.u = u %}{% endif %}{% endfor %}
       <td class="actions"><span class="btn-row quiz-row-actions">
+        {% if ns_u.cq and ns_u.cq.status in ('new', 'started') and not ns_u.cq.not_open_yet() %}{{ action(ns_u.cq, compact=true) }}
+        {%- elif ns_u.cq and ns_u.cq.status in ('new', 'started') %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Start: you can’t start this yet. It opens {{ ns_u.cq.opens_at|when }}.">{{ icon_label('lc-play', 'Start') }}</button>
+        {%- else %}<button type="button" class="btn btn-secondary btn-sm btn-icon" disabled title="Start: nothing to start; every attempt is handed in">{{ icon_label('lc-play', 'Start') }}</button>{% endif %}
         {% if fk.flat %}{{ move_mini(fk, 'quiz', g.vquiz.id, '“' ~ g.vquiz.title ~ '”', here) }}{% endif %}</span></td>
     </tr>
   {% endfor %}
@@ -196,8 +200,9 @@
     <li><span><strong>“{{ cq.vquiz.title }}”</strong></span>
       {% if cq.marked_kind() %}{{ attempt_mark(cq, own=true) }}
       {% elif cq.status == 'completed' and cq.score is not none %}<span class="badge {{ score_class(cq.score) }}">{{ '%.0f' % cq.score }}%</span>
-      {#- (handed in and still being graded: "Handed in" here, the owner 2026-10-17) -#}
-      {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">Handed in</span>{% endif %}
+      {#- (handed in and still being graded: "Waiting for your teacher", the Status column's words; was "Handed in"
+         (2026-10-17); the owner, 2026-10-31, D107) -#}
+      {% else %}<span class="badge badge-accent badge-status" title="Handed in; your teacher is checking your written answers">Waiting for your teacher</span>{% endif %}
       <span class="small muted">{{ cq.compdate|when }}</span>
       <a class="icon-link dash-go" href="{{ url_for('qgen.qtake', cidx=cq.id) }}" title="View: {{ 'how you did on' if cq.status == 'completed' else 'what you handed in for' }} “{{ cq.vquiz.title }}”">{{ icon_label('lc-eye', 'View') }}</a></li>
   {% endfor %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import back_button, slot with context %}
-{% from "_macros.html" import field, check, errors as error_box, image_drop, tip, box_label %}
+{% from "_macros.html" import field, check, errors as error_box, image_drop, tip, box_label, kind_icon %}
 {% from "_subjects.html" import subject_checks, subject_optional with context %}
 
 {# ---------- help texts for the "?" tips (written for teachers, not programmers) ---------- #}
@@ -87,7 +87,7 @@
 {% block body_attrs %}{% if vp and vp.id %}{{ watch('problem:%d' % vp.id, note='This problem has been changed somewhere else since you opened it.', ask=True) }}{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
+  <h1>{{ kind_icon('lc-puzzle') }}{{ title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   <span class="head-icons">{% if vp and vp.id %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vprob', vpid=vp.id) }}" title="View: See three students' versions of the saved problem">{{ icon_label('lc-eye', 'View') }}</a>{% endif %}{% if vp and vp.id %}{% if vp.cproblems %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.problem_results', vpid=vp.id) }}" title="History: Every answer students have given to {{ vp.title or 'this problem' }}, quiz by quiz">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has answered this problem yet', 'btn btn-secondary') }}{% endif %}{% endif %}</span>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
@@ -98,6 +98,8 @@
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo Changes" title="Go back to the saved version">↺ Undo Changes</button>
     {% else %}<button type="button" class="btn btn-secondary btn-sm" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Clear everything on this page and start over?" data-ok="Start Over" title="Clear the form back to blank">↺ Start Over</button>{% endif %}
+    {#- Save and Cancel at the top right too, small, as on New Quiz; the buttons under the Helper stay (the owner, 2026-10-30, D103) #}
+    <button type="submit" form="problem-form" name="submit" value="{{ form.submit.label.text }}" class="btn btn-sm" title="Check for mistakes and save. Students only see it once it is in a quiz you assign.">{{ form.submit.label.text }}</button><a class="btn btn-secondary btn-sm" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
   </div>
 </div>
 
@@ -256,11 +258,8 @@
 <div class="side-col">
 {% with form_id='problem-form', check_url=url_for('qgen.check_vprob', vp=vp.id if vp and vp.id else none) %}{% include "_helper.html" %}{% endwith %}
   <div class="editor-go">
-    {{ form.submit(class='btn', title='Check for mistakes and save. Students only see it once it is in a quiz you assign.', form='problem-form') }}
-    {# beside Save (the owner, 2026-10-16); the examples still show under the form #}
+    {#- (no Save Problem / Cancel here: they're in the pinned title line; Show Me 3 Examples stays: the owner, 2026-10-30, D104) #}
     <button type="button" class="btn btn-secondary" id="preview-btn" data-url="{{ url_for('qgen.preview_vprob') }}" title="See what three different students would get, without saving">Show Me 3 Examples</button>
-    {#- (Cancel last: the main button first, discard last, the owner 2026-10-23) #}
-    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
   </div>
   {#- what stops “Show Me 3 Examples”, right under the buttons, at the top: not at the foot of the page, scrolled
       down to (the owner, 2026-10-27; static/js/problem_form.js) #}

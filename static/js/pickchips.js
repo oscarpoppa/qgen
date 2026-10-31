@@ -9,7 +9,10 @@
       var byName = {}, names = [];
       card.querySelectorAll('input[name="' + name + '"]:checked').forEach(function (b) {
         var l = card.querySelector('label[for="' + b.id + '"]');
-        var n = l ? (l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : l.textContent).trim() : '';
+        //(the name: the label's first words, past the kind icon or person's circle before it and not the "(teacher)" after)
+        var n = '';
+        for (var c = l && l.firstChild; c && !n; c = c.nextSibling) if (c.nodeType === 3) n = c.textContent.trim();
+        if (!n && l) n = l.textContent.trim();
         if (!n) return;
         if (!byName[n]) names.push(byName[n] = { n: n, boxes: [] });
         byName[n].boxes.push(b);

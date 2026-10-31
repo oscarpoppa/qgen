@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import count_badge, post_button, slot, scan_mark, note_button, trash_note_mark with context %}
 {% from "_archive_sections.html" import archive_switch %}
+{% from "_macros.html" import kind_icon %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {#- a problem's chip in an opened quiz row, opening it on Problems #}
 {#- times: how many times the quiz uses it, a small count circle after it when more than once (the owner, 2026-10-27) #}
@@ -110,7 +111,7 @@
     <a class="btn btn-sm" href="{{ url_for('qgen.mkvquiz') }}" title="Build a new quiz from your problems">+ New Quiz</a> {% if config.ANTHROPIC_API_KEY %}<a class="btn btn-secondary btn-sm" href="{{ url_for('qgen.scan_start') }}" title="Photograph or scan workbook pages; the AI drafts their problems and quizzes for you to check">{{ icon('camera') }} Scan Workbook Pages</a>{% else %}<button type="button" class="btn btn-secondary btn-sm" disabled title="Needs an AI key, which this site doesn’t have">{{ icon('camera') }} Scan Workbook Pages</button>{% endif %}
 {% endset %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
+  <h1>{{ kind_icon('note') }}{{ title }}</h1>
   {% if not total %}<div class="actions">{{ head_buttons }}</div>{% endif %}
 </div>
 {% endif %}

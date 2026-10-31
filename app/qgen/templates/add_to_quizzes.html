@@ -2,7 +2,7 @@
 {# Add to quizzes: problems on the left (the Problems page's folders, the ones checked there already
    checked), the quizzes on the right, like the Assign page; the checked ones as chips on both sides
    (static/js/pickchips.js). They go at the end of each quiz checked (the owner, 2026-10-24: it was a dialog) #}
-{% from "_macros.html" import filter_bar, scan_mark with context %}
+{% from "_macros.html" import filter_bar, scan_mark, kind_icon with context %}
 {% from "_pick.html" import pick_table %}
 
 {#- the whole window, like Assign quizzes and the folder pages (the owner, 2026-10-25) #}
@@ -10,7 +10,7 @@
 {#- (a notice when the problems, quizzes or folders change while it's open, as on Assign quizzes) #}
 {% block body_attrs %}{{ watch('addquiz', note='The problems, quizzes or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>
+<div class="page-head"><h1>{{ kind_icon('note') }}{{ title }}</h1>
   {#- Add and Cancel at the top too (as on Assign Quizzes; the bottom row stays: the owner, 2026-10-28) #}
   <div class="actions"><button form="add-quiz-form" class="btn btn-sm" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary btn-sm" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div></div>
 
@@ -21,7 +21,7 @@
   <input type="hidden" name="view" value="{{ view }}">
     <div class="card field pick-quiz" id="add-problem-pick">
       <div class="pick-chips" data-chip-cap="10" data-chips-for="items" data-chip-icon="lc-puzzle" aria-live="polite"></div>
-      <span class="label pick-wrap-head">Problems</span>
+      <span class="label pick-wrap-head">{{ kind_icon('lc-puzzle') }}Problems</span>
       {{ filter_bar('#add-problem-pick .folder-filter-list', 'problem', 'problems', items='tr[data-box]', id='add-problem-bar') }}
       {#- (the red message right under the filter, where it's seen: the owner, 2026-10-24) #}
       <div class="error pick-error" data-problem-error role="alert" hidden>Check at least one problem first.</div>
@@ -30,7 +30,7 @@
         <script type="application/json" class="folder-filter-tree">{{ problem_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Problem', 'add-problem-list') %}
-            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ p.title or 'Untitled' }}{{ scan_mark(p) }}</label></td></tr>{% endfor %}
+            {% for p in problems %}<tr data-box="problem:{{ p.id }}"><td class="tick-col"><input type="checkbox" name="items" value="{{ p.id }}" id="ap-{{ p.id }}"{% if p.id in chosen %} checked{% endif %}></td><td><label for="ap-{{ p.id }}">{{ kind_icon('lc-puzzle') }}{{ p.title or 'Untitled' }}{{ scan_mark(p) }}</label></td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>
@@ -38,7 +38,7 @@
   <div class="assign-side">
     <div class="card field pick-quiz pick-people-card" id="add-quiz-pick">
       <div class="pick-chips" data-chip-cap="10" data-chips-for="quiz" data-chip-icon="note" aria-live="polite"></div>
-      <span class="label pick-wrap-head">Quizzes</span>
+      <span class="label pick-wrap-head">{{ kind_icon('note') }}Quizzes</span>
       {{ filter_bar('#add-quiz-pick .folder-filter-list', 'quiz', 'quizzes', items='tr[data-box]', id='add-quiz-bar') }}
       <div class="error pick-error" data-quiz-error role="alert" hidden>Check at least one quiz first.</div>
       <div class="folder-filter" data-folder-filter data-prefix="quiz:" data-all-label="All Quizzes" data-main-label="Uncategorized"
@@ -46,14 +46,14 @@
         <script type="application/json" class="folder-filter-tree">{{ quiz_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Quiz', 'add-quiz-list') %}
-            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ q.title }}{{ scan_mark(q) }}</label></td></tr>{% endfor %}
+            {% for q in quizzes %}<tr data-box="quiz:{{ q.id }}"><td class="tick-col"><input type="checkbox" name="quiz" value="{{ q.id }}" id="aq-{{ q.id }}"></td><td><label for="aq-{{ q.id }}">{{ kind_icon('note') }}{{ q.title }}{{ scan_mark(q) }}</label></td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>
       {# or a new quiz with the problems checked in it; its Back comes back to the Problems page #}
       <p class="small add-quiz-new"><a href="{{ url_for('qgen.mkvquiz') }}" data-new-quiz data-next="{{ back_to_problems }}" data-ask-over="{{ tuning.get('ask_over_problems') }}" title="Open New quiz with the checked problems already in it; its Back comes back to Problems">Make New Quiz</a></p>
     </div>
-    <div class="assign-go btn-row"><button class="btn" title="Add the checked problems to the end of the checked quizzes">Add</button><a class="btn btn-secondary" href="{{ back_to_problems }}" data-back-href title="Leave without adding anything">Cancel</a></div>
+    {#- (no Add / Cancel down here: they're in the pinned title line: the owner, 2026-10-30, D104) #}
   </div>
 </form>
 {% endblock %}

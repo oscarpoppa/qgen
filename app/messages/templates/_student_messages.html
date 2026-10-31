@@ -1,6 +1,7 @@
 {# the messages side panel for a student: pinned announcements, the conversation with all
    the teachers or one of them (picked at the top, like the teachers' panel), a box to write #}
 {% from "_clear_thread.html" import clear_thread with context %}
+{% from "_macros.html" import avatar with context %}
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=teacher.id if teacher else 'all') }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
   {% if teachers %}
@@ -38,7 +39,7 @@
         <legend class="small muted">Send to</legend>
         <input type="hidden" name="to_checked" value="1">
         {% for t in teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not teacher or teacher.id == t.teacher.id }}>
-          {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
+          {{ avatar(t.teacher, 20) }}{{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
       </fieldset>
     {% else %}<input type="hidden" name="to" value="all">{% endif %}
     <button class="btn" title="{{ 'Send this to the teachers you checked' if teachers|length > 1 else 'Send this to ' ~ to_whom }}">Send</button>

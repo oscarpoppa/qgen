@@ -973,3 +973,27 @@ window.qgenPinAuto = function (list) {
   window.addEventListener('load', all);
   window.addEventListener('resize', function () { clearTimeout(all.t); all.t = setTimeout(function () { all(); document.querySelectorAll('.folder-side-list').forEach(window.qgenPinAuto); }, 100); });
 })();
+
+/* A list sorted in place (static/js/sorttable.js swaps the table in without a reload): its Expand all / Collapse all in the
+ * heading row is drawn again, a copy of the pair beside the folder tab, as when the page opened (the owner, 2026-10-30: on
+ * Quiz History it was gone after a click on “Student” to sort). */
+(function () {
+  document.addEventListener('qgen-swapped', function () {
+    document.querySelectorAll('.level-buttons.level-in-tab[data-level-twin]').forEach(function (pair) {
+      var btn = pair.querySelector('[data-level-of]');
+      var list = btn && document.querySelector(btn.dataset.levelOf);
+      if (!list || list.querySelector('.level-buttons.level-in-head')) return;
+      var cell = list.querySelector('tbody > tr > td > details.row-fold');
+      if (!cell) return;
+      var td = cell.parentElement, table = td.closest('table');
+      var at = Array.prototype.indexOf.call(td.parentElement.children, td);
+      var th = table && table.querySelector(':scope > thead > tr > th:nth-child(' + (at + 1) + ')');
+      if (!th) return;
+      var head = pair.cloneNode(true);
+      head.classList.remove('level-in-tab', 'tab-level-pair');
+      head.classList.add('level-in-head');
+      th.insertBefore(head, th.firstChild);
+    });
+    if (window.qgenBoxes) window.qgenBoxes.levels();
+  });
+})();

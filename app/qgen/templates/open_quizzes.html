@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import filter_bar, back_button, person_name, row_state, post_button, search_box with context %}
+{% from "_macros.html" import filter_bar, back_button, person_name, kind_icon, row_state, post_button, search_box with context %}
 {% from "_folders.html" import named_box, folders_page, empty_note with context %}
 {% block body_attrs %}{{ watch('openquizzes') }}{% endblock %}
 {% block main_class %} container-wide{% endblock %}
@@ -8,7 +8,7 @@
    was assigned and its state's icon, sortable; newest assigned first. The quiz's name opens it on the student's Student History. #}
 {% macro attempt_rows(rows) %}
   <div class="table-wrap stack"><table class="even-cols open-rows" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-    <thead><tr><th data-sort-key="student">Student</th><th data-sort-key="quiz">Quiz</th><th data-sort-key="assigned" class="date-col">Assigned</th><th data-sort-key="status">Status</th><th></th></tr></thead>
+    <thead><tr><th data-sort-key="student">Student</th><th data-sort-key="quiz" class="name-col">Quiz</th><th data-sort-key="assigned" class="date-col">Assigned</th><th data-sort-key="status">Status</th><th></th></tr></thead>
     <tbody>{% for cq in rows %}
       <tr data-box="attempt:{{ cq.id }}" data-name="{{ (cq.vquiz.title or '')|lower }} {{ cq.taker.username|lower }} {{ (cq.taker.nickname or '')|lower }}">
         <td data-label="Student">{{ person_name(cq.taker) }}</td>
@@ -24,14 +24,14 @@
         <td class="actions">
           {%- if cq.expired %}{{ post_button(url_for('qgen.ret_cquiz', cqid=cq.id), 'Give another attempt', 'btn btn-secondary btn-sm', 'Give ' ~ (cq.taker.shown_name)|string ~ ' another attempt at “' ~ (cq.vquiz.title)|string ~ '” with new values?', tip=(cq.taker.shown_name)|string ~ ' gets new values this time', icon='lc-retake') }}{% endif %}
           {%- if not cq.taker.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=cq.taker.id) }}" title="Message: write to {{ cq.taker.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>
-          {%- else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ Messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
+          {%- else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page', with=cq.taker.id) }}" title="Message: write to {{ cq.taker.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
           {{ post_button(url_for('qgen.del_cquiz', cqid=cq.id), 'Move to Trash', 'btn btn-danger btn-sm', 'Move ' ~ (cq.taker.shown_name)|string ~ '’s attempt (' ~ cq.when_label ~ ') at “' ~ (cq.vquiz.title)|string ~ '” to the Trash? You can view or restore it there.', tip='Move this attempt to the Trash (you can restore it there)', icon='lc-trash', trash_message=true) }}</td>
       </tr>{% endfor %}</tbody>
   </table></div>
 {% endmacro %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1></div>
+<div class="page-head"><h1>{{ kind_icon('note') }}{{ title }}</h1></div>
 {% call folders_page(fk) %}
   <div class="folder-tools-bar">{{ filter_bar('#folder-items', 'attempt', 'attempts', items='tr[data-box]', paged=pg.total) }}{{ search_box(fk, keep=('section',)) }}
     <div class="btn-row results-filter-right">{{ back_button(home_url(), 'Dashboard', 'btn btn-secondary btn-sm') }}</div></div>

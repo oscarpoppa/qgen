@@ -239,12 +239,14 @@
       var a = e.target.closest && e.target.closest('a[href]');
       if (!a || e.ctrlKey || e.metaKey || e.shiftKey || a.target === '_blank') return;
       var m = /^\/messages\/(\d+)$/.exec(a.pathname || '');
-      if (!m || a.origin !== location.origin) return;
+      //(and /messages/teachers, ?with=<id>: the teachers' messages, or one teacher's, in this panel; that page is gone: the owner, 2026-10-30)
+      var t = !m && a.pathname === '/messages/teachers' ? (/^\d+$/.test(new URLSearchParams(a.search).get('with') || '') ? 't' + new URLSearchParams(a.search).get('with') : 'teachers') : null;
+      if ((!m && !t) || a.origin !== location.origin) return;
       e.preventDefault();
-      openStudent(m[1]);
+      openStudent(m ? m[1] : t);
     });
     var asked = new URLSearchParams(location.search).get('msg');
-    if (asked && /^\d+$/.test(asked)) {
+    if (asked && /^(\d+|teachers|t\d+)$/.test(asked)) {
       var u = new URL(location.href); u.searchParams.delete('msg');
       history.replaceState(history.state, '', u.pathname + u.search + u.hash);
       openStudent(asked);

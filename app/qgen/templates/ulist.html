@@ -22,7 +22,7 @@
   {% set n = item.cquizzes|map(attribute='vquiz_id')|unique|list|length %}
   <details class="box card subject-box student item-box" data-list id="student-{{ item.id }}" data-box="student:{{ item.id }}" data-name="{{ item.shown_name|lower }}"{% if not n %} data-empty{% endif %}{% if single %} open{% endif %}>
     <summary>
-      {{ box_label(avatar(item, 30), item.shown_name if single else student_link(item), count_of(n, 'quiz', 'quizzes')) }}
+      {{ box_label(avatar(item, 24), item.shown_name if single else student_link(item), count_of(n, 'quiz', 'quizzes')) }}
       {# folded, the heading still says where they are: done (and their average), to grade,
          in progress, not started #}
       {# done: quizzes with a score that counts (one per quiz, retakes counted by its rule, as in the box) #}

@@ -66,7 +66,7 @@ def test_all_teachers_or_chosen_ones(app_db):
     # students: can't reach any of it, and never see it
     assert sam.post('/messages/teachers/send', data={'body': 'hi', 'to': 'all'}).status_code == 302
     assert StaffMessage.query.count() == 2
-    assert sam.get('/messages/teachers').status_code == 302
+    assert sam.get('/messages/teachers').status_code == 302  # (a student: to his/her page; the page is gone for everyone)
     for url in ('/messages/panel', '/messages/panel?student=teachers', '/messages/panel?student=t{}'.format(ids('teach')), '/mypage'):
         page = sam.get(url).data.decode()
         assert 'Staff meeting' not in page and 'cover my class' not in page, url
@@ -76,20 +76,26 @@ def test_all_teachers_or_chosen_ones(app_db):
     assert r.status_code == 400
 
 
-def test_the_teachers_page_deleting_and_the_pop_up(app_db):
+def test_the_teachers_messages_deleting_and_the_pop_up(app_db):
     app, db = app_db
     from app.messages.models import StaffMessage
     teachers(db, 'lee')
     teach, lee = login(app, 'teach'), login(app, 'lee')
     #(the Messages page is retired: the panel's Showing menu lists the teachers' messages)
     assert '<optgroup label="Teachers">' in teach.get('/messages/panel').data.decode()
-    # the page writes with a plain form (one other teacher: no checkboxes, it's to all of them)
-    page = teach.get('/messages/teachers').data.decode()
-    assert 'All Messages (every teacher)' in page and 'name="to" value="all"' in page
+    # no Teachers' Messages page (the owner, 2026-10-30): its address goes back where it came from with the panel
+    # open on the teachers (?msg=teachers), or on one teacher (?with=<id>: ?msg=t<id>); with nowhere to go back to, the Dashboard
+    r = teach.get('/messages/teachers', headers={'Referer': 'http://localhost/quiz/open?sort=assigned'})
+    assert r.status_code == 302 and r.headers['Location'].endswith('/quiz/open?sort=assigned&msg=teachers')
+    r = teach.get('/messages/teachers?with={}'.format(ids('lee')))
+    assert r.status_code == 302 and r.headers['Location'].endswith('/dashboard?msg=t{}'.format(ids('lee')))
+    # the panel writes with a plain form (one other teacher: no checkboxes, it's to all of them)
+    page = teach.get('/messages/panel?student=teachers').data.decode()
+    assert 'name="to" value="all"' in page and 'as a page' not in page
     r = teach.post('/messages/teachers/send', data={'body': 'Hello lee', 'to': 'all'})
     assert r.status_code == 302
     msg = StaffMessage.query.one()
-    assert msg.to_all and 'Hello lee' in lee.get('/messages/teachers?with={}'.format(ids('teach'))).data.decode()
+    assert msg.to_all and 'Hello lee' in lee.get('/messages/panel?student=t{}'.format(ids('teach'))).data.decode()
     # only the writer can delete it
     assert lee.post('/messages/teachers/delete/{}'.format(msg.id), headers=FETCH).status_code == 404
     assert StaffMessage.query.count() == 1
@@ -104,5 +110,5 @@ def test_the_teachers_page_deleting_and_the_pop_up(app_db):
     from app.user.models import User
     lee_id = User.query.filter_by(username='lee').one().id
     assert unread_messages_for_teacher(lee_id) == 1 and lee.get('/messages/poll').get_json()['unread'] == 1
-    lee.get('/messages/teachers')  # the page shows it: seen
+    lee.get('/messages/panel?student=teachers')  # the panel shows it: seen
     assert unread_messages_for_teacher(lee_id) == 0

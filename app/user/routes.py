@@ -338,7 +338,7 @@ def home():
     return render_template('home.html', title='Home', now=now, waiting=waiting, soon=soon, recent=recent, recent_days=tuning.get('recent_days'),
                            todo=sum(1 for cq in waiting if cq.status == 'new'),
                            started=sum(1 for cq in current_user.cquizzes if cq.status in ('started', 'review')),
-                           awards=have, to_earn=awards.still_to_earn(current_user, have))
+                           awards=have)
 
 # route to user logout action
 #(no password check: someone told to change their password can still log out, e.g. on a shared computer)

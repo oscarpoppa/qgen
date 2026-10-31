@@ -119,7 +119,8 @@
 
     function heighten(h, keep) {
       tall = Math.max(0, h);
-      card.style.minHeight = tall && !narrow() ? (card._baseH + tall) + 'px' : '';
+      //(only while it's open: a folded card is just its heading, whatever height it was pulled to: the owner, 2026-10-30, Home's awards)
+      card.style.minHeight = tall && !narrow() && (card.tagName !== 'DETAILS' || card.open) ? (card._baseH + tall) + 'px' : '';
       if (keep) store(key + ':h', tall ? String(Math.round(tall)) : null);
       float();
     }
@@ -148,7 +149,12 @@
     card._elasticBar = barShown;
     barShown();
     card._elasticFloat = float;
-    card.addEventListener('toggle', function () { if (card.open) raise(card); });
+    card.addEventListener('toggle', function () {
+      if (card.open) raise(card);
+      //(opened: its pulled height again, over what it holds now; folded: just its heading)
+      if (tall) { card.style.minHeight = ''; if (card.open) card._baseH = card.getBoundingClientRect().height; heighten(tall, false); }
+      if (window.qgenRelayout) window.qgenRelayout();
+    });
     function usual() {
       widen(0, true);
       heighten(0, true);
@@ -177,8 +183,12 @@
           if (sideways) widen(w0 + (toLeft ? x0 - ev.clientX : ev.clientX - x0), false);
           if (upDown) {
             var dy = ev.clientY - y0, used = 0;
-            if (a) { a._gripSet(h0 + dy, false); used = a.getBoundingClientRect().height - h0; }
-            if (!tallOnly) heighten(t0 + Math.max(0, dy - Math.max(0, used)), false);
+            //(pulled up: the card's own extra height goes first, then its list; before, only the list could get
+            //shorter, so a card pulled past its awards never came back up: the owner, 2026-10-31, Home's awards)
+            var cut = dy < 0 && !tallOnly ? Math.min(t0, -dy) : 0;
+            if (cut) heighten(t0 - cut, false);
+            if (a) { a._gripSet(h0 + dy + cut, false); used = a.getBoundingClientRect().height - h0; }
+            if (!tallOnly && !cut) heighten(t0 + Math.max(0, dy - Math.max(0, used)), false);
           }
         }
         function up() {

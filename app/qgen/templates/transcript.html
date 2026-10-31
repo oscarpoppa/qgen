@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {# reading and forms: lines no wider than is comfortable #}
 {% block main_class %} container-narrow{% endblock %}
-{% from "_macros.html" import after_quiz, attempt_links, from_teacher with context %}
+{% from "_macros.html" import after_quiz, attempt_links, from_teacher, kind_icon with context %}
 {% from "_page_thumbs.html" import page_thumbs with context %}
 {# kept up to date: grading, a regrade, the attempt deleted (app/live.py) #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id) }}{% endblock %}
@@ -9,7 +9,7 @@
 {% block content %}
 <div class="page-head no-print">
   {#- (it was “Results”: the owner, 2026-10-20, from the Oct 7 review) #}
-  <h1>Quiz Results</h1>
+  <h1>{{ kind_icon('note') }}Quiz Results</h1>
   <div class="actions">
     {# (the way back always first, on every page: the owner, 2026-10-14) #}
     {% if current_user == cq.taker %}{{ after_quiz() }}

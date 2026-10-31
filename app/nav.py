@@ -181,6 +181,17 @@ LINK_LABELS = {
 }
 
 
+#a notice's link as a bare icon, its words in the tooltip (the owner, 2026-10-30, D95): the icon of each link_label's words
+LINK_ICONS = {'Go to the quiz': 'lc-play', 'See your results': 'lc-eye', 'See results': 'lc-eye', 'Grade it': 'lc-grade',
+              'Student history': 'lc-history', 'Quiz history': 'lc-history', 'See it in the Trash': 'lc-archive',
+              'Open the messages': 'lc-message'}
+
+
+def link_icon(label):
+    """The icon for a notice link's words (link_label's); an arrow for any other."""
+    return LINK_ICONS.get(label, 'lc-arrow-right')
+
+
 def link_kind(link):
     """The endpoint a stored link (a notice's) goes to, or None."""
     path = safe_next(link)

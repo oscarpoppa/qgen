@@ -1,7 +1,7 @@
 {# Write to chosen students, from the Messages panel's "Write to…" (static/js/messages.js; the
    owner, 2026-10-17): the students with People's folders as the folder list and tabs, like the
    Assign page's Students card, then the message #}
-{% from "_macros.html" import filter_bar with context %}
+{% from "_macros.html" import filter_bar, avatar with context %}
 {% from "_pick.html" import pick_table %}
 {% set wt_students, wt_tree = message_students() %}
 <dialog class="ask panel-dialog write-to-dialog" id="write-to-dialog" aria-labelledby="write-to-head">
@@ -19,7 +19,7 @@
         <script type="application/json" class="folder-filter-tree">{{ wt_tree|tojson }}</script>
         <div class="folder-filter-list">
           {% call pick_table('Name') %}
-            {% for u in wt_students %}<tr data-box="user:{{ u.id }}"><td class="tick-col"><input type="checkbox" name="students" value="{{ u.id }}" id="wt-{{ u.id }}"></td><td><label for="wt-{{ u.id }}">{{ u.shown_name }}</label></td></tr>{% endfor %}
+            {% for u in wt_students %}<tr data-box="user:{{ u.id }}" data-name="{{ u.shown_name|lower }}"><td class="tick-col"><input type="checkbox" name="students" value="{{ u.id }}" id="wt-{{ u.id }}"></td><td><label for="wt-{{ u.id }}">{{ avatar(u, 20) }}{{ u.shown_name }}</label></td></tr>{% endfor %}
           {% endcall %}
         </div>
       </div>

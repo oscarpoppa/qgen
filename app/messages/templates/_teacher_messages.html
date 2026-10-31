@@ -1,6 +1,7 @@
 {# the messages side panel for a teacher: everyone's messages together, or one student's conversation #}
 {# what's shown: 'all' (every student), a student's id, 'teachers' (every teacher) or 't<id>' (one teacher) #}
 {% from "_clear_thread.html" import clear_thread with context %}
+{% from "_macros.html" import avatar with context %}
 {% set current = ('t' ~ other.id if other else 'teachers') if teachers_view else (student.id if student else ('f' ~ folder.id) if folder else 'all') %}
 <section id="messages" data-panel-url="{{ url_for('messages.panel', student=current) }}" aria-labelledby="messages-title">
   <h2 id="messages-title" class="sr-only">Messages</h2>
@@ -58,13 +59,12 @@
           <legend class="small muted">Send to</legend>
           <input type="hidden" name="to_checked" value="1">
           {% for t in staff.teachers %}<label class="small"><input type="checkbox" name="to" value="{{ t.teacher.id }}"{{ ' checked' if not other or other.id == t.teacher.id }}>
-            {{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
+            {{ avatar(t.teacher, 20) }}{{ '● ' if t.online }}{{ t.teacher.shown_name }}</label>{% endfor %}
         </fieldset>
       {% else %}<input type="hidden" name="to" value="all">{% endif %}
       <button class="btn" title="{{ 'Send this to the teachers you checked' if staff.teachers|length > 1 else 'Send this to ' ~ to_whom }}">Send</button>
       <p class="muted small" style="margin:4px 0 0">{{ 'Only the teachers you check will see it. ' if staff.teachers|length > 1 }}Students never see messages between teachers.</p>
     </form>
-    <p class="small" style="margin:10px 0 0"><a href="{{ url_for('messages.teachers_page') }}" title="Open the full page of messages between teachers">Teachers’ Messages, as a page</a></p>
   {% elif rows %}
     {% if everyone %}
       <div class="thread-scroll">{% set me_teacher = true %}{% include "_thread.html" %}</div>

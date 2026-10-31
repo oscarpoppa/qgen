@@ -15,7 +15,7 @@ def finish(cq, score, when):
 
 
 def titles(page):
-    """The awards earned (not the ones still to earn) on a page."""
+    """The awards earned on a page (the split keeps working if a list of awards still to earn comes back)."""
     part = page.split('Still to Earn')[0]
     return re.findall(r'<li class="award award-\w+">.*?<strong>([^<]+)</strong>', part, re.S)
 
@@ -64,9 +64,8 @@ def test_awards(app_db):
     assert titles(page) == ['Perfect score', '5 quizzes', '3 in a row', 'Perfect score', 'Comeback', 'First quiz']
     assert '100% on <span class="quiz-title">W4</span>' in page  # (no quotes, bolder: the owner, 2026-10-26)
     assert 'Up 25 points on' in page
-    # still to earn: the next of each kind only
-    rest = page.split('Still to Earn')[1]
-    assert '10 quizzes' in rest and '5 in a row' in rest and 'Perfect score' not in rest and 'Comeback' not in rest
+    # no "Still to Earn" box any more, only the awards earned (the owner, 2026-10-31)
+    assert 'Still to Earn' not in page and 'awards-locked' not in page
     # a regrade is reflected: no perfect score on W1 any more
     from app.qgen.models import CQuiz
     cq = CQuiz.query.filter_by(vquiz_id=quizzes[1].id).one()

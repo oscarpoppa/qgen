@@ -1208,7 +1208,7 @@ def test_put_away_and_take_out(app_db, ai):
     html = teacher.get('/quiz/scan').data.decode()
     current, away = html.split('id="scan-away"')
     assert 'Week 1' not in current.split('id="scan-current"')[1] and 'No workbooks yet.' in current
-    assert '<h2>Stashed Workbooks</h2>' in html and '<th>Stashed</th>' in away and 'Nothing stashed.' not in away
+    assert '<h2>Stashed Workbooks</h2>' in html and '<th class="date-col">Stashed</th>' in away and 'Nothing stashed.' not in away
     assert 'Week 1' in away and 'Take “Week 1” out' in away and 'Continue: go on checking “Week 1”' in away
     # ...and never in the Dashboard's pop-over nor on its chip (the owner, 2026-10-21; it had a list
     # of its own there)

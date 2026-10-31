@@ -2,7 +2,7 @@
 {% from "_macros.html" import filter_bar, search_box, count_badge, count_dot with context %}
 {% from "_archive_sections.html" import archive_switch %}
 {% from "_macros.html" import post_button, slot, trash_note_mark, note_button with context %}
-{% from "_macros.html" import avatar, count_of, quiz_link, attempt_title with context %}
+{% from "_macros.html" import avatar, kind_icon, count_of, quiz_link, attempt_title with context %}
 {% from "_results.html" import result_group with context %}
 {% from "_folders.html" import named_box, folders_page, all_boxes, folder_items, empty_note, in_folders, folder_icons, folder_chips, remove_button with context %}
 {% block body_attrs %}{{ watch('users' if in_archive else 'people') }}{% endblock %}
@@ -38,7 +38,7 @@
                  critic, 2026-10-20) #}
               <span class="person drag-item" data-drag="user" data-id="{{ item.id }}" data-home="{{ here.id if here else ('top' if not mine else 'all') }}" data-name="{{ item.shown_name }}"
                     title="Drag onto a folder to move {{ item.shown_name }} there (Ctrl+drag copies)">{#- (the picture and the name kept together on one line; the badge goes under them when the
-                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 28) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · In the Trash since {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{#- each mark has its own place after the name, kept when it's empty, so the same marks line up down the column: the
+                    column is narrow: the owner, 2026-10-22) #}<span class="person-line"><span class="avatar-wrap">{{ avatar(item, 24) }}{% if item.online %}<span class="online-dot" role="img" aria-label="online now" title="Online now: a page is open (checked every {{ tuning.get('poll_seconds') }} seconds)"></span>{% endif %}</span><strong class="box-title" title="{% if item.is_admin %}Teacher{% else %}Student{% endif %} · Last seen: {% if item.online %}online now{% elif item.last_seen %}{{ item.seen_label() }}{% else %}never{% endif %}{% if in_archive %} · In the Trash since {{ item.archived_at|when('date') }}{% endif %}">{{ item.shown_name }}</strong>{#- (the teacher's cap on the name's own line, never under it: the owner, 2026-10-24, To do 38) #}{#- each mark has its own place after the name, kept when it's empty, so the same marks line up down the column: the
                     teacher's cap, then the note (the owner, 2026-10-27) -#}
                     {% if item.is_admin %}<span class="person-role person-role-icon" title="Teacher" role="img" aria-label="Teacher">{{ icon('lc-graduation-cap') }}</span>{% else %}<span class="person-role-icon person-slot" aria-hidden="true"></span>{% endif %}</span></span></summary>
             {#- opened: the person's account only; his/her quizzes are on his/her own page (the owner, 2026-10-25: People is
@@ -99,7 +99,7 @@
                  delete_note=('His/her quiz results are kept in the Trash’s Attempts.' if not item.is_admin else 'Problems, quizzes and grades made by this account are kept; any quizzes it took go to the Trash’s Attempts.'), trash_message=true, trash_kind='person') }}
             {% else %}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.assign', users=item.id) }}" title="Assign quizzes: choose quizzes to give {{ item.shown_name }}">{{ icon_label('lc-send', 'Assign quizzes') }}</a>
-            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page') }}" title="Message: teachers write to each other in Teachers’ Messages">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
+            {% if not item.is_admin %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.conversation', student_id=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% else %}<a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('messages.teachers_page', with=item.id) }}" title="Message: write to {{ item.shown_name }}">{{ icon_label('lc-message', 'Message') }}</a>{% endif %}
             {# their page: quizzes and results, awards #}
             <a class="btn btn-secondary btn-sm btn-icon" href="{{ url_for('qgen.list_user', uid=item.id) }}" title="Student history: {{ item.shown_name }}'s quizzes, results and awards">{{ icon_label('lc-history', 'Student history') }}</a>
             {{- folder_icons(fk, 'user', item.id, item.shown_name, mine) }}
@@ -128,7 +128,7 @@
 {% else %}
 {# (no Sign-up & site settings button here: it's More › Settings; the owner, 2026-10-16) #}
 {#- (no Accounts | Results switch: one People page, the owner 2026-10-21) #}
-<div class="page-head"><h1>People</h1></div>
+<div class="page-head"><h1>{{ kind_icon('user') }}People</h1></div>
 {% endif %}
 
 {#- (no Assign paper plane at the top: people are assigned from the Checked folder, the owner 2026-10-24) #}

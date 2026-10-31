@@ -6,10 +6,10 @@
 {# before a quiz starts: what's ahead, and nothing (nor its timer) starts until "Start the quiz" #}
 {% block body_attrs %}{{ watch('attempt:%d' % cq.id, note='This quiz has changed. Reload to see it.', button='Reload', ask=True) }}{% endblock %}
 
-{% from "_macros.html" import from_teacher with context %}
+{% from "_macros.html" import from_teacher, kind_icon with context %}
 {% block content %}
 <div class="card card-narrow quiz-start">
-  <h1>{{ cq.vquiz.title }}</h1>
+  <h1>{{ kind_icon('note') }}{{ cq.vquiz.title }}</h1>
   <ul class="start-facts">
     <li>{{ icon('note') }} <span>{{ count }} question{{ '' if count == 1 else 's' }}</span></li>
     {% if cq.time_limit and cut_short %}

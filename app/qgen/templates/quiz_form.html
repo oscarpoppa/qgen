@@ -3,7 +3,7 @@
 {% from "_macros.html" import back_button, slot with context %}
 {% from "_macros.html" import field, check, image_drop %}
 {% from "_subjects.html" import subject_checks, subject_labels, subject_optional with context %}
-{% from "_macros.html" import box_label, count_of %}
+{% from "_macros.html" import box_label, count_of, kind_icon %}
 
 {# editing: another tab's changes are offered, never reloaded under the typing #}
 {# one folder's problems in the quiz editor, each with its check box (key: the folder) #}
@@ -16,7 +16,7 @@
       {% set box_id = 'pick-' ~ key ~ '-' ~ p.id %}
       <tr data-item="{{ p.id }}" data-fkey="p:{{ p.id }}" data-view-url="{{ url_for('qgen.view_vprob', vpid=p.id) }}" data-name="{{ (p.title or 'untitled')|lower }}">
         <td class="tick-col"><input type="checkbox" class="pick" value="{{ p.id }}" id="{{ box_id }}" data-title="{{ p.title or 'Untitled' }}" aria-label="Include “{{ p.title or 'Untitled' }}”"></td>
-        <td><label for="{{ box_id }}"><strong>{{ p.title or 'Untitled' }}</strong></label>
+        <td><label for="{{ box_id }}">{{ kind_icon('lc-puzzle') }}<strong>{{ p.title or 'Untitled' }}</strong></label>
           <span class="badge">{{ qtypes[p.qtype].label if p.qtype in qtypes else p.qtype }}</span> {{ subject_labels(p.vpgroups) }}
           <div class="small muted clamp">{{ p.raw_prob }}</div></td>
       </tr>
@@ -33,7 +33,7 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>{{ title }}</h1>
+  <h1>{{ kind_icon('note') }}{{ title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   <span class="head-icons">{% if vq and vq.id %} {% if not vq.removed_at %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.assign', vq=vq.id) }}" data-what="“{{ vq.title }}”" title="Assign: Give {{ vq.title }} to students">{{ icon_label('lc-send', 'Assign') }}</a>{% else %}{{ slot('Assign', 'A removed quiz can’t be assigned: restore it first', 'btn btn-secondary') }}{% endif %} <a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.view_vquiz', vqid=vq.id) }}" title="View: See one student’s version of the saved quiz">{{ icon_label('lc-eye', 'View') }}</a> {% if vq.cquizzes %}<a class="btn btn-secondary btn-icon" href="{{ url_for('qgen.quiz_results_page', vqid=vq.id) }}" title="History: Every student’s attempts and scores on {{ vq.title }}">{{ icon_label('lc-history', 'History') }}</a>{% else %}{{ slot('History', 'No one has taken this quiz yet', 'btn btn-secondary') }}{% endif %} {% endif %}</span>
   {# back where they came from (a quiz's results, its View page...), also after saving #}
@@ -44,6 +44,8 @@
         data-ask="Throw away your changes and go back to the saved version?" data-ok="Undo Changes" title="Go back to the saved version">↺ Undo Changes</button>
     {% else %}<button type="button" class="btn btn-secondary btn-sm" data-start-over="{{ request.full_path.rstrip('?') }}"
         data-ask="Clear everything on this page and start over?" data-ok="Start Over" title="Clear the form back to blank">↺ Start Over</button>{% endif %}
+    {#- Save and Cancel at the top right too, small, as on Assign and Add to Quizzes; the pair under the Helper stays (the owner, 2026-10-30) #}
+    <button type="submit" form="quiz-form" name="submit" value="{{ form.submit.label.text }}" class="btn btn-sm" title="Save the quiz and go back">{{ form.submit.label.text }}</button><a class="btn btn-secondary btn-sm" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
   </div>
 </div>
 
@@ -141,12 +143,7 @@
     {{ form.vplist(form="quiz-form") }}
     {% for e in form.vplist.errors %}<div class="error">{{ e }}</div>{% endfor %}
   </div>
-  {# Save at the bottom of this side, under the Helper and the list, like Assign's button (the owner,
-     2026-10-15; still the form's: form="quiz-form") #}
-  <div class="editor-go">
-    {{ form.submit(class='btn', title='Save the quiz and go back', form='quiz-form') }}
-    <a class="btn btn-secondary" href="{{ came[0] }}" data-back-href title="Leave without saving">Cancel</a>
-  </div>
+  {#- (no Save Quiz / Cancel under the Helper: they're in the pinned title line: the owner, 2026-10-30, D104) #}
 </div>
 </div>
 {#- the quiz picture's "Choose one already uploaded": the same dialog as the problem editor's (the owner, 2026-10-19) #}

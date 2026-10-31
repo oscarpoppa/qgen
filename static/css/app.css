@@ -202,6 +202,17 @@ main.container.container-narrow { max-width: 1080px; }
 main.container.container-wide { max-width: none; }
 
 .page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+/* the page's title line (its title and buttons) stays pinned under the top bar while the page scrolls, on every page; what
+   else sticks moves down by its height (--head-h, static/js/pinhead.js); on a phone too, its buttons the only Save / Assign... (the
+   owner, 2026-10-30, "The area above the red line should be pinned down on all pages", D104, D105) */
+main > .page-head { position: sticky; top: var(--topbar-h); z-index: 7; background: var(--bg); padding: 8px 0; margin-top: -8px; }
+/* (on a phone, its buttons small, as a folder page's title's, so they fit on one line and the pinned line stays short) */
+@media (max-width: 640px) {
+  main > .page-head { gap: 6px 8px; }
+  main > .page-head .actions { gap: 6px; }
+  main > .page-head .btn { padding: 3px 8px; min-height: 28px; font-size: var(--fs-xs); border-radius: var(--r-sm); flex: 0 0 auto; width: auto; }
+  main > .page-head .btn.btn-icon { width: 30px; height: 30px; padding: 0; }
+}
 .page-head h1 { margin: 0; }
 /* two views of one page (People: Accounts | Results), side by side in the page's heading */
 .seg-switch { display: inline-flex; border: 1px solid var(--field-border); border-radius: var(--r); overflow: hidden; }
@@ -267,6 +278,14 @@ svg.ico .ico-fill-ok { fill: var(--ok); stroke: none; }
 .empty .big svg.ico { width: 1.2em; height: 1.2em; stroke-width: 1.5; }
 /* folders and section headings: the accent color, so they read as places to go */
 .box-icon svg.ico, .side-link svg.ico, .folder-tab svg.ico, .folder-title svg.ico { color: var(--accent); }
+/* a kind's icon before a heading or a picker row's name (puzzle piece, quiz icon, person: the owner, 2026-10-30) */
+.kind-icon { display: inline-flex; vertical-align: middle; margin-right: 8px; line-height: 1; }
+h1 .kind-icon svg.ico { width: .9em; height: .9em; vertical-align: 0; }
+.archive-switch .kind-icon { margin-right: 6px; }
+/* (a long name wraps beside its icon, not under it: Home's lists) */
+.dash-list li > span:has(> .kind-icon), .dash-list .name-link:has(> .kind-icon) { display: inline-flex; align-items: flex-start; }
+.pick-table label > .kind-icon { margin-right: 0; }  /* (the row's label spaces them already: 8px) */
+.pick-table label > .avatar { flex: none; }
 .award-icon { color: var(--new-edge); }
 .award-icon svg.ico { stroke-width: 1.75; }
 
@@ -347,7 +366,7 @@ legend { font-weight: 700; padding: 0 6px; }
 .filter-bar { margin-bottom: 8px; }
 .pick-count { margin-left: auto; }
 /* Users page: when people are checked, a bar to give them a quiz */
-.pick-bar-users { position: sticky; top: calc(var(--topbar-h) + 7px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
+.pick-bar-users { position: sticky; top: calc(var(--topbar-h) + var(--head-h, 0px) + 7px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px;
   padding: 8px 12px; border: 1px solid var(--accent); border-radius: var(--r-lg); background: var(--accent-soft); }
 .pick-users-count { font-weight: 600; margin-right: auto; }
 .pick-of { white-space: nowrap; }
@@ -443,7 +462,7 @@ td.actions .btn { margin-left: 4px; }
 img.qimg { display: block; width: auto; height: auto; max-width: min(100%, 520px); max-height: min(360px, 50vh);
   object-fit: contain; border-radius: var(--r); margin-bottom: 12px; }
 img.qimg.card { padding: 0; max-width: min(100%, 640px); }  /* the one at the top of a quiz */
-.progress { position: sticky; top: calc(var(--topbar-h) + 7px); z-index: 5; background: var(--bg); padding: 8px 0; }
+.progress { position: sticky; top: calc(var(--topbar-h) + var(--head-h, 0px) + 7px); z-index: 5; background: var(--bg); padding: 8px 0; }
 .progress-bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .progress-bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
 
@@ -548,7 +567,7 @@ details.help-box pre { white-space: pre-wrap; background: var(--surface-2); padd
 
 /* ---------- live helper ---------- */
 .editor { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
-.editor > .helper { position: sticky; top: calc(var(--topbar-h) + 15px); max-height: calc(100vh - var(--topbar-h) - 33px); overflow-y: auto; }
+.editor > .helper { position: sticky; top: calc(var(--topbar-h) + var(--head-h, 0px) + 15px); max-height: calc(100vh - var(--topbar-h) - var(--head-h, 0px) - 33px); overflow-y: auto; }
 @media (max-width: 960px) { .editor { grid-template-columns: minmax(0, 1fr); } .editor > .helper { position: static; max-height: none; order: -1; } }
 .hints { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .hint { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; font-size: var(--fs-sm); padding: 8px 10px; border-radius: var(--r); background: var(--surface-2); }
@@ -829,6 +848,13 @@ button.badge-btn:hover { filter: brightness(1.1); text-decoration: underline; }
 .notice-clear { margin-left: auto; }
 .notice-x { background: none; border: 0; color: var(--muted); min-height: 0; padding: 2px 6px; font-size: var(--fs-sm); }
 .notice-x:hover { color: var(--bad); background: var(--bad-soft); filter: none; }
+/* (a notice's link and ✕ as bare icons at its end, the words in their tooltips: the owner, 2026-10-30, D95) */
+.notice > .notice-go, .notice .notice-x { flex: none; }
+.notice > .notice-go { align-self: center; }
+.notice button.icon-link.notice-x { color: var(--muted); padding: 0; }
+.notice button.icon-link.notice-x:hover { color: var(--bad); background: var(--bad-soft); }
+/* (each teacher's circle before his/her name in Send to: the owner, 2026-10-30, D94) */
+.send-to label > .avatar { flex: none; margin: 0; }  /* (the label spaces them already) */
 .notice-clear-all, .thread-clear-all { text-align: right; margin: -4px 0 6px; }
 .thread-clear-all { margin-top: 4px; }
 .thread-top { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
@@ -925,7 +951,7 @@ dialog.ask .ask-message p { margin: 0; font-size: var(--fs-sm); }
 /* (the problem itself narrower than the facts, which grow as its quizzes and folders build up: the owner, 2026-10-29) */
 .person-open > .problem-peek { flex: 1 1 220px; min-width: 0; max-width: 380px; display: flex; gap: 10px; align-items: flex-start;
   padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2); }
-.problem-peek-pic img { width: 64px; height: 64px; object-fit: cover; border-radius: 4px; display: block; }
+.problem-peek-pic img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--r-sm); display: block; }
 .problem-peek-text { min-width: 0; }
 .problem-peek-text p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 .problem-peek-choices { margin: 4px 0 0; padding-left: 18px; }
@@ -970,9 +996,16 @@ dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere;
      is jammed together"; it was fixed widths, D35–D39): each column an equal share of the table, the name two shares, the
      icons only as wide as they are; each kind of column never narrower than its floor (the name 10rem, the Note 4rem, a
      date 7.5rem and on one line), and the same padding between every two columns. The order: docs/ui-patterns.md, D58. */
-  table.even-cols > thead > tr > th:not(.tick-col):not(:last-child) { width: 10%; }
-  table.even-cols > thead > tr > th:first-child:not(.tick-col), table.even-cols > thead > tr > th.tick-col + th { width: 20%; min-width: 10rem; }
-  table.even-cols > thead > tr > th.note-col { min-width: 4rem; }
+  /* (D97, the owner, 2026-10-30, "use this space a little better": the names take the rest. Every other column only as wide
+     as its widest content, never under 6rem (a date 7.5rem, on one line); the name column, and a second one marked .name-col
+     (Pending Quizzes' Quiz), share all the room left, so a name wraps only when the table is truly full. It was an equal
+     share each and the name two (D59), which gave a one-icon Note column as much room as a date and wrapped the names.) */
+  table.even-cols > thead > tr > th:not(.tick-col):not(:last-child) { width: 1%; min-width: 6rem; white-space: nowrap; }
+  /* (the :not()s outrank the rule above, also after a check-box column: before, the name lost to it there and never got its
+     share, Problems, Quizzes and People) */
+  table.even-cols > thead > tr > :is(th:first-child, th.tick-col + th, th.name-col):not(.tick-col):not(:last-child) { width: 100%; min-width: 10rem; white-space: normal; }
+  /* (two names, Pending Quizzes' Student and Quiz: half the rest each; "auto" handed the room out by what's folded inside) */
+  table.even-cols:has(> thead > tr > th.name-col) > thead > tr > :is(th:first-child, th.tick-col + th, th.name-col):not(.tick-col):not(:last-child) { width: 50%; }
   table.even-cols > thead > tr > th.date-col { min-width: 7.5rem; white-space: nowrap; }
   table.even-cols > thead > tr > th.tick-col { width: 36px; }
   table.even-cols td.actions { width: 1%; white-space: nowrap; }
@@ -988,8 +1021,8 @@ dialog.ask .ask-message-before { white-space: pre-wrap; overflow-wrap: anywhere;
 .folders-layout > .folder-side { grid-column: 1; }
 .folders-layout > .folder-main { grid-column: -2 / -1; }
 /* sticks below the top bar (also sticky), never under it */
-.folder-side { position: sticky; top: calc(var(--topbar-h) + 12px); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px;
-  background: var(--surface); max-height: calc(100vh - var(--topbar-h) - 24px); overflow: auto; }
+.folder-side { position: sticky; top: calc(var(--topbar-h) + var(--head-h, 0px) + 12px); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 10px 8px;
+  background: var(--surface); max-height: calc(100vh - var(--topbar-h) - var(--head-h, 0px) - 24px); overflow: auto; }
 .folder-side-head { display: none; list-style: none; cursor: pointer; }
 .folder-side-head::-webkit-details-marker { display: none; }
 .side-list { list-style: none; margin: 0; padding: 0; }
@@ -1902,7 +1935,7 @@ html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-sel
    left, its quiz and drafted problems on the right; stacked on a phone */
 .scan-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
 @media (max-width: 860px) { .scan-split { grid-template-columns: minmax(0, 1fr); } }
-.scan-left { position: sticky; top: calc(var(--topbar-h, 56px) + 8px); }
+.scan-left { position: sticky; top: calc(var(--topbar-h, 56px) + var(--head-h, 0px) + 8px); }
 @media (max-width: 860px) { .scan-left { position: static; } }
 .scan-canvas { position: relative; line-height: 0; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; touch-action: none; user-select: none; }
 .scan-canvas img { display: block; width: 100%; height: auto; max-height: none; }
@@ -2468,6 +2501,11 @@ details.quiz-card:not([open]) > summary .quiz-sum { margin-left: auto; }
    focused or checked, so they don't invite a click that's rarely wanted (the owner, 2026-10-20;
    16px with room around it in its 36px column meets WCAG 2.5.8's spacing rule) */
 td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 16px; height: 16px; opacity: .45; transition: opacity .15s; }
+/* (each row's check box level with its fold arrow: a picture's or file's row has a taller thumbnail line: the owner, 2026-10-30, "not level with each other anymore") */
+table.no-rest-cols > tbody > tr > td.tick-col { padding-top: 16px; }
+/* (and the rest of a picture's or file's row level with its thumbnail line too) */
+table.no-rest-cols > tbody > tr > td:not(.tick-col):not(:has(> details)) { padding-top: 16px; }
+table.no-rest-cols > tbody > tr > td.actions { padding-top: 7px; }
 tr:hover > td.tick-col input[type=checkbox], tr:hover > th.tick-col input[type=checkbox],
 td.tick-col input[type=checkbox]:is(:focus-visible, :checked), th.tick-col input[type=checkbox]:is(:focus-visible, :checked, :indeterminate) { opacity: 1; }
 @media (pointer: coarse) { td.tick-col input[type=checkbox], th.tick-col input[type=checkbox] { width: 22px; height: 22px; opacity: .6; } }
@@ -2498,6 +2536,20 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
   .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
   .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
   .person-folders, .person-folders .move-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+}
+/* (the same on the row cards of a narrower window, the list's panel under 860px or the page under 780px: the check box sat alone on a
+   line above the title there; the owner, 2026-10-30) */
+@container listarea (max-width: 860px) {
+  .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0; }
+  .stack tr:has(> td.tick-col) > td { grid-column: 2; }
+  .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
+  .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
+}
+@container page (max-width: 780px) {
+  .stack tr:has(> td.tick-col) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0; }
+  .stack tr:has(> td.tick-col) > td { grid-column: 2; }
+  .stack tr:has(> td.tick-col) > td.tick-col { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
+  .stack tr:has(> td.tick-col) > td.tick-col + td { grid-row: 1; }
 }
 /* use the room: on a wide screen, cards and form parts sit side by side instead of one narrow
    column with empty space beside it (docs/ui-patterns.md, principle 9) */
@@ -2562,7 +2614,7 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
    hold the Helper and other cards that inform (the quiz builder's "Questions in this quiz");
    it stays in view while the form scrolls, and scrolls itself when it's long */
 .editor:has(> .side-col) { grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); }
-.editor > .side-col { position: sticky; top: calc(var(--topbar-h) + 15px); max-height: calc(100vh - var(--topbar-h) - 33px);
+.editor > .side-col { position: sticky; top: calc(var(--topbar-h) + var(--head-h, 0px) + 15px); max-height: calc(100vh - var(--topbar-h) - var(--head-h, 0px) - 33px);
   overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .editor > .side-col > .card { margin: 0; }
 .editor > .side-col > .helper { position: static; max-height: none; overflow: visible; }
@@ -2630,7 +2682,7 @@ table:not(.has-open-row) th.row-more:not(.row-count-col), table:not(.has-open-ro
 /* a picking card's list and its folder list beside it scroll inside themselves, at most about the
    window's height, so a long list (All problems) never runs on down the page (the owner, 2026-10-19) */
 .folder-filter[data-style="list"] > .folder-filter-list,
-.folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(100vh - var(--topbar-h) - 170px); overflow-y: auto; overscroll-behavior: auto; }
+.folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(100vh - var(--topbar-h) - var(--head-h, 0px) - 170px); overflow-y: auto; overscroll-behavior: auto; }
 dialog .folder-filter[data-style="list"] > .folder-filter-list,
 dialog .folder-filter[data-style="list"] > .folder-filter-side { max-height: calc(80vh - 170px); }
 @media (max-width: 640px) {
@@ -2684,7 +2736,9 @@ a.icon-link, button.icon-link { display: inline-flex; align-items: center; justi
   color: var(--accent); text-decoration: none; }
 a.icon-link svg.ico, button.icon-link svg.ico { width: 20px; height: 20px; }  /* (the same size as every icon button) */
 button.icon-link { border: 0; background: none; padding: 0; cursor: pointer; min-height: 0; }
-a.icon-link:hover, button.icon-link:hover { background: var(--accent-soft); }
+a.icon-link:hover, button.icon-link:hover:not(:disabled) { background: var(--accent-soft); }
+/* (one that doesn't apply, e.g. no note from the teacher: just grayed out, no glow on hover, as the icon buttons: the owner, 2026-10-30) */
+button.icon-link:disabled { color: var(--muted); opacity: .5; cursor: default; }
 a.icon-link:focus-visible, button.icon-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (pointer: coarse) { a.icon-link, button.icon-link { width: 44px; height: 44px; } }
 .result-attempt-buttons a.icon-link.attempt-open { min-width: 0; }
@@ -3023,6 +3077,10 @@ td.attempt-buttons { text-align: right; }
 .quiz-rows details.quiz-card { border: 0; padding: 0; margin: 0; background: none; box-shadow: none; }
 .quiz-rows details.quiz-card > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .quiz-rows details.quiz-card[open] > summary { margin-bottom: 6px; }
+/* (in a row the name stays beside its icon and wraps its own words, never dropping below it: the old card grid's
+   11rem minimum made a narrow Quiz column twice as tall; the owner, 2026-10-31, with D117) */
+.quiz-rows details.quiz-card > summary { flex-wrap: nowrap; }
+.quiz-rows details.quiz-card > summary .box-title { min-width: 0; }
 /* (a new or started quiz's row outlined all the way round, its cells drawing the edge so no side
    is cut off: the owner, 2026-10-17) */
 tr.row-is-new { --row-edge: var(--new-edge); }
@@ -3369,6 +3427,11 @@ dialog.ask.write-to-dialog[open] { display: flex; flex-direction: column; }
 /* a scan being read: a bar that keeps moving and the time so far (the owner, 2026-10-20) */
 .scan-working { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
 .scan-working .scan-chip-bar { width: 64px; }
+/* (on Scan Workbook Pages' Current Workbooks: on a line of its own under the name, as wide as the Workbook column, the time
+   after it: the owner, 2026-10-30, "use up more of this space") */
+#scan-current .scan-row-name > div { flex: 1 1 auto; min-width: 0; }
+#scan-current .scan-working { display: flex; margin: 6px 0 0; }
+#scan-current .scan-working .scan-chip-bar { flex: 1 1 auto; width: auto; height: 6px; }
 .scan-controls .btn-danger.btn-icon { background: none; border: 0; color: var(--bad); }
 /* a scanned page's "Read this page again": its note and button open under it (the owner, 2026-10-20) */
 .scan-again { margin-top: 8px; }
@@ -3520,8 +3583,9 @@ th.tick-col input.check-all { margin: 0; }
 /* (the cap and the note in a fixed column at the name cell's right edge, so each lines up down the list whatever the name's length,
    with room before “Created”: the owner, 2026-10-28) */
 .people-table .person-line > .person-role-icon { margin-left: auto; }
-.people-table .person-line > .box-title { flex: none; max-width: 10.5rem; overflow-wrap: break-word; }  /* (the name on one line, as before the marks' column;
-   past 10.5rem it wraps, so a very long name doesn't squeeze the rest of the table: the owner, 2026-10-28) */
+.people-table .person-line > .box-title { flex: none; max-width: 24rem; overflow-wrap: break-word; }  /* (the name on one line, as before the marks' column;
+   past 24rem it wraps, so a very long name doesn't squeeze the rest of the table: the owner, 2026-10-28; it was 10.5rem, which wrapped
+   a long name onto three lines once the name column had room, D97: the owner, 2026-10-30) */
 /* (the Name column at least as wide as the whole name and its marks, so nothing runs into “Created”; a card's width is fixed,
    so a long name breaks between words there and the marks stay inside it) */
 table.people-table details.row-fold > summary > .person { min-width: max-content; }
@@ -3729,7 +3793,8 @@ a.pager-num:hover { background: var(--accent-soft); border-color: var(--border);
    below, 34px icons with 4px or 6px). People's were 59-91px: its Folders cell held 34px icons with 10px of room, the picture made the
    name line 32px, and the Status badges and folder chips wrapped. */
 .folder-filter-list table.even-cols > tbody > tr > td.person-folders { padding-top: 6px; padding-bottom: 5px; }
-.people-table > tbody > tr > td[data-label="Name"] { padding-top: 4px; padding-bottom: 4px; }
+.people-table > tbody > tr > td[data-label="Name"] { padding-top: 10px; padding-bottom: 4px; }  /* (10px above, as the other cells, so the check box, arrow,
+   circle and name sit level with the rest of the row since the circle is 24px: the owner, 2026-10-30; it was 4px for the 28px circle) */
 /* (an open person's shaded contents stop at the cell's 4px padding, just above the open row's line:
    reaching 10px down as elsewhere, Firefox painted the shade over that line; the owner, 2026-10-26) */
 .people-table details.row-fold[open]::after { bottom: -4px; }
@@ -4068,4 +4133,9 @@ details.row-fold > summary > .person-note-mark { margin-left: auto; padding-left
    2026-10-29, D27) */
 .dash-list > li > .home-note { margin-left: auto; }
 .dash-list > li > .home-note ~ .dash-go { margin-left: 6px; }
+/* (a long quiz name wraps inside its own space, so the note and Start icons never drop to a line of their own:
+   the owner, 2026-10-31, D115) */
+.dash-list > li:has(> .home-note) { flex-wrap: nowrap; }
+.dash-list > li:has(> .home-note) > span:first-child { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.dash-list > li:has(> .home-note) > :not(:first-child) { flex: 0 0 auto; }
 /* (My quizzes' notes: in the row's own Note column now, not on the attempt lines: the owner, 2026-10-29, D29) */

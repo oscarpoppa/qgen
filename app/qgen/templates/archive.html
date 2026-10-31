@@ -18,7 +18,7 @@
       <summary>{{ box_label('calendar', month.label, count_of(month['items']|length, 'attempt', 'attempts')) }}</summary>
       <div class="table-wrap stack">
         <table class="archive-table even-cols" data-paged data-sorted="{{ pg.sort or '' }}" data-sorted-dir="{{ pg.dir }}">
-          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="student">Student</th><th class="row-more date-col" data-sort-key="when">When</th><th data-sort-key="quiz">Quiz</th><th data-sort-key="result">Result</th><th></th></tr></thead>
+          <thead><tr><th class="tick-col"><span class="sr-only">Check</span></th><th data-sort-key="student">Student</th><th class="row-more date-col" data-sort-key="when">When</th><th data-sort-key="quiz" class="name-col">Quiz</th><th data-sort-key="result">Result</th><th></th></tr></thead>
           <tbody>
           {% for a in month['items'] %}
             {% set blocker = blockers.get(a.id) %}

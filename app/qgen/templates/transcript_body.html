@@ -1,11 +1,14 @@
 {# The permanent record of a finished quiz. Rendered once and saved in CQuiz.transcript.
    Also drawn for archived attempts, which may not have been handed in or graded yet. #}
+{#- a teacher looking at a student's results: "ava’s answer", not "Your answer" (the student sees "Your answer": the owner, 2026-10-30, D92) #}
+{%- set by_other = cq.taker and current_user.is_authenticated and (cq.taker.id is not defined or cq.taker.id != current_user.id) %}
+{%- set their = ((cq.taker.shown_name or cq.taker.username) ~ '’s answer') if by_other else none %}
 <div class="card">
   <div class="result-head">
     {% if cq.score is not none %}
     <div class="score" aria-label="Score {{ '%.0f' % cq.score }} percent">{{ '%.0f' % cq.score }}%<small>score</small></div>
     {% else %}
-    <div class="score" aria-label="No score yet">–<small>{{ 'in progress' if cq.needs_review else 'not handed in' }}</small></div>
+    <div class="score" aria-label="No score yet">–<small>{{ ('waiting for grading' if by_other else 'waiting for your teacher') if cq.needs_review else 'not handed in' }}</small></div>
     {% endif %}
     <div>
       <h2 style="margin:0">{{ cq.vquiz.title }}</h2>
@@ -41,7 +44,7 @@
       <p class="paper-note">{{ icon('pencil') }} Done on paper.</p>
       {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% elif it.essay %}
-      <div class="label">Your answer</div>
+      <div class="label">{{ their or 'Your answer' }}</div>
       <div class="essay-text">{{ it.submitted_html if it.submitted else '(no answer)' }}</div>
       {% if it.feedback %}<div class="feedback"><strong>Teacher:</strong> {{ it.feedback }}</div>{% endif %}
     {% elif it.choices %}
@@ -51,7 +54,7 @@
           <li class="{{ 'is-picked' if c.picked }} {{ 'is-right' if c.right }}">
             <span class="pick" aria-hidden="true">{{ '●' if c.picked else '○' }}</span>
             <span class="choice-text">{{ c.text }}</span>
-            {% if c.picked %}<span class="badge">your answer</span>{% endif %}
+            {% if c.picked %}<span class="badge">{{ their or 'your answer' }}</span>{% endif %}
             {% if c.right %}<span class="badge badge-ok">✓ correct</span>{% endif %}
           </li>
         {% endfor %}
@@ -62,7 +65,7 @@
       {% endif %}
     {% else %}
       <dl class="answer-row">
-        <dt>Your answer</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
+        <dt>{{ their or 'Your answer' }}</dt><dd>{{ it.submitted or '(no answer)' }}</dd>
         {# once answers are shown: under every question, right or wrong #}
         <dt>Correct answer</dt><dd>{{ it.correct }}</dd>
       </dl>

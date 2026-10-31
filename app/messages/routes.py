@@ -159,10 +159,17 @@ def delete_staff(message_id):
 @pw_check
 @admin_only
 def teachers_page():
-    choice = request.args.get('with') or 'teachers'
-    view = teachers_view(M.inbox(current_user), staff_picker(current_user),
-                         choice if choice == 'teachers' else 't' + choice.lstrip('t'))
-    return render_template('teachers_messages.html', title='Teachers’ Messages', **view)
+    #(no page of its own any more: back to the page this came from, with the Messages panel open on the teachers, or on one
+    #teacher with ?with=<id>, as a student's conversation (static/js/messages.js ?msg=): the owner, 2026-10-30)
+    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+    who = (request.args.get('with') or '').lstrip('t')
+    view = 't' + who if who.isdigit() else 'teachers'
+    back = urlsplit(request.referrer or '')
+    if back.netloc == request.host and back.path.startswith('/') and not back.path.startswith('//') \
+            and not back.path.startswith('/messages/'):
+        query = urlencode([(k, v) for k, v in parse_qsl(back.query, keep_blank_values=True) if k != 'msg'] + [('msg', view)])
+        return redirect(urlunsplit(('', '', back.path, query, '')))
+    return redirect(url_for('qgen.dashboard') + '?msg=' + view)
 
 #route to pin or unpin a message (and every copy sent with it)
 @messages_bp.route('/messages/pin/<int:message_id>', methods=['POST'])

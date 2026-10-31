@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {# the page's whole width: the Quiz card, with When and Assign under it, beside the Students card #}
 {% from "_macros.html" import filter_bar, scan_mark with context %}
-{% from "_macros.html" import back_home, box_label with context %}
+{% from "_macros.html" import back_home, box_label, kind_icon, avatar with context %}
 {% from "_macros.html" import field, check %}
 {% from "_pick.html" import pick_table %}
 
@@ -11,7 +11,7 @@
 {% block body_attrs %}{{ watch('assign', note='The quizzes, people or folders have changed since you opened this page.', ask=True) }}{% endblock %}
 
 {% block content %}
-<div class="page-head"><h1>{{ title }}</h1>
+<div class="page-head"><h1>{{ kind_icon('note') }}{{ title }}</h1>
   {#- Assign and Cancel at the top too, so nobody has to scroll to the bottom for them (small, like every button by a
       page title; the bottom row stays: the owner, 2026-10-28) #}
   <div class="actions"><button type="submit" form="assign-form" name="submit" value="Assign" class="btn btn-sm" title="Give the quizzes to the checked students">Assign</button><a class="btn btn-secondary btn-sm" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div></div>
@@ -25,7 +25,7 @@
   <div class="card field pick-quiz{% if form.vquiz.errors %} has-error{% endif %}" id="pick-quiz">
     {# the checked ones as chips, in the card's top right (the owner, 2026-10-24) #}
     <div class="pick-chips" data-chip-cap="10" data-chips-for="vquiz" data-chip-icon="note" aria-live="polite"></div>
-    <span class="label pick-wrap-head">{{ form.vquiz.label.text }}</span>
+    <span class="label pick-wrap-head">{{ kind_icon('note') }}{{ form.vquiz.label.text }}</span>
     {% if not quizzes %}
     {# (the same words as the Quizzes page with none) #}
     <p class="card empty small">No quizzes yet. <a href="{{ url_for('qgen.mkvquiz') }}" title="Start a new quiz">Build one from your problems</a>.</p>
@@ -40,7 +40,7 @@
         {% call pick_table('Quiz', 'quiz-pick-list') %}
           {% for q in quizzes %}
             <tr data-box="quiz:{{ q.id }}" data-name="{{ q.title|lower }}"{% if not q.shuffle_order %} data-keep-order{% endif %}><td class="tick-col"><input type="checkbox" name="vquiz" value="{{ q.id }}" id="vquiz-{{ q.id }}"{% if q.id in (form.vquiz.data or []) %} checked{% endif %}></td>
-              <td><label for="vquiz-{{ q.id }}">{{ q.title }}{{ scan_mark(q) }}</label></td></tr>
+              <td><label for="vquiz-{{ q.id }}">{{ kind_icon('note') }}{{ q.title }}{{ scan_mark(q) }}</label></td></tr>
           {% endfor %}
         {% endcall %}
       </div>
@@ -58,7 +58,7 @@
         folder, and both cards start at the top, level: the owner, 2026-10-22) #}
   <div class="field pick-people{% if form.users.errors %} has-error{% endif %}" id="pick-people">
     {# always open, like the Quiz card beside it #}
-    <span class="label pick-wrap-head">{{ form.users.label.text }}</span>
+    <span class="label pick-wrap-head">{{ kind_icon('user') }}{{ form.users.label.text }}</span>
     {# the same filter bar as the Quiz card's (filter, Clear, how many shown), then the checking on a
        line of its own, as in the Assign and Write-to dialogs (the owner, 2026-10-19, from the user critic) #}
     {#- (checking everyone shown: the check box in the list's heading row, static/js/checkall.js; the owner, 2026-10-22) #}
@@ -70,8 +70,8 @@
       <div class="folder-filter-list">
         {% call pick_table('Name') %}
           {% for u in people %}
-            <tr data-box="user:{{ u.id }}"><td class="tick-col"><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}" data-name="{{ u.shown_name }}"{% if u.id in chosen %} checked{% endif %}></td>
-              <td data-sort="{{ u.shown_name|lower }}"><label for="users-{{ u.id }}">{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></td></tr>
+            <tr data-box="user:{{ u.id }}" data-name="{{ u.shown_name|lower }}{{ ' (teacher)' if u.is_admin }}"><td class="tick-col"><input type="checkbox" name="users" value="{{ u.id }}" id="users-{{ u.id }}" data-user="{{ u.id }}" data-name="{{ u.shown_name }}"{% if u.id in chosen %} checked{% endif %}></td>
+              <td data-sort="{{ u.shown_name|lower }}"><label for="users-{{ u.id }}">{{ avatar(u, 20) }}{{ u.shown_name }}{% if u.is_admin %} <span class="muted small">(teacher)</span>{% endif %}</label></td></tr>
           {% endfor %}
         {% endcall %}
       </div>
@@ -83,7 +83,7 @@
   </div>
   </div>
   {#- (Cancel last, back to the page they came from: the owner, 2026-10-24) #}
-  <div class="assign-go btn-row">{{ form.submit(class='btn', title='Give the quizzes to the checked students') }}<a class="btn btn-secondary" href="{{ came_from[0] if came_from else home_url() }}" data-back-href title="Leave without assigning anything">Cancel</a></div>
+  {#- (no Assign / Cancel down here: they're in the pinned title line, always in sight: the owner, 2026-10-30, D104) #}
   </div>
   {# when: under the Quiz card (the Students card beside both) #}
   <div class="card assign-when">
@@ -158,7 +158,12 @@
   if (!form) return;
   var sure = false;
   function checked(name) { return Array.prototype.slice.call(form.querySelectorAll('input[name="' + name + '"]:checked')); }
-  function nameOf(b) { var l = form.querySelector('label[for="' + b.id + '"]'); return l ? (l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : l.textContent).trim() : ''; }
+  //(the label's first words, past the kind icon or person's circle before it: static/js/pickchips.js)
+  function nameOf(b) {
+    var l = form.querySelector('label[for="' + b.id + '"]'), n = '';
+    for (var c = l && l.firstChild; c && !n; c = c.nextSibling) if (c.nodeType === 3) n = c.textContent.trim();
+    return n || (l ? l.textContent.trim() : '');
+  }
   function says(list, one, many) {
     var names = list.map(nameOf).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
     return names.length === 1 ? '\u201c' + names[0] + '\u201d' : names.length + ' ' + many;

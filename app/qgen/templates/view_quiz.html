@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% from "_macros.html" import back_button, slot with context %}
+{% from "_macros.html" import back_button, slot, kind_icon with context %}
 {% from "_subjects.html" import subject_labels with context %}
 {% from "_page_thumbs.html" import page_thumbs with context %}
 {% block body_attrs %}{{ watch('viewquiz:%d' % vq.id, note='This quiz has been changed since you opened it.', button='Reload', ask=True) }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>View: {{ vq.title }}</h1>
+  <h1>{{ kind_icon('note') }}View: {{ vq.title }}</h1>
   {#- (icon buttons right after the title, not in with the worded buttons: the owner, 2026-10-19) #}
   <span class="head-icons">
     {#- Assign from here too (the owner, 2026-10-19), as on the quiz's Edit page #}

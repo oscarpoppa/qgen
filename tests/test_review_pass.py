@@ -320,7 +320,8 @@ def test_notice_links_say_what_they_open(app_db):
     vq = make_quiz(app, teach)
     teach.post('/quiz/assign', data={'vquiz': vq.id, 'users': [ids('sam')]})
     panel = sam.get('/messages/notices').data.decode()
-    assert '>Go to the quiz</a>' in panel and '>Open</a>' not in panel
+    #(a student's notices are just their words and the ✕, no links: the owner, 2026-10-31, D125–D127)
+    assert 'New quiz' in panel and 'notice-go' not in panel and 'notice-x' in panel
 
 
 # ---------------------------------------------------------------- nicknames
@@ -1233,9 +1234,8 @@ def test_standard_wording_and_history_buttons(app_db):
     #(one check box in the list's heading row now, static/js/checkall.js: the owner, 2026-10-23)
     page = teach.get('/quiz/assign').data.decode()
     assert 'data-pick="clear"' not in page and 'js/checkall.js' in page
-    # the teachers' messages page: one name, and the way back is the top bar's arrows
-    page = teach.get('/messages/teachers').data.decode()
-    assert 'Teachers’ Messages' in page and back_by_the_trail(page) and 'Messages with' not in page
+    # no teachers' messages page any more: the Messages panel, over the page you were on (the owner, 2026-10-30)
+    assert teach.get('/messages/teachers').status_code == 302
 
 
 def test_pages_come_back_as_they_were_left(app_db):
@@ -1288,7 +1288,7 @@ def test_folder_lists_have_one_order(app_db):
         teach.post('/quiz/subjects/{}/new'.format(kind), data={'name': 'Fall'})
     def side(page):
         nav = page.split('<nav aria-label="Folders">')[1].split('</nav>')[0]
-        return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<svg\b[^>]*>.*?</svg>\s*)?(?:<span class="side-name">)?([^<]+)', nav)]
+        return [re.sub(r'\s+', ' ', n).strip() for n in re.findall(r'class="side-link(?: side-view-[a-z]+)?"[^>]*>(?:<span[^>]*>[^<]*</span>)?\s*(?:<svg\b[^>]*>.*?</svg>\s*)?(?:<span class="side-name">)?([^<]+)', nav)]
     for who, url in ((teach, '/quiz/listvp'), (teach, '/quiz/listvq'), (teach, '/userdet'), (teach, '/quiz/listuser'),
                      (teach, '/quiz/results'), (teach, '/quiz/archive')):
         page = who.get(url, follow_redirects=True).data.decode()
@@ -1690,7 +1690,7 @@ def test_unused_buttons_are_grayed_out_not_missing(app_db):
         '/settings/technical': ['disabled title="Already the default">Reset</button>'],
         '/userdet': ['disabled title="Delete for good: You can’t delete your own account">',
                      'disabled title="Move to folder: make a folder first (+ New Folder)">',
-                     'title="Message: teachers write to each other in Teachers’ Messages">'],
+                     'title="Message: write to '],
     }
     for url, wanted in pages.items():
         page = teacher.get(url).data.decode()
@@ -1763,7 +1763,8 @@ def test_quiz_boxes_on_a_student_page_line_their_buttons_up(app_db):
     assert 'class="icon-link attempt-open"' in page and 'aria-label="View"' in page
     #(a student page's quizzes are rows like My quizzes', each attempt's icons one group at the row's
     #right end: the owner, 2026-10-21)
-    assert '<thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="latest" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="status">Status</th><th data-sort-key="score">Score</th><th></th></tr></thead>' in page
+    #(the Note column, and Score before Status: one column order on every folder page, the owner, 2026-10-30, D58)
+    assert '<thead><tr><th data-sort-key="title">Quiz</th><th data-sort-key="note" class="note-col">Note</th><th data-sort-key="latest" class="date-col" title="The newest of its attempts: handed in, started, or assigned">Last Activity</th><th data-sort-key="attempts">Attempts</th><th data-sort-key="score">Score</th><th data-sort-key="status">Status</th><th></th></tr></thead>' in page
     assert 'class="attempt-act attempt-act-group"' in page
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     css = open(os.path.join(here, 'static', 'css', 'app.css')).read()
