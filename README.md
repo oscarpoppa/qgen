@@ -1,9 +1,9 @@
 # qgen: quizzes where every student gets a different version
 
-qgen is a small, self-hosted quiz app for teachers (Flask, MySQL and MathJax).
+qgen is a small, self-hosted quiz app for teachers (Flask, MySQL and LaTeX).
 
 **The problem it solves is cheating.** When everyone gets the same quiz, answers travel.
-A student says "number 3 is B" to a friend, peeks at a neighbour's screen, or remembers a
+A student says "number 3 is B" to a friend, peeks at a neighbor's screen, or remembers a
 quiz for a retake. In qgen, **every student gets a different version** of the same quiz.
 The questions are the same kind, but they use different numbers, names and pictures, with
 choices and questions in a different order. Passing answers along doesn't help.
@@ -56,7 +56,7 @@ Teachers don't need to be technical. Problems are written in plain words with
   handed in.
 - Fractions (`3/4`, `1 1/2`) and complex numbers (`3 + 2i`) are understood.
 - Results with every answer marked, and the teacher's comments on essays.
-- A profile picture, or coloured initials.
+- A profile picture, or colored initials.
 
 ### Scoring without the teacher
 Quizzes without essays are scored the moment the student submits. Overdue quizzes are
